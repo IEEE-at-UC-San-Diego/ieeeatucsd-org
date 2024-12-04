@@ -1,0 +1,30 @@
+[
+    {
+        "name": "About",
+        "path": "/about"
+    },
+    {
+        "name": "Join",
+        "path": "/join"
+    },
+    {
+        "name": "Events",
+        "path": "/events"
+    },
+    {
+        "name": "Projects",
+        "path": "/projects"
+    },
+    {
+        "name": "Board",
+        "path": "/board"
+    },
+    {
+        "name": "Find Us",
+        "path": "/find-us"
+    },
+    {
+        "name": "Online Store",
+        "path": "/online-store"
+    }
+]
