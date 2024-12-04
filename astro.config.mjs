@@ -1,23 +1,23 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig } from "astro/config";
 
-import tailwind from '@astrojs/tailwind';
+import tailwind from "@astrojs/tailwind";
 
-import mdx from '@astrojs/mdx';
+import mdx from "@astrojs/mdx";
 
-import react from '@astrojs/react';
+import react from "@astrojs/react";
 
-import expressiveCode from 'astro-expressive-code';
+import expressiveCode from "astro-expressive-code";
 
-import node from '@astrojs/node';
+import node from "@astrojs/node";
 
-import icon from 'astro-icon';
+import icon from "astro-icon";
 
 // https://astro.build/config
 export default defineConfig({
-  integrations: [tailwind(), mdx(), react(), expressiveCode(), icon()],
+    integrations: [tailwind(), expressiveCode(), react(), icon(), mdx()],
 
-  adapter: node({
-    mode: 'standalone'
-  })
+    adapter: node({
+        mode: "standalone",
+    }),
 });
