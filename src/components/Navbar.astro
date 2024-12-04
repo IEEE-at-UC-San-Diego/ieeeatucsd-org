@@ -1,0 +1,31 @@
+---
+import { Image } from "astro:assets";
+import pages from "../data/pages.json";
+---
+
+<div class="flex items-center">
+	<div class="flex flex-col border-white-500 border-2 bg-ieee_navigation_bg w-[98%] h-full mt-3 mx-auto rounded-[4rem] py-3">
+		<div class="flex justify-between items-center mx-6">
+			<div class="flex">
+				<Image src="/logos/white_logo_horizontal.svg" alt="IEEE UCSD Logo" width={300} height={300} />
+			</div>
+
+			<div class="flex gap-6">
+				{
+					pages.map((page) => (
+						<a
+							href={page.path}
+							class={`uppercase border-2 px-4 py-2 rounded-[3rem] transition-colors duration-200 
+								${page.name === "Online Store" 
+									? "bg-[#f3c135] text-black border-[#f3c135] hover:bg-[#dba923] hover:border-[#dba923]" 
+									: "text-white border-white hover:text-gray-300"}`}
+						>
+							{page.name}
+						</a>
+					))
+				}
+			</div>
+		</div>
+	</div>
+</div>
+ 
