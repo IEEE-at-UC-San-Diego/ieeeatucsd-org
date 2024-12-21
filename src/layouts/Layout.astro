@@ -4,26 +4,31 @@ import Navbar from "../components/Navbar.astro";
 
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Astro Basics</title>
-  </head>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta name="generator" content={Astro.generator} />
+        <title>Astro Basics</title>
+    </head>
 
-  <Navbar />
+    <Navbar />
 
-  <body class="bg-ieee_blue">
-    <slot />
-  </body>
+    <body class="bg-bg_primary relative">
+        <!-- Gradient overlay -->
+        <div
+            class="fixed top-0 left-0 w-full h-full bg-gradient-radial from-top_gradient/80 to-transparent pointer-events-none z-[-10]"
+        >
+        </div>
+        <slot />
+    </body>
 </html>
 
 <style>
-  html,
-  body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-  }
+    html,
+    body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+    }
 </style>
