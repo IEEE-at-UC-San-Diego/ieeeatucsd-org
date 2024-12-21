@@ -1,5 +1,5 @@
 ---
-import Navbar from "../components/Navbar.astro";
+import Navbar from "../components/core/Navbar.astro";
 ---
 
 <!doctype html>
@@ -12,23 +12,23 @@ import Navbar from "../components/Navbar.astro";
         <title>Astro Basics</title>
     </head>
 
-    <Navbar />
-
     <body class="bg-bg_primary relative">
-        <!-- Gradient overlay -->
+        <Navbar />
         <div
             class="fixed top-0 left-0 w-full h-full bg-gradient-radial from-top_gradient/80 to-transparent pointer-events-none z-[-10]"
         >
         </div>
-        <slot />
+        <main class="w-[98%] mx-auto">
+            <slot />
+        </main>
     </body>
-</html>
 
-<style>
-    html,
-    body {
-        margin: 0;
-        width: 100%;
-        height: 100%;
-    }
-</style>
+    <style>
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</html>
