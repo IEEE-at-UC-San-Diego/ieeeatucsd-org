@@ -1,0 +1,17 @@
+{
+  "Supercomputing": {
+    "description": "Explore the field of supercomputing.",
+    "image": "https://placehold.co/600x400",
+    "url": "/project-page"
+  },
+  "Robocup": {
+    "description": "Participate in the Robocup competition.",
+    "image": "https://placehold.co/600x400",
+    "url": "/project-page"
+  },
+  "Signal Processing": {
+    "description": "Explore the field of signal processing.",
+    "image": "https://placehold.co/600x400",
+    "url": "/project-page"
+  }
+}
