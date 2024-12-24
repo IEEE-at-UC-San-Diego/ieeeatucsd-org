@@ -24,8 +24,8 @@ const { width = "100%" } = Astro.props;
                                 alt={`${title} Project`}
                                 class="w-full h-full object-cover rounded-lg transition-transform duration-500 ease-in-out md:group-hover:scale-110"
                             />
-                            <div class="absolute inset-0 bg-gradient-to-b from-transparent to-project_card_gradient/60 rounded-lg" />
-                            <div class="absolute bottom-0 left-0 p-6 text-project_card_text z-10 w-full transition-transform duration-300 md:[.expanded_&]:translate-y-[-30px]">
+                            <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/60 rounded-lg" />
+                            <div class="absolute bottom-0 left-0 p-6 text-white z-10 w-full transition-transform duration-300 md:[.expanded_&]:translate-y-[-30px]">
                                 <h3 class="text-xl font-bold mb-2 transition-transform duration-300">
                                     {title}
                                 </h3>
@@ -34,12 +34,12 @@ const { width = "100%" } = Astro.props;
                                 </p>
                             </div>
                             <div
-                                class="absolute bottom-2 right-2 bg-project_button_bg rounded-full p-2 shadow 
+                                class="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow 
                                 md:opacity-0 md:[.expanded_&]:opacity-100 transition-opacity duration-300"
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
-                                    class="h-6 w-6 text-project_button_color"
+                                    class="h-6 w-6 text-black"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
