@@ -12,20 +12,7 @@ export default {
           black: "#0A0E1A",
           "blue-100": "#88BFEC",
         },
-
-        ieee_online_store_bg: "#f3c135",
-        ieee_blue: "#00629b",
-        ieee_gold_text: "#ffbc00",
-
-        // Layout colors
-        bg_primary: "#0a0e1b",
-        top_gradient: "#1c284e",
-
-        // Main Page Card colors
-        card_bg: "#0d1324",
-        card_text: "#eaf7ff",
-        card_gradient: "#FFFFFF",
-
+        
         // Project Page Card colors
         project_card_bg: "#0d1324",
       },
