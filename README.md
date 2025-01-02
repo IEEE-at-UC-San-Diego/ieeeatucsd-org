@@ -2,6 +2,8 @@
 
 Development version of the IEEE UC San Diego student branch website.
 
+## Figma Design
+-   [IEEE UCSD Website Design](https://www.figma.com/design/AihoR936yUmYrMoCZJ0LF7/UCSD-IEEE?node-id=0-1&t=ajK9lKroQFJbokFS-1)
 ## Getting Started
 
 Prerequisites:

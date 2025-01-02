@@ -1,5 +1,6 @@
 ---
 import Navbar from "../components/core/Navbar.astro";
+import Footer from "../components/core/Footer.astro";
 ---
 
 <!doctype html>
@@ -12,11 +13,12 @@ import Navbar from "../components/core/Navbar.astro";
         <title>Astro Basics</title>
     </head>
 
-    <body class="bg-ieee-black relative flex flex-col items-center">
+    <body class="bg-ieee-black relative flex flex-col items-center min-h-screen justify-between">
         <Navbar />
         <main class="w-[95%]">
             <slot />
         </main>
+        <Footer />
     </body>
 
     <style>

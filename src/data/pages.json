@@ -1,9 +1,5 @@
 [
     {
-        "name": "About",
-        "path": "/about"
-    },
-    {
         "name": "Join",
         "path": "/join"
     },

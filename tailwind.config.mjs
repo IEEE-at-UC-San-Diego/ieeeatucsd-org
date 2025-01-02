@@ -11,6 +11,7 @@ export default {
           yellow: "#F3C135",
           black: "#0A0E1A",
           "blue-100": "#88BFEC",
+          "blue-300": "#233363",
         },
         
         // Project Page Card colors

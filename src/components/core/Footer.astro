@@ -1,0 +1,23 @@
+---
+import { Image } from "astro:assets";
+import Link from "next/link";
+import whiteLogoHorizontal from "../../../public/logos/white_logo_horizontal.svg";
+import { IoHeart } from "react-icons/io5";
+---
+<div class="w-full py-[2%] flex justify-center">
+    <div class="w-[95%] bg-black/40 py-[1%] px-[1.5%] rounded-[2vw] border-[0.1vw] flex justify-between">
+        <Link href="/" className="hover:opacity-70 duration-300">
+            <Image
+            class="w-[15vw]"
+            src={whiteLogoHorizontal}
+            alt="IEEE UCSD Logo"
+            />
+        </Link>
+        <div class="flex items-center">
+            <p class="text-white text-[1.2vw]">
+                made by IEEE UCSD webmasters with
+            </p>
+            <IoHeart className=" text-ieee-blue-100 ml-[1vw] text-[1.5vw]" />
+        </div>
+    </div>
+</div>
