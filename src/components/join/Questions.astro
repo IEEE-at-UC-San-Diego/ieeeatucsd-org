@@ -1,0 +1,21 @@
+---
+import Question from "./Question.astro"
+import { LiaDotCircle } from "react-icons/lia";
+import faq from "../../data/faq.json"
+---
+<div class = "text-white w-full h-[90vh] ml-[9vw]">
+    <div class = "text-[2.5vw] flex items-center my-[7vh]">
+        <LiaDotCircle className = "mr-[1vw]" />
+        <p>
+            Frequently Asked Questions
+        </p>
+    </div>
+    <div class = "w-full ml-[10vw]">
+        {faq.map((question)=>(
+           <Question
+            question = {question.question}
+            answer = {question.answer}
+           /> 
+        ))}
+    </div>
+</div>
