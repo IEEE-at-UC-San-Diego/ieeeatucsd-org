@@ -1,0 +1,14 @@
+---
+const {question, answer} = Astro.props;
+---
+<div class = "text-white w-full flex flex-col mb-[2vh]">
+    <p class = "text-ieee-yellow text-[1.4vw] mb-[2vh] font-semibold pl-[1vw]">
+    {question}
+    </p>
+    <p class = "w-[60%] mb-[2vh] pl-[1vw]">
+        {answer}
+    </p>    
+    <dev>
+        <hr class="w-[17%] h-[0.1vw] my-[1vw] bg-white/40">
+    </dev>
+</div>
