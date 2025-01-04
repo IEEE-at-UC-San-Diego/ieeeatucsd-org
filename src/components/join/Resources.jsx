@@ -7,9 +7,7 @@ const Resources = () => {
     return (
         <div class = "text-white w-full flex flex-col items-center h-[55vh] justify-center">
             <div class = "text-[2.5vw] flex items-center">
-                <div>
-                    <LiaDotCircle className = "mr-[1vw] pt-[0.5%]" />
-                </div>
+                <LiaDotCircle className = "mr-[1vw] pt-[0.5%]" />
                 <p>
                     Member Resources 
                 </p>
