@@ -1,0 +1,23 @@
+---
+import about from "../../../public/about.png";
+import { Image } from "astro:assets";
+import shing from "../../../public/officers/shing.jpg";
+import { LiaDotCircle } from "react-icons/lia";
+---
+<div class = "text-white flex flex-col items-center my-[10vh]">
+
+    <div class="relative w-[21vw]">
+        <Image src={about} alt="About background image"/>
+        <Image src={shing} alt="About image" class="absolute top-[10%] left-[16%] aspect-[399/491] object-cover w-[14vw] rounded-[2vw]" />
+    </div>
+
+    <div class = "text-[2.5vw] flex items-center mt-[5vh]">
+        <LiaDotCircle className = "mr-[1vw] pt-[0.5%]" />
+        <p>
+            MEET THE BOARD 
+        </p>
+    </div>
+
+    
+</div>
+
