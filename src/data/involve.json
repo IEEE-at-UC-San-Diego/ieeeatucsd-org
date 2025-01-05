@@ -1,17 +1,17 @@
 [
     {
         "text": "PROJECTS",
-        "image": "/about2.png",
+        "image": "/project.png",
         "link": "/projects"
     },
     {
         "text": "EVENTS",
-        "image": "/about2.png",
+        "image": "/halloween.png",
         "link": "/events"
     },
     {
         "text": "H.A.R.D. HACK",
-        "image": "/about2.png",
+        "image": "/hardhack.png",
         "link": "https://hardhack.dev/"
     }
 ]

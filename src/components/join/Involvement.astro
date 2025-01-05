@@ -8,7 +8,7 @@ const {image, text, link} = Astro.props;
 ---
 <div class="w-[15vw] relative group">
 
-    <img src={image} alt="involvement background" class="aspect-[230/425] object-cover rounded-[2vw] group-hover:opacity-70 duration-300"/>
+    <img src={image} alt="involvement background" class="opacity-70 aspect-[230/425] object-cover rounded-[2vw] group-hover:opacity-50 duration-300"/>
     <Link 
         href={link}
         target={text==="H.A.R.D. HACK"? "_blank":"_self"} 
