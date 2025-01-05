@@ -1,0 +1,20 @@
+---
+const {name, location, date, time, description} = Astro.props;
+---
+
+<div class="text-white w-[40vw] pl-[8%] border-l-[0.3vw] border-white/70 pb-[5%] relative">
+    <p class=" py-[0.2%] px-[2%] w-fit border-[0.1vw] font-light rounded-full text-[1.3vw]">
+        {name}
+    </p>
+    <div class="flex justify-between items-center min-w-[70%] w-fit text-[1.2vw] my-[2%]">
+        <p>Location: {location}</p>
+        <div class="bg-white h-[0.5vw] w-[0.5vw] rounded-full" />
+        <p>{date}</p>
+        <div class="bg-white h-[0.5vw] w-[0.5vw] rounded-full" />
+        <p>{time}</p>
+    </div>
+    <p class="text-[1vw] text-white/60">
+        {description}
+    </p>
+    <div class="bg-ieee-yellow h-[1.2vw] w-[1.2vw] rounded-full absolute -top-[1.5%] -left-[2%]" />
+</div>
