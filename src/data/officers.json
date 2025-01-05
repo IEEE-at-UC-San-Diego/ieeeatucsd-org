@@ -1,0 +1,219 @@
+[
+    {
+        "name": "Mustahsin Zarif",
+        "position": "Chair",
+        "picture": "/../public/neko.png",
+        "email": "mmzarif@ucsd.edu",
+        "type": ["Executives"]
+    },
+    {
+        "name": "Stephanie Xu",
+        "position": "Vice Chair Internal",
+        "picture": "/officers/steph.jpg",
+        "email": "sxxu@ucsd.edu",
+        "type": ["Executives", "Internal"]
+    },
+    {
+        "name": "Charles Nguyen",
+        "position": "Webmaster",
+        "picture": "/officers/charles.jpg",
+        "email": "cmn010@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Shing Hung",
+        "position": "Webmaster",
+        "picture": "/officers/shing.jpg",
+        "email": "s1hung@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Andy Smithwick",
+        "position": "Webmaster",
+        "picture": "/officers/andy.jpg",
+        "email": "asmithwick@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Stella Ji",
+        "position": "Marketing Chair",
+        "picture": "/officers/stella.jpg",
+        "email": "seji@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Lauren Vo",
+        "position": "Marketing Chair",
+        "picture": "/officers/lauren.jpg",
+        "email": "lavo@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Wan-Rong (Emma) Leung",
+        "position": "Design Chair",
+        "picture": "/officers/emma.jpg",
+        "email": "waleung@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Christine Uy",
+        "position": "Design Chair",
+        "picture": "/officers/christine.jpg",
+        "email": "c1uy@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Shipra Gudekar",
+        "position": "Vice Chair Events",
+        "picture": "/officers/shipra.jpg",
+        "email": "sgudekar@ucsd.edu",
+        "type": ["Executives", "Events"]
+    },
+    {
+        "name": "Rohil Kadekar",
+        "position": "Vice Chair Projects",
+        "picture": "/officers/rohil.jpg",
+        "email": "rkadekar@ucsd.edu",
+        "type": ["Executives", "Projects"]
+    },
+    {
+        "name": "Lisa Liu",
+        "position": "Vice Chair Finance",
+        "picture": "/officers/lisa.jpg",
+        "email": "lil043@ucsd.edu",
+        "type": ["Executives"]
+    },
+    {
+        "name": "Erik Duarte",
+        "position": "Events Coordinator",
+        "picture": "/officers/erik.jpg",
+        "email": "Erduarte@ucsd.edu",
+        "type": ["Executives", "Events"]
+    },
+    {
+        "name": "Sin Yin Yang",
+        "position": "Events Coordinator",
+        "picture": "/../public/neko.png",
+        "email": "siy015@ucsd.edu",
+        "type": ["Executives", "Events"]
+    },
+    {
+        "name": "Rana Singh",
+        "position": "Vice Chair External",
+        "picture": "/../public/neko.png",
+        "email": "ras010@ucsd.edu",
+        "type": ["Executives"]
+    },
+    {
+        "name": "Rafaella Gomes",
+        "position": "Project Space Chair",
+        "picture": "/officers/rafaella.jpg",
+        "email": "ragomes@ucsd.edu",
+        "type": ["Projects"]
+    },
+    {
+        "name": "Terri Tai",
+        "position": "Robocup Soccer Chair",
+        "picture": "/officers/terri.jpg",
+        "email": "y2tai@ucsd.edu",
+        "type": ["Projects"]
+    },
+    {
+        "name": "Raymond Rada",
+        "position": "Robocup Soccer Chair",
+        "picture": "/officers/raymond.jpg",
+        "email": "rrada@ucsd.edu",
+        "type": ["Projects"]
+    },
+    {
+        "name": "Philip Pincencia",
+        "position": "Signal Processing Chair",
+        "picture": "/officers/philip.jpg",
+        "email": "ppincencia@ucsd.edu",
+        "type": ["Projects"]
+    },
+    {
+        "name": "Ritoban Roy-Chowdhury",
+        "position": "Supercomputing Chair",
+        "picture": "/../public/neko.png",
+        "email": "rroychowdhury@ucsd.edu",
+        "type": ["Projects"]
+    },
+    {
+        "name": "Akhil Ram Shankar",
+        "position": "Quarterly Projects Chair",
+        "picture": "/officers/akhil.jpg",
+        "email": "aramshankar@ucsd.edu",
+        "type": ["Projects"]
+    },
+    {
+        "name": "Jonathan Zhou",
+        "position": "Quarterly Projects Chair",
+        "picture": "/officers/jonathan.jpg",
+        "email": "jtzhou@ucsd.edu",
+        "type": ["Projects"]
+    },
+    {
+        "name": "Ashlee Young",
+        "position": "Professional Chair",
+        "picture": "/officers/ashlee.jpg",
+        "email": "asy001@ucsd.edu",
+        "type": ["Events"]
+    },
+    {
+        "name": "Allie Dinh",
+        "position": "Professional Chair",
+        "picture": "/officers/allie.jpg",
+        "email": "ald012@ucsd.edu",
+        "type": ["Events"]
+    },
+    {
+        "name": "Fahad Alkhazam",
+        "position": "Technical Chair",
+        "picture": "/../public/neko.png",
+        "email": "falkhazam@ucsd.edu",
+        "type": ["Events"]
+    },
+    {
+        "name": "Pranav Mehta",
+        "position": "Technical Chair",
+        "picture": "/officers/pranav.jpg",
+        "email": "p3mehta@ucsd.edu",
+        "type": ["Events"]
+    },
+    {
+        "name": "Ridhi Srikanth",
+        "position": "Technical Chair",
+        "picture": "/officers/ridhi.jpg",
+        "email": "rsrikanth@ucsd.edu",
+        "type": ["Events"]
+    },
+    {
+        "name": "Dihan Lin",
+        "position": "Outreach Chair",
+        "picture": "/officers/dihan.jpg",
+        "email": "dil009@ucsd.edu",
+        "type": ["Events"]
+    },
+    {
+        "name": "Anika Agarwal",
+        "position": "Outreach Chair",
+        "picture": "/officers/anika.jpg",
+        "email": "ana012@ucsd.edu",
+        "type": ["Events"]
+    },
+    {
+        "name": "Anupama Nambiar",
+        "position": "Social Chair",
+        "picture": "/officers/anu.jpg",
+        "email": "annambiar@ucsd.edu",
+        "type": ["Events"]
+    },
+    {
+        "name": "Dhruv Roy Choudhary",
+        "position": "Social Chair",
+        "picture": "/officers/dhruv.jpg",
+        "email": "dchoudhary@ucsd.edu",
+        "type": ["Events"]
+    }
+]

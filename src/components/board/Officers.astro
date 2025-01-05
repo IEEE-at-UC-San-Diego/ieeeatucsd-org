@@ -1,0 +1,39 @@
+---
+import about from "../../../public/about.png";
+import { Image } from "astro:assets";
+import neko from "/public/neko.png";
+import { LiaDotCircle } from "react-icons/lia";
+import Officer from "../board/Officer.astro"
+import officers from "../../data/officers.json"
+---
+<div class = "text-white flex flex-col items-center my-[10vh]">
+
+    <div class="relative w-[21vw]">
+        <Image src={about} alt="About background image"/>
+        <Image src={neko} alt="About image" class="absolute top-[10%] left-[16%] aspect-[399/491] object-cover w-[14vw] rounded-[2vw]" />
+    </div>
+
+    <div class = "text-[2.5vw] flex items-center mt-[2vh]">
+        <LiaDotCircle className = "mr-[1vw] pt-[0.5%]" />
+        <p>
+            MEET THE BOARD 
+        </p>
+    </div>
+
+    <p class = "text-[1.3vw] w-[56%] my-[3%] font-extralight text-center">
+        Erat hendrerit tristique erat; parturient cursus fringilla feugiat. Eget faucibus fames ridiculus nec egestas convallis cubilia malesuada. Tellus nibh vivamus tempus molestie tristique quis
+    </p>
+
+    <div class = "grid gap-[3vw] grid-cols-3 mt-[10vh]">
+        {officers.map((officer)=>(
+            <Officer
+            name = {officer.name}
+            position = {officer.position}
+            picture = {officer.picture}
+            email = {officer.email}
+            />
+        ))}
+    </div>
+    
+</div>
+
