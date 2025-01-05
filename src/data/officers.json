@@ -2,7 +2,7 @@
     {
         "name": "Mustahsin Zarif",
         "position": "Chair",
-        "picture": "/officers/zarif.jpg",
+        "picture": "/../public/neko.png",
         "email": "mmzarif@ucsd.edu",
         "type": ["Executives"]
     },
@@ -18,6 +18,48 @@
         "position": "Webmaster",
         "picture": "/officers/charles.jpg",
         "email": "cmn010@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Shing Hung",
+        "position": "Webmaster",
+        "picture": "/officers/shing.jpg",
+        "email": "s1hung@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Andy Smithwick",
+        "position": "Webmaster",
+        "picture": "/officers/andy.jpg",
+        "email": "asmithwick@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Stella Ji",
+        "position": "Marketing Chair",
+        "picture": "/officers/stella.jpg",
+        "email": "seji@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Lauren Vo",
+        "position": "Marketing Chair",
+        "picture": "/officers/lauren.jpg",
+        "email": "lavo@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Wan-Rong (Emma) Leung",
+        "position": "Design Chair",
+        "picture": "/officers/emma.jpg",
+        "email": "waleung@ucsd.edu",
+        "type": ["Internal"]
+    },
+    {
+        "name": "Christine Uy",
+        "position": "Design Chair",
+        "picture": "/officers/christine.jpg",
+        "email": "c1uy@ucsd.edu",
         "type": ["Internal"]
     },
     {
@@ -51,14 +93,14 @@
     {
         "name": "Sin Yin Yang",
         "position": "Events Coordinator",
-        "picture": "/officers/sinyin.jpg",
+        "picture": "/../public/neko.png",
         "email": "siy015@ucsd.edu",
         "type": ["Executives", "Events"]
     },
     {
         "name": "Rana Singh",
         "position": "Vice Chair External",
-        "picture": "/officers/rana.jpg",
+        "picture": "/../public/neko.png",
         "email": "ras010@ucsd.edu",
         "type": ["Executives"]
     },
@@ -93,7 +135,7 @@
     {
         "name": "Ritoban Roy-Chowdhury",
         "position": "Supercomputing Chair",
-        "picture": "/officers/ritoban.jpg",
+        "picture": "/../public/neko.png",
         "email": "rroychowdhury@ucsd.edu",
         "type": ["Projects"]
     },
@@ -128,7 +170,7 @@
     {
         "name": "Fahad Alkhazam",
         "position": "Technical Chair",
-        "picture": "/officers/fahad.jpg",
+        "picture": "/../public/neko.png",
         "email": "falkhazam@ucsd.edu",
         "type": ["Events"]
     },
@@ -173,48 +215,5 @@
         "picture": "/officers/dhruv.jpg",
         "email": "dchoudhary@ucsd.edu",
         "type": ["Events"]
-    },
-
-    {
-        "name": "Andy Smithwick",
-        "position": "Webmaster",
-        "picture": "/officers/andy.jpg",
-        "email": "asmithwick@ucsd.edu",
-        "type": ["Internal"]
-    },
-    {
-        "name": "Shing Hung",
-        "position": "Webmaster",
-        "picture": "/officers/shing.jpg",
-        "email": "s1hung@ucsd.edu",
-        "type": ["Internal"]
-    },
-    {
-        "name": "Stella Ji",
-        "position": "Marketing Chair",
-        "picture": "/officers/stella.jpg",
-        "email": "seji@ucsd.edu",
-        "type": ["Internal"]
-    },
-    {
-        "name": "Lauren Vo",
-        "position": "Marketing Chair",
-        "picture": "/officers/lauren.jpg",
-        "email": "lavo@ucsd.edu",
-        "type": ["Internal"]
-    },
-    {
-        "name": "Wan-Rong (Emma) Leung",
-        "position": "Design Chair",
-        "picture": "/officers/emma.jpg",
-        "email": "waleung@ucsd.edu",
-        "type": ["Internal"]
-    },
-    {
-        "name": "Christine Uy",
-        "position": "Design Chair",
-        "picture": "/officers/christine.jpg",
-        "email": "c1uy@ucsd.edu",
-        "type": ["Internal"]
     }
 ]
