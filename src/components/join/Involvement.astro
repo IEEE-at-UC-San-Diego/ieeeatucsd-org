@@ -1,0 +1,41 @@
+---
+import Link from "next/link";
+import { GoArrowDownRight } from "react-icons/go";
+import { Image } from "astro:assets";
+import { FaGear } from "react-icons/fa6";
+import { IoMdCalendar } from "react-icons/io";
+import { RiRobot2Fill } from "react-icons/ri";
+const {image, text, link} = Astro.props;
+---
+<div class="w-[15vw] relative">
+
+    <img src={image} alt="involvement background" class="aspect-[230/425] object-cover rounded-[2vw]"/>
+    <Link href={link} className="group absolute top-0 w-[15vw] pt-[5%] aspect-[230/425] flex flex-col justify-between">
+        <div class="w-full flex justify-end pr-[5%]">
+            <div class="bg-white w-fit rounded-full aspect-square p-[0.5vw] text-ieee-black text-[2vw]">
+                {
+                    text === "PROJECTS"? <RiRobot2Fill/>:
+                    text === "EVENTS"? <IoMdCalendar/>:
+                    <FaGear/>
+                }
+            </div>
+        </div>
+    
+        <div class="px-[3%] text-white w-full bg-gradient-to-t from-black via-black to-transparent rounded-b-[2vw] pt-[30%] pb-[5%]">
+            <div class="text-[1.1vw] duration-300 flex w-full px-[3%] justify-between items-end">
+                <p class="pt-[3%] pb-[2%] px-[10%] border-[0.1vw] border-white rounded-full group-hover:text-ieee-yellow group-hover:border-ieee-yellow duration-300 font-light">
+                    {text}
+                </p>
+                <GoArrowDownRight className="text-[3vw] leading-none group-hover:text-ieee-yellow"/>
+            </div>
+    
+            {text === "H.A.R.D. HACK" &&
+                <p class="text-[1vw] text-center pt-[10%] group-hover:text-ieee-yellow duration-300">
+                    UC San Diego’s largest
+                    hardware focused hackathon
+                    hold by IEEE UCSD, HKN, and TNT
+                </p>
+            }
+        </div>
+    </Link>
+</div>

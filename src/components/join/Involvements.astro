@@ -1,0 +1,26 @@
+---
+import Involvement from "./Involvement.astro";
+import involve from "../../data/involve.json";
+---
+<div class="px-[8%] flex items-center mb-[10%]">
+    <div class="flex w-3/5 justify-between">
+        {involve.map((item)=>(
+            <Involvement
+             text = {item.text}
+             image = {item.image}
+             link = {item.link}
+    
+            /> 
+         ))}
+    </div>
+
+    <div class="w-2/5 flex flex-col px-[5%]">
+        <p class="text-ieee-yellow text-[1.2vw] mb-[5%]">
+            Get involve in international IEEE
+        </p>
+        <p class="text-white text-[2vw] font-bold">
+            How To Keep Up With And Get Engaged With IEEE at UCSD
+        </p>
+    </div>
+</div>
+

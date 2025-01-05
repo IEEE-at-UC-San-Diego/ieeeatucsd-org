@@ -1,0 +1,17 @@
+[
+    {
+        "text": "PROJECTS",
+        "image": "/about2.png",
+        "link": "/projects"
+    },
+    {
+        "text": "EVENTS",
+        "image": "/about2.png",
+        "link": "/events"
+    },
+    {
+        "text": "H.A.R.D. HACK",
+        "image": "/about2.png",
+        "link": "https://hardhack.dev/"
+    }
+]
