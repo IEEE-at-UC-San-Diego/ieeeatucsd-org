@@ -1,0 +1,18 @@
+---
+import Step from "./Step.astro"
+import steps from "../../data/steps.json"
+import Subtitle from "../core/Subtitle.astro"
+---
+<div class="flex flex-col items-center my-[7%]">
+    <Subtitle title="How it works:" />
+    <div class="grid grid-cols-5 w-3/5 gap-[1.5vw]">
+        {steps.map((step)=>(
+            <Step
+             text = {step.text}
+             number = {step.number}
+             col = {step.col}
+             position = {step.position}
+            /> 
+         ))}
+    </div>
+</div>

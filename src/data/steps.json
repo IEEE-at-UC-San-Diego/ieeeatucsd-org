@@ -1,0 +1,32 @@
+[
+    {
+        "text": "Prospective participants who are interested in joining Quaterly Project will fill out QP interest form, which can be founded on the bottom of this page.",
+        "number": "01",
+        "col": "2",
+        "position": "bottom-0 right-[2%] "
+    },
+    {
+        "text": "Participants will be put into teams of 5 based on their experience and interests",
+        "number": "02",
+        "col": "2",
+        "position": " top-0 left-[2%] "
+    },
+    {
+        "text": "Each team will be assigned a mentor.",
+        "number": "03",
+        "col": "1",
+        "position": "bottom-0"
+    },
+    {
+        "text": "At the end of the quarter, teams will showcase their project to judges including professors, industry experts, IEEE officers, and fellow participants",
+        "number": "04",
+        "col": "3",
+        "position": "bottom-0 right-[2%] "
+    },
+    {
+        "text": "Winning teams will walk away with prizes!",
+        "number": "05",
+        "col": "2",
+        "position": "top-0 right-[5%]"
+    }
+]

@@ -1,0 +1,18 @@
+---
+const {title, link, image, col} = Astro.props;
+import { GoArrowDownRight } from "react-icons/go";
+import Link from "next/link";
+---
+
+<Link href={link} target="_blank" className={`ease-in-out group relative col-span-${col} text-white`}>
+    <img src={image} alt="past projects image" class="h-[30vh] object-cover w-full rounded-[1.5vw] opacity-80 group-hover:opacity-40 duration-300" />
+
+    <div class="absolute bottom-0 px-[3%] w-full bg-gradient-to-t from-black via-black to-transparent rounded-b-[1.5vw] pb-[1vw] pt-[5%]">
+        <div class="text-[1.1vw] flex w-full px-[2%] justify-between items-end">
+            <p class="py-[0.3vw] px-[1vw] border-[0.1vw] text-nowrap border-white rounded-full group-hover:text-ieee-yellow group-hover:border-ieee-yellow duration-300 font-light">
+                {title}
+            </p>
+            <GoArrowDownRight className="text-[3vw] leading-none group-hover:text-ieee-yellow duration-300 "/>
+        </div>
+    </div>
+</Link>

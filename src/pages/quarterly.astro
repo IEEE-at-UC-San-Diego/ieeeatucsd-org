@@ -1,8 +1,19 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Title from "../components/core/Title.astro";
+import About from "../components/qp/About.astro";
+import Steps from "../components/qp/Steps.astro";
+import PastProjects from "../components/qp/PastProjects.astro";
+import { Image } from "astro:assets";
+import qp from "../../public/qp.png"
 ---
 
 <Layout>
     <Title title="Quarterly Project" />
+    <div class="w-full flex justify-center my-[3%]">
+        <Image src={qp} alt="board group photos" class=" w-2/3 rounded-full object-cover aspect-[2.5/1]"/>
+    </div>
+    <About />
+    <Steps />
+    <PastProjects />
 </Layout>
