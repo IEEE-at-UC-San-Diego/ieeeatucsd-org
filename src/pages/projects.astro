@@ -1,7 +1,16 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import Title from "../components/core/Title.astro";
+import QP from "../components/projects/QP.astro";
+import AP from "../components/projects/AP.astro";
+import { Image } from "astro:assets";
+import join from "../../public/join.png";
 ---
 
 <Layout>
-    Projects
+    <Image src={join} alt="JOIN US" class="absolute left-[1vw] w-[4vw] top-[60vh]" />
+    <Image src={join} alt="JOIN US" class="absolute right-[1vw] w-[4vw] top-[60vh]" />
+    <Title title="PROJECTS" />
+    <QP />
+    <AP />
 </Layout>

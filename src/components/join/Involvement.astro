@@ -1,7 +1,6 @@
 ---
 import Link from "next/link";
 import { GoArrowDownRight } from "react-icons/go";
-import { Image } from "astro:assets";
 import { FaGear } from "react-icons/fa6";
 import { IoMdCalendar } from "react-icons/io";
 import { RiRobot2Fill } from "react-icons/ri";
@@ -10,7 +9,11 @@ const {image, text, link} = Astro.props;
 <div class="w-[15vw] relative group">
 
     <img src={image} alt="involvement background" class="aspect-[230/425] object-cover rounded-[2vw] group-hover:opacity-70 duration-300"/>
-    <Link href={link} className="absolute top-0 w-[15vw] pt-[5%] aspect-[230/425] flex flex-col justify-between">
+    <Link 
+        href={link}
+        target={text==="H.A.R.D. HACK"? "_blank":"_self"} 
+        className="absolute top-0 w-[15vw] pt-[5%] aspect-[230/425] flex flex-col justify-between"
+    >
         <div class="w-full flex justify-end pr-[5%]">
             <div class="bg-white w-fit rounded-full aspect-square p-[0.5vw] text-ieee-black text-[2vw]">
                 {
