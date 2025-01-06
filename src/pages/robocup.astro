@@ -7,6 +7,8 @@ import RoboTitle from "../components/robocub/RoboTitle.astro";
 import Link from "next/link"
 import { Image } from "astro:assets";
 import roboborder from "../../public/roboborder.png";
+import Join from "../components/robocub/Join.astro";
+import Contacts from "../components/robocub/Contacts.astro";
 ---
 
 <Layout>
@@ -19,5 +21,7 @@ import roboborder from "../../public/roboborder.png";
             Past Team Description Paper
         </Link>
     </div>
+    <Join/>
     <Questions faq={faq}/>
+    <Contacts/>
 </Layout>

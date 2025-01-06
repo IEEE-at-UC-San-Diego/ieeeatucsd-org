@@ -1,0 +1,28 @@
+---
+import Link from "next/link";
+import { GoArrowDownRight } from "react-icons/go";
+import { Image } from "astro:assets";
+import robocup from "../../../public/robocup.png";
+import Subtitle from "../core/Subtitle.astro";
+---
+
+<div class="flex flex-col items-center relative my-[10%]">
+    <Subtitle title="Join" />
+    <Image src={robocup} alt="robocub competition image" class="w-3/5 rounded-[2vw] object-cover aspect-[8/5] opacity-40"/>
+    <Link href="/" target="_blank" className="absolute aspect-[8/5] w-3/5 p-[5%] group -bottom-[3%]">
+        <div class="w-full flex justify-end items-center h-4/5">
+            <p class=" text-[4.5vw] font-bold w-fit">
+                We Are<br/>
+                Hiring
+            </p>
+        </div>
+        <div class="text-[1vw] pt-[3%]">
+            <p>Join a community of beginner to experienced engineers from different disciplines and backgrounds</p>
+            <p>Fill out this application form (due week 2 of each quarter if space permits) </p>
+        </div>
+        <div class="flex w-full justify-end items-end text-[3.5vw] mt-[3%] group-hover:text-ieee-yellow duration-300">
+            <p class="mr-[2%] w-fit py-[1%] px-[2%] text-[1.2vw] border-[0.1vw] group-hover:text-ieee-yellow border-white rounded-full group-hover:border-ieee-yellow duration-300 font-light">Application form</p>
+            <GoArrowDownRight />
+        </div>
+    </Link>
+</div>
