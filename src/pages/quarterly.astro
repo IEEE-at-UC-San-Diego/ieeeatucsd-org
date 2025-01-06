@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Title from "../components/core/Title.astro";
-import About from "../components/qp/About.astro";
+import About from "../components/core/About.astro";
 import Steps from "../components/qp/Steps.astro";
 import PastProjects from "../components/qp/PastProjects.astro";
 import { Image } from "astro:assets";
@@ -10,6 +10,7 @@ import Mentorship from "../components/qp/Mentorship.astro";
 import qpborder from "../../public/qpborder.png";
 import Join from "../components/qp/Join.astro";
 import Carousel from "../components/qp/Carousel.astro";
+import Timeline from "../components/core/Timeline.astro";
 ---
 
 <Layout>
@@ -19,8 +20,9 @@ import Carousel from "../components/qp/Carousel.astro";
     <div class="w-full flex justify-center my-[3%]">
         <Image src={qp} alt="board group photos" class=" w-2/3 rounded-full object-cover aspect-[2.5/1]"/>
     </div>
-    <About />
+    <About title="What is Quarterly Project?" text="Getting started on hardware development or want to make your own project? Need something to put on your resume? IEEE's Quarterly Projects aims to provide students with project experience in a span of 10 weeks. During QP, students will acquire skills used in the industry such as C++ and the prototyping process with the assistance of our mentors. At the end of the quarter, students will demonstrate their projects at QP Showcase in front of other students, professors, and industry professionals!" />
     <Steps />
+    <Timeline />
     <PastProjects />
     <Mentorship />
     <Join />

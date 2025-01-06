@@ -4,14 +4,14 @@ import { LiaDotCircle } from "react-icons/lia";
 const {faq} = Astro.props;
 
 ---
-<div class = "text-white w-full h-[90vh] ml-[9vw] mb-[20%] mt-[10%]">
+<div class = "text-white w-full h-[90vh] ml-[15vw] mb-[20%] mt-[10%]">
     <div class = "text-[2.5vw] flex items-center my-[7vh]">
         <LiaDotCircle className = "mr-[1vw]" />
         <p>
             Frequently Asked Questions
         </p>
     </div>
-    <div class = "w-full ml-[10vw]">
+    <div class = "w-full ml-[5vw]">
         {faq.map((question)=>(
            <Question
             question = {question.question}

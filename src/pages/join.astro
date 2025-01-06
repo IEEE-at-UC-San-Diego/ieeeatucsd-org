@@ -3,11 +3,12 @@ import Layout from "../layouts/Layout.astro";
 import Social from "../components/core/Social.astro";
 import JoinTitle from "../components/join/JoinTitle.astro";
 import Resources from "../components/join/Resources.jsx";
-import Questions from "../components/join/Questions.astro";
+import Questions from "../components/core/Questions.astro";
 import Involvements from "../components/join/Involvements.astro";
 import Findus from "../components/join/Findus.astro";
 import { Image } from "astro:assets";
 import join from "../../public/join.png";
+import faq from "../data/faq.json";
 ---
 
 <Layout>
@@ -16,7 +17,7 @@ import join from "../../public/join.png";
     <JoinTitle/>
     <Involvements/>
     <Social/>
-    <Questions/>
+    <Questions faq={faq}/>
     <Resources/>
     <Findus/>
 </Layout>
