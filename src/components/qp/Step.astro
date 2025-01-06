@@ -1,9 +1,13 @@
 ---
-const {text, number, col, position} = Astro.props;
+const { text, number, col, position, width } = Astro.props;
 ---
 
-<div class={`relative col-span-${col} border-[0.1vw] border-white/30 h-[23vh] text-[1.2vw] bg-gradient-to-b from-white/10 to-ieee-blue-300/10 px-[1vw] py-[2vw] rounded-[1vw]`}>
-    <p class={`${position} text-[4vw] opacity-10 font-bold absolute leading-tight`}>
+<div
+    class={`relative col-span-${col} border-[0.1vw] border-white/30 text-[1.2vw] bg-gradient-to-b from-white/10 to-ieee-blue-300/10 px-[1vw] py-[2vw] rounded-[1vw] `}
+>
+    <p
+        class={`${position} text-[4vw] opacity-10 font-bold absolute leading-tight `}
+    >
         {number}
     </p>
     {text}
