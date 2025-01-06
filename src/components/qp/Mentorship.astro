@@ -1,14 +1,41 @@
 ---
 import { Image } from "astro:assets"
+import Link from "next/link"
+import { LiaDotCircle } from "react-icons/lia";
+import mentorship from "../../../public/joinbg.png"
+import jonathan from "../../../public/about3.png"
 ---
 
-<div>
-    <div>
-        <div>
-
+<div class="flex justify-center mt-[10%] mb-[3%]">
+    <div class="flex w-[70%] items-center">
+        <div class="w-1/2 font-light text-[1.2vw]">
+            <div class="flex items-center text-[2.3vw] mb-[5%]">
+                <LiaDotCircle className=" mr-[1vw] pt-[0.5%]"/>
+                <p class="text-[2.3vw] font-bold text-transparent bg-clip-text bg-gradient-to-l from-white to-ieee-yellow">
+                    Mentorship
+                </p>
+            </div>
+            <p class="my-[10%] ">
+                Mentors are a fundamental part of QP, providing teams
+                 with advice and guidance through the ideation and 
+                 execution of their project. Each team is paired with
+                  a mentor they can regularly consult for advice and insights.
+                 Mentors are matched with teams based on their expertise 
+                 and the team’s project focus, ensuring aligned support for each group.
+            </p>
+            <p class="mb-[12%]">
+                If you are interested in becoming a mentor, please follow this link to signup: 
+            </p>
+            <div class="w-full flex justify-center">
+                <Link href="/" target="_blank" className="p-[2%] text-[1.2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"> 
+                    BECOME A MENTOR
+                </Link>
+            </div>
         </div>
-        <div>
 
+        <div class="w-1/2 flex justify-center h-full items-center relative">
+            <Image src={mentorship} alt="blue background" />
+            <Image src={jonathan} alt="blue background" class=" absolute rounded-full object-cover aspect-[262/433] w-[54%] top-[5%] right-[10%]" />
         </div>
     </div>
 </div>

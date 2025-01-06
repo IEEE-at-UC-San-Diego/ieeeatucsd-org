@@ -6,9 +6,14 @@ import Steps from "../components/qp/Steps.astro";
 import PastProjects from "../components/qp/PastProjects.astro";
 import { Image } from "astro:assets";
 import qp from "../../public/qp.png"
+import Mentorship from "../components/qp/Mentorship.astro";
+import qpborder from "../../public/qpborder.png";
+import Join from "../components/qp/Join.astro";
 ---
 
 <Layout>
+    <Image src={qpborder} alt="JOIN US" class="absolute left-[1vw] w-[4vw] top-[70vh]" />
+    <Image src={qpborder} alt="JOIN US" class="absolute right-[1vw] w-[4vw] top-[70vh]" />
     <Title title="Quarterly Project" />
     <div class="w-full flex justify-center my-[3%]">
         <Image src={qp} alt="board group photos" class=" w-2/3 rounded-full object-cover aspect-[2.5/1]"/>
@@ -16,4 +21,6 @@ import qp from "../../public/qp.png"
     <About />
     <Steps />
     <PastProjects />
+    <Mentorship />
+    <Join />
 </Layout>

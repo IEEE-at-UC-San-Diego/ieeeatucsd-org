@@ -2,7 +2,7 @@
     {
         "name": "Mustahsin Zarif",
         "position": "Chair",
-        "picture": "/../public/neko.png",
+        "picture": "/neko.png",
         "email": "mmzarif@ucsd.edu",
         "type": ["Executives"]
     },
@@ -93,14 +93,14 @@
     {
         "name": "Sin Yin Yang",
         "position": "Events Coordinator",
-        "picture": "/../public/neko.png",
+        "picture": "/neko.png",
         "email": "siy015@ucsd.edu",
         "type": ["Executives", "Events"]
     },
     {
         "name": "Rana Singh",
         "position": "Vice Chair External",
-        "picture": "/../public/neko.png",
+        "picture": "/neko.png",
         "email": "ras010@ucsd.edu",
         "type": ["Executives"]
     },
@@ -135,7 +135,7 @@
     {
         "name": "Ritoban Roy-Chowdhury",
         "position": "Supercomputing Chair",
-        "picture": "/../public/neko.png",
+        "picture": "/neko.png",
         "email": "rroychowdhury@ucsd.edu",
         "type": ["Projects"]
     },
@@ -170,7 +170,7 @@
     {
         "name": "Fahad Alkhazam",
         "position": "Technical Chair",
-        "picture": "/../public/neko.png",
+        "picture": "/neko.png",
         "email": "falkhazam@ucsd.edu",
         "type": ["Events"]
     },

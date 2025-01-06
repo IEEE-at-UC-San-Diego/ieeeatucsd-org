@@ -3,9 +3,9 @@ import Step from "./Step.astro"
 import steps from "../../data/steps.json"
 import Subtitle from "../core/Subtitle.astro"
 ---
-<div class="flex flex-col items-center my-[7%]">
+<div class="flex flex-col items-center mt-[7%] mb-[10%]">
     <Subtitle title="How it works:" />
-    <div class="grid grid-cols-5 w-3/5 gap-[1.5vw]">
+    <div class="grid grid-cols-5 w-[70%] gap-[1.5vw]">
         {steps.map((step)=>(
             <Step
              text = {step.text}
