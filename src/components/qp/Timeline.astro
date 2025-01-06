@@ -4,14 +4,14 @@ const { events } = qpTimeline;
 import Subtitle from "../core/Subtitle.astro";
 ---
 
-<div class="flex flex-col items-center my-[5%]">
+<div class="flex flex-col items-center mt-[10%] mb-[15%]">
     <Subtitle title="Timeline" />
 
     <div
-        class="relative flex items-center justify-between w-full max-w-4xl py-[10%]"
+        class="relative flex items-center justify-between w-full max-w-[65vw] py-[10%] mt-[3%]"
     >
         <div
-            class="absolute top-1/2 w-full h-0.5 bg-gray-200 transform -translate-y-1/2"
+            class="absolute top-1/2 w-full h-[0.1vw] bg-gray-200 transform -translate-y-1/2"
         >
         </div>
 
@@ -23,14 +23,14 @@ import Subtitle from "../core/Subtitle.astro";
                 >
                     <div
                         class={`absolute ${
-                            index % 2 === 0 ? "bottom-0 mb-20" : "top-0 mt-20"
+                            index % 2 === 0 ? "bottom-0 mb-[70%]" : "top-0 mt-[70%]"
                         } flex flex-col items-center`}
                     >
                         <div class="text-center">
-                            <div class="font-bold text-ieee-yellow">
+                            <div class="font-bold text-ieee-yellow text-[1.4vw]">
                                 {event.week}
                             </div>
-                            <div class="text-sm text-gray-300 max-w-[120px]">
+                            <div class="text-[1.1vw] text-gray-300 max-w-[10vw]">
                                 {event.description}
                             </div>
                         </div>
@@ -39,13 +39,13 @@ import Subtitle from "../core/Subtitle.astro";
                     <div
                         class={`absolute ${
                             index % 2 === 1
-                                ? "h-[75px] top-1/2"
-                                : "h-[75px] bottom-1/2"
-                        } w-0.5 bg-white    `}
+                                ? "h-[5vw] top-1/2"
+                                : "h-[5vw] bottom-1/2"
+                        } w-[0.1vw] bg-white`}
                     />
 
                     <div class="absolute top-1/2 transform -translate-y-1/2">
-                        <div class="w-4 h-4 bg-white border-2 rounded-full" />
+                        <div class="w-[1.2vw] h-[1.2vw] bg-white border-2 rounded-full" />
                     </div>
                 </div>
             ))
