@@ -3,11 +3,9 @@ import Link from "next/link";
 import { GoArrowDownRight } from "react-icons/go";
 import { Image } from "astro:assets";
 import robocup from "../../../public/robocup.png";
-import Subtitle from "../core/Subtitle.astro";
 ---
 
 <div class="flex flex-col items-center relative my-[10%]">
-    <Subtitle title="Join" />
     <Image src={robocup} alt="robocub competition image" class="w-3/5 rounded-[2vw] object-cover aspect-[8/5] opacity-40"/>
     <Link href="/" target="_blank" className="absolute aspect-[8/5] w-3/5 p-[5%] group -bottom-[3%]">
         <div class="w-full flex justify-end items-center h-4/5">

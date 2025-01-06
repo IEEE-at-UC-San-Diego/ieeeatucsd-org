@@ -9,6 +9,8 @@ import { Image } from "astro:assets";
 import roboborder from "../../public/roboborder.png";
 import Join from "../components/robocub/Join.astro";
 import Contacts from "../components/robocub/Contacts.astro";
+import Subteams from "../components/robocub/Subteams.astro";
+import Timeline from "../components/qp/Timeline.astro";
 ---
 
 <Layout>
@@ -21,6 +23,8 @@ import Contacts from "../components/robocub/Contacts.astro";
             Past Team Description Paper
         </Link>
     </div>
+    <Subteams />
+    <Timeline />
     <Join/>
     <Questions faq={faq}/>
     <Contacts/>

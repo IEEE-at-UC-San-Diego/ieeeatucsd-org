@@ -1,0 +1,13 @@
+---
+import Subtitle from "../core/Subtitle.astro";
+import Subteam from "./Subteam.astro";
+import subteams from "../../data/subteams.json"
+---
+<div class="flex flex-col items-center my-[10%]">
+    <Subtitle title="Subteams" />
+    <div class="grid grid-flow-col gap-[1.5vw] mt-[3%]">
+        {subteams.map((subteam)=>(
+            <Subteam title={subteam.title} list={subteam.list} />
+         ))}
+    </div>
+</div>
