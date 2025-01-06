@@ -1,10 +1,11 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}"],
+  safelist: ["col-span-1", "col-span-2", "col-span-3", "col-span-4"],
   theme: {
     extend: {
       boxShadow: {
-        'glow': '0 0 0.5vw 0.1vw rgba(255, 255, 255, 0.3), 0 0 1vw 0.5vw rgba(255, 255, 255, 0.1)',
+        glow: "0 0 0.5vw 0.1vw rgba(255, 255, 255, 0.3), 0 0 1vw 0.5vw rgba(255, 255, 255, 0.1)",
       },
       colors: {
         ieee: {
@@ -13,7 +14,7 @@ export default {
           "blue-100": "#88BFEC",
           "blue-300": "#233363",
         },
-        
+
         // Project Page Card colors
         project_card_bg: "#0d1324",
       },
