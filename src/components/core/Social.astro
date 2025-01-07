@@ -21,7 +21,7 @@ import Link from "next/link";
     <div
         class="w-[85%] rounded-[3vw] bg-gradient-to-r from-ieee-blue-300 to-ieee-blue-100 relative h-[30vh] flex items-center text-white/90"
     >
-        <div class="w-2/5 flex justify-evenly ml-[5%]">
+        <div data-inview class="w-2/5 flex justify-evenly ml-[5%] in-view:animate-flip-up animate-duration-1000">
             <Link
                 href="https://discord.gg/XxfjqZSjca"
                 target="_blank"
@@ -62,9 +62,10 @@ import Link from "next/link";
             </Link>
         </div>
         <Image
+            data-inview
             src={evan}
             alt="cat placeholder"
-            class="absolute -bottom-[10vh] w-[25vw] right-0"
+            class="absolute -bottom-[10vh] w-[25vw] right-0 in-view:animate-wiggle"
         />
     </div>
 </div>

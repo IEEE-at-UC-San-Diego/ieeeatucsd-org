@@ -3,24 +3,28 @@
         "title": "Quarterly Project",
         "text": "Lorem ipsum is placeholder text commonly used in the graphic, print, and publi",
         "link": "/quarterly",
-        "number": "01"
+        "number": "01",
+        "delay": "100"
     },
     {
         "title": "Annual Project",
         "text": "Lorem ipsum is placeholder text commonly used in the graphic, print, and publi",
         "link": "/projects",
-        "number": "02"
+        "number": "02",
+        "delay": "300"
     },
     {
         "title": "Social",
         "text": "Lorem ipsum is placeholder text commonly used in the graphic, print, and publi",
         "link": "/events",
-        "number": "03"
+        "number": "03",
+        "delay": "500"
     },
     {
         "title": "Professional Development",
         "text": "Lorem ipsum is placeholder text commonly used in the graphic, print, and publi",
         "link": "/events",
-        "number": "04"
+        "number": "04",
+        "delay": "700"
     }
 ]

@@ -2,10 +2,10 @@
 const {question, answer} = Astro.props;
 ---
 <div class = "text-white w-full flex flex-col mb-[2vh]">
-    <p class = "text-ieee-yellow text-[1.4vw] mb-[2vh] font-semibold pl-[1vw]">
+    <p data-inview class = "in-view:animate-fade-right text-ieee-yellow text-[1.4vw] mb-[2vh] font-semibold pl-[1vw]">
     {question}
     </p>
-    <p class = "w-[60%] mb-[2vh] pl-[1vw]">
+    <p data-inview class = "w-[60%] mb-[2vh] pl-[1vw] in-view:animate-fade-left">
         {answer}
     </p>    
     <dev>

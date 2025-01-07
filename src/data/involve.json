@@ -2,16 +2,19 @@
     {
         "text": "PROJECTS",
         "image": "/project.png",
-        "link": "/projects"
+        "link": "/projects",
+        "delay": "100"
     },
     {
         "text": "EVENTS",
         "image": "/halloween.png",
-        "link": "/events"
+        "link": "/events",
+        "delay": "300"
     },
     {
         "text": "H.A.R.D. HACK",
         "image": "/hardhack.png",
-        "link": "https://hardhack.dev/"
+        "link": "https://hardhack.dev/",
+        "delay": "500"
     }
 ]

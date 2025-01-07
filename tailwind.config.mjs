@@ -1,7 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}"],
-  safelist: ["col-span-1", "col-span-2", "col-span-3", "col-span-4"],
+  safelist: [
+    "col-span-1",
+    "col-span-2",
+    "col-span-3",
+    "col-span-4",
+    "animate-delay-100",
+    "animate-delay-300",
+    "animate-delay-500",
+    "animate-delay-700"],
   theme: {
     extend: {
       boxShadow: {
@@ -24,5 +32,10 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-motion"), require("tailwindcss-animated")],
+  plugins: [
+    require("tailwindcss-motion"),
+    require("tailwindcss-animated"),
+    function ({ addVariant }) {
+      addVariant("in-view", "&.in-view");
+    },],
 };

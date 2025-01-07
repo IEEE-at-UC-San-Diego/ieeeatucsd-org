@@ -3,7 +3,6 @@ import about from "../../images/about.png";
 import Link from "next/link";
 import { LiaDotCircle } from "react-icons/lia";
 import { Image } from "astro:assets";
-import about1 from "../../images/about1.png";
 import about2 from "../../images/about2.png";
 import about3 from "../../images/about3.png";
 import about4 from "../../images/about4.png";
@@ -24,21 +23,25 @@ import about4 from "../../images/about4.png";
             />
         </div>
         <Image
+            data-inview
             src={about2}
             alt="About image"
-            class="absolute aspect-square object-cover w-[7vw] rounded-[1vw] top-[15%] -left-[15%]"
+            class="absolute aspect-square object-cover w-[7vw] rounded-[1vw] top-[15%] -left-[15%] in-view:animate-fade-right"
         />
         <Image
+            data-inview
             src={about3}
             alt="About image"
-            class="absolute aspect-[3/3.5] object-cover w-[10vw] rounded-[1.5vw] bottom-[3%] left-0"
+            class="absolute aspect-[3/3.5] object-cover w-[10vw] rounded-[1.5vw] bottom-[3%] left-0 in-view:animate-fade-up"
         />
         <div
-            class="absolute w-[3vw] rounded-[1vw] bg-ieee-blue-300/60 aspect-square left-[2%] top-[50%]"
+            data-inview
+            class="absolute w-[3vw] rounded-[1vw] bg-ieee-blue-300/60 aspect-square left-[2%] top-[50%] in-view:animate-fade-left"
         >
         </div>
         <div
-            class="absolute w-[6vw] rounded-[1vw] bg-ieee-blue-100/40 aspect-square right-[15%] bottom-[4%]"
+            data-inview
+            class="absolute w-[6vw] rounded-[1vw] bg-ieee-blue-100/40 aspect-square right-[15%] bottom-[4%] in-view:animate-fade-left"
         >
         </div>
     </div>

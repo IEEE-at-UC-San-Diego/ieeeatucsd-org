@@ -4,9 +4,9 @@ import { GoArrowDownRight } from "react-icons/go";
 import { FaGear } from "react-icons/fa6";
 import { IoMdCalendar } from "react-icons/io";
 import { RiRobot2Fill } from "react-icons/ri";
-const {image, text, link} = Astro.props;
+const {image, text, link, delay} = Astro.props;
 ---
-<div class="w-[15vw] relative group">
+<div data-inview class={`w-[15vw] relative group in-view:animate-fade-up animate-delay-${delay} animate-duration-1000`}>
 
     <img src={image} alt="involvement background" class="opacity-70 aspect-[230/425] object-cover rounded-[2vw] group-hover:opacity-50 duration-300"/>
     <Link 
