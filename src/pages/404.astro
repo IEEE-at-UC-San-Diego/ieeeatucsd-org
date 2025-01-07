@@ -4,19 +4,24 @@ import Link from "next/link";
 ---
 
 <Layout>
-
-    <div class = "w-fit h-fit flex flex-col items-center relative">
-
-        <img src = "/404.png" alt = "404 shing" class = "mr-[11%]">
-        <div class = "flex flex-col items-center absolute bottom-[37%]">
-            <p class = "font-extralight text-[1.2vw]">
-                Oops! You're Lost in the Circuit! 🔌⚡
-            </p>
-            <Link href = "/" className = "border-white/80 border-[0.12vw] rounded-[0.7vw] px-[8.5vw] py-[3%] font-extralight text-[1.2vw] mt-[3%] hover:text-ieee-yellow hover:border-ieee-yellow duration-300">
-                Go Back Home
-            </Link>
+    <div class="h-screen w-full flex items-center justify-center">
+        <div class="flex flex-col items-center relative">
+            <img
+                src="/404.png"
+                alt="404 shing"
+                class="mr-[11%] [mask-image:radial-gradient(circle,black_10%,transparent_100%)]"
+            />
+            <div class="flex flex-col items-center absolute bottom-[27%]">
+                <p class="font-extralight text-[1.2vw]">
+                    Oops! You're Lost in the Circuit! 🔌⚡
+                </p>
+                <Link
+                    href="/"
+                    className="border-white/80 border-[0.12vw] rounded-[0.7vw] px-[8.5vw] py-[3%] font-extralight text-[1.2vw] mt-[3%] hover:text-ieee-yellow hover:border-ieee-yellow duration-300"
+                >
+                    Go Back Home
+                </Link>
+            </div>
         </div>
-        
     </div>
-
 </Layout>
