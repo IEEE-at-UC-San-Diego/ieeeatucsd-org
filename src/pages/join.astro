@@ -7,17 +7,25 @@ import Questions from "../components/core/Questions.astro";
 import Involvements from "../components/join/Involvements.astro";
 import Findus from "../components/join/Findus.astro";
 import { Image } from "astro:assets";
-import join from "../../public/join.png";
+import join from "../images/join.png";
 import faq from "../data/faq.json";
 ---
 
 <Layout>
-    <Image src={join} alt="JOIN US" class="absolute left-[1vw] w-[4vw] top-[60vh]" />
-    <Image src={join} alt="JOIN US" class="absolute right-[1vw] w-[4vw] top-[60vh]" />
-    <JoinTitle/>
-    <Involvements/>
-    <Social/>
-    <Questions faq={faq}/>
-    <Resources/>
-    <Findus/>
+    <Image
+        src={join}
+        alt="JOIN US"
+        class="absolute left-[1vw] w-[4vw] top-[60vh]"
+    />
+    <Image
+        src={join}
+        alt="JOIN US"
+        class="absolute right-[1vw] w-[4vw] top-[60vh]"
+    />
+    <JoinTitle />
+    <Involvements />
+    <Social />
+    <Questions faq={faq} />
+    <Resources />
+    <Findus />
 </Layout>

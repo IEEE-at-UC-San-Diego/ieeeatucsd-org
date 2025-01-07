@@ -2,14 +2,22 @@
 import Layout from "../layouts/Layout.astro";
 import EventTitle from "../components/events/EventTitle.astro";
 import { Image } from "astro:assets";
-import eventborder from "../../public/eventborder.png";
-import calendar from "../../public/calendar2.png";
+import eventborder from "../images/eventborder.png";
+import calendar from "../images/calendar2.png";
 import UpcomingEvents from "../components/events/UpcomingEvents.astro";
 ---
 
 <Layout>
-    <Image src={eventborder} alt="JOIN US" class="absolute left-[1vw] w-[4vw] top-[60vh]" />
-    <Image src={eventborder} alt="JOIN US" class="absolute right-[1vw] w-[4vw] top-[60vh]" />
+    <Image
+        src={eventborder}
+        alt="JOIN US"
+        class="absolute left-[1vw] w-[4vw] top-[60vh]"
+    />
+    <Image
+        src={eventborder}
+        alt="JOIN US"
+        class="absolute right-[1vw] w-[4vw] top-[60vh]"
+    />
     <EventTitle />
     <UpcomingEvents />
     <div class="flex justify-center pb-[10%]">

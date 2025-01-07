@@ -2,33 +2,38 @@
 import { LiaDotCircle } from "react-icons/lia";
 import { Image } from "astro:assets";
 import Link from "next/link";
-import qp from "../../../public/qp.png"
+import qp from "../../images/qp.png";
 import { IoIosArrowDroprightCircle } from "react-icons/io";
 ---
 
-
 <div class="text-white flex flex-col items-center my-[7%] relative">
     <div class="flex items-center text-[2.7vw] mb-[4%]">
-        <LiaDotCircle className=" mr-[1vw] pt-[0.5%]"/>
-        <p>
-            Quarterly Project
-        </p>
+        <LiaDotCircle className=" mr-[1vw] pt-[0.5%]" />
+        <p>Quarterly Project</p>
     </div>
-    <Image src={qp} alt="qp showcase photo" class="w-[70vw] aspect-[2.5/1] rounded-full"/>
-    <Link href="/quarterly" className="absolute top-[25%] right-[15%] w-fit px-[1%] py-[0.4%] bg-white rounded-full text-black flex items-center text-[1.3vw] hover:bg-ieee-yellow duration-300 shadow-md">
+    <Image
+        src={qp}
+        alt="qp showcase photo"
+        class="w-[70vw] aspect-[2.5/1] rounded-full"
+    />
+    <Link
+        href="/quarterly"
+        className="absolute top-[25%] right-[15%] w-fit px-[1%] py-[0.4%] bg-white rounded-full text-black flex items-center text-[1.3vw] hover:bg-ieee-yellow duration-300 shadow-md"
+    >
         more details
-        <IoIosArrowDroprightCircle className="ml-[0.5vw] text-[1.7vw] mt-[1%]"/>
+        <IoIosArrowDroprightCircle
+            className="ml-[0.5vw] text-[1.7vw] mt-[1%]"
+        />
     </Link>
-    <div class="w-[45%] text-[1vw] font-semibold bg-white/50 backdrop-blur text-black absolute -bottom-[6%] left-[15%] px-[1.5%] py-[1%] rounded-[1.5vw]">
-        <p class="text-[1.4vw] mb-[2%]">
-            Quarterly Project
-        </p>
+    <div
+        class="w-[45%] text-[1vw] font-semibold bg-white/50 backdrop-blur text-black absolute -bottom-[6%] left-[15%] px-[1.5%] py-[1%] rounded-[1.5vw]"
+    >
+        <p class="text-[1.4vw] mb-[2%]">Quarterly Project</p>
         <p>
-            Getting started on hardware development or want to make your own project? 
-            Need something to put on your resume? 
-            IEEE's Quarterly Projects aims to provide students with project experience in a span of 10 weeks.
-            Check out QP page for more detail!
+            Getting started on hardware development or want to make your own
+            project? Need something to put on your resume? IEEE's Quarterly
+            Projects aims to provide students with project experience in a span
+            of 10 weeks. Check out QP page for more detail!
         </p>
     </div>
-    
 </div>
