@@ -3,12 +3,13 @@ import Layout from "../layouts/Layout.astro";
 import Contacts from "../components/signal/Contacts.astro";
 import About from "../components/core/About.astro";
 import Title from "../components/core/Title.astro";
+import Competition from "../components/signal/Competition.astro"
 ---
 
 <Layout>
     <p class="text-ieee-yellow text-[1.2vw] absolute top-[27.5vh] left-[15.5vw]">COMING SOON (New UCSD IEEE branch)</p>
     <Title title="Signal Processing" />
     <About title="What is Signal Processing" text="Currently, we are focusing on the IEEE Signal Processing Cup (an annual signal processing competition). However, we might do projects in the future."/>
+    <Competition picture = "../public/signal.png" name = "IEEE Signal Processing Cup" link = "https://www.google.com/"/>
     <Contacts />
-
 </Layout>
