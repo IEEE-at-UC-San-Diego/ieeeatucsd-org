@@ -1,0 +1,16 @@
+<script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in-view");
+          console.log("Added 'in-view' class to:", entry.target);
+        } else {
+          entry.target.classList.remove("in-view");
+          console.log("Removed 'in-view' class from:", entry.target);
+        }
+      });
+    }, { threshold: 0.2 });
+  
+    document.querySelectorAll("[data-inview]").forEach((el) => observer.observe(el));
+  </script>
+  

@@ -1,6 +1,11 @@
-<div class="flex py-[15vh] px-[7vw] items-end w-full">
+---
+import InView from "../../components/core/InView.astro"
+---
+<InView />
+
+<div data-inview class="flex py-[15vh] px-[7vw] items-end w-full">
     <div class="w-3/5">
-        <p class="text-ieee-yellow text-[4.5vw] font-semibold">
+        <p class="text-ieee-yellow text-[4.5vw] font-semibold in-view:animate-flip-down">
             02
         </p>
         <p class="text-white text-[2.5vw] font-light">
@@ -12,4 +17,4 @@
         Lorem ipsum dolor sit amet, consectetur adipiscing elit, 
         sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
     </p>
-</div>
+</div >
