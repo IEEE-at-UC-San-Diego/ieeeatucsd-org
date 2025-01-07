@@ -1,15 +1,14 @@
 ---
 import { Image } from "astro:assets";
-import whiteLogoHorizontal from "../../../public/logos/white_logo_horizontal.svg";
+import whiteLogoHorizontal from "../../images/logos/white_logo_horizontal.svg";
 import pages from "../../data/pages.json";
 ---
 
 <div class="md:w-full w-fit fixed z-10">
-    <div class="flex justify-between items-center bg-black my-[1%] mx-[2.5%] py-[0.5%] px-[1%] md:rounded-full md:border-[0.1vw]">
-        <a
-        href="/"
-        class="hover:opacity-60 duration-300 hidden md:flex"
-        >
+    <div
+        class="flex justify-between items-center bg-black my-[1%] mx-[2.5%] py-[0.5%] px-[1%] md:rounded-full md:border-[0.1vw]"
+    >
+        <a href="/" class="hover:opacity-60 duration-300 hidden md:flex">
             <Image
                 class="w-[15vw]"
                 src={whiteLogoHorizontal}
@@ -76,7 +75,9 @@ import pages from "../../data/pages.json";
         id="mobile-menu"
         class="fixed inset-0 z-[51] hidden xl:hidden motion-safe:transition-transform motion-safe:duration-300 translate-x-full"
     >
-        <div class="flex flex-col items-center h-[70vh] justify-evenly bg-black">
+        <div
+            class="flex flex-col items-center h-[70vh] justify-evenly bg-black"
+        >
             {
                 pages.map((page) => (
                     <a

@@ -2,11 +2,19 @@
 import Layout from "../layouts/Layout.astro";
 import Officers from "../components/board/Officers.astro";
 import { Image } from "astro:assets";
-import board from "../../public/board.png";
+import board from "../images/board.png";
 ---
 
 <Layout>
-    <Image src={board} alt="JOIN US" class="absolute left-[1vw] w-[4vw] top-[15vh]" />
-    <Image src={board} alt="JOIN US" class="absolute right-[1vw] w-[4vw] top-[15vh]" />
-    <Officers/>
+    <Image
+        src={board}
+        alt="JOIN US"
+        class="absolute left-[1vw] w-[4vw] top-[15vh]"
+    />
+    <Image
+        src={board}
+        alt="JOIN US"
+        class="absolute right-[1vw] w-[4vw] top-[15vh]"
+    />
+    <Officers />
 </Layout>

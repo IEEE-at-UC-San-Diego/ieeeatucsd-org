@@ -4,9 +4,9 @@ import Questions from "../components/core/Questions.astro";
 import faq from "../data/faq.json";
 import About from "../components/core/About.astro";
 import RoboTitle from "../components/robocub/RoboTitle.astro";
-import Link from "next/link"
+import Link from "next/link";
 import { Image } from "astro:assets";
-import roboborder from "../../public/roboborder.png";
+import roboborder from "../images/roboborder.png";
 import Join from "../components/robocub/Join.astro";
 import Contacts from "../components/robocub/Contacts.astro";
 import Subteams from "../components/robocub/Subteams.astro";
@@ -15,19 +15,34 @@ import Competition from "../components/signal/Competition.astro";
 ---
 
 <Layout>
-    <Image src={roboborder} alt="JOIN US" class="absolute left-[1vw] w-[4vw] top-[60vh]" />
-    <Image src={roboborder} alt="JOIN US" class="absolute right-[1vw] w-[4vw] top-[60vh]" />
+    <Image
+        src={roboborder}
+        alt="JOIN US"
+        class="absolute left-[1vw] w-[4vw] top-[60vh]"
+    />
+    <Image
+        src={roboborder}
+        alt="JOIN US"
+        class="absolute right-[1vw] w-[4vw] top-[60vh]"
+    />
     <RoboTitle />
-    <About title="What is RoboCup?" text="UC San Diego’s RoboCup team is one of IEEE’s largest projects. Different subteams come together to build 6 autonomous soccer-playing robots to compete in the international RoboCup Small Sized League Competition every year. Learn more link to our website, picture of entire robot" />
+    <About
+        title="What is RoboCup?"
+        text="UC San Diego’s RoboCup team is one of IEEE’s largest projects. Different subteams come together to build 6 autonomous soccer-playing robots to compete in the international RoboCup Small Sized League Competition every year. Learn more link to our website, picture of entire robot"
+    />
     <div class="w-full flex justify-center">
-        <Link href="/" target="_blank" className="px-[2%] py-[0.5%] text-[1.2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"> 
+        <Link
+            href="/"
+            target="_blank"
+            className="px-[2%] py-[0.5%] text-[1.2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"
+        >
             Past Team Description Paper
         </Link>
     </div>
     <Competition picture = "../public/robocup.png" name = "Preparing for Salvador 2025" description = "Recently the team went to our first ever competition in Germany!" link = "https://www.google.com/"/>
     <Subteams />
     <Timeline />
-    <Join/>
-    <Questions faq={faq}/>
-    <Contacts/>
+    <Join />
+    <Questions faq={faq} />
+    <Contacts />
 </Layout>

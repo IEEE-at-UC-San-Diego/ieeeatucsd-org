@@ -1,33 +1,44 @@
 ---
-import { Image } from "astro:assets"
-import Link from "next/link"
+import { Image } from "astro:assets";
+import Link from "next/link";
 import { LiaDotCircle } from "react-icons/lia";
-import mentorship from "../../../public/mentorship.png"
-import jonathan from "../../../public/about3.png"
+import mentorship from "../../images/mentorship.png";
+import jonathan from "../../images/about3.png";
 ---
 
 <div class="flex justify-center mb-[10%]">
     <div class="flex w-[70%] items-center">
         <div class="w-1/2 flex justify-center h-full relative">
             <Image src={mentorship} alt="blue background" class="mr-[20%]" />
-            <Image src={jonathan} alt="blue background" class=" absolute rounded-full object-cover aspect-[262/433] w-[54%] top-[5%] left-0" />
+            <Image
+                src={jonathan}
+                alt="blue background"
+                class="absolute rounded-full object-cover aspect-[262/433] w-[54%] top-[5%] left-0"
+            />
         </div>
         <div class="w-1/2 font-light text-[1.2vw]">
             <div class="flex items-center text-[2.3vw] mb-[5%]">
-                <LiaDotCircle className=" mr-[1vw] pt-[0.5%]"/>
-                <p class="text-[2.3vw] font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-ieee-yellow">
+                <LiaDotCircle className=" mr-[1vw] pt-[0.5%]" />
+                <p
+                    class="text-[2.3vw] font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-ieee-yellow"
+                >
                     How to join
                 </p>
             </div>
-            <p class="my-[10%] ">
-                We will create a QP Application every quarter and send it out 
-                to prospective participants via the IEEE discord or Instagram page. 
+            <p class="my-[10%]">
+                We will create a QP Application every quarter and send it out to
+                prospective participants via the IEEE discord or Instagram page.
             </p>
             <p class="mb-[12%]">
-                URL to Drive Folder with every school year’s QP Application forms (3 per school year): 
+                URL to Drive Folder with every school year’s QP Application
+                forms (3 per school year):
             </p>
             <div class="w-full flex justify-center">
-                <Link href="/" target="_blank" className="py-[2%] px-[15%] text-[1.2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"> 
+                <Link
+                    href="/"
+                    target="_blank"
+                    className="py-[2%] px-[15%] text-[1.2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"
+                >
                     JOIN
                 </Link>
             </div>
