@@ -17,8 +17,9 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
         class="w-[70vw] aspect-[2.5/1] rounded-full"
     />
     <Link
+        data-inview
         href="/quarterly"
-        className="absolute top-[25%] right-[15%] w-fit px-[1%] py-[0.4%] bg-white rounded-full text-black flex items-center text-[1.3vw] hover:bg-ieee-yellow duration-300 shadow-md"
+        className="in-view:animate-fade-left absolute top-[25%] right-[15%] w-fit px-[1%] py-[0.4%] bg-white rounded-full text-black flex items-center text-[1.3vw] hover:bg-ieee-yellow duration-300 shadow-md"
     >
         more details
         <IoIosArrowDroprightCircle
@@ -26,7 +27,7 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
         />
     </Link>
     <div
-        class="w-[45%] text-[1vw] font-semibold bg-white/50 backdrop-blur text-black absolute -bottom-[6%] left-[15%] px-[1.5%] py-[1%] rounded-[1.5vw]"
+        data-inview class="in-view:animate-fade-right w-[45%] text-[1vw] font-semibold bg-white/50 backdrop-blur text-black absolute -bottom-[6%] left-[15%] px-[1.5%] py-[1%] rounded-[1.5vw]"
     >
         <p class="text-[1.4vw] mb-[2%]">Quarterly Project</p>
         <p>

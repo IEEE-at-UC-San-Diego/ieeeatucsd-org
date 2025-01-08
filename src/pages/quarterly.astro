@@ -27,9 +27,10 @@ import Timeline from "../components/qp/Timeline.astro";
     <Title title="Quarterly Project" />
     <div class="w-full flex justify-center my-[3%]">
         <Image
+            data-inview
             src={qp}
             alt="board group photos"
-            class="w-2/3 rounded-full object-cover aspect-[2.5/1]"
+            class="in-view:animate-fade w-2/3 rounded-full object-cover aspect-[2.5/1]"
         />
     </div>
     <About
