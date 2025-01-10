@@ -51,6 +51,9 @@ bun run start
 - [Astro](https://astro.build) - Web framework for content-driven websites
 - [React](https://react.dev) - UI components
 - [TailwindCSS](https://tailwindcss.com) - Styling
+  - This manifests as one line CSS like `class="flex border-white/40 border-[0.1vw] rounded-[2vw] h-[85vh] px-[10%] py-[3%] bg-gradient-to-t to-ieee-blue-100/30 via-ieee-black from-ieee-black"`
+- [TailwindAnimated](https://www.tailwindcss-animated.com/)
+  - This is what we use for all of our nice animations!
 - [MDX](https://mdxjs.com) - Enhanced Markdown
 - [Expressive Code](https://expressive-code.com) - Beautiful code blocks
 - [Node.js Adapter](https://docs.astro.build/en/guides/integrations-guide/node/) - Server-side rendering
