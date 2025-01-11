@@ -21,10 +21,10 @@ const {name, position, picture, email} = Astro.props;
             <FaGear/>
         </div>
         <div class = "w-full flex justify-between px-[7%]">
-            <p data-inview class = " in-view:animate-fade-right text-[2vw] font-light leading-[4.5vh]">
+            <p data-inview class = "opacity-0 in-view:animate-fade-right text-[2vw] font-light leading-[4.5vh]">
                 {name}
             </p>
-            <div data-inview class = "in-view:animate-fade-up text-[0.8vw] w-[8vw] border-[0.11vw] border-white/90 rounded-full p-[0.5%] h-fit text-center">
+            <div data-inview class = "opacity-0 in-view:animate-fade-up text-[0.8vw] w-[8vw] border-[0.11vw] border-white/90 rounded-full p-[0.5%] h-fit text-center">
                 {position}
             </div>
         </div>
