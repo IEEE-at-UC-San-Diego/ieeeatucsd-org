@@ -36,14 +36,14 @@ const UpcomingEvent = ({ name, location, date, time, delay, description }) => (
   </div>
 );
 
-const EventList = ({ CALENDAR_API_KEY }) => {
+const EventList = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const apiKey = CALENDAR_API_KEY;
-    const calendarId = "666sh64sku5n29qv2a2f4598jc@group.calendar.google.com";
+    const calendarId = EVENT_CALENDAR_ID;
     const userTimeZone = "America/Los_Angeles";
 
     const loadGapiAndListEvents = async () => {

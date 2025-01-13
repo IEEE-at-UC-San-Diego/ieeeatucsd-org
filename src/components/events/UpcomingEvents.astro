@@ -3,6 +3,7 @@ import UpcomingEvent from "./UpcomingEvent.astro";
 import { LiaDotCircle } from "react-icons/lia";
 import EventList from "./EventList.jsx";
 const CALENDAR_API_KEY = import.meta.env.CALENDAR_API_KEY;
+const EVENT_CALENDAR_ID = import.meta.env.EVENT_CALENDAR_ID;
 ---
 
 <div class="flex ml-[15%] my-[10%]">
@@ -19,6 +20,10 @@ const CALENDAR_API_KEY = import.meta.env.CALENDAR_API_KEY;
         </p>
     </div>
     <div>
-        <EventList client:load CALENDAR_API_KEY={CALENDAR_API_KEY} />
+        <EventList
+            client:load
+            CALENDAR_API_KEY={CALENDAR_API_KEY}
+            EVENT_CALENDAR_ID={EVENT_CALENDAR_ID}
+        />
     </div>
 </div>
