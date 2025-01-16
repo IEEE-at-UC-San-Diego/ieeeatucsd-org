@@ -1,45 +1,29 @@
 ---
 import UpcomingEvent from "./UpcomingEvent.astro";
 import { LiaDotCircle } from "react-icons/lia";
+import EventList from "./EventList.jsx";
+const CALENDAR_API_KEY = import.meta.env.CALENDAR_API_KEY;
+const EVENT_CALENDAR_ID = import.meta.env.EVENT_CALENDAR_ID;
 ---
-    <div class="flex ml-[15%] my-[10%]">
-        <div class="w-1/4 text-white pr-[5%] mr-[10%]">
-            <div class="w-[6vw] h-[0.3vw] bg-ieee-yellow rounded-full"/>
-            <div class="flex items-center text-[2vw] font-bold my-[10%]">
-                <LiaDotCircle className=" mr-[1vw] text-[2.5vw]"/>
-                <p>
-                    Upcoming <br/> Events
-                </p>
-            </div>
-            <p class="text-[1.3vw] font-light">
-                SCROLL DOWN TO SEE THE UPCOMING EVENTS FOR IEEE!
+
+<div class="flex ml-[15%] my-[10%]">
+    <div class="w-1/4 text-white pr-[5%] mr-[10%]">
+        <div class="w-[6vw] h-[0.3vw] bg-ieee-yellow rounded-full"></div>
+        <div class="flex items-center text-[2vw] font-bold my-[10%]">
+            <LiaDotCircle className=" mr-[1vw] text-[2.5vw]" />
+            <p>
+                Upcoming <br /> Events
             </p>
         </div>
-        <div>
-            <UpcomingEvent 
-                name="Beach Social" 
-                location="La Jolla Cove" 
-                date="Tue 9 Jun 2024" 
-                time="2 pm" 
-                delay="0"
-                description="Cursus nec orci pulvinar convallis mollis a diam. Nostra aptent praesent suscipit nisl dignissim consequat. Semper malesuada pharetra fusce; elementum maximus"
-            />
-            <UpcomingEvent 
-                name="Beach Social" 
-                location="La Jolla Cove" 
-                date="Tue 9 Jun 2024" 
-                time="2 pm" 
-                delay="300"
-                description="Cursus nec orci pulvinar convallis mollis a diam. Nostra aptent praesent suscipit nisl dignissim consequat. Semper malesuada pharetra fusce; elementum maximus"
-            />
-            <UpcomingEvent 
-                name="Beach Social" 
-                location="La Jolla Cove" 
-                date="Tue 9 Jun 2024" 
-                time="2 pm" 
-                delay="700"
-                description="Cursus nec orci pulvinar convallis mollis a diam. Nostra aptent praesent suscipit nisl dignissim consequat. Semper malesuada pharetra fusce; elementum maximus"
-            />
-        </div>
+        <p class="text-[1.3vw] font-light">
+            SCROLL DOWN TO SEE THE UPCOMING EVENTS FOR IEEE!
+        </p>
     </div>
-
+    <div>
+        <EventList
+            client:load
+            CALENDAR_API_KEY={CALENDAR_API_KEY}
+            EVENT_CALENDAR_ID={EVENT_CALENDAR_ID}
+        />
+    </div>
+</div>
