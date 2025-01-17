@@ -14,6 +14,34 @@
     "type": ["Executives", "Internal"]
   },
   {
+    "name": "Rana Singh",
+    "position": "Vice Chair External",
+    "picture": "https://placehold.co/800x800?text=RANA%20SINGH",
+    "email": "ras010@ucsd.edu",
+    "type": ["Executives"]
+  },
+  {
+    "name": "Rohil Kadekar",
+    "position": "Vice Chair Projects",
+    "picture": "/officers/rohil.jpg",
+    "email": "rkadekar@ucsd.edu",
+    "type": ["Executives", "Projects"]
+  },
+  {
+    "name": "Shipra Gudekar",
+    "position": "Vice Chair Events",
+    "picture": "/officers/shipra.jpg",
+    "email": "sgudekar@ucsd.edu",
+    "type": ["Executives", "Events"]
+  },
+  {
+    "name": "Lisa Liu",
+    "position": "Vice Chair Finance",
+    "picture": "/officers/lisa.jpg",
+    "email": "lil043@ucsd.edu",
+    "type": ["Executives"]
+  },
+  {
     "name": "Charles Nguyen",
     "position": "Webmaster",
     "picture": "/officers/charles.jpg",
@@ -63,27 +91,6 @@
     "type": ["Internal"]
   },
   {
-    "name": "Shipra Gudekar",
-    "position": "Vice Chair Events",
-    "picture": "/officers/shipra.jpg",
-    "email": "sgudekar@ucsd.edu",
-    "type": ["Executives", "Events"]
-  },
-  {
-    "name": "Rohil Kadekar",
-    "position": "Vice Chair Projects",
-    "picture": "/officers/rohil.jpg",
-    "email": "rkadekar@ucsd.edu",
-    "type": ["Executives", "Projects"]
-  },
-  {
-    "name": "Lisa Liu",
-    "position": "Vice Chair Finance",
-    "picture": "/officers/lisa.jpg",
-    "email": "lil043@ucsd.edu",
-    "type": ["Executives"]
-  },
-  {
     "name": "Erik Duarte",
     "position": "Events Coordinator",
     "picture": "/officers/erik.jpg",
@@ -96,13 +103,6 @@
     "picture": "https://placehold.co/800x800?text=SIN%20YIN%20YANG",
     "email": "siy015@ucsd.edu",
     "type": ["Executives", "Events"]
-  },
-  {
-    "name": "Rana Singh",
-    "position": "Vice Chair External",
-    "picture": "https://placehold.co/800x800?text=RANA%20SINGH",
-    "email": "ras010@ucsd.edu",
-    "type": ["Executives"]
   },
   {
     "name": "Rafaella Gomes",
@@ -130,13 +130,6 @@
     "position": "Signal Processing Chair",
     "picture": "/officers/philip.jpg",
     "email": "ppincencia@ucsd.edu",
-    "type": ["Projects"]
-  },
-  {
-    "name": "Ritoban Roy-Chowdhury",
-    "position": "Supercomputing Chair",
-    "picture": "https://placehold.co/800x800?text=Ritoban%20Roy-Chowdhury",
-    "email": "rroychowdhury@ucsd.edu",
     "type": ["Projects"]
   },
   {
@@ -186,13 +179,6 @@
     "position": "Technical Chair",
     "picture": "/officers/ridhi.jpg",
     "email": "rsrikanth@ucsd.edu",
-    "type": ["Events"]
-  },
-  {
-    "name": "Dihan Lin",
-    "position": "Outreach Chair",
-    "picture": "/officers/dihan.jpg",
-    "email": "dil009@ucsd.edu",
     "type": ["Events"]
   },
   {
