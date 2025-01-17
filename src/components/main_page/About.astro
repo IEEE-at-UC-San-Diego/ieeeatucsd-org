@@ -8,51 +8,49 @@ import about3 from "../../images/about3.png";
 import about4 from "../../images/about4.png";
 ---
 
----
-
 <div
-    class="flex border-white/40 border-[0.1vw] rounded-[2vw] h-[85vh] px-[10%] py-[3%] bg-gradient-to-t to-ieee-blue-100/30 via-ieee-black from-ieee-black"
+    class="flex border-white/40 border-[0.1vw] rounded-[2vw] md:h-[43vw] h-[60vw] md:px-[10%] px-[6%] py-[3%] bg-gradient-to-t to-ieee-blue-100/30 via-ieee-black from-ieee-black"
 >
-    <div class="w-1/2 flex justify-center pr-[5%] relative">
+    <div class="w-1/2 flex justify-center pr-[5%] relative h-full">
         <div class="relative w-[35vw]">
-            <Image src={about} alt="About background image" />
+            <Image src={about} alt="About background image" class="md:visible invisible" />
             <Image
                 src={about4}
                 alt="About image"
-                class="absolute top-[5%] left-[14%] aspect-[399/491] object-cover w-[25vw] rounded-[2vw]"
+                class="absolute top-[5%] left-[14%] aspect-[399/491] object-cover w-[33vw] md:w-[25vw] rounded-[2vw]"
             />
         </div>
         <Image
             data-inview
             src={about2}
             alt="About image"
-            class="absolute aspect-square object-cover w-[7vw] rounded-[1vw] top-[15%] -left-[15%] in-view:animate-fade-right"
+            class="animate-ease-in-out absolute aspect-square object-cover w-[7vw] rounded-[1vw] top-[15%] md:-left-[15%] -left-[8%] in-view:animate-fade-right"
         />
         <Image
             data-inview
             src={about3}
             alt="About image"
-            class="absolute aspect-[3/3.5] object-cover w-[10vw] rounded-[1.5vw] bottom-[3%] left-0 in-view:animate-fade-up"
+            class="animate-ease-in-out absolute aspect-[3/3.5] object-cover w-[10vw] rounded-[1.5vw] bottom-[3%] left-0 in-view:animate-fade-up"
         />
         <div
             data-inview
-            class="absolute w-[3vw] rounded-[1vw] bg-ieee-blue-300/60 aspect-square left-[2%] top-[50%] in-view:animate-fade-left"
+            class="animate-ease-in-out absolute w-[3vw] rounded-[1vw] bg-ieee-blue-300/60 aspect-square left-[2%] top-[50%] in-view:animate-fade-left"
         >
         </div>
         <div
             data-inview
-            class="absolute w-[6vw] rounded-[1vw] bg-ieee-blue-100/40 aspect-square right-[15%] bottom-[4%] in-view:animate-fade-left"
+            class="animate-ease-in-out absolute w-[6vw] rounded-[1vw] bg-ieee-blue-100/40 aspect-square right-[15%] bottom-[4%] in-view:animate-fade-left"
         >
         </div>
     </div>
-    <div class="w-1/2 text-white text-[1.3vw] font-light">
+    <div class="w-1/2 text-white text-[1.8vw] md:text-[1.3vw] font-light">
         <p
-            class="rounded-full border-[0.1vw] w-fit px-[3%] pb-[1%] text-[1.3vw] ml-[8%] mb-[6%] leading-none"
+            class="rounded-full border-[0.1vw] w-fit px-[3%] pb-[1%] text-[2vw] md:text-[1.3vw] ml-[8%] mb-[6%] leading-none"
         >
             we are ...
         </p>
         <div
-            class="text-[2.7vw] flex items-center ml-[8%] font-semibold mb-[4%]"
+            class="text-[5vw] md:text-[2.7vw] flex items-center ml-[8%] font-semibold mb-[4%]"
         >
             <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
             <p>About Us</p>
@@ -71,7 +69,7 @@ import about4 from "../../images/about4.png";
         <div class="flex justify-end mt-[2%]">
             <Link
                 href="/join"
-                className=" text-[1.1vw] font-extralight border-white/70 border-[0.1vw] py-[1%] px-[8%] rounded-[0.5vw] cursor-pointer hover:text-ieee-yellow hover:border-ieee-yellow duration-300"
+                className=" text-[2vw] md:text-[1.1vw] font-extralight border-white/70 border-[0.1vw] py-[1%] px-[8%] rounded-[0.5vw] cursor-pointer hover:text-ieee-yellow hover:border-ieee-yellow duration-300"
             >
                 LEARN MORE
             </Link>

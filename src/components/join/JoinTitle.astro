@@ -3,19 +3,19 @@ import Link from "next/link";
 import { LiaDotCircle } from "react-icons/lia";
 ---
 
-<div class="pt-[14vh] text-white w-full flex justify-center mb-[20vh]">
-    <div class="w-3/4 h-[40vh] flex justify-between flex-col">
-        <div data-inview class="flex items-center text-[3vw] pl-[5%] pt-[5%] in-view:animate-fade-right">
+<div class="md:pt-[7vw] pt-[15vw] text-white w-full flex justify-center mb-[10vw]">
+    <div class="w-3/4 md:h-[20vw] h-[40vw] flex justify-between flex-col">
+        <div data-inview class=" animate-ease-in-out flex items-center text-[6vw] md:text-[3vw] pl-[5%] pt-[5%] in-view:animate-fade-right">
             <LiaDotCircle className=" mr-[1vw] pt-[0.5%]"/>
             <p>
                 Join Us
             </p>
         </div>
-        <p class="text-[1.25vw]">
+        <p class="text-[2.2vw] md:text-[1.25vw]">
             The <a class=" text-ieee-yellow underline" href="https://maps.app.goo.gl/y4RwNCkoKBEHGHsv6" target="_blank">IEEE Project Space</a> is an open-access, collaborative space located at EBU1-4710. Students can do homework or get access to basic electronic tools such as soldering stations, breadboard components, and Arduino and Raspberry PI parts!
         </p>
-        <div data-inview class="flex justify-end in-view:animate-fade-up">
-            <Link href="https://maps.app.goo.gl/y4RwNCkoKBEHGHsv6" target="_blank" className="text-[1.2vw] border-white/70 border-[0.1vw] py-[1%] px-[8%] rounded-[0.7vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300">
+        <div data-inview class="animate-ease-in-out flex justify-end in-view:animate-fade-up">
+            <Link href="https://maps.app.goo.gl/y4RwNCkoKBEHGHsv6" target="_blank" className="text-[2.5vw] md:text-[1.2vw] border-white/70 border-[0.1vw] py-[1%] px-[8%] rounded-[0.7vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300">
                 JOIN
             </Link>
         </div>
