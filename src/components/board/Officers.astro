@@ -4,7 +4,14 @@ import { Image } from "astro:assets";
 import neko from "../../images/neko.png";
 import { LiaDotCircle } from "react-icons/lia";
 import Officer from "../board/Officer.astro";
+import Filter from "../board/Filter.astro";
 import officers from "../../data/officers.json";
+
+// Get all unique types and add 'All' option
+const typeOrder = ["Executives", "Internal", "Events", "Projects"];
+const types = ["All", ...typeOrder];
+
+const currentFilter = "All";
 ---
 
 <div class="text-white flex flex-col items-center mt-[15vh] mb-[10vh]">
@@ -28,15 +35,23 @@ import officers from "../../data/officers.json";
         nibh vivamus tempus molestie tristique quis
     </p>
 
-    <div class="grid gap-[3vw] grid-cols-3 mt-[10vh]">
+    <Filter filters={types} currentFilter={currentFilter} />
+
+    <div class="grid gap-[3vw] grid-cols-3 mt-[4vh]">
         {
             officers.map((officer) => (
-                <Officer
-                    name={officer.name}
-                    position={officer.position}
-                    picture={officer.picture}
-                    email={officer.email}
-                />
+                <div
+                    data-officer
+                    data-types={JSON.stringify(officer.type)}
+                    style="opacity: 0; visibility: hidden"
+                >
+                    <Officer
+                        name={officer.name}
+                        position={officer.position}
+                        picture={officer.picture}
+                        email={officer.email}
+                    />
+                </div>
             ))
         }
     </div>
