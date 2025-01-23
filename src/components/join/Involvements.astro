@@ -2,8 +2,8 @@
 import Involvement from "./Involvement.astro";
 import involve from "../../data/involve.json";
 ---
-<div class="pl-[10%] pr-[6%] flex items-center mb-[10%]">
-    <div class="flex w-3/5 justify-between">
+<div class="pl-[10%] pr-[6%] flex md:items-center md:mb-[10%] mb-[30vw] mt-[20vw] md:mt-0 flex-col-reverse md:flex-row">
+    <div class="flex md:w-3/5 w-[95%] justify-between">
         {involve.map((item)=>(
             <Involvement
              text = {item.text}
@@ -14,11 +14,11 @@ import involve from "../../data/involve.json";
          ))}
     </div>
 
-    <div class="w-2/5 flex flex-col px-[5%]">
-        <p class="text-ieee-yellow text-[1.2vw] mb-[5%]">
-            Get involve in international IEEE
+    <div class="md:w-2/5 w-4/5 flex flex-col px-[5%] pb-[10vw] md:pb-0">
+        <p class="text-ieee-yellow md:text-[1.2vw] text-[2.5vw] mb-[5%]">
+            Get involve in IEEE @ UCSD
         </p>
-        <p class="text-white text-[2vw] font-bold">
+        <p class="text-white md:text-[2vw] text-[3vw] font-bold">
             How To Keep Up With And Get Engaged With IEEE at UCSD
         </p>
     </div>
