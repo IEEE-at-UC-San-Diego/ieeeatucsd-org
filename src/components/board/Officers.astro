@@ -14,27 +14,18 @@ const types = ["All", ...typeOrder];
 const currentFilter = "All";
 ---
 
-<<<<<<< HEAD
-<div class="text-white flex flex-col items-center md:mt-[10vw] mt-[20vw] mb-[10vh]">
-    <div data-inview class="relative w-[40vw] md:w-[21vw] in-view:animate-fade-down">
-=======
 <div
     class="text-white flex flex-col items-center md:mt-[10vw] mt-[20vw] mb-[10vh]"
 >
     <div
         data-inview
-        class="relative w-[40vw] md:w-[21vw] in-view:animate-fade-down"
+        class="relative w-[40vw] md:w-[21vw] mb-[10vh] in-view:animate-fade-down"
     >
->>>>>>> chark1es-main
         <Image src={about} alt="About background image" />
         <Image
             src={neko}
             alt="About image"
-<<<<<<< HEAD
-            class="absolute top-[10%] left-[16%] aspect-[399/491] object-cover w-[27vw] md:w-[14vw] rounded-[2vw]"
-=======
             class="absolute top-[10%] left-[16%] aspect-[399/491] object-cover w-[27vw] md:ww-[14vw] rounded-[2vw]"
->>>>>>> chark1es-main
         />
     </div>
 
@@ -43,12 +34,6 @@ const currentFilter = "All";
         <p>MEET THE BOARD</p>
     </div>
 
-<<<<<<< HEAD
-    <p class="md:text-[1.3vw] text-[2.5vw] md:w-[56%] w-[70%] my-[3%] font-extralight text-center">
-        Our board comprises 31 students of varying majors, colleges, and interests! Feel free to reach out for any questions about our position or experiences.
-    </p>
-
-=======
     <p
         class="md:text-[1.3vw] text-[2.5vw] md:w-[56%] w-[70%] my-[3%] font-extralight text-center"
     >
@@ -59,8 +44,7 @@ const currentFilter = "All";
 
     <Filter filters={types} currentFilter={currentFilter} />
 
->>>>>>> chark1es-main
-    <div class="grid gap-[3vw] md:grid-cols-3 grid-cols-2 mt-[10vh]">
+    <div class="grid gap-[3vw] md:grid-cols-3 grid-cols-2 mt-[2vh]">
         {
             officers.map((officer) => (
                 <div
