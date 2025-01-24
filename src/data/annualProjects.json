@@ -1,17 +1,17 @@
 {
   "Robocup": {
     "description": "Participate in the Robocup competition.",
-    "image": "/robocup.png",
+    "image": "/robocup.webp",
     "url": "/robocup"
   },
   "Signal Processing": {
     "description": "Explore the field of signal processing.",
-    "image": "/signal.png",
+    "image": "/signal.webp",
     "url": "/signal"
   },
   "Supercomputing": {
     "description": "Explore the field of supercomputing.",
-    "image": "/supercomp.png",
+    "image": "/supercomp.webp",
     "url": "https://supercomputing-club.sdsc.edu/"
   }
 }

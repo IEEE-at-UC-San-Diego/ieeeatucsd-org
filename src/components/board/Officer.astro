@@ -2,6 +2,7 @@
 import { FaGear } from "react-icons/fa6";
 import { MdEmail } from "react-icons/md";
 import Link from "next/link";
+import { Image } from "astro:assets";
 const { name, position, picture, email } = Astro.props;
 ---
 
@@ -23,10 +24,12 @@ const { name, position, picture, email } = Astro.props;
     <div
         class="md:w-[20vw] w-[35vw] aspect-[334/440] bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[10%] flex flex-col items-center relative"
     >
-        <img
+        <Image
             src={picture}
             alt="officer"
             class="md:w-[18vw] w-[31vw] md:rounded-[1.5vw] rounded-[3vw] mt-[5%] mb-[3%]"
+            width={334}
+            height={440}
         />
         <div
             class="bg-white w-fit rounded-full aspect-square md:p-[0.4vw] p-[0.8vw] text-ieee-black md:text-[1.8vw] text-[3.5vw] absolute md:right-[1.5vw] md:top-[1.5vw] right-[2.5vw] top-[2.5vw]"

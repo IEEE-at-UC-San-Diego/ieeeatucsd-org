@@ -6,7 +6,7 @@ import About from "../components/core/About.astro";
 import RoboTitle from "../components/robocub/RoboTitle.astro";
 import Link from "next/link";
 import { Image } from "astro:assets";
-import roboborder from "../images/roboborder.png";
+import roboborder from "../images/roboborder.webp";
 import Join from "../components/robocub/Join.astro";
 import Contacts from "../components/robocub/Contacts.astro";
 import Subteams from "../components/robocub/Subteams.astro";
@@ -39,7 +39,12 @@ import Competition from "../components/signal/Competition.astro";
             Past Team Description Paper
         </Link>
     </div>
-    <Competition picture = "../public/robocup.png" name = "Preparing for Salvador 2025" description = "Recently the team went to our first ever competition in Germany!" link = "https://www.google.com/"/>
+    <Competition
+        picture="../public/robocup.webp"
+        name="Preparing for Salvador 2025"
+        description="Recently the team went to our first ever competition in Germany!"
+        link="https://www.google.com/"
+    />
     <Subteams />
     <Timeline />
     <Join />
