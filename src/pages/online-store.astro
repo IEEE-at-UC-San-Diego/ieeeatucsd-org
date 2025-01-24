@@ -1,0 +1,51 @@
+---
+import Layout from "../layouts/Layout.astro";
+import UserProfile from "../components/auth/UserProfile.astro";
+import StoreItem from "../components/store/StoreItem.astro";
+const title = "IEEE Store";
+---
+
+<Layout {title}>
+    <main class="w-[95%] mx-auto pb-12 md:pt-[14vh] pt-[12vw] min-h-screen">
+        <h1 class="text-4xl font-bold mb-12">IEEE UCSD Store</h1>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <!-- Left Column - User Info -->
+            <div class="md:col-span-1 h-fit">
+                <UserProfile />
+            </div>
+
+            <!-- Right Column - Store Items -->
+            <div id="storeContent" class="md:col-span-3">
+                <div
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                    <StoreItem
+                        name="Item Name"
+                        description="Description of the item goes here. This is a placeholder."
+                        price={20.0}
+                    />
+                    <StoreItem
+                        name="Item Name"
+                        description="Description of the item goes here. This is a placeholder."
+                        price={25.0}
+                    />
+                    <StoreItem
+                        name="Item Name"
+                        description="Description of the item goes here. This is a placeholder."
+                        price={15.0}
+                    />
+                    <StoreItem
+                        name="Item Name"
+                        description="Description of the item goes here. This is a placeholder."
+                        price={15.0}
+                    />
+                </div>
+            </div>
+        </div>
+    </main>
+</Layout>
+
+<script>
+    import { StoreAuth } from "../components/auth/StoreAuth";
+    new StoreAuth();
+</script>

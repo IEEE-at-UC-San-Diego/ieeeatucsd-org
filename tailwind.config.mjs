@@ -9,7 +9,8 @@ export default {
     "animate-delay-100",
     "animate-delay-300",
     "animate-delay-500",
-    "animate-delay-700"],
+    "animate-delay-700",
+  ],
   theme: {
     extend: {
       boxShadow: {
@@ -35,7 +36,9 @@ export default {
   plugins: [
     require("tailwindcss-motion"),
     require("tailwindcss-animated"),
+    require("daisyui"),
     function ({ addVariant }) {
       addVariant("in-view", "&.in-view");
-    },],
+    },
+  ],
 };

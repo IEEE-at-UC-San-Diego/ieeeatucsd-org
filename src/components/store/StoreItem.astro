@@ -1,0 +1,37 @@
+---
+interface Props {
+    name: string;
+    description: string;
+    price: number;
+    imageUrl: string;
+}
+
+const {
+    name,
+    description,
+    price,
+    imageUrl = "https://placehold.co/400x300",
+} = Astro.props;
+---
+
+<div class="card bg-base-200 shadow-xl">
+    <figure class="px-6 pt-6">
+        <div class="relative w-full">
+            <div class="skeleton w-full aspect-[4/3] rounded-xl"></div>
+            <img
+                src={imageUrl}
+                alt={name}
+                class="rounded-xl absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
+                onload="this.classList.remove('opacity-0')"
+            />
+        </div>
+    </figure>
+    <div class="card-body">
+        <h2 class="card-title">{name}</h2>
+        <p>{description}</p>
+        <div class="card-actions justify-between items-center mt-2">
+            <span class="text-xl font-semibold">${price.toFixed(2)}</span>
+            <button class="btn btn-primary">Add to Cart</button>
+        </div>
+    </div>
+</div>

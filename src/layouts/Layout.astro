@@ -14,7 +14,9 @@ import InView from "../components/core/InView.astro";
         <title>Astro Basics</title>
     </head>
     <InView />
-    <body class="text-white bg-ieee-black relative flex flex-col items-center min-h-screen justify-between overflow-x-clip">
+    <body
+        class="text-white bg-ieee-black relative flex flex-col items-center min-h-screen justify-between overflow-x-clip"
+    >
         <Navbar />
         <main class="w-[95%]">
             <slot />
@@ -23,6 +25,9 @@ import InView from "../components/core/InView.astro";
     </body>
 
     <style>
+        :root {
+            background-color: rgb(10 14 26 / var(--tw-bg-opacity, 1));
+        }
         html,
         body {
             margin: 0;
