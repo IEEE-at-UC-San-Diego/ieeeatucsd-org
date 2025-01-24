@@ -246,7 +246,7 @@ export class StoreAuth {
                 member_id: memberId
             });
             
-            memberIdStatus.textContent = "Member ID saved successfully!";
+            memberIdStatus.textContent = "IEEE Member ID saved successfully!";
             this.isEditingMemberId = false;
             this.updateUI();
             
@@ -255,8 +255,8 @@ export class StoreAuth {
                 memberIdStatus.textContent = "";
             }, 3000);
         } catch (err: any) {
-            console.error("Member ID save error:", err);
-            memberIdStatus.textContent = "Failed to save member ID. Please try again.";
+            console.error("IEEE Member ID save error:", err);
+            memberIdStatus.textContent = "Failed to save IEEE Member ID. Please try again.";
         }
     }
 
