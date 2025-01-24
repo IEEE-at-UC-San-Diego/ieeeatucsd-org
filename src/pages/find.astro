@@ -21,11 +21,13 @@ import contactbroder from "../images/contactbroder.webp";
     />
     <FindTitle />
     <div class="w-full flex justify-center">
-        <Image
-            src={event}
-            alt="board group photos"
-            class="w-3/4 rounded-full"
-        />
+        <div class="skeleton w-3/4 rounded-full">
+            <Image
+                src={event}
+                alt="board group photos"
+                class="w-full rounded-full"
+            />
+        </div>
     </div>
     <Findus />
     <Social />
