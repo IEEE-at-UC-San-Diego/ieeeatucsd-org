@@ -4,37 +4,37 @@ import eventbg from "../../images/eventbg.webp";
 import { LiaDotCircle } from "react-icons/lia";
 ---
 
-<div class="w-full pt-[25vh] flex justify-center relative">
-    <div class="w-[45%] rounded-[2vw] aspect-[2/1] relative">
-        <div
-            id="event-skeleton"
-            class="skeleton absolute inset-0 rounded-[2vw] z-0"
-        >
-        </div>
-        <Image
-            id="event-image"
-            src={eventbg}
-            alt="Event Page Background"
-            class="w-full h-full rounded-[2vw] object-cover absolute top-0 left-0 z-1"
-        />
-    </div>
+<div class="w-full md:pt-[5vw] pt-[10vw] flex justify-center relative">
+  <div class="w-[45%] rounded-[2vw] aspect-[2/1] relative">
     <div
-        class="absolute -bottom-[6%] left-[20%] flex items-center text-[3vw] py-[1.5%] px-[3%] text-white bg-ieee-black rounded-[2vw]"
+      id="event-skeleton"
+      class="skeleton absolute inset-0 rounded-[2vw] z-0"
     >
-        <LiaDotCircle className=" mr-[2vw] pt-[0.5%]" />
-        <p>EVENTS</p>
     </div>
+    <Image
+      id="event-image"
+      src={eventbg}
+      alt="Event Page Background"
+      class="w-full h-full rounded-[2vw] object-cover absolute top-0 left-0 z-1"
+    />
+  </div>
+  <div
+    class="absolute -bottom-[6%] md:left-[20%] left-[10%] flex items-center md:text-[3vw] text-[6vw] py-[1.5%] px-[3%] text-white bg-ieee-black rounded-[2vw]"
+  >
+    <LiaDotCircle className=" mr-[2vw] pt-[0.5%]" />
+    <p>EVENTS</p>
+  </div>
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const image = document.getElementById("event-image");
-        const skeleton = document.getElementById("event-skeleton");
+  document.addEventListener("DOMContentLoaded", () => {
+    const image = document.getElementById("event-image");
+    const skeleton = document.getElementById("event-skeleton");
 
-        if (image && skeleton) {
-            image.onload = () => {
-                skeleton.style.display = "none";
-            };
-        }
-    });
+    if (image && skeleton) {
+      image.onload = () => {
+        skeleton.style.display = "none";
+      };
+    }
+  });
 </script>

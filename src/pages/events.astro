@@ -3,7 +3,6 @@ import Layout from "../layouts/Layout.astro";
 import EventTitle from "../components/events/EventTitle.astro";
 import { Image } from "astro:assets";
 import eventborder from "../images/eventborder.webp";
-import calendar from "../images/calendar2.webp";
 import UpcomingEvents from "../components/events/UpcomingEvents.astro";
 import Calendar from "../components/events/Calendar.jsx";
 
@@ -15,12 +14,12 @@ const EVENT_CALENDAR_ID = import.meta.env.EVENT_CALENDAR_ID;
     <Image
         src={eventborder}
         alt="JOIN US"
-        class="absolute left-[1vw] w-[4vw] top-[60vh]"
+        class="absolute left-[1vw] md:w-[4vw] w-[5vw] md:top-[60vh] top-[70vw] -z-10"
     />
     <Image
         src={eventborder}
         alt="JOIN US"
-        class="absolute right-[1vw] w-[4vw] top-[60vh]"
+        class="absolute right-[1vw] md:w-[4vw] w-[5vw] md:top-[60vh] top-[70vw] -z-10"
     />
     <EventTitle />
     <UpcomingEvents />

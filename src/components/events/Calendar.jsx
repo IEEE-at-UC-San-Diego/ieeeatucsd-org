@@ -234,7 +234,7 @@ const Calendar = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
 
   return (
     <div
-      className="w-[90vw] mx-auto p-[3vw] relative"
+      className="md:w-[90vw] w-[95vw] mx-auto p-[3vw] relative z-10"
       onMouseMove={handleMouseMove}
     >
       {/* Hovering Calendar Header */}
