@@ -1,54 +1,51 @@
 ---
-import qpTimeline from "../../data/qpTimeline.json";
-const { events } = qpTimeline;
+const {timeline} = Astro.props;
 import Subtitle from "../core/Subtitle.astro";
 ---
 
-<div class="flex flex-col items-center mt-[10%] mb-[15%]">
+<div class="flex flex-col items-center md:mt-[10%] mt-[25%] md:mb-[15%] mb-[35%]">
     <Subtitle title="Timeline" />
 
     <div
-        class="relative flex items-center justify-between w-full max-w-[65vw] py-[10%] mt-[3%]"
+        class="relative flex items-center justify-between w-full md:max-w-[65vw] max-w-[85vw] py-[10%] md:mt-[3%] mt-[10%]"
     >
         <div
             class="absolute top-1/2 w-full h-[0.1vw] bg-gray-200 transform -translate-y-1/2"
         >
         </div>
 
-        {
-            events.map((event, index) => (
+        {timeline.map((event, index) => (
+            <div
+                class="relative flex flex-col items-center"
+                style={`flex: 1`}
+            >
                 <div
-                    class="relative flex flex-col items-center"
-                    style={`flex: 1`}
+                    class={`absolute ${
+                        index % 2 === 0 ? "bottom-0 mb-[70%]" : "top-0 mt-[70%]"
+                    } flex flex-col items-center`}
                 >
-                    <div
-                        class={`absolute ${
-                            index % 2 === 0 ? "bottom-0 mb-[70%]" : "top-0 mt-[70%]"
-                        } flex flex-col items-center`}
-                    >
-                        <div class="text-center">
-                            <div class="font-bold text-ieee-yellow text-[1.4vw]">
-                                {event.week}
-                            </div>
-                            <div class="text-[1.1vw] text-gray-300 max-w-[10vw]">
-                                {event.description}
-                            </div>
+                    <div class="text-center">
+                        <div class="font-bold text-ieee-yellow md:text-[1.4vw] text-[2vw]">
+                            {event.week}
+                        </div>
+                        <div class="md:text-[1.1vw] text-[1.5vw] text-gray-300 md:max-w-[10vw] max-w-[15vw]">
+                            {event.description}
                         </div>
                     </div>
-
-                    <div
-                        class={`absolute ${
-                            index % 2 === 1
-                                ? "h-[5vw] top-1/2"
-                                : "h-[5vw] bottom-1/2"
-                        } w-[0.1vw] bg-white`}
-                    />
-
-                    <div class="absolute top-1/2 transform -translate-y-1/2">
-                        <div class="w-[1.2vw] h-[1.2vw] bg-white border-2 rounded-full" />
-                    </div>
                 </div>
-            ))
-        }
+
+                <div
+                    class={`absolute ${
+                        index % 2 === 1
+                            ? "h-[5vw] top-1/2"
+                            : "h-[5vw] bottom-1/2"
+                    } w-[0.1vw] bg-white`}
+                />
+
+                <div class="absolute top-1/2 transform -translate-y-1/2">
+                    <div class="w-[1.2vw] h-[1.2vw] bg-white border-2 rounded-full" />
+                </div>
+            </div>
+        ))}
     </div>
 </div>

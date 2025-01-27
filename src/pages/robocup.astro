@@ -12,6 +12,7 @@ import Contacts from "../components/robocub/Contacts.astro";
 import Subteams from "../components/robocub/Subteams.astro";
 import Timeline from "../components/qp/Timeline.astro";
 import Competition from "../components/signal/Competition.astro";
+import roboTimeline from "../data/roboTimeline.json"
 ---
 
 <Layout>
@@ -34,19 +35,19 @@ import Competition from "../components/signal/Competition.astro";
         <Link
             href="/"
             target="_blank"
-            className="mb-[10%] z-10 cursor-pointer px-[2%] py-[0.5%] text-[1.2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"
+            className="mb-[10%] z-10 cursor-pointer px-[2%] py-[0.5%] md:text-[1.2vw] text-[2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"
         >
             Past Team Description Paper
         </Link>
     </div>
     <Competition
-        picture="../public/robocup.webp"
+        picture="/robocup.webp"
         name="Preparing for Salvador 2025"
         description="Recently the team went to our first ever competition in Germany!"
         link="https://www.google.com/"
     />
     <Subteams />
-    <Timeline />
+    <Timeline timeline={roboTimeline}/>
     <Join />
     <Questions faq={faq} />
     <Contacts />

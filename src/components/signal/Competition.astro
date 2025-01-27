@@ -5,25 +5,24 @@ const {picture, name, description, link} = Astro.props;
 ---
 <div class = "text-white relative my-[3%]" >
     
-    <img src = {picture} alt = "signal" class = "w-full object-cover aspect-[1512/526] opacity-25">
+    <img src = {picture} alt = "signal" class = "w-full object-cover md:aspect-[1300/526] aspect-[2/1] opacity-25">
 
-    <div class = "w-full flex justify-evenly absolute bottom-[28%] ml-[5%]">
-
-        <div class = "flex items-center text-[2.5vw] font-extralight">
-            <LiaDotCircle className=" mr-[1vw] text-[2.5vw]"/>
+    <div class = "w-full flex justify-evenly absolute bottom-[20%] left-[4%]">
+        <div class = "flex items-center md:text-[2.5vw] text-[4vw]">
+            <LiaDotCircle className=" mr-[1vw] md:text-[2.6vw]"/>
             <p>
                 Competition
             </p>
         </div>
     
-        <div class = "text-[1.5vw] font-extralight tracking-wider">
-            <p class = "w-[35vw] mb-[3%] mt-[40vh]">
+        <div class = "md:text-[1.6vw] text-[2.2vw] tracking-wider">
+            <p class = "w-[35vw] md:mt-[25vw] mt-[35vw]">
                 {name}
             </p>
             <p class = "mb-[5%]">
                 {description}
             </p>
-            <Link href = {link} target="_blank" className="text-[1vw] border-white/70 border-[0.1vw] py-[3%] px-[15%] rounded-[0.7vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300">
+            <Link href = {link} target="_blank" className="md:text-[1.2vw] text-[2vw] font-light border-white/70 border-[0.1vw] py-[1.5%] px-[9%] rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300">
                 Link
             </Link>
         </div>
