@@ -1,20 +1,20 @@
 [
-    {
-        "text": "PROJECTS",
-        "image": "/project.png",
-        "link": "/projects",
-        "delay": "100"
-    },
-    {
-        "text": "EVENTS",
-        "image": "/halloween.png",
-        "link": "/events",
-        "delay": "300"
-    },
-    {
-        "text": "H.A.R.D. HACK",
-        "image": "/hardhack.png",
-        "link": "https://hardhack.dev/",
-        "delay": "500"
-    }
+  {
+    "text": "PROJECTS",
+    "image": "/project.webp",
+    "link": "/projects",
+    "delay": "100"
+  },
+  {
+    "text": "EVENTS",
+    "image": "/halloween.webp",
+    "link": "/events",
+    "delay": "300"
+  },
+  {
+    "text": "H.A.R.D. HACK",
+    "image": "/hardhack.webp",
+    "link": "https://hardhack.dev/",
+    "delay": "500"
+  }
 ]

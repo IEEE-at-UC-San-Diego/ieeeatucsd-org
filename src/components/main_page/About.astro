@@ -1,11 +1,11 @@
 ---
-import about from "../../images/about.png";
+import about from "../../images/about.webp";
 import Link from "next/link";
 import { LiaDotCircle } from "react-icons/lia";
 import { Image } from "astro:assets";
-import about2 from "../../images/about2.png";
-import about3 from "../../images/about3.png";
-import about4 from "../../images/about4.png";
+import about2 from "../../images/about2.webp";
+import about3 from "../../images/about3.webp";
+import about4 from "../../images/about4.webp";
 ---
 
 <div
@@ -13,7 +13,11 @@ import about4 from "../../images/about4.png";
 >
     <div class="w-1/2 flex justify-center pr-[5%] relative h-full">
         <div class="relative w-[35vw]">
-            <Image src={about} alt="About background image" class="md:visible invisible" />
+            <Image
+                src={about}
+                alt="About background image"
+                class="md:visible invisible"
+            />
             <Image
                 src={about4}
                 alt="About image"

@@ -2,31 +2,56 @@
 import { FaGear } from "react-icons/fa6";
 import { MdEmail } from "react-icons/md";
 import Link from "next/link";
-const {name, position, picture, email} = Astro.props;
+import { Image } from "astro:assets";
+const { name, position, picture, email } = Astro.props;
 ---
-<div class = "text-white">
-    <div class = "text-ieee-yellow">
-        <Link href={`mailto:${email}`} className = "flex items-center ml-[3%] py-[0.5vh] group">
-            <MdEmail className = "md:text-[1.5vw] text-[2.5vw] mr-[0.5%] group-hover:scale-110 group-hover:opacity-70 duration-300"/>
-            <p class = "md:text-[0.8vw] text-[2vw]">
+
+<div class="text-white">
+    <div class="text-ieee-yellow">
+        <Link
+            href={`mailto:${email}`}
+            className="flex items-center ml-[3%] py-[0.5vh] group"
+        >
+            <MdEmail
+                className="md:text-[1.5vw] text-[2.5vw] mr-[0.5%] group-hover:scale-110 group-hover:opacity-70 duration-300"
+            />
+            <p class="md:text-[0.8vw] text-[2vw]">
                 {email}
             </p>
         </Link>
     </div>
 
-    <div class = "md:w-[20vw] w-[35vw] aspect-[334/440] bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[10%] flex flex-col items-center relative">
-        <img src ={picture} alt = "officer" class = "md:w-[18vw] w-[31vw] md:rounded-[1.5vw] rounded-[3vw] mt-[5%] mb-[3%]" >
-        <div class = "bg-white w-fit rounded-full aspect-square md:p-[0.4vw] p-[0.8vw] text-ieee-black md:text-[1.8vw] text-[3.5vw] absolute md:right-[1.5vw] md:top-[1.5vw] right-[2.5vw] top-[2.5vw]">
-            <FaGear/>
+    <div
+        class="md:w-[20vw] w-[35vw] aspect-[334/440] bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[10%] flex flex-col items-center relative"
+    >
+        <Image
+            src={picture}
+            alt="officer"
+            class="md:w-[18vw] w-[31vw] md:rounded-[1.5vw] rounded-[3vw] mt-[5%] mb-[3%]"
+            width={334}
+            height={440}
+        />
+        <div
+            class="bg-white w-fit rounded-full aspect-square md:p-[0.4vw] p-[0.8vw] text-ieee-black md:text-[1.8vw] text-[3.5vw] absolute md:right-[1.5vw] md:top-[1.5vw] right-[2.5vw] top-[2.5vw]"
+        >
+            <FaGear />
         </div>
-        <div class = "w-full flex justify-between px-[7%]">
-            <p data-inview class = " in-view:animate-fade-right md:text-[2vw] text-[3.5vw] font-light md:leading-[2.5vw] leading-[5vw]">
+        <p
+            data-inview
+            class="in-view:animate-fade-right md:text-[2vw] text-[3.5vw] font-light md:leading-[2.5vw] leading-[5vw]"
+        >
+            <p
+                data-inview
+                class="in-view:animate-fade-right text-[2vw] font-light md:leading-[3vh] leading-[1.5vh]"
+            >
                 {name}
             </p>
-            <div data-inview class = "md:mt-[0.5vw] mt-[1.5vw] in-view:animate-fade-up md:text-[0.8vw] text-[1.5vw] md:w-[8vw] w-[15vw] border-[0.11vw] border-white/90 rounded-full p-[0.5%] h-fit text-center">
+            <div
+                data-inview
+                class="md:mt-[0.5vw] mt-[1.5vw] in-view:animate-fade-up md:text-[0.8vw] text-[1.5vw] w-[20vw] md:w-[10vw] border-[0.11vw] border-white/90 rounded-full p-[0.5%] h-fit text-center"
+            >
                 {position}
             </div>
-        </div>
+        </p>
     </div>
-    
 </div>
