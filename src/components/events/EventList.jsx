@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
 
 const UpcomingEvent = ({ name, location, date, time, delay, description }) => (
-  <div className="text-white w-[40vw] pl-[8%] border-l-[0.3vw] border-white/70 pb-[5%] relative">
+  <div className="text-white w-[40vw] pl-[8%] md:border-l-[0.3vw] border-l-[0.5vw] border-white/70 pb-[5%] relative">
     <p
       data-inview
-      className={`animate-duration-500 animate-delay-${delay * 200} in-view:animate-fade-left py-[0.2%] px-[2%] w-fit border-[0.1vw] font-light rounded-full text-[1.3vw]`}
+      className={`animate-duration-500 animate-delay-${delay * 200} in-view:animate-fade-left py-[0.2%] px-[2%] w-fit border-[0.1vw] font-light rounded-full md:text-[1.3vw] text-[2.3vw]`}
     >
       {name}
     </p>
     <div
       data-inview
-      className={`animate-duration-500 animate-delay-${delay * 200 + 100} in-view:animate-fade-left flex justify-between items-center min-w-[70%] w-fit text-[1.2vw] my-[2%]`}
+      className={`animate-duration-500 animate-delay-${delay * 200 + 100} in-view:animate-fade-left flex justify-between items-center min-w-[70%] w-fit md:text-[1.2vw] text-[2vw] my-[2%]`}
     >
       <p>Location: {location}</p>
       {date && (
@@ -28,11 +28,11 @@ const UpcomingEvent = ({ name, location, date, time, delay, description }) => (
     </div>
     <p
       data-inview
-      className={`animate-duration-500 animate-delay-${delay * 200 + 200} in-view:animate-fade-left text-[1vw] text-white/60`}
+      className={`animate-duration-500 animate-delay-${delay * 200 + 200} in-view:animate-fade-left md:text-[1vw] text-[1.8vw] text-white/60`}
     >
       {description}
     </p>
-    <div className="bg-ieee-yellow h-[1.2vw] w-[1.2vw] rounded-full absolute -top-[1.5%] -left-[2%]" />
+    <div className="bg-ieee-yellow md:h-[1.2vw] h-[1.5vw] md:w-[1.2vw] w-[1.5vw] rounded-full absolute -top-[1.5%] -left-[2%]" />
   </div>
 );
 
