@@ -3,7 +3,7 @@ import { Image } from "astro:assets";
 import Link from "next/link";
 import { LiaDotCircle } from "react-icons/lia";
 import mentorship from "../../images/mentorship.webp";
-import jonathan from "../../images/about3.webp";
+import join from "../../images/join.png";
 ---
 
 <div class="flex justify-center mb-[10%]">
@@ -11,9 +11,9 @@ import jonathan from "../../images/about3.webp";
         <div class="w-1/2 flex justify-center h-full relative">
             <Image src={mentorship} alt="blue background" class="mr-[20%]" />
             <Image
-                src={jonathan}
+                src={join}
                 alt="blue background"
-                class="absolute rounded-full object-cover aspect-[262/433] w-[54%] top-[5%] left-0"
+                class="absolute rounded-full object-cover aspect-[262/433] w-[54%] top-[5%] left-0 opacity-80"
             />
         </div>
         <div class="w-1/2 font-light text-[1.2vw]">
@@ -35,7 +35,7 @@ import jonathan from "../../images/about3.webp";
             </p>
             <div class="w-full flex justify-center">
                 <Link
-                    href="/"
+                    href="https://tinyurl.com/20242025QPApps"
                     target="_blank"
                     className="py-[2%] px-[15%] text-[1.2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"
                 >
