@@ -2,18 +2,18 @@
 const { filters, currentFilter } = Astro.props;
 ---
 
-<div class="inline-flex border border-white/20 rounded-full p-1 relative">
+<div class="inline-flex border border-white/20 rounded-full md:p-[0.2vw] p-[0.4vw] relative my-[3vw]">
     <div
         id="slider"
-        class="absolute h-[calc(100%-8px)] bg-[#FFB81C] rounded-full transition-none"
-        style="left: 4px;"
+        class="absolute h-[calc(100%-15%)] bg-[#FFB81C] rounded-full transition-none"
+        style="left: 1%;"
     >
     </div>
     {
         filters.map((filter) => (
             <button
                 data-filter={filter}
-                class={`px-6 py-2 rounded-full transition-all relative z-10 ${
+                class={`md:text-[1.3vw] text-[2.5vw] md:px-[1.8vw] px-[3vw] md:py-[0.2vw] py-[0.4vw] rounded-full transition-all relative z-10 ${
                     currentFilter === filter
                         ? "text-black"
                         : "text-white hover:bg-white/10 hover:bg-opacity-50"

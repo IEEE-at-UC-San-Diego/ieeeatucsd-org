@@ -12,7 +12,7 @@ const UpcomingEvent = ({ name, location, date, time, delay, description }) => (
       data-inview
       className={`animate-duration-500 animate-delay-${delay * 200 + 100} in-view:animate-fade-left flex justify-between items-center min-w-[70%] w-fit md:text-[1.2vw] text-[2vw] my-[2%]`}
     >
-      <p>Location: {location}</p>
+      Location: {location}
       {date && (
         <>
           <div className="bg-white h-[0.5vw] w-[0.5vw] rounded-full mx-[0.5vw]" />
