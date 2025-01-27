@@ -1,11 +1,13 @@
 ---
-const {title} = Astro.props;
+const { title } = Astro.props;
 import { LiaDotCircle } from "react-icons/lia";
 ---
 
-<div class="flex items-center md:text-[3vw] text-[4.5vw] ml-[10%] md:pt-[10%] pt-[15%] text-white font-semibold">
-    <LiaDotCircle className=" mr-[1vw] text-[2.7vw]"/>
-    <p>
-        {title}
-    </p>
+<div
+  class="flex items-center md:text-[3vw] text-[4.5vw] ml-[10%] md:pt-[5%] pt-[10%] text-white font-semibold"
+>
+  <LiaDotCircle className=" mr-[1vw] text-[2.7vw]" />
+  <p>
+    {title}
+  </p>
 </div>

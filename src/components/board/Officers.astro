@@ -15,51 +15,50 @@ const currentFilter = "All";
 ---
 
 <div
-    class="text-white flex flex-col items-center md:mt-[10vw] mt-[20vw] mb-[10vh]"
+  class="text-white flex flex-col items-center md:mt-[5vw] mt-[10vw] mb-[10vh]"
 >
-    <div
-        data-inview
-        class="relative w-[40vw] md:w-[21vw] mb-[10vh] in-view:animate-fade-down"
-    >
-        <Image src={about} alt="About background image" />
-        <Image
-            src={neko}
-            alt="About image"
-            class="absolute top-[10%] left-[16%] aspect-[399/491] object-cover w-[27vw] md:w-[14vw] rounded-[2vw]"
-        />
-    </div>
+  <div
+    data-inview
+    class="relative w-[40vw] md:w-[21vw] mb-[10vh] in-view:animate-fade-down"
+  >
+    <Image src={about} alt="About background image" />
+    <Image
+      src={neko}
+      alt="About image"
+      class="absolute top-[10%] left-[16%] aspect-[399/491] object-cover w-[27vw] md:w-[14vw] rounded-[2vw]"
+    />
+  </div>
 
-    <div class="text-[5vw] md:text-[2.5vw] flex items-center mt-[1vw]">
-        <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
-        <p>MEET THE BOARD</p>
-    </div>
+  <div class="text-[5vw] md:text-[2.5vw] flex items-center mt-[1vw]">
+    <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
+    <p>MEET THE BOARD</p>
+  </div>
 
-    <p
-        class="md:text-[1.3vw] text-[2.5vw] md:w-[56%] w-[70%] my-[3%] font-extralight text-center"
-    >
-        Our board comprises 31 students of varying majors, colleges, and
-        interests! Feel free to reach out for any questions about our position
-        or experiences.
-    </p>
+  <p
+    class="md:text-[1.3vw] text-[2.5vw] md:w-[56%] w-[70%] my-[3%] font-extralight text-center"
+  >
+    Our board comprises 31 students of varying majors, colleges, and interests!
+    Feel free to reach out for any questions about our position or experiences.
+  </p>
 
-    <Filter filters={types} currentFilter={currentFilter} />
+  <Filter filters={types} currentFilter={currentFilter} />
 
-    <div class="grid gap-[3vw] md:grid-cols-3 grid-cols-2 mt-[2vh]">
-        {
-            officers.map((officer) => (
-                <div
-                    data-officer
-                    data-types={JSON.stringify(officer.type)}
-                    style="opacity: 0; visibility: hidden"
-                >
-                    <Officer
-                        name={officer.name}
-                        position={officer.position}
-                        picture={officer.picture}
-                        email={officer.email}
-                    />
-                </div>
-            ))
-        }
-    </div>
+  <div class="grid gap-[3vw] md:grid-cols-3 grid-cols-2 mt-[2vh]">
+    {
+      officers.map((officer) => (
+        <div
+          data-officer
+          data-types={JSON.stringify(officer.type)}
+          style="opacity: 0; visibility: hidden"
+        >
+          <Officer
+            name={officer.name}
+            position={officer.position}
+            picture={officer.picture}
+            email={officer.email}
+          />
+        </div>
+      ))
+    }
+  </div>
 </div>
