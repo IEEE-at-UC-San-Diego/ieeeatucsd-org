@@ -4,146 +4,140 @@ import whiteLogoHorizontal from "../../images/logos/white_logo_horizontal.svg";
 import pages from "../../data/pages.json";
 ---
 
-<div class="md:w-full w-fit fixed z-10">
-    <div
-        class="flex justify-between items-center bg-black my-[1%] mx-[2.5%] py-[0.5%] px-[1%] md:rounded-full md:border-[0.1vw]"
-    >
-        <a href="/" class="hover:opacity-60 duration-300 hidden md:flex">
-            <Image
-                class="w-[15vw]"
-                src={whiteLogoHorizontal}
-                alt="IEEE UCSD Logo"
-            />
-        </a>
+<div class="w-full">
+  <div
+    class="flex justify-between items-center bg-black my-[1%] mx-[2.5%] py-[0.5%] px-[1%] md:rounded-full md:border-[0.1vw]"
+  >
+    <a href="/" class="hover:opacity-60 duration-300 hidden md:flex">
+      <Image class="w-[15vw]" src={whiteLogoHorizontal} alt="IEEE UCSD Logo" />
+    </a>
 
-        <!-- Desktop Navigation -->
-        <div class="hidden md:flex md:w-[55%] md:justify-between">
-            {
-                pages.map((page) => (
-                    <a
-                        href={page.path}
-                        class={`uppercase rounded-full duration-300 px-[1.5vw] py-[0.2vw] text-[1.2vw] text-nowrap
+    <!-- Desktop Navigation -->
+    <div class="hidden md:flex md:w-[55%] md:justify-between">
+      {
+        pages.map((page) => (
+          <a
+            href={page.path}
+            class={`uppercase rounded-full duration-300 px-[1.5vw] py-[0.2vw] text-[1.2vw] text-nowrap
                             ${
-                                page.name === "Online Store"
-                                    ? "bg-ieee-yellow text-black hover:opacity-70"
-                                    : "text-white border-white hover:opacity-50 border-[0.1vw] font-light"
+                              page.name === "Online Store"
+                                ? "bg-ieee-yellow text-black hover:opacity-70"
+                                : "text-white border-white hover:opacity-50 border-[0.1vw] font-light"
                             }`}
-                    >
-                        {page.name}
-                    </a>
-                ))
-            }
-        </div>
-
-        <!-- Mobile Hamburger/Close Button -->
-        <button
-            id="menu-btn"
-            class="md:hidden text-white p-2 flex justify-center items-center focus:outline-none relative z-[60] scale-150"
-            aria-label="Toggle menu"
-        >
-            <!-- Hamburger Icon -->
-            <svg
-                class="w-6 h-6 menu-icon"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-            <!-- Close Icon -->
-            <svg
-                class="w-6 h-6 close-icon hidden"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-        </button>
+          >
+            {page.name}
+          </a>
+        ))
+      }
     </div>
 
-    <!-- Mobile Menu -->
-    <div
-        id="mobile-menu"
-        class="fixed inset-0 z-[51] hidden xl:hidden motion-safe:transition-transform motion-safe:duration-300 translate-x-full"
+    <!-- Mobile Hamburger/Close Button -->
+    <button
+      id="menu-btn"
+      class="md:hidden text-white p-2 flex justify-center items-center focus:outline-none relative z-[60] scale-150"
+      aria-label="Toggle menu"
     >
-        <div
-            class="flex flex-col items-center h-[70vh] justify-evenly bg-black"
-        >
-            {
-                pages.map((page) => (
-                    <a
-                        href={page.path}
-                        class={`block py-2 px-8 text-center rounded-[3rem] motion-safe:transition-colors motion-safe:duration-200 uppercase font-bold text-xl
+      <!-- Hamburger Icon -->
+      <svg
+        class="w-6 h-6 menu-icon"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+      <!-- Close Icon -->
+      <svg
+        class="w-6 h-6 close-icon hidden"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div
+    id="mobile-menu"
+    class="fixed inset-0 z-[51] hidden xl:hidden motion-safe:transition-transform motion-safe:duration-300 translate-x-full"
+  >
+    <div class="flex flex-col items-center h-[70vh] justify-evenly bg-black">
+      {
+        pages.map((page) => (
+          <a
+            href={page.path}
+            class={`block py-2 px-8 text-center rounded-[3rem] motion-safe:transition-colors motion-safe:duration-200 uppercase font-bold text-xl
                             ${
-                                page.name === "Online Store"
-                                    ? "bg-[#f3c135] text-black border-[#f3c135] hover:bg-[#dba923] hover:border-[#dba923]"
-                                    : "text-white hover:text-gray-300 border-white"
+                              page.name === "Online Store"
+                                ? "bg-[#f3c135] text-black border-[#f3c135] hover:bg-[#dba923] hover:border-[#dba923]"
+                                : "text-white hover:text-gray-300 border-white"
                             }`}
-                    >
-                        {page.name}
-                    </a>
-                ))
-            }
-        </div>
+          >
+            {page.name}
+          </a>
+        ))
+      }
     </div>
+  </div>
 </div>
 
 <style>
-    #mobile-menu.show {
-        @apply translate-x-0;
-    }
+  #mobile-menu.show {
+    @apply translate-x-0;
+  }
 </style>
 
 <script>
-    const menuBtn = document.getElementById("menu-btn");
-    const mobileMenu = document.getElementById("mobile-menu");
-    const menuIcon = document.querySelector(".menu-icon");
-    const closeIcon = document.querySelector(".close-icon");
+  const menuBtn = document.getElementById("menu-btn");
+  const mobileMenu = document.getElementById("mobile-menu");
+  const menuIcon = document.querySelector(".menu-icon");
+  const closeIcon = document.querySelector(".close-icon");
 
-    function toggleMenu(show: boolean) {
-        if (show) {
-            mobileMenu?.classList.remove("hidden");
-            menuIcon?.classList.add("hidden");
-            closeIcon?.classList.remove("hidden");
-            document.body.style.overflow = "hidden";
+  function toggleMenu(show: boolean) {
+    if (show) {
+      mobileMenu?.classList.remove("hidden");
+      menuIcon?.classList.add("hidden");
+      closeIcon?.classList.remove("hidden");
+      document.body.style.overflow = "hidden";
 
-            setTimeout(() => {
-                mobileMenu?.classList.add("show");
-            }, 10);
-        } else {
-            mobileMenu?.classList.remove("show");
-            menuIcon?.classList.remove("hidden");
-            closeIcon?.classList.add("hidden");
-            document.body.style.overflow = "";
+      setTimeout(() => {
+        mobileMenu?.classList.add("show");
+      }, 10);
+    } else {
+      mobileMenu?.classList.remove("show");
+      menuIcon?.classList.remove("hidden");
+      closeIcon?.classList.add("hidden");
+      document.body.style.overflow = "";
 
-            setTimeout(() => {
-                mobileMenu?.classList.add("hidden");
-            }, 100);
-        }
+      setTimeout(() => {
+        mobileMenu?.classList.add("hidden");
+      }, 100);
     }
+  }
 
-    menuBtn?.addEventListener("click", () => {
-        const isMenuHidden = mobileMenu?.classList.contains("hidden") ?? true;
-        toggleMenu(isMenuHidden);
-    });
+  menuBtn?.addEventListener("click", () => {
+    const isMenuHidden = mobileMenu?.classList.contains("hidden") ?? true;
+    toggleMenu(isMenuHidden);
+  });
 
-    // Close menu when clicking outside
-    document.addEventListener("click", (e) => {
-        if (
-            !mobileMenu?.contains(e.target as Node) &&
-            !menuBtn?.contains(e.target as Node) &&
-            !mobileMenu?.classList.contains("hidden")
-        ) {
-            toggleMenu(false);
-        }
-    });
+  // Close menu when clicking outside
+  document.addEventListener("click", (e) => {
+    if (
+      !mobileMenu?.contains(e.target as Node) &&
+      !menuBtn?.contains(e.target as Node) &&
+      !mobileMenu?.classList.contains("hidden")
+    ) {
+      toggleMenu(false);
+    }
+  });
 </script>
