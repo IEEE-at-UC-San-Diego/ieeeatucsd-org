@@ -10,33 +10,34 @@ const title = "IEEE Store";
     <h1 class="text-4xl font-bold mb-12">IEEE UCSD Store</h1>
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
       <!-- Left Column - User Info -->
-      <div class="lg:col-span-2 xl:col-span-1 h-fit">
+      <div class="lg:col-span-2 2xl:col-span-1 h-fit">
         <UserProfile />
       </div>
 
       <!-- Right Column - Store Items -->
-      <div id="storeContent" class="lg:col-span-2 xl:col-span-3">
-        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          <StoreItem
-            name="Item Name"
-            description="Description of the item goes here. This is a placeholder."
-            price={20.0}
-          />
-          <StoreItem
-            name="Item Name"
-            description="Description of the item goes here. This is a placeholder."
-            price={25.0}
-          />
-          <StoreItem
-            name="Item Name"
-            description="Description of the item goes here. This is a placeholder."
-            price={15.0}
-          />
-          <StoreItem
-            name="Item Name"
-            description="Description of the item goes here. This is a placeholder."
-            price={15.0}
-          />
+      <div id="storeContent" class="lg:col-span-2 2xl:col-span-3">
+        <div id="storeItemsGrid" class="h-full">
+          <div
+            class="card bg-base-200 shadow-xl h-full flex items-center justify-center min-h-[400px]"
+          >
+            <div
+              class="card-body flex flex-col items-center justify-center h-full w-full max-w-2xl mx-auto"
+            >
+              <div class="text-center w-full">
+                <h2 class="card-title text-3xl justify-center mb-6">
+                  Store Coming Soon!
+                </h2>
+                <div class="space-y-4">
+                  <p class="text-base-content/70 text-lg">
+                    Our store is currently under development. Check back later
+                    for IEEE UCSD merchandise! In the meantime, please make sure
+                    your profile is up to date with your IEEE Member ID and
+                    resume.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <!-- Officer View Content -->
         <div id="officerContent" class="hidden">

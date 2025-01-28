@@ -857,9 +857,7 @@ export class StoreAuth {
     // Officer view toggle event listener - now just toggles visibility
     this.elements.officerViewCheckbox.addEventListener("change", (e) => {
       const isChecked = (e.target as HTMLInputElement).checked;
-      const storeItemsContainer = document.querySelector(
-        ".grid.grid-cols-1.lg\\:grid-cols-2.xl\\:grid-cols-3",
-      ) as HTMLElement;
+      const storeItemsContainer = document.getElementById("storeItemsGrid");
       const { officerContent } = this.elements;
 
       if (storeItemsContainer) {
