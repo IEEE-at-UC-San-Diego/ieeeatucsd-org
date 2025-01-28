@@ -284,8 +284,16 @@ export class StoreAuth {
     if (this.pb.authStore.isValid && this.pb.authStore.model) {
       // Update all the user information first
       const user = this.pb.authStore.model;
+
       userName.textContent = user.name || "Name not provided";
       userEmail.textContent = user.email || "Email not available";
+
+      // Enable member ID input and save button
+      memberIdInput.disabled = false;
+      saveMemberId.disabled = false;
+
+      // Enable resume upload
+      resumeUpload.disabled = false;
 
       // Update member status
       if (user.verified) {
@@ -398,9 +406,15 @@ export class StoreAuth {
       memberStatus.classList.add("badge-neutral");
       lastLogin.textContent = "Never";
 
+      // Disable member ID input and save button
+      memberIdInput.disabled = true;
+      saveMemberId.disabled = true;
+
+      // Disable resume upload
+      resumeUpload.disabled = true;
+
       // Reset member ID
       memberIdInput.value = "";
-      memberIdInput.disabled = true;
       this.isEditingMemberId = false;
       this.updateMemberIdState();
 
