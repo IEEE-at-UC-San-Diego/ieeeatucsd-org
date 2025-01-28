@@ -41,76 +41,176 @@ const title = "IEEE Store";
         </div>
         <!-- Officer View Content -->
         <div id="officerContent" class="hidden">
+          <!-- Category Filter -->
           <div
-            class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-0 mb-4"
+            class="inline-flex border border-white/20 rounded-full md:p-[0.2vw] p-[0.4vw] relative mb-8"
           >
-            <h2 class="text-2xl font-bold">Member Management</h2>
-            <div class="flex flex-col lg:flex-row gap-2">
-              <div class="form-control w-full">
-                <input
-                  type="text"
-                  id="resumeSearch"
-                  placeholder="Search users..."
-                  class="input input-bordered input-sm w-full"
-                />
-              </div>
-              <div class="flex gap-2 w-full lg:w-auto">
-                <button
-                  id="searchResumes"
-                  class="btn btn-sm flex-1 lg:flex-none"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+            <div
+              id="officerSlider"
+              class="absolute h-[calc(100%-15%)] bg-[#FFB81C] rounded-full transition-none"
+              style="left: 1%;"
+            >
+            </div>
+            <button
+              data-officer-filter="members"
+              class="md:text-[1.3vw] text-[2.5vw] md:px-[1.8vw] px-[3vw] md:py-[0.2vw] py-[0.4vw] rounded-full transition-all relative z-10 text-black"
+            >
+              Member Management
+            </button>
+            <button
+              data-officer-filter="events"
+              class="md:text-[1.3vw] text-[2.5vw] md:px-[1.8vw] px-[3vw] md:py-[0.2vw] py-[0.4vw] rounded-full transition-all relative z-10 text-white hover:bg-white/10 hover:bg-opacity-50"
+            >
+              Event Management
+            </button>
+          </div>
+
+          <!-- Member Management Section -->
+          <div id="memberSection">
+            <div
+              class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-0 mb-4"
+            >
+              <h2 class="text-2xl font-bold">Member Management</h2>
+              <div class="flex flex-col lg:flex-row gap-2">
+                <div class="form-control w-full">
+                  <input
+                    type="text"
+                    id="resumeSearch"
+                    placeholder="Search users..."
+                    class="input input-bordered input-sm w-full"
+                  />
+                </div>
+                <div class="flex gap-2 w-full lg:w-auto">
+                  <button
+                    id="searchResumes"
+                    class="btn btn-sm flex-1 lg:flex-none"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
-                  <span class="lg:hidden ml-2">Search</span>
-                </button>
-                <button
-                  id="refreshResumes"
-                  class="btn btn-ghost btn-sm flex-1 lg:flex-none"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <span class="lg:hidden ml-2">Search</span>
+                  </button>
+                  <button
+                    id="refreshResumes"
+                    class="btn btn-ghost btn-sm flex-1 lg:flex-none"
                   >
-                    <path
-                      fill-rule="evenodd"
-                      d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                      clip-rule="evenodd"></path>
-                  </svg>
-                  <span class="lg:hidden ml-2">Refresh</span>
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                        clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="lg:hidden ml-2">Refresh</span>
+                  </button>
+                </div>
               </div>
             </div>
+            <div class="overflow-x-auto">
+              <table class="table table-zebra w-full">
+                <thead class="hidden lg:table-header-group">
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Member ID</th>
+                    <th>Points</th>
+                    <th>Resume</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="resumeList" class="divide-y">
+                  <!-- Resume entries will be populated here -->
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div class="overflow-x-auto">
-            <table class="table table-zebra w-full">
-              <!-- Use responsive classes -->
-              <thead class="hidden lg:table-header-group">
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Member ID</th>
-                  <th>Points</th>
-                  <th>Resume</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="resumeList" class="divide-y">
-                <!-- Resume entries will be populated here -->
-              </tbody>
-            </table>
+
+          <!-- Event Management Section -->
+          <div id="eventSection" class="hidden">
+            <div
+              class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-0 mb-4"
+            >
+              <h2 class="text-2xl font-bold">Event Management</h2>
+              <div class="flex flex-col lg:flex-row gap-2">
+                <div class="form-control w-full">
+                  <input
+                    type="text"
+                    id="eventSearch"
+                    placeholder="Search events..."
+                    class="input input-bordered input-sm w-full"
+                  />
+                </div>
+                <div class="flex gap-2 w-full lg:w-auto">
+                  <button
+                    id="addEvent"
+                    class="btn btn-primary btn-sm flex-1 lg:flex-none"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span class="ml-2">Add Event</span>
+                  </button>
+                  <button
+                    id="refreshEvents"
+                    class="btn btn-ghost btn-sm flex-1 lg:flex-none"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                        clip-rule="evenodd"></path>
+                    </svg>
+                    <span class="lg:hidden ml-2">Refresh</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="table table-zebra w-full">
+                <thead class="hidden lg:table-header-group">
+                  <tr>
+                    <th>Event Name</th>
+                    <th>Date</th>
+                    <th>Location</th>
+                    <th>Points</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="eventList" class="divide-y">
+                  <!-- Event entries will be populated here -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -121,4 +221,75 @@ const title = "IEEE Store";
 <script>
   import { StoreAuth } from "../components/auth/StoreAuth";
   new StoreAuth();
+
+  // Officer View Toggle Logic
+  const officerButtons = document.querySelectorAll("[data-officer-filter]");
+  const memberSection = document.getElementById("memberSection");
+  const eventSection = document.getElementById("eventSection");
+  const officerSlider = document.getElementById("officerSlider");
+
+  function moveOfficerSlider(button: HTMLButtonElement) {
+    if (!officerSlider) return;
+    const buttonRect = button.getBoundingClientRect();
+    const containerRect = button.parentElement?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    officerSlider.style.width = `${buttonRect.width}px`;
+    officerSlider.style.left = `${buttonRect.left - containerRect.left}px`;
+  }
+
+  function updateOfficerView(
+    selectedFilter: string,
+    clickedButton: HTMLButtonElement,
+  ) {
+    // Update button styles
+    officerButtons.forEach((btn) => {
+      const isSelected =
+        btn.getAttribute("data-officer-filter") === selectedFilter;
+      btn.classList.toggle("text-black", isSelected);
+      btn.classList.toggle("text-white", !isSelected);
+      btn.classList.toggle("hover:bg-white/10", !isSelected);
+      btn.classList.toggle("hover:bg-opacity-50", !isSelected);
+    });
+
+    // Move slider
+    moveOfficerSlider(clickedButton);
+
+    // Toggle sections with null checks
+    if (!memberSection || !eventSection) return;
+
+    if (selectedFilter === "members") {
+      memberSection.classList.remove("hidden");
+      eventSection.classList.add("hidden");
+    } else {
+      memberSection.classList.add("hidden");
+      eventSection.classList.remove("hidden");
+    }
+  }
+
+  // Initialize slider
+  const initialButton = document.querySelector(
+    "[data-officer-filter='members']",
+  ) as HTMLButtonElement;
+  if (initialButton && officerSlider) {
+    const buttonRect = initialButton.getBoundingClientRect();
+    officerSlider.style.width = `${buttonRect.width}px`;
+    requestAnimationFrame(() => {
+      officerSlider.classList.remove("transition-none");
+      officerSlider.classList.add(
+        "transition-all",
+        "duration-300",
+        "ease-in-out",
+      );
+    });
+  }
+
+  // Add click handlers
+  officerButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const filterValue =
+        button.getAttribute("data-officer-filter") || "members";
+      updateOfficerView(filterValue, button as HTMLButtonElement);
+    });
+  });
 </script>
