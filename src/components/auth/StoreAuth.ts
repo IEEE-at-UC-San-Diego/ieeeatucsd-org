@@ -1,46 +1,59 @@
 import PocketBase from "pocketbase";
 
 interface AuthElements {
-    loginButton: HTMLButtonElement;
-    logoutButton: HTMLButtonElement;
-    userInfo: HTMLDivElement;
-    userName: HTMLParagraphElement;
-    userEmail: HTMLParagraphElement;
-    memberStatus: HTMLDivElement;
-    lastLogin: HTMLParagraphElement;
-    storeContent: HTMLDivElement;
-    resumeUpload: HTMLInputElement;
-    resumeName: HTMLParagraphElement;
-    resumeDownload: HTMLAnchorElement;
-    deleteResume: HTMLButtonElement;
-    uploadStatus: HTMLParagraphElement;
-    resumeActions: HTMLDivElement;
-    memberIdInput: HTMLInputElement;
-    saveMemberId: HTMLButtonElement;
-    memberIdStatus: HTMLParagraphElement;
+  loginButton: HTMLButtonElement;
+  logoutButton: HTMLButtonElement;
+  userInfo: HTMLDivElement;
+  userName: HTMLParagraphElement;
+  userEmail: HTMLParagraphElement;
+  memberStatus: HTMLDivElement;
+  lastLogin: HTMLParagraphElement;
+  storeContent: HTMLDivElement;
+  resumeUpload: HTMLInputElement;
+  resumeName: HTMLParagraphElement;
+  resumeDownload: HTMLAnchorElement;
+  deleteResume: HTMLButtonElement;
+  uploadStatus: HTMLParagraphElement;
+  resumeActions: HTMLDivElement;
+  memberIdInput: HTMLInputElement;
+  saveMemberId: HTMLButtonElement;
+  memberIdStatus: HTMLParagraphElement;
+  officerViewToggle: HTMLDivElement;
+  officerViewCheckbox: HTMLInputElement;
+  officerContent: HTMLDivElement;
+  resumeList: HTMLTableSectionElement;
+  refreshResumes: HTMLButtonElement;
+  resumeSearch: HTMLInputElement;
+  searchResumes: HTMLButtonElement;
 }
 
 export class StoreAuth {
-    private pb: PocketBase;
-    private elements: AuthElements & { loadingSkeleton: HTMLDivElement };
-    private isEditingMemberId: boolean = false;
+  private pb: PocketBase;
+  private elements: AuthElements & { loadingSkeleton: HTMLDivElement };
+  private isEditingMemberId: boolean = false;
 
-    constructor() {
-        this.pb = new PocketBase("https://pocketbase.ieeeucsd.org");
-        this.elements = this.getElements();
-        this.init();
-    }
+  constructor() {
+    this.pb = new PocketBase("https://pocketbase.ieeeucsd.org");
+    this.elements = this.getElements();
+    this.init();
+  }
 
-    private getElements(): AuthElements & { loadingSkeleton: HTMLDivElement } {
-        // Fun typescript fixes
-        const loginButton = document.getElementById("loginButton") as HTMLButtonElement;
-        const logoutButton = document.getElementById("logoutButton") as HTMLButtonElement;
-        const userInfo = document.getElementById("userInfo") as HTMLDivElement;
-        const loadingSkeleton = document.getElementById("loadingSkeleton") as HTMLDivElement;
-        
-        // Add CSS for loading state transitions
-        const style = document.createElement('style');
-        style.textContent = `
+  private getElements(): AuthElements & { loadingSkeleton: HTMLDivElement } {
+    // Fun typescript fixes
+    const loginButton = document.getElementById(
+      "loginButton",
+    ) as HTMLButtonElement;
+    const logoutButton = document.getElementById(
+      "logoutButton",
+    ) as HTMLButtonElement;
+    const userInfo = document.getElementById("userInfo") as HTMLDivElement;
+    const loadingSkeleton = document.getElementById(
+      "loadingSkeleton",
+    ) as HTMLDivElement;
+
+    // Add CSS for loading state transitions
+    const style = document.createElement("style");
+    style.textContent = `
             .loading-state {
                 opacity: 0.5;
                 transition: opacity 0.3s ease-in-out;
@@ -49,334 +62,826 @@ export class StoreAuth {
                 opacity: 1;
             }
         `;
-        document.head.appendChild(style);
+    document.head.appendChild(style);
 
-        const userName = document.getElementById("userName") as HTMLParagraphElement;
-        const userEmail = document.getElementById("userEmail") as HTMLParagraphElement;
-        const memberStatus = document.getElementById("memberStatus") as HTMLDivElement;
-        const lastLogin = document.getElementById("lastLogin") as HTMLParagraphElement;
-        const storeContent = document.getElementById("storeContent") as HTMLDivElement;
-        const resumeUpload = document.getElementById("resumeUpload") as HTMLInputElement;
-        const resumeName = document.getElementById("resumeName") as HTMLParagraphElement;
-        const resumeDownload = document.getElementById("resumeDownload") as HTMLAnchorElement;
-        const deleteResume = document.getElementById("deleteResume") as HTMLButtonElement;
-        const uploadStatus = document.getElementById("uploadStatus") as HTMLParagraphElement;
-        const resumeActions = document.getElementById("resumeActions") as HTMLDivElement;
-        const memberIdInput = document.getElementById("memberIdInput") as HTMLInputElement;
-        const saveMemberId = document.getElementById("saveMemberId") as HTMLButtonElement;
-        const memberIdStatus = document.getElementById("memberIdStatus") as HTMLParagraphElement;
+    const userName = document.getElementById(
+      "userName",
+    ) as HTMLParagraphElement;
+    const userEmail = document.getElementById(
+      "userEmail",
+    ) as HTMLParagraphElement;
+    const memberStatus = document.getElementById(
+      "memberStatus",
+    ) as HTMLDivElement;
+    const lastLogin = document.getElementById(
+      "lastLogin",
+    ) as HTMLParagraphElement;
+    const storeContent = document.getElementById(
+      "storeContent",
+    ) as HTMLDivElement;
+    const resumeUpload = document.getElementById(
+      "resumeUpload",
+    ) as HTMLInputElement;
+    const resumeName = document.getElementById(
+      "resumeName",
+    ) as HTMLParagraphElement;
+    const resumeDownload = document.getElementById(
+      "resumeDownload",
+    ) as HTMLAnchorElement;
+    const deleteResume = document.getElementById(
+      "deleteResume",
+    ) as HTMLButtonElement;
+    const uploadStatus = document.getElementById(
+      "uploadStatus",
+    ) as HTMLParagraphElement;
+    const resumeActions = document.getElementById(
+      "resumeActions",
+    ) as HTMLDivElement;
+    const memberIdInput = document.getElementById(
+      "memberIdInput",
+    ) as HTMLInputElement;
+    const saveMemberId = document.getElementById(
+      "saveMemberId",
+    ) as HTMLButtonElement;
+    const memberIdStatus = document.getElementById(
+      "memberIdStatus",
+    ) as HTMLParagraphElement;
+    const officerViewToggle = document.getElementById(
+      "officerViewToggle",
+    ) as HTMLDivElement;
+    const officerViewCheckbox = officerViewToggle?.querySelector(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement;
+    const officerContent = document.getElementById(
+      "officerContent",
+    ) as HTMLDivElement;
+    const resumeList = document.getElementById(
+      "resumeList",
+    ) as HTMLTableSectionElement;
+    const refreshResumes = document.getElementById(
+      "refreshResumes",
+    ) as HTMLButtonElement;
+    const resumeSearch = document.getElementById(
+      "resumeSearch",
+    ) as HTMLInputElement;
+    const searchResumes = document.getElementById(
+      "searchResumes",
+    ) as HTMLButtonElement;
 
-        if (!loginButton || !logoutButton || !userInfo || !storeContent || !userName || !userEmail || 
-            !memberStatus || !lastLogin || !resumeUpload || !resumeName || !loadingSkeleton ||
-            !resumeDownload || !deleteResume || !uploadStatus || !resumeActions ||
-            !memberIdInput || !saveMemberId || !memberIdStatus) {
-            throw new Error("Required DOM elements not found");
-        }
-
-        return { 
-            loginButton, logoutButton, userInfo, userName, userEmail, memberStatus, 
-            lastLogin, storeContent, resumeUpload, resumeName, loadingSkeleton,
-            resumeDownload, deleteResume, uploadStatus, resumeActions,
-            memberIdInput, saveMemberId, memberIdStatus
-        };
+    if (
+      !loginButton ||
+      !logoutButton ||
+      !userInfo ||
+      !storeContent ||
+      !userName ||
+      !userEmail ||
+      !memberStatus ||
+      !lastLogin ||
+      !resumeUpload ||
+      !resumeName ||
+      !loadingSkeleton ||
+      !resumeDownload ||
+      !deleteResume ||
+      !uploadStatus ||
+      !resumeActions ||
+      !memberIdInput ||
+      !saveMemberId ||
+      !memberIdStatus ||
+      !officerViewToggle ||
+      !officerViewCheckbox ||
+      !officerContent ||
+      !resumeList ||
+      !refreshResumes ||
+      !resumeSearch ||
+      !searchResumes
+    ) {
+      throw new Error("Required DOM elements not found");
     }
 
-    private updateMemberIdState() {
-        const { memberIdInput, saveMemberId } = this.elements;
-        const user = this.pb.authStore.model;
+    return {
+      loginButton,
+      logoutButton,
+      userInfo,
+      userName,
+      userEmail,
+      memberStatus,
+      lastLogin,
+      storeContent,
+      resumeUpload,
+      resumeName,
+      loadingSkeleton,
+      resumeDownload,
+      deleteResume,
+      uploadStatus,
+      resumeActions,
+      memberIdInput,
+      saveMemberId,
+      memberIdStatus,
+      officerViewToggle,
+      officerViewCheckbox,
+      officerContent,
+      resumeList,
+      refreshResumes,
+      resumeSearch,
+      searchResumes,
+    };
+  }
 
-        if (user?.member_id && !this.isEditingMemberId) {
-            // Has member ID and not editing - show update button and disable input
-            memberIdInput.disabled = true;
-            memberIdInput.value = user.member_id;
-            saveMemberId.textContent = "Update";
-            saveMemberId.classList.remove("btn-primary");
-            saveMemberId.classList.add("btn-ghost");
-        } else {
-            // No member ID or editing - show save button and enable input
-            memberIdInput.disabled = false;
-            saveMemberId.textContent = "Save";
-            saveMemberId.classList.remove("btn-ghost");
-            saveMemberId.classList.add("btn-primary");
-        }
+  private updateMemberIdState() {
+    const { memberIdInput, saveMemberId } = this.elements;
+    const user = this.pb.authStore.model;
+
+    if (user?.member_id && !this.isEditingMemberId) {
+      // Has member ID and not editing - show update button and disable input
+      memberIdInput.disabled = true;
+      memberIdInput.value = user.member_id;
+      saveMemberId.textContent = "Update";
+      saveMemberId.classList.remove("btn-primary");
+      saveMemberId.classList.add("btn-ghost");
+    } else {
+      // No member ID or editing - show save button and enable input
+      memberIdInput.disabled = false;
+      saveMemberId.textContent = "Save";
+      saveMemberId.classList.remove("btn-ghost");
+      saveMemberId.classList.add("btn-primary");
     }
+  }
 
-    private async updateUI() {
-        const { loginButton, logoutButton, userInfo, userName, userEmail, memberStatus, 
-                lastLogin, storeContent, resumeName, resumeDownload, resumeActions,
-                memberIdInput, saveMemberId, resumeUpload, loadingSkeleton } = this.elements;
+  private async updateUI() {
+    const {
+      loginButton,
+      logoutButton,
+      userInfo,
+      userName,
+      userEmail,
+      memberStatus,
+      lastLogin,
+      storeContent,
+      resumeName,
+      resumeDownload,
+      resumeActions,
+      memberIdInput,
+      saveMemberId,
+      resumeUpload,
+      loadingSkeleton,
+      officerViewToggle,
+      officerContent,
+    } = this.elements;
 
-        // Hide buttons initially
-        loginButton.style.display = 'none';
-        logoutButton.style.display = 'none';
+    // Hide buttons initially
+    loginButton.style.display = "none";
+    logoutButton.style.display = "none";
 
-        if (this.pb.authStore.isValid && this.pb.authStore.model) {
-            // Update all the user information first
-            const user = this.pb.authStore.model;
-            userName.textContent = user.name || "Name not provided";
-            userEmail.textContent = user.email || "Email not available";
-            
-            // Update member status
-            if (user.verified) {
-                // Check and update member_type if not set
-                if (!user.member_type) {
-                    try {
-                        const isIeeeOfficer = user.email?.toLowerCase().endsWith('@ieeeucsd.org') || false;
-                        const newMemberType = isIeeeOfficer ? "IEEE Officer" : "Regular Member";
-                        
-                        await this.pb.collection("users").update(user.id, {
-                            member_type: newMemberType
-                        });
-                        
-                        user.member_type = newMemberType;
-                    } catch (err) {
-                        console.error("Failed to update member type:", err);
-                    }
-                }
+    if (this.pb.authStore.isValid && this.pb.authStore.model) {
+      // Update all the user information first
+      const user = this.pb.authStore.model;
+      userName.textContent = user.name || "Name not provided";
+      userEmail.textContent = user.email || "Email not available";
 
-                memberStatus.textContent = user.member_type || "Regular Member";
-                memberStatus.classList.remove("badge-neutral", "badge-success", "badge-warning", "badge-info", "badge-error");
-                
-                // Set color based on member type
-                if (user.member_type === "IEEE Administrator") {
-                    memberStatus.classList.add("badge-warning"); // Red for administrators
-                } else if (user.member_type === "IEEE Officer") {
-                    memberStatus.classList.add("badge-info"); // Blue for officers
-                } else {
-                    memberStatus.classList.add("badge-neutral"); // Yellow for regular members
-                }
-            } else {
-                memberStatus.textContent = "Not Verified";
-                memberStatus.classList.remove("badge-info", "badge-warning", "badge-success", "badge-error");
-                memberStatus.classList.add("badge-neutral");
-            }
-
-            // Update member ID input and state
-            memberIdInput.value = user.member_id || "";
-            this.updateMemberIdState();
-
-            // Update last login
-            const lastLoginDate = user.last_login ? new Date(user.last_login).toLocaleString() : "Never";
-            lastLogin.textContent = lastLoginDate;
-
-            // Update resume section
-            if (user.resume && (!Array.isArray(user.resume) || user.resume.length > 0)) {
-                const resumeUrl = user.resume.toString();
-                resumeName.textContent = this.getFileNameFromUrl(resumeUrl);
-                resumeDownload.href = this.pb.files.getURL(user, resumeUrl);
-                resumeActions.style.display = 'flex';
-            } else {
-                resumeName.textContent = "No resume uploaded";
-                resumeDownload.href = "#";
-                resumeActions.style.display = 'none';
-            }
-
-            // After everything is updated, show the content
-            loadingSkeleton.style.display = 'none';
-            userInfo.classList.remove('hidden');
-            // Use a small delay to ensure the transition works
-            setTimeout(() => {
-                userInfo.style.opacity = '1';
-            }, 50);
-            
-            logoutButton.style.display = 'block';
-        } else {
-            // Update for logged out state
-            userName.textContent = "Not signed in";
-            userEmail.textContent = "Not signed in";
-            memberStatus.textContent = "Not verified";
-            memberStatus.classList.remove("badge-info", "badge-warning", "badge-success", "badge-error");
-            memberStatus.classList.add("badge-neutral");
-            lastLogin.textContent = "Never";
-            
-            // Reset member ID
-            memberIdInput.value = "";
-            memberIdInput.disabled = true;
-            this.isEditingMemberId = false;
-            this.updateMemberIdState();
-
-            // Reset resume section
-            resumeName.textContent = "No resume uploaded";
-            resumeDownload.href = "#";
-            resumeActions.style.display = 'none';
-
-            // After everything is updated, show the content
-            loadingSkeleton.style.display = 'none';
-            userInfo.classList.remove('hidden');
-            // Use a small delay to ensure the transition works
-            setTimeout(() => {
-                userInfo.style.opacity = '1';
-            }, 50);
-            
-            loginButton.style.display = 'block';
-        }
-    }
-
-    private getFileNameFromUrl(url: string): string {
-        const parts = url.split("/");
-        return parts[parts.length - 1];
-    }
-
-    private async handleMemberIdButton() {
-        const user = this.pb.authStore.model;
-        
-        if (user?.member_id && !this.isEditingMemberId) {
-            // If we have a member ID and we're not editing, switch to edit mode
-            this.isEditingMemberId = true;
-            this.updateMemberIdState();
-        } else {
-            // If we're editing or don't have a member ID, try to save
-            await this.handleMemberIdSave();
-        }
-    }
-
-    private async handleMemberIdSave() {
-        const { memberIdInput, memberIdStatus } = this.elements;
-        const memberId = memberIdInput.value.trim();
-        
-        try {
-            memberIdStatus.textContent = "Saving member ID...";
-            
-            const user = this.pb.authStore.model;
-            if (!user?.id) {
-                throw new Error("User ID not found");
-            }
+      // Update member status
+      if (user.verified) {
+        // Check and update member_type if not set
+        if (!user.member_type) {
+          try {
+            const isIeeeOfficer =
+              user.email?.toLowerCase().endsWith("@ieeeucsd.org") || false;
+            const newMemberType = isIeeeOfficer
+              ? "IEEE Officer"
+              : "Regular Member";
 
             await this.pb.collection("users").update(user.id, {
-                member_id: memberId
+              member_type: newMemberType,
             });
-            
-            memberIdStatus.textContent = "IEEE Member ID saved successfully!";
-            this.isEditingMemberId = false;
-            this.updateUI();
-            
-            // Clear the status message after a delay
-            setTimeout(() => {
-                memberIdStatus.textContent = "";
-            }, 3000);
-        } catch (err: any) {
-            console.error("IEEE Member ID save error:", err);
-            memberIdStatus.textContent = "Failed to save IEEE Member ID. Please try again.";
+
+            user.member_type = newMemberType;
+          } catch (err) {
+            console.error("Failed to update member type:", err);
+          }
         }
-    }
 
-    private async handleResumeUpload(file: File) {
-        const { uploadStatus } = this.elements;
-        
-        try {
-            uploadStatus.textContent = "Uploading resume...";
-            
-            const formData = new FormData();
-            formData.append("resume", file);
+        memberStatus.textContent = user.member_type || "Regular Member";
+        memberStatus.classList.remove(
+          "badge-neutral",
+          "badge-success",
+          "badge-warning",
+          "badge-info",
+          "badge-error",
+        );
 
-            const user = this.pb.authStore.model;
-            if (!user?.id) {
-                throw new Error("User ID not found");
-            }
-
-            await this.pb.collection("users").update(user.id, formData);
-            
-            uploadStatus.textContent = "Resume uploaded successfully!";
-            this.updateUI();
-
-            // Clear the file input
-            this.elements.resumeUpload.value = "";
-            
-            // Clear the status message after a delay
-            setTimeout(() => {
-                uploadStatus.textContent = "";
-            }, 3000);
-        } catch (err: any) {
-            console.error("Resume upload error:", err);
-            uploadStatus.textContent = "Failed to upload resume. Please try again.";
+        // Set color based on member type
+        if (user.member_type === "IEEE Administrator") {
+          memberStatus.classList.add("badge-warning"); // Red for administrators
+        } else if (user.member_type === "IEEE Officer") {
+          memberStatus.classList.add("badge-info"); // Blue for officers
+        } else {
+          memberStatus.classList.add("badge-neutral"); // Yellow for regular members
         }
+      } else {
+        memberStatus.textContent = "Not Verified";
+        memberStatus.classList.remove(
+          "badge-info",
+          "badge-warning",
+          "badge-success",
+          "badge-error",
+        );
+        memberStatus.classList.add("badge-neutral");
+      }
+
+      // Update member ID input and state
+      memberIdInput.value = user.member_id || "";
+      this.updateMemberIdState();
+
+      // Update last login
+      const lastLoginDate = user.last_login
+        ? new Date(user.last_login).toLocaleString()
+        : "Never";
+      lastLogin.textContent = lastLoginDate;
+
+      // Update resume section
+      if (
+        user.resume &&
+        (!Array.isArray(user.resume) || user.resume.length > 0)
+      ) {
+        const resumeUrl = user.resume.toString();
+        resumeName.textContent = this.getFileNameFromUrl(resumeUrl);
+        resumeDownload.href = this.pb.files.getURL(user, resumeUrl);
+        resumeActions.style.display = "flex";
+      } else {
+        resumeName.textContent = "No resume uploaded";
+        resumeDownload.href = "#";
+        resumeActions.style.display = "none";
+      }
+
+      // Handle officer view toggle visibility and data loading
+      const isOfficer = [
+        "IEEE Officer",
+        "IEEE Administrator",
+        "IEEE Events",
+      ].includes(user.member_type || "");
+
+      officerViewToggle.style.display = isOfficer ? "block" : "none";
+
+      // If user is an officer, preload the table data
+      if (isOfficer) {
+        await this.fetchUserResumes();
+      }
+
+      // After everything is updated, show the content
+      loadingSkeleton.style.display = "none";
+      userInfo.classList.remove("hidden");
+      // Use a small delay to ensure the transition works
+      setTimeout(() => {
+        userInfo.style.opacity = "1";
+      }, 50);
+
+      logoutButton.style.display = "block";
+    } else {
+      // Update for logged out state
+      userName.textContent = "Not signed in";
+      userEmail.textContent = "Not signed in";
+      memberStatus.textContent = "Not verified";
+      memberStatus.classList.remove(
+        "badge-info",
+        "badge-warning",
+        "badge-success",
+        "badge-error",
+      );
+      memberStatus.classList.add("badge-neutral");
+      lastLogin.textContent = "Never";
+
+      // Reset member ID
+      memberIdInput.value = "";
+      memberIdInput.disabled = true;
+      this.isEditingMemberId = false;
+      this.updateMemberIdState();
+
+      // Reset resume section
+      resumeName.textContent = "No resume uploaded";
+      resumeDownload.href = "#";
+      resumeActions.style.display = "none";
+
+      // After everything is updated, show the content
+      loadingSkeleton.style.display = "none";
+      userInfo.classList.remove("hidden");
+      // Use a small delay to ensure the transition works
+      setTimeout(() => {
+        userInfo.style.opacity = "1";
+      }, 50);
+
+      loginButton.style.display = "block";
+      officerViewToggle.style.display = "none";
     }
+  }
 
-    private async handleResumeDelete() {
-        const { uploadStatus } = this.elements;
-        
-        try {
-            uploadStatus.textContent = "Deleting resume...";
-            
-            const user = this.pb.authStore.model;
-            if (!user?.id) {
-                throw new Error("User ID not found");
-            }
+  private getFileNameFromUrl(url: string): string {
+    const parts = url.split("/");
+    return parts[parts.length - 1];
+  }
 
-            await this.pb.collection("users").update(user.id, {
-                "resume": null
-            });
-            
-            uploadStatus.textContent = "Resume deleted successfully!";
-            this.updateUI();
-            
-            // Clear the status message after a delay
-            setTimeout(() => {
-                uploadStatus.textContent = "";
-            }, 3000);
-        } catch (err: any) {
-            console.error("Resume deletion error:", err);
-            uploadStatus.textContent = "Failed to delete resume. Please try again.";
+  private async handleMemberIdButton() {
+    const user = this.pb.authStore.model;
+
+    if (user?.member_id && !this.isEditingMemberId) {
+      // If we have a member ID and we're not editing, switch to edit mode
+      this.isEditingMemberId = true;
+      this.updateMemberIdState();
+    } else {
+      // If we're editing or don't have a member ID, try to save
+      await this.handleMemberIdSave();
+    }
+  }
+
+  private async handleMemberIdSave() {
+    const { memberIdInput, memberIdStatus } = this.elements;
+    const memberId = memberIdInput.value.trim();
+
+    try {
+      memberIdStatus.textContent = "Saving member ID...";
+
+      const user = this.pb.authStore.model;
+      if (!user?.id) {
+        throw new Error("User ID not found");
+      }
+
+      await this.pb.collection("users").update(user.id, {
+        member_id: memberId,
+      });
+
+      memberIdStatus.textContent = "IEEE Member ID saved successfully!";
+      this.isEditingMemberId = false;
+      this.updateUI();
+
+      // Clear the status message after a delay
+      setTimeout(() => {
+        memberIdStatus.textContent = "";
+      }, 3000);
+    } catch (err: any) {
+      console.error("IEEE Member ID save error:", err);
+      memberIdStatus.textContent =
+        "Failed to save IEEE Member ID. Please try again.";
+    }
+  }
+
+  private async handleResumeUpload(file: File) {
+    const { uploadStatus } = this.elements;
+
+    try {
+      uploadStatus.textContent = "Uploading resume...";
+
+      const formData = new FormData();
+      formData.append("resume", file);
+
+      const user = this.pb.authStore.model;
+      if (!user?.id) {
+        throw new Error("User ID not found");
+      }
+
+      await this.pb.collection("users").update(user.id, formData);
+
+      uploadStatus.textContent = "Resume uploaded successfully!";
+      this.updateUI();
+
+      // Clear the file input
+      this.elements.resumeUpload.value = "";
+
+      // Clear the status message after a delay
+      setTimeout(() => {
+        uploadStatus.textContent = "";
+      }, 3000);
+    } catch (err: any) {
+      console.error("Resume upload error:", err);
+      uploadStatus.textContent = "Failed to upload resume. Please try again.";
+    }
+  }
+
+  private async handleResumeDelete() {
+    const { uploadStatus } = this.elements;
+
+    try {
+      uploadStatus.textContent = "Deleting resume...";
+
+      const user = this.pb.authStore.model;
+      if (!user?.id) {
+        throw new Error("User ID not found");
+      }
+
+      await this.pb.collection("users").update(user.id, {
+        resume: null,
+      });
+
+      uploadStatus.textContent = "Resume deleted successfully!";
+      this.updateUI();
+
+      // Clear the status message after a delay
+      setTimeout(() => {
+        uploadStatus.textContent = "";
+      }, 3000);
+    } catch (err: any) {
+      console.error("Resume deletion error:", err);
+      uploadStatus.textContent = "Failed to delete resume. Please try again.";
+    }
+  }
+
+  private async handleLogin() {
+    console.log("Starting OAuth2 authentication...");
+    try {
+      const authMethods = await this.pb.collection("users").listAuthMethods();
+      const oidcProvider = authMethods.oauth2?.providers?.find(
+        (p: { name: string }) => p.name === "oidc",
+      );
+
+      if (!oidcProvider) {
+        throw new Error("OIDC provider not found");
+      }
+
+      // Store provider info for the redirect page
+      localStorage.setItem("provider", JSON.stringify(oidcProvider));
+
+      // Redirect to the authorization URL
+      const redirectUrl = window.location.origin + "/oauth2-redirect";
+      const authUrl = oidcProvider.authURL + encodeURIComponent(redirectUrl);
+      window.location.href = authUrl;
+    } catch (err: any) {
+      console.error("Authentication error:", err);
+      this.elements.userEmail.textContent = "Failed to start authentication";
+      this.elements.userName.textContent = "Error";
+    }
+  }
+
+  private handleLogout() {
+    this.pb.authStore.clear();
+    this.updateUI();
+  }
+
+  private async fetchUserResumes(searchQuery: string = "") {
+    try {
+      let filter = 'resume != ""';
+      if (searchQuery) {
+        const terms = searchQuery
+          .toLowerCase()
+          .split(" ")
+          .filter((term) => term.length > 0);
+        if (terms.length > 0) {
+          const searchConditions = terms
+            .map(
+              (term) =>
+                `(name ?~ "${term}" || email ?~ "${term}" || member_id ?~ "${term}")`,
+            )
+            .join(" && ");
+          filter += ` && (${searchConditions})`;
         }
-    }
+      }
 
-    private async handleLogin() {
-        console.log("Starting OAuth2 authentication...");
-        try {
-            const authMethods = await this.pb.collection("users").listAuthMethods();
-            const oidcProvider = authMethods.oauth2?.providers?.find(
-                (p: { name: string }) => p.name === "oidc"
-            );
+      const records = await this.pb.collection("users").getList(1, 50, {
+        filter,
+        sort: "-updated",
+        fields: "id,name,email,member_id,resume,updated,points",
+      });
 
-            if (!oidcProvider) {
-                throw new Error("OIDC provider not found");
-            }
+      const { resumeList } = this.elements;
+      const fragment = document.createDocumentFragment();
 
-            // Store provider info for the redirect page
-            localStorage.setItem("provider", JSON.stringify(oidcProvider));
+      if (records.items.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td colspan="6" class="text-center py-4">
+            ${searchQuery ? "No users found matching your search." : "No resumes uploaded yet."}
+          </td>
+        `;
+        fragment.appendChild(row);
+      } else {
+        records.items.forEach((user) => {
+          const row = document.createElement("tr");
+          const resumeUrl = user.resume
+            ? this.pb.files.getURL(user, user.resume)
+            : null;
 
-            // Redirect to the authorization URL
-            const redirectUrl = window.location.origin + "/oauth2-redirect";
-            const authUrl = oidcProvider.authURL + encodeURIComponent(redirectUrl);
-            window.location.href = authUrl;
-        } catch (err: any) {
-            console.error("Authentication error:", err);
-            this.elements.userEmail.textContent = "Failed to start authentication";
-            this.elements.userName.textContent = "Error";
-        }
-    }
+          row.innerHTML = `
+            <td class="block lg:table-cell">
+              <!-- Mobile View -->
+              <div class="lg:hidden space-y-2">
+                <div class="font-medium">${user.name || "N/A"}</div>
+                <div class="text-sm opacity-70">${user.email || "N/A"}</div>
+                <div class="text-sm opacity-70">ID: ${user.member_id || "N/A"}</div>
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm opacity-70">Points:</span>
+                    <div class="points-display-${user.id} flex items-center gap-2">
+                      <span class="font-medium">${user.points || 0}</span>
+                      <button class="btn btn-xs btn-ghost edit-points" data-user-id="${user.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div class="points-edit-${user.id} hidden flex items-center gap-2">
+                      <input 
+                        type="number" 
+                        class="input input-bordered input-xs w-[70px]" 
+                        value="${user.points || 0}"
+                        min="0"
+                        data-user-id="${user.id}"
+                      />
+                      <div class="flex gap-1">
+                        <button class="btn btn-xs btn-ghost confirm-points" data-user-id="${user.id}">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-success" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                          </svg>
+                        </button>
+                        <button class="btn btn-xs btn-ghost cancel-points" data-user-id="${user.id}">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-error" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between">
+                  ${
+                    resumeUrl
+                      ? `
+                    <a href="${resumeUrl}" target="_blank" class="btn btn-ghost btn-xs">
+                      View Resume
+                    </a>
+                  `
+                      : '<span class="text-sm opacity-50">No resume</span>'
+                  }
+                  <span class="text-xs opacity-50">
+                    ${new Date(user.updated).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
 
-    private handleLogout() {
-        this.pb.authStore.clear();
-        this.updateUI();
-    }
+              <!-- Desktop View -->
+              <span class="hidden lg:block">${user.name || "N/A"}</span>
+            </td>
+            <td class="hidden lg:table-cell">${user.email || "N/A"}</td>
+            <td class="hidden lg:table-cell">${user.member_id || "N/A"}</td>
+            <td class="hidden lg:table-cell w-[140px]">
+              <div class="points-display-${user.id} flex items-center justify-between">
+                <span class="font-medium min-w-[40px]">${user.points || 0}</span>
+                <button class="btn btn-xs btn-ghost edit-points" data-user-id="${user.id}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                  </svg>
+                </button>
+              </div>
+              <div class="points-edit-${user.id} hidden flex items-center justify-between">
+                <input 
+                  type="number" 
+                  class="input input-bordered input-xs w-[70px]" 
+                  value="${user.points || 0}"
+                  min="0"
+                  data-user-id="${user.id}"
+                />
+                <div class="flex gap-1">
+                  <button class="btn btn-xs btn-ghost confirm-points" data-user-id="${user.id}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-success" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                  <button class="btn btn-xs btn-ghost cancel-points" data-user-id="${user.id}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-error" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </td>
+            <td class="hidden lg:table-cell">
+              ${
+                resumeUrl
+                  ? `
+                <a href="${resumeUrl}" target="_blank" class="btn btn-ghost btn-xs">
+                  View Resume
+                </a>
+              `
+                  : '<span class="text-sm opacity-50">No resume</span>'
+              }
+            </td>
+            <td class="hidden lg:table-cell">${new Date(user.updated).toLocaleDateString()}</td>
+          `;
 
-    private init() {
-        // Initial UI update with loading state
-        this.updateUI().catch(console.error);
-
-        // Setup event listeners
-        this.elements.loginButton.addEventListener("click", () => this.handleLogin());
-        this.elements.logoutButton.addEventListener("click", () => this.handleLogout());
-        
-        // Resume upload event listener
-        this.elements.resumeUpload.addEventListener("change", (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (file) {
-                this.handleResumeUpload(file);
-            }
+          fragment.appendChild(row);
         });
+      }
 
-        // Resume delete event listener
-        this.elements.deleteResume.addEventListener("click", () => this.handleResumeDelete());
+      resumeList.innerHTML = "";
+      resumeList.appendChild(fragment);
 
-        // Member ID save event listener
-        this.elements.saveMemberId.addEventListener("click", () => this.handleMemberIdButton());
-
-        // Listen for auth state changes
-        this.pb.authStore.onChange(async (token) => {
-            console.log("Auth state changed. IsValid:", this.pb.authStore.isValid);
-            this.updateUI();
-        });
+      // Setup event listeners for the points editing functionality
+      this.setupPointsEventListeners();
+    } catch (err) {
+      console.error("Failed to fetch user resumes:", err);
+      const { resumeList } = this.elements;
+      resumeList.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center py-4 text-error">
+            Failed to fetch resumes. Please try again.
+          </td>
+        </tr>
+      `;
     }
-} 
+  }
+
+  private async updateUserPoints(userId: string, points: number) {
+    try {
+      await this.pb.collection("users").update(userId, {
+        points: points,
+      });
+
+      // Update the display after successful update
+      const displayElement = document.querySelector(
+        `.points-display-${userId}`,
+      ) as HTMLDivElement;
+      const editElement = document.querySelector(
+        `.points-edit-${userId}`,
+      ) as HTMLDivElement;
+      if (displayElement && editElement) {
+        const pointsSpan = displayElement.querySelector("span");
+        if (pointsSpan) {
+          pointsSpan.textContent = points.toString();
+        }
+        displayElement.classList.remove("hidden");
+        editElement.classList.add("hidden");
+      }
+    } catch (err) {
+      console.error("Failed to update points:", err);
+    }
+  }
+
+  private setupPointsEventListeners() {
+    // Use event delegation for all points-related actions
+    const { resumeList } = this.elements;
+
+    resumeList.addEventListener("click", async (e) => {
+      console.log("Click event triggered");
+      const target = e.target as HTMLElement;
+      const button = target.closest("button");
+      console.log("Button found:", button);
+      if (!button) return;
+
+      const userId = button.dataset.userId;
+      console.log("User ID:", userId);
+      if (!userId) return;
+
+      // Handle edit button click
+      if (button.classList.contains("edit-points")) {
+        console.log("Edit points button clicked");
+        const row = button.closest("tr");
+        if (!row) return;
+
+        const displayElement = row.querySelector(
+          `.points-display-${userId}`,
+        ) as HTMLDivElement;
+        const editElement = row.querySelector(
+          `.points-edit-${userId}`,
+        ) as HTMLDivElement;
+
+        console.log("Display element:", displayElement);
+        console.log("Edit element:", editElement);
+
+        if (displayElement && editElement) {
+          const currentPoints =
+            displayElement.querySelector("span")?.textContent;
+          console.log("Current points:", currentPoints);
+          const input = editElement.querySelector("input") as HTMLInputElement;
+          console.log("Input element:", input);
+          if (input && currentPoints) {
+            input.value = currentPoints;
+          }
+
+          displayElement.classList.add("hidden");
+          editElement.classList.remove("hidden");
+        }
+      }
+
+      // Handle confirm button click
+      if (button.classList.contains("confirm-points")) {
+        const row = button.closest("tr");
+        if (!row) return;
+
+        const input = row.querySelector(
+          `input[data-user-id="${userId}"]`,
+        ) as HTMLInputElement;
+        if (input) {
+          const points = parseInt(input.value) || 0;
+          await this.updateUserPoints(userId, points);
+
+          const displayElement = row.querySelector(
+            `.points-display-${userId}`,
+          ) as HTMLDivElement;
+          const editElement = row.querySelector(
+            `.points-edit-${userId}`,
+          ) as HTMLDivElement;
+
+          if (displayElement && editElement) {
+            displayElement.classList.remove("hidden");
+            editElement.classList.add("hidden");
+          }
+        }
+      }
+
+      // Handle cancel button click
+      if (button.classList.contains("cancel-points")) {
+        const row = button.closest("tr");
+        if (!row) return;
+
+        const displayElement = row.querySelector(
+          `.points-display-${userId}`,
+        ) as HTMLDivElement;
+        const editElement = row.querySelector(
+          `.points-edit-${userId}`,
+        ) as HTMLDivElement;
+        const input = row.querySelector(
+          `input[data-user-id="${userId}"]`,
+        ) as HTMLInputElement;
+        const currentPoints =
+          displayElement?.querySelector("span")?.textContent;
+
+        if (input && currentPoints) {
+          input.value = currentPoints;
+        }
+
+        if (displayElement && editElement) {
+          displayElement.classList.remove("hidden");
+          editElement.classList.add("hidden");
+        }
+      }
+    });
+  }
+
+  private init() {
+    // Initial UI update with loading state
+    this.updateUI().catch(console.error);
+
+    // Setup event listeners
+    this.elements.loginButton.addEventListener("click", () =>
+      this.handleLogin(),
+    );
+    this.elements.logoutButton.addEventListener("click", () =>
+      this.handleLogout(),
+    );
+
+    // Resume upload event listener
+    this.elements.resumeUpload.addEventListener("change", (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        this.handleResumeUpload(file);
+      }
+    });
+
+    // Resume delete event listener
+    this.elements.deleteResume.addEventListener("click", () =>
+      this.handleResumeDelete(),
+    );
+
+    // Member ID save event listener
+    this.elements.saveMemberId.addEventListener("click", () =>
+      this.handleMemberIdButton(),
+    );
+
+    // Search functionality with minimal debounce
+    let searchTimeout: NodeJS.Timeout;
+    const handleSearch = () => {
+      const searchQuery = this.elements.resumeSearch.value.trim();
+      this.fetchUserResumes(searchQuery);
+    };
+
+    // Real-time search with minimal debounce
+    this.elements.resumeSearch.addEventListener("input", () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(handleSearch, 150); // Reduced to 150ms for faster response
+    });
+
+    // Keep the click handler for the search button
+    this.elements.searchResumes.addEventListener("click", handleSearch);
+
+    // Officer view toggle event listener - now just toggles visibility
+    this.elements.officerViewCheckbox.addEventListener("change", (e) => {
+      const isChecked = (e.target as HTMLInputElement).checked;
+      const storeItemsContainer = document.querySelector(
+        ".grid.grid-cols-1.lg\\:grid-cols-2.xl\\:grid-cols-3",
+      ) as HTMLElement;
+      const { officerContent } = this.elements;
+
+      if (storeItemsContainer) {
+        storeItemsContainer.style.display = isChecked ? "none" : "grid";
+      }
+      officerContent.style.display = isChecked ? "block" : "none";
+    });
+
+    // Refresh resumes button event listener
+    this.elements.refreshResumes.addEventListener("click", () => {
+      this.elements.resumeSearch.value = ""; // Clear search when refreshing
+      this.fetchUserResumes();
+    });
+
+    // Listen for auth state changes
+    this.pb.authStore.onChange(async (token) => {
+      console.log("Auth state changed. IsValid:", this.pb.authStore.isValid);
+      this.updateUI();
+    });
+  }
+}

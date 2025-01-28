@@ -1,193 +1,181 @@
 <div>
-    <!-- Loading Skeleton (shown by default) -->
-    <div id="loadingSkeleton" class="card bg-base-200 shadow-xl">
-        <div class="card-body p-0">
-            <div class="px-6 pt-6">
-                <!-- Title -->
-                <h2 class="skeleton h-8 w-40 card-title"></h2>
+  <!-- Loading Skeleton (shown by default) -->
+  <div id="loadingSkeleton" class="card bg-base-200 shadow-xl">
+    <div class="card-body p-0">
+      <div class="px-6 pt-6">
+        <!-- Title -->
+        <h2 class="skeleton h-8 w-40 card-title"></h2>
+      </div>
+      <!-- Content -->
+      <div class="px-6 pb-6">
+        <div class="space-y-3">
+          <!-- Name -->
+          <div class="space-y-1">
+            <div class="skeleton h-3 w-16 opacity-70"></div>
+            <div class="skeleton h-[1.75rem] w-48"></div>
+          </div>
+          <div class="divider my-0.5"></div>
+
+          <!-- Email -->
+          <div class="space-y-1">
+            <div class="skeleton h-3 w-16 opacity-70"></div>
+            <div class="skeleton h-[1.75rem] w-64"></div>
+          </div>
+          <div class="divider my-0.5"></div>
+
+          <!-- Member Status -->
+          <div class="space-y-1">
+            <div class="skeleton h-3 w-24 opacity-70"></div>
+            <div class="skeleton h-[1.75rem] w-32"></div>
+          </div>
+          <div class="divider my-0.5"></div>
+
+          <!-- Member ID -->
+          <div class="space-y-1">
+            <div class="skeleton h-3 w-20 opacity-70"></div>
+            <div class="flex items-center gap-2">
+              <div class="skeleton h-8 flex-1"></div>
+              <div class="skeleton h-8 w-16"></div>
             </div>
-            <!-- Content -->
-            <div class="px-6 pb-6">
-                <div class="space-y-3">
-                    <!-- Name -->
-                    <div class="space-y-1">
-                        <div class="skeleton h-3 w-16 opacity-70"></div>
-                        <div class="skeleton h-[1.75rem] w-48"></div>
-                    </div>
-                    <div class="divider my-0.5"></div>
+          </div>
+          <div class="divider my-0.5"></div>
 
-                    <!-- Email -->
-                    <div class="space-y-1">
-                        <div class="skeleton h-3 w-16 opacity-70"></div>
-                        <div class="skeleton h-[1.75rem] w-64"></div>
-                    </div>
-                    <div class="divider my-0.5"></div>
+          <!-- Last Login -->
+          <div class="space-y-1">
+            <div class="skeleton h-3 w-20 opacity-70"></div>
+            <div class="skeleton h-[1.25rem] w-32"></div>
+          </div>
+          <div class="divider my-0.5"></div>
 
-                    <!-- Member Status -->
-                    <div class="space-y-1">
-                        <div class="skeleton h-3 w-24 opacity-70"></div>
-                        <div class="skeleton h-[1.75rem] w-32"></div>
-                    </div>
-                    <div class="divider my-0.5"></div>
-
-                    <!-- Member ID -->
-                    <div class="space-y-1">
-                        <div class="skeleton h-3 w-20 opacity-70"></div>
-                        <div class="flex items-center gap-2">
-                            <div class="skeleton h-8 flex-1"></div>
-                            <div class="skeleton h-8 w-16"></div>
-                        </div>
-                    </div>
-                    <div class="divider my-0.5"></div>
-
-                    <!-- Last Login -->
-                    <div class="space-y-1">
-                        <div class="skeleton h-3 w-20 opacity-70"></div>
-                        <div class="skeleton h-[1.25rem] w-32"></div>
-                    </div>
-                    <div class="divider my-0.5"></div>
-
-                    <!-- Resume -->
-                    <div class="space-y-1">
-                        <div class="skeleton h-3 w-16 opacity-70"></div>
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2">
-                                <div class="skeleton h-[1.25rem] flex-1"></div>
-                                <div class="skeleton h-[1.25rem] w-24"></div>
-                            </div>
-                            <div class="skeleton h-8 w-full"></div>
-                        </div>
-                    </div>
-                    <div class="divider my-0.5"></div>
-
-                    <!-- Auth Button -->
-                    <div class="pt-2">
-                        <div class="skeleton h-10 w-full"></div>
-                    </div>
-                </div>
+          <!-- Resume -->
+          <div class="space-y-1">
+            <div class="skeleton h-3 w-16 opacity-70"></div>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <div class="skeleton h-[1.25rem] flex-1"></div>
+                <div class="skeleton h-[1.25rem] w-24"></div>
+              </div>
+              <div class="skeleton h-8 w-full"></div>
             </div>
+          </div>
+          <div class="divider my-0.5"></div>
+
+          <!-- Auth Button -->
+          <div class="pt-2">
+            <div class="skeleton h-10 w-full"></div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Actual Content (hidden by default) -->
-    <div id="userInfo" class="card bg-base-200 shadow-xl opacity-0 hidden">
-        <div class="card-body p-0">
-            <div class="px-6 pt-6">
-                <h2 class="card-title text-2xl">User Profile</h2>
+  <!-- Actual Content (hidden by default) -->
+  <div id="userInfo" class="card bg-base-200 shadow-xl opacity-0 hidden">
+    <div class="card-body p-0">
+      <div class="px-6 pt-6">
+        <h2 class="card-title text-2xl">User Profile</h2>
+      </div>
+      <div class="px-6 pb-6">
+        <div class="space-y-3">
+          <div class="space-y-1">
+            <label class="text-sm opacity-70">Name</label>
+            <p id="userName" class="h-[1.75rem] font-medium">Not signed in</p>
+          </div>
+          <div class="divider my-0.5"></div>
+          <div class="space-y-1">
+            <label class="text-sm opacity-70">Email</label>
+            <p id="userEmail" class="h-[1.75rem] font-medium">Not signed in</p>
+          </div>
+          <div class="divider my-0.5"></div>
+          <div class="space-y-1">
+            <label class="text-sm opacity-70">Member Status</label>
+            <div class="flex h-[1.75rem] items-center">
+              <div id="memberStatus" class="badge badge-neutral">
+                Not verified
+              </div>
             </div>
-            <div class="px-6 pb-6">
-                <div class="space-y-3">
-                    <div class="space-y-1">
-                        <label class="text-sm opacity-70">Name</label>
-                        <p id="userName" class="h-[1.75rem] font-medium">
-                            Not signed in
-                        </p>
-                    </div>
-                    <div class="divider my-0.5"></div>
-                    <div class="space-y-1">
-                        <label class="text-sm opacity-70">Email</label>
-                        <p id="userEmail" class="h-[1.75rem] font-medium">
-                            Not signed in
-                        </p>
-                    </div>
-                    <div class="divider my-0.5"></div>
-                    <div class="space-y-1">
-                        <label class="text-sm opacity-70">Member Status</label>
-                        <div class="flex h-[1.75rem] items-center">
-                            <div id="memberStatus" class="badge badge-neutral">
-                                Not verified
-                            </div>
-                        </div>
-                    </div>
-                    <div class="divider my-0.5"></div>
-                    <div class="space-y-1">
-                        <label class="text-sm opacity-70">IEEE Member ID</label>
-                        <div class="flex items-center gap-2 h-8">
-                            <input
-                                type="text"
-                                id="memberIdInput"
-                                placeholder="Enter your IEEE Member ID"
-                                class="input input-bordered w-full h-8 min-h-[2rem] disabled:bg-base-300 disabled:border-2 disabled:border-opacity-50 disabled:cursor-not-allowed"
-                            />
-                            <button
-                                id="saveMemberId"
-                                class="btn btn-primary h-8 min-h-[2rem]"
-                                >Save</button
-                            >
-                        </div>
-                        <p id="memberIdStatus" class="text-xs mt-1 opacity-70">
-                        </p>
-                    </div>
-                    <div class="divider my-0.5"></div>
-                    <div class="space-y-1">
-                        <label class="text-sm opacity-70">Last Login</label>
-                        <p
-                            id="lastLogin"
-                            class="text-sm h-[1.25rem] opacity-80"
-                        >
-                            Never
-                        </p>
-                    </div>
-                    <div class="divider my-0.5"></div>
-                    <div class="space-y-2">
-                        <label class="text-sm opacity-70">Resume</label>
-                        <div id="resumeSection" class="space-y-2">
-                            <div class="flex items-center gap-2 h-[1.25rem]">
-                                <p
-                                    id="resumeName"
-                                    class="text-sm truncate flex-1"
-                                >
-                                    No resume uploaded
-                                </p>
-                                <div id="resumeActions" class="flex gap-2">
-                                    <a
-                                        id="resumeDownload"
-                                        href="#"
-                                        target="_blank"
-                                        class="btn btn-ghost btn-xs">View</a
-                                    >
-                                    <button
-                                        id="deleteResume"
-                                        class="btn btn-ghost btn-xs text-error"
-                                        >Delete</button
-                                    >
-                                </div>
-                            </div>
-                            <div id="uploadSection">
-                                <input
-                                    type="file"
-                                    id="resumeUpload"
-                                    accept=".pdf,.doc,.docx"
-                                    class="file-input file-input-bordered file-input-sm w-full"
-                                />
-                                <p
-                                    id="uploadStatus"
-                                    class="text-xs mt-1 opacity-70"
-                                >
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="divider my-0.5"></div>
-                    <div class="pt-2">
-                        <button id="loginButton" class="btn btn-primary w-full"
-                            >Sign in with IEEEUCSD SSO</button
-                        >
-                        <button id="logoutButton" class="btn btn-error w-full"
-                            >Sign Out</button
-                        >
-                    </div>
+          </div>
+          <div id="officerViewToggle" class="hidden">
+            <label
+              class="flex items-center justify-between w-full px-1 bg-base-200 rounded-lg"
+            >
+              <span class="text-sm">Officer View</span>
+              <input type="checkbox" class="toggle toggle-primary" />
+            </label>
+          </div>
+          <div class="divider my-0.5"></div>
+          <div class="space-y-1">
+            <label class="text-sm opacity-70">IEEE Member ID</label>
+            <div class="flex items-center gap-2 h-8">
+              <input
+                type="text"
+                id="memberIdInput"
+                placeholder="Enter your IEEE Member ID"
+                class="input input-bordered w-full h-8 min-h-[2rem] disabled:bg-base-300 disabled:border-2 disabled:border-opacity-50 disabled:cursor-not-allowed"
+              />
+              <button id="saveMemberId" class="btn btn-primary h-8 min-h-[2rem]"
+                >Save</button
+              >
+            </div>
+            <p id="memberIdStatus" class="text-xs mt-1 opacity-70"></p>
+          </div>
+          <div class="divider my-0.5"></div>
+          <div class="space-y-1">
+            <label class="text-sm opacity-70">Last Login</label>
+            <p id="lastLogin" class="text-sm h-[1.25rem] opacity-80">Never</p>
+          </div>
+          <div class="divider my-0.5"></div>
+          <div class="space-y-2">
+            <label class="text-sm opacity-70">Resume</label>
+            <div id="resumeSection" class="space-y-2">
+              <div class="flex items-center gap-2 h-[1.25rem]">
+                <p id="resumeName" class="text-sm truncate flex-1">
+                  No resume uploaded
+                </p>
+                <div id="resumeActions" class="flex gap-2">
+                  <a
+                    id="resumeDownload"
+                    href="#"
+                    target="_blank"
+                    class="btn btn-ghost btn-xs">View</a
+                  >
+                  <button
+                    id="deleteResume"
+                    class="btn btn-ghost btn-xs text-error">Delete</button
+                  >
                 </div>
+              </div>
+              <div id="uploadSection">
+                <input
+                  type="file"
+                  id="resumeUpload"
+                  accept=".pdf,.doc,.docx"
+                  class="file-input file-input-bordered file-input-sm w-full"
+                />
+                <p id="uploadStatus" class="text-xs mt-1 opacity-70"></p>
+              </div>
             </div>
+          </div>
+          <div class="divider my-0.5"></div>
+          <div class="pt-2">
+            <button id="loginButton" class="btn btn-primary w-full"
+              >Sign in with IEEEUCSD SSO</button
+            >
+            <button id="logoutButton" class="btn btn-error w-full"
+              >Sign Out</button
+            >
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <style>
-    .hidden {
-        display: none;
-    }
-    #userInfo {
-        transition: opacity 0.3s ease-in-out;
-    }
+  .hidden {
+    display: none;
+  }
+  #userInfo {
+    transition: opacity 0.3s ease-in-out;
+  }
 </style>
