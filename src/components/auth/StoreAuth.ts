@@ -33,12 +33,14 @@ interface AuthElements {
   editorResume: HTMLInputElement;
   editorCurrentResume: HTMLParagraphElement;
   saveProfileButton: HTMLButtonElement;
+  sponsorViewToggle: HTMLDivElement;
 }
 
 export class StoreAuth {
   private pb: PocketBase;
   private elements: AuthElements & { loadingSkeleton: HTMLDivElement };
   private isEditingMemberId: boolean = false;
+  private cachedUsers: any[] = []; // Store users data
 
   constructor() {
     this.pb = new PocketBase("https://pocketbase.ieeeucsd.org");
@@ -161,6 +163,10 @@ export class StoreAuth {
       "saveProfileButton",
     ) as HTMLButtonElement;
 
+    const sponsorViewToggle = document.getElementById(
+      "sponsorViewToggle",
+    ) as HTMLDivElement;
+
     if (
       !loginButton ||
       !logoutButton ||
@@ -194,7 +200,8 @@ export class StoreAuth {
       !editorPoints ||
       !editorResume ||
       !editorCurrentResume ||
-      !saveProfileButton
+      !saveProfileButton ||
+      !sponsorViewToggle
     ) {
       throw new Error("Required DOM elements not found");
     }
@@ -233,6 +240,7 @@ export class StoreAuth {
       editorResume,
       editorCurrentResume,
       saveProfileButton,
+      sponsorViewToggle,
     };
   }
 
@@ -245,14 +253,14 @@ export class StoreAuth {
       memberIdInput.disabled = true;
       memberIdInput.value = user.member_id;
       saveMemberId.textContent = "Update";
-      saveMemberId.classList.remove("btn-primary");
-      saveMemberId.classList.add("btn-ghost");
+      saveMemberId.classList.remove("enabled:btn-primary");
+      saveMemberId.classList.add("enabled:btn-ghost", "enabled:btn-outline");
     } else {
       // No member ID or editing - show save button and enable input
       memberIdInput.disabled = false;
       saveMemberId.textContent = "Save";
-      saveMemberId.classList.remove("btn-ghost");
-      saveMemberId.classList.add("btn-primary");
+      saveMemberId.classList.remove("enabled:btn-ghost", "enabled:btn-outline");
+      saveMemberId.classList.add("enabled:btn-primary");
     }
   }
 
@@ -275,6 +283,7 @@ export class StoreAuth {
       loadingSkeleton,
       officerViewToggle,
       officerContent,
+      sponsorViewToggle,
     } = this.elements;
 
     // Hide buttons initially
@@ -284,16 +293,34 @@ export class StoreAuth {
     if (this.pb.authStore.isValid && this.pb.authStore.model) {
       // Update all the user information first
       const user = this.pb.authStore.model;
+      const isSponsor = user.member_type === "IEEE Sponsor";
 
       userName.textContent = user.name || "Name not provided";
       userEmail.textContent = user.email || "Email not available";
 
-      // Enable member ID input and save button
-      memberIdInput.disabled = false;
-      saveMemberId.disabled = false;
+      // Hide member ID and resume sections for sponsors
+      const memberIdSection = memberIdInput.closest('.space-y-1') as HTMLElement;
+      const resumeSection = resumeUpload.closest('.space-y-2')?.parentElement as HTMLElement;
+      const memberIdDivider = memberIdSection?.nextElementSibling as HTMLElement;
+      const resumeDivider = resumeSection?.nextElementSibling as HTMLElement;
 
-      // Enable resume upload
-      resumeUpload.disabled = false;
+      if (isSponsor) {
+        // Hide member ID and resume sections for sponsors
+        if (memberIdSection) memberIdSection.style.display = 'none';
+        if (memberIdDivider) memberIdDivider.style.display = 'none';
+        if (resumeSection) resumeSection.style.display = 'none';
+        if (resumeDivider) resumeDivider.style.display = 'none';
+      } else {
+        // Show and enable member ID input and save button for non-sponsors
+        if (memberIdSection) memberIdSection.style.display = '';
+        if (memberIdDivider) memberIdDivider.style.display = '';
+        if (resumeSection) resumeSection.style.display = '';
+        if (resumeDivider) resumeDivider.style.display = '';
+        
+        memberIdInput.disabled = false;
+        saveMemberId.disabled = false;
+        resumeUpload.disabled = false;
+      }
 
       // Update member status
       if (user.verified) {
@@ -330,8 +357,22 @@ export class StoreAuth {
           memberStatus.classList.add("badge-warning"); // Red for administrators
         } else if (user.member_type === "IEEE Officer") {
           memberStatus.classList.add("badge-info"); // Blue for officers
+        } else if (user.member_type === "IEEE Sponsor") {
+          memberStatus.classList.add("badge-warning"); // Yellow for sponsors
         } else {
-          memberStatus.classList.add("badge-neutral"); // Yellow for regular members
+          memberStatus.classList.add("badge-neutral"); // Neutral for regular members
+        }
+
+        // Handle view toggles visibility
+        const isOfficer = ["IEEE Officer", "IEEE Administrator"].includes(user.member_type || "");
+        const isSponsor = user.member_type === "IEEE Sponsor";
+
+        officerViewToggle.style.display = isOfficer ? "block" : "none";
+        sponsorViewToggle.style.display = isSponsor ? "block" : "none";
+
+        // If user is an officer or sponsor, preload the table data
+        if (isOfficer || isSponsor) {
+          await this.fetchUserResumes();
         }
       } else {
         memberStatus.textContent = "Not Verified";
@@ -367,20 +408,6 @@ export class StoreAuth {
         resumeName.textContent = "No resume uploaded";
         resumeDownload.href = "#";
         resumeActions.style.display = "none";
-      }
-
-      // Handle officer view toggle visibility and data loading
-      const isOfficer = [
-        "IEEE Officer",
-        "IEEE Administrator",
-        "IEEE Events",
-      ].includes(user.member_type || "");
-
-      officerViewToggle.style.display = isOfficer ? "block" : "none";
-
-      // If user is an officer, preload the table data
-      if (isOfficer) {
-        await this.fetchUserResumes();
       }
 
       // After everything is updated, show the content
@@ -433,6 +460,7 @@ export class StoreAuth {
 
       loginButton.style.display = "block";
       officerViewToggle.style.display = "none";
+      sponsorViewToggle.style.display = "none";
     }
   }
 
@@ -586,43 +614,63 @@ export class StoreAuth {
   }
 
   private handleLogout() {
+    // Clear auth store
     this.pb.authStore.clear();
+    
+    // Clear cached users
+    this.cachedUsers = [];
+
+    // Reset member ID editing state
+    this.isEditingMemberId = false;
+
+    // Show all sections that might have been hidden
+    const memberIdSection = this.elements.memberIdInput.closest('.space-y-1') as HTMLElement;
+    const resumeSection = this.elements.resumeUpload.closest('.space-y-2')?.parentElement as HTMLElement;
+    const memberIdDivider = memberIdSection?.nextElementSibling as HTMLElement;
+    const resumeDivider = resumeSection?.nextElementSibling as HTMLElement;
+
+    // Show all sections
+    if (memberIdSection) memberIdSection.style.display = '';
+    if (memberIdDivider) memberIdDivider.style.display = '';
+    if (resumeSection) resumeSection.style.display = '';
+    if (resumeDivider) resumeDivider.style.display = '';
+
+    // Update UI
     this.updateUI();
   }
 
   private async fetchUserResumes(searchQuery: string = "") {
     try {
-      let filter = ""; // Remove the resume filter to show all users
+      // Only fetch from API if we don't have cached data
+      if (this.cachedUsers.length === 0) {
+        const records = await this.pb.collection("users").getList(1, 50, {
+          sort: "-updated",
+          fields: "id,name,email,member_id,resume,points,collectionId,collectionName",
+          expand: "resume",
+        });
+        this.cachedUsers = records.items;
+      }
+
+      // Filter cached data based on search query
+      let filteredUsers = this.cachedUsers;
       if (searchQuery) {
-        const terms = searchQuery
-          .toLowerCase()
-          .split(" ")
-          .filter((term) => term.length > 0);
+        const terms = searchQuery.toLowerCase().split(" ").filter(term => term.length > 0);
         if (terms.length > 0) {
-          const searchConditions = terms
-            .map(
-              (term) =>
-                `(name ?~ "${term}" || email ?~ "${term}" || member_id ?~ "${term}")`,
-            )
-            .join(" && ");
-          filter = searchConditions; // Only apply search conditions
+          filteredUsers = this.cachedUsers.filter(user => {
+            return terms.every(term => 
+              (user.name?.toLowerCase().includes(term) || 
+               user.email?.toLowerCase().includes(term) || 
+               user.member_id?.toLowerCase().includes(term))
+            );
+          });
         }
       }
 
-      const records = await this.pb.collection("users").getList(1, 50, {
-        filter,
-        sort: "-updated",
-        fields:
-          "id,name,email,member_id,resume,points,collectionId,collectionName",
-        expand: "resume",
-      });
-
-      console.log("Fetched records:", records.items); // Debug log
-
       const { resumeList } = this.elements;
       const fragment = document.createDocumentFragment();
+      const isSponsor = this.pb.authStore.model?.member_type === "IEEE Sponsor";
 
-      if (records.items.length === 0) {
+      if (filteredUsers.length === 0) {
         const row = document.createElement("tr");
         row.innerHTML = `
           <td colspan="6" class="text-center py-4">
@@ -631,14 +679,21 @@ export class StoreAuth {
         `;
         fragment.appendChild(row);
       } else {
-        records.items.forEach((user) => {
+        filteredUsers.forEach((user) => {
           const row = document.createElement("tr");
-          const resumeUrl =
-            user.resume && user.resume !== ""
-              ? this.pb.files.getURL(user, user.resume.toString())
-              : null;
+          const resumeUrl = user.resume && user.resume !== ""
+            ? this.pb.files.getURL(user, user.resume.toString())
+            : null;
 
-          console.log("User resume:", user.resume, "Resume URL:", resumeUrl); // Debug log
+          // Create edit button only if not a sponsor
+          const editButton = !isSponsor ? `
+            <button class="btn btn-ghost btn-xs edit-profile" data-user-id="${user.id}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+              Edit
+            </button>
+          ` : '';
 
           row.innerHTML = `
             <td class="block lg:table-cell">
@@ -649,21 +704,11 @@ export class StoreAuth {
                 <div class="text-sm opacity-70">ID: ${user.member_id || "N/A"}</div>
                 <div class="text-sm opacity-70">Points: ${user.points || 0}</div>
                 <div class="flex items-center justify-between">
-                  ${
-                    resumeUrl
-                      ? `
-                    <a href="${resumeUrl}" target="_blank" class="btn btn-ghost btn-xs">
-                      View Resume
-                    </a>
-                  `
-                      : '<span class="text-sm opacity-50">No resume</span>'
+                  ${resumeUrl
+                    ? `<a href="${resumeUrl}" target="_blank" class="btn btn-ghost btn-xs">View Resume</a>`
+                    : '<span class="text-sm opacity-50">No resume</span>'
                   }
-                  <button class="btn btn-ghost btn-xs edit-profile" data-user-id="${user.id}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                    </svg>
-                    Edit
-                  </button>
+                  ${editButton}
                 </div>
               </div>
 
@@ -674,23 +719,13 @@ export class StoreAuth {
             <td class="hidden lg:table-cell">${user.member_id || "N/A"}</td>
             <td class="hidden lg:table-cell">${user.points || 0}</td>
             <td class="hidden lg:table-cell">
-              ${
-                resumeUrl
-                  ? `
-                <a href="${resumeUrl}" target="_blank" class="btn btn-ghost btn-xs">
-                  View Resume
-                </a>
-              `
-                  : '<span class="text-sm opacity-50">No resume</span>'
+              ${resumeUrl
+                ? `<a href="${resumeUrl}" target="_blank" class="btn btn-ghost btn-xs">View Resume</a>`
+                : '<span class="text-sm opacity-50">No resume</span>'
               }
             </td>
             <td class="hidden lg:table-cell">
-              <button class="btn btn-ghost btn-xs edit-profile" data-user-id="${user.id}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                </svg>
-                Edit Profile
-              </button>
+              ${editButton}
             </td>
           `;
 
@@ -701,16 +736,18 @@ export class StoreAuth {
       resumeList.innerHTML = "";
       resumeList.appendChild(fragment);
 
-      // Setup edit profile event listeners
-      const editButtons = resumeList.querySelectorAll(".edit-profile");
-      editButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-          const userId = (button as HTMLButtonElement).dataset.userId;
-          if (userId) {
-            this.handleProfileEdit(userId);
-          }
+      // Setup edit profile event listeners only if not a sponsor
+      if (!isSponsor) {
+        const editButtons = resumeList.querySelectorAll(".edit-profile");
+        editButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const userId = (button as HTMLButtonElement).dataset.userId;
+            if (userId) {
+              this.handleProfileEdit(userId);
+            }
+          });
         });
-      });
+      }
     } catch (err) {
       console.error("Failed to fetch user resumes:", err);
       const { resumeList } = this.elements;
@@ -852,23 +889,19 @@ export class StoreAuth {
       this.handleMemberIdButton(),
     );
 
-    // Search functionality with minimal debounce
-    let searchTimeout: NodeJS.Timeout;
+    // Search functionality
     const handleSearch = () => {
       const searchQuery = this.elements.resumeSearch.value.trim();
       this.fetchUserResumes(searchQuery);
     };
 
-    // Real-time search with minimal debounce
-    this.elements.resumeSearch.addEventListener("input", () => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(handleSearch, 150); // Reduced to 150ms for faster response
-    });
+    // Real-time search
+    this.elements.resumeSearch.addEventListener("input", handleSearch);
 
-    // Keep the click handler for the search button
+    // Search button click handler
     this.elements.searchResumes.addEventListener("click", handleSearch);
 
-    // Officer view toggle event listener - now just toggles visibility
+    // Officer view toggle event listener
     this.elements.officerViewCheckbox.addEventListener("change", (e) => {
       const isChecked = (e.target as HTMLInputElement).checked;
       const storeItemsContainer = document.getElementById("storeItemsGrid");
@@ -878,11 +911,40 @@ export class StoreAuth {
         storeItemsContainer.style.display = isChecked ? "none" : "grid";
       }
       officerContent.style.display = isChecked ? "block" : "none";
+
+      // Uncheck sponsor view if officer view is checked
+      if (isChecked) {
+        const sponsorCheckbox = this.elements.sponsorViewToggle.querySelector('input[type="checkbox"]') as HTMLInputElement;
+        if (sponsorCheckbox) {
+          sponsorCheckbox.checked = false;
+        }
+      }
     });
+
+    // Sponsor view toggle event listener
+    const sponsorCheckbox = this.elements.sponsorViewToggle.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    if (sponsorCheckbox) {
+      sponsorCheckbox.addEventListener("change", (e) => {
+        const isChecked = (e.target as HTMLInputElement).checked;
+        const storeItemsContainer = document.getElementById("storeItemsGrid");
+        const { officerContent } = this.elements;
+
+        if (storeItemsContainer) {
+          storeItemsContainer.style.display = isChecked ? "none" : "grid";
+        }
+        officerContent.style.display = isChecked ? "block" : "none";
+
+        // Uncheck officer view if sponsor view is checked
+        if (isChecked) {
+          this.elements.officerViewCheckbox.checked = false;
+        }
+      });
+    }
 
     // Refresh resumes button event listener
     this.elements.refreshResumes.addEventListener("click", () => {
       this.elements.resumeSearch.value = ""; // Clear search when refreshing
+      this.cachedUsers = []; // Clear the cache to force a new fetch
       this.fetchUserResumes();
     });
 
