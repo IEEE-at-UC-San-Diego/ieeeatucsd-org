@@ -171,11 +171,87 @@
   </div>
 </div>
 
+<!-- Profile Editor Dialog -->
+<dialog id="profileEditor" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">Edit Profile</h3>
+    <form class="space-y-4" onsubmit="return false" novalidate>
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">Name</span>
+        </label>
+        <input type="text" id="editorName" class="input input-bordered" />
+      </div>
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">Email</span>
+        </label>
+        <input
+          type="email"
+          id="editorEmail"
+          class="input input-bordered"
+          disabled
+        />
+      </div>
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">IEEE Member ID</span>
+        </label>
+        <input type="text" id="editorMemberId" class="input input-bordered" />
+      </div>
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">Loyalty Points</span>
+        </label>
+        <input
+          type="number"
+          id="editorPoints"
+          min="0"
+          class="input input-bordered"
+        />
+      </div>
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">Resume</span>
+        </label>
+        <div class="flex flex-col gap-2">
+          <p id="editorCurrentResume" class="text-sm opacity-70">
+            No resume uploaded
+          </p>
+          <input
+            type="file"
+            id="editorResume"
+            accept=".pdf,.doc,.docx"
+            class="file-input file-input-bordered file-input-sm w-full"
+          />
+        </div>
+      </div>
+      <div class="modal-action">
+        <button type="button" id="saveProfileButton" class="btn btn-primary"
+          >Save Changes</button
+        >
+        <button type="button" class="btn" onclick="profileEditor.close()"
+          >Cancel</button
+        >
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
 <style>
   .hidden {
     display: none;
   }
   #userInfo {
     transition: opacity 0.3s ease-in-out;
+  }
+  .modal {
+    background: rgba(0, 0, 0, 0.5);
+  }
+  .modal::backdrop {
+    background: rgba(0, 0, 0, 0.5);
   }
 </style>

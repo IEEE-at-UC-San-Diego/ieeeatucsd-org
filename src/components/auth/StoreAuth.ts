@@ -25,6 +25,14 @@ interface AuthElements {
   refreshResumes: HTMLButtonElement;
   resumeSearch: HTMLInputElement;
   searchResumes: HTMLButtonElement;
+  profileEditor: HTMLDialogElement;
+  editorName: HTMLInputElement;
+  editorEmail: HTMLInputElement;
+  editorMemberId: HTMLInputElement;
+  editorPoints: HTMLInputElement;
+  editorResume: HTMLInputElement;
+  editorCurrentResume: HTMLParagraphElement;
+  saveProfileButton: HTMLButtonElement;
 }
 
 export class StoreAuth {
@@ -128,6 +136,31 @@ export class StoreAuth {
       "searchResumes",
     ) as HTMLButtonElement;
 
+    const profileEditor = document.getElementById(
+      "profileEditor",
+    ) as HTMLDialogElement;
+    const editorName = document.getElementById(
+      "editorName",
+    ) as HTMLInputElement;
+    const editorEmail = document.getElementById(
+      "editorEmail",
+    ) as HTMLInputElement;
+    const editorMemberId = document.getElementById(
+      "editorMemberId",
+    ) as HTMLInputElement;
+    const editorPoints = document.getElementById(
+      "editorPoints",
+    ) as HTMLInputElement;
+    const editorResume = document.getElementById(
+      "editorResume",
+    ) as HTMLInputElement;
+    const editorCurrentResume = document.getElementById(
+      "editorCurrentResume",
+    ) as HTMLParagraphElement;
+    const saveProfileButton = document.getElementById(
+      "saveProfileButton",
+    ) as HTMLButtonElement;
+
     if (
       !loginButton ||
       !logoutButton ||
@@ -153,7 +186,15 @@ export class StoreAuth {
       !resumeList ||
       !refreshResumes ||
       !resumeSearch ||
-      !searchResumes
+      !searchResumes ||
+      !profileEditor ||
+      !editorName ||
+      !editorEmail ||
+      !editorMemberId ||
+      !editorPoints ||
+      !editorResume ||
+      !editorCurrentResume ||
+      !saveProfileButton
     ) {
       throw new Error("Required DOM elements not found");
     }
@@ -184,6 +225,14 @@ export class StoreAuth {
       refreshResumes,
       resumeSearch,
       searchResumes,
+      profileEditor,
+      editorName,
+      editorEmail,
+      editorMemberId,
+      editorPoints,
+      editorResume,
+      editorCurrentResume,
+      saveProfileButton,
     };
   }
 
@@ -374,8 +423,13 @@ export class StoreAuth {
   }
 
   private getFileNameFromUrl(url: string): string {
-    const parts = url.split("/");
-    return parts[parts.length - 1];
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split("/");
+      return decodeURIComponent(pathParts[pathParts.length - 1]);
+    } catch (e) {
+      return url.split("/").pop() || "Unknown File";
+    }
   }
 
   private async handleMemberIdButton() {
@@ -435,6 +489,15 @@ export class StoreAuth {
       if (!user?.id) {
         throw new Error("User ID not found");
       }
+
+      // Get current user data first
+      const currentUser = await this.pb.collection("users").getOne(user.id);
+
+      // Keep existing data
+      formData.append("name", currentUser.name || "");
+      formData.append("email", currentUser.email || "");
+      formData.append("member_id", currentUser.member_id || "");
+      formData.append("points", currentUser.points?.toString() || "0");
 
       await this.pb.collection("users").update(user.id, formData);
 
@@ -515,7 +578,7 @@ export class StoreAuth {
 
   private async fetchUserResumes(searchQuery: string = "") {
     try {
-      let filter = 'resume != ""';
+      let filter = ""; // Remove the resume filter to show all users
       if (searchQuery) {
         const terms = searchQuery
           .toLowerCase()
@@ -528,15 +591,19 @@ export class StoreAuth {
                 `(name ?~ "${term}" || email ?~ "${term}" || member_id ?~ "${term}")`,
             )
             .join(" && ");
-          filter += ` && (${searchConditions})`;
+          filter = searchConditions; // Only apply search conditions
         }
       }
 
       const records = await this.pb.collection("users").getList(1, 50, {
         filter,
         sort: "-updated",
-        fields: "id,name,email,member_id,resume,updated,points",
+        fields:
+          "id,name,email,member_id,resume,points,collectionId,collectionName",
+        expand: "resume",
       });
+
+      console.log("Fetched records:", records.items); // Debug log
 
       const { resumeList } = this.elements;
       const fragment = document.createDocumentFragment();
@@ -545,16 +612,19 @@ export class StoreAuth {
         const row = document.createElement("tr");
         row.innerHTML = `
           <td colspan="6" class="text-center py-4">
-            ${searchQuery ? "No users found matching your search." : "No resumes uploaded yet."}
+            ${searchQuery ? "No users found matching your search." : "No users found."}
           </td>
         `;
         fragment.appendChild(row);
       } else {
         records.items.forEach((user) => {
           const row = document.createElement("tr");
-          const resumeUrl = user.resume
-            ? this.pb.files.getURL(user, user.resume)
-            : null;
+          const resumeUrl =
+            user.resume && user.resume !== ""
+              ? this.pb.files.getURL(user, user.resume.toString())
+              : null;
+
+          console.log("User resume:", user.resume, "Resume URL:", resumeUrl); // Debug log
 
           row.innerHTML = `
             <td class="block lg:table-cell">
@@ -563,40 +633,7 @@ export class StoreAuth {
                 <div class="font-medium">${user.name || "N/A"}</div>
                 <div class="text-sm opacity-70">${user.email || "N/A"}</div>
                 <div class="text-sm opacity-70">ID: ${user.member_id || "N/A"}</div>
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm opacity-70">Points:</span>
-                    <div class="points-display-${user.id} flex items-center gap-2">
-                      <span class="font-medium">${user.points || 0}</span>
-                      <button class="btn btn-xs btn-ghost edit-points" data-user-id="${user.id}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                      </button>
-                    </div>
-                    <div class="points-edit-${user.id} hidden flex items-center gap-2">
-                      <input 
-                        type="number" 
-                        class="input input-bordered input-xs w-[70px]" 
-                        value="${user.points || 0}"
-                        min="0"
-                        data-user-id="${user.id}"
-                      />
-                      <div class="flex gap-1">
-                        <button class="btn btn-xs btn-ghost confirm-points" data-user-id="${user.id}">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-success" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                          </svg>
-                        </button>
-                        <button class="btn btn-xs btn-ghost cancel-points" data-user-id="${user.id}">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-error" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <div class="text-sm opacity-70">Points: ${user.points || 0}</div>
                 <div class="flex items-center justify-between">
                   ${
                     resumeUrl
@@ -607,9 +644,12 @@ export class StoreAuth {
                   `
                       : '<span class="text-sm opacity-50">No resume</span>'
                   }
-                  <span class="text-xs opacity-50">
-                    ${new Date(user.updated).toLocaleDateString()}
-                  </span>
+                  <button class="btn btn-ghost btn-xs edit-profile" data-user-id="${user.id}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                    Edit
+                  </button>
                 </div>
               </div>
 
@@ -618,37 +658,7 @@ export class StoreAuth {
             </td>
             <td class="hidden lg:table-cell">${user.email || "N/A"}</td>
             <td class="hidden lg:table-cell">${user.member_id || "N/A"}</td>
-            <td class="hidden lg:table-cell w-[140px]">
-              <div class="points-display-${user.id} flex items-center justify-between">
-                <span class="font-medium min-w-[40px]">${user.points || 0}</span>
-                <button class="btn btn-xs btn-ghost edit-points" data-user-id="${user.id}">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                  </svg>
-                </button>
-              </div>
-              <div class="points-edit-${user.id} hidden flex items-center justify-between">
-                <input 
-                  type="number" 
-                  class="input input-bordered input-xs w-[70px]" 
-                  value="${user.points || 0}"
-                  min="0"
-                  data-user-id="${user.id}"
-                />
-                <div class="flex gap-1">
-                  <button class="btn btn-xs btn-ghost confirm-points" data-user-id="${user.id}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-success" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                    </svg>
-                  </button>
-                  <button class="btn btn-xs btn-ghost cancel-points" data-user-id="${user.id}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-error" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </td>
+            <td class="hidden lg:table-cell">${user.points || 0}</td>
             <td class="hidden lg:table-cell">
               ${
                 resumeUrl
@@ -660,7 +670,14 @@ export class StoreAuth {
                   : '<span class="text-sm opacity-50">No resume</span>'
               }
             </td>
-            <td class="hidden lg:table-cell">${new Date(user.updated).toLocaleDateString()}</td>
+            <td class="hidden lg:table-cell">
+              <button class="btn btn-ghost btn-xs edit-profile" data-user-id="${user.id}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+                Edit Profile
+              </button>
+            </td>
           `;
 
           fragment.appendChild(row);
@@ -670,8 +687,16 @@ export class StoreAuth {
       resumeList.innerHTML = "";
       resumeList.appendChild(fragment);
 
-      // Setup event listeners for the points editing functionality
-      this.setupPointsEventListeners();
+      // Setup edit profile event listeners
+      const editButtons = resumeList.querySelectorAll(".edit-profile");
+      editButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const userId = (button as HTMLButtonElement).dataset.userId;
+          if (userId) {
+            this.handleProfileEdit(userId);
+          }
+        });
+      });
     } catch (err) {
       console.error("Failed to fetch user resumes:", err);
       const { resumeList } = this.elements;
@@ -685,131 +710,102 @@ export class StoreAuth {
     }
   }
 
-  private async updateUserPoints(userId: string, points: number) {
+  private async handleProfileEdit(userId: string) {
     try {
-      await this.pb.collection("users").update(userId, {
-        points: points,
-      });
+      const user = await this.pb.collection("users").getOne(userId);
+      const {
+        profileEditor,
+        editorName,
+        editorEmail,
+        editorMemberId,
+        editorPoints,
+        editorCurrentResume,
+        saveProfileButton,
+      } = this.elements;
 
-      // Update the display after successful update
-      const displayElement = document.querySelector(
-        `.points-display-${userId}`,
-      ) as HTMLDivElement;
-      const editElement = document.querySelector(
-        `.points-edit-${userId}`,
-      ) as HTMLDivElement;
-      if (displayElement && editElement) {
-        const pointsSpan = displayElement.querySelector("span");
-        if (pointsSpan) {
-          pointsSpan.textContent = points.toString();
-        }
-        displayElement.classList.remove("hidden");
-        editElement.classList.add("hidden");
+      // Populate the form
+      editorName.value = user.name || "";
+      editorEmail.value = user.email || "";
+      editorMemberId.value = user.member_id || "";
+      editorPoints.value = user.points?.toString() || "0";
+
+      // Update resume display
+      if (user.resume) {
+        const resumeUrl = this.pb.files.getURL(user, user.resume.toString());
+        const fileName = this.getFileNameFromUrl(resumeUrl);
+        editorCurrentResume.textContent = `Current resume: ${fileName}`;
+        editorCurrentResume.classList.remove("opacity-70");
+      } else {
+        editorCurrentResume.textContent = "No resume uploaded";
+        editorCurrentResume.classList.add("opacity-70");
       }
+
+      // Store the user ID for saving
+      saveProfileButton.dataset.userId = userId;
+
+      // Show the dialog
+      profileEditor.showModal();
     } catch (err) {
-      console.error("Failed to update points:", err);
+      console.error("Failed to load user for editing:", err);
     }
   }
 
-  private setupPointsEventListeners() {
-    // Use event delegation for all points-related actions
-    const { resumeList } = this.elements;
+  private async handleProfileSave() {
+    const {
+      profileEditor,
+      editorName,
+      editorEmail,
+      editorMemberId,
+      editorPoints,
+      editorResume,
+      saveProfileButton,
+    } = this.elements;
+    const userId = saveProfileButton.dataset.userId;
 
-    resumeList.addEventListener("click", async (e) => {
-      console.log("Click event triggered");
-      const target = e.target as HTMLElement;
-      const button = target.closest("button");
-      console.log("Button found:", button);
-      if (!button) return;
+    if (!userId) {
+      console.error("No user ID found for saving");
+      return;
+    }
 
-      const userId = button.dataset.userId;
-      console.log("User ID:", userId);
-      if (!userId) return;
+    try {
+      // First get the current user data to check existing resume
+      const currentUser = await this.pb.collection("users").getOne(userId);
 
-      // Handle edit button click
-      if (button.classList.contains("edit-points")) {
-        console.log("Edit points button clicked");
-        const row = button.closest("tr");
-        if (!row) return;
+      const formData = new FormData();
+      formData.append("name", editorName.value);
+      formData.append("email", editorEmail.value);
+      formData.append("member_id", editorMemberId.value);
+      formData.append("points", editorPoints.value);
 
-        const displayElement = row.querySelector(
-          `.points-display-${userId}`,
-        ) as HTMLDivElement;
-        const editElement = row.querySelector(
-          `.points-edit-${userId}`,
-        ) as HTMLDivElement;
-
-        console.log("Display element:", displayElement);
-        console.log("Edit element:", editElement);
-
-        if (displayElement && editElement) {
-          const currentPoints =
-            displayElement.querySelector("span")?.textContent;
-          console.log("Current points:", currentPoints);
-          const input = editElement.querySelector("input") as HTMLInputElement;
-          console.log("Input element:", input);
-          if (input && currentPoints) {
-            input.value = currentPoints;
-          }
-
-          displayElement.classList.add("hidden");
-          editElement.classList.remove("hidden");
-        }
+      // Only append resume if a new file is selected
+      if (editorResume.files && editorResume.files.length > 0) {
+        formData.append("resume", editorResume.files[0]);
+      } else if (currentUser.resume) {
+        // If no new file but there's an existing resume, keep it
+        formData.append("resume", currentUser.resume);
       }
 
-      // Handle confirm button click
-      if (button.classList.contains("confirm-points")) {
-        const row = button.closest("tr");
-        if (!row) return;
+      // Log the form data for debugging
+      console.log("Form data being sent:", {
+        name: editorName.value,
+        email: editorEmail.value,
+        member_id: editorMemberId.value,
+        points: editorPoints.value,
+        hasNewResume: editorResume.files && editorResume.files.length > 0,
+        hasExistingResume: !!currentUser.resume,
+      });
 
-        const input = row.querySelector(
-          `input[data-user-id="${userId}"]`,
-        ) as HTMLInputElement;
-        if (input) {
-          const points = parseInt(input.value) || 0;
-          await this.updateUserPoints(userId, points);
+      const updatedUser = await this.pb
+        .collection("users")
+        .update(userId, formData);
+      console.log("Update response:", updatedUser);
 
-          const displayElement = row.querySelector(
-            `.points-display-${userId}`,
-          ) as HTMLDivElement;
-          const editElement = row.querySelector(
-            `.points-edit-${userId}`,
-          ) as HTMLDivElement;
-
-          if (displayElement && editElement) {
-            displayElement.classList.remove("hidden");
-            editElement.classList.add("hidden");
-          }
-        }
-      }
-
-      // Handle cancel button click
-      if (button.classList.contains("cancel-points")) {
-        const row = button.closest("tr");
-        if (!row) return;
-
-        const displayElement = row.querySelector(
-          `.points-display-${userId}`,
-        ) as HTMLDivElement;
-        const editElement = row.querySelector(
-          `.points-edit-${userId}`,
-        ) as HTMLDivElement;
-        const input = row.querySelector(
-          `input[data-user-id="${userId}"]`,
-        ) as HTMLInputElement;
-        const currentPoints =
-          displayElement?.querySelector("span")?.textContent;
-
-        if (input && currentPoints) {
-          input.value = currentPoints;
-        }
-
-        if (displayElement && editElement) {
-          displayElement.classList.remove("hidden");
-          editElement.classList.add("hidden");
-        }
-      }
-    });
+      // Close the dialog and refresh the table
+      profileEditor.close();
+      this.fetchUserResumes();
+    } catch (err) {
+      console.error("Failed to save user profile:", err);
+    }
   }
 
   private init() {
@@ -882,6 +878,22 @@ export class StoreAuth {
     this.pb.authStore.onChange(async (token) => {
       console.log("Auth state changed. IsValid:", this.pb.authStore.isValid);
       this.updateUI();
+    });
+
+    // Profile editor event listeners
+    const { profileEditor, saveProfileButton } = this.elements;
+
+    // Close dialog when clicking outside
+    profileEditor.addEventListener("click", (e) => {
+      if (e.target === profileEditor) {
+        profileEditor.close();
+      }
+    });
+
+    // Save profile button
+    saveProfileButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.handleProfileSave();
     });
   }
 }
