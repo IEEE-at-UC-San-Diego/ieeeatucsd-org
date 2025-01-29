@@ -1,0 +1,70 @@
+api:
+  baseUrl: https://pocketbase.ieeeucsd.org
+  oauth2:
+    redirectPath: /oauth2-redirect
+    providerName: oidc
+
+roles:
+  administrator:
+    name: IEEE Administrator
+    badge: badge-warning
+    permissions: [view, edit, manage]
+
+  officer:
+    name: IEEE Officer
+    badge: badge-info
+    permissions: [view, edit]
+
+  sponsor:
+    name: IEEE Sponsor
+    badge: badge-warning
+    permissions: [view]
+
+  member:
+    name: Regular Member
+    badge: badge-neutral
+    permissions: [self]
+
+resume:
+  allowedTypes: [.pdf, .doc, .docx]
+  maxSize: 5242880 # 5MB in bytes
+  viewer:
+    width: w-11/12
+    maxWidth: max-w-5xl
+    height: h-[80vh]
+
+ui:
+  transitions:
+    fadeDelay: 50
+
+  messages:
+    memberId:
+      saving: Saving member ID...
+      success: IEEE Member ID saved successfully!
+      error: Failed to save IEEE Member ID. Please try again.
+      messageTimeout: 3000
+
+    resume:
+      uploading: Uploading resume...
+      success: Resume uploaded successfully!
+      error: Failed to upload resume. Please try again.
+      deleting: Deleting resume...
+      deleteSuccess: Resume deleted successfully!
+      deleteError: Failed to delete resume. Please try again.
+      messageTimeout: 3000
+
+    auth:
+      loginError: Failed to start authentication
+      notSignedIn: Not signed in
+      notVerified: Not verified
+      notProvided: Not provided
+      notAvailable: Not available
+      never: Never
+
+  defaults:
+    pageSize: 50
+    sortField: -updated
+
+autoDetection:
+  officer:
+    emailDomain: "@ieeeucsd.org"

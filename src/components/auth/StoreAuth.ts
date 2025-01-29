@@ -1,4 +1,80 @@
 import PocketBase from "pocketbase";
+import yaml from "js-yaml";
+import configYaml from "../../data/storeConfig.yaml?raw";
+
+// Configuration type definitions
+interface Role {
+  name: string;
+  badge: string;
+  permissions: string[];
+}
+
+interface Config {
+  api: {
+    baseUrl: string;
+    oauth2: {
+      redirectPath: string;
+      providerName: string;
+    };
+  };
+  roles: {
+    administrator: Role;
+    officer: Role;
+    sponsor: Role;
+    member: Role;
+  };
+  resume: {
+    allowedTypes: string[];
+    maxSize: number;
+    viewer: {
+      width: string;
+      maxWidth: string;
+      height: string;
+    };
+  };
+  ui: {
+    transitions: {
+      fadeDelay: number;
+    };
+    messages: {
+      memberId: {
+        saving: string;
+        success: string;
+        error: string;
+        messageTimeout: number;
+      };
+      resume: {
+        uploading: string;
+        success: string;
+        error: string;
+        deleting: string;
+        deleteSuccess: string;
+        deleteError: string;
+        messageTimeout: number;
+      };
+      auth: {
+        loginError: string;
+        notSignedIn: string;
+        notVerified: string;
+        notProvided: string;
+        notAvailable: string;
+        never: string;
+      };
+    };
+    defaults: {
+      pageSize: number;
+      sortField: string;
+    };
+  };
+  autoDetection: {
+    officer: {
+      emailDomain: string;
+    };
+  };
+}
+
+// Parse YAML configuration with type
+const config = yaml.load(configYaml) as Config;
 
 interface AuthElements {
   loginButton: HTMLButtonElement;
@@ -34,6 +110,10 @@ interface AuthElements {
   editorCurrentResume: HTMLParagraphElement;
   saveProfileButton: HTMLButtonElement;
   sponsorViewToggle: HTMLDivElement;
+  pdfViewer: HTMLDialogElement;
+  pdfFrame: HTMLIFrameElement;
+  pdfTitle: HTMLHeadingElement;
+  pdfExternalLink: HTMLAnchorElement;
 }
 
 export class StoreAuth {
@@ -41,9 +121,10 @@ export class StoreAuth {
   private elements: AuthElements & { loadingSkeleton: HTMLDivElement };
   private isEditingMemberId: boolean = false;
   private cachedUsers: any[] = []; // Store users data
+  private config = config;
 
   constructor() {
-    this.pb = new PocketBase("https://pocketbase.ieeeucsd.org");
+    this.pb = new PocketBase(this.config.api.baseUrl);
     this.elements = this.getElements();
     this.init();
   }
@@ -167,6 +248,11 @@ export class StoreAuth {
       "sponsorViewToggle",
     ) as HTMLDivElement;
 
+    const pdfViewer = document.getElementById("pdfViewer") as HTMLDialogElement;
+    const pdfFrame = document.getElementById("pdfFrame") as HTMLIFrameElement;
+    const pdfTitle = document.getElementById("pdfTitle") as HTMLHeadingElement;
+    const pdfExternalLink = document.getElementById("pdfExternalLink") as HTMLAnchorElement;
+
     if (
       !loginButton ||
       !logoutButton ||
@@ -201,7 +287,11 @@ export class StoreAuth {
       !editorResume ||
       !editorCurrentResume ||
       !saveProfileButton ||
-      !sponsorViewToggle
+      !sponsorViewToggle ||
+      !pdfViewer ||
+      !pdfFrame ||
+      !pdfTitle ||
+      !pdfExternalLink
     ) {
       throw new Error("Required DOM elements not found");
     }
@@ -241,6 +331,10 @@ export class StoreAuth {
       editorCurrentResume,
       saveProfileButton,
       sponsorViewToggle,
+      pdfViewer,
+      pdfFrame,
+      pdfTitle,
+      pdfExternalLink,
     };
   }
 
@@ -293,10 +387,10 @@ export class StoreAuth {
     if (this.pb.authStore.isValid && this.pb.authStore.model) {
       // Update all the user information first
       const user = this.pb.authStore.model;
-      const isSponsor = user.member_type === "IEEE Sponsor";
+      const isSponsor = user.member_type === this.config.roles.sponsor.name;
 
-      userName.textContent = user.name || "Name not provided";
-      userEmail.textContent = user.email || "Email not available";
+      userName.textContent = user.name || this.config.ui.messages.auth.notProvided;
+      userEmail.textContent = user.email || this.config.ui.messages.auth.notAvailable;
 
       // Hide member ID and resume sections for sponsors
       const memberIdSection = memberIdInput.closest('.space-y-1') as HTMLElement;
@@ -327,11 +421,10 @@ export class StoreAuth {
         // Check and update member_type if not set
         if (!user.member_type) {
           try {
-            const isIeeeOfficer =
-              user.email?.toLowerCase().endsWith("@ieeeucsd.org") || false;
+            const isIeeeOfficer = user.email?.toLowerCase().endsWith(this.config.autoDetection.officer.emailDomain) || false;
             const newMemberType = isIeeeOfficer
-              ? "IEEE Officer"
-              : "Regular Member";
+              ? this.config.roles.officer.name
+              : this.config.roles.member.name;
 
             await this.pb.collection("users").update(user.id, {
               member_type: newMemberType,
@@ -343,7 +436,7 @@ export class StoreAuth {
           }
         }
 
-        memberStatus.textContent = user.member_type || "Regular Member";
+        memberStatus.textContent = user.member_type || this.config.roles.member.name;
         memberStatus.classList.remove(
           "badge-neutral",
           "badge-success",
@@ -353,19 +446,19 @@ export class StoreAuth {
         );
 
         // Set color based on member type
-        if (user.member_type === "IEEE Administrator") {
-          memberStatus.classList.add("badge-warning"); // Red for administrators
-        } else if (user.member_type === "IEEE Officer") {
-          memberStatus.classList.add("badge-info"); // Blue for officers
-        } else if (user.member_type === "IEEE Sponsor") {
-          memberStatus.classList.add("badge-warning"); // Yellow for sponsors
+        const role = Object.values(this.config.roles).find(r => r.name === user.member_type);
+        if (role) {
+          memberStatus.classList.add(role.badge);
         } else {
-          memberStatus.classList.add("badge-neutral"); // Neutral for regular members
+          memberStatus.classList.add(this.config.roles.member.badge);
         }
 
         // Handle view toggles visibility
-        const isOfficer = ["IEEE Officer", "IEEE Administrator"].includes(user.member_type || "");
-        const isSponsor = user.member_type === "IEEE Sponsor";
+        const isOfficer = [
+          this.config.roles.officer.name,
+          this.config.roles.administrator.name
+        ].includes(user.member_type || "");
+        const isSponsor = user.member_type === this.config.roles.sponsor.name;
 
         officerViewToggle.style.display = isOfficer ? "block" : "none";
         sponsorViewToggle.style.display = isSponsor ? "block" : "none";
@@ -375,7 +468,7 @@ export class StoreAuth {
           await this.fetchUserResumes();
         }
       } else {
-        memberStatus.textContent = "Not Verified";
+        memberStatus.textContent = this.config.ui.messages.auth.notVerified;
         memberStatus.classList.remove(
           "badge-info",
           "badge-warning",
@@ -392,7 +485,7 @@ export class StoreAuth {
       // Update last login
       const lastLoginDate = user.last_login
         ? new Date(user.last_login).toLocaleString()
-        : "Never";
+        : this.config.ui.messages.auth.never;
       lastLogin.textContent = lastLoginDate;
 
       // Update resume section
@@ -401,12 +494,19 @@ export class StoreAuth {
         (!Array.isArray(user.resume) || user.resume.length > 0)
       ) {
         const resumeUrl = user.resume.toString();
-        resumeName.textContent = this.getFileNameFromUrl(resumeUrl);
-        resumeDownload.href = this.pb.files.getURL(user, resumeUrl);
+        const fileName = this.getFileNameFromUrl(resumeUrl);
+        resumeName.textContent = fileName;
+        const fullUrl = this.pb.files.getURL(user, resumeUrl);
+        resumeDownload.href = "#";
+        resumeDownload.onclick = (e) => {
+          e.preventDefault();
+          this.handleResumeView(fullUrl, fileName);
+        };
         resumeActions.style.display = "flex";
       } else {
         resumeName.textContent = "No resume uploaded";
         resumeDownload.href = "#";
+        resumeDownload.onclick = null;
         resumeActions.style.display = "none";
       }
 
@@ -421,9 +521,9 @@ export class StoreAuth {
       logoutButton.style.display = "block";
     } else {
       // Update for logged out state
-      userName.textContent = "Not signed in";
-      userEmail.textContent = "Not signed in";
-      memberStatus.textContent = "Not verified";
+      userName.textContent = this.config.ui.messages.auth.notSignedIn;
+      userEmail.textContent = this.config.ui.messages.auth.notSignedIn;
+      memberStatus.textContent = this.config.ui.messages.auth.notVerified;
       memberStatus.classList.remove(
         "badge-info",
         "badge-warning",
@@ -431,7 +531,7 @@ export class StoreAuth {
         "badge-error",
       );
       memberStatus.classList.add("badge-neutral");
-      lastLogin.textContent = "Never";
+      lastLogin.textContent = this.config.ui.messages.auth.never;
 
       // Disable member ID input and save button
       memberIdInput.disabled = true;
@@ -448,6 +548,7 @@ export class StoreAuth {
       // Reset resume section
       resumeName.textContent = "No resume uploaded";
       resumeDownload.href = "#";
+      resumeDownload.onclick = null;
       resumeActions.style.display = "none";
 
       // After everything is updated, show the content
@@ -492,7 +593,7 @@ export class StoreAuth {
     const memberId = memberIdInput.value.trim();
 
     try {
-      memberIdStatus.textContent = "Saving member ID...";
+      memberIdStatus.textContent = this.config.ui.messages.memberId.saving;
 
       const user = this.pb.authStore.model;
       if (!user?.id) {
@@ -503,26 +604,36 @@ export class StoreAuth {
         member_id: memberId,
       });
 
-      memberIdStatus.textContent = "IEEE Member ID saved successfully!";
+      memberIdStatus.textContent = this.config.ui.messages.memberId.success;
       this.isEditingMemberId = false;
       this.updateUI();
 
       // Clear the status message after a delay
       setTimeout(() => {
         memberIdStatus.textContent = "";
-      }, 3000);
+      }, this.config.ui.messages.memberId.messageTimeout);
     } catch (err: any) {
       console.error("IEEE Member ID save error:", err);
-      memberIdStatus.textContent =
-        "Failed to save IEEE Member ID. Please try again.";
+      memberIdStatus.textContent = this.config.ui.messages.memberId.error;
     }
   }
 
   private async handleResumeUpload(file: File) {
     const { uploadStatus } = this.elements;
 
+    // Check file type and size
+    if (!this.config.resume.allowedTypes.some(type => file.name.toLowerCase().endsWith(type))) {
+      uploadStatus.textContent = `File type not allowed. Allowed types: ${this.config.resume.allowedTypes.join(", ")}`;
+      return;
+    }
+
+    if (file.size > this.config.resume.maxSize) {
+      uploadStatus.textContent = `File too large. Maximum size: ${this.config.resume.maxSize / 1024 / 1024}MB`;
+      return;
+    }
+
     try {
-      uploadStatus.textContent = "Uploading resume...";
+      uploadStatus.textContent = this.config.ui.messages.resume.uploading;
 
       const formData = new FormData();
       formData.append("resume", file);
@@ -543,7 +654,7 @@ export class StoreAuth {
 
       await this.pb.collection("users").update(user.id, formData);
 
-      uploadStatus.textContent = "Resume uploaded successfully!";
+      uploadStatus.textContent = this.config.ui.messages.resume.success;
       this.updateUI();
 
       // Clear the file input
@@ -552,10 +663,10 @@ export class StoreAuth {
       // Clear the status message after a delay
       setTimeout(() => {
         uploadStatus.textContent = "";
-      }, 3000);
+      }, this.config.ui.messages.resume.messageTimeout);
     } catch (err: any) {
       console.error("Resume upload error:", err);
-      uploadStatus.textContent = "Failed to upload resume. Please try again.";
+      uploadStatus.textContent = this.config.ui.messages.resume.error;
     }
   }
 
@@ -563,7 +674,7 @@ export class StoreAuth {
     const { uploadStatus } = this.elements;
 
     try {
-      uploadStatus.textContent = "Deleting resume...";
+      uploadStatus.textContent = this.config.ui.messages.resume.deleting;
 
       const user = this.pb.authStore.model;
       if (!user?.id) {
@@ -574,16 +685,16 @@ export class StoreAuth {
         resume: null,
       });
 
-      uploadStatus.textContent = "Resume deleted successfully!";
+      uploadStatus.textContent = this.config.ui.messages.resume.deleteSuccess;
       this.updateUI();
 
       // Clear the status message after a delay
       setTimeout(() => {
         uploadStatus.textContent = "";
-      }, 3000);
+      }, this.config.ui.messages.resume.messageTimeout);
     } catch (err: any) {
       console.error("Resume deletion error:", err);
-      uploadStatus.textContent = "Failed to delete resume. Please try again.";
+      uploadStatus.textContent = this.config.ui.messages.resume.deleteError;
     }
   }
 
@@ -592,7 +703,7 @@ export class StoreAuth {
     try {
       const authMethods = await this.pb.collection("users").listAuthMethods();
       const oidcProvider = authMethods.oauth2?.providers?.find(
-        (p: { name: string }) => p.name === "oidc",
+        (p: { name: string }) => p.name === this.config.api.oauth2.providerName,
       );
 
       if (!oidcProvider) {
@@ -603,12 +714,12 @@ export class StoreAuth {
       localStorage.setItem("provider", JSON.stringify(oidcProvider));
 
       // Redirect to the authorization URL
-      const redirectUrl = window.location.origin + "/oauth2-redirect";
+      const redirectUrl = window.location.origin + this.config.api.oauth2.redirectPath;
       const authUrl = oidcProvider.authURL + encodeURIComponent(redirectUrl);
       window.location.href = authUrl;
     } catch (err: any) {
       console.error("Authentication error:", err);
-      this.elements.userEmail.textContent = "Failed to start authentication";
+      this.elements.userEmail.textContent = this.config.ui.messages.auth.loginError;
       this.elements.userName.textContent = "Error";
     }
   }
@@ -643,8 +754,8 @@ export class StoreAuth {
     try {
       // Only fetch from API if we don't have cached data
       if (this.cachedUsers.length === 0) {
-        const records = await this.pb.collection("users").getList(1, 50, {
-          sort: "-updated",
+        const records = await this.pb.collection("users").getList(1, this.config.ui.defaults.pageSize, {
+          sort: this.config.ui.defaults.sortField,
           fields: "id,name,email,member_id,resume,points,collectionId,collectionName",
           expand: "resume",
         });
@@ -668,7 +779,7 @@ export class StoreAuth {
 
       const { resumeList } = this.elements;
       const fragment = document.createDocumentFragment();
-      const isSponsor = this.pb.authStore.model?.member_type === "IEEE Sponsor";
+      const isSponsor = this.pb.authStore.model?.member_type === this.config.roles.sponsor.name;
 
       if (filteredUsers.length === 0) {
         const row = document.createElement("tr");
@@ -684,6 +795,7 @@ export class StoreAuth {
           const resumeUrl = user.resume && user.resume !== ""
             ? this.pb.files.getURL(user, user.resume.toString())
             : null;
+          const fileName = resumeUrl ? this.getFileNameFromUrl(user.resume.toString()) : null;
 
           // Create edit button only if not a sponsor
           const editButton = !isSponsor ? `
@@ -695,6 +807,11 @@ export class StoreAuth {
             </button>
           ` : '';
 
+          // Create view resume link
+          const viewResumeLink = resumeUrl
+            ? `<a href="#" class="btn btn-ghost btn-xs" onclick="event.preventDefault(); document.dispatchEvent(new CustomEvent('viewResume', { detail: { url: '${resumeUrl}', fileName: '${fileName}' } }));">View Resume</a>`
+            : '<span class="text-sm opacity-50">No resume</span>';
+
           row.innerHTML = `
             <td class="block lg:table-cell">
               <!-- Mobile View -->
@@ -704,10 +821,7 @@ export class StoreAuth {
                 <div class="text-sm opacity-70">ID: ${user.member_id || "N/A"}</div>
                 <div class="text-sm opacity-70">Points: ${user.points || 0}</div>
                 <div class="flex items-center justify-between">
-                  ${resumeUrl
-                    ? `<a href="${resumeUrl}" target="_blank" class="btn btn-ghost btn-xs">View Resume</a>`
-                    : '<span class="text-sm opacity-50">No resume</span>'
-                  }
+                  ${viewResumeLink}
                   ${editButton}
                 </div>
               </div>
@@ -719,10 +833,7 @@ export class StoreAuth {
             <td class="hidden lg:table-cell">${user.member_id || "N/A"}</td>
             <td class="hidden lg:table-cell">${user.points || 0}</td>
             <td class="hidden lg:table-cell">
-              ${resumeUrl
-                ? `<a href="${resumeUrl}" target="_blank" class="btn btn-ghost btn-xs">View Resume</a>`
-                : '<span class="text-sm opacity-50">No resume</span>'
-              }
+              ${viewResumeLink}
             </td>
             <td class="hidden lg:table-cell">
               ${editButton}
@@ -859,6 +970,14 @@ export class StoreAuth {
     }
   }
 
+  private handleResumeView(url: string, fileName: string) {
+    const { pdfViewer, pdfFrame, pdfTitle, pdfExternalLink } = this.elements;
+    pdfFrame.src = url;
+    pdfTitle.textContent = fileName;
+    pdfExternalLink.href = url;
+    pdfViewer.showModal();
+  }
+
   private init() {
     // Initial UI update with loading state
     this.updateUI().catch(console.error);
@@ -969,5 +1088,10 @@ export class StoreAuth {
       e.preventDefault();
       this.handleProfileSave();
     });
+
+    // Add resume view event listener
+    document.addEventListener('viewResume', ((e: CustomEvent) => {
+      this.handleResumeView(e.detail.url, e.detail.fileName);
+    }) as EventListener);
   }
 }
