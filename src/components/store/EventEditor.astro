@@ -1,0 +1,96 @@
+<!-- Event Editor Dialog -->
+<dialog id="eventEditor" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Event Details</h3>
+        <form class="space-y-4">
+            <div class="form-control">
+                <label class="label" for="editorEventId">
+                    <span class="label-text">Event ID</span>
+                </label>
+                <input
+                    type="text"
+                    id="editorEventId"
+                    class="input input-bordered w-full"
+                    required
+                />
+            </div>
+
+            <div class="form-control">
+                <label class="label" for="editorEventName">
+                    <span class="label-text">Event Name</span>
+                </label>
+                <input
+                    type="text"
+                    id="editorEventName"
+                    class="input input-bordered w-full"
+                    required
+                />
+            </div>
+
+            <div class="form-control">
+                <label class="label" for="editorEventCode">
+                    <span class="label-text">Event Code</span>
+                </label>
+                <input
+                    type="text"
+                    id="editorEventCode"
+                    class="input input-bordered w-full"
+                    required
+                />
+            </div>
+
+            <div class="form-control">
+                <label class="label" for="editorStartDate">
+                    <span class="label-text">Start Date & Time</span>
+                </label>
+                <input
+                    type="datetime-local"
+                    id="editorStartDate"
+                    class="input input-bordered w-full"
+                    required
+                />
+            </div>
+
+            <div class="form-control">
+                <label class="label" for="editorEndDate">
+                    <span class="label-text">End Date & Time</span>
+                </label>
+                <input
+                    type="datetime-local"
+                    id="editorEndDate"
+                    class="input input-bordered w-full"
+                    required
+                />
+            </div>
+
+            <div class="form-control">
+                <label class="label" for="editorPointsToReward">
+                    <span class="label-text">Points to Reward</span>
+                </label>
+                <input
+                    type="number"
+                    id="editorPointsToReward"
+                    class="input input-bordered w-full"
+                    min="0"
+                    required
+                />
+            </div>
+
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="eventEditor.close()">
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    id="saveEventButton"
+                    class="btn btn-primary"
+                >
+                    Save
+                </button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>

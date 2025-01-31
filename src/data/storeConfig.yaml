@@ -53,6 +53,15 @@ ui:
       deleteError: Failed to delete resume. Please try again.
       messageTimeout: 3000
 
+    event:
+      saving: Saving event...
+      success: Event saved successfully!
+      error: Failed to save event. Please try again.
+      deleting: Deleting event...
+      deleteSuccess: Event deleted successfully!
+      deleteError: Failed to delete event. Please try again.
+      messageTimeout: 3000
+
     auth:
       loginError: Failed to start authentication
       notSignedIn: Not signed in
