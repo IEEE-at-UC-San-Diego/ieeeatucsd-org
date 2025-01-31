@@ -1,0 +1,50 @@
+---
+import Layout from "../layouts/Layout.astro";
+import UserProfile from "../components/auth/UserProfile.astro";
+import DefaultProfileView from "../components/profile/DefaultProfileView.astro";
+import OfficerProfileView from "../components/profile/OfficerView.astro";
+const title = "User Profile";
+---
+
+<Layout {title}>
+    <main class="mx-auto pb-12 md:pt-[5vh] pt-[5vw] min-h-screen">
+        <h1 class="text-4xl font-bold mb-12">Profile Management</h1>
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Left Column - User Info -->
+            <div class="lg:col-span-2 2xl:col-span-1 h-fit">
+                <UserProfile />
+            </div>
+
+            <!-- Right Column - Store Items -->
+            <div id="storeContent" class="lg:col-span-2 2xl:col-span-3">
+                <div id="defaultView">
+                    <DefaultProfileView />
+                </div>
+                <div id="officerView" class="hidden">
+                    <OfficerProfileView />
+                </div>
+            </div>
+        </div>
+    </main>
+</Layout>
+
+<script>
+    import { StoreAuth } from "../components/auth/StoreAuth";
+    new StoreAuth();
+
+    // Handle view toggling
+    const officerViewToggle = document.getElementById("officerViewToggle");
+    const officerViewCheckbox = officerViewToggle?.querySelector(
+        'input[type="checkbox"]'
+    );
+    const defaultView = document.getElementById("defaultView");
+    const officerView = document.getElementById("officerView");
+
+    if (officerViewCheckbox && defaultView && officerView) {
+        officerViewCheckbox.addEventListener("change", (e) => {
+            const isChecked = (e.target as HTMLInputElement).checked;
+            defaultView.style.display = isChecked ? "none" : "block";
+            officerView.style.display = isChecked ? "block" : "none";
+        });
+    }
+</script>

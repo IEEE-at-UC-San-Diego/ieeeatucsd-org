@@ -47,20 +47,34 @@
                     </div>
                     <div class="divider my-0.5"></div>
 
-                    <!-- Resume -->
-                    <div class="space-y-1">
-                        <div class="skeleton h-3 w-16 opacity-70"></div>
+                    <!-- Event Check-in -->
+                    <div class="space-y-2">
+                        <div class="skeleton h-3 w-24 opacity-70"></div>
                         <div class="space-y-2">
                             <div class="flex items-center gap-2">
-                                <div class="skeleton h-[1.25rem] flex-1"></div>
-                                <div class="skeleton h-[1.25rem] w-24"></div>
+                                <div class="skeleton h-8 flex-1"></div>
+                                <div class="skeleton h-8 w-24"></div>
                             </div>
-                            <div class="skeleton h-8 w-full"></div>
+                            <div class="skeleton h-3 w-48 opacity-70"></div>
                         </div>
                     </div>
                     <div class="divider my-0.5"></div>
 
-                    <!-- Auth Button -->
+                    <!-- Resume -->
+                    <div class="space-y-2">
+                        <div class="skeleton h-3 w-16 opacity-70"></div>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2">
+                                <div class="skeleton h-5 flex-1"></div>
+                                <div class="skeleton h-5 w-24"></div>
+                            </div>
+                            <div class="skeleton h-8 w-full"></div>
+                            <div class="skeleton h-3 w-48 opacity-70"></div>
+                        </div>
+                    </div>
+                    <div class="divider my-0.5"></div>
+
+                    <!-- Auth Buttons -->
                     <div class="pt-2">
                         <div class="skeleton h-10 w-full"></div>
                     </div>
@@ -194,10 +208,14 @@
                     </div>
                     <div class="divider my-0.5"></div>
                     <div class="pt-2">
-                        <button id="loginButton" class="btn btn-primary w-full"
+                        <button
+                            id="contentLoginButton"
+                            class="login-button btn btn-primary w-full"
                             >Sign in with IEEEUCSD SSO</button
                         >
-                        <button id="logoutButton" class="btn btn-error w-full"
+                        <button
+                            id="contentLogoutButton"
+                            class="logout-button btn btn-error w-full"
                             >Sign Out</button
                         >
                     </div>
@@ -347,3 +365,10 @@
         background: rgba(0, 0, 0, 0.5);
     }
 </style>
+
+<script>
+    import { StoreAuth } from "./StoreAuth";
+    import { EventCheckIn } from "./EventCheckIn";
+    new StoreAuth();
+    new EventCheckIn();
+</script>

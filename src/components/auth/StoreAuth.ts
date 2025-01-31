@@ -132,10 +132,10 @@ export class StoreAuth {
   private getElements(): AuthElements & { loadingSkeleton: HTMLDivElement } {
     // Fun typescript fixes
     const loginButton = document.getElementById(
-      "loginButton",
+      "contentLoginButton",
     ) as HTMLButtonElement;
     const logoutButton = document.getElementById(
-      "logoutButton",
+      "contentLogoutButton",
     ) as HTMLButtonElement;
     const userInfo = document.getElementById("userInfo") as HTMLDivElement;
     const loadingSkeleton = document.getElementById(
@@ -380,14 +380,25 @@ export class StoreAuth {
       sponsorViewToggle,
     } = this.elements;
 
-    // Hide buttons initially
-    loginButton.style.display = "none";
-    logoutButton.style.display = "none";
+    // Get all login and logout buttons using classes
+    const allLoginButtons = document.querySelectorAll('.login-button');
+    const allLogoutButtons = document.querySelectorAll('.logout-button');
+
+    // Hide all buttons initially
+    allLoginButtons.forEach(btn => btn.classList.add("hidden"));
+    allLogoutButtons.forEach(btn => btn.classList.add("hidden"));
 
     if (this.pb.authStore.isValid && this.pb.authStore.model) {
+      // Show logout buttons for authenticated users
+      allLogoutButtons.forEach(btn => btn.classList.remove("hidden"));
+
       // Update all the user information first
       const user = this.pb.authStore.model;
       const isSponsor = user.member_type === this.config.roles.sponsor.name;
+      const isOfficer = [
+        this.config.roles.officer.name,
+        this.config.roles.administrator.name
+      ].includes(user.member_type || "");
 
       userName.textContent = user.name || this.config.ui.messages.auth.notProvided;
       userEmail.textContent = user.email || this.config.ui.messages.auth.notAvailable;
@@ -454,12 +465,6 @@ export class StoreAuth {
         }
 
         // Handle view toggles visibility
-        const isOfficer = [
-          this.config.roles.officer.name,
-          this.config.roles.administrator.name
-        ].includes(user.member_type || "");
-        const isSponsor = user.member_type === this.config.roles.sponsor.name;
-
         officerViewToggle.style.display = isOfficer ? "block" : "none";
         sponsorViewToggle.style.display = isSponsor ? "block" : "none";
 
@@ -518,8 +523,12 @@ export class StoreAuth {
         userInfo.style.opacity = "1";
       }, 50);
 
-      logoutButton.style.display = "block";
+      officerViewToggle.style.display = isOfficer ? "block" : "none";
+      sponsorViewToggle.style.display = isSponsor ? "block" : "none";
     } else {
+      // Show login buttons for unauthenticated users
+      allLoginButtons.forEach(btn => btn.classList.remove("hidden"));
+
       // Update for logged out state
       userName.textContent = this.config.ui.messages.auth.notSignedIn;
       userEmail.textContent = this.config.ui.messages.auth.notSignedIn;
@@ -559,7 +568,6 @@ export class StoreAuth {
         userInfo.style.opacity = "1";
       }, 50);
 
-      loginButton.style.display = "block";
       officerViewToggle.style.display = "none";
       sponsorViewToggle.style.display = "none";
     }

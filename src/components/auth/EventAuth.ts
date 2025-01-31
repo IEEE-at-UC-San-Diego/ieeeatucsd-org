@@ -1,6 +1,8 @@
 import PocketBase from "pocketbase";
+import type { RecordModel } from "pocketbase";
 import yaml from "js-yaml";
 import configYaml from "../../data/storeConfig.yaml?raw";
+import JSZip from 'jszip';
 
 // Configuration type definitions
 interface Config {
@@ -19,6 +21,28 @@ interface Config {
         messageTimeout: number;
       };
     };
+    tables: {
+      events: {
+        title: string;
+        columns: {
+          event_name: string;
+          event_id: string;
+          event_code: string;
+          start_date: string;
+          end_date: string;
+          points_to_reward: string;
+          location: string;
+          registered_users: string;
+          actions: string;
+        };
+        form: {
+          buttons: {
+            edit: string;
+            delete: string;
+          };
+        };
+      };
+    };
     defaults: {
       pageSize: number;
       sortField: string;
@@ -28,16 +52,19 @@ interface Config {
 
 // Parse YAML configuration with type
 const config = yaml.load(configYaml) as Config;
+const { columns, form } = config.ui.tables.events;
 
 interface Event {
   id: string;
   event_id: string;
   event_name: string;
   event_code: string;
-  registered_users: string; // JSON string
+  attendees: string; // JSON string of attendee IDs
   points_to_reward: number;
   start_date: string;
   end_date: string;
+  location: string;
+  files: string[]; // Array of file URLs
   collectionId: string;
   collectionName: string;
 }
@@ -52,15 +79,32 @@ interface AuthElements {
   editorEventName: HTMLInputElement;
   editorEventCode: HTMLInputElement;
   editorStartDate: HTMLInputElement;
+  editorStartTime: HTMLInputElement;
   editorEndDate: HTMLInputElement;
+  editorEndTime: HTMLInputElement;
   editorPointsToReward: HTMLInputElement;
+  editorLocation: HTMLInputElement;
+  editorFiles: HTMLInputElement;
+  currentFiles: HTMLDivElement;
   saveEventButton: HTMLButtonElement;
+}
+
+interface ValidationErrors {
+  eventId?: string;
+  eventName?: string;
+  eventCode?: string;
+  startDate?: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
+  points?: string;
 }
 
 export class EventAuth {
   private pb: PocketBase;
   private elements: AuthElements;
   private cachedEvents: Event[] = [];
+  private abortController: AbortController | null = null;
 
   constructor() {
     this.pb = new PocketBase(config.api.baseUrl);
@@ -78,8 +122,13 @@ export class EventAuth {
     const editorEventName = document.getElementById("editorEventName") as HTMLInputElement;
     const editorEventCode = document.getElementById("editorEventCode") as HTMLInputElement;
     const editorStartDate = document.getElementById("editorStartDate") as HTMLInputElement;
+    const editorStartTime = document.getElementById("editorStartTime") as HTMLInputElement;
     const editorEndDate = document.getElementById("editorEndDate") as HTMLInputElement;
+    const editorEndTime = document.getElementById("editorEndTime") as HTMLInputElement;
     const editorPointsToReward = document.getElementById("editorPointsToReward") as HTMLInputElement;
+    const editorLocation = document.getElementById("editorLocation") as HTMLInputElement;
+    const editorFiles = document.getElementById("editorFiles") as HTMLInputElement;
+    const currentFiles = document.getElementById("currentFiles") as HTMLDivElement;
     const saveEventButton = document.getElementById("saveEventButton") as HTMLButtonElement;
 
     if (
@@ -92,8 +141,13 @@ export class EventAuth {
       !editorEventName ||
       !editorEventCode ||
       !editorStartDate ||
+      !editorStartTime ||
       !editorEndDate ||
+      !editorEndTime ||
       !editorPointsToReward ||
+      !editorLocation ||
+      !editorFiles ||
+      !currentFiles ||
       !saveEventButton
     ) {
       throw new Error("Required DOM elements not found");
@@ -109,20 +163,44 @@ export class EventAuth {
       editorEventName,
       editorEventCode,
       editorStartDate,
+      editorStartTime,
       editorEndDate,
+      editorEndTime,
       editorPointsToReward,
+      editorLocation,
+      editorFiles,
+      currentFiles,
       saveEventButton,
     };
   }
 
   private getRegisteredUsersCount(registeredUsers: string): number {
+    // Handle different cases for registered_users field
+    if (!registeredUsers) return 0;
+    
     try {
-      if (!registeredUsers) return 0;
+      // Try to parse if it's a JSON string
       const users = JSON.parse(registeredUsers);
-      return Array.isArray(users) ? users.length : 0;
+      // Ensure users is an array
+      if (!Array.isArray(users)) {
+        return 0;
+      }
+      return users.length;
     } catch (err) {
-      console.warn("Failed to parse registered_users:", err);
+      console.warn("Failed to parse registered_users, using 0");
       return 0;
+    }
+  }
+
+  private parseArrayField(field: any, defaultValue: any[] = []): any[] {
+    if (!field) return defaultValue;
+    if (Array.isArray(field)) return field;
+    try {
+      const parsed = JSON.parse(field);
+      return Array.isArray(parsed) ? parsed : defaultValue;
+    } catch (err) {
+      console.warn("Failed to parse array field:", err);
+      return defaultValue;
     }
   }
 
@@ -145,7 +223,8 @@ export class EventAuth {
             return terms.every(term => 
               (event.event_name?.toLowerCase().includes(term) || 
                event.event_id?.toLowerCase().includes(term) || 
-               event.event_code?.toLowerCase().includes(term))
+               event.event_code?.toLowerCase().includes(term) ||
+               event.location?.toLowerCase().includes(term))
             );
           });
         }
@@ -157,7 +236,7 @@ export class EventAuth {
       if (filteredEvents.length === 0) {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td colspan="8" class="text-center py-4">
+          <td colspan="10" class="text-center py-4">
             ${searchQuery ? "No events found matching your search." : "No events found."}
           </td>
         `;
@@ -167,57 +246,105 @@ export class EventAuth {
           const row = document.createElement("tr");
           const startDate = event.start_date ? new Date(event.start_date).toLocaleString() : "N/A";
           const endDate = event.end_date ? new Date(event.end_date).toLocaleString() : "N/A";
-          const registeredCount = this.getRegisteredUsersCount(event.registered_users);
+          
+          // Parse attendees using the new helper method
+          const attendees = this.parseArrayField(event.attendees);
+          const attendeeCount = attendees.length;
+
+          // Handle files display
+          const filesHtml = event.files && Array.isArray(event.files) && event.files.length > 0
+            ? `<button class="btn btn-ghost btn-xs view-files w-24" data-event-id="${event.id}">${event.files.length} File${event.files.length > 1 ? 's' : ''}</button>`
+            : '<span class="text-sm opacity-50">No files</span>';
+
+          // Format dates for display
+          const formatDateTime = (dateStr: string) => {
+            if (!dateStr) return { dateDisplay: 'N/A', timeDisplay: 'N/A' };
+            const date = new Date(dateStr);
+            return {
+              dateDisplay: date.toLocaleDateString(),
+              timeDisplay: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+          };
+
+          const startDateTime = formatDateTime(event.start_date);
+          const endDateTime = formatDateTime(event.end_date);
 
           row.innerHTML = `
             <td class="block lg:table-cell">
               <!-- Mobile View -->
               <div class="lg:hidden space-y-2">
-                <div class="font-medium">${event.event_name || "N/A"}</div>
-                <div class="text-sm opacity-70">Event ID: ${event.event_id || "N/A"}</div>
-                <div class="text-sm opacity-70">Code: ${event.event_code || "N/A"}</div>
-                <div class="text-sm opacity-70">Start: ${startDate}</div>
-                <div class="text-sm opacity-70">End: ${endDate}</div>
-                <div class="text-sm opacity-70">Points: ${event.points_to_reward || 0}</div>
-                <div class="text-sm opacity-70">Registered: ${registeredCount}</div>
-                <div class="flex items-center justify-between mt-2">
+                <div class="font-medium text-center">${event.event_name || "N/A"}</div>
+                <div class="text-sm opacity-70 text-center">${columns.event_id}: ${event.event_id || "N/A"}</div>
+                <div class="text-sm opacity-70 text-center">${columns.event_code}: ${event.event_code || "N/A"}</div>
+                <div class="text-sm opacity-70 text-center">${columns.start_date}: ${startDateTime.dateDisplay}<br>${startDateTime.timeDisplay}</div>
+                <div class="text-sm opacity-70 text-center">${columns.end_date}: ${endDateTime.dateDisplay}<br>${endDateTime.timeDisplay}</div>
+                <div class="text-sm opacity-70 text-center">${columns.points_to_reward}: ${event.points_to_reward || 0}</div>
+                <div class="text-sm opacity-70 text-center">${columns.location}: ${event.location || "N/A"}</div>
+                <div class="text-sm opacity-70 text-center">Files: ${filesHtml}</div>
+                <div class="text-sm opacity-70 text-center">Attendees: ${attendeeCount}</div>
+                <div class="flex items-center justify-center gap-2 mt-2">
+                  <button class="btn btn-ghost btn-xs view-attendees" data-event-id="${event.id}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                    </svg>
+                    View Attendees
+                  </button>
                   <button class="btn btn-ghost btn-xs edit-event" data-event-id="${event.id}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                     </svg>
-                    Edit
+                    ${form.buttons.edit}
                   </button>
                   <button class="btn btn-ghost btn-xs text-error delete-event" data-event-id="${event.id}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                     </svg>
-                    Delete
+                    ${form.buttons.delete}
                   </button>
                 </div>
               </div>
 
               <!-- Desktop View -->
-              <span class="hidden lg:block">${event.event_name || "N/A"}</span>
+              <span class="hidden lg:block text-center">${event.event_name || "N/A"}</span>
             </td>
-            <td class="hidden lg:table-cell">${event.event_id || "N/A"}</td>
-            <td class="hidden lg:table-cell">${event.event_code || "N/A"}</td>
-            <td class="hidden lg:table-cell">${startDate}</td>
-            <td class="hidden lg:table-cell">${endDate}</td>
-            <td class="hidden lg:table-cell">${event.points_to_reward || 0}</td>
-            <td class="hidden lg:table-cell">${registeredCount}</td>
-            <td class="hidden lg:table-cell">
-              <div class="flex gap-2">
+            <td class="hidden lg:table-cell text-center">${event.event_id || "N/A"}</td>
+            <td class="hidden lg:table-cell text-center">${event.event_code || "N/A"}</td>
+            <td class="hidden lg:table-cell text-center">
+              <div class="flex flex-col items-center">
+                <span>${startDateTime.dateDisplay}</span>
+                <span class="text-sm opacity-70">${startDateTime.timeDisplay}</span>
+              </div>
+            </td>
+            <td class="hidden lg:table-cell text-center">
+              <div class="flex flex-col items-center">
+                <span>${endDateTime.dateDisplay}</span>
+                <span class="text-sm opacity-70">${endDateTime.timeDisplay}</span>
+              </div>
+            </td>
+            <td class="hidden lg:table-cell text-center">${event.points_to_reward || 0}</td>
+            <td class="hidden lg:table-cell text-center">${event.location || "N/A"}</td>
+            <td class="hidden lg:table-cell text-center">${filesHtml}</td>
+            <td class="hidden lg:table-cell text-center">
+              <button class="btn btn-ghost btn-xs view-attendees" data-event-id="${event.id}">
+                <span class="mr-2">${attendeeCount}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                </svg>
+              </button>
+            </td>
+            <td class="hidden lg:table-cell text-center">
+              <div class="flex justify-center gap-2">
                 <button class="btn btn-ghost btn-xs edit-event" data-event-id="${event.id}">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                   </svg>
-                  Edit
+                  ${form.buttons.edit}
                 </button>
                 <button class="btn btn-ghost btn-xs text-error delete-event" data-event-id="${event.id}">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                   </svg>
-                  Delete
+                  ${form.buttons.delete}
                 </button>
               </div>
             </td>
@@ -230,7 +357,7 @@ export class EventAuth {
       eventList.innerHTML = "";
       eventList.appendChild(fragment);
 
-      // Setup event listeners for edit and delete buttons
+      // Setup event listeners for buttons
       const editButtons = eventList.querySelectorAll(".edit-event");
       editButtons.forEach((button) => {
         button.addEventListener("click", () => {
@@ -250,16 +377,60 @@ export class EventAuth {
           }
         });
       });
+
+      const viewAttendeesButtons = eventList.querySelectorAll(".view-attendees");
+      viewAttendeesButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const eventId = (button as HTMLButtonElement).dataset.eventId;
+          if (eventId) {
+            this.handleViewAttendees(eventId);
+          }
+        });
+      });
+
+      const viewFilesButtons = eventList.querySelectorAll(".view-files");
+      viewFilesButtons.forEach((button) => {
+        button.addEventListener("click", async () => {
+          const eventId = (button as HTMLButtonElement).dataset.eventId;
+          if (eventId) {
+            await this.handleViewFiles(eventId);
+          }
+        });
+      });
     } catch (err) {
       console.error("Failed to fetch events:", err);
       const { eventList } = this.elements;
       eventList.innerHTML = `
         <tr>
-          <td colspan="8" class="text-center py-4 text-error">
+          <td colspan="10" class="text-center py-4 text-error">
             Failed to fetch events. Please try again.
           </td>
         </tr>
       `;
+    }
+  }
+
+  private splitDateTime(dateTimeStr: string): { date: string; time: string } {
+    if (!dateTimeStr) return { date: "", time: "" };
+    const dateTime = new Date(dateTimeStr);
+    const date = dateTime.toISOString().split('T')[0];
+    const time = dateTime.toTimeString().split(' ')[0].slice(0, 5);
+    return { date, time };
+  }
+
+  private combineDateTime(date: string, time: string): string {
+    if (!date || !time) return "";
+    return `${date}T${time}:00`;
+  }
+
+  private getFileNameFromUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split("/");
+      return decodeURIComponent(pathParts[pathParts.length - 1]);
+    } catch (e) {
+      // If URL parsing fails, try to get the filename from the path directly
+      return url.split("/").pop() || "Unknown File";
     }
   }
 
@@ -272,18 +443,77 @@ export class EventAuth {
         editorEventName,
         editorEventCode,
         editorStartDate,
+        editorStartTime,
         editorEndDate,
+        editorEndTime,
         editorPointsToReward,
+        editorLocation,
+        currentFiles,
         saveEventButton,
       } = this.elements;
+
+      // Split start and end dates into separate date and time
+      const startDateTime = this.splitDateTime(event.start_date);
+      const endDateTime = this.splitDateTime(event.end_date);
 
       // Populate the form
       editorEventId.value = event.event_id || "";
       editorEventName.value = event.event_name || "";
       editorEventCode.value = event.event_code || "";
-      editorStartDate.value = event.start_date ? new Date(event.start_date).toISOString().slice(0, 16) : "";
-      editorEndDate.value = event.end_date ? new Date(event.end_date).toISOString().slice(0, 16) : "";
+      editorStartDate.value = startDateTime.date;
+      editorStartTime.value = startDateTime.time;
+      editorEndDate.value = endDateTime.date;
+      editorEndTime.value = endDateTime.time;
       editorPointsToReward.value = event.points_to_reward?.toString() || "0";
+      editorLocation.value = event.location || "";
+
+      // Display current files
+      this.updateFilesDisplay(event);
+
+      // Update file input to support multiple files
+      const fileInput = this.elements.editorFiles;
+      fileInput.setAttribute('multiple', 'true');
+      fileInput.setAttribute('accept', '*/*');
+      
+      // Add file input change handler for automatic upload
+      fileInput.addEventListener('change', async () => {
+        const selectedFiles = fileInput.files;
+        if (selectedFiles && selectedFiles.length > 0) {
+          try {
+            // Create FormData for file upload
+            const formData = new FormData();
+            
+            // Add existing files to the formData
+            if (event.files && Array.isArray(event.files)) {
+              formData.append("files", JSON.stringify(event.files));
+            }
+            
+            // Add new files to the formData
+            Array.from(selectedFiles).forEach(file => {
+              formData.append("files", file);
+            });
+            
+            // Update the event with new files
+            const updatedEvent = await this.pb.collection('events').update(event.id, formData);
+            
+            // Update the files display without refreshing the entire editor
+            event.files = updatedEvent.files;
+            this.updateFilesDisplay(event);
+            
+            // Clear the file input
+            fileInput.value = '';
+            
+            // Clear the file name display
+            const fileNameDisplay = fileInput.parentElement?.querySelector('.file-name');
+            if (fileNameDisplay) {
+              fileNameDisplay.setAttribute('data-content', '');
+            }
+          } catch (err) {
+            console.error('Failed to upload files:', err);
+            alert('Failed to upload files. Please try again.');
+          }
+        }
+      });
 
       // Store the event ID for saving
       saveEventButton.dataset.eventId = eventId;
@@ -298,6 +528,152 @@ export class EventAuth {
     }
   }
 
+  private validateForm(): ValidationErrors | null {
+    const {
+      editorEventId,
+      editorEventName,
+      editorEventCode,
+      editorStartDate,
+      editorStartTime,
+      editorEndDate,
+      editorEndTime,
+      editorPointsToReward,
+    } = this.elements;
+
+    const errors: ValidationErrors = {};
+
+    // Reset all error messages
+    const errorElements = document.querySelectorAll('.label-text-alt.text-error');
+    errorElements.forEach(el => el.classList.add('hidden'));
+
+    // Event ID validation
+    if (!editorEventId.disabled) { // Only validate if it's a new event
+      if (!editorEventId.value) {
+        errors.eventId = "Event ID is required";
+      } else if (!editorEventId.value.match(/^[A-Za-z0-9_-]+$/)) {
+        errors.eventId = "Event ID can only contain letters, numbers, underscores, and hyphens";
+      } else if (editorEventId.value.length < 3) {
+        errors.eventId = "Event ID must be at least 3 characters";
+      } else if (editorEventId.value.length > 50) {
+        errors.eventId = "Event ID must be less than 50 characters";
+      }
+    }
+
+    // Event Name validation
+    if (!editorEventName.value) {
+      errors.eventName = "Event Name is required";
+    } else if (editorEventName.value.length < 3) {
+      errors.eventName = "Event Name must be at least 3 characters";
+    } else if (editorEventName.value.length > 100) {
+      errors.eventName = "Event Name must be less than 100 characters";
+    }
+
+    // Event Code validation
+    if (!editorEventCode.value) {
+      errors.eventCode = "Event Code is required";
+    } else if (!editorEventCode.value.match(/^[A-Za-z0-9_-]+$/)) {
+      errors.eventCode = "Event Code can only contain letters, numbers, underscores, and hyphens";
+    } else if (editorEventCode.value.length < 3) {
+      errors.eventCode = "Event Code must be at least 3 characters";
+    } else if (editorEventCode.value.length > 20) {
+      errors.eventCode = "Event Code must be less than 20 characters";
+    }
+
+    // Date and Time validation
+    if (!editorStartDate.value) {
+      errors.startDate = "Start Date is required";
+    }
+    if (!editorStartTime.value) {
+      errors.startTime = "Start Time is required";
+    }
+    if (!editorEndDate.value) {
+      errors.endDate = "End Date is required";
+    }
+    if (!editorEndTime.value) {
+      errors.endTime = "End Time is required";
+    }
+
+    // Validate that end date/time is after start date/time
+    if (editorStartDate.value && editorStartTime.value && editorEndDate.value && editorEndTime.value) {
+      const startDateTime = new Date(`${editorStartDate.value}T${editorStartTime.value}`);
+      const endDateTime = new Date(`${editorEndDate.value}T${editorEndTime.value}`);
+      
+      if (endDateTime <= startDateTime) {
+        errors.endDate = "End date/time must be after start date/time";
+      }
+    }
+
+    // Points validation
+    const points = parseInt(editorPointsToReward.value);
+    if (!editorPointsToReward.value) {
+      errors.points = "Points are required";
+    } else if (isNaN(points) || points < 0) {
+      errors.points = "Points must be a positive number";
+    } else if (points > 1000) {
+      errors.points = "Points must be less than 1000";
+    }
+
+    // Show error messages
+    if (errors.eventId) {
+      const errorEl = document.getElementById('eventIdError');
+      if (errorEl) {
+        errorEl.textContent = errors.eventId;
+        errorEl.classList.remove('hidden');
+      }
+    }
+    if (errors.eventName) {
+      const errorEl = document.getElementById('eventNameError');
+      if (errorEl) {
+        errorEl.textContent = errors.eventName;
+        errorEl.classList.remove('hidden');
+      }
+    }
+    if (errors.eventCode) {
+      const errorEl = document.getElementById('eventCodeError');
+      if (errorEl) {
+        errorEl.textContent = errors.eventCode;
+        errorEl.classList.remove('hidden');
+      }
+    }
+    if (errors.startDate) {
+      const errorEl = document.getElementById('startDateError');
+      if (errorEl) {
+        errorEl.textContent = errors.startDate;
+        errorEl.classList.remove('hidden');
+      }
+    }
+    if (errors.startTime) {
+      const errorEl = document.getElementById('startTimeError');
+      if (errorEl) {
+        errorEl.textContent = errors.startTime;
+        errorEl.classList.remove('hidden');
+      }
+    }
+    if (errors.endDate) {
+      const errorEl = document.getElementById('endDateError');
+      if (errorEl) {
+        errorEl.textContent = errors.endDate;
+        errorEl.classList.remove('hidden');
+      }
+    }
+    if (errors.endTime) {
+      const errorEl = document.getElementById('endTimeError');
+      if (errorEl) {
+        errorEl.textContent = errors.endTime;
+        errorEl.classList.remove('hidden');
+      }
+    }
+    if (errors.points) {
+      const errorEl = document.getElementById('pointsError');
+      if (errorEl) {
+        errorEl.textContent = errors.points;
+        errorEl.classList.remove('hidden');
+      }
+    }
+
+    return Object.keys(errors).length > 0 ? errors : null;
+  }
+
   private async handleEventSave() {
     const {
       eventEditor,
@@ -305,33 +681,65 @@ export class EventAuth {
       editorEventName,
       editorEventCode,
       editorStartDate,
+      editorStartTime,
       editorEndDate,
+      editorEndTime,
       editorPointsToReward,
+      editorLocation,
+      editorFiles,
       saveEventButton,
     } = this.elements;
 
     const eventId = saveEventButton.dataset.eventId;
     const isNewEvent = !eventId;
 
-    try {
-      const eventData: Record<string, any> = {
-        event_name: editorEventName.value,
-        event_code: editorEventCode.value,
-        start_date: editorStartDate.value,
-        end_date: editorEndDate.value,
-        points_to_reward: parseInt(editorPointsToReward.value) || 0,
-      };
+    // Validate form before proceeding
+    const errors = this.validateForm();
+    if (errors) {
+      return; // Stop if there are validation errors
+    }
 
-      // Only set registered_users for new events
+    try {
+      // Combine date and time inputs
+      const startDateTime = this.combineDateTime(editorStartDate.value, editorStartTime.value);
+      const endDateTime = this.combineDateTime(editorEndDate.value, editorEndTime.value);
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("event_name", editorEventName.value);
+      formData.append("event_code", editorEventCode.value);
+      formData.append("start_date", startDateTime);
+      formData.append("end_date", endDateTime);
+      formData.append("points_to_reward", editorPointsToReward.value);
+      formData.append("location", editorLocation.value);
+
+      // For new events, set event_id and initialize attendees as empty array
       if (isNewEvent) {
-        eventData.event_id = editorEventId.value;
-        eventData.registered_users = "[]";
+        formData.append("event_id", editorEventId.value);
+        formData.append("attendees", "[]"); // Initialize with empty array
+      } else {
+        // For existing events, preserve current attendees and files
+        const currentEvent = await this.pb.collection("events").getOne(eventId);
+        const currentAttendees = this.parseArrayField(currentEvent.attendees, []);
+        formData.append("attendees", JSON.stringify(currentAttendees));
+        
+        // Preserve existing files if no new files are being uploaded
+        if (currentEvent.files && (!editorFiles.files || editorFiles.files.length === 0)) {
+          formData.append("files", JSON.stringify(currentEvent.files));
+        }
+      }
+
+      // Handle file uploads
+      if (editorFiles.files && editorFiles.files.length > 0) {
+        Array.from(editorFiles.files).forEach(file => {
+          formData.append("files", file);
+        });
       }
 
       if (isNewEvent) {
-        await this.pb.collection("events").create(eventData);
+        await this.pb.collection("events").create(formData);
       } else {
-        await this.pb.collection("events").update(eventId, eventData);
+        await this.pb.collection("events").update(eventId, formData);
       }
 
       // Close the dialog and refresh the table
@@ -355,7 +763,289 @@ export class EventAuth {
     }
   }
 
+  private async handleViewAttendees(eventId: string) {
+    try {
+      const event = await this.pb.collection("events").getOne(eventId);
+      const attendees = this.parseArrayField(event.attendees);
+
+      // Fetch user details for each attendee
+      const userDetails = await Promise.all(
+        attendees.map(async (userId: string) => {
+          try {
+            const user = await this.pb.collection("users").getOne(userId);
+            return {
+              name: user.name || "N/A",
+              email: user.email || "N/A",
+              member_id: user.member_id || "N/A"
+            };
+          } catch (err) {
+            console.warn(`Failed to fetch user ${userId}:`, err);
+            return {
+              name: "Unknown User",
+              email: "N/A",
+              member_id: "N/A"
+            };
+          }
+        })
+      );
+
+      // Create and show modal
+      const modal = document.createElement("dialog");
+      modal.className = "modal";
+      modal.innerHTML = `
+        <div class="modal-box max-w-3xl">
+          <h3 class="font-bold text-lg mb-4">Attendees for ${event.event_name}</h3>
+          <div class="form-control w-full mb-4">
+            <input
+              type="text"
+              id="attendeeSearch"
+              placeholder="Search attendees by name, email, or member ID..."
+              class="input input-bordered input-sm w-full"
+            />
+          </div>
+          <div class="overflow-x-auto max-h-[60vh]">
+            <table class="table table-zebra w-full">
+              <thead class="sticky top-0 bg-base-100">
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Member ID</th>
+                </tr>
+              </thead>
+              <tbody id="attendeeList">
+                ${userDetails.length === 0 
+                  ? '<tr><td colspan="3" class="text-center py-4">No attendees yet</td></tr>'
+                  : userDetails.map(user => `
+                      <tr class="attendee-row">
+                        <td>${user.name}</td>
+                        <td>${user.email}</td>
+                        <td>${user.member_id}</td>
+                      </tr>
+                    `).join("")
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="modal-action">
+            <form method="dialog">
+              <button class="btn">Close</button>
+            </form>
+          </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+          <button>close</button>
+        </form>
+      `;
+
+      document.body.appendChild(modal);
+      modal.showModal();
+
+      // Add search functionality
+      const searchInput = modal.querySelector("#attendeeSearch") as HTMLInputElement;
+      const attendeeRows = modal.querySelectorAll(".attendee-row");
+
+      if (searchInput) {
+        searchInput.addEventListener("input", () => {
+          const searchTerm = searchInput.value.toLowerCase();
+          attendeeRows.forEach((row) => {
+            const text = row.textContent?.toLowerCase() || "";
+            if (text.includes(searchTerm)) {
+              (row as HTMLElement).style.display = "";
+            } else {
+              (row as HTMLElement).style.display = "none";
+            }
+          });
+        });
+      }
+
+      // Remove modal when closed
+      modal.addEventListener("close", () => {
+        document.body.removeChild(modal);
+      });
+    } catch (err) {
+      console.error("Failed to view attendees:", err);
+    }
+  }
+
+  private async syncAttendees() {
+    try {
+      // Cancel any existing sync operation
+      if (this.abortController) {
+        this.abortController.abort();
+      }
+      
+      // Create new abort controller for this sync operation
+      this.abortController = new AbortController();
+      
+      console.log("=== STARTING ATTENDEE SYNC ===");
+      
+      // Fetch all events first with abort signal
+      const events = await this.pb.collection("events").getFullList({
+        sort: config.ui.defaults.sortField,
+        $cancelKey: "syncAttendees",
+      });
+
+      // Early return if aborted
+      if (this.abortController.signal.aborted) {
+        console.log("Sync operation was cancelled");
+        return;
+      }
+
+      console.log("=== EVENTS DATA ===");
+      events.forEach(event => {
+        console.log(`Event: ${event.event_name} (ID: ${event.id})`);
+        console.log("- event_id:", event.event_id);
+        console.log("- Raw attendees field:", event.attendees);
+      });
+
+      // Create a map of event_id to event record for faster lookup
+      const eventMap = new Map();
+      events.forEach(event => {
+        const currentAttendees = this.parseArrayField(event.attendees);
+        console.log(`Parsed attendees for event ${event.event_name}:`, currentAttendees);
+
+        eventMap.set(event.event_id, {
+          id: event.id,
+          event_id: event.event_id,
+          event_name: event.event_name,
+          attendees: new Set(currentAttendees)
+        });
+        console.log(`Mapped event ${event.event_name} with event_id ${event.event_id}`);
+      });
+
+      // Check if aborted before fetching users
+      if (this.abortController.signal.aborted) {
+        console.log("Sync operation was cancelled");
+        return;
+      }
+
+      // Fetch all users with abort signal
+      const users = await this.pb.collection("users").getFullList({
+        fields: "id,name,email,member_id,events_attended",
+        $cancelKey: "syncAttendees",
+      });
+
+      console.log("=== USERS DATA ===");
+      users.forEach(user => {
+        console.log(`User: ${user.name || 'Unknown'} (ID: ${user.id})`);
+        console.log("- Raw events_attended:", user.events_attended);
+      });
+
+      // Process each user's events_attended
+      for (const user of users) {
+        // Check if aborted before processing each user
+        if (this.abortController.signal.aborted) {
+          console.log("Sync operation was cancelled");
+          return;
+        }
+
+        console.log(`\nProcessing user: ${user.name || 'Unknown'} (ID: ${user.id})`);
+        const eventsAttended = this.parseArrayField(user.events_attended);
+        console.log("Parsed events_attended:", eventsAttended);
+
+        // For each event the user attended
+        for (const eventId of eventsAttended) {
+          console.log(`\nChecking event ${eventId} for user ${user.id}`);
+          
+          // Find the event by event_id
+          const eventRecord = eventMap.get(eventId);
+          if (eventRecord) {
+            console.log(`Found event record:`, eventRecord);
+            // If user not already in attendees, add them
+            if (!eventRecord.attendees.has(user.id)) {
+              eventRecord.attendees.add(user.id);
+              console.log(`Added user ${user.id} to event ${eventId}`);
+            } else {
+              console.log(`User ${user.id} already in event ${eventId}`);
+            }
+          } else {
+            console.log(`Event ${eventId} not found in event map. Available event_ids:`, 
+              Array.from(eventMap.keys()));
+          }
+        }
+      }
+
+      // Update all events with new attendee lists
+      console.log("\n=== UPDATING EVENTS ===");
+      for (const [eventId, record] of eventMap.entries()) {
+        // Check if aborted before each update
+        if (this.abortController.signal.aborted) {
+          console.log("Sync operation was cancelled");
+          return;
+        }
+
+        try {
+          const attendeeArray = Array.from(record.attendees);
+          console.log(`Updating event ${eventId}:`);
+          console.log("- Current attendees:", attendeeArray);
+          
+          await this.pb.collection("events").update(record.id, {
+            attendees: JSON.stringify(attendeeArray)
+          }, {
+            $cancelKey: "syncAttendees",
+          });
+          console.log(`Successfully updated event ${eventId}`);
+        } catch (err: any) {
+          if (err?.name === "AbortError") {
+            console.log("Update was cancelled");
+            return;
+          }
+          console.error(`Failed to update attendees for event ${eventId}:`, err);
+          console.error("Failed record:", record);
+        }
+      }
+
+      // Clear the cache to force a refresh of the events list
+      this.cachedEvents = [];
+      console.log("\n=== SYNC COMPLETE ===");
+      await this.fetchEvents();
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        console.log("Sync operation was cancelled");
+        return;
+      }
+      console.error("Failed to sync attendees:", err);
+      console.error("Full error:", err);
+    } finally {
+      // Clear the abort controller when done
+      this.abortController = null;
+    }
+  }
+
+  private cleanup() {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+  }
+
+  private async refreshEventsAndSync() {
+    try {
+      // Clear the cache to force a fresh fetch
+      this.cachedEvents = [];
+
+      // Check if user is authorized to sync
+      const user = this.pb.authStore.model;
+      if (user && (user.member_type === "IEEE Officer" || user.member_type === "IEEE Administrator")) {
+        await this.syncAttendees().catch(console.error);
+      } else {
+        // If not authorized to sync, just refresh the events
+        await this.fetchEvents();
+      }
+    } catch (err) {
+      console.error("Failed to refresh events:", err);
+    }
+  }
+
   private init() {
+    // Only sync attendees if user is an officer or administrator
+    setTimeout(async () => {
+      const user = this.pb.authStore.model;
+      if (user && (user.member_type === "IEEE Officer" || user.member_type === "IEEE Administrator")) {
+        await this.syncAttendees().catch(console.error);
+      }
+    }, 100);
+
     // Initial fetch
     this.fetchEvents();
 
@@ -371,6 +1061,14 @@ export class EventAuth {
     // Search button click handler
     this.elements.searchEvents.addEventListener("click", handleSearch);
 
+    // Refresh button click handler
+    const refreshButton = document.getElementById("refreshEvents");
+    if (refreshButton) {
+      refreshButton.addEventListener("click", () => {
+        this.refreshEventsAndSync();
+      });
+    }
+
     // Add event button
     this.elements.addEvent.addEventListener("click", () => {
       const { eventEditor, editorEventId, saveEventButton } = this.elements;
@@ -380,7 +1078,9 @@ export class EventAuth {
       this.elements.editorEventName.value = "";
       this.elements.editorEventCode.value = "";
       this.elements.editorStartDate.value = "";
+      this.elements.editorStartTime.value = "";
       this.elements.editorEndDate.value = "";
+      this.elements.editorEndTime.value = "";
       this.elements.editorPointsToReward.value = "0";
       
       // Enable event_id field for new events
@@ -408,5 +1108,299 @@ export class EventAuth {
       e.preventDefault();
       this.handleEventSave();
     });
+  }
+
+  // Add this new method to handle files display update
+  private updateFilesDisplay(event: RecordModel) {
+    const { currentFiles } = this.elements;
+    currentFiles.innerHTML = "";
+    
+    if (event.files && Array.isArray(event.files) && event.files.length > 0) {
+      const filesList = document.createElement("div");
+      filesList.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4";
+      
+      event.files.forEach((file: string) => {
+        const fileUrl = this.pb.files.getURL(event, file);
+        const fileName = this.getFileNameFromUrl(file);
+        const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
+        
+        const fileItem = document.createElement("div");
+        fileItem.className = "bg-base-200 rounded-lg overflow-hidden";
+
+        // Generate preview based on file type
+        let previewHtml = '';
+        if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExt)) {
+          previewHtml = `
+            <div class="aspect-video bg-base-300 overflow-hidden">
+              <img src="${fileUrl}" alt="${fileName}" class="w-full h-full object-contain">
+            </div>
+          `;
+        } else if (fileExt === 'pdf') {
+          previewHtml = `
+            <div class="aspect-video bg-base-300 overflow-hidden">
+              <iframe src="${fileUrl}" class="w-full h-full"></iframe>
+            </div>
+          `;
+        } else {
+          // For other file types, show an icon based on type
+          const iconHtml = fileExt === 'txt' || fileExt === 'md' 
+            ? `<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 100 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+              </svg>`
+            : `<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+              </svg>`;
+          
+          previewHtml = `
+            <div class="aspect-video bg-base-300 flex items-center justify-center">
+              ${iconHtml}
+            </div>
+          `;
+        }
+
+        fileItem.innerHTML = `
+          ${previewHtml}
+          <div class="p-3 flex items-center justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <span class="text-sm truncate block" title="${fileName}">${fileName}</span>
+            </div>
+            <div class="flex gap-2 shrink-0">
+              <a href="${fileUrl}" target="_blank" class="btn btn-ghost btn-xs" title="Open in new tab">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                  <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                </svg>
+              </a>
+              <button class="btn btn-ghost btn-xs text-error" title="Remove file" data-file="${file}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+        
+        // Add delete handler
+        const deleteButton = fileItem.querySelector('.text-error');
+        if (deleteButton) {
+          deleteButton.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to remove this file?')) {
+              try {
+                const fileToRemove = deleteButton.getAttribute('data-file');
+                if (!fileToRemove) throw new Error('File not found');
+
+                // Get the current event data to ensure we have the latest state
+                const currentEvent = await this.pb.collection('events').getOne(event.id);
+                
+                // Filter out the file to be removed
+                const updatedFiles = currentEvent.files.filter((f: string) => f !== fileToRemove);
+                
+                // Update the event with the new files array
+                await this.pb.collection('events').update(event.id, {
+                  files: updatedFiles
+                });
+                
+                // Update the event.files array in memory
+                event.files = updatedFiles;
+                
+                // Remove the file item from the UI
+                fileItem.remove();
+                
+                // If no files left, show the "No files" message
+                if (updatedFiles.length === 0) {
+                  currentFiles.innerHTML = '<span class="text-sm opacity-50">No files</span>';
+                }
+              } catch (err) {
+                console.error('Failed to remove file:', err);
+                alert('Failed to remove file. Please try again.');
+              }
+            }
+          });
+        }
+        
+        filesList.appendChild(fileItem);
+      });
+      
+      currentFiles.appendChild(filesList);
+    } else {
+      currentFiles.innerHTML = '<span class="text-sm opacity-50">No files</span>';
+    }
+  }
+
+  private async handleViewFiles(eventId: string) {
+    try {
+      const event = await this.pb.collection("events").getOne(eventId);
+      
+      // Create and show modal
+      const modal = document.createElement("dialog");
+      modal.className = "modal";
+      modal.innerHTML = `
+        <div class="modal-box max-w-5xl">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg">Files for ${event.event_name}</h3>
+            ${event.files && Array.isArray(event.files) && event.files.length > 0 
+              ? `<button class="download-all btn btn-sm gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                  </svg>
+                  Download ${event.files.length > 1 ? 'All' : 'File'}
+                </button>`
+              : ''
+            }
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${event.files && Array.isArray(event.files) && event.files.length > 0 
+              ? event.files.map(file => {
+                  const fileUrl = this.pb.files.getURL(event, file);
+                  const fileName = this.getFileNameFromUrl(file);
+                  const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
+                  
+                  let previewHtml = '';
+                  if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExt)) {
+                    previewHtml = `
+                      <div class="aspect-video bg-base-300 rounded-t-lg overflow-hidden">
+                        <img src="${fileUrl}" alt="${fileName}" class="w-full h-full object-contain">
+                      </div>
+                    `;
+                  } else {
+                    // For other file types, show an icon based on type
+                    const iconHtml = fileExt === 'txt' || fileExt === 'md' 
+                      ? `<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 100 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                        </svg>`
+                      : `<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                        </svg>`;
+                    
+                    previewHtml = `
+                      <div class="aspect-video bg-base-300 rounded-t-lg flex items-center justify-center">
+                        ${iconHtml}
+                      </div>
+                    `;
+                  }
+
+                  return `
+                    <button class="preview-file group bg-base-200 rounded-lg transition-colors w-full text-left hover:bg-base-300" 
+                            data-url="${fileUrl}" 
+                            data-filename="${fileName}"
+                            data-ext="${fileExt}">
+                      ${previewHtml}
+                      <div class="p-3 flex items-center gap-2">
+                        <span class="text-sm truncate flex-1" title="${fileName}">${fileName}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                          <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                        </svg>
+                      </div>
+                    </button>
+                  `;
+                }).join("")
+              : '<div class="col-span-full text-center py-4 text-opacity-50">No files available</div>'
+            }
+          </div>
+          <div class="modal-action">
+            <form method="dialog">
+              <button class="btn">Close</button>
+            </form>
+          </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+          <button>close</button>
+        </form>
+      `;
+
+      document.body.appendChild(modal);
+      modal.showModal();
+
+      // Add preview functionality
+      const previewButtons = modal.querySelectorAll('.preview-file');
+      previewButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const url = (button as HTMLButtonElement).dataset.url;
+          const fileName = (button as HTMLButtonElement).dataset.filename;
+          const ext = (button as HTMLButtonElement).dataset.ext;
+          if (url && fileName) {
+            if (ext === 'pdf') {
+              window.open(url, '_blank');
+            } else {
+              document.dispatchEvent(new CustomEvent('showFilePreview', {
+                detail: { url, fileName }
+              }));
+            }
+          }
+        });
+      });
+
+      // Add download functionality
+      const downloadButton = modal.querySelector('.download-all');
+      if (downloadButton && event.files && Array.isArray(event.files)) {
+        downloadButton.addEventListener('click', async () => {
+          try {
+            if (event.files.length === 1) {
+              // For single file, download directly
+              const fileUrl = this.pb.files.getURL(event, event.files[0]);
+              const fileName = this.getFileNameFromUrl(event.files[0]);
+              const response = await fetch(fileUrl);
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = fileName;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+            } else {
+              // For multiple files, create a zip
+              const zip = new JSZip();
+              
+              // Show loading state
+              downloadButton.classList.add('loading');
+              downloadButton.setAttribute('disabled', 'true');
+              
+              // Download all files and add to zip
+              await Promise.all(event.files.map(async (file: string) => {
+                const fileUrl = this.pb.files.getURL(event, file);
+                const fileName = this.getFileNameFromUrl(file);
+                const response = await fetch(fileUrl);
+                const blob = await response.blob();
+                zip.file(fileName, blob);
+              }));
+              
+              // Generate and download zip file
+              const zipBlob = await zip.generateAsync({ type: 'blob' });
+              const url = window.URL.createObjectURL(zipBlob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `${event.event_name || 'event'}_files.zip`;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+              
+              // Reset button state
+              downloadButton.classList.remove('loading');
+              downloadButton.removeAttribute('disabled');
+            }
+          } catch (err) {
+            console.error('Failed to download files:', err);
+            alert('Failed to download files. Please try again.');
+            
+            // Reset button state on error
+            if (downloadButton) {
+              downloadButton.classList.remove('loading');
+              downloadButton.removeAttribute('disabled');
+            }
+          }
+        });
+      }
+
+      // Remove modal when closed
+      modal.addEventListener("close", () => {
+        document.body.removeChild(modal);
+      });
+    } catch (err) {
+      console.error("Failed to view files:", err);
+    }
   }
 } 

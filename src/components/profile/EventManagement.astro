@@ -1,0 +1,260 @@
+---
+import EventEditor from "./EventEditor.astro";
+import yaml from "js-yaml";
+import configYaml from "../../data/storeConfig.yaml?raw";
+
+const config = yaml.load(configYaml) as any;
+const { title, columns } = config.ui.tables.events;
+---
+
+<div
+    class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-0 mb-4"
+>
+    <h2 class="text-2xl font-bold">{title}</h2>
+    <div class="flex flex-col lg:flex-row gap-2">
+        <div class="form-control w-full">
+            <input
+                type="text"
+                id="eventSearch"
+                placeholder="Search events..."
+                class="input input-bordered input-sm w-full"
+            />
+        </div>
+        <div class="flex gap-2 w-full lg:w-auto">
+            <button id="searchEvents" class="btn btn-sm flex-1 lg:flex-none">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <span class="lg:hidden ml-2">Search</span>
+            </button>
+            <button id="refreshEvents" class="btn btn-sm flex-1 lg:flex-none">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    ></path>
+                </svg>
+                <span class="lg:hidden ml-2">Refresh</span>
+            </button>
+            <button
+                id="addEvent"
+                class="btn btn-primary btn-sm flex-1 lg:flex-none"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span class="lg:hidden ml-2">Add Event</span>
+            </button>
+        </div>
+    </div>
+</div>
+<div class="overflow-x-auto">
+    <table
+        class="table table-zebra w-full [&_tr]:border-b [&_tr]:border-base-200"
+    >
+        <thead class="hidden lg:table-header-group">
+            <tr>
+                <th>{columns.event_name}</th>
+                <th>{columns.event_id}</th>
+                <th>{columns.event_code}</th>
+                <th>{columns.start_date}</th>
+                <th>{columns.end_date}</th>
+                <th>{columns.points_to_reward}</th>
+                <th>{columns.location}</th>
+                <th>Files</th>
+                <th>Attendees</th>
+                <th>{columns.actions}</th>
+            </tr>
+        </thead>
+        <tbody id="eventList" class="divide-y divide-base-200">
+            <!-- Event entries will be populated here -->
+        </tbody>
+    </table>
+</div>
+
+<EventEditor />
+
+<!-- File Viewer Modal -->
+<dialog id="fileViewer" class="modal">
+    <div class="modal-box w-11/12 max-w-5xl h-[80vh]">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg" id="fileTitle">File Preview</h3>
+            <div class="flex items-center gap-2">
+                <a
+                    id="fileExternalLink"
+                    href="#"
+                    target="_blank"
+                    class="btn btn-sm btn-ghost"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4 mr-1"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"
+                        ></path>
+                        <path
+                            d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"
+                        ></path>
+                    </svg>
+                    Open in New Tab
+                </a>
+                <form method="dialog">
+                    <button class="btn btn-sm btn-circle btn-ghost">✕</button>
+                </form>
+            </div>
+        </div>
+        <div class="h-[calc(100%-4rem)] bg-base-200 rounded-lg">
+            <!-- PDF Preview -->
+            <iframe
+                id="fileFrame"
+                class="w-full h-full rounded-lg border-2 border-base-300 hidden"
+                src=""></iframe>
+            <!-- Image Preview -->
+            <img
+                id="imagePreview"
+                class="w-full h-full object-contain rounded-lg hidden"
+                src=""
+                alt="File preview"
+            />
+            <!-- Text Preview -->
+            <div
+                id="textPreview"
+                class="w-full h-full p-4 font-mono text-sm overflow-auto whitespace-pre rounded-lg hidden"
+            >
+            </div>
+            <!-- Unsupported Format Message -->
+            <div
+                id="unsupportedPreview"
+                class="w-full h-full flex items-center justify-center text-center p-4 hidden"
+            >
+                <div class="space-y-4">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-16 w-16 mx-auto opacity-50"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        ></path>
+                    </svg>
+                    <div>
+                        <p class="text-lg font-medium">Preview not available</p>
+                        <p class="text-sm opacity-70">
+                            Please use the "Open in New Tab" button to view this
+                            file
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<script>
+    import { EventAuth } from "../auth/EventAuth";
+    new EventAuth();
+
+    // File preview handling
+    const fileViewer = document.getElementById(
+        "fileViewer"
+    ) as HTMLDialogElement;
+    const fileFrame = document.getElementById("fileFrame") as HTMLIFrameElement;
+    const imagePreview = document.getElementById(
+        "imagePreview"
+    ) as HTMLImageElement;
+    const textPreview = document.getElementById(
+        "textPreview"
+    ) as HTMLDivElement;
+    const unsupportedPreview = document.getElementById(
+        "unsupportedPreview"
+    ) as HTMLDivElement;
+    const fileTitle = document.getElementById(
+        "fileTitle"
+    ) as HTMLHeadingElement;
+    const fileExternalLink = document.getElementById(
+        "fileExternalLink"
+    ) as HTMLAnchorElement;
+
+    // Function to show file preview
+    async function showFilePreview(url: string, fileName: string) {
+        // Reset all preview elements
+        fileFrame.classList.add("hidden");
+        imagePreview.classList.add("hidden");
+        textPreview.classList.add("hidden");
+        unsupportedPreview.classList.add("hidden");
+
+        // Update title and external link
+        fileTitle.textContent = fileName;
+        fileExternalLink.href = url;
+
+        // Get file extension
+        const ext = fileName.split(".").pop()?.toLowerCase() || "";
+
+        // Handle different file types
+        if (["jpg", "jpeg", "png", "gif"].includes(ext)) {
+            imagePreview.src = url;
+            imagePreview.classList.remove("hidden");
+        } else if (ext === "pdf") {
+            fileFrame.src = url;
+            fileFrame.classList.remove("hidden");
+        } else if (["txt", "md", "json", "yaml", "yml"].includes(ext)) {
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                textPreview.textContent = text;
+                textPreview.classList.remove("hidden");
+            } catch (err) {
+                console.error("Failed to load text file:", err);
+                unsupportedPreview.classList.remove("hidden");
+            }
+        } else {
+            unsupportedPreview.classList.remove("hidden");
+        }
+
+        fileViewer.showModal();
+    }
+
+    // Add global event listener for file preview
+    document.addEventListener("showFilePreview", ((e: CustomEvent) => {
+        showFilePreview(e.detail.url, e.detail.fileName);
+    }) as EventListener);
+</script>

@@ -1,22 +1,18 @@
----
-import EventEditor from "./EventEditor.astro";
----
-
 <div
     class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-0 mb-4"
 >
-    <h2 class="text-2xl font-bold">Event Management</h2>
+    <h2 class="text-2xl font-bold">Member Management</h2>
     <div class="flex flex-col lg:flex-row gap-2">
         <div class="form-control w-full">
             <input
                 type="text"
-                id="eventSearch"
-                placeholder="Search events..."
+                id="resumeSearch"
+                placeholder="Search users..."
                 class="input input-bordered input-sm w-full"
             />
         </div>
         <div class="flex gap-2 w-full lg:w-auto">
-            <button id="searchEvents" class="btn btn-sm flex-1 lg:flex-none">
+            <button id="searchResumes" class="btn btn-sm flex-1 lg:flex-none">
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
                     class="h-4 w-4"
@@ -33,50 +29,41 @@ import EventEditor from "./EventEditor.astro";
                 <span class="lg:hidden ml-2">Search</span>
             </button>
             <button
-                id="addEvent"
-                class="btn btn-primary btn-sm flex-1 lg:flex-none"
+                id="refreshResumes"
+                class="btn btn-ghost btn-sm flex-1 lg:flex-none"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                    class="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
                 >
                     <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 4v16m8-8H4"></path>
+                        fill-rule="evenodd"
+                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                        clip-rule="evenodd"></path>
                 </svg>
-                <span class="lg:hidden ml-2">Add Event</span>
+                <span class="lg:hidden ml-2">Refresh</span>
             </button>
         </div>
     </div>
 </div>
 <div class="overflow-x-auto">
-    <table class="table table-zebra w-full">
+    <table
+        class="table table-zebra w-full [&_tr]:border-b [&_tr]:border-base-200"
+    >
         <thead class="hidden lg:table-header-group">
             <tr>
-                <th>Event Name</th>
-                <th>Event ID</th>
-                <th>Event Code</th>
-                <th>Start Date</th>
-                <th>End Date</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Member ID</th>
                 <th>Points</th>
-                <th>Registered</th>
+                <th>Resume</th>
                 <th>Actions</th>
             </tr>
         </thead>
-        <tbody id="eventList" class="divide-y">
-            <!-- Event entries will be populated here -->
+        <tbody id="resumeList" class="divide-y divide-base-200">
+            <!-- Resume entries will be populated here -->
         </tbody>
     </table>
 </div>
-
-<EventEditor />
-
-<script>
-    import { EventAuth } from "../auth/EventAuth";
-    new EventAuth();
-</script>
