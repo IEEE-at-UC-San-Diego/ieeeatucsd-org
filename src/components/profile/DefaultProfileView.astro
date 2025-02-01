@@ -8,48 +8,44 @@
                     <h2 class="card-title text-2xl">Events</h2>
                 </div>
 
-                <!-- Event Check-in -->
-                <div
-                    id="eventCheckInSkeleton"
-                    class="card bg-base-100 shadow-sm mb-4 animate-pulse"
-                >
-                    <div class="card-body p-4">
-                        <div class="h-6 bg-base-300 rounded w-2/3 mb-4"></div>
-                        <div class="flex items-center gap-2">
-                            <div class="h-8 bg-base-300 rounded flex-1"></div>
-                            <div class="h-8 bg-base-300 rounded w-24"></div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Event Check-in Section -->
+                <div class="card bg-base-200 shadow-xl mb-8">
+                    <div class="card-body p-6">
+                        <h2 class="card-title text-2xl mb-4">Quick Check-in</h2>
 
-                <div
-                    id="eventCheckInContent"
-                    class="card bg-base-100 shadow-sm mb-4 hidden"
-                >
-                    <div class="card-body p-4">
-                        <h3 class="font-medium text-lg mb-2">
-                            Enter your event code to check in
-                        </h3>
-                        <div id="eventCheckInSection" class="space-y-2">
-                            <div class="flex items-center gap-2">
-                                <input
-                                    type="text"
-                                    id="eventCodeInput"
-                                    placeholder="Enter event code"
-                                    class="input input-bordered input-sm flex-1"
-                                    value=""
-                                />
-                                <button
-                                    id="checkInButton"
-                                    class="btn btn-sm btn-primary"
-                                    >Check In</button
-                                >
+                        <!-- Event Check-in Skeleton -->
+                        <div id="eventCheckInSkeleton" class="animate-pulse">
+                            <div class="h-6 bg-base-300 rounded w-2/3 mb-4">
                             </div>
-                            <p
-                                id="checkInStatus"
-                                class="text-xs mt-1 opacity-70"
-                            >
-                            </p>
+                            <div class="flex items-center gap-2">
+                                <div class="h-8 bg-base-300 rounded flex-1">
+                                </div>
+                                <div class="h-8 bg-base-300 rounded w-24"></div>
+                            </div>
+                        </div>
+
+                        <!-- Event Check-in Content -->
+                        <div id="eventCheckInContent" class="hidden">
+                            <div id="eventCheckInSection" class="space-y-2">
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        id="eventCodeInput"
+                                        placeholder="Enter event code"
+                                        class="input input-bordered flex-1"
+                                        value=""
+                                    />
+                                    <button
+                                        id="checkInButton"
+                                        class="btn btn-primary">Check In</button
+                                    >
+                                </div>
+                                <p
+                                    id="checkInStatus"
+                                    class="text-sm mt-1 opacity-70"
+                                >
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -210,6 +206,7 @@
         "eventCheckInSkeleton"
     );
     const eventCheckInContent = document.getElementById("eventCheckInContent");
+    const pastEventsCount = document.getElementById("pastEventsCount");
 
     // Function to show content and hide skeleton
     function showEventCheckIn() {
@@ -325,6 +322,7 @@
         const hasFiles =
             event.files && Array.isArray(event.files) && event.files.length > 0;
         const isPastEvent = new Date(event.end_date) < new Date();
+        const { status, badge } = getEventStatus(event, isAttended);
 
         // Only show files button for past events
         const filesButton =
@@ -343,30 +341,33 @@
                 : "";
 
         return `
-            <div class="card bg-base-100 shadow-sm">
+            <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
                 <div class="card-body p-4">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-medium text-lg">${event.event_name}</h3>
+                    <div class="flex justify-between items-start gap-4">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-2">
+                                <h3 class="font-medium text-lg truncate">${event.event_name}</h3>
+                                <div class="badge ${badge} gap-1">
+                                    ${getStatusIcon(status)}
+                                    ${status}
+                                </div>
+                            </div>
                             <div class="text-sm opacity-70 space-y-1">
                                 <p>Starts: ${formatDate(event.start_date)}</p>
                                 <p>Ends: ${formatDate(event.end_date)}</p>
-                                ${event.location ? `<p class="text-xs">📍 ${event.location}</p>` : ""}
+                                ${
+                                    event.location
+                                        ? `<p class="flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                                    </svg>
+                                    ${event.location}
+                                </p>`
+                                        : ""
+                                }
                             </div>
-                            ${hasFiles && isPastEvent ? `<div class="mt-2">${filesButton}</div>` : ""}
+                            ${hasFiles && isPastEvent ? `<div class="mt-3">${filesButton}</div>` : ""}
                         </div>
-                        ${
-                            isAttended
-                                ? `
-                            <div class="badge badge-success gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                                </svg>
-                                Attended
-                            </div>
-                        `
-                                : ""
-                        }
                     </div>
                 </div>
             </div>
@@ -427,14 +428,12 @@
                 }
             });
 
-            // Sort upcoming events by start date and limit to 2
-            const nextTwoEvents = upcomingEvents
-                .sort(
-                    (a, b) =>
-                        new Date(a.start_date).getTime() -
-                        new Date(b.start_date).getTime()
-                )
-                .slice(0, 2);
+            // Sort upcoming events by start date
+            const sortedUpcomingEvents = upcomingEvents.sort(
+                (a, b) =>
+                    new Date(a.start_date).getTime() -
+                    new Date(b.start_date).getTime()
+            );
 
             // Sort past events by date descending (most recent first)
             const sortedPastEvents = pastEvents.sort(
@@ -443,50 +442,34 @@
                     new Date(a.end_date).getTime()
             );
 
-            // Function to render section
-            function renderSection(
-                title: string,
-                events: Event[],
-                showDivider: boolean = true
-            ): string {
-                if (events.length === 0) return "";
-                return `
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-medium text-base-content/70">${title}</h3>
-                        <div class="space-y-4">
-                            ${events.map((event) => renderEventCard(event, attendedEvents)).join("")}
-                        </div>
-                        ${showDivider ? '<div class="divider"></div>' : ""}
-                    </div>
-                `;
+            // Update past events count
+            if (pastEventsCount) {
+                pastEventsCount.textContent =
+                    sortedPastEvents.length.toString();
             }
 
-            // Update main events list (left column)
-            eventsList.innerHTML = `
-                ${renderSection("Upcoming Events", nextTwoEvents, nextTwoEvents.length > 0)}
-                ${renderSection("Currently Happening", currentEvents, false)}
-            `;
-
-            // Update past events list (right column)
-            pastEventsList.innerHTML =
-                sortedPastEvents.length > 0
-                    ? sortedPastEvents
-                          .map((event) =>
-                              renderEventCard(event, attendedEvents)
-                          )
-                          .join("")
-                    : `<div class="text-center py-8 opacity-70">
-                    <p>No past events found</p>
-                   </div>`;
-
-            // If no events at all
-            if (events.items.length === 0) {
-                eventsList.innerHTML = `
+            // Function to render section
+            function renderSection(events: Event[]): string {
+                if (events.length === 0) {
+                    return `
                     <div class="text-center py-8 opacity-70">
                         <p>No events found</p>
                     </div>
                 `;
+                }
+                return events
+                    .map((event) => renderEventCard(event, attendedEvents))
+                    .join("");
             }
+
+            // Update main events list (current & upcoming)
+            eventsList.innerHTML = renderSection([
+                ...currentEvents,
+                ...sortedUpcomingEvents,
+            ]);
+
+            // Update past events list
+            pastEventsList.innerHTML = renderSection(sortedPastEvents);
         } catch (err) {
             console.error("Failed to render events:", err);
             const errorMessage = `
