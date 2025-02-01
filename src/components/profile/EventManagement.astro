@@ -82,16 +82,16 @@ const { title, columns } = config.ui.tables.events;
     >
         <thead class="hidden lg:table-header-group">
             <tr>
-                <th>{columns.event_name}</th>
-                <th>{columns.event_id}</th>
-                <th>{columns.event_code}</th>
-                <th>{columns.start_date}</th>
-                <th>{columns.end_date}</th>
-                <th>{columns.points_to_reward}</th>
-                <th>{columns.location}</th>
-                <th>Files</th>
-                <th>Attendees</th>
-                <th>{columns.actions}</th>
+                <th class="text-center">{columns.event_name}</th>
+                <th class="text-center">{columns.event_id}</th>
+                <th class="text-center">{columns.event_code}</th>
+                <th class="text-center">{columns.start_date}</th>
+                <th class="text-center">{columns.end_date}</th>
+                <th class="text-center">{columns.points_to_reward}</th>
+                <th class="text-center">{columns.location}</th>
+                <th class="text-center">Files</th>
+                <th class="text-center">Attendees</th>
+                <th class="text-center">{columns.actions}</th>
             </tr>
         </thead>
         <tbody id="eventList" class="divide-y divide-base-200">
