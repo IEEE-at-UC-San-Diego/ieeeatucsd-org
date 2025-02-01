@@ -1,28 +1,28 @@
 [
     {
         "title": "Quarterly Project",
-        "text": "Lorem ipsum is placeholder text commonly used in the graphic, print, and publi",
+        "text": "QP is a quarter-long project competition. Students collaborate in teams of up to 6 to build a product aligned with a quarterly theme.",
         "link": "/quarterly",
         "number": "01",
         "delay": "100"
     },
     {
         "title": "Annual Project",
-        "text": "Lorem ipsum is placeholder text commonly used in the graphic, print, and publi",
+        "text": "IEEE @ UCSD hosts the university Robocup, Signal Processing, Supercomputing, and Micromouse teams that each compete in annual competitions.",
         "link": "/projects",
         "number": "02",
         "delay": "300"
     },
     {
         "title": "Social",
-        "text": "Lorem ipsum is placeholder text commonly used in the graphic, print, and publi",
+        "text": "Get involved in our diverse student society! We host regular social events ranging from IEEEat meals-out to karaoke sessions.",
         "link": "/events",
         "number": "03",
         "delay": "500"
     },
     {
         "title": "Professional Development",
-        "text": "Lorem ipsum is placeholder text commonly used in the graphic, print, and publi",
+        "text": "IEEE @ UCSD offers a diversity of technical and professional workshops each quarter. Previous examples include soldering, esp32s and an intern panel. ",
         "link": "/events",
         "number": "04",
         "delay": "700"

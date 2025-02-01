@@ -2,25 +2,32 @@
 import Layout from "../layouts/Layout.astro";
 import EventTitle from "../components/events/EventTitle.astro";
 import { Image } from "astro:assets";
-import eventborder from "../images/eventborder.png";
-import calendar from "../images/calendar2.png";
+import eventborder from "../images/eventborder.webp";
 import UpcomingEvents from "../components/events/UpcomingEvents.astro";
+import Calendar from "../components/events/Calendar.jsx";
+
+const CALENDAR_API_KEY = import.meta.env.CALENDAR_API_KEY;
+const EVENT_CALENDAR_ID = import.meta.env.EVENT_CALENDAR_ID;
 ---
 
 <Layout>
     <Image
         src={eventborder}
         alt="JOIN US"
-        class="absolute left-[1vw] w-[4vw] top-[60vh]"
+        class="absolute left-[1vw] md:w-[4vw] w-[5vw] md:top-[60vh] top-[70vw] -z-10"
     />
     <Image
         src={eventborder}
         alt="JOIN US"
-        class="absolute right-[1vw] w-[4vw] top-[60vh]"
+        class="absolute right-[1vw] md:w-[4vw] w-[5vw] md:top-[60vh] top-[70vw] -z-10"
     />
     <EventTitle />
     <UpcomingEvents />
     <div class="flex justify-center pb-[10%]">
-        <Image src={calendar} alt="calendar" class="w-[70%]" />
+        <Calendar
+            client:load
+            CALENDAR_API_KEY={CALENDAR_API_KEY}
+            EVENT_CALENDAR_ID={EVENT_CALENDAR_ID}
+        />
     </div>
 </Layout>

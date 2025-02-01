@@ -1,20 +1,32 @@
 [
-    {
-        "title": "Mechanical",
-        "list": ["Design the Mechanisms and Structure of the Robot",
-                "Fabricate and assemble robot design",
-                "Integrate electronics and other hardware"]
-    },
-    {
-        "title": "Electrical",
-        "list": ["Design circuits to power and control robot subsystems",
-                "Work with mechanical team to assemble electronics in the robots"]
-    },
-    {
-        "title": "Embedded",
-        "list": ["Communicate between software and hardware",
-                "Provide low level software interface and API",
-                "Handle and sample data using math/physics knowledge"
-                ]
-    }
+  {
+    "title": "Mechanical",
+    "list": [
+      "Design the Mechanisms and Structure of the Robot",
+      "Fabricate and assemble robot design",
+      "Integrate electronics and other hardware"
+    ]
+  },
+  {
+    "title": "Electrical",
+    "list": [
+      "Design circuits to power and control robot subsystems",
+      "Work with mechanical team to assemble electronics in the robots"
+    ]
+  },
+  {
+    "title": "Embedded",
+    "list": [
+      "Communicate between software and hardware",
+      "Provide low level software interface and API",
+      "Handle and sample data using math/physics knowledge"
+    ]
+  },
+  {
+    "title": "AI",
+    "list": [
+      "Design decision making algorithms using behavioral trees",
+      "Conduct testing with simulation"
+    ]
+  }
 ]

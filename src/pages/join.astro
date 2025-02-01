@@ -7,7 +7,7 @@ import Questions from "../components/core/Questions.astro";
 import Involvements from "../components/join/Involvements.astro";
 import Findus from "../components/join/Findus.astro";
 import { Image } from "astro:assets";
-import join from "../images/join.png";
+import join from "../images/join.webp";
 import faq from "../data/faq.json";
 ---
 
@@ -15,12 +15,12 @@ import faq from "../data/faq.json";
     <Image
         src={join}
         alt="JOIN US"
-        class="absolute left-[1vw] w-[4vw] top-[60vh]"
+        class="absolute left-[1vw] md:w-[4vw] w-[10vw] md:top-[60vh] top-[70vw]"
     />
     <Image
         src={join}
         alt="JOIN US"
-        class="absolute right-[1vw] w-[4vw] top-[60vh]"
+        class="absolute right-[1vw] md:w-[4vw] w-[10vw] md:top-[60vh] top-[70vw]"
     />
     <JoinTitle />
     <Involvements />

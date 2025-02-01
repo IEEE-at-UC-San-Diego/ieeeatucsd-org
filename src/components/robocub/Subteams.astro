@@ -1,13 +1,241 @@
 ---
 import Subtitle from "../core/Subtitle.astro";
-import Subteam from "./Subteam.astro";
-import subteams from "../../data/subteams.json"
+import subteams from "../../data/subteams.json";
+import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
+import { FaGear, FaMicrochip, FaCode } from "react-icons/fa6";
+import { LuBrainCircuit } from "react-icons/lu";
+
+// duplicate the array 3 times for smoother looping
+const duplicatedSubteams = [...subteams, ...subteams, ...subteams];
+const centerIndex = Math.floor(subteams.length); // center in the middle
 ---
-<div class="flex flex-col items-center my-[10%]">
+
+<div class="flex flex-col items-center md:my-[10%] my-[20%] relative overflow-x-clip">
     <Subtitle title="Subteams" />
-    <div class="grid grid-flow-col gap-[1.5vw] mt-[3%]">
-        {subteams.map((subteam)=>(
-            <Subteam title={subteam.title} list={subteam.list} />
-         ))}
+    <div class="relative md:w-[75vw] w-[85vw] h-[25vw] mt-[8%] md:mt-[5%]">
+        <div id="carousel" class="absolute w-full h-full flex justify-center">
+            {
+                duplicatedSubteams.map((subteam, index) => {
+                    let distance = index - centerIndex;
+                    // wrap
+                    if (distance > duplicatedSubteams.length / 2) {
+                        distance -= duplicatedSubteams.length;
+                    } else if (distance < -duplicatedSubteams.length / 2) {
+                        distance += duplicatedSubteams.length;
+                    }
+
+                    return (
+                        <div
+                            class="carousel-item absolute transition-all duration-500 md:w-[20vw] w-[25vw]"
+                            style={{
+                                transform: `translateX(${distance * 12}vw) scale(${
+                                    Math.abs(distance) === 0
+                                        ? 1.2
+                                        : Math.abs(distance) === 1
+                                          ? 1.0
+                                          : 0.8
+                                })`,
+                                opacity: Math.abs(distance) <= 2 ? 1 : 0,
+                                zIndex:
+                                    Math.abs(distance) === 0
+                                        ? 30
+                                        : Math.abs(distance) === 1
+                                          ? 20
+                                          : 10,
+                            }}
+                            data-index={index}
+                        >
+                            <div class="relative">
+                                <div class="relative w-full h-full backdrop-blur-md overflow-hidden rounded-[2vw]">
+                                    <div class="px-[10%] flex flex-col justify-center items-center md:w-[20vw] w-[25vw] md:h-[22vw] h-[28vw] bg-gradient-to-b from-ieee-blue-100/25 to-ieee-black backdrop-blur rounded-[2vw] border-white/40 border-[0.1vw]">
+                                        <p class="md:text-[1.5vw] text-[2vw] mb-[10%] font-semibold pt-[10%]">
+                                            {subteam.title}
+                                        </p>
+                                        <ul class="md:text-[1vw] text-[1.5vw] font-light">
+                                            {subteam.list.map(
+                                                (item: string) => (
+                                                    <li>&#8226; {item}</li>
+                                                )
+                                            )}
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="-top-[10%] left-1/2 -translate-x-1/2 w-fit p-[5%] shadow-ieee-blue-300 md:text-[3.2vw] text-[4.5vw] bg-gradient-to-b from-ieee-blue-100 to-ieee-blue-300 rounded-full absolute">
+                                    {subteam.title === "Mechanical" && (
+                                        <FaGear />
+                                    )}
+                                    {subteam.title === "Electrical" && (
+                                        <FaMicrochip />
+                                    )}
+                                    {subteam.title === "AI" && (
+                                        <LuBrainCircuit />
+                                    )}
+                                    {subteam.title === "Embedded" && <FaCode />}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })
+            }
+        </div>
+        <button
+            id="prevBtn"
+            class="absolute left-[-3vw] top-[calc(50%-1.5vw)] transform -translate-y-1/2 text-[3vw] text-white hover:text-white/70 duration-300 z-20 bg-black/30 hover:bg-black/50 p-2 rounded-full backdrop-blur-sm"
+            aria-label="Previous card"
+        >
+            <IoIosArrowBack />
+        </button>
+        <button
+            id="nextBtn"
+            class="absolute right-[-3vw] top-[calc(50%-1.5vw)] transform -translate-y-1/2 text-[3vw] text-white hover:text-white/70 duration-300 z-20 bg-black/30 hover:bg-black/50 p-2 rounded-full backdrop-blur-sm"
+            aria-label="Next card"
+        >
+            <IoIosArrowForward />
+        </button>
     </div>
 </div>
+
+<style>
+    .carousel-item {
+        transition: none;
+    }
+
+    .carousel-item[data-loaded="true"] {
+        transition:
+            transform 500ms,
+            opacity 200ms;
+    }
+</style>
+
+<script>
+    const items = document.querySelectorAll(".carousel-item");
+    const totalItems = items.length;
+    const singleSetLength = totalItems / 3; // length of one set of cards
+    let currentIndex = singleSetLength;
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    let autoAdvanceTimer: ReturnType<typeof setInterval>;
+    let isAnimating = false;
+    let isTransitioning = false;
+
+    function startAutoAdvance() {
+        if (autoAdvanceTimer) {
+            clearInterval(autoAdvanceTimer);
+        }
+        autoAdvanceTimer = setInterval(() => {
+            if (!isAnimating && !isTransitioning) {
+                updateCards(currentIndex + 1);
+            }
+        }, 10000);
+    }
+
+    setTimeout(() => {
+        items.forEach((item) => {
+            item.setAttribute("data-loaded", "true");
+        });
+        startAutoAdvance();
+    }, 100);
+
+    function updateCards(newIndex: number): void {
+        if (isAnimating || isTransitioning) return;
+        isAnimating = true;
+        isTransitioning = true;
+
+        // direction of movement
+        const direction = newIndex > currentIndex ? 1 : -1;
+
+        items.forEach((item, index) => {
+            const el = item as HTMLElement;
+            let distance = index - newIndex;
+
+            // wrap
+            if (distance > singleSetLength) {
+                distance -= totalItems;
+            } else if (distance < -singleSetLength) {
+                distance += totalItems;
+            }
+
+            const scale =
+                Math.abs(distance) === 0
+                    ? 1.2
+                    : Math.abs(distance) === 1
+                      ? 1
+                      : Math.abs(distance) === 2
+                        ? 0.8
+                        : 0.6; // smaller scale for hidden cards (to transition)
+
+            // show only 5 cards at once (2 on each side)
+            el.style.transform = `translateX(${distance * 12}vw) scale(${scale})`;
+            el.style.opacity = Math.abs(distance) <= 2 ? "1" : "0";
+            el.style.zIndex =
+                Math.abs(distance) === 0
+                    ? "30"
+                    : Math.abs(distance) === 1
+                      ? "20"
+                      : "10";
+        });
+
+        // Update index with wrapping
+        if (newIndex >= totalItems) {
+            newIndex = 0;
+        } else if (newIndex < 0) {
+            newIndex = totalItems - 1;
+        }
+
+        currentIndex = newIndex;
+
+        setTimeout(() => {
+            isAnimating = false;
+            // small delay before allowing next transition
+            setTimeout(() => {
+                isTransitioning = false;
+            }, 50);
+        }, 500);
+    }
+
+    // button clicks
+    prevBtn?.addEventListener("click", () => {
+        if (!isAnimating && !isTransitioning) {
+            updateCards(currentIndex - 1);
+            startAutoAdvance();
+        }
+    });
+
+    nextBtn?.addEventListener("click", () => {
+        if (!isAnimating && !isTransitioning) {
+            updateCards(currentIndex + 1);
+            startAutoAdvance();
+        }
+    });
+
+    // click handler for cards
+    items.forEach((item, index) => {
+        item.addEventListener("click", () => {
+            if (isAnimating || isTransitioning) return;
+
+            const distance = index - currentIndex;
+
+            // visual position of the clicked card
+            let visualDistance = distance;
+            if (distance > totalItems / 2) {
+                visualDistance -= totalItems;
+            } else if (distance < -totalItems / 2) {
+                visualDistance += totalItems;
+            }
+
+            // only allow clicking on visible cards that aren't in the center
+            if (Math.abs(visualDistance) <= 2 && visualDistance !== 0) {
+                let targetIndex = currentIndex + visualDistance;
+
+                if (targetIndex >= totalItems) {
+                    targetIndex = targetIndex % totalItems;
+                } else if (targetIndex < 0) {
+                    targetIndex = totalItems + (targetIndex % totalItems);
+                }
+
+                updateCards(targetIndex);
+                startAutoAdvance();
+            }
+        });
+    });
+</script>

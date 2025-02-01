@@ -1,8 +1,9 @@
 ---
-import OH from "./OH.astro"
+import OAH from "./OAH.astro";
+import BuildingLocation from "./BuildingLocation.astro";
 ---
 
-<div class="w-full flex justify-evenly px-[10%]">
-    <OH title="Check out our calendar!" subtitle="Each officer has their own OAH" image="/calendar.png" />
-    <OH title="Check out our location!" subtitle="We are located in EBU1-4710" image="/map.png" />
+<div class="w-full flex flex-col md:flex-row items-center md:justify-evenly px-[10%]">
+    <OAH />
+    <BuildingLocation />
 </div>

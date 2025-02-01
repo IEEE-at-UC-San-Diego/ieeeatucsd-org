@@ -6,16 +6,16 @@ import { IoMdCalendar } from "react-icons/io";
 import { RiRobot2Fill } from "react-icons/ri";
 const {image, text, link, delay} = Astro.props;
 ---
-<div data-inview class={`w-[15vw] relative group in-view:animate-fade-up animate-delay-${delay} animate-duration-1000`}>
+<div data-inview class={` animate-ease-in-out md:w-[15vw] w-[24vw] relative group in-view:animate-fade-up animate-delay-${delay} animate-duration-1000`}>
 
     <img src={image} alt="involvement background" class="opacity-70 aspect-[230/425] object-cover rounded-[2vw] group-hover:opacity-50 duration-300"/>
     <Link 
         href={link}
         target={text==="H.A.R.D. HACK"? "_blank":"_self"} 
-        className="absolute top-0 w-[15vw] pt-[5%] aspect-[230/425] flex flex-col justify-between"
+        className="absolute top-0 md:w-[15vw] w-[25vw] pt-[5%] aspect-[230/425] flex flex-col justify-between"
     >
-        <div class="w-full flex justify-end pr-[5%]">
-            <div class="bg-white w-fit rounded-full aspect-square p-[0.5vw] text-ieee-black text-[2vw]">
+        <div class="w-full flex justify-end md:pr-[5%] pr-[2vw]">
+            <div class="bg-white w-fit rounded-full aspect-square p-[0.5vw] text-ieee-black text-[4.5vw] md:text-[2vw]">
                 {
                     text === "PROJECTS"? <RiRobot2Fill/>:
                     text === "EVENTS"? <IoMdCalendar/>:
@@ -24,16 +24,16 @@ const {image, text, link, delay} = Astro.props;
             </div>
         </div>
     
-        <div class="px-[3%] text-white w-full bg-gradient-to-t from-black via-black to-transparent rounded-b-[2vw] pt-[30%] pb-[5%]">
-            <div class="text-[1.1vw] duration-300 flex w-full px-[3%] justify-between items-end">
+        <div class="px-[3%] text-white w-full bg-gradient-to-t from-black via-black to-transparent rounded-b-[2vw] pt-[20vw] pb-[3vw] md:pt-[30%] md:pb-[5%]">
+            <div class="text-[2vw] md:text-[1.1vw] duration-300 flex w-full px-[3%] justify-between items-end">
                 <p class="pt-[3%] pb-[2%] px-[10%] border-[0.1vw] border-white rounded-full group-hover:text-ieee-yellow group-hover:border-ieee-yellow duration-300 font-light">
                     {text}
                 </p>
-                <GoArrowDownRight className="text-[3vw] leading-none group-hover:text-ieee-yellow"/>
+                <GoArrowDownRight className="text-[5vw] md:text-[3vw] leading-none group-hover:text-ieee-yellow"/>
             </div>
     
             {text === "H.A.R.D. HACK" &&
-                <p class="text-[1vw] text-center pt-[10%] group-hover:text-ieee-yellow duration-300">
+                <p class="text-[1.8vw] md:text-[1vw] text-center pt-[10%] group-hover:text-ieee-yellow duration-300">
                     UC San Diego’s largest
                     hardware focused hackathon
                     hold by IEEE UCSD, HKN, and TNT

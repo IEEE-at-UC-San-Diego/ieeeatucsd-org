@@ -1,0 +1,30 @@
+[
+  {
+    "week": "Fall W1 - W3",
+    "description": "Submit Applications"
+  },
+  {
+    "week": "Fall W4 - W9",
+    "description": "QP groups are formed, QP Kickoff"
+  },
+  {
+    "week": "Week 3",
+    "description": "Mentor Assignments"
+  },
+  {
+    "week": "Week 4",
+    "description": "Workathon #1"
+  },
+  {
+    "week": "Week 6",
+    "description": "Workathon #2, Milestone #1"
+  },
+  {
+    "week": "Week 8",
+    "description": "Workathon #3, Milestone #2"
+  },
+  {
+    "week": "Week 9/10",
+    "description": "Final submission, QP Showcase!"
+  }
+]

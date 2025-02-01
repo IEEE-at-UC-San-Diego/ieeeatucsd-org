@@ -1,16 +1,16 @@
 ---
 import Title from "../core/Title.astro";
 import { Image } from "astro:assets";
-import model from "../../images/model.png";
+import model from "../../images/model.webp";
 ---
 
 <div
-    class="flex items-center h-[60vh] relative w-full pl-[10%] mt-[3%] mb-[15%]"
+    class="flex items-center md:h-[35vw] h-[45vw] relative w-full pl-[10%] md:mt-[3%] mt-[20%] mb-[15%]"
 >
     <Title title="Robocup" />
     <Image
         src={model}
         alt="Robocup robot model"
-        class="absolute w-[50%] right-[10%] top-[5%]"
+        class="absolute md:w-[50%] w-[60%] md:right-[10%] right-0 md:top-[5%]"
     />
 </div>
