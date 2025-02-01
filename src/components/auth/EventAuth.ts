@@ -1183,13 +1183,14 @@ export class EventAuth {
         // Add delete handler
         const deleteButton = fileItem.querySelector('.text-error');
         if (deleteButton) {
-          deleteButton.addEventListener('click', async () => {
+          deleteButton.addEventListener('click', async (e) => {
+            e.preventDefault(); // Prevent any form submission
             if (confirm('Are you sure you want to remove this file?')) {
               try {
                 const fileToRemove = deleteButton.getAttribute('data-file');
                 if (!fileToRemove) throw new Error('File not found');
 
-                // Get the current event data to ensure we have the latest state
+                // Get the current event data
                 const currentEvent = await this.pb.collection('events').getOne(event.id);
                 
                 // Filter out the file to be removed
@@ -1200,14 +1201,14 @@ export class EventAuth {
                   files: updatedFiles
                 });
                 
-                // Update the event.files array in memory
+                // Update the local event object
                 event.files = updatedFiles;
                 
                 // Remove the file item from the UI
                 fileItem.remove();
                 
                 // If no files left, show the "No files" message
-                if (updatedFiles.length === 0) {
+                if (!event.files || event.files.length === 0) {
                   currentFiles.innerHTML = '<span class="text-sm opacity-50">No files</span>';
                 }
               } catch (err) {

@@ -10,7 +10,12 @@ const { editor_title, form } = config.ui.tables.events;
 <dialog id="eventEditor" class="modal">
     <div class="modal-box w-11/12 max-w-4xl">
         <h3 class="font-bold text-lg mb-6">{editor_title}</h3>
-        <form class="space-y-6" id="eventForm" novalidate>
+        <form
+            class="space-y-6"
+            id="eventForm"
+            novalidate
+            onsubmit="event.preventDefault();"
+        >
             <!-- Basic Info Section -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="form-control">
