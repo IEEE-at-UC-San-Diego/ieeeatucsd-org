@@ -27,7 +27,7 @@ const { editor_title, form } = config.ui.tables.events;
                         id="editorEventId"
                         class="input input-bordered w-full"
                         placeholder={form.event_id.placeholder}
-                        pattern="[A-Za-z0-9_-]+"
+                        pattern="[A-Za-z0-9_\-]+"
                         minlength="3"
                         maxlength="50"
                         required
@@ -49,7 +49,7 @@ const { editor_title, form } = config.ui.tables.events;
                         id="editorEventCode"
                         class="input input-bordered w-full"
                         placeholder={form.event_code.placeholder}
-                        pattern="[A-Za-z0-9_-]+"
+                        pattern="[A-Za-z0-9_\-]+"
                         minlength="3"
                         maxlength="20"
                         required

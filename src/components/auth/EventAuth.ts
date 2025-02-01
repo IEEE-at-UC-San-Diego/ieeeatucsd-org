@@ -531,7 +531,7 @@ export class EventAuth {
     if (!editorEventId.disabled) { // Only validate if it's a new event
       if (!editorEventId.value) {
         errors.eventId = "Event ID is required";
-      } else if (!editorEventId.value.match(/^[A-Za-z0-9_-]+$/)) {
+      } else if (!editorEventId.value.match(/^[A-Za-z0-9_\-]+$/)) {
         errors.eventId = "Event ID can only contain letters, numbers, underscores, and hyphens";
       } else if (editorEventId.value.length < 3) {
         errors.eventId = "Event ID must be at least 3 characters";
@@ -552,7 +552,7 @@ export class EventAuth {
     // Event Code validation
     if (!editorEventCode.value) {
       errors.eventCode = "Event Code is required";
-    } else if (!editorEventCode.value.match(/^[A-Za-z0-9_-]+$/)) {
+    } else if (!editorEventCode.value.match(/^[A-Za-z0-9_\-]+$/)) {
       errors.eventCode = "Event Code can only contain letters, numbers, underscores, and hyphens";
     } else if (editorEventCode.value.length < 3) {
       errors.eventCode = "Event Code must be at least 3 characters";
