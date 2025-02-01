@@ -412,15 +412,35 @@ export class EventAuth {
 
   private splitDateTime(dateTimeStr: string): { date: string; time: string } {
     if (!dateTimeStr) return { date: "", time: "" };
+    
+    // Create a date object in local timezone
     const dateTime = new Date(dateTimeStr);
-    const date = dateTime.toISOString().split('T')[0];
-    const time = dateTime.toTimeString().split(' ')[0].slice(0, 5);
+    
+    // Format date as YYYY-MM-DD
+    const date = dateTime.toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD format
+    
+    // Format time as HH:mm
+    const time = dateTime.toLocaleTimeString('en-US', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
     return { date, time };
   }
 
   private combineDateTime(date: string, time: string): string {
     if (!date || !time) return "";
-    return `${date}T${time}:00`;
+    
+    // Create a new Date object from the date and time strings
+    const [year, month, day] = date.split('-').map(Number);
+    const [hours, minutes] = time.split(':').map(Number);
+    
+    // Create date in local timezone
+    const dateTime = new Date(year, month - 1, day, hours, minutes);
+    
+    // Format the date to ISO string with timezone offset
+    return dateTime.toISOString();
   }
 
   private getFileNameFromUrl(url: string): string {
