@@ -299,9 +299,31 @@ export class StoreAuth {
         ? new Date(user.last_login).toLocaleString()
         : this.config.ui.messages.auth.never;
 
-      // Show/hide view toggles
+      // Show/hide view toggles and update view visibility
       officerViewToggle.style.display = isOfficer ? "block" : "none";
       sponsorViewToggle.style.display = isSponsor ? "block" : "none";
+
+      // If not an officer, ensure default view is shown and officer view is hidden
+      if (!isOfficer) {
+        const defaultView = document.getElementById("defaultView");
+        const officerView = document.getElementById("officerView");
+        const mainTabs = document.querySelector(".tabs.tabs-boxed");
+        const officerContent = document.getElementById("officerContent");
+
+        if (defaultView && officerView && mainTabs && officerContent) {
+          // Show default view and its tabs
+          defaultView.classList.remove("hidden");
+          mainTabs.classList.remove("hidden");
+          // Hide officer view
+          officerView.classList.add("hidden");
+          officerContent.classList.add("hidden");
+          // Also uncheck the toggle if it exists
+          const officerViewCheckbox = officerViewToggle.querySelector('input[type="checkbox"]') as HTMLInputElement;
+          if (officerViewCheckbox) {
+            officerViewCheckbox.checked = false;
+          }
+        }
+      }
 
       // After everything is updated, show the content
       loadingSkeleton.style.display = "none";

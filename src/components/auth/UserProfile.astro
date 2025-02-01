@@ -319,6 +319,46 @@
             const auth = new StoreAuth();
             new EventCheckIn();
 
+            // Add officer view toggle handler
+            const officerViewToggle =
+                document.getElementById("officerViewToggle");
+            const officerViewCheckbox = officerViewToggle?.querySelector(
+                'input[type="checkbox"]'
+            ) as HTMLInputElement;
+
+            if (officerViewCheckbox) {
+                officerViewCheckbox.addEventListener("change", () => {
+                    const defaultView = document.getElementById("defaultView");
+                    const officerView = document.getElementById("officerView");
+                    const mainTabs = document.querySelector(".tabs.tabs-boxed");
+                    const officerContent =
+                        document.getElementById("officerContent");
+
+                    if (
+                        defaultView &&
+                        officerView &&
+                        mainTabs &&
+                        officerContent
+                    ) {
+                        if (officerViewCheckbox.checked) {
+                            // Hide default view and its tabs
+                            defaultView.classList.add("hidden");
+                            mainTabs.classList.add("hidden");
+                            // Show officer view
+                            officerView.classList.remove("hidden");
+                            officerContent.classList.remove("hidden");
+                        } else {
+                            // Show default view and its tabs
+                            defaultView.classList.remove("hidden");
+                            mainTabs.classList.remove("hidden");
+                            // Hide officer view
+                            officerView.classList.add("hidden");
+                            officerContent.classList.add("hidden");
+                        }
+                    }
+                });
+            }
+
             // Add login button event listener
             const loginButtons = document.querySelectorAll(".login-button");
             loginButtons.forEach((button) => {

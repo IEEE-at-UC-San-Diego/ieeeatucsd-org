@@ -1,84 +1,219 @@
-<div class="space-y-6">
-    <div class="card bg-base-200 shadow-xl">
-        <div class="card-body">
-            <h2 class="card-title text-2xl mb-4">Account Settings</h2>
+---
+// Import the majors list
+import allMajors from "../../data/allUCSDMajors.txt?raw";
+const majorsList: string[] = allMajors
+    .split("\n")
+    .filter((major: string) => major.trim());
+---
 
-            <!-- IEEE Member ID -->
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">IEEE Member ID</span>
-                </label>
-                <input
-                    type="text"
-                    id="memberIdInput"
-                    placeholder="Enter your IEEE Member ID"
-                    class="input input-bordered w-full"
-                />
+<div class="card bg-base-100 shadow-xl">
+    <div class="card-body p-6">
+        <!-- Header -->
+        <div class="flex items-center gap-4 mb-8">
+            <div class="flex-1">
+                <h2 class="card-title text-2xl">Profile Settings</h2>
+                <p class="text-base-content/70 mt-1">
+                    Manage your academic information and preferences
+                </p>
             </div>
-
-            <!-- Major -->
-            <div class="form-control mt-4">
-                <label class="label">
-                    <span class="label-text">Major</span>
-                </label>
-                <select id="majorSelect" class="select select-bordered w-full">
-                    <option disabled selected>Select your major</option>
-                    <option value="ECE"
-                        >Electrical & Computer Engineering</option
+            <div class="flex-none">
+                <button class="btn btn-primary" id="saveSettings">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5 mr-2"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
                     >
-                    <option value="CSE">Computer Science & Engineering</option>
-                    <option value="MAE"
-                        >Mechanical & Aerospace Engineering</option
+                        <path
+                            fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    Save Changes
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Sections -->
+        <div class="space-y-8">
+            <!-- Academic Information Section -->
+            <div class="bg-base-200 rounded-box p-6">
+                <div class="flex items-center gap-2 mb-6">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
                     >
-                    <option value="BE">Bioengineering</option>
-                    <option value="SE">Structural Engineering</option>
-                    <option value="NANO">Nanoengineering</option>
-                    <option value="CENG">Chemical Engineering</option>
-                    <option value="OTHER">Other</option>
-                </select>
+                        <path
+                            d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"
+                        ></path>
+                    </svg>
+                    <h3 class="text-xl font-medium">Academic Information</h3>
+                </div>
+
+                <div class="grid gap-6">
+                    <!-- Major Selection -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Major</span>
+                            <span class="label-text-alt text-base-content/70"
+                                >Select your current major</span
+                            >
+                        </label>
+                        <select
+                            id="majorSelect"
+                            class="select select-bordered w-full"
+                        >
+                            <option value="">Select your major</option>
+                            {
+                                majorsList.map((major: string) => (
+                                    <option value={major}>{major}</option>
+                                ))
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Graduation Year -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium"
+                                >Expected Graduation</span
+                            >
+                            <span class="label-text-alt text-base-content/70"
+                                >When do you plan to graduate?</span
+                            >
+                        </label>
+                        <select
+                            id="gradYearSelect"
+                            class="select select-bordered w-full"
+                        >
+                            <option value="">Select graduation year</option>
+                            {
+                                Array.from({ length: 6 }, (_, i) => {
+                                    const year = new Date().getFullYear() + i;
+                                    return <option value={year}>{year}</option>;
+                                })
+                            }
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <!-- Expected Graduation Year -->
-            <div class="form-control mt-4">
-                <label class="label">
-                    <span class="label-text">Expected Graduation Year</span>
-                </label>
-                <input
-                    type="number"
-                    id="gradYearInput"
-                    min="2024"
-                    max="2030"
-                    placeholder="Enter graduation year"
-                    class="input input-bordered w-full"
-                />
+            <!-- IEEE Information Section -->
+            <div class="bg-base-200 rounded-box p-6">
+                <div class="flex items-center gap-2 mb-6">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 10-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm-1 4a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    <h3 class="text-xl font-medium">IEEE Membership</h3>
+                </div>
+
+                <div class="grid gap-6">
+                    <!-- IEEE Member ID -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium"
+                                >IEEE Member ID</span
+                            >
+                            <span class="label-text-alt text-base-content/70"
+                                >Your IEEE membership number</span
+                            >
+                        </label>
+                        <input
+                            type="text"
+                            id="memberIdInput"
+                            placeholder="Enter your IEEE Member ID"
+                            class="input input-bordered w-full"
+                        />
+                    </div>
+
+                    <!-- Resume Upload -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Resume</span>
+                            <span class="label-text-alt text-base-content/70"
+                                >Upload your latest resume</span
+                            >
+                        </label>
+                        <div class="flex flex-col gap-2">
+                            <p
+                                id="currentResume"
+                                class="text-sm text-base-content/70"
+                            >
+                                No resume uploaded
+                            </p>
+                            <input
+                                type="file"
+                                id="resumeUpload"
+                                accept=".pdf,.doc,.docx"
+                                class="file-input file-input-bordered file-input-sm w-full"
+                            />
+                            <label class="label">
+                                <span id="uploadStatus" class="label-text-alt"
+                                ></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Resume -->
-            <div class="form-control mt-4">
-                <label class="label">
-                    <span class="label-text">Resume</span>
-                </label>
-                <div class="flex flex-col gap-2">
-                    <p id="currentResume" class="text-sm opacity-70">
-                        No resume uploaded
-                    </p>
-                    <input
-                        type="file"
-                        id="resumeUpload"
-                        accept=".pdf,.doc,.docx"
-                        class="file-input file-input-bordered file-input-sm w-full"
-                    />
-                    <label class="label">
-                        <span id="uploadStatus" class="label-text-alt"></span>
-                    </label>
+            <!-- Notification Preferences Section -->
+            <div class="bg-base-200 rounded-box p-6">
+                <div class="flex items-center gap-2 mb-6">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"
+                        ></path>
+                    </svg>
+                    <h3 class="text-xl font-medium">
+                        Notification Preferences
+                    </h3>
+                </div>
+
+                <div class="grid gap-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-medium">Event Reminders</h3>
+                            <p class="text-sm text-base-content/70">
+                                Get notified about upcoming events
+                            </p>
+                        </div>
+                        <input
+                            type="checkbox"
+                            class="toggle toggle-primary"
+                            checked
+                        />
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-medium">Newsletter</h3>
+                            <p class="text-sm text-base-content/70">
+                                Receive our monthly newsletter
+                            </p>
+                        </div>
+                        <input
+                            type="checkbox"
+                            class="toggle toggle-primary"
+                            checked
+                        />
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Save Button -->
-    <div class="flex justify-end">
-        <button class="btn btn-primary" id="saveSettings">Save Changes</button>
     </div>
 </div>
 
@@ -93,9 +228,9 @@
     const majorSelect = document.getElementById(
         "majorSelect"
     ) as HTMLSelectElement;
-    const gradYearInput = document.getElementById(
-        "gradYearInput"
-    ) as HTMLInputElement;
+    const gradYearSelect = document.getElementById(
+        "gradYearSelect"
+    ) as HTMLSelectElement;
     const resumeUpload = document.getElementById(
         "resumeUpload"
     ) as HTMLInputElement;
@@ -108,11 +243,10 @@
         const authState = auth.getAuthState();
         if (authState.isValid && authState.model) {
             const user = authState.model;
-
-            // Set current values
             if (memberIdInput) memberIdInput.value = user.member_id || "";
             if (majorSelect) majorSelect.value = user.major || "";
-            if (gradYearInput) gradYearInput.value = user.graduation_year || "";
+            if (gradYearSelect)
+                gradYearSelect.value = user.graduation_year || "";
 
             // Update resume display
             if (currentResume && user.resume) {
@@ -143,19 +277,53 @@
     // Handle save settings
     if (saveSettings) {
         saveSettings.addEventListener("click", async () => {
+            const button = saveSettings as HTMLButtonElement;
+            button.classList.add("loading");
+
             try {
                 const data = {
                     member_id: memberIdInput?.value,
                     major: majorSelect?.value,
-                    graduation_year: gradYearInput?.value,
+                    graduation_year: gradYearSelect?.value,
                 };
 
                 await auth.updateProfileSettings(data);
-                alert("Settings saved successfully");
-                loadUserData(); // Reload the data to show updated values
+
+                // Show success toast
+                const toast = document.createElement("div");
+                toast.className =
+                    "alert alert-success fixed bottom-4 right-4 w-auto z-50";
+                toast.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <span>Settings saved successfully!</span>
+                    </div>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+
+                loadUserData();
             } catch (err) {
                 console.error("Failed to save settings:", err);
-                alert("Failed to save settings");
+
+                // Show error toast
+                const toast = document.createElement("div");
+                toast.className =
+                    "alert alert-error fixed bottom-4 right-4 w-auto z-50";
+                toast.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                        <span>Failed to save settings. Please try again.</span>
+                    </div>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            } finally {
+                button.classList.remove("loading");
             }
         });
     }

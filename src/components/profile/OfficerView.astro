@@ -4,43 +4,43 @@ import EventManagement from "./EventManagement.astro";
 ---
 
 <div id="officerContent" class="hidden">
-    <div class="tabs tabs-boxed mb-6">
-        <button class="tab tab-active" data-tab="members"
+    <div class="tabs tabs-boxed mb-6" id="officerViewTabs">
+        <button class="tab tab-active" data-officer-tab="members"
             >Member Management</button
         >
-        <button class="tab" data-tab="events">Event Management</button>
+        <button class="tab" data-officer-tab="events">Event Management</button>
     </div>
 
     <div class="tab-contents">
-        <div id="membersTab" style="display: block;">
+        <div id="officerMembersTab" style="display: block;">
             <MemberManagement />
         </div>
-        <div id="eventsTab" style="display: none;">
+        <div id="officerEventsTab" style="display: none;">
             <EventManagement />
         </div>
     </div>
 </div>
 
 <script>
-    const tabs = document.querySelectorAll("[data-tab]");
-    const membersTab = document.getElementById("membersTab");
-    const eventsTab = document.getElementById("eventsTab");
+    const officerTabs = document.querySelectorAll("[data-officer-tab]");
+    const officerMembersTab = document.getElementById("officerMembersTab");
+    const officerEventsTab = document.getElementById("officerEventsTab");
 
-    if (tabs && membersTab && eventsTab) {
-        tabs.forEach((tab) => {
+    if (officerTabs && officerMembersTab && officerEventsTab) {
+        officerTabs.forEach((tab) => {
             tab.addEventListener("click", () => {
                 // Update tab styles
-                tabs.forEach((t) => t.classList.remove("tab-active"));
+                officerTabs.forEach((t) => t.classList.remove("tab-active"));
                 tab.classList.add("tab-active");
 
                 // Update content visibility
-                const tabId = (tab as HTMLElement).dataset.tab;
+                const tabId = (tab as HTMLElement).dataset.officerTab;
                 if (tabId === "members") {
-                    membersTab.style.display = "block";
-                    eventsTab.style.display = "none";
+                    officerMembersTab.style.display = "block";
+                    officerEventsTab.style.display = "none";
                 } else {
-                    membersTab.style.display = "none";
-                    eventsTab.style.display = "block";
+                    officerMembersTab.style.display = "none";
+                    officerEventsTab.style.display = "block";
                 }
             });
         });

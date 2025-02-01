@@ -8,16 +8,10 @@ const title = "User Profile";
 ---
 
 <Layout {title}>
-    <main class="min-h-screen bg-base-100/50">
-        <div class="container mx-auto px-4 py-8">
+    <main class="min-h-screen bg-base-100/50 rounded-[1.5rem]">
+        <div class="container mx-auto px-6 py-6 mt-10">
             <!-- Header Section with Breadcrumbs -->
             <div class="mb-8">
-                <div class="text-sm breadcrumbs opacity-70 mb-2">
-                    <ul>
-                        <li><a href="/">Home</a></li>
-                        <li>Profile</li>
-                    </ul>
-                </div>
                 <h1 class="text-4xl font-bold">Profile Dashboard</h1>
                 <p class="text-base-content/70 mt-2">
                     Manage your IEEE UCSD membership and activities
@@ -108,7 +102,7 @@ const title = "User Profile";
             >
                 <!-- Left Column - User Info -->
                 <div class="xl:col-span-4 2xl:col-span-3">
-                    <div class="sticky top-8">
+                    <div class="sticky top-[100px]">
                         <UserProfile />
                     </div>
                 </div>
@@ -194,14 +188,12 @@ const title = "User Profile";
                     </div>
 
                     <!-- Main Content Tabs -->
-                    <div class="tabs tabs-boxed mb-6">
-                        <button class="tab tab-active" data-tab="events"
+                    <div class="tabs tabs-boxed mb-6" id="defaultViewTabs">
+                        <button class="tab tab-active" data-default-tab="events"
                             >Events & Activities</button
                         >
-                        <button class="tab" data-tab="settings">Settings</button
-                        >
-                        <button class="tab" data-tab="officer" id="officerTab"
-                            >Officer Panel</button
+                        <button class="tab" data-default-tab="settings"
+                            >Settings</button
                         >
                     </div>
 
@@ -340,23 +332,22 @@ const title = "User Profile";
         }
     });
 
-    // Handle tab switching
-    tabs.forEach((tab) => {
+    // Handle default view tab switching
+    const defaultViewTabs = document.querySelectorAll("[data-default-tab]");
+    defaultViewTabs.forEach((tab) => {
         tab.addEventListener("click", () => {
             // Update tab styles
-            tabs.forEach((t) => t.classList.remove("tab-active"));
+            defaultViewTabs.forEach((t) => t.classList.remove("tab-active"));
             tab.classList.add("tab-active");
 
             // Update content visibility
-            const tabId = (tab as HTMLElement).dataset.tab;
+            const tabId = (tab as HTMLElement).dataset.defaultTab;
             const defaultView = document.getElementById("defaultView");
             const settingsView = document.getElementById("settingsView");
-            const officerView = document.getElementById("officerView");
 
-            if (defaultView && settingsView && officerView) {
+            if (defaultView && settingsView) {
                 defaultView.classList.add("hidden");
                 settingsView.classList.add("hidden");
-                officerView.classList.add("hidden");
 
                 switch (tabId) {
                     case "events":
@@ -364,9 +355,6 @@ const title = "User Profile";
                         break;
                     case "settings":
                         settingsView.classList.remove("hidden");
-                        break;
-                    case "officer":
-                        officerView.classList.remove("hidden");
                         break;
                 }
             }
