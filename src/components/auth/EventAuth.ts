@@ -1202,6 +1202,7 @@ export class EventAuth {
         const fileUrl = this.pb.files.getURL(event, file);
         const fileName = this.getFileNameFromUrl(file);
         const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
+        const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
         
         const fileItem = document.createElement("div");
         fileItem.className = "bg-base-200 rounded-lg overflow-hidden";
@@ -1212,12 +1213,6 @@ export class EventAuth {
           previewHtml = `
             <div class="aspect-video bg-base-300 overflow-hidden">
               <img src="${fileUrl}" alt="${fileName}" class="w-full h-full object-contain">
-            </div>
-          `;
-        } else if (fileExt === 'pdf') {
-          previewHtml = `
-            <div class="aspect-video bg-base-300 overflow-hidden">
-              <iframe src="${fileUrl}" class="w-full h-full"></iframe>
             </div>
           `;
         } else {
@@ -1239,23 +1234,26 @@ export class EventAuth {
 
         fileItem.innerHTML = `
           ${previewHtml}
-          <div class="p-3 flex items-center justify-between gap-2">
-            <div class="flex-1 min-w-0">
-              <span class="text-sm truncate block" title="${fileName}">${fileName}</span>
-            </div>
-            <div class="flex gap-2 shrink-0">
-              <a href="${fileUrl}" target="_blank" class="btn btn-ghost btn-xs" title="Open in new tab">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                  <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                </svg>
-              </a>
-              <button class="btn btn-ghost btn-xs text-error" title="Remove file" data-file="${file}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-              </button>
-            </div>
+          <div class="card-body p-4">
+            <h3 class="card-title text-sm flex items-center justify-between gap-2" title="${fileName}">
+              <span class="truncate min-w-0">${nameWithoutExt}</span>
+              <span class="text-base-content/50 text-xs uppercase font-mono shrink-0">${fileExt}</span>
+            </h3>
+          </div>
+          <div class="border-t border-base-300 grid grid-cols-2">
+            <a href="${fileUrl}" target="_blank" class="btn btn-ghost btn-sm rounded-none rounded-bl-lg gap-2 h-12">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+              </svg>
+              Open
+            </a>
+            <button class="btn btn-ghost btn-sm text-error rounded-none rounded-br-lg gap-2 h-12 border-l border-base-300" title="Remove file" data-file="${file}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+              Remove
+            </button>
           </div>
         `;
         
@@ -1263,7 +1261,7 @@ export class EventAuth {
         const deleteButton = fileItem.querySelector('.text-error');
         if (deleteButton) {
           deleteButton.addEventListener('click', async (e) => {
-            e.preventDefault(); // Prevent any form submission
+            e.preventDefault();
             if (confirm('Are you sure you want to remove this file?')) {
               try {
                 const fileToRemove = deleteButton.getAttribute('data-file');
@@ -1307,14 +1305,14 @@ export class EventAuth {
     }
   }
 
-  private async handleViewFiles(eventId: string) {
+  private async handleViewFiles(eventId: string): Promise<void> {
     try {
-      const event = await this.pb.collection("events").getOne(eventId);
+      const event = await this.pb.collection("events").getOne<Event>(eventId);
       
       // Create and show modal
       const modal = document.createElement("dialog");
       modal.className = "modal";
-      modal.innerHTML = `
+      const modalContent = `
         <div class="modal-box max-w-5xl">
           <div class="flex justify-between items-center mb-4">
             <h3 class="font-bold text-lg">Files for ${event.event_name}</h3>
@@ -1330,7 +1328,7 @@ export class EventAuth {
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             ${event.files && Array.isArray(event.files) && event.files.length > 0 
-              ? event.files.map(file => {
+              ? event.files.map((file: string) => {
                   const fileUrl = this.pb.files.getURL(event, file);
                   const fileName = this.getFileNameFromUrl(file);
                   const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
@@ -1351,31 +1349,36 @@ export class EventAuth {
                       : `<svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 opacity-50" viewBox="0 0 20 20" fill="currentColor">
                           <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
                         </svg>`;
-                    
+
                     previewHtml = `
-                      <div class="aspect-video bg-base-300 rounded-t-lg flex items-center justify-center">
+                      <div class="aspect-video bg-base-300 flex items-center justify-center">
                         ${iconHtml}
                       </div>
                     `;
                   }
 
                   return `
-                    <button class="preview-file group bg-base-200 rounded-lg transition-colors w-full text-left hover:bg-base-300" 
-                            data-url="${fileUrl}" 
-                            data-filename="${fileName}"
-                            data-ext="${fileExt}">
+                    <div class="card bg-base-200">
                       ${previewHtml}
-                      <div class="p-3 flex items-center gap-2">
-                        <span class="text-sm truncate flex-1" title="${fileName}">${fileName}</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50 group-hover:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                          <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                        </svg>
+                      <div class="card-body p-4">
+                        <h3 class="card-title text-sm flex items-center justify-between gap-2" title="${fileName}">
+                          <span class="truncate min-w-0">${fileName.substring(0, fileName.lastIndexOf("."))}</span>
+                          <span class="text-base-content/50 text-xs uppercase font-mono shrink-0">${fileExt}</span>
+                        </h3>
                       </div>
-                    </button>
+                      <div class="border-t border-base-300">
+                        <a href="${fileUrl}" target="_blank" class="btn btn-ghost btn-sm w-full rounded-none rounded-b-lg gap-2 h-12">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                            <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                          </svg>
+                          Open in New Tab
+                        </a>
+                      </div>
+                    </div>
                   `;
                 }).join("")
-              : '<div class="col-span-full text-center py-4 text-opacity-50">No files available</div>'
+              : `<div class="col-span-full text-center py-4 opacity-70">No files available</div>`
             }
           </div>
           <div class="modal-action">
@@ -1387,90 +1390,44 @@ export class EventAuth {
         <form method="dialog" class="modal-backdrop">
           <button>close</button>
         </form>
-      `;
+      </dialog>`;
 
+      modal.innerHTML = modalContent;
       document.body.appendChild(modal);
       modal.showModal();
 
-      // Add preview functionality
-      const previewButtons = modal.querySelectorAll('.preview-file');
-      previewButtons.forEach(button => {
-        button.addEventListener('click', () => {
-          const url = (button as HTMLButtonElement).dataset.url;
-          const fileName = (button as HTMLButtonElement).dataset.filename;
-          const ext = (button as HTMLButtonElement).dataset.ext;
-          if (url && fileName) {
-            if (ext === 'pdf') {
-              window.open(url, '_blank');
-            } else {
-              document.dispatchEvent(new CustomEvent('showFilePreview', {
-                detail: { url, fileName }
-              }));
-            }
-          }
-        });
-      });
-
-      // Add download functionality
-      const downloadButton = modal.querySelector('.download-all');
-      if (downloadButton && event.files && Array.isArray(event.files)) {
-        downloadButton.addEventListener('click', async () => {
+      // Add download all functionality
+      const downloadAllButton = modal.querySelector('.download-all') as HTMLButtonElement;
+      if (downloadAllButton) {
+        downloadAllButton.addEventListener('click', async () => {
           try {
-            if (event.files.length === 1) {
-              // For single file, download directly
-              const fileUrl = this.pb.files.getURL(event, event.files[0]);
-              const fileName = this.getFileNameFromUrl(event.files[0]);
+            // Create a new JSZip instance
+            const zip = new JSZip();
+
+            // Add each file to the zip
+            for (const file of event.files) {
+              const fileUrl = this.pb.files.getURL(event, file);
+              const fileName = this.getFileNameFromUrl(file);
               const response = await fetch(fileUrl);
               const blob = await response.blob();
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = fileName;
-              document.body.appendChild(a);
-              a.click();
-              window.URL.revokeObjectURL(url);
-              document.body.removeChild(a);
-            } else {
-              // For multiple files, create a zip
-              const zip = new JSZip();
-              
-              // Show loading state
-              downloadButton.classList.add('loading');
-              downloadButton.setAttribute('disabled', 'true');
-              
-              // Download all files and add to zip
-              await Promise.all(event.files.map(async (file: string) => {
-                const fileUrl = this.pb.files.getURL(event, file);
-                const fileName = this.getFileNameFromUrl(file);
-                const response = await fetch(fileUrl);
-                const blob = await response.blob();
-                zip.file(fileName, blob);
-              }));
-              
-              // Generate and download zip file
-              const zipBlob = await zip.generateAsync({ type: 'blob' });
-              const url = window.URL.createObjectURL(zipBlob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `${event.event_name || 'event'}_files.zip`;
-              document.body.appendChild(a);
-              a.click();
-              window.URL.revokeObjectURL(url);
-              document.body.removeChild(a);
-              
-              // Reset button state
-              downloadButton.classList.remove('loading');
-              downloadButton.removeAttribute('disabled');
+              zip.file(fileName, blob);
             }
+
+            // Generate the zip file
+            const content = await zip.generateAsync({ type: "blob" });
+
+            // Create a download link and trigger it
+            const downloadUrl = URL.createObjectURL(content);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `${event.event_name} Files.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
           } catch (err) {
             console.error('Failed to download files:', err);
             alert('Failed to download files. Please try again.');
-            
-            // Reset button state on error
-            if (downloadButton) {
-              downloadButton.classList.remove('loading');
-              downloadButton.removeAttribute('disabled');
-            }
           }
         });
       }
@@ -1483,4 +1440,4 @@ export class EventAuth {
       console.error("Failed to view files:", err);
     }
   }
-} 
+}
