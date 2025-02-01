@@ -105,6 +105,7 @@ export class EventAuth {
   private elements: AuthElements;
   private cachedEvents: Event[] = [];
   private abortController: AbortController | null = null;
+  private currentUploadXHR: XMLHttpRequest | null = null;
 
   constructor() {
     this.pb = new PocketBase(config.api.baseUrl);
@@ -1020,10 +1021,44 @@ export class EventAuth {
   private init() {
     // Add file input change handler for automatic upload
     const fileInput = this.elements.editorFiles;
+
+    // Add dialog close handler to cancel uploads
+    this.elements.eventEditor.addEventListener('close', () => {
+      if (this.currentUploadXHR) {
+        this.currentUploadXHR.abort();
+        this.currentUploadXHR = null;
+        
+        // Hide progress bar
+        const progressContainer = document.getElementById('uploadProgress');
+        if (progressContainer) {
+          progressContainer.classList.add('hidden');
+        }
+        
+        // Clear file input
+        fileInput.value = '';
+      }
+    });
+
     fileInput.addEventListener('change', async () => {
       const selectedFiles = fileInput.files;
       if (selectedFiles && selectedFiles.length > 0) {
         try {
+          // Validate file sizes
+          const MAX_FILE_SIZE = 999999999; // ~1GB max per file (server limit)
+          const MAX_TOTAL_SIZE = 999999999; // ~1GB max total (server limit)
+          let totalSize = 0;
+
+          for (const file of selectedFiles) {
+            if (file.size > MAX_FILE_SIZE) {
+              throw new Error(`File "${file.name}" is too large. Maximum size per file is ${(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)}MB.`);
+            }
+            totalSize += file.size;
+          }
+
+          if (totalSize > MAX_TOTAL_SIZE) {
+            throw new Error(`Total file size (${(totalSize / 1024 / 1024).toFixed(1)}MB) exceeds the limit of ${(MAX_TOTAL_SIZE / 1024 / 1024).toFixed(0)}MB.`);
+          }
+
           // Get the current event ID
           const eventId = this.elements.saveEventButton.dataset.eventId;
           if (!eventId) {
@@ -1057,6 +1092,7 @@ export class EventAuth {
 
           // Create XMLHttpRequest for better progress tracking
           const xhr = new XMLHttpRequest();
+          this.currentUploadXHR = xhr;  // Store the XHR request
           const url = `${this.pb.baseUrl}/api/collections/events/records/${eventId}`;
           
           xhr.upload.onprogress = (e) => {
@@ -1064,11 +1100,11 @@ export class EventAuth {
               const progress = Math.round((e.loaded * 100) / e.total);
               if (progressBar) progressBar.value = progress;
               if (progressText) progressText.textContent = `${progress}%`;
-              console.log('Upload progress:', progress + '%');
             }
           };
 
           xhr.onload = async () => {
+            this.currentUploadXHR = null;  // Clear the XHR reference
             if (xhr.status === 200) {
               // Update was successful
               const response = JSON.parse(xhr.responseText);
@@ -1087,16 +1123,47 @@ export class EventAuth {
                 }
               }, 1000);
             } else {
-              console.error('Upload failed:', xhr.responseText);
-              alert('Failed to upload files. Please try again.');
+              let errorMessage = 'Failed to upload files. ';
+              try {
+                const errorResponse = JSON.parse(xhr.responseText);
+                errorMessage += errorResponse.message || 'Please try again.';
+              } catch {
+                if (xhr.status === 413) {
+                  errorMessage += 'Files are too large. Please reduce file sizes and try again.';
+                } else if (xhr.status === 401) {
+                  errorMessage += 'Your session has expired. Please log in again.';
+                } else {
+                  errorMessage += 'Please try again.';
+                }
+              }
+              console.error('Upload failed:', errorMessage);
+              alert(errorMessage);
               if (progressContainer) progressContainer.classList.add('hidden');
+              fileInput.value = '';
             }
           };
 
           xhr.onerror = () => {
+            this.currentUploadXHR = null;  // Clear the XHR reference
             console.error('Upload failed');
-            alert('Failed to upload files. Please try again.');
+            let errorMessage = 'Failed to upload files. ';
+            if (xhr.status === 413) {
+              errorMessage += 'Files are too large. Please reduce file sizes and try again.';
+            } else if (xhr.status === 0) {
+              errorMessage += 'Network error or CORS issue. Please try again later.';
+            } else {
+              errorMessage += 'Please try again.';
+            }
+            alert(errorMessage);
             if (progressContainer) progressContainer.classList.add('hidden');
+            fileInput.value = '';
+          };
+
+          xhr.onabort = () => {
+            this.currentUploadXHR = null;  // Clear the XHR reference
+            console.log('Upload cancelled');
+            if (progressContainer) progressContainer.classList.add('hidden');
+            fileInput.value = '';
           };
 
           // Get the auth token
@@ -1108,11 +1175,14 @@ export class EventAuth {
           xhr.send(formData);
         } catch (err) {
           console.error('Failed to upload files:', err);
-          alert('Failed to upload files. Please try again.');
+          alert(err instanceof Error ? err.message : 'Failed to upload files. Please try again.');
           
           // Hide progress bar on error
           const progressContainer = document.getElementById('uploadProgress');
           if (progressContainer) progressContainer.classList.add('hidden');
+          
+          // Clear file input
+          fileInput.value = '';
         }
       }
     });
