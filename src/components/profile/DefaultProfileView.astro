@@ -90,21 +90,30 @@
     <!-- Right Column - Profile Information -->
     <div class="card bg-base-200 shadow-xl h-full">
         <div class="card-body p-6">
-            <h2 class="card-title text-2xl mb-6">Something here</h2>
-            <div class="space-y-4">
+            <h2 class="card-title text-2xl mb-6">Past Events</h2>
+            <div id="pastEventsList" class="space-y-4 overflow-y-auto">
                 <!-- Loading Skeletons -->
-                <div class="space-y-2 animate-pulse">
-                    <div class="h-6 bg-base-300 rounded w-1/3"></div>
-                    <div class="h-4 bg-base-300 rounded w-2/3 opacity-70"></div>
-                </div>
-                <div class="space-y-2 animate-pulse">
-                    <div class="h-6 bg-base-300 rounded w-1/2"></div>
-                    <div class="h-4 bg-base-300 rounded w-3/4 opacity-70"></div>
-                </div>
-                <div class="space-y-2 animate-pulse">
-                    <div class="h-6 bg-base-300 rounded w-2/5"></div>
-                    <div class="h-4 bg-base-300 rounded w-1/2 opacity-70"></div>
-                </div>
+                {
+                    Array(3)
+                        .fill(0)
+                        .map(() => (
+                            <div class="card bg-base-100 shadow-sm animate-pulse">
+                                <div class="card-body p-4">
+                                    <div class="flex justify-between items-start">
+                                        <div class="space-y-3 w-full">
+                                            <div class="h-6 bg-base-300 rounded w-3/4" />
+                                            <div class="space-y-2">
+                                                <div class="h-4 bg-base-300 rounded w-1/2 opacity-70" />
+                                                <div class="h-4 bg-base-300 rounded w-2/3 opacity-70" />
+                                                <div class="h-4 bg-base-300 rounded w-1/3 opacity-70" />
+                                            </div>
+                                        </div>
+                                        <div class="h-6 w-20 bg-base-300 rounded" />
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                }
             </div>
         </div>
     </div>
@@ -287,10 +296,68 @@
         location: string;
     }
 
+    // Function to render event card
+    function renderEventCard(event: Event, attendedEvents: string[]): string {
+        const isAttended =
+            Array.isArray(attendedEvents) &&
+            attendedEvents.includes(event.event_id);
+        const hasFiles =
+            event.files && Array.isArray(event.files) && event.files.length > 0;
+        const isPastEvent = new Date(event.end_date) < new Date();
+
+        // Only show files button for past events
+        const filesButton =
+            hasFiles && isPastEvent
+                ? `
+            <button 
+                class="btn btn-ghost btn-xs view-files" 
+                data-event-id="${event.id}"
+                onclick="document.dispatchEvent(new CustomEvent('viewEventFiles', { detail: { eventId: '${event.id}' } }))"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                </svg>
+                ${event.files.length} File${event.files.length > 1 ? "s" : ""}
+            </button>
+        `
+                : "";
+
+        return `
+            <div class="card bg-base-100 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-medium text-lg">${event.event_name}</h3>
+                            <div class="text-sm opacity-70 space-y-1">
+                                <p>Starts: ${formatDate(event.start_date)}</p>
+                                <p>Ends: ${formatDate(event.end_date)}</p>
+                                ${event.location ? `<p class="text-xs">📍 ${event.location}</p>` : ""}
+                            </div>
+                            ${hasFiles && isPastEvent ? `<div class="mt-2">${filesButton}</div>` : ""}
+                        </div>
+                        ${
+                            isAttended
+                                ? `
+                            <div class="badge badge-success gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                                Attended
+                            </div>
+                        `
+                                : ""
+                        }
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     // Function to render events
     async function renderEvents() {
         const eventsList = document.getElementById("eventsList");
-        if (!eventsList) return;
+        const pastEventsList = document.getElementById("pastEventsList");
+        if (!eventsList || !pastEventsList) return;
 
         try {
             // Get current user's attended events with safe parsing
@@ -318,6 +385,7 @@
 
             // Clear loading skeletons
             eventsList.innerHTML = "";
+            pastEventsList.innerHTML = "";
 
             // Categorize events
             const now = new Date();
@@ -355,42 +423,6 @@
                     new Date(a.end_date).getTime()
             );
 
-            // Function to render event card
-            function renderEventCard(event: Event): string {
-                const isAttended =
-                    Array.isArray(attendedEvents) &&
-                    attendedEvents.includes(event.event_id);
-
-                return `
-                    <div class="card bg-base-100 shadow-sm">
-                        <div class="card-body p-4">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h3 class="font-medium text-lg">${event.event_name}</h3>
-                                    <div class="text-sm opacity-70 space-y-1">
-                                        <p>Starts: ${formatDate(event.start_date)}</p>
-                                        <p>Ends: ${formatDate(event.end_date)}</p>
-                                        ${event.location ? `<p class="text-xs">📍 ${event.location}</p>` : ""}
-                                    </div>
-                                </div>
-                                ${
-                                    isAttended
-                                        ? `
-                                    <div class="badge badge-success gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                                        </svg>
-                                        Attended
-                                    </div>
-                                `
-                                        : ""
-                                }
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
             // Function to render section
             function renderSection(
                 title: string,
@@ -402,19 +434,30 @@
                     <div class="space-y-4">
                         <h3 class="text-lg font-medium text-base-content/70">${title}</h3>
                         <div class="space-y-4">
-                            ${events.map((event) => renderEventCard(event)).join("")}
+                            ${events.map((event) => renderEventCard(event, attendedEvents)).join("")}
                         </div>
                         ${showDivider ? '<div class="divider"></div>' : ""}
                     </div>
                 `;
             }
 
-            // Render all sections
+            // Update main events list (left column)
             eventsList.innerHTML = `
                 ${renderSection("Upcoming Events", nextTwoEvents, nextTwoEvents.length > 0)}
-                ${renderSection("Currently Happening", currentEvents, currentEvents.length > 0)}
-                ${renderSection("Past Events", sortedPastEvents, false)}
+                ${renderSection("Currently Happening", currentEvents, false)}
             `;
+
+            // Update past events list (right column)
+            pastEventsList.innerHTML =
+                sortedPastEvents.length > 0
+                    ? sortedPastEvents
+                          .map((event) =>
+                              renderEventCard(event, attendedEvents)
+                          )
+                          .join("")
+                    : `<div class="text-center py-8 opacity-70">
+                    <p>No past events found</p>
+                   </div>`;
 
             // If no events at all
             if (events.items.length === 0) {
@@ -426,13 +469,37 @@
             }
         } catch (err) {
             console.error("Failed to render events:", err);
-            eventsList.innerHTML = `
+            const errorMessage = `
                 <div class="text-center py-8 text-error">
                     <p>Failed to load events. Please try again later.</p>
                 </div>
             `;
+            eventsList.innerHTML = errorMessage;
+            pastEventsList.innerHTML = errorMessage;
         }
     }
+
+    // Add event listener for viewing files
+    const handleViewFiles = (e: Event) => {
+        if (e instanceof CustomEvent && "eventId" in e.detail) {
+            (async () => {
+                try {
+                    const event = await pb
+                        .collection("events")
+                        .getOne(e.detail.eventId);
+                    document.dispatchEvent(
+                        new CustomEvent("showEventFiles", {
+                            detail: { event },
+                        })
+                    );
+                } catch (err) {
+                    console.error("Failed to load event files:", err);
+                }
+            })();
+        }
+    };
+
+    document.addEventListener("viewEventFiles", handleViewFiles);
 
     // Initial render
     renderEvents();
