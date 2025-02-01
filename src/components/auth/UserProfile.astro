@@ -127,104 +127,11 @@
                 </div>
             </div>
 
-            <!-- Member Details -->
-            <div class="space-y-4">
-                <!-- IEEE Member ID -->
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text flex items-center gap-2">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4 w-4"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 10-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm-1 4a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z"
-                                    clip-rule="evenodd"></path>
-                            </svg>
-                            IEEE Member ID
-                        </span>
-                    </label>
-                    <div class="join w-full">
-                        <input
-                            type="text"
-                            id="memberIdInput"
-                            placeholder="Enter your IEEE Member ID"
-                            class="join-item input input-bordered flex-1 disabled:bg-base-200 disabled:border-2 disabled:border-opacity-50 disabled:cursor-not-allowed"
-                            disabled
-                        />
-                        <button
-                            id="saveMemberId"
-                            class="join-item btn disabled:bg-base-200 disabled:border-2 disabled:border-opacity-50 disabled:cursor-not-allowed enabled:btn-primary hover:enabled:bg-primary-focus"
-                            disabled>Save</button
-                        >
-                    </div>
-                    <label class="label">
-                        <span id="memberIdStatus" class="label-text-alt"></span>
-                    </label>
-                </div>
-
-                <!-- Resume Upload -->
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text flex items-center gap-2">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4 w-4"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
-                                    clip-rule="evenodd"></path>
-                            </svg>
-                            Resume
-                        </span>
-                    </label>
-                    <div id="resumeSection" class="space-y-2">
-                        <div class="flex items-center gap-2">
-                            <p id="resumeName" class="text-sm truncate flex-1">
-                                No resume uploaded
-                            </p>
-                            <div id="resumeActions" class="flex gap-2">
-                                <a
-                                    id="resumeDownload"
-                                    href="#"
-                                    target="_blank"
-                                    class="btn btn-ghost btn-xs">View</a
-                                >
-                                <button
-                                    id="deleteResume"
-                                    class="btn btn-ghost btn-xs text-error"
-                                    >Delete</button
-                                >
-                            </div>
-                        </div>
-                        <div id="uploadSection">
-                            <input
-                                type="file"
-                                id="resumeUpload"
-                                accept=".pdf,.doc,.docx"
-                                class="file-input file-input-bordered file-input-sm w-full disabled:bg-base-200 disabled:border-2 disabled:border-opacity-50 disabled:cursor-not-allowed"
-                                disabled
-                            />
-                            <label class="label">
-                                <span id="uploadStatus" class="label-text-alt"
-                                ></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Auth Buttons -->
             <div class="pt-4">
                 <button
                     id="contentLoginButton"
-                    class="login-button btn btn-primary w-full gap-2"
+                    class="login-button btn btn-primary w-full gap-2 hidden"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -241,7 +148,7 @@
                 </button>
                 <button
                     id="contentLogoutButton"
-                    class="logout-button btn btn-error w-full gap-2"
+                    class="logout-button btn btn-error w-full gap-2 hidden"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -409,8 +316,47 @@
     // Initialize auth and event check-in
     document.addEventListener("DOMContentLoaded", () => {
         try {
-            new StoreAuth();
+            const auth = new StoreAuth();
             new EventCheckIn();
+
+            // Add login button event listener
+            const loginButtons = document.querySelectorAll(".login-button");
+            loginButtons.forEach((button) => {
+                button.addEventListener("click", () => {
+                    const loadingSkeleton =
+                        document.getElementById("loadingSkeleton");
+                    const userInfo = document.getElementById("userInfo");
+
+                    // Show loading state
+                    if (loadingSkeleton)
+                        loadingSkeleton.style.display = "block";
+                    if (userInfo) userInfo.classList.add("hidden");
+
+                    // Call the handleLogin method
+                    auth.handleLogin().catch((error) => {
+                        console.error("Login error:", error);
+                        // Show error message
+                        if (loadingSkeleton)
+                            loadingSkeleton.style.display = "none";
+                        if (userInfo) {
+                            const errorMessage = document.createElement("div");
+                            errorMessage.className = "alert alert-error";
+                            errorMessage.innerHTML = `
+                                <div class="flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Failed to sign in. Please try again.</span>
+                                </div>
+                            `;
+                            userInfo.innerHTML = "";
+                            userInfo.appendChild(errorMessage);
+                            userInfo.classList.remove("hidden");
+                            userInfo.style.opacity = "1";
+                        }
+                    });
+                });
+            });
 
             // Add error handling for failed initialization
             window.addEventListener("unhandledrejection", (event) => {
@@ -418,6 +364,7 @@
                 const userInfo = document.getElementById("userInfo");
                 const loadingSkeleton =
                     document.getElementById("loadingSkeleton");
+                const memberDetails = document.getElementById("memberDetails");
                 const errorMessage = document.createElement("div");
 
                 errorMessage.className = "alert alert-error";
@@ -432,12 +379,32 @@
 
                 if (loadingSkeleton) loadingSkeleton.style.display = "none";
                 if (userInfo) {
-                    userInfo.innerHTML = "";
+                    if (memberDetails) memberDetails.style.display = "none";
                     userInfo.appendChild(errorMessage);
                     userInfo.classList.remove("hidden");
                     userInfo.style.opacity = "1";
                 }
             });
+
+            // Check auth state and update UI accordingly
+            const authState = auth.getAuthState();
+            if (!authState.isValid || !authState.model) {
+                const userInfo = document.getElementById("userInfo");
+                const loadingSkeleton =
+                    document.getElementById("loadingSkeleton");
+                const memberDetails = document.getElementById("memberDetails");
+                const contentLoginButton =
+                    document.getElementById("contentLoginButton");
+
+                if (loadingSkeleton) loadingSkeleton.style.display = "none";
+                if (memberDetails) memberDetails.style.display = "none";
+                if (contentLoginButton)
+                    contentLoginButton.classList.remove("hidden");
+                if (userInfo) {
+                    userInfo.classList.remove("hidden");
+                    userInfo.style.opacity = "1";
+                }
+            }
         } catch (error) {
             console.error("Failed to initialize profile:", error);
         }
@@ -478,7 +445,7 @@
         });
     }
 
-    // Set member since date (you'll need to modify StoreAuth.ts to include this)
+    // Set member since date
     if (memberSinceElement) {
         const created = new Date(); // Replace with actual user creation date
         memberSinceElement.textContent = created.toLocaleDateString();

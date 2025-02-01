@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import UserProfile from "../components/auth/UserProfile.astro";
 import DefaultProfileView from "../components/profile/DefaultProfileView.astro";
 import OfficerProfileView from "../components/profile/OfficerView.astro";
+import UserSettings from "../components/profile/UserSettings.astro";
 const title = "User Profile";
 ---
 
@@ -52,6 +53,50 @@ const title = "User Profile";
                             >Failed to load profile data. Please try refreshing
                             the page.</span
                         >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Not Authenticated State -->
+            <div id="notAuthenticatedState" class="hidden w-full">
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body items-center text-center">
+                        <div class="mb-6">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-16 w-16 text-base-content/30"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                    clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <h2 class="card-title text-2xl mb-2">
+                            Sign in to Access Your Profile
+                        </h2>
+                        <p class="text-base-content/70 mb-6">
+                            Please sign in with your IEEE UCSD account to view
+                            and manage your profile.
+                        </p>
+                        <button
+                            class="login-button btn btn-primary btn-lg gap-2"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z"
+                                    clip-rule="evenodd"></path>
+                            </svg>
+                            Sign in with IEEEUCSD SSO
+                        </button>
                     </div>
                 </div>
             </div>
@@ -217,6 +262,9 @@ const title = "User Profile";
                     <div id="defaultView">
                         <DefaultProfileView />
                     </div>
+                    <div id="settingsView" class="hidden">
+                        <UserSettings />
+                    </div>
                     <div id="officerView" class="hidden">
                         <OfficerProfileView />
                     </div>
@@ -233,6 +281,9 @@ const title = "User Profile";
     // Initialize page state
     const pageLoadingState = document.getElementById("pageLoadingState");
     const pageErrorState = document.getElementById("pageErrorState");
+    const notAuthenticatedState = document.getElementById(
+        "notAuthenticatedState"
+    );
     const mainContent = document.getElementById("mainContent");
     const tabs = document.querySelectorAll(".tab");
     const defaultView = document.getElementById("defaultView");
@@ -273,12 +324,18 @@ const title = "User Profile";
             // Show loading state
             if (pageLoadingState) pageLoadingState.classList.remove("hidden");
             if (pageErrorState) pageErrorState.classList.add("hidden");
+            if (notAuthenticatedState)
+                notAuthenticatedState.classList.add("hidden");
             if (mainContent) mainContent.classList.add("hidden");
 
             // Check auth state
             const authState = auth.getAuthState();
             if (!authState.isValid || !authState.model) {
-                throw new Error("User not authenticated");
+                // Show not authenticated state
+                if (pageLoadingState) pageLoadingState.classList.add("hidden");
+                if (notAuthenticatedState)
+                    notAuthenticatedState.classList.remove("hidden");
+                return;
             }
 
             const user = authState.model;
@@ -350,12 +407,26 @@ const title = "User Profile";
 
             // Update content visibility
             const tabId = (tab as HTMLElement).dataset.tab;
-            if (tabId === "events") {
-                defaultView!.style.display = "block";
-                officerView!.style.display = "none";
-            } else if (tabId === "officer") {
-                defaultView!.style.display = "none";
-                officerView!.style.display = "block";
+            const defaultView = document.getElementById("defaultView");
+            const settingsView = document.getElementById("settingsView");
+            const officerView = document.getElementById("officerView");
+
+            if (defaultView && settingsView && officerView) {
+                defaultView.classList.add("hidden");
+                settingsView.classList.add("hidden");
+                officerView.classList.add("hidden");
+
+                switch (tabId) {
+                    case "events":
+                        defaultView.classList.remove("hidden");
+                        break;
+                    case "settings":
+                        settingsView.classList.remove("hidden");
+                        break;
+                    case "officer":
+                        officerView.classList.remove("hidden");
+                        break;
+                }
             }
         });
     });
@@ -389,6 +460,25 @@ const title = "User Profile";
             }
         });
     }
+
+    // Add login button event listener
+    const loginButtons = document.querySelectorAll(".login-button");
+    loginButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            // Show loading state while authentication is in progress
+            if (pageLoadingState) pageLoadingState.classList.remove("hidden");
+            if (notAuthenticatedState)
+                notAuthenticatedState.classList.add("hidden");
+
+            // Call the handleLogin method from StoreAuth
+            auth.handleLogin().catch((error) => {
+                console.error("Login error:", error);
+                // Show error state if login fails
+                if (pageLoadingState) pageLoadingState.classList.add("hidden");
+                if (pageErrorState) pageErrorState.classList.remove("hidden");
+            });
+        });
+    });
 </script>
 
 <style>

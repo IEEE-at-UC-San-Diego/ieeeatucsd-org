@@ -1,0 +1,172 @@
+<div class="space-y-6">
+    <div class="card bg-base-200 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-2xl mb-4">Account Settings</h2>
+
+            <!-- IEEE Member ID -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">IEEE Member ID</span>
+                </label>
+                <input
+                    type="text"
+                    id="memberIdInput"
+                    placeholder="Enter your IEEE Member ID"
+                    class="input input-bordered w-full"
+                />
+            </div>
+
+            <!-- Major -->
+            <div class="form-control mt-4">
+                <label class="label">
+                    <span class="label-text">Major</span>
+                </label>
+                <select id="majorSelect" class="select select-bordered w-full">
+                    <option disabled selected>Select your major</option>
+                    <option value="ECE"
+                        >Electrical & Computer Engineering</option
+                    >
+                    <option value="CSE">Computer Science & Engineering</option>
+                    <option value="MAE"
+                        >Mechanical & Aerospace Engineering</option
+                    >
+                    <option value="BE">Bioengineering</option>
+                    <option value="SE">Structural Engineering</option>
+                    <option value="NANO">Nanoengineering</option>
+                    <option value="CENG">Chemical Engineering</option>
+                    <option value="OTHER">Other</option>
+                </select>
+            </div>
+
+            <!-- Expected Graduation Year -->
+            <div class="form-control mt-4">
+                <label class="label">
+                    <span class="label-text">Expected Graduation Year</span>
+                </label>
+                <input
+                    type="number"
+                    id="gradYearInput"
+                    min="2024"
+                    max="2030"
+                    placeholder="Enter graduation year"
+                    class="input input-bordered w-full"
+                />
+            </div>
+
+            <!-- Resume -->
+            <div class="form-control mt-4">
+                <label class="label">
+                    <span class="label-text">Resume</span>
+                </label>
+                <div class="flex flex-col gap-2">
+                    <p id="currentResume" class="text-sm opacity-70">
+                        No resume uploaded
+                    </p>
+                    <input
+                        type="file"
+                        id="resumeUpload"
+                        accept=".pdf,.doc,.docx"
+                        class="file-input file-input-bordered file-input-sm w-full"
+                    />
+                    <label class="label">
+                        <span id="uploadStatus" class="label-text-alt"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="flex justify-end">
+        <button class="btn btn-primary" id="saveSettings">Save Changes</button>
+    </div>
+</div>
+
+<script>
+    import { StoreAuth } from "../auth/StoreAuth";
+    const auth = new StoreAuth();
+
+    // Get form elements
+    const memberIdInput = document.getElementById(
+        "memberIdInput"
+    ) as HTMLInputElement;
+    const majorSelect = document.getElementById(
+        "majorSelect"
+    ) as HTMLSelectElement;
+    const gradYearInput = document.getElementById(
+        "gradYearInput"
+    ) as HTMLInputElement;
+    const resumeUpload = document.getElementById(
+        "resumeUpload"
+    ) as HTMLInputElement;
+    const currentResume = document.getElementById("currentResume");
+    const uploadStatus = document.getElementById("uploadStatus");
+    const saveSettings = document.getElementById("saveSettings");
+
+    // Load current user data
+    const loadUserData = () => {
+        const authState = auth.getAuthState();
+        if (authState.isValid && authState.model) {
+            const user = authState.model;
+
+            // Set current values
+            if (memberIdInput) memberIdInput.value = user.member_id || "";
+            if (majorSelect) majorSelect.value = user.major || "";
+            if (gradYearInput) gradYearInput.value = user.graduation_year || "";
+
+            // Update resume display
+            if (currentResume && user.resume) {
+                const fileName = user.resume.toString().split("/").pop();
+                currentResume.textContent = fileName || "Resume uploaded";
+            }
+        }
+    };
+
+    // Handle resume upload
+    if (resumeUpload && uploadStatus) {
+        resumeUpload.addEventListener("change", async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+                uploadStatus.textContent = "Uploading...";
+                try {
+                    await auth.handleResumeUpload(file);
+                    uploadStatus.textContent = "Resume uploaded successfully";
+                    if (currentResume) currentResume.textContent = file.name;
+                } catch (err) {
+                    console.error("Resume upload error:", err);
+                    uploadStatus.textContent = "Failed to upload resume";
+                }
+            }
+        });
+    }
+
+    // Handle save settings
+    if (saveSettings) {
+        saveSettings.addEventListener("click", async () => {
+            try {
+                const data = {
+                    member_id: memberIdInput?.value,
+                    major: majorSelect?.value,
+                    graduation_year: gradYearInput?.value,
+                };
+
+                await auth.updateProfileSettings(data);
+                alert("Settings saved successfully");
+                loadUserData(); // Reload the data to show updated values
+            } catch (err) {
+                console.error("Failed to save settings:", err);
+                alert("Failed to save settings");
+            }
+        });
+    }
+
+    // Load initial data
+    loadUserData();
+
+    // Update when auth state changes
+    window.addEventListener("storage", (e) => {
+        if (e.key === "pocketbase_auth") {
+            loadUserData();
+        }
+    });
+</script>
