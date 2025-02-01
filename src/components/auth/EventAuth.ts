@@ -474,46 +474,6 @@ export class EventAuth {
       const fileInput = this.elements.editorFiles;
       fileInput.setAttribute('multiple', 'true');
       fileInput.setAttribute('accept', '*/*');
-      
-      // Add file input change handler for automatic upload
-      fileInput.addEventListener('change', async () => {
-        const selectedFiles = fileInput.files;
-        if (selectedFiles && selectedFiles.length > 0) {
-          try {
-            // Create FormData for file upload
-            const formData = new FormData();
-            
-            // Add existing files to the formData
-            if (event.files && Array.isArray(event.files)) {
-              formData.append("files", JSON.stringify(event.files));
-            }
-            
-            // Add new files to the formData
-            Array.from(selectedFiles).forEach(file => {
-              formData.append("files", file);
-            });
-            
-            // Update the event with new files
-            const updatedEvent = await this.pb.collection('events').update(event.id, formData);
-            
-            // Update the files display without refreshing the entire editor
-            event.files = updatedEvent.files;
-            this.updateFilesDisplay(event);
-            
-            // Clear the file input
-            fileInput.value = '';
-            
-            // Clear the file name display
-            const fileNameDisplay = fileInput.parentElement?.querySelector('.file-name');
-            if (fileNameDisplay) {
-              fileNameDisplay.setAttribute('data-content', '');
-            }
-          } catch (err) {
-            console.error('Failed to upload files:', err);
-            alert('Failed to upload files. Please try again.');
-          }
-        }
-      });
 
       // Store the event ID for saving
       saveEventButton.dataset.eventId = eventId;
@@ -1038,6 +998,105 @@ export class EventAuth {
   }
 
   private init() {
+    // Add file input change handler for automatic upload
+    const fileInput = this.elements.editorFiles;
+    fileInput.addEventListener('change', async () => {
+      const selectedFiles = fileInput.files;
+      if (selectedFiles && selectedFiles.length > 0) {
+        try {
+          // Get the current event ID
+          const eventId = this.elements.saveEventButton.dataset.eventId;
+          if (!eventId) {
+            throw new Error('No event ID found');
+          }
+
+          // Get current event to preserve existing files
+          const currentEvent = await this.pb.collection("events").getOne(eventId);
+          const formData = new FormData();
+
+          // Preserve existing files by adding them to formData
+          if (currentEvent.files && Array.isArray(currentEvent.files)) {
+            formData.append("files", JSON.stringify(currentEvent.files));
+          }
+          
+          // Add new files to the formData
+          Array.from(selectedFiles).forEach(file => {
+            formData.append("files", file);
+          });
+          
+          // Show progress bar container
+          const progressContainer = document.getElementById('uploadProgress');
+          const progressBar = document.getElementById('uploadProgressBar') as HTMLProgressElement;
+          const progressText = document.getElementById('uploadProgressText');
+          if (progressContainer) {
+            progressContainer.classList.remove('hidden');
+            // Reset progress
+            if (progressBar) progressBar.value = 0;
+            if (progressText) progressText.textContent = '0%';
+          }
+
+          // Create XMLHttpRequest for better progress tracking
+          const xhr = new XMLHttpRequest();
+          const url = `${this.pb.baseUrl}/api/collections/events/records/${eventId}`;
+          
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const progress = Math.round((e.loaded * 100) / e.total);
+              if (progressBar) progressBar.value = progress;
+              if (progressText) progressText.textContent = `${progress}%`;
+              console.log('Upload progress:', progress + '%');
+            }
+          };
+
+          xhr.onload = async () => {
+            if (xhr.status === 200) {
+              // Update was successful
+              const response = JSON.parse(xhr.responseText);
+              const event = await this.pb.collection("events").getOne(eventId);
+              this.updateFilesDisplay(event);
+              
+              // Clear the file input
+              fileInput.value = '';
+              
+              // Hide progress bar after a short delay
+              setTimeout(() => {
+                if (progressContainer) {
+                  progressContainer.classList.add('hidden');
+                  if (progressBar) progressBar.value = 0;
+                  if (progressText) progressText.textContent = '0%';
+                }
+              }, 1000);
+            } else {
+              console.error('Upload failed:', xhr.responseText);
+              alert('Failed to upload files. Please try again.');
+              if (progressContainer) progressContainer.classList.add('hidden');
+            }
+          };
+
+          xhr.onerror = () => {
+            console.error('Upload failed');
+            alert('Failed to upload files. Please try again.');
+            if (progressContainer) progressContainer.classList.add('hidden');
+          };
+
+          // Get the auth token
+          const token = this.pb.authStore.token;
+
+          // Send the request
+          xhr.open('PATCH', url, true);
+          xhr.setRequestHeader('Authorization', token);
+          xhr.send(formData);
+        } catch (err) {
+          console.error('Failed to upload files:', err);
+          alert('Failed to upload files. Please try again.');
+          
+          // Hide progress bar on error
+          const progressContainer = document.getElementById('uploadProgress');
+          if (progressContainer) progressContainer.classList.add('hidden');
+        }
+      }
+    });
+
     // Only sync attendees if user is an officer or administrator
     setTimeout(async () => {
       const user = this.pb.authStore.model;

@@ -243,6 +243,17 @@ const { editor_title, form } = config.ui.tables.events;
                     multiple
                     accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
                 />
+                <div id="uploadProgress" class="w-full mt-2 hidden">
+                    <div class="flex justify-between mb-1 text-xs opacity-70">
+                        <span>Uploading files...</span>
+                        <span id="uploadProgressText">0%</span>
+                    </div>
+                    <progress
+                        id="uploadProgressBar"
+                        class="progress progress-primary w-full"
+                        value="0"
+                        max="100"></progress>
+                </div>
                 <div id="currentFiles" class="mt-4 space-y-2"></div>
                 <label class="label">
                     <span class="label-text-alt opacity-70"
