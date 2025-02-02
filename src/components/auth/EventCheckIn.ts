@@ -1,6 +1,7 @@
 import PocketBase from "pocketbase";
 import yaml from "js-yaml";
 import configYaml from "../../data/storeConfig.yaml?raw";
+import { SendLog } from "./SendLog";
 
 // Configuration type definitions
 interface Config {
@@ -36,10 +37,12 @@ interface AuthElements {
 export class EventCheckIn {
   private pb: PocketBase;
   private elements: AuthElements;
+  private logger: SendLog;
 
   constructor() {
     this.pb = new PocketBase(config.api.baseUrl);
     this.elements = this.getElements();
+    this.logger = new SendLog();
     
     // Add event listener for the check-in button
     this.elements.checkInButton.addEventListener("click", () => this.handleCheckIn());
@@ -85,7 +88,10 @@ export class EventCheckIn {
         });
 
         if (events.length === 0) {
-            return { isValid: false, message: "Invalid event code." };
+            return { 
+                isValid: false, 
+                message: `Event code "${code}" does not match any active events.` 
+            };
         }
 
         const event = events[0];
@@ -97,21 +103,26 @@ export class EventCheckIn {
         if (now < startDate) {
             return { 
                 isValid: false, 
-                message: `Event check-in is not open yet. Check-in opens at ${startDate.toLocaleString()}.` 
+                event,
+                message: `Event "${event.event_name}" check-in is not open yet. Check-in opens at ${startDate.toLocaleString()}.` 
             };
         }
 
         if (now > endDate) {
             return { 
                 isValid: false, 
-                message: `Event check-in has closed. Check-in closed at ${endDate.toLocaleString()}.` 
+                event,
+                message: `Event "${event.event_name}" check-in has closed. Check-in closed at ${endDate.toLocaleString()}.` 
             };
         }
 
         return { isValid: true, event };
     } catch (err) {
         console.error('Failed to validate event code:', err);
-        return { isValid: false, message: "Failed to validate event code. Please try again." };
+        return { 
+            isValid: false, 
+            message: `Failed to validate event code "${code}". Error: ${err instanceof Error ? err.message : "Unknown error"}` 
+        };
     }
   }
 
@@ -131,6 +142,11 @@ export class EventCheckIn {
       const user = this.pb.authStore.model;
       if (!user) {
         this.showStatus("Please sign in to check in to events", "error");
+        await this.logger.send(
+          "error",
+          "event check in",
+          "Check-in attempt failed: User not authenticated"
+        );
         return;
       }
 
@@ -138,6 +154,11 @@ export class EventCheckIn {
       const validation = await this.validateEventCode(eventCode);
       if (!validation.isValid) {
         this.showStatus(validation.message || "Invalid event code.", "error");
+        await this.logger.send(
+          "error",
+          "event check in",
+          `Invalid event code attempt: "${eventCode}". Reason: ${validation.message}`
+        );
         return;
       }
 
@@ -171,6 +192,11 @@ export class EventCheckIn {
       
       if (isAlreadyCheckedIn) {
         this.showStatus(`You have already checked in to ${event.event_name}`, "info");
+        await this.logger.send(
+          "error",
+          "event check in",
+          `Duplicate check-in attempt for event "${event.event_name}" (${event.event_id})`
+        );
         eventCodeInput.value = ""; // Clear input
         return;
       }
@@ -211,9 +237,45 @@ export class EventCheckIn {
         "success"
       );
       eventCodeInput.value = ""; // Clear input
+
+      // Log the successful check-in
+      await this.logger.send(
+        "create",
+        "event check in",
+        `Successfully checked in to event ${event.id}`
+      );
+
+      // Log the points update
+      await this.logger.send(
+        "update",
+        "loyalty points",
+        `Points updated from ${currentPoints} to ${newTotalPoints} (+${pointsToAdd} from event ${event.id})`
+      );
+
+      // Update event attendance count
+      const currentAttendance = event.attendance_count || 0;
+      
+      await this.pb.collection('events').update(event.id, {
+        attendance_count: currentAttendance + 1
+      });
+
+      // Log the attendance update
+      await this.logger.send(
+        "update",
+        "event attendance",
+        `Event ${event.id} attendance updated to ${currentAttendance + 1}`
+      );
+
     } catch (err) {
       console.error("Check-in error:", err);
       this.showStatus(config.ui.messages.event.checkIn.error, "error");
+
+      // Log any errors that occur during check-in
+      await this.logger.send(
+        "error",
+        "event check in",
+        `Failed to check in to event ${event.id}: ${err instanceof Error ? err.message : "Unknown error"}`
+      );
     }
   }
 
@@ -239,6 +301,37 @@ export class EventCheckIn {
       setTimeout(() => {
         checkInStatus.textContent = "";
       }, config.ui.messages.event.checkIn.messageTimeout);
+    }
+  }
+
+  /**
+   * Gets all events a user has checked into
+   * @param userId The ID of the user
+   */
+  public async getUserEventHistory(userId: string) {
+    try {
+      const records = await this.pb.collection('event_checkins').getFullList({
+        filter: `user_id="${userId}"`,
+        sort: '-created',
+        expand: 'event_id'
+      });
+
+      // Log the history retrieval
+      await this.logger.send(
+        "update",
+        "event attendance",
+        `Retrieved attendance history for user: ${records.length} events found`
+      );
+
+      return records;
+    } catch (error) {
+      // Log any errors in retrieving history
+      await this.logger.send(
+        "error",
+        "event attendance",
+        `Failed to retrieve event history: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+      throw error;
     }
   }
 } 
