@@ -142,8 +142,9 @@ export class StoreAuth {
 
   // Public method to update profile settings
   public async updateProfileSettings(data: {
-    major?: string;
-    graduation_year?: string | number;
+    major?: string | null;
+    graduation_year?: number | null;
+    member_id?: string | null;
   }) {
     const user = this.pb.authStore.model;
     if (!user?.id) {
@@ -151,6 +152,37 @@ export class StoreAuth {
     }
 
     return await this.pb.collection("users").update(user.id, data);
+  }
+
+  /**
+   * Handles uploading a resume file for the current user
+   * @param file The resume file to upload
+   * @returns Promise that resolves when the resume is uploaded
+   */
+  public async handleResumeUpload(file: File) {
+    const user = this.pb.authStore.model;
+    if (!user?.id) {
+      throw new Error("User ID not found");
+    }
+
+    // Validate file type
+    const allowedTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error("Invalid file type. Please upload a PDF or Word document.");
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      throw new Error("File size too large. Maximum size is 5MB.");
+    }
+
+    // Create form data with the file
+    const formData = new FormData();
+    formData.append("resume", file);
+
+    // Update the user record with the new resume
+    return await this.pb.collection("users").update(user.id, formData);
   }
 
   private getElements(): AuthElements & { loadingSkeleton: HTMLDivElement } {
@@ -309,8 +341,9 @@ export class StoreAuth {
         const officerView = document.getElementById("officerView");
         const mainTabs = document.querySelector(".tabs.tabs-boxed");
         const officerContent = document.getElementById("officerContent");
+        const settingsView = document.getElementById("settingsView");
 
-        if (defaultView && officerView && mainTabs && officerContent) {
+        if (defaultView && officerView && mainTabs && officerContent && settingsView) {
           // Show default view and its tabs
           defaultView.classList.remove("hidden");
           mainTabs.classList.remove("hidden");
