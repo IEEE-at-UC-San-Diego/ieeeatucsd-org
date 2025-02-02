@@ -191,7 +191,157 @@ const { title, columns } = config.ui.tables.events;
 
 <script>
     import { EventAuth } from "../auth/EventAuth";
+    import PocketBase from "pocketbase";
+    import yaml from "js-yaml";
+    import configYaml from "../../data/storeConfig.yaml?raw";
+
     new EventAuth();
+
+    // Parse YAML configuration
+    interface Config {
+        api: {
+            baseUrl: string;
+        };
+    }
+    const config = yaml.load(configYaml) as Config;
+    const pb = new PocketBase(config.api.baseUrl);
+
+    // Get DOM elements
+    const eventsList = document.getElementById("eventList");
+    const searchInput = document.getElementById(
+        "eventSearch"
+    ) as HTMLInputElement;
+    const searchButton = document.getElementById("searchEvents");
+    const refreshButton = document.getElementById("refreshEvents");
+    const addEventButton = document.getElementById("addEvent");
+
+    // Function to format date
+    function formatDate(dateStr: string): string {
+        return new Date(dateStr).toLocaleString();
+    }
+
+    // Function to render event row
+    function renderEventRow(event: any) {
+        return `
+            <tr class="hover:bg-base-200">
+                <td class="text-center">
+                    <div class="font-medium">${event.event_name || "N/A"}</div>
+                </td>
+                <td class="text-center">${event.event_id || "N/A"}</td>
+                <td class="text-center">${event.event_code || "N/A"}</td>
+                <td class="text-center">${formatDate(event.start_date)}</td>
+                <td class="text-center">${formatDate(event.end_date)}</td>
+                <td class="text-center">${event.points_to_reward || "0"}</td>
+                <td class="text-center">
+                    <div class="flex justify-center gap-2">
+                        <button class="btn btn-ghost btn-xs" onclick="document.dispatchEvent(new CustomEvent('viewAttendees', { detail: '${event.id}' }))">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                            </svg>
+                            Attendees
+                        </button>
+                        <button class="btn btn-ghost btn-xs" onclick="document.getElementById('eventEditor').showModal(); document.dispatchEvent(new CustomEvent('editEvent', { detail: ${JSON.stringify(event)} }))">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                            Edit
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    // Function to load events
+    async function loadEvents(searchQuery = "") {
+        if (!eventsList) return;
+
+        try {
+            // Show loading state
+            eventsList.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-4">
+                        <span class="loading loading-spinner loading-md"></span>
+                        Loading events...
+                    </td>
+                </tr>
+            `;
+
+            // Fetch events with filter if search query exists
+            const filter = searchQuery
+                ? `event_name ~ "${searchQuery}" || event_id ~ "${searchQuery}" || event_code ~ "${searchQuery}"`
+                : "";
+
+            const events = await pb.collection("events").getList(1, 50, {
+                filter,
+                sort: "-created",
+            });
+
+            // Update table
+            if (events.items.length === 0) {
+                eventsList.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            No events found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            eventsList.innerHTML = events.items.map(renderEventRow).join("");
+        } catch (error) {
+            console.error("Failed to load events:", error);
+            eventsList.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-error">
+                        Failed to load events. Please try again.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // Add event listeners
+    if (searchButton && searchInput) {
+        searchButton.addEventListener("click", () => {
+            loadEvents(searchInput.value);
+        });
+
+        searchInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                loadEvents(searchInput.value);
+            }
+        });
+    }
+
+    if (refreshButton) {
+        refreshButton.addEventListener("click", () => {
+            if (searchInput) searchInput.value = "";
+            loadEvents();
+
+            // Turn off officer view toggle
+            const officerViewToggle =
+                document.getElementById("officerViewToggle");
+            const officerViewCheckbox = officerViewToggle?.querySelector(
+                'input[type="checkbox"]'
+            ) as HTMLInputElement;
+            if (officerViewCheckbox) {
+                officerViewCheckbox.checked = false;
+                // Trigger the change event to update the views
+                officerViewCheckbox.dispatchEvent(new Event("change"));
+            }
+        });
+    }
+
+    if (addEventButton) {
+        addEventButton.addEventListener("click", () => {
+            document.getElementById("eventEditor")?.showModal();
+        });
+    }
+
+    // Initial load
+    loadEvents();
 
     // File preview handling
     const fileViewer = document.getElementById(

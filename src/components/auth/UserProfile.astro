@@ -333,22 +333,26 @@
                     const mainTabs = document.querySelector(".tabs.tabs-boxed");
                     const officerContent =
                         document.getElementById("officerContent");
+                    const settingsView =
+                        document.getElementById("settingsView");
 
                     if (
                         defaultView &&
                         officerView &&
                         mainTabs &&
-                        officerContent
+                        officerContent &&
+                        settingsView
                     ) {
                         if (officerViewCheckbox.checked) {
-                            // Hide default view and its tabs
+                            // Hide default view, settings, and tabs
                             defaultView.classList.add("hidden");
+                            settingsView.classList.add("hidden");
                             mainTabs.classList.add("hidden");
                             // Show officer view
                             officerView.classList.remove("hidden");
                             officerContent.classList.remove("hidden");
                         } else {
-                            // Show default view and its tabs
+                            // Show default view and tabs
                             defaultView.classList.remove("hidden");
                             mainTabs.classList.remove("hidden");
                             // Hide officer view
