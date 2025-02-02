@@ -273,6 +273,7 @@ const majorsList: string[] = allMajors
 <script>
     import { StoreAuth } from "../auth/StoreAuth";
     import { SendLog } from "../auth/SendLog";
+    import PocketBase from "pocketbase";
     const auth = new StoreAuth();
     const logger = new SendLog();
 
@@ -319,12 +320,14 @@ const majorsList: string[] = allMajors
             // Update resume display
             if (currentResume && resumeDisplay) {
                 if (user.resume) {
-                    const fileName = user.resume.toString().split("/").pop();
+                    const fileName = user.resume.toString();
                     currentResume.textContent = fileName || "Resume uploaded";
                     resumeDisplay.classList.remove("hidden");
 
-                    // Set up preview URLs - using the correct PocketBase file URL format
-                    const resumeUrl = `${import.meta.env.POCKETBASE_URL}/api/files/users/${user.id}/${user.resume}`;
+                    // Set up preview URLs - using PocketBase's direct file URL
+                    const baseUrl = "https://pocketbase.ieeeucsd.org";
+                    const resumeUrl = `${baseUrl}/api/files/users/${user.id}/${user.resume}`;
+
                     if (resumeFrame) resumeFrame.src = resumeUrl;
                     if (resumeExternalLink) resumeExternalLink.href = resumeUrl;
                 } else {
