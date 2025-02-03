@@ -204,10 +204,10 @@ const text = yaml.load(textConfig) as any;
                     <div id="defaultView">
                         <DefaultProfileView />
                     </div>
-                    <!-- <div id="settingsView" class="hidden">
+                    <div id="settingsView" class="hidden">
                         <UserSettings />
                     </div>
-                    <div id="officerView" class="hidden">
+                    <!--<div id="officerView" class="hidden">
                         <OfficerProfileView />
                     </div> -->
                 </div>
@@ -345,19 +345,20 @@ const text = yaml.load(textConfig) as any;
 
             // Update content visibility
             const tabId = (tab as HTMLElement).dataset.defaultTab;
+            const views = {
+                events: defaultView,
+                settings: settingsView,
+            };
 
-            if (defaultView && settingsView) {
-                defaultView.classList.add("hidden");
-                settingsView.classList.add("hidden");
+            // Hide all views first
+            Object.values(views).forEach((view) => {
+                if (view) view.classList.add("hidden");
+            });
 
-                switch (tabId) {
-                    case "events":
-                        defaultView.classList.remove("hidden");
-                        break;
-                    case "settings":
-                        settingsView.classList.remove("hidden");
-                        break;
-                }
+            // Show the selected view
+            const selectedView = views[tabId as keyof typeof views];
+            if (selectedView) {
+                selectedView.classList.remove("hidden");
             }
         });
     });

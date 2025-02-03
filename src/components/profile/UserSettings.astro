@@ -454,7 +454,16 @@ const majorsList: string[] = allMajors
                 document.body.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
 
+                // Only update form data without affecting visibility
                 loadUserData();
+
+                // Ensure settings view stays visible
+                const defaultView = document.getElementById("defaultView");
+                const settingsView = document.getElementById("settingsView");
+                if (defaultView && settingsView) {
+                    defaultView.classList.add("hidden");
+                    settingsView.classList.remove("hidden");
+                }
             } catch (err) {
                 console.error("Failed to save settings:", err);
 
