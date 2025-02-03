@@ -1,0 +1,257 @@
+---
+interface Props {
+    id?: string;
+    title?: string;
+    className?: string;
+}
+
+const {
+    id = "filePreviewModal",
+    title = "File Preview",
+    className = "",
+} = Astro.props;
+---
+
+<dialog id={id} class={`modal ${className}`}>
+    <!-- Single File Preview -->
+    <div id={`${id}-single`} class="modal-box w-11/12 max-w-5xl h-[80vh]">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg" id={`${id}-title`}>{title}</h3>
+            <div class="flex items-center gap-2">
+                <a
+                    id={`${id}-external-link`}
+                    href="#"
+                    target="_blank"
+                    class="btn btn-sm btn-ghost"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4 mr-1"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"
+                        ></path>
+                        <path
+                            d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"
+                        ></path>
+                    </svg>
+                    Open in New Tab
+                </a>
+                <form method="dialog">
+                    <button class="btn btn-sm btn-circle btn-ghost">✕</button>
+                </form>
+            </div>
+        </div>
+        <div class="h-[calc(100%-4rem)] bg-base-200 rounded-lg">
+            <!-- Preview Container -->
+            <div id={`${id}-preview-container`} class="w-full h-full"></div>
+        </div>
+    </div>
+
+    <!-- Multiple Files Selection -->
+    <div id={`${id}-multiple`} class="modal-box w-11/12 max-w-5xl hidden">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg">Select File to Preview</h3>
+            <form method="dialog">
+                <button class="btn btn-sm btn-circle btn-ghost">✕</button>
+            </form>
+        </div>
+        <div
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+            id={`${id}-file-grid`}
+        >
+            <!-- Files will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<script define:vars={{ id }}>
+    class FilePreviewModal {
+        constructor(modalId) {
+            this.modal = document.getElementById(modalId);
+            this.singleView = document.getElementById(`${modalId}-single`);
+            this.multipleView = document.getElementById(`${modalId}-multiple`);
+            this.previewContainer = document.getElementById(
+                `${modalId}-preview-container`
+            );
+            this.fileGrid = document.getElementById(`${modalId}-file-grid`);
+            this.titleElement = document.getElementById(`${modalId}-title`);
+            this.externalLink = document.getElementById(
+                `${modalId}-external-link`
+            );
+
+            // Close modal when clicking backdrop
+            this.modal.addEventListener("click", (e) => {
+                const dialogDimensions = this.modal.getBoundingClientRect();
+                if (
+                    e.clientX < dialogDimensions.left ||
+                    e.clientX > dialogDimensions.right ||
+                    e.clientY < dialogDimensions.top ||
+                    e.clientY > dialogDimensions.bottom
+                ) {
+                    this.modal.close();
+                }
+            });
+        }
+
+        getFileType(fileName) {
+            const ext = fileName.split(".").pop()?.toLowerCase() || "";
+            if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext))
+                return "image";
+            if (["mp4", "webm", "ogg"].includes(ext)) return "video";
+            if (["mp3", "wav", "ogg"].includes(ext)) return "audio";
+            if (["pdf"].includes(ext)) return "pdf";
+            return "other";
+        }
+
+        createPreviewElement(file) {
+            const fileType = this.getFileType(file.name);
+            let element;
+
+            switch (fileType) {
+                case "image":
+                    element = document.createElement("img");
+                    element.className = "w-full h-full object-contain";
+                    element.src = file.url;
+                    element.alt = file.name;
+                    break;
+
+                case "video":
+                    element = document.createElement("video");
+                    element.className = "w-full h-full";
+                    element.setAttribute("controls", "");
+                    element.src = file.url;
+                    break;
+
+                case "audio":
+                    element = document.createElement("div");
+                    element.className =
+                        "w-full h-full flex items-center justify-center p-4";
+                    const audio = document.createElement("audio");
+                    audio.className = "w-full";
+                    audio.setAttribute("controls", "");
+                    audio.src = file.url;
+                    element.appendChild(audio);
+                    break;
+
+                case "pdf":
+                    element = document.createElement("iframe");
+                    element.className = "w-full h-full";
+                    element.src = file.url;
+                    break;
+
+                default:
+                    element = document.createElement("div");
+                    element.className =
+                        "w-full h-full flex items-center justify-center";
+                    element.innerHTML = `
+                        <div class="text-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-base-content/50" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                            </svg>
+                            <p>This file type cannot be previewed</p>
+                            <a href="${file.url}" target="_blank" class="btn btn-primary btn-sm mt-4">Download File</a>
+                        </div>
+                    `;
+            }
+
+            return element;
+        }
+
+        showFile(file) {
+            this.titleElement.textContent = file.name;
+            this.externalLink.href = file.url;
+
+            // Clear previous preview
+            this.previewContainer.innerHTML = "";
+
+            // Create and append new preview
+            const previewElement = this.createPreviewElement(file);
+            this.previewContainer.appendChild(previewElement);
+
+            // Show single view
+            this.singleView.classList.remove("hidden");
+            this.multipleView.classList.add("hidden");
+        }
+
+        createFileCard(file) {
+            const fileType = this.getFileType(file.name);
+            const card = document.createElement("div");
+            card.className =
+                "card bg-base-200 hover:bg-base-300 cursor-pointer transition-colors";
+
+            let preview = "";
+            if (fileType === "image") {
+                preview = `
+                    <div class="aspect-video bg-base-300 rounded-t-lg overflow-hidden">
+                        <img src="${file.url}" alt="${file.name}" class="w-full h-full object-cover">
+                    </div>
+                `;
+            } else {
+                preview = `
+                    <div class="aspect-video bg-base-300 rounded-t-lg flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                ${preview}
+                <div class="card-body p-4">
+                    <h3 class="card-title text-sm" title="${file.name}">
+                        <span class="truncate">${file.name}</span>
+                    </h3>
+                </div>
+            `;
+
+            card.addEventListener("click", () => this.showFile(file));
+            return card;
+        }
+
+        show(files) {
+            if (!Array.isArray(files)) {
+                // Single file
+                this.showFile(files);
+            } else if (files.length === 1) {
+                // Single file in array
+                this.showFile(files[0]);
+            } else {
+                // Multiple files
+                this.singleView.classList.add("hidden");
+                this.multipleView.classList.remove("hidden");
+
+                // Clear and populate file grid
+                this.fileGrid.innerHTML = "";
+                files.forEach((file) => {
+                    this.fileGrid.appendChild(this.createFileCard(file));
+                });
+            }
+
+            this.modal.showModal();
+        }
+
+        close() {
+            this.modal.close();
+        }
+    }
+
+    // Initialize the modal
+    const filePreviewModal = new FilePreviewModal(id);
+
+    // Make it available globally
+    window.filePreviewModal = filePreviewModal;
+</script>
+
+<style>
+    .hidden {
+        display: none !important;
+    }
+</style>
