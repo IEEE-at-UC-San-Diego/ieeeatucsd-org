@@ -6,6 +6,12 @@ interface BaseRecord {
   [key: string]: any;
 }
 
+// Interface for request options
+interface RequestOptions {
+  fields?: string[];
+  disableAutoCancellation?: boolean;
+}
+
 export class Get {
   private auth: Authentication;
   private static instance: Get;
@@ -28,13 +34,13 @@ export class Get {
    * Get a single record by ID
    * @param collectionName The name of the collection
    * @param recordId The ID of the record to retrieve
-   * @param fields Optional array of fields to select
+   * @param options Optional request options including fields to select and auto-cancellation control
    * @returns The requested record
    */
   public async getOne<T extends BaseRecord>(
     collectionName: string,
     recordId: string,
-    fields?: string[]
+    options?: RequestOptions,
   ): Promise<T> {
     if (!this.auth.isAuthenticated()) {
       throw new Error("User must be authenticated to retrieve records");
@@ -42,8 +48,13 @@ export class Get {
 
     try {
       const pb = this.auth.getPocketBase();
-      const options = fields ? { fields: fields.join(",") } : undefined;
-      return await pb.collection(collectionName).getOne<T>(recordId, options);
+      const requestOptions = {
+        ...(options?.fields && { fields: options.fields.join(",") }),
+        ...(options?.disableAutoCancellation && { requestKey: null }),
+      };
+      return await pb
+        .collection(collectionName)
+        .getOne<T>(recordId, requestOptions);
     } catch (err) {
       console.error(`Failed to get record from ${collectionName}:`, err);
       throw err;
@@ -54,13 +65,13 @@ export class Get {
    * Get multiple records by their IDs
    * @param collectionName The name of the collection
    * @param recordIds Array of record IDs to retrieve
-   * @param fields Optional array of fields to select
+   * @param options Optional request options including fields to select and auto-cancellation control
    * @returns Array of requested records
    */
   public async getMany<T extends BaseRecord>(
     collectionName: string,
     recordIds: string[],
-    fields?: string[]
+    options?: RequestOptions,
   ): Promise<T[]> {
     if (!this.auth.isAuthenticated()) {
       throw new Error("User must be authenticated to retrieve records");
@@ -69,16 +80,19 @@ export class Get {
     try {
       const pb = this.auth.getPocketBase();
       const filter = `id ?~ "${recordIds.join("|")}"`;
-      const options = {
+      const requestOptions = {
         filter,
-        ...(fields && { fields: fields.join(",") })
+        ...(options?.fields && { fields: options.fields.join(",") }),
+        ...(options?.disableAutoCancellation && { requestKey: null }),
       };
-      
-      const result = await pb.collection(collectionName).getFullList<T>(options);
-      
+
+      const result = await pb
+        .collection(collectionName)
+        .getFullList<T>(requestOptions);
+
       // Sort results to match the order of requested IDs
-      const recordMap = new Map(result.map(record => [record.id, record]));
-      return recordIds.map(id => recordMap.get(id)).filter(Boolean) as T[];
+      const recordMap = new Map(result.map((record) => [record.id, record]));
+      return recordIds.map((id) => recordMap.get(id)).filter(Boolean) as T[];
     } catch (err) {
       console.error(`Failed to get records from ${collectionName}:`, err);
       throw err;
@@ -92,7 +106,7 @@ export class Get {
    * @param perPage Number of items per page
    * @param filter Optional filter string
    * @param sort Optional sort string
-   * @param fields Optional array of fields to select
+   * @param options Optional request options including fields to select and auto-cancellation control
    * @returns Paginated list of records
    */
   public async getList<T extends BaseRecord>(
@@ -101,7 +115,7 @@ export class Get {
     perPage: number = 20,
     filter?: string,
     sort?: string,
-    fields?: string[]
+    options?: RequestOptions,
   ): Promise<{
     page: number;
     perPage: number;
@@ -115,20 +129,23 @@ export class Get {
 
     try {
       const pb = this.auth.getPocketBase();
-      const options = {
+      const requestOptions = {
         ...(filter && { filter }),
         ...(sort && { sort }),
-        ...(fields && { fields: fields.join(",") })
+        ...(options?.fields && { fields: options.fields.join(",") }),
+        ...(options?.disableAutoCancellation && { requestKey: null }),
       };
-      
-      const result = await pb.collection(collectionName).getList<T>(page, perPage, options);
-      
+
+      const result = await pb
+        .collection(collectionName)
+        .getList<T>(page, perPage, requestOptions);
+
       return {
         page: result.page,
         perPage: result.perPage,
         totalItems: result.totalItems,
         totalPages: result.totalPages,
-        items: result.items
+        items: result.items,
       };
     } catch (err) {
       console.error(`Failed to get list from ${collectionName}:`, err);
@@ -141,14 +158,14 @@ export class Get {
    * @param collectionName The name of the collection
    * @param filter Optional filter string
    * @param sort Optional sort string
-   * @param fields Optional array of fields to select
+   * @param options Optional request options including fields to select and auto-cancellation control
    * @returns Array of all matching records
    */
   public async getAll<T extends BaseRecord>(
     collectionName: string,
     filter?: string,
     sort?: string,
-    fields?: string[]
+    options?: RequestOptions,
   ): Promise<T[]> {
     if (!this.auth.isAuthenticated()) {
       throw new Error("User must be authenticated to retrieve records");
@@ -156,13 +173,14 @@ export class Get {
 
     try {
       const pb = this.auth.getPocketBase();
-      const options = {
+      const requestOptions = {
         ...(filter && { filter }),
         ...(sort && { sort }),
-        ...(fields && { fields: fields.join(",") })
+        ...(options?.fields && { fields: options.fields.join(",") }),
+        ...(options?.disableAutoCancellation && { requestKey: null }),
       };
-      
-      return await pb.collection(collectionName).getFullList<T>(options);
+
+      return await pb.collection(collectionName).getFullList<T>(requestOptions);
     } catch (err) {
       console.error(`Failed to get all records from ${collectionName}:`, err);
       throw err;
@@ -173,13 +191,13 @@ export class Get {
    * Get the first record that matches a filter
    * @param collectionName The name of the collection
    * @param filter Filter string
-   * @param fields Optional array of fields to select
+   * @param options Optional request options including fields to select and auto-cancellation control
    * @returns The first matching record or null if none found
    */
   public async getFirst<T extends BaseRecord>(
     collectionName: string,
     filter: string,
-    fields?: string[]
+    options?: RequestOptions,
   ): Promise<T | null> {
     if (!this.auth.isAuthenticated()) {
       throw new Error("User must be authenticated to retrieve records");
@@ -187,18 +205,21 @@ export class Get {
 
     try {
       const pb = this.auth.getPocketBase();
-      const options = {
+      const requestOptions = {
         filter,
-        ...(fields && { fields: fields.join(",") }),
+        ...(options?.fields && { fields: options.fields.join(",") }),
+        ...(options?.disableAutoCancellation && { requestKey: null }),
         sort: "created",
-        perPage: 1
+        perPage: 1,
       };
-      
-      const result = await pb.collection(collectionName).getList<T>(1, 1, options);
+
+      const result = await pb
+        .collection(collectionName)
+        .getList<T>(1, 1, requestOptions);
       return result.items.length > 0 ? result.items[0] : null;
     } catch (err) {
       console.error(`Failed to get first record from ${collectionName}:`, err);
       throw err;
     }
   }
-} 
+}
