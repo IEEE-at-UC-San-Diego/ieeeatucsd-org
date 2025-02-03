@@ -1,6 +1,8 @@
 ---
-// Import the majors list
+// Import the majors list and FilePreviewModal
 import allMajors from "../../data/allUCSDMajors.txt?raw";
+import FilePreviewModal from "../modals/FilePreviewModal.astro";
+
 const majorsList: string[] = allMajors
     .split("\n")
     .filter((major: string) => major.trim())
@@ -226,55 +228,23 @@ const majorsList: string[] = allMajors
     </div>
 </div>
 
-<!-- Resume Viewer Modal -->
-<dialog id="resumeViewer" class="modal">
-    <div class="modal-box w-11/12 max-w-5xl h-[80vh]">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="font-bold text-lg" id="resumeTitle">Resume Preview</h3>
-            <div class="flex items-center gap-2">
-                <a
-                    id="resumeExternalLink"
-                    href="#"
-                    target="_blank"
-                    class="btn btn-sm btn-ghost"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4 mr-1"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"
-                        ></path>
-                        <path
-                            d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"
-                        ></path>
-                    </svg>
-                    Open in New Tab
-                </a>
-                <form method="dialog">
-                    <button class="btn btn-sm btn-circle btn-ghost">✕</button>
-                </form>
-            </div>
-        </div>
-        <div class="h-[calc(100%-4rem)]">
-            <iframe
-                id="resumeFrame"
-                class="w-full h-full rounded-lg border-2 border-base-300"
-                src=""></iframe>
-        </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
+<!-- Replace the old resume viewer modal with the new FilePreviewModal -->
+<FilePreviewModal id="resumeViewer" title="Resume Preview" />
 
 <script>
     import { Authentication } from "../pocketbase/Authentication";
     import { Update } from "../pocketbase/Update";
     import { SendLog } from "../pocketbase/SendLog";
     import { FileManager } from "../pocketbase/FileManager";
+
+    // Add type declaration for the global filePreviewModal
+    declare global {
+        interface Window {
+            filePreviewModal: {
+                show: (file: { url: string; name: string }) => void;
+            };
+        }
+    }
 
     const auth = Authentication.getInstance();
     const update = Update.getInstance();
@@ -301,15 +271,6 @@ const majorsList: string[] = allMajors
     // Add resume preview functionality
     const resumeDisplay = document.getElementById("resumeDisplay");
     const previewResume = document.getElementById("previewResume");
-    const resumeViewer = document.getElementById(
-        "resumeViewer"
-    ) as HTMLDialogElement;
-    const resumeFrame = document.getElementById(
-        "resumeFrame"
-    ) as HTMLIFrameElement;
-    const resumeExternalLink = document.getElementById(
-        "resumeExternalLink"
-    ) as HTMLAnchorElement;
 
     // Load current user data
     const loadUserData = () => {
@@ -329,18 +290,25 @@ const majorsList: string[] = allMajors
                             fileName || "Resume uploaded";
                         resumeDisplay.classList.remove("hidden");
 
-                        // Set up preview URLs - using PocketBase's direct file URL
-                        const baseUrl = import.meta.env.POCKETBASE_URL;
-                        const resumeUrl = `${baseUrl}/api/files/users/${user.id}/${user.resume}`;
+                        // Get the file URL from PocketBase
+                        const resumeUrl = fileManager.getFileUrl(
+                            "users",
+                            user.id,
+                            fileName
+                        );
 
-                        if (resumeFrame) resumeFrame.src = resumeUrl;
-                        if (resumeExternalLink)
-                            resumeExternalLink.href = resumeUrl;
+                        // Update preview button to use new modal
+                        if (previewResume) {
+                            previewResume.onclick = () => {
+                                window.filePreviewModal.show({
+                                    url: resumeUrl,
+                                    name: fileName,
+                                });
+                            };
+                        }
                     } else {
                         currentResume.textContent = "No resume uploaded";
                         resumeDisplay.classList.add("hidden");
-                        if (resumeFrame) resumeFrame.src = "";
-                        if (resumeExternalLink) resumeExternalLink.href = "#";
                     }
                 }
             }
@@ -364,7 +332,9 @@ const majorsList: string[] = allMajors
                         file
                     );
                     uploadStatus.textContent = "Resume uploaded successfully";
-                    if (currentResume) currentResume.textContent = file.name;
+
+                    // Refresh the user data to show the new resume
+                    loadUserData();
 
                     // Log successful resume upload
                     await logger.send(
