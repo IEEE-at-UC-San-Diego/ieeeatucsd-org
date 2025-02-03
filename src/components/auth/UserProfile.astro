@@ -1,437 +1,354 @@
 <div>
-    <!-- Loading Skeleton -->
-    <div id="loadingSkeleton" class="card bg-base-100 shadow-xl">
-        <div class="card-body p-6">
-            <!-- Avatar and Name Section -->
-            <div class="flex flex-col items-center mb-6">
-                <div class="skeleton w-24 h-24 rounded-full mb-4"></div>
-                <div class="skeleton h-8 w-48"></div>
-                <div class="skeleton h-4 w-32 mt-2"></div>
-            </div>
+  <!-- Loading Skeleton -->
+  <div id="loadingSkeleton" class="card bg-base-100 shadow-xl">
+    <div class="card-body p-6">
+      <!-- Avatar and Name Section -->
+      <div class="flex flex-col items-center mb-6">
+        <div class="skeleton w-24 h-24 rounded-full mb-4"></div>
+        <div class="skeleton h-8 w-48"></div>
+        <div class="skeleton h-4 w-32 mt-2"></div>
+      </div>
 
-            <!-- Member Status -->
-            <div class="flex justify-center mb-6">
-                <div class="skeleton h-6 w-32"></div>
-            </div>
+      <!-- Member Status -->
+      <div class="flex justify-center mb-6">
+        <div class="skeleton h-6 w-32"></div>
+      </div>
 
-            <!-- Stats Grid -->
-            <div class="stats stats-vertical shadow bg-base-200 mb-6">
-                <div class="stat px-6 py-2">
-                    <div class="skeleton h-4 w-20 mb-1"></div>
-                    <div class="skeleton h-8 w-24"></div>
-                </div>
-                <div class="stat px-6 py-2">
-                    <div class="skeleton h-4 w-24 mb-1"></div>
-                    <div class="skeleton h-8 w-32"></div>
-                </div>
-            </div>
-
-            <!-- Member Details -->
-            <div class="space-y-4">
-                <div class="space-y-2">
-                    <div class="skeleton h-4 w-24"></div>
-                    <div class="skeleton h-10 w-full"></div>
-                </div>
-                <div class="space-y-2">
-                    <div class="skeleton h-4 w-20"></div>
-                    <div class="skeleton h-10 w-full"></div>
-                </div>
-            </div>
+      <!-- Stats Grid -->
+      <div class="stats stats-vertical shadow bg-base-200 mb-6">
+        <div class="stat px-6 py-2">
+          <div class="skeleton h-4 w-20 mb-1"></div>
+          <div class="skeleton h-8 w-24"></div>
         </div>
-    </div>
-
-    <!-- Actual Content -->
-    <div id="userInfo" class="card bg-base-100 shadow-xl opacity-0 hidden">
-        <div class="card-body p-6">
-            <!-- Avatar and Name Section -->
-            <div class="flex flex-col items-center mb-6">
-                <div class="avatar online placeholder mb-4">
-                    <div
-                        class="bg-gradient-to-br from-primary to-secondary text-primary-content rounded-full w-24 ring ring-primary ring-offset-base-100 ring-offset-2"
-                    >
-                        <span id="userInitials" class="text-3xl"></span>
-                    </div>
-                </div>
-                <div class="text-center">
-                    <h2 id="userName" class="text-2xl font-bold">
-                        Not signed in
-                    </h2>
-                    <p id="userEmail" class="text-base-content/70">
-                        Not signed in
-                    </p>
-                </div>
-            </div>
-
-            <!-- Member Status -->
-            <div class="flex justify-center mb-6">
-                <div id="memberStatus" class="badge badge-lg gap-2">
-                    <span class="loading loading-ring loading-xs"></span>
-                    Not verified
-                </div>
-            </div>
-
-            <!-- Stats Grid -->
-            <div class="stats stats-vertical shadow bg-base-200 mb-6">
-                <div class="stat px-6 py-2">
-                    <div class="stat-title text-xs">Last Login</div>
-                    <div id="lastLogin" class="stat-value text-lg">Never</div>
-                </div>
-                <div class="stat px-6 py-2">
-                    <div class="stat-title text-xs">Member Since</div>
-                    <div class="stat-value text-lg" id="memberSince">-</div>
-                </div>
-            </div>
-
-            <!-- View Toggles -->
-            <div class="space-y-2 mb-6">
-                <div id="officerViewToggle" class="hidden">
-                    <label
-                        class="flex cursor-pointer gap-2 justify-between items-center bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg px-4 py-2 hover:from-primary/20 hover:to-primary/10 transition-all"
-                    >
-                        <span class="flex items-center gap-2">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4 w-4"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path
-                                    d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"
-                                ></path>
-                            </svg>
-                            <span>Officer View</span>
-                        </span>
-                        <input type="checkbox" class="toggle toggle-primary" />
-                    </label>
-                </div>
-                <div id="sponsorViewToggle" class="hidden">
-                    <label
-                        class="flex cursor-pointer gap-2 justify-between items-center bg-gradient-to-r from-warning/10 to-warning/5 rounded-lg px-4 py-2 hover:from-warning/20 hover:to-warning/10 transition-all"
-                    >
-                        <span class="flex items-center gap-2">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4 w-4"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                    clip-rule="evenodd"></path>
-                            </svg>
-                            <span>Sponsor View</span>
-                        </span>
-                        <input type="checkbox" class="toggle toggle-warning" />
-                    </label>
-                </div>
-            </div>
-
-            <!-- Auth Buttons -->
-            <div class="pt-4">
-                <button
-                    id="contentLoginButton"
-                    class="login-button btn btn-primary w-full gap-2 hidden"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            fill-rule="evenodd"
-                            d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z"
-                            clip-rule="evenodd"></path>
-                    </svg>
-                    Sign in with IEEEUCSD SSO
-                </button>
-                <button
-                    id="contentLogoutButton"
-                    class="logout-button btn btn-error w-full gap-2 hidden"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            fill-rule="evenodd"
-                            d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
-                            clip-rule="evenodd"></path>
-                    </svg>
-                    Sign Out
-                </button>
-            </div>
+        <div class="stat px-6 py-2">
+          <div class="skeleton h-4 w-24 mb-1"></div>
+          <div class="skeleton h-8 w-32"></div>
         </div>
+      </div>
+
+      <!-- Member Details -->
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <div class="skeleton h-4 w-24"></div>
+          <div class="skeleton h-10 w-full"></div>
+        </div>
+        <div class="space-y-2">
+          <div class="skeleton h-4 w-20"></div>
+          <div class="skeleton h-10 w-full"></div>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <!-- Actual Content -->
+  <div id="userInfo" class="card bg-base-100 shadow-xl opacity-0 hidden">
+    <div class="card-body p-6">
+      <!-- Avatar and Name Section -->
+      <div class="flex flex-col items-center mb-6">
+        <div class="avatar online placeholder mb-4">
+          <div
+            class="bg-gradient-to-br from-primary to-secondary text-primary-content rounded-full w-24 ring ring-primary ring-offset-base-100 ring-offset-2"
+          >
+            <span id="userInitials" class="text-3xl"></span>
+          </div>
+        </div>
+        <div class="text-center">
+          <h2 id="userName" class="text-2xl font-bold">Not signed in</h2>
+          <p id="userEmail" class="text-base-content/70">Not signed in</p>
+        </div>
+      </div>
+
+      <!-- Member Status -->
+      <div class="flex justify-center mb-6">
+        <div id="memberStatus" class="badge badge-lg gap-2">
+          <span class="loading loading-ring loading-xs"></span>
+          Not verified
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats stats-vertical shadow bg-base-200 mb-6">
+        <div class="stat px-6 py-2">
+          <div class="stat-title text-xs">Last Login</div>
+          <div id="lastLogin" class="stat-value text-lg">Never</div>
+        </div>
+        <div class="stat px-6 py-2">
+          <div class="stat-title text-xs">Member Since</div>
+          <div class="stat-value text-lg" id="memberSince">-</div>
+        </div>
+      </div>
+
+      <!-- Auth Buttons -->
+      <div class="pt-4">
+        <button
+          id="contentLoginButton"
+          class="login-button btn btn-primary w-full gap-2 hidden"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z"
+              clip-rule="evenodd"></path>
+          </svg>
+          Sign in with IEEEUCSD SSO
+        </button>
+        <button
+          id="contentLogoutButton"
+          class="logout-button btn btn-error w-full gap-2 hidden"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
+              clip-rule="evenodd"></path>
+          </svg>
+          Sign Out
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
-    .hidden {
-        display: none;
-    }
-    #userInfo {
-        transition: all 0.3s ease-in-out;
-    }
+  .hidden {
+    display: none;
+  }
+  #userInfo {
+    transition: all 0.3s ease-in-out;
+  }
 </style>
 
 <script>
-    import { Authentication } from "../pocketbase/Authentication";
-    import { Update } from "../pocketbase/Update";
-    import { Get } from "../pocketbase/Get";
-    import { SendLog } from "../pocketbase/SendLog";
+  import { Authentication } from "../pocketbase/Authentication";
+  import { Update } from "../pocketbase/Update";
+  import { Get } from "../pocketbase/Get";
+  import { SendLog } from "../pocketbase/SendLog";
 
-    // Initialize services
-    const auth = Authentication.getInstance();
-    const update = Update.getInstance();
-    const get = Get.getInstance();
-    const logger = SendLog.getInstance();
+  // Initialize services
+  const auth = Authentication.getInstance();
+  const update = Update.getInstance();
+  const get = Get.getInstance();
+  const logger = SendLog.getInstance();
 
-    // Get DOM elements
-    const loadingSkeleton = document.getElementById("loadingSkeleton");
-    const userInfo = document.getElementById("userInfo");
-    const userInitials = document.getElementById("userInitials");
-    const userName = document.getElementById("userName");
-    const userEmail = document.getElementById("userEmail");
-    const memberStatus = document.getElementById("memberStatus");
-    const lastLogin = document.getElementById("lastLogin");
-    const memberSince = document.getElementById("memberSince");
-    const contentLoginButton = document.getElementById("contentLoginButton");
-    const contentLogoutButton = document.getElementById("contentLogoutButton");
-    const officerViewToggle = document.getElementById("officerViewToggle");
-    const sponsorViewToggle = document.getElementById("sponsorViewToggle");
+  // Get DOM elements
+  const loadingSkeleton = document.getElementById("loadingSkeleton");
+  const userInfo = document.getElementById("userInfo");
+  const userInitials = document.getElementById("userInitials");
+  const userName = document.getElementById("userName");
+  const userEmail = document.getElementById("userEmail");
+  const memberStatus = document.getElementById("memberStatus");
+  const lastLogin = document.getElementById("lastLogin");
+  const memberSince = document.getElementById("memberSince");
+  const contentLoginButton = document.getElementById("contentLoginButton");
+  const contentLogoutButton = document.getElementById("contentLogoutButton");
 
-    // Function to format date
-    function formatDate(dateStr: string): string {
-        return new Date(dateStr).toLocaleString();
+  // Function to format date
+  function formatDate(dateStr: string): string {
+    return new Date(dateStr).toLocaleString();
+  }
+
+  // Function to get initials from name
+  function getInitials(name: string): string {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+
+  // Function to update UI with user data
+  async function updateUI(user: any) {
+    if (!user) {
+      // Show login button if not authenticated
+      if (contentLoginButton) contentLoginButton.classList.remove("hidden");
+      if (contentLogoutButton) contentLogoutButton.classList.add("hidden");
+      if (userName) userName.textContent = "Not signed in";
+      if (userEmail) userEmail.textContent = "Not signed in";
+      if (userInitials) userInitials.textContent = "?";
+      if (memberStatus) {
+        memberStatus.textContent = "Not Verified";
+        memberStatus.className = "badge badge-lg gap-2";
+      }
+      if (lastLogin) lastLogin.textContent = "Never";
+      if (memberSince) memberSince.textContent = "-";
+      return;
     }
 
-    // Function to get initials from name
-    function getInitials(name: string): string {
-        return name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
-    }
+    try {
+      // Get full user data
+      const userData = await get.getOne("users", user.id);
 
-    // Function to update UI with user data
-    async function updateUI(user: any) {
-        if (!user) {
-            // Show login button if not authenticated
-            if (contentLoginButton)
-                contentLoginButton.classList.remove("hidden");
-            if (contentLogoutButton)
-                contentLogoutButton.classList.add("hidden");
-            if (userName) userName.textContent = "Not signed in";
-            if (userEmail) userEmail.textContent = "Not signed in";
-            if (userInitials) userInitials.textContent = "?";
-            if (memberStatus) {
-                memberStatus.textContent = "Not Verified";
-                memberStatus.className = "badge badge-lg gap-2";
-            }
-            if (lastLogin) lastLogin.textContent = "Never";
-            if (memberSince) memberSince.textContent = "-";
-            return;
-        }
+      // Update UI elements
+      if (userName) userName.textContent = userData.name || "Unnamed User";
+      if (userEmail) userEmail.textContent = userData.email || "No email";
+      if (userInitials)
+        userInitials.textContent = getInitials(userData.name || "?");
 
-        try {
-            // Get full user data
-            const userData = await get.getOne("users", user.id);
+      // Update member status based on member_type and email domain
+      if (memberStatus) {
+        let memberType = userData.member_type || "IEEE Member";
 
-            // Update UI elements
-            if (userName)
-                userName.textContent = userData.name || "Unnamed User";
-            if (userEmail) userEmail.textContent = userData.email || "No email";
-            if (userInitials)
-                userInitials.textContent = getInitials(userData.name || "?");
+        // Auto-assign officer status for @ieeeucsd.org emails if they're not already a higher rank
+        if (
+          userData.email?.endsWith("@ieeeucsd.org") &&
+          !["IEEE Executive", "IEEE Administrator", "IEEE Sponsor"].includes(
+            memberType,
+          )
+        ) {
+          memberType = "IEEE Officer";
 
-            // Update member status based on member_type and email domain
-            if (memberStatus) {
-                let memberType = userData.member_type || "IEEE Member";
-
-                // Auto-assign officer status for @ieeeucsd.org emails if they're not already a higher rank
-                if (
-                    userData.email?.endsWith("@ieeeucsd.org") &&
-                    ![
-                        "IEEE Executive",
-                        "IEEE Administrator",
-                        "IEEE Sponsor",
-                    ].includes(memberType)
-                ) {
-                    memberType = "IEEE Officer";
-
-                    // Update the member type in the database if it's different
-                    if (userData.member_type !== memberType) {
-                        try {
-                            await update.updateField(
-                                "users",
-                                userData.id,
-                                "member_type",
-                                memberType
-                            );
-                            await logger.send(
-                                "update",
-                                "profile view",
-                                `Updated member type to ${memberType} for user with @ieeeucsd.org email`
-                            );
-                        } catch (error) {
-                            console.error(
-                                "Failed to update member type:",
-                                error
-                            );
-                        }
-                    }
-                }
-
-                // Set badge color based on member type
-                let badgeClass = "badge-primary"; // default
-                switch (memberType) {
-                    case "IEEE Sponsor":
-                        badgeClass = "badge-warning";
-                        break;
-                    case "IEEE Administrator":
-                        badgeClass = "badge-error";
-                        break;
-                    case "IEEE Executive":
-                        badgeClass = "badge-secondary";
-                        break;
-                    case "IEEE Officer":
-                        badgeClass = "badge-info";
-                        break;
-                    case "IEEE Member":
-                        badgeClass = "badge-success";
-                        break;
-                }
-
-                memberStatus.textContent = memberType;
-                memberStatus.className = `badge badge-lg gap-2 ${badgeClass}`;
-            }
-
-            // Update timestamps
-            if (lastLogin)
-                lastLogin.textContent = formatDate(userData.last_login);
-            if (memberSince)
-                memberSince.textContent = formatDate(userData.created);
-
-            // Show logout button
-            if (contentLoginButton) contentLoginButton.classList.add("hidden");
-            if (contentLogoutButton)
-                contentLogoutButton.classList.remove("hidden");
-
-            // Update view toggles based on member type
-            const isOfficerOrHigher = [
-                "IEEE Officer",
-                "IEEE Executive",
-                "IEEE Administrator",
-            ].includes(userData.member_type);
-            if (officerViewToggle) {
-                officerViewToggle.classList.toggle(
-                    "hidden",
-                    !isOfficerOrHigher
-                );
-            }
-            if (sponsorViewToggle) {
-                sponsorViewToggle.classList.toggle(
-                    "hidden",
-                    userData.member_type !== "IEEE Sponsor"
-                );
-            }
-
-            // Show the user info
-            if (loadingSkeleton) loadingSkeleton.style.display = "none";
-            if (userInfo) {
-                userInfo.classList.remove("hidden");
-                userInfo.style.opacity = "1";
-            }
-        } catch (error) {
-            console.error("Failed to update UI:", error);
-            await logger.send(
-                "error",
+          // Update the member type in the database if it's different
+          if (userData.member_type !== memberType) {
+            try {
+              await update.updateField(
+                "users",
+                userData.id,
+                "member_type",
+                memberType,
+              );
+              await logger.send(
+                "update",
                 "profile view",
-                `Failed to update profile UI: ${error instanceof Error ? error.message : "Unknown error"}`
-            );
+                `Updated member type to ${memberType} for user with @ieeeucsd.org email`,
+              );
+            } catch (error) {
+              console.error("Failed to update member type:", error);
+            }
+          }
         }
-    }
 
-    // Initialize profile
-    document.addEventListener("DOMContentLoaded", async () => {
-        try {
-            // Show loading state
+        // Set badge color based on member type
+        let badgeClass = "badge-primary"; // default
+        switch (memberType) {
+          case "IEEE Sponsor":
+            badgeClass = "badge-warning";
+            break;
+          case "IEEE Administrator":
+            badgeClass = "badge-error";
+            break;
+          case "IEEE Executive":
+            badgeClass = "badge-secondary";
+            break;
+          case "IEEE Officer":
+            badgeClass = "badge-info";
+            break;
+          case "IEEE Member":
+            badgeClass = "badge-success";
+            break;
+        }
+
+        memberStatus.textContent = memberType;
+        memberStatus.className = `badge badge-lg gap-2 ${badgeClass}`;
+      }
+
+      // Update timestamps
+      if (lastLogin) lastLogin.textContent = formatDate(userData.last_login);
+      if (memberSince) memberSince.textContent = formatDate(userData.created);
+
+      // Show logout button
+      if (contentLoginButton) contentLoginButton.classList.add("hidden");
+      if (contentLogoutButton) contentLogoutButton.classList.remove("hidden");
+
+      // Show the user info
+      if (loadingSkeleton) loadingSkeleton.style.display = "none";
+      if (userInfo) {
+        userInfo.classList.remove("hidden");
+        userInfo.style.opacity = "1";
+      }
+    } catch (error) {
+      console.error("Failed to update UI:", error);
+      await logger.send(
+        "error",
+        "profile view",
+        `Failed to update profile UI: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
+
+  // Initialize profile
+  document.addEventListener("DOMContentLoaded", async () => {
+    try {
+      // Show loading state
+      if (loadingSkeleton) loadingSkeleton.style.display = "block";
+      if (userInfo) {
+        userInfo.classList.add("hidden");
+        userInfo.style.opacity = "0";
+      }
+
+      // Update UI based on current auth state
+      const user = auth.getCurrentUser();
+      await updateUI(user);
+
+      // Add auth state change listener
+      auth.onAuthStateChange(async () => {
+        const currentUser = auth.getCurrentUser();
+        await updateUI(currentUser);
+      });
+
+      // Add login button handler
+      if (contentLoginButton) {
+        contentLoginButton.addEventListener("click", async () => {
+          try {
             if (loadingSkeleton) loadingSkeleton.style.display = "block";
             if (userInfo) {
-                userInfo.classList.add("hidden");
-                userInfo.style.opacity = "0";
+              userInfo.classList.add("hidden");
+              userInfo.style.opacity = "0";
             }
-
-            // Update UI based on current auth state
-            const user = auth.getCurrentUser();
-            await updateUI(user);
-
-            // Add auth state change listener
-            auth.onAuthStateChange(async () => {
-                const currentUser = auth.getCurrentUser();
-                await updateUI(currentUser);
-            });
-
-            // Add login button handler
-            if (contentLoginButton) {
-                contentLoginButton.addEventListener("click", async () => {
-                    try {
-                        if (loadingSkeleton)
-                            loadingSkeleton.style.display = "block";
-                        if (userInfo) {
-                            userInfo.classList.add("hidden");
-                            userInfo.style.opacity = "0";
-                        }
-                        await auth.login();
-                    } catch (error) {
-                        console.error("Login error:", error);
-                        await logger.send(
-                            "error",
-                            "profile view",
-                            `Login failed: ${error instanceof Error ? error.message : "Unknown error"}`
-                        );
-                        if (loadingSkeleton)
-                            loadingSkeleton.style.display = "none";
-                        if (userInfo) {
-                            userInfo.classList.remove("hidden");
-                            userInfo.style.opacity = "1";
-                        }
-                    }
-                });
-            }
-
-            // Add logout button handler
-            if (contentLogoutButton) {
-                contentLogoutButton.addEventListener("click", async () => {
-                    try {
-                        await auth.logout();
-                        await logger.send(
-                            "logout",
-                            "profile view",
-                            "User logged out successfully"
-                        );
-                    } catch (error) {
-                        console.error("Logout error:", error);
-                        await logger.send(
-                            "error",
-                            "profile view",
-                            `Logout failed: ${error instanceof Error ? error.message : "Unknown error"}`
-                        );
-                    }
-                });
-            }
-        } catch (error) {
-            console.error("Failed to initialize profile:", error);
+            await auth.login();
+          } catch (error) {
+            console.error("Login error:", error);
             await logger.send(
-                "error",
-                "profile view",
-                `Failed to initialize profile: ${error instanceof Error ? error.message : "Unknown error"}`
+              "error",
+              "profile view",
+              `Login failed: ${error instanceof Error ? error.message : "Unknown error"}`,
             );
-        }
-    });
+            if (loadingSkeleton) loadingSkeleton.style.display = "none";
+            if (userInfo) {
+              userInfo.classList.remove("hidden");
+              userInfo.style.opacity = "1";
+            }
+          }
+        });
+      }
+
+      // Add logout button handler
+      if (contentLogoutButton) {
+        contentLogoutButton.addEventListener("click", async () => {
+          try {
+            await auth.logout();
+            await logger.send(
+              "logout",
+              "profile view",
+              "User logged out successfully",
+            );
+          } catch (error) {
+            console.error("Logout error:", error);
+            await logger.send(
+              "error",
+              "profile view",
+              `Logout failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Failed to initialize profile:", error);
+      await logger.send(
+        "error",
+        "profile view",
+        `Failed to initialize profile: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  });
 </script>
