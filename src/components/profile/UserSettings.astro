@@ -274,10 +274,12 @@ const majorsList: string[] = allMajors
     import { Authentication } from "../pocketbase/Authentication";
     import { Update } from "../pocketbase/Update";
     import { SendLog } from "../pocketbase/SendLog";
+    import { FileManager } from "../pocketbase/FileManager";
 
     const auth = Authentication.getInstance();
     const update = Update.getInstance();
     const logger = SendLog.getInstance();
+    const fileManager = FileManager.getInstance();
 
     // Get form elements
     const memberIdInput = document.getElementById(
@@ -355,10 +357,12 @@ const majorsList: string[] = allMajors
                     const user = auth.getCurrentUser();
                     if (!user) throw new Error("User not authenticated");
 
-                    const formData = new FormData();
-                    formData.append("resume", file);
-
-                    await update.updateFields("users", user.id, formData);
+                    await fileManager.uploadFile(
+                        "users",
+                        user.id,
+                        "resume",
+                        file
+                    );
                     uploadStatus.textContent = "Resume uploaded successfully";
                     if (currentResume) currentResume.textContent = file.name;
 

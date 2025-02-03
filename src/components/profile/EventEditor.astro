@@ -285,3 +285,162 @@ const { editor_title, form } = text.ui.tables.events;
         <button>close</button>
     </form>
 </dialog>
+
+<script>
+    import { Authentication } from "../pocketbase/Authentication";
+    import { Get } from "../pocketbase/Get";
+    import { Update } from "../pocketbase/Update";
+    import { SendLog } from "../pocketbase/SendLog";
+    import { FileManager } from "../pocketbase/FileManager";
+
+    const auth = Authentication.getInstance();
+    const get = Get.getInstance();
+    const update = Update.getInstance();
+    const logger = SendLog.getInstance();
+    const fileManager = FileManager.getInstance();
+
+    // Handle file uploads
+    if (editorFiles) {
+        editorFiles.addEventListener("change", async (e) => {
+            const files = Array.from(
+                (e.target as HTMLInputElement).files || []
+            );
+            if (files.length > 0) {
+                const uploadProgress =
+                    document.getElementById("uploadProgress");
+                const uploadProgressBar = document.getElementById(
+                    "uploadProgressBar"
+                ) as HTMLProgressElement;
+                const uploadProgressText =
+                    document.getElementById("uploadProgressText");
+
+                if (uploadProgress) uploadProgress.classList.remove("hidden");
+
+                try {
+                    const user = auth.getCurrentUser();
+                    if (!user) throw new Error("User not authenticated");
+
+                    // Upload files
+                    await fileManager.uploadFiles(
+                        "events",
+                        eventId,
+                        "files",
+                        files
+                    );
+
+                    // Update progress
+                    if (uploadProgressBar) uploadProgressBar.value = 100;
+                    if (uploadProgressText)
+                        uploadProgressText.textContent = "100%";
+
+                    // Log successful upload
+                    await logger.send(
+                        "update",
+                        "event files",
+                        `Successfully uploaded ${files.length} files to event ${eventId}`
+                    );
+
+                    // Refresh file list
+                    await loadCurrentFiles();
+                } catch (err) {
+                    console.error("File upload error:", err);
+
+                    // Log upload error
+                    await logger.send(
+                        "error",
+                        "event files",
+                        `Failed to upload files to event ${eventId}. Error: ${err instanceof Error ? err.message : "Unknown error"}`
+                    );
+                } finally {
+                    if (uploadProgress) {
+                        setTimeout(() => {
+                            uploadProgress.classList.add("hidden");
+                            if (uploadProgressBar) uploadProgressBar.value = 0;
+                            if (uploadProgressText)
+                                uploadProgressText.textContent = "0%";
+                        }, 2000);
+                    }
+                }
+            }
+        });
+    }
+
+    // Function to load current files
+    async function loadCurrentFiles() {
+        const currentFiles = document.getElementById("currentFiles");
+        if (!currentFiles || !eventId) return;
+
+        try {
+            const event = await get.getOne("events", eventId);
+            if (!event.files || !Array.isArray(event.files)) return;
+
+            currentFiles.innerHTML = event.files
+                .map((filename) => {
+                    const fileUrl = fileManager.getFileUrl(
+                        "events",
+                        eventId,
+                        filename
+                    );
+                    return `
+                    <div class="flex justify-between items-center p-2 bg-base-200 rounded-lg">
+                        <span class="truncate flex-1">${filename}</span>
+                        <div class="flex gap-2">
+                            <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-ghost">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                            </a>
+                            <button class="btn btn-sm btn-ghost text-error" onclick="deleteFile('${filename}')">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                })
+                .join("");
+        } catch (err) {
+            console.error("Failed to load current files:", err);
+        }
+    }
+
+    // Function to delete a file
+    async function deleteFile(filename: string) {
+        if (!eventId) return;
+
+        try {
+            const event = await get.getOne("events", eventId);
+            if (!event.files || !Array.isArray(event.files)) return;
+
+            // Remove the file from the array
+            const updatedFiles = event.files.filter((f) => f !== filename);
+            await update.updateField("events", eventId, "files", updatedFiles);
+
+            // Log successful deletion
+            await logger.send(
+                "delete",
+                "event files",
+                `Successfully deleted file ${filename} from event ${eventId}`
+            );
+
+            // Refresh file list
+            await loadCurrentFiles();
+        } catch (err) {
+            console.error("Failed to delete file:", err);
+
+            // Log deletion error
+            await logger.send(
+                "error",
+                "event files",
+                `Failed to delete file ${filename} from event ${eventId}. Error: ${err instanceof Error ? err.message : "Unknown error"}`
+            );
+        }
+    }
+
+    // Make deleteFile available globally
+    window.deleteFile = deleteFile;
+
+    // Load current files on page load
+    loadCurrentFiles();
+</script>

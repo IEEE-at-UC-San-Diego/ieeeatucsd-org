@@ -184,62 +184,66 @@
     import { Authentication } from "../pocketbase/Authentication";
     import { Get } from "../pocketbase/Get";
     import { SendLog } from "../pocketbase/SendLog";
+    import { FileManager } from "../pocketbase/FileManager";
 
     const auth = Authentication.getInstance();
     const get = Get.getInstance();
     const logger = SendLog.getInstance();
+    const fileManager = FileManager.getInstance();
 
-    // Initialize event check-in
-    document.addEventListener("DOMContentLoaded", async () => {
+    // Track if we're currently fetching events
+    let isFetchingEvents = false;
+    let lastFetchPromise: Promise<void> | null = null;
+
+    // Define interfaces
+    interface BaseRecord {
+        id: string;
+        [key: string]: any;
+    }
+
+    interface Event extends BaseRecord {
+        id: string;
+        event_id: string;
+        event_name: string;
+        start_date: string;
+        end_date: string;
+        location: string;
+        files?: string[];
+    }
+
+    // Add debounce function
+    function debounce<T extends (...args: any[]) => any>(
+        func: T,
+        wait: number
+    ): (...args: Parameters<T>) => void {
+        let timeout: ReturnType<typeof setTimeout> | null = null;
+        return (...args: Parameters<T>) => {
+            if (timeout) clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), wait);
+        };
+    }
+
+    // Create debounced version of renderEvents
+    const debouncedRenderEvents = debounce(async () => {
         try {
-            // Get current user's events
-            if (auth.isAuthenticated()) {
-                const user = auth.getCurrentUser();
-                if (user) {
-                    // Get user's events
-                    const events = await get.getMany(
-                        "events",
-                        user.events_attended || []
-                    );
-
-                    // Update UI with events data
-                    // ... rest of the code ...
-                }
-            }
+            await renderEvents();
         } catch (error) {
-            console.error("Failed to initialize profile:", error);
-            await logger.send(
-                "error",
-                "profile view",
-                `Failed to initialize profile: ${error instanceof Error ? error.message : "Unknown error"}`
-            );
+            console.error("Failed to render events:", error);
         }
-    });
-
-    // Handle loading states
-    const eventCheckInSkeleton = document.getElementById(
-        "eventCheckInSkeleton"
-    );
-    const eventCheckInContent = document.getElementById("eventCheckInContent");
-    const pastEventsCount = document.getElementById("pastEventsCount");
+    }, 300);
 
     // Function to show content and hide skeleton
     function showEventCheckIn() {
+        const eventCheckInSkeleton = document.getElementById(
+            "eventCheckInSkeleton"
+        );
+        const eventCheckInContent = document.getElementById(
+            "eventCheckInContent"
+        );
         if (eventCheckInSkeleton && eventCheckInContent) {
             eventCheckInSkeleton.classList.add("hidden");
             eventCheckInContent.classList.remove("hidden");
         }
-    }
-
-    // Show content when auth state changes
-    auth.onAuthStateChange(() => {
-        showEventCheckIn();
-        renderEvents();
-    });
-
-    // Show content on initial load if already authenticated
-    if (auth.isAuthenticated()) {
-        showEventCheckIn();
     }
 
     // Function to format date
@@ -321,14 +325,6 @@
         }
     }
 
-    interface Event extends RecordModel {
-        event_id: string;
-        event_name: string;
-        start_date: string;
-        end_date: string;
-        location: string;
-    }
-
     // Function to render event card
     function renderEventCard(event: Event, attendedEvents: string[]): string {
         const isAttended =
@@ -350,7 +346,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
                 </svg>
-                ${event.files.length} File${event.files.length > 1 ? "s" : ""}
+                ${event.files?.length || 0} File${(event.files?.length || 0) > 1 ? "s" : ""}
             </button>
         `
                 : "";
@@ -389,114 +385,180 @@
         `;
     }
 
-    // Function to render events
+    // Function to render events with request cancellation handling
     async function renderEvents() {
         const eventsList = document.getElementById("eventsList");
         const pastEventsList = document.getElementById("pastEventsList");
         if (!eventsList || !pastEventsList) return;
 
-        try {
-            // Get current user's attended events with safe parsing
-            const user = auth.getCurrentUser();
-            let attendedEvents: string[] = [];
-
-            if (user?.events_attended) {
-                try {
-                    attendedEvents =
-                        typeof user.events_attended === "string"
-                            ? JSON.parse(user.events_attended)
-                            : Array.isArray(user.events_attended)
-                              ? user.events_attended
-                              : [];
-                } catch (e) {
-                    console.warn("Failed to parse events_attended:", e);
-                    attendedEvents = [];
-                }
+        // If we're already fetching, wait for the current fetch to complete
+        if (isFetchingEvents && lastFetchPromise) {
+            try {
+                await lastFetchPromise;
+                return;
+            } catch (err) {
+                console.warn("Previous fetch failed:", err);
             }
+        }
 
-            // Fetch all events
-            const events = await get.getMany(
-                "events",
-                user.events_attended || []
-            );
+        // Set up new fetch
+        isFetchingEvents = true;
+        const fetchPromise = (async () => {
+            try {
+                // Get current user's attended events with safe parsing
+                const user = auth.getCurrentUser();
+                let attendedEvents: string[] = [];
 
-            // Clear loading skeletons
-            eventsList.innerHTML = "";
-            pastEventsList.innerHTML = "";
-
-            // Categorize events
-            const now = new Date();
-            const currentEvents: Event[] = [];
-            const upcomingEvents: Event[] = [];
-            const pastEvents: Event[] = [];
-
-            events.forEach((event) => {
-                const typedEvent = event as Event;
-                const startDate = new Date(typedEvent.start_date);
-                const endDate = new Date(typedEvent.end_date);
-
-                if (startDate > now) {
-                    upcomingEvents.push(typedEvent);
-                } else if (endDate >= now && startDate <= now) {
-                    currentEvents.push(typedEvent);
-                } else {
-                    pastEvents.push(typedEvent);
+                if (user?.events_attended) {
+                    try {
+                        attendedEvents =
+                            typeof user.events_attended === "string"
+                                ? JSON.parse(user.events_attended)
+                                : Array.isArray(user.events_attended)
+                                  ? user.events_attended
+                                  : [];
+                        console.log("Attended events:", attendedEvents);
+                    } catch (e) {
+                        console.warn("Failed to parse events_attended:", e);
+                        attendedEvents = [];
+                    }
                 }
-            });
 
-            // Sort upcoming events by start date
-            const sortedUpcomingEvents = upcomingEvents.sort(
-                (a, b) =>
-                    new Date(a.start_date).getTime() -
-                    new Date(b.start_date).getTime()
-            );
+                // Fetch all events
+                console.log("Fetching all events");
+                const events = await get.getAll<Event>(
+                    "events",
+                    undefined,
+                    "-start_date"
+                );
+                console.log("Fetched events:", events);
 
-            // Sort past events by date descending (most recent first)
-            const sortedPastEvents = pastEvents.sort(
-                (a, b) =>
-                    new Date(b.end_date).getTime() -
-                    new Date(a.end_date).getTime()
-            );
+                if (!Array.isArray(events)) {
+                    throw new Error(
+                        "Failed to fetch events: Invalid response format"
+                    );
+                }
 
-            // Update past events count
-            if (pastEventsCount) {
-                pastEventsCount.textContent =
-                    sortedPastEvents.length.toString();
-            }
+                // Clear loading skeletons
+                eventsList.innerHTML = "";
+                pastEventsList.innerHTML = "";
 
-            // Function to render section
-            function renderSection(events: Event[]): string {
-                if (events.length === 0) {
-                    return `
-                    <div class="text-center py-8 opacity-70">
-                        <p>No events found</p>
+                // Categorize events
+                const now = new Date();
+                const currentEvents: Event[] = [];
+                const upcomingEvents: Event[] = [];
+                const pastEvents: Event[] = [];
+
+                events.forEach((event) => {
+                    if (!event.start_date || !event.end_date) {
+                        console.warn("Event missing dates:", event);
+                        return;
+                    }
+
+                    const startDate = new Date(event.start_date);
+                    const endDate = new Date(event.end_date);
+
+                    if (startDate > now) {
+                        upcomingEvents.push(event);
+                    } else if (endDate >= now && startDate <= now) {
+                        currentEvents.push(event);
+                    } else {
+                        pastEvents.push(event);
+                    }
+                });
+
+                // Sort upcoming events by start date
+                const sortedUpcomingEvents = upcomingEvents.sort(
+                    (a, b) =>
+                        new Date(a.start_date).getTime() -
+                        new Date(b.start_date).getTime()
+                );
+
+                // Sort past events by date descending (most recent first)
+                const sortedPastEvents = pastEvents.sort(
+                    (a, b) =>
+                        new Date(b.end_date).getTime() -
+                        new Date(a.end_date).getTime()
+                );
+
+                // Update past events count
+                const pastEventsCountElement =
+                    document.getElementById("pastEventsCount");
+                if (pastEventsCountElement) {
+                    pastEventsCountElement.textContent =
+                        sortedPastEvents.length.toString();
+                }
+
+                // Function to render section
+                function renderSection(events: Event[]): string {
+                    if (events.length === 0) {
+                        return `
+                        <div class="text-center py-8 opacity-70">
+                            <p>No events found</p>
+                        </div>
+                    `;
+                    }
+                    return events
+                        .map((event) => renderEventCard(event, attendedEvents))
+                        .join("");
+                }
+
+                // Update main events list (current & upcoming)
+                eventsList.innerHTML = renderSection([
+                    ...currentEvents,
+                    ...sortedUpcomingEvents,
+                ]);
+
+                // Update past events list
+                pastEventsList.innerHTML = renderSection(sortedPastEvents);
+            } catch (err) {
+                console.error("Failed to render events:", err);
+                await logger.send(
+                    "error",
+                    "render events",
+                    `Failed to render events: ${err instanceof Error ? err.message : "Unknown error"}`
+                );
+                const errorMessage = `
+                    <div class="text-center py-8 text-error">
+                        <p>Failed to load events. Please try again later.</p>
+                        <p class="text-sm mt-2 opacity-70">${err instanceof Error ? err.message : "Unknown error"}</p>
                     </div>
                 `;
-                }
-                return events
-                    .map((event) => renderEventCard(event, attendedEvents))
-                    .join("");
+                eventsList.innerHTML = errorMessage;
+                pastEventsList.innerHTML = errorMessage;
+                throw err; // Re-throw to handle in the outer catch
+            } finally {
+                isFetchingEvents = false;
             }
+        })();
 
-            // Update main events list (current & upcoming)
-            eventsList.innerHTML = renderSection([
-                ...currentEvents,
-                ...sortedUpcomingEvents,
-            ]);
+        lastFetchPromise = fetchPromise;
 
-            // Update past events list
-            pastEventsList.innerHTML = renderSection(sortedPastEvents);
+        try {
+            await fetchPromise;
         } catch (err) {
-            console.error("Failed to render events:", err);
-            const errorMessage = `
-                <div class="text-center py-8 text-error">
-                    <p>Failed to load events. Please try again later.</p>
-                </div>
-            `;
-            eventsList.innerHTML = errorMessage;
-            pastEventsList.innerHTML = errorMessage;
+            // Error already handled above
+            console.debug("Fetch completed with error");
         }
     }
+
+    // Initialize event check-in
+    document.addEventListener("DOMContentLoaded", () => {
+        showEventCheckIn();
+        // Only render events once at startup
+        renderEvents().catch(console.error);
+    });
+
+    // Show content when auth state changes
+    let lastAuthState = auth.isAuthenticated();
+    auth.onAuthStateChange((isValid) => {
+        showEventCheckIn();
+        // Only re-render if auth state actually changed
+        if (lastAuthState !== isValid) {
+            lastAuthState = isValid;
+            renderEvents().catch(console.error);
+        }
+    });
 
     // Add event listener for viewing files
     interface ViewEventFilesEvent extends CustomEvent {
@@ -509,7 +571,10 @@
         if (e instanceof CustomEvent && "eventId" in e.detail) {
             (async () => {
                 try {
-                    const event = await get.getOne("events", e.detail.eventId);
+                    const event = await get.getOne<Event>(
+                        "events",
+                        e.detail.eventId
+                    );
                     const fileViewerContent =
                         document.getElementById("fileViewerContent");
                     const fileViewerTitle =
@@ -533,7 +598,11 @@
 
                         fileViewerContent.innerHTML = event.files
                             .map((file) => {
-                                const fileUrl = get.getFileURL(event, file);
+                                const fileUrl = fileManager.getFileUrl(
+                                    "events",
+                                    event.id,
+                                    file
+                                );
                                 const fileName =
                                     file.split("/").pop() || "File";
                                 const fileExt =
@@ -599,7 +668,4 @@
             })();
         }
     }) as unknown as EventListener);
-
-    // Initial render
-    renderEvents();
 </script>
