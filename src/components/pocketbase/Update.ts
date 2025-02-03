@@ -37,12 +37,16 @@ export class Update {
     }
 
     try {
+      this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
       const data = { [field]: value };
-      return await pb.collection(collectionName).update<T>(recordId, data);
+      const result = await pb.collection(collectionName).update<T>(recordId, data);
+      return result;
     } catch (err) {
       console.error(`Failed to update ${field} in ${collectionName}:`, err);
       throw err;
+    } finally {
+      this.auth.setUpdating(false);
     }
   }
 
@@ -63,11 +67,15 @@ export class Update {
     }
 
     try {
+      this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
-      return await pb.collection(collectionName).update<T>(recordId, updates);
+      const result = await pb.collection(collectionName).update<T>(recordId, updates);
+      return result;
     } catch (err) {
       console.error(`Failed to update fields in ${collectionName}:`, err);
       throw err;
+    } finally {
+      this.auth.setUpdating(false);
     }
   }
 
@@ -90,6 +98,7 @@ export class Update {
     }
 
     try {
+      this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
       const data = { [field]: value };
       
@@ -97,10 +106,13 @@ export class Update {
         pb.collection(collectionName).update<T>(id, data)
       );
       
-      return await Promise.all(updates);
+      const results = await Promise.all(updates);
+      return results;
     } catch (err) {
       console.error(`Failed to batch update ${field} in ${collectionName}:`, err);
       throw err;
+    } finally {
+      this.auth.setUpdating(false);
     }
   }
 
@@ -119,16 +131,20 @@ export class Update {
     }
 
     try {
+      this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
       
       const updatePromises = updates.map(({ id, data }) => 
         pb.collection(collectionName).update<T>(id, data)
       );
       
-      return await Promise.all(updatePromises);
+      const results = await Promise.all(updatePromises);
+      return results;
     } catch (err) {
       console.error(`Failed to batch update fields in ${collectionName}:`, err);
       throw err;
+    } finally {
+      this.auth.setUpdating(false);
     }
   }
 } 

@@ -20,6 +20,7 @@ export class Authentication {
   private pb: PocketBase;
   private static instance: Authentication;
   private authChangeCallbacks: ((isValid: boolean) => void)[] = [];
+  private isUpdating: boolean = false;
 
   private constructor() {
     // Use the baseUrl from the config file
@@ -27,7 +28,9 @@ export class Authentication {
     
     // Listen for auth state changes
     this.pb.authStore.onChange(() => {
-      this.notifyAuthChange();
+      if (!this.isUpdating) {
+        this.notifyAuthChange();
+      }
     });
   }
 
@@ -107,6 +110,13 @@ export class Authentication {
    */
   public offAuthStateChange(callback: (isValid: boolean) => void): void {
     this.authChangeCallbacks = this.authChangeCallbacks.filter(cb => cb !== callback);
+  }
+
+  /**
+   * Set updating state to prevent auth change notifications during updates
+   */
+  public setUpdating(updating: boolean): void {
+    this.isUpdating = updating;
   }
 
   /**

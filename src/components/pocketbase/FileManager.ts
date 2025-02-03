@@ -37,14 +37,18 @@ export class FileManager {
     }
 
     try {
+      this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
       const formData = new FormData();
       formData.append(field, file);
 
-      return await pb.collection(collectionName).update<T>(recordId, formData);
+      const result = await pb.collection(collectionName).update<T>(recordId, formData);
+      return result;
     } catch (err) {
       console.error(`Failed to upload file to ${collectionName}:`, err);
       throw err;
+    } finally {
+      this.auth.setUpdating(false);
     }
   }
 
@@ -67,6 +71,7 @@ export class FileManager {
     }
 
     try {
+      this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
       const formData = new FormData();
       
@@ -74,10 +79,13 @@ export class FileManager {
         formData.append(field, file);
       });
 
-      return await pb.collection(collectionName).update<T>(recordId, formData);
+      const result = await pb.collection(collectionName).update<T>(recordId, formData);
+      return result;
     } catch (err) {
       console.error(`Failed to upload files to ${collectionName}:`, err);
       throw err;
+    } finally {
+      this.auth.setUpdating(false);
     }
   }
 
@@ -114,12 +122,16 @@ export class FileManager {
     }
 
     try {
+      this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
       const data = { [field]: null };
-      return await pb.collection(collectionName).update<T>(recordId, data);
+      const result = await pb.collection(collectionName).update<T>(recordId, data);
+      return result;
     } catch (err) {
       console.error(`Failed to delete file from ${collectionName}:`, err);
       throw err;
+    } finally {
+      this.auth.setUpdating(false);
     }
   }
 
@@ -140,6 +152,7 @@ export class FileManager {
     }
 
     try {
+      this.auth.setUpdating(true);
       const url = this.getFileUrl(collectionName, recordId, filename);
       const response = await fetch(url);
       
@@ -147,10 +160,13 @@ export class FileManager {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      return await response.blob();
+      const result = await response.blob();
+      return result;
     } catch (err) {
       console.error(`Failed to download file from ${collectionName}:`, err);
       throw err;
+    } finally {
+      this.auth.setUpdating(false);
     }
   }
 } 
