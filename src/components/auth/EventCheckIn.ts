@@ -1,32 +1,23 @@
 import PocketBase from "pocketbase";
 import yaml from "js-yaml";
-import configYaml from "../../data/storeConfig.yaml?raw";
-import { SendLog } from "./SendLog";
+import pocketbaseConfig from "../../config/pocketbaseConfig.yml?raw";
+import textConfig from "../../config/text.yml?raw";
+import { SendLog } from "../pocketbase/SendLog";
 
 // Configuration type definitions
 interface Config {
   api: {
     baseUrl: string;
-  };
-  ui: {
-    messages: {
-      event: {
-        checkIn: {
-          checking: string;
-          success: string;
-          error: string;
-          invalid: string;
-          expired: string;
-          alreadyCheckedIn: string;
-          messageTimeout: number;
-        };
-      };
+    oauth2: {
+      redirectPath: string;
+      providerName: string;
     };
   };
 }
 
-// Parse YAML configuration with type
-const config = yaml.load(configYaml) as Config;
+// Parse YAML configuration
+const config = yaml.load(pocketbaseConfig) as Config;
+const text = yaml.load(textConfig) as any;
 
 interface AuthElements {
   eventCodeInput: HTMLInputElement;
@@ -42,7 +33,7 @@ export class EventCheckIn {
   constructor() {
     this.pb = new PocketBase(config.api.baseUrl);
     this.elements = this.getElements();
-    this.logger = new SendLog();
+    this.logger = SendLog.getInstance();
     
     // Add event listener for the check-in button
     this.elements.checkInButton.addEventListener("click", () => this.handleCheckIn());
@@ -90,7 +81,7 @@ export class EventCheckIn {
         if (events.length === 0) {
             return { 
                 isValid: false, 
-                message: `Event code "${code}" does not match any active events.` 
+                message: text.ui.messages.event.checkIn.invalid
             };
         }
 
@@ -104,7 +95,7 @@ export class EventCheckIn {
             return { 
                 isValid: false, 
                 event,
-                message: `Event "${event.event_name}" check-in is not open yet. Check-in opens at ${startDate.toLocaleString()}.` 
+                message: text.ui.messages.event.checkIn.expired
             };
         }
 
@@ -112,7 +103,7 @@ export class EventCheckIn {
             return { 
                 isValid: false, 
                 event,
-                message: `Event "${event.event_name}" check-in has closed. Check-in closed at ${endDate.toLocaleString()}.` 
+                message: text.ui.messages.event.checkIn.expired
             };
         }
 
@@ -121,7 +112,7 @@ export class EventCheckIn {
         console.error('Failed to validate event code:', err);
         return { 
             isValid: false, 
-            message: `Failed to validate event code "${code}". Error: ${err instanceof Error ? err.message : "Unknown error"}` 
+            message: text.ui.messages.event.checkIn.error
         };
     }
   }
@@ -131,17 +122,19 @@ export class EventCheckIn {
     const eventCode = eventCodeInput.value.trim();
 
     if (!eventCode) {
-      this.showStatus("Please enter an event code", "error");
+      this.showStatus(text.ui.messages.event.checkIn.invalid, "error");
       return;
     }
 
+    let validation: { isValid: boolean; event?: any; message?: string } | undefined;
+
     try {
-      this.showStatus(config.ui.messages.event.checkIn.checking, "info");
+      this.showStatus(text.ui.messages.event.checkIn.checking, "info");
 
       // Get current user
       const user = this.pb.authStore.model;
       if (!user) {
-        this.showStatus("Please sign in to check in to events", "error");
+        this.showStatus(text.ui.messages.auth.notSignedIn, "error");
         await this.logger.send(
           "error",
           "event check in",
@@ -151,9 +144,9 @@ export class EventCheckIn {
       }
 
       // Validate event code and check time window
-      const validation = await this.validateEventCode(eventCode);
+      validation = await this.validateEventCode(eventCode);
       if (!validation.isValid) {
-        this.showStatus(validation.message || "Invalid event code.", "error");
+        this.showStatus(validation.message || text.ui.messages.event.checkIn.invalid, "error");
         await this.logger.send(
           "error",
           "event check in",
@@ -191,7 +184,7 @@ export class EventCheckIn {
       const isAlreadyCheckedIn = eventsAttended.includes(event.event_id);
       
       if (isAlreadyCheckedIn) {
-        this.showStatus(`You have already checked in to ${event.event_name}`, "info");
+        this.showStatus(text.ui.messages.event.checkIn.alreadyCheckedIn, "info");
         await this.logger.send(
           "error",
           "event check in",
@@ -232,10 +225,7 @@ export class EventCheckIn {
       }
 
       // Show success message with points
-      this.showStatus(
-        `Successfully checked in to ${event.event_name}! You earned ${pointsToAdd} points!`, 
-        "success"
-      );
+      this.showStatus(text.ui.messages.event.checkIn.success, "success");
       eventCodeInput.value = ""; // Clear input
 
       // Log the successful check-in
@@ -268,14 +258,22 @@ export class EventCheckIn {
 
     } catch (err) {
       console.error("Check-in error:", err);
-      this.showStatus(config.ui.messages.event.checkIn.error, "error");
+      this.showStatus(text.ui.messages.event.checkIn.error, "error");
 
       // Log any errors that occur during check-in
-      await this.logger.send(
-        "error",
-        "event check in",
-        `Failed to check in to event ${event.id}: ${err instanceof Error ? err.message : "Unknown error"}`
-      );
+      if (validation?.event) {
+        await this.logger.send(
+          "error",
+          "event check in",
+          `Failed to check in to event ${validation.event.id}: ${err instanceof Error ? err.message : "Unknown error"}`
+        );
+      } else {
+        await this.logger.send(
+          "error",
+          "event check in",
+          `Failed to check in: ${err instanceof Error ? err.message : "Unknown error"}`
+        );
+      }
     }
   }
 
@@ -300,7 +298,7 @@ export class EventCheckIn {
     if (type !== "info") {
       setTimeout(() => {
         checkInStatus.textContent = "";
-      }, config.ui.messages.event.checkIn.messageTimeout);
+      }, text.ui.messages.event.checkIn.messageTimeout);
     }
   }
 

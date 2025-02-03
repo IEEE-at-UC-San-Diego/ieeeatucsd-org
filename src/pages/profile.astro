@@ -4,7 +4,13 @@ import UserProfile from "../components/auth/UserProfile.astro";
 import DefaultProfileView from "../components/profile/DefaultProfileView.astro";
 import OfficerProfileView from "../components/profile/OfficerView.astro";
 import UserSettings from "../components/profile/UserSettings.astro";
+import yaml from "js-yaml";
+import profileConfig from "../config/profileConfig.yaml?raw";
+import textConfig from "../config/text.yml?raw";
+
 const title = "User Profile";
+const config = yaml.load(profileConfig) as any;
+const text = yaml.load(textConfig) as any;
 ---
 
 <Layout {title}>
@@ -43,10 +49,7 @@ const title = "User Profile";
                                 d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
                                 clip-rule="evenodd"></path>
                         </svg>
-                        <span
-                            >Failed to load profile data. Please try refreshing
-                            the page.</span
-                        >
+                        <span>{text.ui.messages.auth.loginError}</span>
                     </div>
                 </div>
             </div>
@@ -198,7 +201,7 @@ const title = "User Profile";
                     </div>
 
                     <!-- Content Areas -->
-                    <div id="defaultView">
+                    <!-- <div id="defaultView">
                         <DefaultProfileView />
                     </div>
                     <div id="settingsView" class="hidden">
@@ -206,7 +209,7 @@ const title = "User Profile";
                     </div>
                     <div id="officerView" class="hidden">
                         <OfficerProfileView />
-                    </div>
+                    </div> -->
                 </div>
             </div>
         </div>
@@ -214,8 +217,14 @@ const title = "User Profile";
 </Layout>
 
 <script>
-    import { StoreAuth } from "../components/auth/StoreAuth";
-    const auth = new StoreAuth();
+    import { Authentication } from "../components/pocketbase/Authentication";
+    import yaml from "js-yaml";
+    import profileConfig from "../config/profileConfig.yaml?raw";
+    import textConfig from "../config/text.yml?raw";
+
+    const config = yaml.load(profileConfig) as any;
+    const text = yaml.load(textConfig) as any;
+    const auth = Authentication.getInstance();
 
     // Initialize page state
     const pageLoadingState = document.getElementById("pageLoadingState");
@@ -224,10 +233,9 @@ const title = "User Profile";
         "notAuthenticatedState"
     );
     const mainContent = document.getElementById("mainContent");
-    const tabs = document.querySelectorAll(".tab");
     const defaultView = document.getElementById("defaultView");
     const officerView = document.getElementById("officerView");
-    const officerTab = document.getElementById("officerTab");
+    const settingsView = document.getElementById("settingsView");
 
     // Stats elements
     const eventsAttendedValue = document.getElementById("eventsAttendedValue");
@@ -236,20 +244,15 @@ const title = "User Profile";
     const activityLevelValue = document.getElementById("activityLevelValue");
     const activityLevelDesc = document.getElementById("activityLevelDesc");
 
-    // Hide officer tab by default
-    if (officerTab) {
-        officerTab.style.display = "none";
-    }
-
-    // Show officer tab if user is an officer
-    const showOfficerTab = () => {
-        if (officerTab) {
-            const authState = auth.getAuthState();
-            const isOfficer =
-                authState.model?.member_type === "officer" ||
-                authState.model?.member_type === "administrator";
-            officerTab.style.display = isOfficer ? "inline-flex" : "none";
-        }
+    // Show officer view if user has appropriate role
+    const showOfficerView = (user: any) => {
+        if (!user) return false;
+        const userRole = user.role || "member";
+        const roleConfig = config.roles[userRole];
+        return (
+            roleConfig?.permissions?.includes("manage") ||
+            roleConfig?.permissions?.includes("edit")
+        );
     };
 
     // Initialize page
@@ -263,16 +266,14 @@ const title = "User Profile";
             if (mainContent) mainContent.classList.add("hidden");
 
             // Check auth state
-            const authState = auth.getAuthState();
-            if (!authState.isValid || !authState.model) {
-                // Show not authenticated state
+            if (!auth.isAuthenticated()) {
                 if (pageLoadingState) pageLoadingState.classList.add("hidden");
                 if (notAuthenticatedState)
                     notAuthenticatedState.classList.remove("hidden");
                 return;
             }
 
-            const user = authState.model;
+            const user = auth.getCurrentUser();
 
             // Update stats
             if (eventsAttendedValue) {
@@ -283,16 +284,14 @@ const title = "User Profile";
             if (loyaltyPointsValue && loyaltyPointsChange) {
                 const points = user.points || 0;
                 loyaltyPointsValue.textContent = points.toString();
-                // Calculate points change (example logic)
-                const pointsChange = 10; // Replace with actual calculation
+                const pointsChange = user.points_change_30d || 0;
                 loyaltyPointsChange.textContent =
-                    pointsChange > 0
+                    pointsChange >= 0
                         ? `↗︎ ${pointsChange} points (30 days)`
                         : `↘︎ ${Math.abs(pointsChange)} points (30 days)`;
             }
 
             if (activityLevelValue && activityLevelDesc) {
-                // Calculate activity level based on events and points
                 const eventsAttended = user.events_attended?.length || 0;
                 const points = user.points || 0;
                 let activityLevel = "Low";
@@ -310,8 +309,14 @@ const title = "User Profile";
                 activityLevelDesc.textContent = description;
             }
 
-            // Show officer tab if applicable
-            showOfficerTab();
+            // Show appropriate view based on user role
+            if (showOfficerView(user)) {
+                if (officerView) officerView.classList.remove("hidden");
+                if (defaultView) defaultView.classList.add("hidden");
+            } else {
+                if (officerView) officerView.classList.add("hidden");
+                if (defaultView) defaultView.classList.remove("hidden");
+            }
 
             // Hide loading state and show content
             if (pageLoadingState) pageLoadingState.classList.add("hidden");
@@ -326,10 +331,8 @@ const title = "User Profile";
 
     // Check on load and auth changes
     initializePage();
-    window.addEventListener("storage", (e) => {
-        if (e.key === "pocketbase_auth") {
-            initializePage();
-        }
+    auth.onAuthStateChange(() => {
+        initializePage();
     });
 
     // Handle default view tab switching
@@ -342,8 +345,6 @@ const title = "User Profile";
 
             // Update content visibility
             const tabId = (tab as HTMLElement).dataset.defaultTab;
-            const defaultView = document.getElementById("defaultView");
-            const settingsView = document.getElementById("settingsView");
 
             if (defaultView && settingsView) {
                 defaultView.classList.add("hidden");
@@ -364,19 +365,18 @@ const title = "User Profile";
     // Add login button event listener
     const loginButtons = document.querySelectorAll(".login-button");
     loginButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            // Show loading state while authentication is in progress
-            if (pageLoadingState) pageLoadingState.classList.remove("hidden");
-            if (notAuthenticatedState)
-                notAuthenticatedState.classList.add("hidden");
-
-            // Call the handleLogin method from StoreAuth
-            auth.handleLogin().catch((error) => {
+        button.addEventListener("click", async () => {
+            try {
+                if (pageLoadingState)
+                    pageLoadingState.classList.remove("hidden");
+                if (notAuthenticatedState)
+                    notAuthenticatedState.classList.add("hidden");
+                await auth.login();
+            } catch (error) {
                 console.error("Login error:", error);
-                // Show error state if login fails
                 if (pageLoadingState) pageLoadingState.classList.add("hidden");
                 if (pageErrorState) pageErrorState.classList.remove("hidden");
-            });
+            }
         });
     });
 </script>

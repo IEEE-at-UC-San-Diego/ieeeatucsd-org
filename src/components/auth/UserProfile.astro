@@ -310,188 +310,260 @@
 </style>
 
 <script>
-    import { StoreAuth } from "./StoreAuth";
-    import { EventCheckIn } from "./EventCheckIn";
+    import { Authentication } from "../pocketbase/Authentication";
+    import { Update } from "../pocketbase/Update";
+    import { Get } from "../pocketbase/Get";
+    import { SendLog } from "../pocketbase/SendLog";
 
-    // Initialize auth and event check-in
-    document.addEventListener("DOMContentLoaded", () => {
+    // Initialize services
+    const auth = Authentication.getInstance();
+    const update = Update.getInstance();
+    const get = Get.getInstance();
+    const logger = SendLog.getInstance();
+
+    // Get DOM elements
+    const loadingSkeleton = document.getElementById("loadingSkeleton");
+    const userInfo = document.getElementById("userInfo");
+    const userInitials = document.getElementById("userInitials");
+    const userName = document.getElementById("userName");
+    const userEmail = document.getElementById("userEmail");
+    const memberStatus = document.getElementById("memberStatus");
+    const lastLogin = document.getElementById("lastLogin");
+    const memberSince = document.getElementById("memberSince");
+    const contentLoginButton = document.getElementById("contentLoginButton");
+    const contentLogoutButton = document.getElementById("contentLogoutButton");
+    const officerViewToggle = document.getElementById("officerViewToggle");
+    const sponsorViewToggle = document.getElementById("sponsorViewToggle");
+
+    // Function to format date
+    function formatDate(dateStr: string): string {
+        return new Date(dateStr).toLocaleString();
+    }
+
+    // Function to get initials from name
+    function getInitials(name: string): string {
+        return name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2);
+    }
+
+    // Function to update UI with user data
+    async function updateUI(user: any) {
+        if (!user) {
+            // Show login button if not authenticated
+            if (contentLoginButton)
+                contentLoginButton.classList.remove("hidden");
+            if (contentLogoutButton)
+                contentLogoutButton.classList.add("hidden");
+            if (userName) userName.textContent = "Not signed in";
+            if (userEmail) userEmail.textContent = "Not signed in";
+            if (userInitials) userInitials.textContent = "?";
+            if (memberStatus) {
+                memberStatus.textContent = "Not Verified";
+                memberStatus.className = "badge badge-lg gap-2";
+            }
+            if (lastLogin) lastLogin.textContent = "Never";
+            if (memberSince) memberSince.textContent = "-";
+            return;
+        }
+
         try {
-            const auth = new StoreAuth();
-            new EventCheckIn();
+            // Get full user data
+            const userData = await get.getOne("users", user.id);
 
-            // Add officer view toggle handler
-            const officerViewToggle =
-                document.getElementById("officerViewToggle");
-            const officerViewCheckbox = officerViewToggle?.querySelector(
-                'input[type="checkbox"]'
-            ) as HTMLInputElement;
+            // Update UI elements
+            if (userName)
+                userName.textContent = userData.name || "Unnamed User";
+            if (userEmail) userEmail.textContent = userData.email || "No email";
+            if (userInitials)
+                userInitials.textContent = getInitials(userData.name || "?");
 
-            if (officerViewCheckbox) {
-                officerViewCheckbox.addEventListener("change", () => {
-                    const defaultView = document.getElementById("defaultView");
-                    const officerView = document.getElementById("officerView");
-                    const mainTabs = document.querySelector(".tabs.tabs-boxed");
-                    const officerContent =
-                        document.getElementById("officerContent");
-                    const settingsView =
-                        document.getElementById("settingsView");
+            // Update member status based on member_type and email domain
+            if (memberStatus) {
+                let memberType = userData.member_type || "IEEE Member";
 
-                    if (
-                        defaultView &&
-                        officerView &&
-                        mainTabs &&
-                        officerContent &&
-                        settingsView
-                    ) {
-                        if (officerViewCheckbox.checked) {
-                            // Hide default view, settings, and tabs
-                            defaultView.classList.add("hidden");
-                            settingsView.classList.add("hidden");
-                            mainTabs.classList.add("hidden");
-                            // Show officer view
-                            officerView.classList.remove("hidden");
-                            officerContent.classList.remove("hidden");
-                        } else {
-                            // Show default view and tabs
-                            defaultView.classList.remove("hidden");
-                            mainTabs.classList.remove("hidden");
-                            // Hide officer view
-                            officerView.classList.add("hidden");
-                            officerContent.classList.add("hidden");
+                // Auto-assign officer status for @ieeeucsd.org emails if they're not already a higher rank
+                if (
+                    userData.email?.endsWith("@ieeeucsd.org") &&
+                    ![
+                        "IEEE Executive",
+                        "IEEE Administrator",
+                        "IEEE Sponsor",
+                    ].includes(memberType)
+                ) {
+                    memberType = "IEEE Officer";
+
+                    // Update the member type in the database if it's different
+                    if (userData.member_type !== memberType) {
+                        try {
+                            await update.updateField(
+                                "users",
+                                userData.id,
+                                "member_type",
+                                memberType
+                            );
+                            await logger.send(
+                                "update",
+                                "profile view",
+                                `Updated member type to ${memberType} for user with @ieeeucsd.org email`
+                            );
+                        } catch (error) {
+                            console.error(
+                                "Failed to update member type:",
+                                error
+                            );
                         }
                     }
-                });
+                }
+
+                // Set badge color based on member type
+                let badgeClass = "badge-primary"; // default
+                switch (memberType) {
+                    case "IEEE Sponsor":
+                        badgeClass = "badge-warning";
+                        break;
+                    case "IEEE Administrator":
+                        badgeClass = "badge-error";
+                        break;
+                    case "IEEE Executive":
+                        badgeClass = "badge-secondary";
+                        break;
+                    case "IEEE Officer":
+                        badgeClass = "badge-info";
+                        break;
+                    case "IEEE Member":
+                        badgeClass = "badge-success";
+                        break;
+                }
+
+                memberStatus.textContent = memberType;
+                memberStatus.className = `badge badge-lg gap-2 ${badgeClass}`;
             }
 
-            // Add login button event listener
-            const loginButtons = document.querySelectorAll(".login-button");
-            loginButtons.forEach((button) => {
-                button.addEventListener("click", () => {
-                    const loadingSkeleton =
-                        document.getElementById("loadingSkeleton");
-                    const userInfo = document.getElementById("userInfo");
+            // Update timestamps
+            if (lastLogin)
+                lastLogin.textContent = formatDate(userData.last_login);
+            if (memberSince)
+                memberSince.textContent = formatDate(userData.created);
 
-                    // Show loading state
-                    if (loadingSkeleton)
-                        loadingSkeleton.style.display = "block";
-                    if (userInfo) userInfo.classList.add("hidden");
+            // Show logout button
+            if (contentLoginButton) contentLoginButton.classList.add("hidden");
+            if (contentLogoutButton)
+                contentLogoutButton.classList.remove("hidden");
 
-                    // Call the handleLogin method
-                    auth.handleLogin().catch((error) => {
+            // Update view toggles based on member type
+            const isOfficerOrHigher = [
+                "IEEE Officer",
+                "IEEE Executive",
+                "IEEE Administrator",
+            ].includes(userData.member_type);
+            if (officerViewToggle) {
+                officerViewToggle.classList.toggle(
+                    "hidden",
+                    !isOfficerOrHigher
+                );
+            }
+            if (sponsorViewToggle) {
+                sponsorViewToggle.classList.toggle(
+                    "hidden",
+                    userData.member_type !== "IEEE Sponsor"
+                );
+            }
+
+            // Show the user info
+            if (loadingSkeleton) loadingSkeleton.style.display = "none";
+            if (userInfo) {
+                userInfo.classList.remove("hidden");
+                userInfo.style.opacity = "1";
+            }
+        } catch (error) {
+            console.error("Failed to update UI:", error);
+            await logger.send(
+                "error",
+                "profile view",
+                `Failed to update profile UI: ${error instanceof Error ? error.message : "Unknown error"}`
+            );
+        }
+    }
+
+    // Initialize profile
+    document.addEventListener("DOMContentLoaded", async () => {
+        try {
+            // Show loading state
+            if (loadingSkeleton) loadingSkeleton.style.display = "block";
+            if (userInfo) {
+                userInfo.classList.add("hidden");
+                userInfo.style.opacity = "0";
+            }
+
+            // Update UI based on current auth state
+            const user = auth.getCurrentUser();
+            await updateUI(user);
+
+            // Add auth state change listener
+            auth.onAuthStateChange(async () => {
+                const currentUser = auth.getCurrentUser();
+                await updateUI(currentUser);
+            });
+
+            // Add login button handler
+            if (contentLoginButton) {
+                contentLoginButton.addEventListener("click", async () => {
+                    try {
+                        if (loadingSkeleton)
+                            loadingSkeleton.style.display = "block";
+                        if (userInfo) {
+                            userInfo.classList.add("hidden");
+                            userInfo.style.opacity = "0";
+                        }
+                        await auth.login();
+                    } catch (error) {
                         console.error("Login error:", error);
-                        // Show error message
+                        await logger.send(
+                            "error",
+                            "profile view",
+                            `Login failed: ${error instanceof Error ? error.message : "Unknown error"}`
+                        );
                         if (loadingSkeleton)
                             loadingSkeleton.style.display = "none";
                         if (userInfo) {
-                            const errorMessage = document.createElement("div");
-                            errorMessage.className = "alert alert-error";
-                            errorMessage.innerHTML = `
-                                <div class="flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                    </svg>
-                                    <span>Failed to sign in. Please try again.</span>
-                                </div>
-                            `;
-                            userInfo.innerHTML = "";
-                            userInfo.appendChild(errorMessage);
                             userInfo.classList.remove("hidden");
                             userInfo.style.opacity = "1";
                         }
-                    });
+                    }
                 });
-            });
+            }
 
-            // Add error handling for failed initialization
-            window.addEventListener("unhandledrejection", (event) => {
-                console.error("Profile loading error:", event.reason);
-                const userInfo = document.getElementById("userInfo");
-                const loadingSkeleton =
-                    document.getElementById("loadingSkeleton");
-                const memberDetails = document.getElementById("memberDetails");
-                const errorMessage = document.createElement("div");
-
-                errorMessage.className = "alert alert-error";
-                errorMessage.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                        </svg>
-                        <span>Failed to load profile. Please refresh the page.</span>
-                    </div>
-                `;
-
-                if (loadingSkeleton) loadingSkeleton.style.display = "none";
-                if (userInfo) {
-                    if (memberDetails) memberDetails.style.display = "none";
-                    userInfo.appendChild(errorMessage);
-                    userInfo.classList.remove("hidden");
-                    userInfo.style.opacity = "1";
-                }
-            });
-
-            // Check auth state and update UI accordingly
-            const authState = auth.getAuthState();
-            if (!authState.isValid || !authState.model) {
-                const userInfo = document.getElementById("userInfo");
-                const loadingSkeleton =
-                    document.getElementById("loadingSkeleton");
-                const memberDetails = document.getElementById("memberDetails");
-                const contentLoginButton =
-                    document.getElementById("contentLoginButton");
-
-                if (loadingSkeleton) loadingSkeleton.style.display = "none";
-                if (memberDetails) memberDetails.style.display = "none";
-                if (contentLoginButton)
-                    contentLoginButton.classList.remove("hidden");
-                if (userInfo) {
-                    userInfo.classList.remove("hidden");
-                    userInfo.style.opacity = "1";
-                }
+            // Add logout button handler
+            if (contentLogoutButton) {
+                contentLogoutButton.addEventListener("click", async () => {
+                    try {
+                        await auth.logout();
+                        await logger.send(
+                            "logout",
+                            "profile view",
+                            "User logged out successfully"
+                        );
+                    } catch (error) {
+                        console.error("Logout error:", error);
+                        await logger.send(
+                            "error",
+                            "profile view",
+                            `Logout failed: ${error instanceof Error ? error.message : "Unknown error"}`
+                        );
+                    }
+                });
             }
         } catch (error) {
             console.error("Failed to initialize profile:", error);
+            await logger.send(
+                "error",
+                "profile view",
+                `Failed to initialize profile: ${error instanceof Error ? error.message : "Unknown error"}`
+            );
         }
     });
-
-    // Add user initials generation
-    const userNameElement = document.getElementById("userName");
-    const userInitialsElement = document.getElementById("userInitials");
-    const memberSinceElement = document.getElementById("memberSince");
-
-    if (userNameElement && userInitialsElement && memberSinceElement) {
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (
-                    mutation.type === "characterData" ||
-                    mutation.type === "childList"
-                ) {
-                    const name = userNameElement.textContent || "";
-                    if (name && name !== "Not signed in") {
-                        const initials = name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2);
-                        userInitialsElement.textContent = initials;
-                    } else {
-                        userInitialsElement.textContent = "?";
-                    }
-                }
-            });
-        });
-
-        observer.observe(userNameElement, {
-            characterData: true,
-            childList: true,
-            subtree: true,
-        });
-    }
-
-    // Set member since date
-    if (memberSinceElement) {
-        const created = new Date(); // Replace with actual user creation date
-        memberSinceElement.textContent = created.toLocaleDateString();
-    }
 </script>

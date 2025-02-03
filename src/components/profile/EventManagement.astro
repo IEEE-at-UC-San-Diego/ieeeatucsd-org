@@ -1,9 +1,12 @@
 ---
 import EventEditor from "./EventEditor.astro";
 import yaml from "js-yaml";
-import configYaml from "../../data/storeConfig.yaml?raw";
+import textConfig from "../../config/text.yml?raw";
+import profileConfig from "../../config/profileConfig.yaml?raw";
 
-const config = yaml.load(configYaml) as any;
+// Parse YAML configuration
+const text = yaml.load(textConfig) as any;
+const config = yaml.load(profileConfig) as any;
 const { title, columns } = config.ui.tables.events;
 ---
 
@@ -190,30 +193,37 @@ const { title, columns } = config.ui.tables.events;
 </dialog>
 
 <script>
-    import { EventAuth } from "../auth/EventAuth";
-    import PocketBase from "pocketbase";
-    import yaml from "js-yaml";
-    import configYaml from "../../data/storeConfig.yaml?raw";
+    import { Authentication } from "../pocketbase/Authentication";
+    import { Get } from "../pocketbase/Get";
+    import { Update } from "../pocketbase/Update";
+    import { SendLog } from "../pocketbase/SendLog";
+    import JSZip from "jszip";
 
-    new EventAuth();
+    // Get instances
+    const auth = Authentication.getInstance();
+    const get = Get.getInstance();
+    const update = Update.getInstance();
+    const logger = SendLog.getInstance();
 
-    // Parse YAML configuration
-    interface Config {
-        api: {
-            baseUrl: string;
-        };
-    }
-    const config = yaml.load(configYaml) as Config;
-    const pb = new PocketBase(config.api.baseUrl);
-
-    // Get DOM elements
+    // Show initial loading state
     const eventsList = document.getElementById("eventList");
-    const searchInput = document.getElementById(
-        "eventSearch"
-    ) as HTMLInputElement;
-    const searchButton = document.getElementById("searchEvents");
-    const refreshButton = document.getElementById("refreshEvents");
-    const addEventButton = document.getElementById("addEvent");
+    if (eventsList) {
+        eventsList.innerHTML = `
+            <tr>
+                <td colspan="10" class="text-center py-8">
+                    <div class="flex flex-col items-center gap-2">
+                        <span class="loading loading-spinner loading-lg"></span>
+                        <span class="text-sm opacity-70">Loading events...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    // Initialize after DOM is fully loaded
+    document.addEventListener("DOMContentLoaded", () => {
+        loadEvents();
+    });
 
     // Function to format date
     function formatDate(dateStr: string): string {
@@ -224,48 +234,81 @@ const { title, columns } = config.ui.tables.events;
     function renderEventRow(event: any) {
         return `
             <tr class="hover:bg-base-200">
-                <td class="text-center">
-                    <div class="font-medium">${event.event_name || "N/A"}</div>
+                <!-- Mobile View -->
+                <td class="block lg:table-cell">
+                    <div class="lg:hidden space-y-2">
+                        <div class="font-medium text-center">${event.event_name || "N/A"}</div>
+                        <div class="text-sm opacity-70 text-center">${columns.event_id}: ${event.event_id || "N/A"}</div>
+                        <div class="text-sm opacity-70 text-center">${columns.event_code}: ${event.event_code || "N/A"}</div>
+                        <div class="text-sm opacity-70 text-center">${columns.start_date}: ${formatDate(event.start_date)}</div>
+                        <div class="text-sm opacity-70 text-center">${columns.end_date}: ${formatDate(event.end_date)}</div>
+                        <div class="text-sm opacity-70 text-center">${columns.points_to_reward}: ${event.points_to_reward || "0"}</div>
+                        <div class="text-sm opacity-70 text-center">${columns.location}: ${event.location || "N/A"}</div>
+                        <div class="text-sm opacity-70 text-center">Files: ${event.files?.length || 0}</div>
+                        <div class="text-sm opacity-70 text-center">Attendees: ${event.attendees ? JSON.parse(event.attendees).length : 0}</div>
+                        <div class="flex items-center justify-center gap-2 mt-2">
+                            <button class="btn btn-ghost btn-xs view-attendees" data-event-id="${event.id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                                </svg>
+                                View Attendees
+                            </button>
+                            <button class="btn btn-ghost btn-xs edit-event" data-event-id="${event.id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                </svg>
+                                Edit
+                            </button>
+                            <button class="btn btn-ghost btn-xs text-error delete-event" data-event-id="${event.id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Desktop View -->
+                    <span class="hidden lg:block text-center">${event.event_name || "N/A"}</span>
                 </td>
-                <td class="text-center">${event.event_id || "N/A"}</td>
-                <td class="text-center">${event.event_code || "N/A"}</td>
-                <td class="text-center">${formatDate(event.start_date)}</td>
-                <td class="text-center">${formatDate(event.end_date)}</td>
-                <td class="text-center">${event.points_to_reward || "0"}</td>
-                <td class="text-center">${event.location || "N/A"}</td>
-                <td class="text-center">
+                <td class="hidden lg:table-cell text-center">${event.event_id || "N/A"}</td>
+                <td class="hidden lg:table-cell text-center">${event.event_code || "N/A"}</td>
+                <td class="hidden lg:table-cell text-center">${formatDate(event.start_date)}</td>
+                <td class="hidden lg:table-cell text-center">${formatDate(event.end_date)}</td>
+                <td class="hidden lg:table-cell text-center">${event.points_to_reward || "0"}</td>
+                <td class="hidden lg:table-cell text-center">${event.location || "N/A"}</td>
+                <td class="hidden lg:table-cell text-center">
                     ${
                         event.files && event.files.length > 0
-                            ? event.files
-                                  .map(
-                                      (file: string) => `
-                            <button class="btn btn-ghost btn-xs" data-file-url="${pb.files.getUrl(event, file)}" data-file-name="${file}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
-                                </svg>
-                                View
-                            </button>
-                        `
-                                  )
-                                  .join("")
-                            : "No files"
+                            ? `<button class="btn btn-ghost btn-xs view-files" data-event-id="${event.id}">
+                            ${event.files.length} File${event.files.length > 1 ? "s" : ""}
+                           </button>`
+                            : '<span class="text-sm opacity-50">No files</span>'
                     }
                 </td>
-                <td class="text-center">
+                <td class="hidden lg:table-cell text-center">
                     <button class="btn btn-ghost btn-xs view-attendees" data-event-id="${event.id}">
+                        <span class="mr-2">${event.attendees ? JSON.parse(event.attendees).length : 0}</span>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                         </svg>
-                        Attendees
                     </button>
                 </td>
-                <td class="text-center">
-                    <button class="btn btn-ghost btn-xs edit-event" data-event="${encodeURIComponent(JSON.stringify(event))}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                        Edit
-                    </button>
+                <td class="hidden lg:table-cell text-center">
+                    <div class="flex justify-center gap-2">
+                        <button class="btn btn-ghost btn-xs edit-event" data-event-id="${event.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                            Edit
+                        </button>
+                        <button class="btn btn-ghost btn-xs text-error delete-event" data-event-id="${event.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                            Delete
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -275,33 +318,38 @@ const { title, columns } = config.ui.tables.events;
     async function loadEvents(searchQuery = "") {
         if (!eventsList) return;
 
-        try {
-            // Show loading state
-            eventsList.innerHTML = `
-                <tr>
-                    <td colspan="10" class="text-center py-8">
-                        <span class="loading loading-spinner loading-md"></span>
-                        <div class="mt-2">Loading events...</div>
-                    </td>
-                </tr>
-            `;
+        // Show loading state immediately
+        eventsList.innerHTML = `
+            <tr>
+                <td colspan="10" class="text-center py-8">
+                    <div class="flex flex-col items-center gap-2">
+                        <span class="loading loading-spinner loading-lg"></span>
+                        <span class="text-sm opacity-70">Loading events...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
 
+        try {
             // Fetch events with filter if search query exists
             const filter = searchQuery
                 ? `event_name ~ "${searchQuery}" || event_id ~ "${searchQuery}" || event_code ~ "${searchQuery}"`
                 : "";
 
-            const events = await pb.collection("events").getList(1, 50, {
+            const events = await get.getList(
+                "events",
+                1,
+                50,
                 filter,
-                sort: "-created",
-            });
+                "-created"
+            );
 
             // Update table
             if (events.items.length === 0) {
                 eventsList.innerHTML = `
                     <tr>
-                        <td colspan="10" class="text-center py-8">
-                            No events found
+                        <td colspan="10" class="text-center py-4">
+                            ${searchQuery ? "No events found matching your search." : "No events found."}
                         </td>
                     </tr>
                 `;
@@ -309,19 +357,234 @@ const { title, columns } = config.ui.tables.events;
             }
 
             eventsList.innerHTML = events.items.map(renderEventRow).join("");
-        } catch (error) {
-            console.error("Failed to load events:", error);
+
+            // Setup event listeners for buttons
+            setupEventListeners(events.items);
+        } catch (err) {
+            console.error("Failed to load events:", err);
+            await logger.send(
+                "error",
+                "event management",
+                `Failed to load events: ${err instanceof Error ? err.message : "Unknown error"}`
+            );
             eventsList.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-8 text-error">
-                        Failed to load events. Please try again.
+                    <td colspan="10" class="text-center py-4 text-error">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span>Failed to load events. Please try again.</span>
+                            <button onclick="loadEvents()" class="btn btn-sm btn-ghost mt-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Retry
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
         }
     }
 
+    // Function to setup event listeners
+    function setupEventListeners(events: any[]) {
+        const editButtons = eventsList.querySelectorAll(".edit-event");
+        editButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const eventId = (button as HTMLButtonElement).dataset.eventId;
+                if (eventId) {
+                    handleEventEdit(eventId);
+                }
+            });
+        });
+
+        const deleteButtons = eventsList.querySelectorAll(".delete-event");
+        deleteButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const eventId = (button as HTMLButtonElement).dataset.eventId;
+                if (eventId) {
+                    handleEventDelete(eventId);
+                }
+            });
+        });
+
+        const viewAttendeesButtons =
+            eventsList.querySelectorAll(".view-attendees");
+        viewAttendeesButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const eventId = (button as HTMLButtonElement).dataset.eventId;
+                if (eventId) {
+                    handleViewAttendees(eventId);
+                }
+            });
+        });
+
+        const viewFilesButtons = eventsList.querySelectorAll(".view-files");
+        viewFilesButtons.forEach((button) => {
+            button.addEventListener("click", async () => {
+                const eventId = (button as HTMLButtonElement).dataset.eventId;
+                if (eventId) {
+                    await handleViewFiles(eventId);
+                }
+            });
+        });
+    }
+
+    // Function to handle event edit
+    async function handleEventEdit(eventId: string) {
+        try {
+            const event = await get.getOne("events", eventId);
+            const {
+                eventEditor,
+                editorEventId,
+                editorEventName,
+                editorEventCode,
+                editorStartDate,
+                editorStartTime,
+                editorEndDate,
+                editorEndTime,
+                editorPointsToReward,
+                editorLocation,
+                saveEventButton,
+            } = getElements();
+
+            // Split start and end dates into separate date and time
+            const startDateTime = splitDateTime(event.start_date);
+            const endDateTime = splitDateTime(event.end_date);
+
+            // Populate the form
+            editorEventId.value = event.event_id || "";
+            editorEventName.value = event.event_name || "";
+            editorEventCode.value = event.event_code || "";
+            editorStartDate.value = startDateTime.date;
+            editorStartTime.value = startDateTime.time;
+            editorEndDate.value = endDateTime.date;
+            editorEndTime.value = endDateTime.time;
+            editorPointsToReward.value =
+                event.points_to_reward?.toString() || "0";
+            editorLocation.value = event.location || "";
+
+            // Store the event ID for saving
+            saveEventButton.dataset.eventId = eventId;
+
+            // Show the dialog
+            eventEditor.showModal();
+
+            await logger.send(
+                "update",
+                "event management",
+                `Opened event editor for event: ${event.event_name} (${event.event_id})`
+            );
+        } catch (err) {
+            console.error("Failed to load event for editing:", err);
+            await logger.send(
+                "error",
+                "event management",
+                `Failed to load event for editing: ${err instanceof Error ? err.message : "Unknown error"}`
+            );
+        }
+    }
+
+    // Function to handle event delete
+    async function handleEventDelete(eventId: string) {
+        if (confirm("Are you sure you want to delete this event?")) {
+            try {
+                const event = await get.getOne("events", eventId);
+                await update.deleteRecord("events", eventId);
+                await loadEvents();
+
+                await logger.send(
+                    "delete",
+                    "event management",
+                    `Deleted event: ${event.event_name} (${event.event_id})`
+                );
+            } catch (err) {
+                console.error("Failed to delete event:", err);
+                await logger.send(
+                    "error",
+                    "event management",
+                    `Failed to delete event: ${err instanceof Error ? err.message : "Unknown error"}`
+                );
+            }
+        }
+    }
+
+    // Function to handle viewing attendees
+    async function handleViewAttendees(eventId: string) {
+        try {
+            const event = await get.getOne("events", eventId);
+            const attendees = JSON.parse(event.attendees || "[]");
+
+            // Fetch user details for each attendee
+            const userDetails = await Promise.all(
+                attendees.map(async (userId: string) => {
+                    try {
+                        const user = await get.getOne("users", userId);
+                        return {
+                            name: user.name || "N/A",
+                            email: user.email || "N/A",
+                            member_id: user.member_id || "N/A",
+                        };
+                    } catch (err) {
+                        console.warn(`Failed to fetch user ${userId}:`, err);
+                        return {
+                            name: "Unknown User",
+                            email: "N/A",
+                            member_id: "N/A",
+                        };
+                    }
+                })
+            );
+
+            // Create and show modal
+            showAttendeesModal(event, userDetails);
+
+            await logger.send(
+                "update",
+                "event management",
+                `Viewed attendees for event: ${event.event_name} (${event.event_id})`
+            );
+        } catch (err) {
+            console.error("Failed to view attendees:", err);
+            await logger.send(
+                "error",
+                "event management",
+                `Failed to view attendees: ${err instanceof Error ? err.message : "Unknown error"}`
+            );
+        }
+    }
+
+    // Function to handle viewing files
+    async function handleViewFiles(eventId: string) {
+        try {
+            const event = await get.getOne("events", eventId);
+            showFilesModal(event);
+
+            await logger.send(
+                "update",
+                "event management",
+                `Viewed files for event: ${event.event_name} (${event.event_id})`
+            );
+        } catch (err) {
+            console.error("Failed to view files:", err);
+            await logger.send(
+                "error",
+                "event management",
+                `Failed to view files: ${err instanceof Error ? err.message : "Unknown error"}`
+            );
+        }
+    }
+
     // Add event listeners
+    const searchInput = document.getElementById(
+        "eventSearch"
+    ) as HTMLInputElement;
+    const searchButton = document.getElementById("searchEvents");
+    const refreshButton = document.getElementById("refreshEvents");
+    const addEventButton = document.getElementById("addEvent");
+
     if (searchButton && searchInput) {
         searchButton.addEventListener("click", () => {
             loadEvents(searchInput.value);
@@ -343,7 +606,10 @@ const { title, columns } = config.ui.tables.events;
 
     if (addEventButton) {
         addEventButton.addEventListener("click", () => {
-            document.getElementById("eventEditor")?.showModal();
+            const dialog = document.getElementById(
+                "eventEditor"
+            ) as HTMLDialogElement;
+            dialog?.showModal();
         });
     }
 
@@ -414,48 +680,4 @@ const { title, columns } = config.ui.tables.events;
     document.addEventListener("showFilePreview", ((e: CustomEvent) => {
         showFilePreview(e.detail.url, e.detail.fileName);
     }) as EventListener);
-
-    // Add event listeners for dynamic elements
-    document.addEventListener("click", (e) => {
-        const target = e.target as HTMLElement;
-
-        // Handle file view buttons
-        const fileButton = target.closest("button[data-file-url]");
-        if (fileButton) {
-            const url = fileButton.getAttribute("data-file-url");
-            const fileName = fileButton.getAttribute("data-file-name");
-            if (url && fileName) {
-                showFilePreview(url, fileName);
-            }
-        }
-
-        // Handle view attendees button
-        const attendeesButton = target.closest(".view-attendees");
-        if (attendeesButton) {
-            const eventId = attendeesButton.getAttribute("data-event-id");
-            if (eventId) {
-                document.dispatchEvent(
-                    new CustomEvent("viewAttendees", { detail: eventId })
-                );
-            }
-        }
-
-        // Handle edit event button
-        const editButton = target.closest(".edit-event");
-        if (editButton) {
-            const eventData = editButton.getAttribute("data-event");
-            if (eventData) {
-                const event = JSON.parse(decodeURIComponent(eventData));
-                const eventEditor = document.getElementById(
-                    "eventEditor"
-                ) as HTMLDialogElement;
-                if (eventEditor) {
-                    eventEditor.showModal();
-                    document.dispatchEvent(
-                        new CustomEvent("editEvent", { detail: event })
-                    );
-                }
-            }
-        }
-    });
 </script>

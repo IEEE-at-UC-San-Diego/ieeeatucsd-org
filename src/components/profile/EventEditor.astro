@@ -1,9 +1,10 @@
 ---
 import yaml from "js-yaml";
-import configYaml from "../../data/storeConfig.yaml?raw";
+import textConfig from "../../config/text.yml?raw";
 
-const config = yaml.load(configYaml) as any;
-const { editor_title, form } = config.ui.tables.events;
+// Parse YAML configuration
+const text = yaml.load(textConfig) as any;
+const { editor_title, form } = text.ui.tables.events;
 ---
 
 <!-- Event Editor Dialog -->

@@ -271,11 +271,13 @@ const majorsList: string[] = allMajors
 </dialog>
 
 <script>
-    import { StoreAuth } from "../auth/StoreAuth";
-    import { SendLog } from "../auth/SendLog";
-    import PocketBase from "pocketbase";
-    const auth = new StoreAuth();
-    const logger = new SendLog();
+    import { Authentication } from "../pocketbase/Authentication";
+    import { Update } from "../pocketbase/Update";
+    import { SendLog } from "../pocketbase/SendLog";
+
+    const auth = Authentication.getInstance();
+    const update = Update.getInstance();
+    const logger = SendLog.getInstance();
 
     // Get form elements
     const memberIdInput = document.getElementById(
@@ -309,32 +311,35 @@ const majorsList: string[] = allMajors
 
     // Load current user data
     const loadUserData = () => {
-        const authState = auth.getAuthState();
-        if (authState.isValid && authState.model) {
-            const user = authState.model;
-            if (memberIdInput) memberIdInput.value = user.member_id || "";
-            if (majorSelect) majorSelect.value = user.major || "";
-            if (gradYearSelect)
-                gradYearSelect.value = user.graduation_year || "";
+        if (auth.isAuthenticated()) {
+            const user = auth.getCurrentUser();
+            if (user) {
+                if (memberIdInput) memberIdInput.value = user.member_id || "";
+                if (majorSelect) majorSelect.value = user.major || "";
+                if (gradYearSelect)
+                    gradYearSelect.value = user.graduation_year || "";
 
-            // Update resume display
-            if (currentResume && resumeDisplay) {
-                if (user.resume) {
-                    const fileName = user.resume.toString();
-                    currentResume.textContent = fileName || "Resume uploaded";
-                    resumeDisplay.classList.remove("hidden");
+                // Update resume display
+                if (currentResume && resumeDisplay) {
+                    if (user.resume) {
+                        const fileName = user.resume.toString();
+                        currentResume.textContent =
+                            fileName || "Resume uploaded";
+                        resumeDisplay.classList.remove("hidden");
 
-                    // Set up preview URLs - using PocketBase's direct file URL
-                    const baseUrl = "https://pocketbase.ieeeucsd.org";
-                    const resumeUrl = `${baseUrl}/api/files/users/${user.id}/${user.resume}`;
+                        // Set up preview URLs - using PocketBase's direct file URL
+                        const baseUrl = import.meta.env.POCKETBASE_URL;
+                        const resumeUrl = `${baseUrl}/api/files/users/${user.id}/${user.resume}`;
 
-                    if (resumeFrame) resumeFrame.src = resumeUrl;
-                    if (resumeExternalLink) resumeExternalLink.href = resumeUrl;
-                } else {
-                    currentResume.textContent = "No resume uploaded";
-                    resumeDisplay.classList.add("hidden");
-                    if (resumeFrame) resumeFrame.src = "";
-                    if (resumeExternalLink) resumeExternalLink.href = "#";
+                        if (resumeFrame) resumeFrame.src = resumeUrl;
+                        if (resumeExternalLink)
+                            resumeExternalLink.href = resumeUrl;
+                    } else {
+                        currentResume.textContent = "No resume uploaded";
+                        resumeDisplay.classList.add("hidden");
+                        if (resumeFrame) resumeFrame.src = "";
+                        if (resumeExternalLink) resumeExternalLink.href = "#";
+                    }
                 }
             }
         }
@@ -347,7 +352,13 @@ const majorsList: string[] = allMajors
             if (file) {
                 uploadStatus.textContent = "Uploading...";
                 try {
-                    await auth.handleResumeUpload(file);
+                    const user = auth.getCurrentUser();
+                    if (!user) throw new Error("User not authenticated");
+
+                    const formData = new FormData();
+                    formData.append("resume", file);
+
+                    await update.updateFields("users", user.id, formData);
                     uploadStatus.textContent = "Resume uploaded successfully";
                     if (currentResume) currentResume.textContent = file.name;
 
@@ -379,11 +390,13 @@ const majorsList: string[] = allMajors
             button.classList.add("loading");
 
             try {
-                const authState = auth.getAuthState();
+                const user = auth.getCurrentUser();
+                if (!user) throw new Error("User not authenticated");
+
                 const oldData = {
-                    major: authState.model?.major || null,
-                    graduation_year: authState.model?.graduation_year || null,
-                    member_id: authState.model?.member_id || null,
+                    major: user.major || null,
+                    graduation_year: user.graduation_year || null,
+                    member_id: user.member_id || null,
                 };
 
                 const newData = {
@@ -394,7 +407,7 @@ const majorsList: string[] = allMajors
                     member_id: memberIdInput?.value || null,
                 } as const;
 
-                await auth.updateProfileSettings(newData);
+                await update.updateFields("users", user.id, newData);
 
                 // Create detailed log message of changes
                 const changes = [];
@@ -484,10 +497,8 @@ const majorsList: string[] = allMajors
     loadUserData();
 
     // Update when auth state changes
-    window.addEventListener("storage", (e) => {
-        if (e.key === "pocketbase_auth") {
-            loadUserData();
-        }
+    auth.onAuthStateChange(() => {
+        loadUserData();
     });
 </script>
 

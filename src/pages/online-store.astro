@@ -25,6 +25,69 @@ const title = "IEEE Online Store";
 </Layout>
 
 <script>
-    import { StoreAuth } from "../components/auth/StoreAuth";
-    new StoreAuth();
+    import { Authentication } from "../components/pocketbase/Authentication";
+    const auth = Authentication.getInstance();
+
+    // Initialize page state
+    const pageLoadingState = document.getElementById("pageLoadingState");
+    const pageErrorState = document.getElementById("pageErrorState");
+    const notAuthenticatedState = document.getElementById(
+        "notAuthenticatedState"
+    );
+    const mainContent = document.getElementById("mainContent");
+
+    // Initialize page
+    const initializePage = async () => {
+        try {
+            // Show loading state
+            if (pageLoadingState) pageLoadingState.classList.remove("hidden");
+            if (pageErrorState) pageErrorState.classList.add("hidden");
+            if (notAuthenticatedState)
+                notAuthenticatedState.classList.add("hidden");
+            if (mainContent) mainContent.classList.add("hidden");
+
+            // Check auth state
+            if (!auth.isAuthenticated()) {
+                // Show not authenticated state
+                if (pageLoadingState) pageLoadingState.classList.add("hidden");
+                if (notAuthenticatedState)
+                    notAuthenticatedState.classList.remove("hidden");
+                return;
+            }
+
+            // Hide loading state and show content
+            if (pageLoadingState) pageLoadingState.classList.add("hidden");
+            if (mainContent) mainContent.classList.remove("hidden");
+        } catch (error) {
+            console.error("Failed to initialize page:", error);
+            if (pageLoadingState) pageLoadingState.classList.add("hidden");
+            if (pageErrorState) pageErrorState.classList.remove("hidden");
+            if (mainContent) mainContent.classList.add("hidden");
+        }
+    };
+
+    // Check on load and auth changes
+    initializePage();
+    auth.onAuthStateChange(() => {
+        initializePage();
+    });
+
+    // Add login button event listener
+    const loginButtons = document.querySelectorAll(".login-button");
+    loginButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            // Show loading state while authentication is in progress
+            if (pageLoadingState) pageLoadingState.classList.remove("hidden");
+            if (notAuthenticatedState)
+                notAuthenticatedState.classList.add("hidden");
+
+            // Call the login method
+            auth.login().catch((error) => {
+                console.error("Login error:", error);
+                // Show error state if login fails
+                if (pageLoadingState) pageLoadingState.classList.add("hidden");
+                if (pageErrorState) pageErrorState.classList.remove("hidden");
+            });
+        });
+    });
 </script>

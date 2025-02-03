@@ -181,25 +181,40 @@
 </dialog>
 
 <script>
-    import { StoreAuth } from "../auth/StoreAuth";
-    import { EventCheckIn } from "../auth/EventCheckIn";
-    import PocketBase from "pocketbase";
-    import yaml from "js-yaml";
-    import configYaml from "../../data/storeConfig.yaml?raw";
-    import type { RecordModel } from "pocketbase";
+    import { Authentication } from "../pocketbase/Authentication";
+    import { Get } from "../pocketbase/Get";
+    import { SendLog } from "../pocketbase/SendLog";
 
-    // Parse YAML configuration with type assertion
-    interface Config {
-        api: {
-            baseUrl: string;
-        };
-    }
-    const config = yaml.load(configYaml) as Config;
-    const pb = new PocketBase(config.api.baseUrl);
+    const auth = Authentication.getInstance();
+    const get = Get.getInstance();
+    const logger = SendLog.getInstance();
 
-    // Initialize auth and check-in
-    new StoreAuth();
-    new EventCheckIn();
+    // Initialize event check-in
+    document.addEventListener("DOMContentLoaded", async () => {
+        try {
+            // Get current user's events
+            if (auth.isAuthenticated()) {
+                const user = auth.getCurrentUser();
+                if (user) {
+                    // Get user's events
+                    const events = await get.getMany(
+                        "events",
+                        user.events_attended || []
+                    );
+
+                    // Update UI with events data
+                    // ... rest of the code ...
+                }
+            }
+        } catch (error) {
+            console.error("Failed to initialize profile:", error);
+            await logger.send(
+                "error",
+                "profile view",
+                `Failed to initialize profile: ${error instanceof Error ? error.message : "Unknown error"}`
+            );
+        }
+    });
 
     // Handle loading states
     const eventCheckInSkeleton = document.getElementById(
@@ -217,13 +232,13 @@
     }
 
     // Show content when auth state changes
-    pb.authStore.onChange(() => {
+    auth.onAuthStateChange(() => {
         showEventCheckIn();
         renderEvents();
     });
 
     // Show content on initial load if already authenticated
-    if (pb.authStore.isValid) {
+    if (auth.isAuthenticated()) {
         showEventCheckIn();
     }
 
@@ -382,7 +397,7 @@
 
         try {
             // Get current user's attended events with safe parsing
-            const user = pb.authStore.model;
+            const user = auth.getCurrentUser();
             let attendedEvents: string[] = [];
 
             if (user?.events_attended) {
@@ -400,9 +415,10 @@
             }
 
             // Fetch all events
-            const events = await pb.collection("events").getList(1, 50, {
-                sort: "start_date", // Sort by start date ascending for upcoming events
-            });
+            const events = await get.getMany(
+                "events",
+                user.events_attended || []
+            );
 
             // Clear loading skeletons
             eventsList.innerHTML = "";
@@ -414,7 +430,7 @@
             const upcomingEvents: Event[] = [];
             const pastEvents: Event[] = [];
 
-            events.items.forEach((event) => {
+            events.forEach((event) => {
                 const typedEvent = event as Event;
                 const startDate = new Date(typedEvent.start_date);
                 const endDate = new Date(typedEvent.end_date);
@@ -493,9 +509,7 @@
         if (e instanceof CustomEvent && "eventId" in e.detail) {
             (async () => {
                 try {
-                    const event = await pb
-                        .collection("events")
-                        .getOne(e.detail.eventId);
+                    const event = await get.getOne("events", e.detail.eventId);
                     const fileViewerContent =
                         document.getElementById("fileViewerContent");
                     const fileViewerTitle =
@@ -519,7 +533,7 @@
 
                         fileViewerContent.innerHTML = event.files
                             .map((file) => {
-                                const fileUrl = pb.files.getURL(event, file);
+                                const fileUrl = get.getFileURL(event, file);
                                 const fileName =
                                     file.split("/").pop() || "File";
                                 const fileExt =
