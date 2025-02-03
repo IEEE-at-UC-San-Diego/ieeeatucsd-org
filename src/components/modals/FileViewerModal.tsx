@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import JSZip from 'jszip';
 
 interface FileType {
     url: string;
@@ -82,6 +83,7 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
     const [error, setError] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<FileType | null>(null);
     const [showPreview, setShowPreview] = useState(false);
+    const [downloadingAll, setDownloadingAll] = useState(false);
 
     const fileArray = Array.isArray(files) ? files : [files];
 
@@ -144,6 +146,42 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
     const handleBackToList = () => {
         setShowPreview(false);
         setSelectedFile(null);
+    };
+
+    // Function to download all files as zip
+    const downloadAllFiles = async () => {
+        if (fileArray.length === 0) return;
+
+        setDownloadingAll(true);
+        const zip = new JSZip();
+
+        try {
+            // Download all files
+            const filePromises = fileArray.map(async (file) => {
+                const response = await fetch(file.url);
+                const blob = await response.blob();
+                zip.file(file.name, blob);
+            });
+
+            await Promise.all(filePromises);
+
+            // Generate and download zip
+            const content = await zip.generateAsync({ type: "blob" });
+            const zipUrl = URL.createObjectURL(content);
+
+            const link = document.createElement('a');
+            link.href = zipUrl;
+            link.download = 'files.zip';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(zipUrl);
+        } catch (err) {
+            console.error('Failed to download files:', err);
+            setError('Failed to download files');
+        } finally {
+            setDownloadingAll(false);
+        }
     };
 
     const renderFileContent = (file: FileType) => {
@@ -256,7 +294,31 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
     const renderFileList = () => {
         return (
             <div className="w-full">
-                <h3 className="font-bold text-lg mb-4">Files ({fileArray.length})</h3>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-lg">Files ({fileArray.length})</h3>
+                    {fileArray.length > 1 && (
+                        <button
+                            className={`btn btn-primary btn-sm ${downloadingAll ? 'loading' : ''}`}
+                            onClick={downloadAllFiles}
+                            disabled={downloadingAll}
+                        >
+                            {!downloadingAll && (
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4 mr-2"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fillRule="evenodd"
+                                        d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                                    />
+                                </svg>
+                            )}
+                            {downloadingAll ? 'Preparing Download...' : 'Download All'}
+                        </button>
+                    )}
+                </div>
                 <div className="overflow-y-auto max-h-[60vh]">
                     {fileArray.map((file, index) => (
                         <div
