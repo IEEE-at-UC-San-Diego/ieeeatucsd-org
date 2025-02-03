@@ -45,6 +45,17 @@ const {
             </div>
         </div>
         <div class="h-[calc(100%-4rem)] bg-base-200 rounded-lg">
+            <!-- Loading Skeleton -->
+            <div id={`${id}-loading`} class="w-full h-full hidden">
+                <div class="flex flex-col items-center justify-center h-full">
+                    <div
+                        class="loading loading-spinner loading-lg text-primary"
+                    >
+                    </div>
+                    <p class="mt-4 text-base-content/70">Loading preview...</p>
+                </div>
+            </div>
+
             <!-- Preview Container -->
             <div id={`${id}-preview-container`} class="w-full h-full"></div>
         </div>
@@ -58,6 +69,27 @@ const {
                 <button class="btn btn-sm btn-circle btn-ghost">✕</button>
             </form>
         </div>
+
+        <!-- Multiple Files Loading Skeleton -->
+        <div id={`${id}-multiple-loading`} class="hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {
+                    Array(6)
+                        .fill(0)
+                        .map(() => (
+                            <div class="card bg-base-200 animate-pulse">
+                                <div class="aspect-video bg-base-300 rounded-t-lg" />
+                                <div class="card-body p-4">
+                                    <div class="h-4 bg-base-300 rounded w-3/4" />
+                                    <div class="h-3 bg-base-300 rounded w-1/2 mt-2 opacity-70" />
+                                </div>
+                            </div>
+                        ))
+                }
+            </div>
+        </div>
+
+        <!-- Files Grid -->
         <div
             class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             id={`${id}-file-grid`}
@@ -84,6 +116,10 @@ const {
             this.titleElement = document.getElementById(`${modalId}-title`);
             this.externalLink = document.getElementById(
                 `${modalId}-external-link`
+            );
+            this.loadingElement = document.getElementById(`${modalId}-loading`);
+            this.multipleLoadingElement = document.getElementById(
+                `${modalId}-multiple-loading`
             );
 
             // Close modal when clicking backdrop
@@ -141,9 +177,10 @@ const {
                     break;
 
                 case "pdf":
-                    element = document.createElement("iframe");
+                    element = document.createElement("embed");
                     element.className = "w-full h-full";
-                    element.src = file.url;
+                    element.type = "application/pdf";
+                    element.src = file.url + "#toolbar=0&navpanes=0";
                     break;
 
                 default:
@@ -164,16 +201,89 @@ const {
             return element;
         }
 
-        showFile(file) {
+        showLoading(isMultiple = false) {
+            if (isMultiple) {
+                if (this.multipleLoadingElement) {
+                    this.multipleLoadingElement.classList.remove("hidden");
+                }
+                if (this.fileGrid) {
+                    this.fileGrid.classList.add("hidden");
+                }
+            } else {
+                if (this.loadingElement) {
+                    this.loadingElement.classList.remove("hidden");
+                }
+                if (this.previewContainer) {
+                    this.previewContainer.classList.add("hidden");
+                }
+            }
+        }
+
+        hideLoading(isMultiple = false) {
+            if (isMultiple) {
+                if (this.multipleLoadingElement) {
+                    this.multipleLoadingElement.classList.add("hidden");
+                }
+                if (this.fileGrid) {
+                    this.fileGrid.classList.remove("hidden");
+                }
+            } else {
+                if (this.loadingElement) {
+                    this.loadingElement.classList.add("hidden");
+                }
+                if (this.previewContainer) {
+                    this.previewContainer.classList.remove("hidden");
+                }
+            }
+        }
+
+        async showFile(file) {
             this.titleElement.textContent = file.name;
             this.externalLink.href = file.url;
 
-            // Clear previous preview
-            this.previewContainer.innerHTML = "";
+            // Show loading state
+            this.showLoading(false);
 
-            // Create and append new preview
-            const previewElement = this.createPreviewElement(file);
-            this.previewContainer.appendChild(previewElement);
+            try {
+                // Clear previous preview
+                this.previewContainer.innerHTML = "";
+
+                // Create and append new preview
+                const previewElement = this.createPreviewElement(file);
+
+                // Only wait for images to load, PDFs and other files load in their own context
+                if (previewElement instanceof HTMLImageElement) {
+                    await new Promise((resolve, reject) => {
+                        previewElement.onload = resolve;
+                        previewElement.onerror = reject;
+                        // Add a timeout to prevent infinite loading
+                        setTimeout(reject, 10000); // 10 second timeout
+                    }).catch((error) => {
+                        console.warn("Image load timeout or error:", error);
+                        // Continue anyway, the image might still load
+                    });
+                }
+
+                this.previewContainer.appendChild(previewElement);
+            } catch (error) {
+                console.error("Error loading file:", error);
+                this.previewContainer.innerHTML = `
+                    <div class="flex items-center justify-center h-full">
+                        <div class="text-center text-error">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                            <p>Failed to load preview</p>
+                            <a href="${file.url}" target="_blank" class="btn btn-primary btn-sm mt-4">Open in New Tab</a>
+                        </div>
+                    </div>
+                `;
+            } finally {
+                // Hide loading state after a short delay to ensure UI elements are ready
+                setTimeout(() => {
+                    this.hideLoading(false);
+                }, 500);
+            }
 
             // Show single view
             this.singleView.classList.remove("hidden");
@@ -216,26 +326,34 @@ const {
             return card;
         }
 
-        show(files) {
+        async show(files) {
+            this.modal.showModal();
+
             if (!Array.isArray(files)) {
                 // Single file
-                this.showFile(files);
+                await this.showFile(files);
             } else if (files.length === 1) {
                 // Single file in array
-                this.showFile(files[0]);
+                await this.showFile(files[0]);
             } else {
                 // Multiple files
                 this.singleView.classList.add("hidden");
                 this.multipleView.classList.remove("hidden");
 
-                // Clear and populate file grid
-                this.fileGrid.innerHTML = "";
-                files.forEach((file) => {
-                    this.fileGrid.appendChild(this.createFileCard(file));
-                });
-            }
+                // Show loading state
+                this.showLoading(true);
 
-            this.modal.showModal();
+                try {
+                    // Clear and populate file grid
+                    this.fileGrid.innerHTML = "";
+                    files.forEach((file) => {
+                        this.fileGrid.appendChild(this.createFileCard(file));
+                    });
+                } finally {
+                    // Hide loading state
+                    this.hideLoading(true);
+                }
+            }
         }
 
         close() {
