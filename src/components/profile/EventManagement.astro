@@ -232,21 +232,40 @@ const { title, columns } = config.ui.tables.events;
                 <td class="text-center">${formatDate(event.start_date)}</td>
                 <td class="text-center">${formatDate(event.end_date)}</td>
                 <td class="text-center">${event.points_to_reward || "0"}</td>
+                <td class="text-center">${event.location || "N/A"}</td>
                 <td class="text-center">
-                    <div class="flex justify-center gap-2">
-                        <button class="btn btn-ghost btn-xs" onclick="document.dispatchEvent(new CustomEvent('viewAttendees', { detail: '${event.id}' }))">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                            </svg>
-                            Attendees
-                        </button>
-                        <button class="btn btn-ghost btn-xs" onclick="document.getElementById('eventEditor').showModal(); document.dispatchEvent(new CustomEvent('editEvent', { detail: ${JSON.stringify(event)} }))">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                            </svg>
-                            Edit
-                        </button>
-                    </div>
+                    ${
+                        event.files && event.files.length > 0
+                            ? event.files
+                                  .map(
+                                      (file: string) => `
+                            <button class="btn btn-ghost btn-xs" data-file-url="${pb.files.getUrl(event, file)}" data-file-name="${file}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                                </svg>
+                                View
+                            </button>
+                        `
+                                  )
+                                  .join("")
+                            : "No files"
+                    }
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-ghost btn-xs view-attendees" data-event-id="${event.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                        </svg>
+                        Attendees
+                    </button>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-ghost btn-xs edit-event" data-event="${encodeURIComponent(JSON.stringify(event))}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                        Edit
+                    </button>
                 </td>
             </tr>
         `;
@@ -260,9 +279,9 @@ const { title, columns } = config.ui.tables.events;
             // Show loading state
             eventsList.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center py-4">
+                    <td colspan="10" class="text-center py-8">
                         <span class="loading loading-spinner loading-md"></span>
-                        Loading events...
+                        <div class="mt-2">Loading events...</div>
                     </td>
                 </tr>
             `;
@@ -281,7 +300,7 @@ const { title, columns } = config.ui.tables.events;
             if (events.items.length === 0) {
                 eventsList.innerHTML = `
                     <tr>
-                        <td colspan="7" class="text-center py-4">
+                        <td colspan="10" class="text-center py-8">
                             No events found
                         </td>
                     </tr>
@@ -294,7 +313,7 @@ const { title, columns } = config.ui.tables.events;
             console.error("Failed to load events:", error);
             eventsList.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center py-4 text-error">
+                    <td colspan="10" class="text-center py-8 text-error">
                         Failed to load events. Please try again.
                     </td>
                 </tr>
@@ -319,18 +338,6 @@ const { title, columns } = config.ui.tables.events;
         refreshButton.addEventListener("click", () => {
             if (searchInput) searchInput.value = "";
             loadEvents();
-
-            // Turn off officer view toggle
-            const officerViewToggle =
-                document.getElementById("officerViewToggle");
-            const officerViewCheckbox = officerViewToggle?.querySelector(
-                'input[type="checkbox"]'
-            ) as HTMLInputElement;
-            if (officerViewCheckbox) {
-                officerViewCheckbox.checked = false;
-                // Trigger the change event to update the views
-                officerViewCheckbox.dispatchEvent(new Event("change"));
-            }
         });
     }
 
@@ -407,4 +414,48 @@ const { title, columns } = config.ui.tables.events;
     document.addEventListener("showFilePreview", ((e: CustomEvent) => {
         showFilePreview(e.detail.url, e.detail.fileName);
     }) as EventListener);
+
+    // Add event listeners for dynamic elements
+    document.addEventListener("click", (e) => {
+        const target = e.target as HTMLElement;
+
+        // Handle file view buttons
+        const fileButton = target.closest("button[data-file-url]");
+        if (fileButton) {
+            const url = fileButton.getAttribute("data-file-url");
+            const fileName = fileButton.getAttribute("data-file-name");
+            if (url && fileName) {
+                showFilePreview(url, fileName);
+            }
+        }
+
+        // Handle view attendees button
+        const attendeesButton = target.closest(".view-attendees");
+        if (attendeesButton) {
+            const eventId = attendeesButton.getAttribute("data-event-id");
+            if (eventId) {
+                document.dispatchEvent(
+                    new CustomEvent("viewAttendees", { detail: eventId })
+                );
+            }
+        }
+
+        // Handle edit event button
+        const editButton = target.closest(".edit-event");
+        if (editButton) {
+            const eventData = editButton.getAttribute("data-event");
+            if (eventData) {
+                const event = JSON.parse(decodeURIComponent(eventData));
+                const eventEditor = document.getElementById(
+                    "eventEditor"
+                ) as HTMLDialogElement;
+                if (eventEditor) {
+                    eventEditor.showModal();
+                    document.dispatchEvent(
+                        new CustomEvent("editEvent", { detail: event })
+                    );
+                }
+            }
+        }
+    });
 </script>
