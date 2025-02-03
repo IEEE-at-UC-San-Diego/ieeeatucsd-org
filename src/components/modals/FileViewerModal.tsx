@@ -19,11 +19,15 @@ export const FileViewerModalWrapper: React.FC = () => {
     const [files, setFiles] = useState<FileType[]>([]);
 
     useEffect(() => {
+        let mounted = true;
+
         // Listen for custom events to open/close modal and set files
         const handleShowFiles = (event: CustomEvent) => {
-            const { files } = event.detail;
-            setFiles(Array.isArray(files) ? files : [files]);
-            setIsOpen(true);
+            if (mounted) {
+                const { files } = event.detail;
+                setFiles(Array.isArray(files) ? files : [files]);
+                setIsOpen(true);
+            }
         };
 
         // Add event listeners
@@ -31,13 +35,37 @@ export const FileViewerModalWrapper: React.FC = () => {
 
         // Cleanup
         return () => {
+            mounted = false;
             window.removeEventListener('showFileViewer' as any, handleShowFiles);
+            // Reset state on unmount
+            setIsOpen(false);
+            setFiles([]);
+        };
+    }, []);
+
+    // Handle tab visibility changes
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                setIsOpen(false);
+                setFiles([]);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, []);
 
     const handleClose = () => {
         setIsOpen(false);
+        setFiles([]);
     };
+
+    // Only render the modal if we have files and it should be open
+    if (!isOpen || files.length === 0) return null;
 
     return (
         <FileViewerModal
@@ -57,6 +85,16 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
 
     const fileArray = Array.isArray(files) ? files : [files];
 
+    // Reset state when modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            setLoading(true);
+            setError(null);
+            setSelectedFile(null);
+            setShowPreview(false);
+        }
+    }, [isOpen]);
+
     // Helper function to check if file type is previewable
     const isPreviewableType = (fileType: string): boolean => {
         return (
@@ -71,21 +109,19 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
 
     useEffect(() => {
         if (isOpen) {
-            // Only set loading if the file is previewable
-            if (selectedFile && isPreviewableType(selectedFile.type)) {
-                setLoading(true);
+            // Only show file directly if there's exactly one file
+            if (fileArray.length === 1) {
+                const fileToShow = fileArray[0];
+                setSelectedFile(fileToShow);
+                setShowPreview(true);
+                setLoading(isPreviewableType(fileToShow.type));
             } else {
+                // For multiple files, show the file browser
+                setShowPreview(false);
+                setSelectedFile(null);
                 setLoading(false);
             }
             setError(null);
-            // If single file, show preview directly
-            if (!Array.isArray(files)) {
-                setSelectedFile(files);
-                setShowPreview(true);
-            } else {
-                setShowPreview(false);
-                setSelectedFile(null);
-            }
         }
     }, [isOpen, files]);
 
@@ -101,7 +137,6 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
     const handleFileSelect = (file: FileType) => {
         setSelectedFile(file);
         setShowPreview(true);
-        // Only set loading if the file is previewable
         setLoading(isPreviewableType(file.type));
         setError(null);
     };
@@ -198,7 +233,6 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
             );
         }
 
-        // Fallback for unsupported file types
         return (
             <div className="flex flex-col items-center justify-center p-8">
                 <div className="text-4xl mb-4">📄</div>
@@ -253,19 +287,6 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
         );
     };
 
-    // Clone the modal with a new ID
-    const cloneModal = () => {
-        const newModalId = `${modalId}-${Date.now()}`;
-        return (
-            <FileViewerModal
-                isOpen={isOpen}
-                onClose={onClose}
-                files={files}
-                modalId={newModalId}
-            />
-        );
-    };
-
     if (!isOpen) return null;
 
     return (
@@ -283,13 +304,14 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
                         {showPreview && selectedFile ? (
                             <>
                                 <div className="flex items-center gap-3">
-                                    <button
-                                        className="btn btn-ghost btn-sm"
-                                        onClick={handleBackToList}
-                                        style={{ display: Array.isArray(files) ? 'block' : 'none' }}
-                                    >
-                                        ← Back
-                                    </button>
+                                    {fileArray.length > 1 && (
+                                        <button
+                                            className="btn btn-ghost btn-sm"
+                                            onClick={handleBackToList}
+                                        >
+                                            ← Back
+                                        </button>
+                                    )}
                                     <h3 className="font-bold text-lg truncate">{selectedFile.name}</h3>
                                 </div>
                             </>
@@ -297,25 +319,6 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
                             <h3 className="font-bold text-lg">File Browser</h3>
                         )}
                         <div className="flex gap-2">
-                            <button
-                                className="btn btn-circle btn-ghost"
-                                onClick={cloneModal}
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-6 w-6"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                    />
-                                </svg>
-                            </button>
                             <button
                                 className="btn btn-circle btn-ghost"
                                 onClick={onClose}

@@ -4,6 +4,7 @@ import UserProfile from "../components/auth/UserProfile.astro";
 import DefaultProfileView from "../components/profile/DefaultProfileView.astro";
 import OfficerProfileView from "../components/profile/OfficerView.astro";
 import UserSettings from "../components/profile/UserSettings.astro";
+import FileViewerModal from "../components/modals/FileViewerModal";
 import yaml from "js-yaml";
 import profileConfig from "../config/profileConfig.yaml?raw";
 import textConfig from "../config/text.yml?raw";
@@ -213,6 +214,9 @@ const text = yaml.load(textConfig) as any;
                 </div>
             </div>
         </div>
+
+        <!-- Add FileViewerModal here, outside of the tab content -->
+        <FileViewerModal client:load />
     </main>
 </Layout>
 

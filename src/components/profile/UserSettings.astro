@@ -1,7 +1,6 @@
 ---
-// Import the majors list and FilePreviewModal
+// Import the majors list
 import allMajors from "../../data/allUCSDMajors.txt?raw";
-import FilePreviewModal from "../modals/FilePreviewModal.astro";
 
 const majorsList: string[] = allMajors
     .split("\n")
@@ -183,7 +182,7 @@ const majorsList: string[] = allMajors
                                         <button
                                             id="previewResume"
                                             class="btn btn-sm btn-ghost"
-                                            onclick="resumeViewer.showModal()"
+                                            onclick="showResumePreview(resumeUrl, fileName)"
                                         >
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
@@ -228,23 +227,18 @@ const majorsList: string[] = allMajors
     </div>
 </div>
 
-<!-- Replace the old resume viewer modal with the new FilePreviewModal -->
-<FilePreviewModal id="resumeViewer" title="Resume Preview" />
-
 <script>
+    // TypeScript declarations
+    declare global {
+        interface Window {
+            showEventFiles: (eventId: string) => Promise<void>;
+        }
+    }
+
     import { Authentication } from "../pocketbase/Authentication";
     import { Update } from "../pocketbase/Update";
     import { SendLog } from "../pocketbase/SendLog";
     import { FileManager } from "../pocketbase/FileManager";
-
-    // Add type declaration for the global filePreviewModal
-    declare global {
-        interface Window {
-            filePreviewModal: {
-                show: (file: { url: string; name: string }) => void;
-            };
-        }
-    }
 
     const auth = Authentication.getInstance();
     const update = Update.getInstance();
@@ -271,6 +265,23 @@ const majorsList: string[] = allMajors
     // Add resume preview functionality
     const resumeDisplay = document.getElementById("resumeDisplay");
     const previewResume = document.getElementById("previewResume");
+
+    // Function to show resume in FileViewerModal
+    const showResumePreview = (url: string, fileName: string) => {
+        // Create and dispatch custom event for FileViewerModal
+        const showFileViewerEvent = new CustomEvent("showFileViewer", {
+            detail: {
+                files: {
+                    url,
+                    name: fileName,
+                    type: fileName.toLowerCase().endsWith(".pdf")
+                        ? "application/pdf"
+                        : "application/octet-stream",
+                },
+            },
+        });
+        window.dispatchEvent(showFileViewerEvent);
+    };
 
     // Load current user data
     const loadUserData = () => {
@@ -300,10 +311,7 @@ const majorsList: string[] = allMajors
                         // Update preview button to use new modal
                         if (previewResume) {
                             previewResume.onclick = () => {
-                                window.filePreviewModal.show({
-                                    url: resumeUrl,
-                                    name: fileName,
-                                });
+                                showResumePreview(resumeUrl, fileName);
                             };
                         }
                     } else {
