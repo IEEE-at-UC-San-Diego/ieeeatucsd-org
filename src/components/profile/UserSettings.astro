@@ -182,7 +182,6 @@ const majorsList: string[] = allMajors
                                         <button
                                             id="previewResume"
                                             class="btn btn-sm btn-ghost"
-                                            onclick="showResumePreview(resumeUrl, fileName)"
                                         >
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
@@ -266,21 +265,15 @@ const majorsList: string[] = allMajors
     const resumeDisplay = document.getElementById("resumeDisplay");
     const previewResume = document.getElementById("previewResume");
 
-    // Function to show resume in FileViewerModal
-    const showResumePreview = (url: string, fileName: string) => {
-        // Create and dispatch custom event for FileViewerModal
-        const showFileViewerEvent = new CustomEvent("showFileViewer", {
-            detail: {
-                files: {
-                    url,
-                    name: fileName,
-                    type: fileName.toLowerCase().endsWith(".pdf")
-                        ? "application/pdf"
-                        : "application/octet-stream",
-                },
-            },
-        });
-        window.dispatchEvent(showFileViewerEvent);
+    // Helper function to get file type
+    const getFileType = (fileName: string): string => {
+        const extension = fileName.split(".").pop()?.toLowerCase() || "";
+        const mimeTypes: Record<string, string> = {
+            pdf: "application/pdf",
+            doc: "application/msword",
+            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        };
+        return mimeTypes[extension] || "application/octet-stream";
     };
 
     // Load current user data
@@ -311,7 +304,20 @@ const majorsList: string[] = allMajors
                         // Update preview button to use new modal
                         if (previewResume) {
                             previewResume.onclick = () => {
-                                showResumePreview(resumeUrl, fileName);
+                                // Dispatch custom event for FileViewerModal
+                                const showFileViewerEvent = new CustomEvent(
+                                    "showFileViewer",
+                                    {
+                                        detail: {
+                                            files: {
+                                                url: resumeUrl,
+                                                name: fileName,
+                                                type: getFileType(fileName),
+                                            },
+                                        },
+                                    }
+                                );
+                                window.dispatchEvent(showFileViewerEvent);
                             };
                         }
                     } else {
