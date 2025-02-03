@@ -1,3 +1,12 @@
+---
+// Import the FilePreviewModal component
+import FilePreviewModal from "../modals/FilePreviewModal.astro";
+
+// Define the component's props and setup
+interface Props {}
+const {} = Astro.props;
+---
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
     <!-- Left Column - Events List -->
     <div class="card bg-base-200 shadow-xl h-full">
@@ -115,72 +124,24 @@
     </div>
 </div>
 
-<!-- PDF Viewer Modal -->
-<dialog id="pdfViewer" class="modal">
-    <div class="modal-box w-11/12 max-w-5xl h-[80vh]">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="font-bold text-lg" id="pdfTitle">Resume</h3>
-            <div class="flex items-center gap-2">
-                <a
-                    id="pdfExternalLink"
-                    href="#"
-                    target="_blank"
-                    class="btn btn-sm btn-ghost"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4 mr-1"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"
-                        ></path>
-                        <path
-                            d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5z"
-                        ></path>
-                    </svg>
-                    Open in New Tab
-                </a>
-                <form method="dialog">
-                    <button class="btn btn-sm btn-circle btn-ghost">✕</button>
-                </form>
-            </div>
-        </div>
-        <div class="h-[calc(100%-4rem)]">
-            <iframe
-                id="pdfFrame"
-                class="w-full h-full rounded-lg border-2 border-base-300"
-                src=""></iframe>
-        </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
-
-<!-- File Viewer Modal -->
-<dialog id="fileViewer" class="modal">
-    <div class="modal-box w-11/12 max-w-5xl">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="font-bold text-lg" id="fileViewerTitle">Event Files</h3>
-            <form method="dialog">
-                <button class="btn btn-sm btn-circle btn-ghost">✕</button>
-            </form>
-        </div>
-        <div
-            id="fileViewerContent"
-            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-        >
-            <!-- Files will be dynamically inserted here -->
-        </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
+<!-- Add the FilePreviewModal component -->
+<FilePreviewModal id="eventFileViewer" title="Event Files" />
 
 <script>
+    // TypeScript declarations
+    declare global {
+        interface Window {
+            showEventFiles: (eventId: string) => Promise<void>;
+            filePreviewModal: {
+                show: (
+                    file:
+                        | { url: string; name: string }
+                        | Array<{ url: string; name: string }>
+                ) => void;
+            };
+        }
+    }
+
     import { Authentication } from "../pocketbase/Authentication";
     import { Get } from "../pocketbase/Get";
     import { SendLog } from "../pocketbase/SendLog";
@@ -341,7 +302,7 @@
                 ? `
             <button 
                 class="btn btn-ghost btn-xs gap-2" 
-                onclick="document.getElementById('fileViewer').showModal(); document.dispatchEvent(new CustomEvent('viewEventFiles', { detail: { eventId: '${event.id}' } }))"
+                onclick="window.showEventFiles('${event.id}')"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
@@ -560,112 +521,172 @@
         }
     });
 
-    // Add event listener for viewing files
-    interface ViewEventFilesEvent extends CustomEvent {
-        detail: {
-            eventId: string;
-        };
-    }
+    // Add global function to handle showing event files
+    window.showEventFiles = async (eventId: string) => {
+        try {
+            const modal = document.getElementById(
+                "eventFileViewer"
+            ) as HTMLDialogElement;
+            if (!modal) {
+                console.error("Modal element not found");
+                return;
+            }
 
-    document.addEventListener("viewEventFiles", ((e: Event) => {
-        if (e instanceof CustomEvent && "eventId" in e.detail) {
-            (async () => {
-                try {
-                    const event = await get.getOne<Event>(
-                        "events",
-                        e.detail.eventId
-                    );
-                    const fileViewerContent =
-                        document.getElementById("fileViewerContent");
-                    const fileViewerTitle =
-                        document.getElementById("fileViewerTitle");
+            // Show the modal first
+            modal.showModal();
 
-                    if (fileViewerContent && fileViewerTitle) {
-                        fileViewerTitle.textContent = `Files - ${event.event_name}`;
+            // Fetch the event data
+            const event = await get.getOne("events", eventId);
 
-                        if (
-                            !event.files ||
-                            !Array.isArray(event.files) ||
-                            event.files.length === 0
-                        ) {
-                            fileViewerContent.innerHTML = `
-                                <div class="col-span-full text-center py-4 opacity-70">
-                                    No files available
+            if (
+                !event.files ||
+                !Array.isArray(event.files) ||
+                event.files.length === 0
+            ) {
+                const previewContainer = document.getElementById(
+                    "eventFileViewer-preview-container"
+                );
+                if (previewContainer) {
+                    previewContainer.innerHTML = `
+                        <div class="flex items-center justify-center h-full">
+                            <div class="text-center text-base-content/70">
+                                <p>No files available</p>
+                            </div>
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            // Convert files to the format expected by FilePreviewModal
+            const files = event.files.map((file) => {
+                const fileName = file.split("/").pop() || "File";
+                return {
+                    url: fileManager.getFileUrl("events", event.id, file),
+                    name: fileName,
+                };
+            });
+
+            // If it's a single file, show it directly
+            if (files.length === 1) {
+                const previewContainer = document.getElementById(
+                    "eventFileViewer-preview-container"
+                );
+                const loadingElement = document.getElementById(
+                    "eventFileViewer-loading"
+                );
+                const titleElement = document.getElementById(
+                    "eventFileViewer-title"
+                );
+                const externalLink = document.getElementById(
+                    "eventFileViewer-external-link"
+                ) as HTMLAnchorElement;
+
+                if (
+                    previewContainer &&
+                    loadingElement &&
+                    titleElement &&
+                    externalLink
+                ) {
+                    // Show loading
+                    loadingElement.classList.remove("hidden");
+                    previewContainer.classList.add("hidden");
+
+                    // Update title and external link
+                    titleElement.textContent = files[0].name;
+                    externalLink.href = files[0].url;
+
+                    // Create preview element
+                    const filePreview = document.createElement("div");
+                    filePreview.className = "w-full h-full";
+
+                    // Handle PDF files
+                    if (files[0].name.toLowerCase().endsWith(".pdf")) {
+                        filePreview.innerHTML = `
+                            <embed 
+                                src="${files[0].url}#toolbar=0&navpanes=0"
+                                type="application/pdf"
+                                class="w-full h-full"
+                            />
+                        `;
+                    } else {
+                        // For other files, show download option
+                        filePreview.innerHTML = `
+                            <div class="flex items-center justify-center h-full">
+                                <div class="text-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-base-content/50" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                                    </svg>
+                                    <p class="mb-4">${files[0].name}</p>
+                                    <a href="${files[0].url}" download class="btn btn-primary btn-sm">
+                                        Download File
+                                    </a>
                                 </div>
-                            `;
-                            return;
-                        }
-
-                        fileViewerContent.innerHTML = event.files
-                            .map((file) => {
-                                const fileUrl = fileManager.getFileUrl(
-                                    "events",
-                                    event.id,
-                                    file
-                                );
-                                const fileName =
-                                    file.split("/").pop() || "File";
-                                const fileExt =
-                                    fileName.split(".").pop()?.toLowerCase() ||
-                                    "";
-
-                                let preview = "";
-                                if (
-                                    ["jpg", "jpeg", "png", "gif"].includes(
-                                        fileExt
-                                    )
-                                ) {
-                                    preview = `
-                                    <div class="aspect-video bg-base-300 rounded-t-lg overflow-hidden">
-                                        <img src="${fileUrl}" alt="${fileName}" class="w-full h-full object-contain">
-                                    </div>
-                                `;
-                                } else {
-                                    preview = `
-                                    <div class="aspect-video bg-base-300 rounded-t-lg flex items-center justify-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-50" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
-                                        </svg>
-                                    </div>
-                                `;
-                                }
-
-                                return `
-                                <div class="card bg-base-200">
-                                    ${preview}
-                                    <div class="card-body p-4">
-                                        <h3 class="card-title text-sm flex items-center justify-between gap-2" title="${fileName}">
-                                            <span class="truncate min-w-0">${fileName.substring(0, fileName.lastIndexOf("."))}</span>
-                                            <span class="text-base-content/50 text-xs uppercase font-mono shrink-0">${fileExt}</span>
-                                        </h3>
-                                    </div>
-                                    <div class="border-t border-base-300">
-                                        <a href="${fileUrl}" target="_blank" class="btn btn-ghost btn-sm w-full rounded-none rounded-b-lg gap-2 h-12">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                                                <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                                            </svg>
-                                            Open in New Tab
-                                        </a>
-                                    </div>
-                                </div>
-                            `;
-                            })
-                            .join("");
-                    }
-                } catch (err) {
-                    console.error("Failed to load event files:", err);
-                    const fileViewerContent =
-                        document.getElementById("fileViewerContent");
-                    if (fileViewerContent) {
-                        fileViewerContent.innerHTML = `
-                            <div class="col-span-full text-center py-4 text-error">
-                                Failed to load files. Please try again.
                             </div>
                         `;
                     }
+
+                    // Clear previous content and add new preview
+                    previewContainer.innerHTML = "";
+                    previewContainer.appendChild(filePreview);
+
+                    // Hide loading after a short delay
+                    setTimeout(() => {
+                        loadingElement.classList.add("hidden");
+                        previewContainer.classList.remove("hidden");
+                    }, 500);
                 }
-            })();
+            } else {
+                // For multiple files, show the grid view
+                const fileGrid = document.getElementById(
+                    "eventFileViewer-file-grid"
+                );
+                const multipleView = document.getElementById(
+                    "eventFileViewer-multiple"
+                );
+                const singleView = document.getElementById(
+                    "eventFileViewer-single"
+                );
+
+                if (fileGrid && multipleView && singleView) {
+                    singleView.classList.add("hidden");
+                    multipleView.classList.remove("hidden");
+
+                    fileGrid.innerHTML = files
+                        .map(
+                            (file) => `
+                        <div class="card bg-base-200 hover:bg-base-300 cursor-pointer transition-colors">
+                            <div class="aspect-video bg-base-300 rounded-t-lg flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="card-body p-4">
+                                <h3 class="card-title text-sm" title="${file.name}">
+                                    <span class="truncate">${file.name}</span>
+                                </h3>
+                            </div>
+                        </div>
+                    `
+                        )
+                        .join("");
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load event files:", err);
+            const previewContainer = document.getElementById(
+                "eventFileViewer-preview-container"
+            );
+            if (previewContainer) {
+                previewContainer.innerHTML = `
+                    <div class="flex items-center justify-center h-full">
+                        <div class="text-center text-error">
+                            <p>Failed to load files</p>
+                            <p class="text-sm mt-2 opacity-70">${err instanceof Error ? err.message : "Unknown error"}</p>
+                        </div>
+                    </div>
+                `;
+            }
         }
-    }) as unknown as EventListener);
+    };
 </script>

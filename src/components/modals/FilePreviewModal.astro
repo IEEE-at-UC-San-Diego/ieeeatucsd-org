@@ -138,11 +138,45 @@ const {
 
         getFileType(fileName) {
             const ext = fileName.split(".").pop()?.toLowerCase() || "";
-            if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext))
+            // Images
+            if (
+                ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(
+                    ext
+                )
+            )
                 return "image";
-            if (["mp4", "webm", "ogg"].includes(ext)) return "video";
-            if (["mp3", "wav", "ogg"].includes(ext)) return "audio";
+            // Videos
+            if (["mp4", "webm", "ogg", "mov", "avi"].includes(ext))
+                return "video";
+            // Audio
+            if (["mp3", "wav", "ogg", "m4a", "aac"].includes(ext))
+                return "audio";
+            // Documents
             if (["pdf"].includes(ext)) return "pdf";
+            if (["doc", "docx"].includes(ext)) return "word";
+            if (["xls", "xlsx"].includes(ext)) return "excel";
+            if (["ppt", "pptx"].includes(ext)) return "powerpoint";
+            if (["txt", "rtf", "md"].includes(ext)) return "text";
+            // Archives
+            if (["zip", "rar", "7z", "tar", "gz"].includes(ext))
+                return "archive";
+            // Code
+            if (
+                [
+                    "js",
+                    "ts",
+                    "py",
+                    "java",
+                    "cpp",
+                    "c",
+                    "cs",
+                    "html",
+                    "css",
+                    "php",
+                    "rb",
+                ].includes(ext)
+            )
+                return "code";
             return "other";
         }
 
@@ -162,16 +196,24 @@ const {
                     element = document.createElement("video");
                     element.className = "w-full h-full";
                     element.setAttribute("controls", "");
+                    element.setAttribute("controlsList", "nodownload");
+                    element.setAttribute("preload", "metadata");
                     element.src = file.url;
                     break;
 
                 case "audio":
                     element = document.createElement("div");
                     element.className =
-                        "w-full h-full flex items-center justify-center p-4";
+                        "w-full h-full flex flex-col items-center justify-center p-8 gap-4";
+                    // Add audio icon
+                    element.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-base-content/50" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd" />
+                        </svg>`;
                     const audio = document.createElement("audio");
-                    audio.className = "w-full";
+                    audio.className = "w-full max-w-md";
                     audio.setAttribute("controls", "");
+                    audio.setAttribute("controlsList", "nodownload");
                     audio.src = file.url;
                     element.appendChild(audio);
                     break;
@@ -183,7 +225,41 @@ const {
                     element.src = file.url + "#toolbar=0&navpanes=0";
                     break;
 
+                case "word":
+                case "excel":
+                case "powerpoint":
+                case "text":
+                case "code":
+                    // For documents that might be previewable, offer both preview and download
+                    element = document.createElement("div");
+                    element.className =
+                        "w-full h-full flex flex-col items-center justify-center p-8 gap-4";
+                    const icon = this.getFileTypeIcon(fileType);
+                    element.innerHTML = `
+                        <div class="text-center">
+                            ${icon}
+                            <p class="mt-4 font-medium">${file.name}</p>
+                            <p class="text-base-content/70 mb-4">This file type may not be previewable in the browser</p>
+                            <div class="flex gap-2">
+                                <a href="${file.url}" target="_blank" class="btn btn-primary btn-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                                    </svg>
+                                    Open in New Tab
+                                </a>
+                                <a href="${file.url}" download class="btn btn-ghost btn-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                    Download
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
                 default:
+                    // For other file types, show a download option
                     element = document.createElement("div");
                     element.className =
                         "w-full h-full flex items-center justify-center";
@@ -192,13 +268,45 @@ const {
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-base-content/50" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
                             </svg>
-                            <p>This file type cannot be previewed</p>
-                            <a href="${file.url}" target="_blank" class="btn btn-primary btn-sm mt-4">Download File</a>
+                            <p class="mb-4">${file.name}</p>
+                            <a href="${file.url}" download class="btn btn-primary btn-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                                Download File
+                            </a>
                         </div>
                     `;
             }
 
             return element;
+        }
+
+        getFileTypeIcon(fileType) {
+            const iconClasses = "h-24 w-24 mx-auto text-base-content/50";
+            switch (fileType) {
+                case "word":
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="${iconClasses}" viewBox="0 0 384 512">
+                        <path fill="currentColor" d="M48 448V64c0-8.8 7.2-16 16-16h256c8.8 0 16 7.2 16 16v384c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16zm16-64h256V80H64v304zm48-208h160c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64h160c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64h160c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16z"/>
+                    </svg>`;
+                case "excel":
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="${iconClasses}" viewBox="0 0 384 512">
+                        <path fill="currentColor" d="M48 448V64c0-8.8 7.2-16 16-16h256c8.8 0 16 7.2 16 16v384c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16zm16-64h256V80H64v304zm48-208h160c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 128h160c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16z"/>
+                    </svg>`;
+                case "powerpoint":
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="${iconClasses}" viewBox="0 0 384 512">
+                        <path fill="currentColor" d="M48 448V64c0-8.8 7.2-16 16-16h256c8.8 0 16 7.2 16 16v384c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16zm16-64h256V80H64v304zm144-208c35.3 0 64 28.7 64 64s-28.7 64-64 64h-48v48c0 8.8-7.2 16-16 16s-16-7.2-16-16V192c0-8.8 7.2-16 16-16h64zm0 96c17.7 0 32-14.3 32-32s-14.3-32-32-32h-48v64h48z"/>
+                    </svg>`;
+                case "text":
+                case "code":
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="${iconClasses}" viewBox="0 0 384 512">
+                        <path fill="currentColor" d="M48 448V64c0-8.8 7.2-16 16-16h256c8.8 0 16 7.2 16 16v384c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16zm16-64h256V80H64v304zm48-208h160c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64h160c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16z"/>
+                    </svg>`;
+                default:
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="${iconClasses}" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                    </svg>`;
+            }
         }
 
         showLoading(isMultiple = false) {
