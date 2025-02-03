@@ -15,379 +15,358 @@ const text = yaml.load(textConfig) as any;
 ---
 
 <Layout {title}>
-    <main class="min-h-screen bg-base-100/50 rounded-[1.5rem]">
-        <div class="container mx-auto px-6 py-6 mt-10">
-            <!-- Header Section with Breadcrumbs -->
-            <div class="mb-8">
-                <h1 class="text-4xl font-bold">Profile Dashboard</h1>
-                <p class="text-base-content/70 mt-2">
-                    Manage your IEEE UCSD membership and activities
-                </p>
-            </div>
+  <main class="min-h-screen bg-base-100/50 rounded-[1.5rem]">
+    <div class="container mx-auto px-6 py-6 mt-10">
+      <!-- Header Section with Breadcrumbs -->
+      <div class="mb-8">
+        <h1 class="text-4xl font-bold">Profile Dashboard</h1>
+        <p class="text-base-content/70 mt-2">
+          Manage your IEEE UCSD membership and activities
+        </p>
+      </div>
 
-            <!-- Loading State -->
-            <div id="pageLoadingState" class="w-full">
-                <div class="flex flex-col items-center justify-center p-8">
-                    <div class="loading loading-spinner loading-lg"></div>
-                    <p class="mt-4 text-base-content/70">
-                        Loading your profile...
-                    </p>
-                </div>
-            </div>
+      <!-- Loading State -->
+      <div id="pageLoadingState" class="w-full">
+        <div class="flex flex-col items-center justify-center p-8">
+          <div class="loading loading-spinner loading-lg"></div>
+          <p class="mt-4 text-base-content/70">Loading your profile...</p>
+        </div>
+      </div>
 
-            <!-- Error State -->
-            <div id="pageErrorState" class="hidden w-full">
-                <div class="alert alert-error">
-                    <div class="flex items-center gap-2">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-6 w-6"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                clip-rule="evenodd"></path>
-                        </svg>
-                        <span>{text.ui.messages.auth.loginError}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Not Authenticated State -->
-            <div id="notAuthenticatedState" class="hidden w-full">
-                <div class="card bg-base-100 shadow-xl">
-                    <div class="card-body items-center text-center">
-                        <div class="mb-6">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-16 w-16 text-base-content/30"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                                    clip-rule="evenodd"></path>
-                            </svg>
-                        </div>
-                        <h2 class="card-title text-2xl mb-2">
-                            Sign in to Access Your Profile
-                        </h2>
-                        <p class="text-base-content/70 mb-6">
-                            Please sign in with your IEEE UCSD account to view
-                            and manage your profile.
-                        </p>
-                        <button
-                            class="login-button btn btn-primary btn-lg gap-2"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-5 w-5"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z"
-                                    clip-rule="evenodd"></path>
-                            </svg>
-                            Sign in with IEEEUCSD SSO
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Content Grid -->
-            <div
-                id="mainContent"
-                class="hidden grid grid-cols-1 xl:grid-cols-12 gap-8"
+      <!-- Error State -->
+      <div id="pageErrorState" class="hidden w-full">
+        <div class="alert alert-error">
+          <div class="flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              viewBox="0 0 20 20"
+              fill="currentColor"
             >
-                <!-- Left Column - User Info -->
-                <div class="xl:col-span-4 2xl:col-span-3">
-                    <div class="sticky top-[100px]">
-                        <UserProfile />
-                    </div>
-                </div>
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span>{text.ui.messages.auth.loginError}</span>
+          </div>
+        </div>
+      </div>
 
-                <!-- Right Column - Content -->
-                <div class="xl:col-span-8 2xl:col-span-9">
-                    <!-- Stats Overview -->
-                    <div class="stats shadow w-full mb-8 bg-base-100">
-                        <div class="stat">
-                            <div class="stat-figure text-primary">
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-8 w-8"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
-                                    ></path>
-                                </svg>
-                            </div>
-                            <div class="stat-title">Events Attended</div>
-                            <div
-                                class="stat-value text-primary"
-                                id="eventsAttendedValue"
-                            >
-                                -
-                            </div>
-                            <div class="stat-desc">Since joining</div>
-                        </div>
-
-                        <div class="stat">
-                            <div class="stat-figure text-secondary">
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-8 w-8"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clip-rule="evenodd"></path>
-                                </svg>
-                            </div>
-                            <div class="stat-title">Loyalty Points</div>
-                            <div
-                                class="stat-value text-secondary"
-                                id="loyaltyPointsValue"
-                            >
-                                -
-                            </div>
-                            <div class="stat-desc" id="loyaltyPointsChange">
-                                Loading...
-                            </div>
-                        </div>
-
-                        <div class="stat">
-                            <div class="stat-figure text-accent">
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-8 w-8"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm9 4a1 1 0 10-2 0v6a1 1 0 102 0V7zm-3 2a1 1 0 10-2 0v4a1 1 0 102 0V9zm-3 3a1 1 0 10-2 0v1a1 1 0 102 0v-1z"
-                                        clip-rule="evenodd"></path>
-                                </svg>
-                            </div>
-                            <div class="stat-title">Activity Level</div>
-                            <div
-                                class="stat-value text-accent"
-                                id="activityLevelValue"
-                            >
-                                -
-                            </div>
-                            <div class="stat-desc" id="activityLevelDesc">
-                                Loading...
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Main Content Tabs -->
-                    <div class="tabs tabs-boxed mb-6" id="defaultViewTabs">
-                        <button class="tab tab-active" data-default-tab="events"
-                            >Events & Activities</button
-                        >
-                        <button class="tab" data-default-tab="settings"
-                            >Settings</button
-                        >
-                    </div>
-
-                    <!-- Content Areas -->
-                    <div id="defaultView">
-                        <DefaultProfileView />
-                    </div>
-                    <div id="settingsView" class="hidden">
-                        <UserSettings />
-                    </div>
-                    <!--<div id="officerView" class="hidden">
-                        <OfficerProfileView />
-                    </div> -->
-                </div>
+      <!-- Not Authenticated State -->
+      <div id="notAuthenticatedState" class="hidden w-full">
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body items-center text-center">
+            <div class="mb-6">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-16 w-16 text-base-content/30"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                  clip-rule="evenodd"></path>
+              </svg>
             </div>
+            <h2 class="card-title text-2xl mb-2">
+              Sign in to Access Your Profile
+            </h2>
+            <p class="text-base-content/70 mb-6">
+              Please sign in with your IEEE UCSD account to view and manage your
+              profile.
+            </p>
+            <button class="login-button btn btn-primary btn-lg gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z"
+                  clip-rule="evenodd"></path>
+              </svg>
+              Sign in with IEEEUCSD SSO
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content Grid -->
+      <div
+        id="mainContent"
+        class="hidden grid grid-cols-1 xl:grid-cols-12 gap-8"
+      >
+        <!-- Left Column - User Info -->
+        <div class="xl:col-span-4 2xl:col-span-3">
+          <div class="sticky top-[100px]">
+            <UserProfile />
+          </div>
         </div>
 
-        <!-- Add FileViewerModal here, outside of the tab content -->
-        <FileViewerModal client:load />
-    </main>
+        <!-- Right Column - Content -->
+        <div class="xl:col-span-8 2xl:col-span-9">
+          <!-- Stats Overview -->
+          <div class="stats shadow w-full mb-8 bg-base-100">
+            <div class="stat">
+              <div class="stat-figure text-primary">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-8 w-8"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                  ></path>
+                </svg>
+              </div>
+              <div class="stat-title">Events Attended</div>
+              <div class="stat-value text-primary" id="eventsAttendedValue">
+                -
+              </div>
+              <div class="stat-desc">Since joining</div>
+            </div>
+
+            <div class="stat">
+              <div class="stat-figure text-secondary">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-8 w-8"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <div class="stat-title">Loyalty Points</div>
+              <div class="stat-value text-secondary" id="loyaltyPointsValue">
+                -
+              </div>
+              <div class="stat-desc" id="loyaltyPointsChange">Loading...</div>
+            </div>
+
+            <div class="stat">
+              <div class="stat-figure text-accent">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-8 w-8"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm9 4a1 1 0 10-2 0v6a1 1 0 102 0V7zm-3 2a1 1 0 10-2 0v4a1 1 0 102 0V9zm-3 3a1 1 0 10-2 0v1a1 1 0 102 0v-1z"
+                    clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <div class="stat-title">Activity Level</div>
+              <div class="stat-value text-accent" id="activityLevelValue">
+                -
+              </div>
+              <div class="stat-desc" id="activityLevelDesc">Loading...</div>
+            </div>
+          </div>
+
+          <!-- Main Content Tabs -->
+          <div class="tabs tabs-boxed mb-6" id="defaultViewTabs">
+            <button class="tab tab-active" data-default-tab="events"
+              >Events & Activities</button
+            >
+            <button class="tab" data-default-tab="settings">Settings</button>
+          </div>
+
+          <!-- Content Areas -->
+          <div id="defaultView">
+            <DefaultProfileView />
+          </div>
+          <div id="settingsView" class="hidden">
+            <UserSettings />
+          </div>
+          <!--<div id="officerView" class="hidden">
+                        <OfficerProfileView />
+                    </div> -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Add FileViewerModal here, outside of the tab content -->
+    <FileViewerModal client:load />
+  </main>
 </Layout>
 
 <script>
-    import { Authentication } from "../components/pocketbase/Authentication";
-    import yaml from "js-yaml";
-    import profileConfig from "../config/profileConfig.yaml?raw";
-    import textConfig from "../config/text.yml?raw";
+  import { Authentication } from "../components/pocketbase/Authentication";
+  import yaml from "js-yaml";
+  import profileConfig from "../config/profileConfig.yaml?raw";
+  import textConfig from "../config/text.yml?raw";
 
-    const config = yaml.load(profileConfig) as any;
-    const text = yaml.load(textConfig) as any;
-    const auth = Authentication.getInstance();
+  const config = yaml.load(profileConfig) as any;
+  const text = yaml.load(textConfig) as any;
+  const auth = Authentication.getInstance();
 
-    // Initialize page state
-    const pageLoadingState = document.getElementById("pageLoadingState");
-    const pageErrorState = document.getElementById("pageErrorState");
-    const notAuthenticatedState = document.getElementById(
-        "notAuthenticatedState"
+  // Initialize page state
+  const pageLoadingState = document.getElementById("pageLoadingState");
+  const pageErrorState = document.getElementById("pageErrorState");
+  const notAuthenticatedState = document.getElementById(
+    "notAuthenticatedState",
+  );
+  const mainContent = document.getElementById("mainContent");
+  const defaultView = document.getElementById("defaultView");
+  const officerView = document.getElementById("officerView");
+  const settingsView = document.getElementById("settingsView");
+
+  // Stats elements
+  const eventsAttendedValue = document.getElementById("eventsAttendedValue");
+  const loyaltyPointsValue = document.getElementById("loyaltyPointsValue");
+  const loyaltyPointsChange = document.getElementById("loyaltyPointsChange");
+  const activityLevelValue = document.getElementById("activityLevelValue");
+  const activityLevelDesc = document.getElementById("activityLevelDesc");
+
+  // Show officer view if user has appropriate role
+  const showOfficerView = (user: any) => {
+    if (!user) return false;
+    const userRole = user.role || "member";
+    const roleConfig = config.roles[userRole];
+    return (
+      roleConfig?.permissions?.includes("manage") ||
+      roleConfig?.permissions?.includes("edit")
     );
-    const mainContent = document.getElementById("mainContent");
-    const defaultView = document.getElementById("defaultView");
-    const officerView = document.getElementById("officerView");
-    const settingsView = document.getElementById("settingsView");
+  };
 
-    // Stats elements
-    const eventsAttendedValue = document.getElementById("eventsAttendedValue");
-    const loyaltyPointsValue = document.getElementById("loyaltyPointsValue");
-    const loyaltyPointsChange = document.getElementById("loyaltyPointsChange");
-    const activityLevelValue = document.getElementById("activityLevelValue");
-    const activityLevelDesc = document.getElementById("activityLevelDesc");
+  // Initialize page
+  const initializePage = async () => {
+    try {
+      // Show loading state
+      if (pageLoadingState) pageLoadingState.classList.remove("hidden");
+      if (pageErrorState) pageErrorState.classList.add("hidden");
+      if (notAuthenticatedState) notAuthenticatedState.classList.add("hidden");
+      if (mainContent) mainContent.classList.add("hidden");
 
-    // Show officer view if user has appropriate role
-    const showOfficerView = (user: any) => {
-        if (!user) return false;
-        const userRole = user.role || "member";
-        const roleConfig = config.roles[userRole];
-        return (
-            roleConfig?.permissions?.includes("manage") ||
-            roleConfig?.permissions?.includes("edit")
-        );
-    };
+      // Check auth state
+      if (!auth.isAuthenticated()) {
+        if (pageLoadingState) pageLoadingState.classList.add("hidden");
+        if (notAuthenticatedState)
+          notAuthenticatedState.classList.remove("hidden");
+        return;
+      }
 
-    // Initialize page
-    const initializePage = async () => {
-        try {
-            // Show loading state
-            if (pageLoadingState) pageLoadingState.classList.remove("hidden");
-            if (pageErrorState) pageErrorState.classList.add("hidden");
-            if (notAuthenticatedState)
-                notAuthenticatedState.classList.add("hidden");
-            if (mainContent) mainContent.classList.add("hidden");
+      const user = auth.getCurrentUser();
 
-            // Check auth state
-            if (!auth.isAuthenticated()) {
-                if (pageLoadingState) pageLoadingState.classList.add("hidden");
-                if (notAuthenticatedState)
-                    notAuthenticatedState.classList.remove("hidden");
-                return;
-            }
+      // Update stats
+      if (eventsAttendedValue) {
+        const eventsAttended = user.events_attended?.length || 0;
+        eventsAttendedValue.textContent = eventsAttended.toString();
+      }
 
-            const user = auth.getCurrentUser();
+      if (loyaltyPointsValue && loyaltyPointsChange) {
+        const points = user.points || 0;
+        loyaltyPointsValue.textContent = points.toString();
+        const pointsChange = user.points_change_30d || 0;
+        loyaltyPointsChange.textContent =
+          pointsChange >= 0
+            ? `↗︎ ${pointsChange} points (30 days)`
+            : `↘︎ ${Math.abs(pointsChange)} points (30 days)`;
+      }
 
-            // Update stats
-            if (eventsAttendedValue) {
-                const eventsAttended = user.events_attended?.length || 0;
-                eventsAttendedValue.textContent = eventsAttended.toString();
-            }
+      if (activityLevelValue && activityLevelDesc) {
+        const eventsAttended = user.events_attended?.length || 0;
+        const points = user.points || 0;
+        let activityLevel = "Low";
+        let description = "Occasional Member";
 
-            if (loyaltyPointsValue && loyaltyPointsChange) {
-                const points = user.points || 0;
-                loyaltyPointsValue.textContent = points.toString();
-                const pointsChange = user.points_change_30d || 0;
-                loyaltyPointsChange.textContent =
-                    pointsChange >= 0
-                        ? `↗︎ ${pointsChange} points (30 days)`
-                        : `↘︎ ${Math.abs(pointsChange)} points (30 days)`;
-            }
-
-            if (activityLevelValue && activityLevelDesc) {
-                const eventsAttended = user.events_attended?.length || 0;
-                const points = user.points || 0;
-                let activityLevel = "Low";
-                let description = "Occasional Member";
-
-                if (eventsAttended > 5 || points > 50) {
-                    activityLevel = "High";
-                    description = "Active Member";
-                } else if (eventsAttended > 2 || points > 20) {
-                    activityLevel = "Medium";
-                    description = "Regular Member";
-                }
-
-                activityLevelValue.textContent = activityLevel;
-                activityLevelDesc.textContent = description;
-            }
-
-            // Show appropriate view based on user role
-            if (showOfficerView(user)) {
-                if (officerView) officerView.classList.remove("hidden");
-                if (defaultView) defaultView.classList.add("hidden");
-            } else {
-                if (officerView) officerView.classList.add("hidden");
-                if (defaultView) defaultView.classList.remove("hidden");
-            }
-
-            // Hide loading state and show content
-            if (pageLoadingState) pageLoadingState.classList.add("hidden");
-            if (mainContent) mainContent.classList.remove("hidden");
-        } catch (error) {
-            console.error("Failed to initialize page:", error);
-            if (pageLoadingState) pageLoadingState.classList.add("hidden");
-            if (pageErrorState) pageErrorState.classList.remove("hidden");
-            if (mainContent) mainContent.classList.add("hidden");
+        if (eventsAttended > 5 || points > 50) {
+          activityLevel = "High";
+          description = "Active Member";
+        } else if (eventsAttended > 2 || points > 20) {
+          activityLevel = "Medium";
+          description = "Regular Member";
         }
-    };
 
-    // Check on load and auth changes
+        activityLevelValue.textContent = activityLevel;
+        activityLevelDesc.textContent = description;
+      }
+
+      // Show appropriate view based on user role
+      if (showOfficerView(user)) {
+        if (officerView) officerView.classList.remove("hidden");
+        if (defaultView) defaultView.classList.add("hidden");
+      } else {
+        if (officerView) officerView.classList.add("hidden");
+        if (defaultView) defaultView.classList.remove("hidden");
+      }
+
+      // Hide loading state and show content
+      if (pageLoadingState) pageLoadingState.classList.add("hidden");
+      if (mainContent) mainContent.classList.remove("hidden");
+    } catch (error) {
+      console.error("Failed to initialize page:", error);
+      if (pageLoadingState) pageLoadingState.classList.add("hidden");
+      if (pageErrorState) pageErrorState.classList.remove("hidden");
+      if (mainContent) mainContent.classList.add("hidden");
+    }
+  };
+
+  // Check on load and auth changes
+  initializePage();
+  auth.onAuthStateChange(() => {
     initializePage();
-    auth.onAuthStateChange(() => {
-        initializePage();
+  });
+
+  // Handle default view tab switching
+  const defaultViewTabs = document.querySelectorAll("[data-default-tab]");
+  defaultViewTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      // Update tab styles
+      defaultViewTabs.forEach((t) => t.classList.remove("tab-active"));
+      tab.classList.add("tab-active");
+
+      // Update content visibility
+      const tabId = (tab as HTMLElement).dataset.defaultTab;
+      const views = {
+        events: defaultView,
+        settings: settingsView,
+      };
+
+      // Hide all views first
+      Object.values(views).forEach((view) => {
+        if (view) view.classList.add("hidden");
+      });
+
+      // Show the selected view
+      const selectedView = views[tabId as keyof typeof views];
+      if (selectedView) {
+        selectedView.classList.remove("hidden");
+      }
     });
+  });
 
-    // Handle default view tab switching
-    const defaultViewTabs = document.querySelectorAll("[data-default-tab]");
-    defaultViewTabs.forEach((tab) => {
-        tab.addEventListener("click", () => {
-            // Update tab styles
-            defaultViewTabs.forEach((t) => t.classList.remove("tab-active"));
-            tab.classList.add("tab-active");
-
-            // Update content visibility
-            const tabId = (tab as HTMLElement).dataset.defaultTab;
-            const views = {
-                events: defaultView,
-                settings: settingsView,
-            };
-
-            // Hide all views first
-            Object.values(views).forEach((view) => {
-                if (view) view.classList.add("hidden");
-            });
-
-            // Show the selected view
-            const selectedView = views[tabId as keyof typeof views];
-            if (selectedView) {
-                selectedView.classList.remove("hidden");
-            }
-        });
+  // Add login button event listener
+  const loginButtons = document.querySelectorAll(".login-button");
+  loginButtons.forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        if (pageLoadingState) pageLoadingState.classList.remove("hidden");
+        if (notAuthenticatedState)
+          notAuthenticatedState.classList.add("hidden");
+        await auth.login();
+      } catch (error) {
+        console.error("Login error:", error);
+        if (pageLoadingState) pageLoadingState.classList.add("hidden");
+        if (pageErrorState) pageErrorState.classList.remove("hidden");
+      }
     });
-
-    // Add login button event listener
-    const loginButtons = document.querySelectorAll(".login-button");
-    loginButtons.forEach((button) => {
-        button.addEventListener("click", async () => {
-            try {
-                if (pageLoadingState)
-                    pageLoadingState.classList.remove("hidden");
-                if (notAuthenticatedState)
-                    notAuthenticatedState.classList.add("hidden");
-                await auth.login();
-            } catch (error) {
-                console.error("Login error:", error);
-                if (pageLoadingState) pageLoadingState.classList.add("hidden");
-                if (pageErrorState) pageErrorState.classList.remove("hidden");
-            }
-        });
-    });
+  });
 </script>
 
 <style>
-    .hidden {
-        display: none !important;
-    }
+  .hidden {
+    display: none !important;
+  }
 </style>
