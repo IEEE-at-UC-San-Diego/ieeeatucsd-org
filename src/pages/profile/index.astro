@@ -1,13 +1,13 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import UserProfile from "../components/auth/UserProfile.astro";
-import DefaultProfileView from "../components/profile/DefaultProfileView.astro";
-import OfficerProfileView from "../components/profile/OfficerView.astro";
-import UserSettings from "../components/profile/UserSettings.astro";
-import FileViewerModal from "../components/modals/FileViewerModal";
+import Layout from "../../layouts/Layout.astro";
+import UserProfile from "../../components/auth/UserProfile.astro";
+import DefaultProfileView from "../../components/profile/DefaultProfileView.astro";
+import OfficerProfileView from "../../components/profile/OfficerView.astro";
+import UserSettings from "../../components/profile/UserSettings.astro";
+import FileViewerModal from "../../components/modals/FileViewerModal";
 import yaml from "js-yaml";
-import profileConfig from "../config/profileConfig.yaml?raw";
-import textConfig from "../config/text.yml?raw";
+import profileConfig from "../../config/profileConfig.yaml?raw";
+import textConfig from "../../config/text.yml?raw";
 
 const title = "User Profile";
 const config = yaml.load(profileConfig) as any;
@@ -202,10 +202,10 @@ const text = yaml.load(textConfig) as any;
 </Layout>
 
 <script>
-  import { Authentication } from "../components/pocketbase/Authentication";
+  import { Authentication } from "../../components/pocketbase/Authentication";
   import yaml from "js-yaml";
-  import profileConfig from "../config/profileConfig.yaml?raw";
-  import textConfig from "../config/text.yml?raw";
+  import profileConfig from "../../config/profileConfig.yaml?raw";
+  import textConfig from "../../config/text.yml?raw";
 
   const config = yaml.load(profileConfig) as any;
   const text = yaml.load(textConfig) as any;
