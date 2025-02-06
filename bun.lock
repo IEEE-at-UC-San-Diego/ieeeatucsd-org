@@ -24,6 +24,7 @@
         "tailwindcss": "^3.4.16",
       },
       "devDependencies": {
+        "@iconify/react": "^5.2.0",
         "daisyui": "^4.12.23",
         "prettier": "^3.4.2",
         "prettier-plugin-astro": "^0.14.1",
@@ -156,6 +157,8 @@
     "@expressive-code/plugin-shiki": ["@expressive-code/plugin-shiki@0.38.3", "", { "dependencies": { "@expressive-code/core": "^0.38.3", "shiki": "^1.22.2" } }, "sha512-kqHnglZeesqG3UKrb6e9Fq5W36AZ05Y9tCREmSN2lw8LVTqENIeCIkLDdWtQ5VoHlKqwUEQFTVlRehdwoY7Gmw=="],
 
     "@expressive-code/plugin-text-markers": ["@expressive-code/plugin-text-markers@0.38.3", "", { "dependencies": { "@expressive-code/core": "^0.38.3" } }, "sha512-dPK3+BVGTbTmGQGU3Fkj3jZ3OltWUAlxetMHI6limUGCWBCucZiwoZeFM/WmqQa71GyKRzhBT+iEov6kkz2xVA=="],
+
+    "@iconify/react": ["@iconify/react@5.2.0", "", { "dependencies": { "@iconify/types": "^2.0.0" }, "peerDependencies": { "react": ">=16" } }, "sha512-7Sdjrqq3fkkQNks9SY3adGC37NQTHsBJL2PRKlQd455PoDi9s+Es9AUTY+vGLFOYs5yO9w9yCE42pmxCwG26WA=="],
 
     "@iconify/tools": ["@iconify/tools@4.0.7", "", { "dependencies": { "@iconify/types": "^2.0.0", "@iconify/utils": "^2.1.32", "@types/tar": "^6.1.13", "axios": "^1.7.7", "cheerio": "1.0.0", "domhandler": "^5.0.3", "extract-zip": "^2.0.1", "local-pkg": "^0.5.0", "pathe": "^1.1.2", "svgo": "^3.3.2", "tar": "^6.2.1" } }, "sha512-zOJxKIfZn96ZRGGvIWzDRLD9vb2CsxjcLuM+QIdvwWbv6SWhm49gECzUnd4d2P0sq9sfodT7yCNobWK8nvavxQ=="],
 
