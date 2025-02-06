@@ -3,6 +3,10 @@ import yaml from "js-yaml";
 import profileConfig from "../config/profileConfig.yaml?raw";
 import textConfig from "../config/text.yml?raw";
 import { Icon } from "astro-icon/components";
+import ProfileSection from "../components/dashboard/ProfileSection.astro";
+import EventsSection from "../components/dashboard/EventsSection.astro";
+import ReimbursementSection from "../components/dashboard/ReimbursementSection.astro";
+import SettingsSection from "../components/dashboard/SettingsSection.astro";
 
 const title = "Dashboard";
 const config = yaml.load(profileConfig) as any;
@@ -64,23 +68,26 @@ const text = yaml.load(textConfig) as any;
                 </div>
 
                 <!-- Navigation -->
-                <nav class="flex-1 overflow-y-auto py-6">
+                <nav class="flex-1 overflow-y-auto scrollbar-hide py-6">
                     <ul class="menu gap-2 px-4 text-base-content/80">
                         <li class="menu-title font-medium opacity-70">
                             <span>Main Menu</span>
                         </li>
                         <li>
                             <button
-                                class="dashboard-nav-btn active gap-4 hover:bg-base-200 transition-all duration-200"
+                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 active:bg-base-200 active:font-medium active:text-primary"
                                 data-section="profile"
                             >
-                                <Icon name="heroicons:home" class="h-5 w-5" />
+                                <Icon
+                                    name="heroicons:home"
+                                    class="h-5 w-5 group-[.active]:text-primary"
+                                />
                                 Dashboard
                             </button>
                         </li>
                         <li>
                             <button
-                                class="dashboard-nav-btn gap-4 hover:bg-base-200 transition-all duration-200"
+                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
                                 data-section="events"
                             >
                                 <Icon
@@ -92,7 +99,7 @@ const text = yaml.load(textConfig) as any;
                         </li>
                         <li>
                             <button
-                                class="dashboard-nav-btn gap-4 hover:bg-base-200 transition-all duration-200"
+                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
                                 data-section="reimbursement"
                             >
                                 <Icon
@@ -108,7 +115,7 @@ const text = yaml.load(textConfig) as any;
                         </li>
                         <li>
                             <button
-                                class="dashboard-nav-btn gap-4 hover:bg-base-200 transition-all duration-200"
+                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
                                 data-section="settings"
                             >
                                 <Icon
@@ -121,7 +128,7 @@ const text = yaml.load(textConfig) as any;
                         <li>
                             <button
                                 id="logoutButton"
-                                class="gap-4 text-error hover:bg-error/10 transition-all duration-200"
+                                class="gap-4 text-error hover:bg-error/10 transition-all duration-200 outline-none focus:outline-none"
                             >
                                 <Icon
                                     name="heroicons:arrow-right-on-rectangle"
@@ -228,200 +235,10 @@ const text = yaml.load(textConfig) as any;
 
                     <!-- Main Content -->
                     <div id="mainContent" class="hidden">
-                        <!-- Dashboard Section -->
-                        <div id="profileSection" class="dashboard-section">
-                            <div class="mb-6">
-                                <h2 class="text-2xl font-bold">
-                                    Dashboard Overview
-                                </h2>
-                                <p class="opacity-70">
-                                    Welcome to your IEEE UCSD dashboard
-                                </p>
-                            </div>
-
-                            <!-- Stats Cards -->
-                            <div
-                                class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
-                            >
-                                <div
-                                    class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-primary transition-colors duration-300"
-                                >
-                                    <div class="stat">
-                                        <div
-                                            class="stat-title font-medium opacity-80"
-                                        >
-                                            Events Attended
-                                        </div>
-                                        <div
-                                            class="stat-value text-primary"
-                                            id="eventsAttendedValue"
-                                        >
-                                            0
-                                        </div>
-                                        <div
-                                            class="stat-desc flex items-center gap-2 mt-1"
-                                        >
-                                            <div
-                                                class="badge badge-primary badge-sm"
-                                            >
-                                                Since joining
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div
-                                    class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-secondary transition-colors duration-300"
-                                >
-                                    <div class="stat">
-                                        <div
-                                            class="stat-title font-medium opacity-80"
-                                        >
-                                            Loyalty Points
-                                        </div>
-                                        <div
-                                            class="stat-value text-secondary"
-                                            id="loyaltyPointsValue"
-                                        >
-                                            0
-                                        </div>
-                                        <div
-                                            class="stat-desc flex items-center gap-2 mt-1"
-                                        >
-                                            <div
-                                                class="badge badge-secondary badge-sm"
-                                                id="loyaltyPointsChange"
-                                            >
-                                                No activity
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div
-                                    class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-accent transition-colors duration-300"
-                                >
-                                    <div class="stat">
-                                        <div
-                                            class="stat-title font-medium opacity-80"
-                                        >
-                                            Activity Level
-                                        </div>
-                                        <div
-                                            class="stat-value text-accent"
-                                            id="activityLevelValue"
-                                        >
-                                            Low
-                                        </div>
-                                        <div
-                                            class="stat-desc flex items-center gap-2 mt-1"
-                                        >
-                                            <div
-                                                class="badge badge-accent badge-sm"
-                                                id="activityLevelDesc"
-                                            >
-                                                New Member
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Dashboard Content -->
-                            <div
-                                class="card bg-base-100 shadow-lg border border-base-200 hover:border-primary transition-colors duration-300"
-                            >
-                                <div class="card-body">
-                                    <h3
-                                        class="card-title text-xl font-bold flex items-center gap-3"
-                                    >
-                                        <div class="badge badge-primary p-3">
-                                            <Icon
-                                                name="heroicons:eye"
-                                                class="h-5 w-5"
-                                            />
-                                        </div>
-                                        Recent Activity
-                                    </h3>
-                                    <div class="divider"></div>
-                                    <div class="py-4">
-                                        <p
-                                            class="text-base-content/70 flex items-center gap-2"
-                                        >
-                                            <Icon
-                                                name="heroicons:question-mark-circle"
-                                                class="h-5 w-5 opacity-50"
-                                            />
-                                            No recent activity to display.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Events Section -->
-                        <div
-                            id="eventsSection"
-                            class="dashboard-section hidden"
-                        >
-                            <div class="mb-6">
-                                <h2 class="text-2xl font-bold">Events</h2>
-                                <p class="opacity-70">
-                                    View and manage your IEEE UCSD events
-                                </p>
-                            </div>
-                            <div class="card bg-base-100 shadow-xl">
-                                <div class="card-body">
-                                    <h3 class="card-title">Upcoming Events</h3>
-                                    <!-- Events content will go here -->
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Reimbursement Section -->
-                        <div
-                            id="reimbursementSection"
-                            class="dashboard-section hidden"
-                        >
-                            <div class="mb-6">
-                                <h2 class="text-2xl font-bold">
-                                    Reimbursement
-                                </h2>
-                                <p class="opacity-70">
-                                    Manage your reimbursement requests
-                                </p>
-                            </div>
-                            <div class="card bg-base-100 shadow-xl">
-                                <div class="card-body">
-                                    <h3 class="card-title">
-                                        Reimbursement Requests
-                                    </h3>
-                                    <!-- Reimbursement content will go here -->
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Settings Section -->
-                        <div
-                            id="settingsSection"
-                            class="dashboard-section hidden"
-                        >
-                            <div class="mb-6">
-                                <h2 class="text-2xl font-bold">Settings</h2>
-                                <p class="opacity-70">
-                                    Manage your account settings
-                                </p>
-                            </div>
-                            <div class="card bg-base-100 shadow-xl">
-                                <div class="card-body">
-                                    <h3 class="card-title">Account Settings</h3>
-                                    <div class="py-4">
-                                        <p class="text-base-content/70">
-                                            Account settings will be available
-                                            soon.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <ProfileSection />
+                        <EventsSection />
+                        <ReimbursementSection />
+                        <SettingsSection />
                     </div>
                 </div>
             </main>
@@ -431,7 +248,12 @@ const text = yaml.load(textConfig) as any;
 
 <script>
     import { Authentication } from "../components/pocketbase/Authentication";
+    import { Get } from "../components/pocketbase/Get";
+    import { SendLog } from "../components/pocketbase/SendLog";
+
     const auth = Authentication.getInstance();
+    const get = Get.getInstance();
+    const logger = SendLog.getInstance();
 
     // Initialize page state
     const pageLoadingState = document.getElementById("pageLoadingState");
@@ -446,6 +268,41 @@ const text = yaml.load(textConfig) as any;
     const userInitials = document.getElementById("userInitials");
     const userName = document.getElementById("userName");
     const userRole = document.getElementById("userRole");
+
+    // Display user profile information
+    const updateUserProfile = async (user: any) => {
+        if (!user) return;
+
+        try {
+            // Get user information including member type
+            const extendedUser = await get.getOne("users", user.id, {
+                fields: ["id", "name", "member_type", "expand.member_type"],
+            });
+
+            // Update display elements
+            if (userName) {
+                userName.textContent = extendedUser.name || "Unknown User";
+            }
+
+            if (userRole) {
+                userRole.textContent = extendedUser.member_type || "Member";
+            }
+
+            if (userInitials) {
+                const initials = (extendedUser.name || "U")
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join("")
+                    .toUpperCase();
+                userInitials.textContent = initials;
+            }
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+            if (userName) userName.textContent = "Unknown User";
+            if (userRole) userRole.textContent = "Member";
+            if (userInitials) userInitials.textContent = "?";
+        }
+    };
 
     // Mobile sidebar toggle
     const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
@@ -483,22 +340,6 @@ const text = yaml.load(textConfig) as any;
         });
     };
 
-    // Update user profile
-    const updateUserProfile = (user: any) => {
-        if (!user) return;
-
-        if (userName) userName.textContent = user.name || "Unknown User";
-        if (userRole) userRole.textContent = user.role || "Member";
-        if (userInitials) {
-            const initials = (user.name || "U")
-                .split(" ")
-                .map((n: string) => n[0])
-                .join("")
-                .toUpperCase();
-            userInitials.textContent = initials;
-        }
-    };
-
     // Initialize page
     const initializePage = async () => {
         try {
@@ -517,7 +358,7 @@ const text = yaml.load(textConfig) as any;
             }
 
             const user = auth.getCurrentUser();
-            updateUserProfile(user);
+            await updateUserProfile(user);
 
             // Initialize navigation
             handleNavigation();
@@ -578,56 +419,3 @@ const text = yaml.load(textConfig) as any;
         );
     }
 </script>
-
-<style>
-    .dashboard-nav-btn.active {
-        @apply bg-base-200 font-medium text-primary;
-    }
-
-    .dashboard-nav-btn.active svg {
-        @apply text-primary;
-    }
-
-    /* Smooth transitions */
-    .dashboard-nav-btn {
-        @apply transition-all duration-200;
-    }
-
-    .dashboard-nav-btn:hover {
-        background-color: rgba(
-            255,
-            255,
-            255,
-            0.05
-        ); /* Example: Subtle white overlay */
-    }
-
-    /* Card hover effects */
-    .card {
-        @apply transition-all duration-300;
-    }
-
-    .card:hover {
-        @apply transform -translate-y-1;
-    }
-
-    /* Stats hover effects */
-    .stats {
-        @apply transition-all duration-300;
-    }
-
-    .stats:hover {
-        @apply transform -translate-y-1;
-    }
-
-    /* Hide scrollbar for Chrome, Safari and Opera */
-    .overflow-y-auto::-webkit-scrollbar {
-        display: none;
-    }
-
-    /* Hide scrollbar for IE, Edge and Firefox */
-    .overflow-y-auto {
-        -ms-overflow-style: none; /* IE and Edge */
-        scrollbar-width: none; /* Firefox */
-    }
-</style>
