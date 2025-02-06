@@ -2,6 +2,7 @@
 import yaml from "js-yaml";
 import profileConfig from "../config/profileConfig.yaml?raw";
 import textConfig from "../config/text.yml?raw";
+import { Icon } from "astro-icon/components";
 
 const title = "Dashboard";
 const config = yaml.load(profileConfig) as any;
@@ -19,136 +20,113 @@ const text = yaml.load(textConfig) as any;
     <body class="bg-base-200">
         <div class="flex h-screen">
             <!-- Sidebar -->
-            <aside class="bg-base-100 w-80 flex flex-col shadow-lg">
+            <aside
+                class="bg-base-100 w-80 flex flex-col shadow-xl border-r border-base-200 transition-all duration-300"
+            >
                 <!-- Logo -->
-                <div class="p-4 border-b border-base-200">
-                    <div class="flex items-center gap-2">
-                        <img
-                            src="/ieee-logo.png"
-                            alt="IEEE Logo"
-                            class="w-8 h-8"
-                        />
-                        <span class="text-xl font-bold">IEEE UCSD</span>
+                <div class="p-6 border-b border-base-200">
+                    <div class="flex items-center justify-center">
+                        <span
+                            class="text-4xl font-bold text-[#06659d] select-none tracking-wide"
+                            >IEEEUCSD</span
+                        >
                     </div>
                 </div>
 
                 <!-- User Profile -->
-                <div class="p-4 border-b border-base-200">
+                <div class="p-6 border-b border-base-200">
                     <div
-                        class="flex items-center gap-3"
+                        class="flex items-center gap-4"
                         id="userProfileSummary"
                     >
-                        <div class="avatar placeholder">
+                        <div class="avatar flex items-center justify-center">
                             <div
-                                class="w-12 h-12 rounded-full bg-primary text-primary-content"
+                                class="w-12 h-12 rounded-xl bg-[#06659d] text-white ring ring-base-200 ring-offset-base-100 ring-offset-2 inline-flex items-center justify-center"
                             >
-                                <span class="text-xl" id="userInitials">?</span>
+                                <span
+                                    class="text-xl font-semibold select-none inline-flex items-center justify-center w-full h-full"
+                                    id="userInitials">?</span
+                                >
                             </div>
                         </div>
                         <div>
-                            <h3 class="font-medium" id="userName">
+                            <h3 class="font-medium text-lg" id="userName">
                                 Loading...
                             </h3>
-                            <p class="text-sm opacity-70" id="userRole">
+                            <div
+                                class="badge badge-outline mt-1 border-[#06659d] text-[#06659d]"
+                                id="userRole"
+                            >
                                 Member
-                            </p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Navigation -->
-                <nav class="flex-1 overflow-y-auto">
-                    <ul class="menu p-4 gap-2 text-base-content">
-                        <li class="menu-title"><span>Main Menu</span></li>
+                <nav class="flex-1 overflow-y-auto py-6">
+                    <ul class="menu gap-2 px-4 text-base-content/80">
+                        <li class="menu-title font-medium opacity-70">
+                            <span>Main Menu</span>
+                        </li>
                         <li>
                             <button
-                                class="dashboard-nav-btn active"
+                                class="dashboard-nav-btn active gap-4 hover:bg-base-200 transition-all duration-200"
                                 data-section="profile"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"
-                                    ></path>
-                                </svg>
+                                <Icon name="heroicons:home" class="h-5 w-5" />
                                 Dashboard
                             </button>
                         </li>
                         <li>
                             <button
-                                class="dashboard-nav-btn"
+                                class="dashboard-nav-btn gap-4 hover:bg-base-200 transition-all duration-200"
                                 data-section="events"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
+                                <Icon
+                                    name="heroicons:calendar"
                                     class="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-                                        clip-rule="evenodd"></path>
-                                </svg>
+                                />
                                 Events
                             </button>
                         </li>
                         <li>
                             <button
-                                class="dashboard-nav-btn"
+                                class="dashboard-nav-btn gap-4 hover:bg-base-200 transition-all duration-200"
                                 data-section="reimbursement"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
+                                <Icon
+                                    name="heroicons:credit-card"
                                     class="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
-                                    ></path>
-                                </svg>
+                                />
                                 Reimbursement
                             </button>
                         </li>
 
-                        <li class="menu-title mt-4"><span>Account</span></li>
+                        <li class="menu-title mt-6 font-medium opacity-70">
+                            <span>Account</span>
+                        </li>
                         <li>
                             <button
-                                class="dashboard-nav-btn"
+                                class="dashboard-nav-btn gap-4 hover:bg-base-200 transition-all duration-200"
                                 data-section="settings"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
+                                <Icon
+                                    name="heroicons:cog-6-tooth"
                                     class="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-                                        clip-rule="evenodd"></path>
-                                </svg>
+                                />
                                 Settings
                             </button>
                         </li>
                         <li>
-                            <button id="logoutButton" class="text-error">
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
+                            <button
+                                id="logoutButton"
+                                class="gap-4 text-error hover:bg-error/10 transition-all duration-200"
+                            >
+                                <Icon
+                                    name="heroicons:arrow-right-on-rectangle"
                                     class="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
-                                        clip-rule="evenodd"></path>
-                                </svg>
+                                />
                                 Logout
                             </button>
                         </li>
@@ -166,19 +144,7 @@ const text = yaml.load(textConfig) as any;
                                 id="mobileSidebarToggle"
                                 class="btn btn-square btn-ghost"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-6 w-6"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M4 6h16M4 12h16M4 18h16"></path>
-                                </svg>
+                                <Icon name="heroicons:bars-3" class="h-6 w-6" />
                             </button>
                             <h1 class="text-xl font-bold">IEEE UCSD</h1>
                         </div>
@@ -277,68 +243,113 @@ const text = yaml.load(textConfig) as any;
                             <div
                                 class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
                             >
-                                <div class="stats shadow">
+                                <div
+                                    class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-primary transition-colors duration-300"
+                                >
                                     <div class="stat">
-                                        <div class="stat-title">
+                                        <div
+                                            class="stat-title font-medium opacity-80"
+                                        >
                                             Events Attended
                                         </div>
                                         <div
-                                            class="stat-value"
+                                            class="stat-value text-primary"
                                             id="eventsAttendedValue"
                                         >
                                             0
                                         </div>
-                                        <div class="stat-desc">
-                                            Since joining
+                                        <div
+                                            class="stat-desc flex items-center gap-2 mt-1"
+                                        >
+                                            <div
+                                                class="badge badge-primary badge-sm"
+                                            >
+                                                Since joining
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="stats shadow">
+                                <div
+                                    class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-secondary transition-colors duration-300"
+                                >
                                     <div class="stat">
-                                        <div class="stat-title">
+                                        <div
+                                            class="stat-title font-medium opacity-80"
+                                        >
                                             Loyalty Points
                                         </div>
                                         <div
-                                            class="stat-value text-primary"
+                                            class="stat-value text-secondary"
                                             id="loyaltyPointsValue"
                                         >
                                             0
                                         </div>
                                         <div
-                                            class="stat-desc"
-                                            id="loyaltyPointsChange"
+                                            class="stat-desc flex items-center gap-2 mt-1"
                                         >
-                                            No recent activity
+                                            <div
+                                                class="badge badge-secondary badge-sm"
+                                                id="loyaltyPointsChange"
+                                            >
+                                                No activity
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="stats shadow">
+                                <div
+                                    class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-accent transition-colors duration-300"
+                                >
                                     <div class="stat">
-                                        <div class="stat-title">
+                                        <div
+                                            class="stat-title font-medium opacity-80"
+                                        >
                                             Activity Level
                                         </div>
                                         <div
-                                            class="stat-value text-secondary"
+                                            class="stat-value text-accent"
                                             id="activityLevelValue"
                                         >
                                             Low
                                         </div>
                                         <div
-                                            class="stat-desc"
-                                            id="activityLevelDesc"
+                                            class="stat-desc flex items-center gap-2 mt-1"
                                         >
-                                            New Member
+                                            <div
+                                                class="badge badge-accent badge-sm"
+                                                id="activityLevelDesc"
+                                            >
+                                                New Member
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Dashboard Content -->
-                            <div class="card bg-base-100 shadow-xl">
+                            <div
+                                class="card bg-base-100 shadow-lg border border-base-200 hover:border-primary transition-colors duration-300"
+                            >
                                 <div class="card-body">
-                                    <h3 class="card-title">Recent Activity</h3>
+                                    <h3
+                                        class="card-title text-xl font-bold flex items-center gap-3"
+                                    >
+                                        <div class="badge badge-primary p-3">
+                                            <Icon
+                                                name="heroicons:eye"
+                                                class="h-5 w-5"
+                                            />
+                                        </div>
+                                        Recent Activity
+                                    </h3>
+                                    <div class="divider"></div>
                                     <div class="py-4">
-                                        <p class="text-base-content/70">
+                                        <p
+                                            class="text-base-content/70 flex items-center gap-2"
+                                        >
+                                            <Icon
+                                                name="heroicons:question-mark-circle"
+                                                class="h-5 w-5 opacity-50"
+                                            />
                                             No recent activity to display.
                                         </p>
                                     </div>
@@ -570,7 +581,43 @@ const text = yaml.load(textConfig) as any;
 
 <style>
     .dashboard-nav-btn.active {
-        @apply bg-base-200 font-medium;
+        @apply bg-base-200 font-medium text-primary;
+    }
+
+    .dashboard-nav-btn.active svg {
+        @apply text-primary;
+    }
+
+    /* Smooth transitions */
+    .dashboard-nav-btn {
+        @apply transition-all duration-200;
+    }
+
+    .dashboard-nav-btn:hover {
+        background-color: rgba(
+            255,
+            255,
+            255,
+            0.05
+        ); /* Example: Subtle white overlay */
+    }
+
+    /* Card hover effects */
+    .card {
+        @apply transition-all duration-300;
+    }
+
+    .card:hover {
+        @apply transform -translate-y-1;
+    }
+
+    /* Stats hover effects */
+    .stats {
+        @apply transition-all duration-300;
+    }
+
+    .stats:hover {
+        @apply transform -translate-y-1;
     }
 
     /* Hide scrollbar for Chrome, Safari and Opera */
