@@ -1,27 +1,27 @@
 import React, { useEffect, useState } from "react";
 
 const UpcomingEvent = ({ name, location, date, time, delay, description }) => (
-  <div className="text-white w-[40vw] pl-[8%] md:border-l-[0.3vw] border-l-[0.5vw] border-white/70 pb-[5%] relative">
+  <div className="text-white w-[40vw] pl-[8%] md:border-l-[0.3vw] border-l-[0.5vw] border-white/70 md:pb-[5%] pb-[10%] relative">
     <p
       data-inview
-      className={`animate-duration-500 animate-delay-${delay * 200} in-view:animate-fade-left py-[0.2%] px-[2%] w-fit border-[0.1vw] font-light rounded-full md:text-[1.3vw] text-[2.3vw]`}
+      className={`animate-duration-500 animate-delay-${delay * 200} in-view:animate-fade-left py-[0.2%] pl-[8%] md:pl-[2%] md:pr-[2%] w-fit border-[0.1vw] font-light rounded-full md:text-[1.3vw] text-[2.3vw]`}
     >
       {name}
     </p>
     <div
       data-inview
-      className={`animate-duration-500 animate-delay-${delay * 200 + 100} in-view:animate-fade-left flex justify-between items-center min-w-[70%] w-fit md:text-[1.2vw] text-[2vw] my-[2%]`}
+      className={`animate-duration-500 animate-delay-${delay * 200 + 100} in-view:animate-fade-left md:flex justify-between items-center min-w-[70%] w-fit md:text-[1.2vw] text-[2vw] my-[2%]`}
     >
       Location: {location}
       {date && (
         <>
-          <div className="bg-white h-[0.5vw] w-[0.5vw] rounded-full mx-[0.5vw]" />
+          <div className="md:visible invisible bg-white h-[0.5vw] w-[0.5vw] rounded-full mx-[0.5vw]" />
           <p>{date}</p>
         </>
       )}
       {time && (
         <>
-          <div className="bg-white h-[0.5vw] w-[0.5vw] rounded-full mx-[0.5vw]" />
+          <div className="md:visible invisible bg-white h-[0.5vw] w-[0.5vw] rounded-full mx-[0.5vw]" />
           <p>{time}</p>
         </>
       )}
