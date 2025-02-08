@@ -136,7 +136,7 @@ import pages from "../../data/pages.json";
                                     </svg>
                                 </button>
                             </div>
-                            <div class="mobile-dropdown-content hidden mt-2 space-y-2 pl-4 absolute w-full">
+                            <div class="mobile-dropdown-content mt-2 space-y-2 pl-4 absolute w-full animate-duration-200 animate-ease-in-out">
                                 {page.subpages.map((subpage) => (
                                     <a
                                         href={subpage.path}
@@ -172,18 +172,46 @@ import pages from "../../data/pages.json";
     }
 
     .mobile-dropdown-content {
-        max-height: 0;
         opacity: 0;
         pointer-events: none;
-        transition: all 0.3s ease-out;
         z-index: 30;
+        width: calc(100% - 1rem) !important;
+        animation: fadeOut 0.2s ease-in-out forwards;
     }
 
     .mobile-dropdown-content.show {
-        max-height: none;
         opacity: 1;
         pointer-events: all;
-        transition: all 0.3s ease-in;
+        backdrop-filter: none;
+        animation: fadeIn 0.2s ease-in-out forwards;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+    }
+
+    .mobile-dropdown-content a {
+        margin-inline: auto;
+        width: 100% !important;
+        max-width: calc(100% - 1rem);
     }
 
     .dropdown-icon.rotated {
@@ -194,11 +222,15 @@ import pages from "../../data/pages.json";
     .dropdown-container {
         transition: all 0.3s ease;
         position: relative;
+        isolation: isolate;
     }
 
     .dropdown-container.active {
         transform: scale(1.02);
         z-index: 25;
+        backdrop-filter: none;
+        filter: none;
+        transition: all 0.2s ease;
     }
 
     .dropdown-container.active .mobile-dropdown-toggle,
@@ -206,26 +238,42 @@ import pages from "../../data/pages.json";
         position: relative;
         z-index: 25;
         pointer-events: all;
+        backdrop-filter: none;
+        filter: none;
+        transition: all 0.2s ease;
     }
 
     .dropdown-container.active::after {
         content: "";
         position: fixed;
         inset: 0;
-        background: transparent;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
         z-index: 15;
         pointer-events: none;
+        transition: all 0.3s ease;
     }
 
     #mobile-menu.has-active-dropdown > div > *:not(.dropdown-container.active) {
-        opacity: 0.3;
+        opacity: 0.2;
         transform: scale(0.98);
-        transition: all 0.3s ease;
+        filter: blur(2px);
+        transition: all 0.2s ease;
         pointer-events: none;
     }
 
     #mobile-menu.has-active-dropdown .dropdown-container.active {
         pointer-events: all;
+        filter: none;
+        transition: all 0.2s ease;
+    }
+
+    #mobile-menu.has-active-dropdown
+        .dropdown-container.active
+        .mobile-dropdown-content.show {
+        filter: none;
+        backdrop-filter: none;
+        background: transparent;
     }
 </style>
 
@@ -277,18 +325,21 @@ import pages from "../../data/pages.json";
 
             // If clicking an already active dropdown, close it and restore interactions
             if (isExpanded) {
-                container?.classList.remove("active");
-                mobileMenu?.classList.remove("has-active-dropdown");
-                content?.classList.add("hidden");
+                // First close the dropdown
                 content?.classList.remove("show");
                 icon?.classList.remove("rotated");
-                toggle.setAttribute("aria-expanded", "false");
+
+                // Then wait for animation to complete plus a delay before removing focus
+                setTimeout(() => {
+                    container?.classList.remove("active");
+                    mobileMenu?.classList.remove("has-active-dropdown");
+                    toggle.setAttribute("aria-expanded", "false");
+                }, 300); // 200ms for animation + 100ms delay
                 return;
             }
 
             // Remove active state from all dropdowns first
             document.querySelectorAll(".dropdown-container").forEach((el) => {
-                el.classList.remove("active");
                 const dropdownContent = el.querySelector(
                     ".mobile-dropdown-content"
                 );
@@ -298,24 +349,27 @@ import pages from "../../data/pages.json";
                 const dropdownIcon =
                     dropdownToggle?.querySelector(".dropdown-icon");
 
-                dropdownContent?.classList.add("hidden");
                 dropdownContent?.classList.remove("show");
                 dropdownIcon?.classList.remove("rotated");
                 dropdownToggle?.setAttribute("aria-expanded", "false");
             });
-            mobileMenu?.classList.remove("has-active-dropdown");
 
-            // Activate the clicked dropdown
+            // First focus the new dropdown
             container?.classList.add("active");
             mobileMenu?.classList.add("has-active-dropdown");
-            content?.classList.remove("hidden");
-            content?.classList.add("show");
-            icon?.classList.add("rotated");
             toggle.setAttribute("aria-expanded", "true");
+            icon?.classList.add("rotated");
+
+            // Then show the content with animation after a short delay
+            setTimeout(() => {
+                requestAnimationFrame(() => {
+                    content?.classList.add("show");
+                });
+            }, 100);
         });
     });
 
-    // Close menu when clicking outside
+    // Close menu when clicking outside ~ Doesnt really work at the moment
     document.addEventListener("click", (e) => {
         if (
             !mobileMenu?.contains(e.target as Node) &&
