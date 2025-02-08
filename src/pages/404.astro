@@ -26,14 +26,40 @@ import Link from "next/link";
             >
                 404
             </p>
-            <p class="font-extralight md:text-[1.4vw] text-[3vw]">
-                Oops! You got lost in the circuit!🔌⚡
+            <p
+                class="font-bold md:text-[1.4vw] text-[3vw] text-slate-800/90 select-none font-mono"
+                style={{ textShadow: "0vw 0vw 0.2vw #88BFEC" }}
+            >
+                <span class="text-ieee-yellow">root@ieee</span>:<span
+                    class="text-blue-400">~/404</span
+                > $ ERROR: Connection_Not_Found();
+                <br />
             </p>
             <Link
                 href="/"
-                className="border-white/80 border-[0.12vw] rounded-[0.7vw] px-[7vw] py-[2%] font-extralight md:text-[1.2vw] text-[2.5vw] mt-[3%] hover:text-ieee-yellow hover:border-ieee-yellow duration-300"
+                className="font-bold md:text-[1.2vw] text-[2.5vw] mt-[5%] text-slate-800/90 hover:text-ieee-yellow duration-300 select-none font-mono border-2 border-slate-800/90 rounded-lg px-8 py-3 hover:border-ieee-yellow flex items-center gap-3 group relative overflow-hidden bg-white/5 backdrop-blur-sm hover:bg-ieee-yellow/10 shadow-lg hover:shadow-ieee-yellow/20 transition-all"
+                style={{ textShadow: "0vw 0vw 0.2vw #88BFEC" }}
             >
-                Go Back Home
+                <span
+                    class="text-ieee-yellow group-hover:text-slate-800/90 transition-colors"
+                    >$</span
+                >
+                <span class="relative z-10">cd /home</span>
+                <svg
+                    class="w-[1.2em] h-[1.2em] transition-all group-hover:translate-x-1 text-ieee-yellow group-hover:text-slate-800/90"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M5 12h14m-7-7l7 7-7 7"></path>
+                </svg>
+                <div
+                    class="absolute inset-0 bg-gradient-to-r from-slate-800/0 via-slate-800/5 to-slate-800/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
+                >
+                </div>
             </Link>
         </div>
     </div>
