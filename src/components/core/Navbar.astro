@@ -302,8 +302,29 @@ import pages from "../../data/pages.json";
             closeIcon?.classList.add("hidden");
             document.body.style.overflow = "";
 
+            // First wait for the navbar to slide out
             setTimeout(() => {
                 mobileMenu?.classList.add("hidden");
+
+                // Then reset all dropdowns and focus states
+                document
+                    .querySelectorAll(".dropdown-container")
+                    .forEach((el) => {
+                        const dropdownContent = el.querySelector(
+                            ".mobile-dropdown-content"
+                        );
+                        const dropdownToggle = el.querySelector(
+                            ".mobile-dropdown-toggle"
+                        );
+                        const dropdownIcon =
+                            dropdownToggle?.querySelector(".dropdown-icon");
+
+                        el.classList.remove("active");
+                        dropdownContent?.classList.remove("show");
+                        dropdownIcon?.classList.remove("rotated");
+                        dropdownToggle?.setAttribute("aria-expanded", "false");
+                    });
+                mobileMenu?.classList.remove("has-active-dropdown");
             }, 300);
         }
     }
