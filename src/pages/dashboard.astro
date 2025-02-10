@@ -1,7 +1,5 @@
 ---
 import yaml from "js-yaml";
-import profileConfig from "../config/profileConfig.yaml?raw";
-import textConfig from "../config/text.yml?raw";
 import { Icon } from "astro-icon/components";
 import ProfileSection from "../components/dashboard/ProfileSection.astro";
 import EventsSection from "../components/dashboard/EventsSection.astro";
@@ -9,413 +7,387 @@ import ReimbursementSection from "../components/dashboard/ReimbursementSection.a
 import SettingsSection from "../components/dashboard/SettingsSection.astro";
 
 const title = "Dashboard";
-const config = yaml.load(profileConfig) as any;
-const text = yaml.load(textConfig) as any;
 ---
 
 <!doctype html>
 <html lang="en" data-theme="dark">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{title} | IEEE UCSD</title>
-        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    </head>
-    <body class="bg-base-200">
-        <div class="flex h-screen">
-            <!-- Sidebar -->
-            <aside
-                class="bg-base-100 w-80 flex flex-col shadow-xl border-r border-base-200 transition-all duration-300"
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} | IEEE UCSD</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  </head>
+  <body class="bg-base-200">
+    <div class="flex h-screen">
+      <!-- Sidebar -->
+      <aside
+        class="bg-base-100 w-80 flex flex-col shadow-xl border-r border-base-200 transition-all duration-300"
+      >
+        <!-- Logo -->
+        <div class="p-6 border-b border-base-200">
+          <div class="flex items-center justify-center">
+            <span
+              class="text-4xl font-bold text-[#06659d] select-none tracking-wide"
+              >IEEEUCSD</span
             >
-                <!-- Logo -->
-                <div class="p-6 border-b border-base-200">
-                    <div class="flex items-center justify-center">
-                        <span
-                            class="text-4xl font-bold text-[#06659d] select-none tracking-wide"
-                            >IEEEUCSD</span
-                        >
-                    </div>
-                </div>
-
-                <!-- User Profile -->
-                <div class="p-6 border-b border-base-200">
-                    <div
-                        class="flex items-center gap-4"
-                        id="userProfileSummary"
-                    >
-                        <div class="avatar flex items-center justify-center">
-                            <div
-                                class="w-12 h-12 rounded-xl bg-[#06659d] text-white ring ring-base-200 ring-offset-base-100 ring-offset-2 inline-flex items-center justify-center"
-                            >
-                                <span
-                                    class="text-xl font-semibold select-none inline-flex items-center justify-center w-full h-full"
-                                    id="userInitials">?</span
-                                >
-                            </div>
-                        </div>
-                        <div>
-                            <h3 class="font-medium text-lg" id="userName">
-                                Loading...
-                            </h3>
-                            <div
-                                class="badge badge-outline mt-1 border-[#06659d] text-[#06659d]"
-                                id="userRole"
-                            >
-                                Member
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Navigation -->
-                <nav class="flex-1 overflow-y-auto scrollbar-hide py-6">
-                    <ul class="menu gap-2 px-4 text-base-content/80">
-                        <li class="menu-title font-medium opacity-70">
-                            <span>Main Menu</span>
-                        </li>
-                        <li>
-                            <button
-                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 active:bg-base-200 active:font-medium active:text-primary"
-                                data-section="profile"
-                            >
-                                <Icon
-                                    name="heroicons:home"
-                                    class="h-5 w-5 group-[.active]:text-primary"
-                                />
-                                Dashboard
-                            </button>
-                        </li>
-                        <li>
-                            <button
-                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
-                                data-section="events"
-                            >
-                                <Icon
-                                    name="heroicons:calendar"
-                                    class="h-5 w-5"
-                                />
-                                Events
-                            </button>
-                        </li>
-                        <li>
-                            <button
-                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
-                                data-section="reimbursement"
-                            >
-                                <Icon
-                                    name="heroicons:credit-card"
-                                    class="h-5 w-5"
-                                />
-                                Reimbursement
-                            </button>
-                        </li>
-
-                        <li class="menu-title mt-6 font-medium opacity-70">
-                            <span>Account</span>
-                        </li>
-                        <li>
-                            <button
-                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
-                                data-section="settings"
-                            >
-                                <Icon
-                                    name="heroicons:cog-6-tooth"
-                                    class="h-5 w-5"
-                                />
-                                Settings
-                            </button>
-                        </li>
-                        <li>
-                            <button
-                                id="logoutButton"
-                                class="gap-4 text-error hover:bg-error/10 transition-all duration-200 outline-none focus:outline-none"
-                            >
-                                <Icon
-                                    name="heroicons:arrow-right-on-rectangle"
-                                    class="h-5 w-5"
-                                />
-                                Logout
-                            </button>
-                        </li>
-                    </ul>
-                </nav>
-            </aside>
-
-            <!-- Main Content -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-base-200">
-                <!-- Mobile Header -->
-                <header class="bg-base-100 p-4 shadow-md lg:hidden">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <button
-                                id="mobileSidebarToggle"
-                                class="btn btn-square btn-ghost"
-                            >
-                                <Icon name="heroicons:bars-3" class="h-6 w-6" />
-                            </button>
-                            <h1 class="text-xl font-bold">IEEE UCSD</h1>
-                        </div>
-                    </div>
-                </header>
-
-                <!-- Page Content -->
-                <div class="p-6 max-w-[1600px] mx-auto">
-                    <!-- Loading State -->
-                    <div id="pageLoadingState" class="w-full">
-                        <div
-                            class="flex flex-col items-center justify-center p-8"
-                        >
-                            <div class="loading loading-spinner loading-lg">
-                            </div>
-                            <p class="mt-4 opacity-70">Loading dashboard...</p>
-                        </div>
-                    </div>
-
-                    <!-- Error State -->
-                    <div id="pageErrorState" class="hidden w-full">
-                        <div class="alert alert-error">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-6 w-6"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                            >
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                    clip-rule="evenodd"></path>
-                            </svg>
-                            <span>Failed to load dashboard content</span>
-                        </div>
-                    </div>
-
-                    <!-- Not Authenticated State -->
-                    <div id="notAuthenticatedState" class="hidden w-full">
-                        <div class="card bg-base-100 shadow-xl">
-                            <div class="card-body items-center text-center">
-                                <div class="mb-6">
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        class="h-16 w-16 opacity-30"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                                            clip-rule="evenodd"></path>
-                                    </svg>
-                                </div>
-                                <h2 class="card-title text-2xl mb-2">
-                                    Sign in to Access Dashboard
-                                </h2>
-                                <p class="opacity-70 mb-6">
-                                    Please sign in with your IEEE UCSD account
-                                    to access the dashboard.
-                                </p>
-                                <button
-                                    class="login-button btn btn-primary btn-lg gap-2"
-                                >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        class="h-5 w-5"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z"
-                                            clip-rule="evenodd"></path>
-                                    </svg>
-                                    Sign in with IEEEUCSD SSO
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Main Content -->
-                    <div id="mainContent" class="hidden">
-                        <ProfileSection />
-                        <EventsSection />
-                        <ReimbursementSection />
-                        <SettingsSection />
-                    </div>
-                </div>
-            </main>
+          </div>
         </div>
-    </body>
+
+        <!-- User Profile -->
+        <div class="p-6 border-b border-base-200">
+          <div class="flex items-center gap-4" id="userProfileSummary">
+            <div class="avatar flex items-center justify-center">
+              <div
+                class="w-12 h-12 rounded-xl bg-[#06659d] text-white ring ring-base-200 ring-offset-base-100 ring-offset-2 inline-flex items-center justify-center"
+              >
+                <span
+                  class="text-xl font-semibold select-none inline-flex items-center justify-center w-full h-full"
+                  id="userInitials">?</span
+                >
+              </div>
+            </div>
+            <div>
+              <h3 class="font-medium text-lg" id="userName">Loading...</h3>
+              <div
+                class="badge badge-outline mt-1 border-[#06659d] text-[#06659d]"
+                id="userRole"
+              >
+                Member
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto scrollbar-hide py-6">
+          <ul class="menu gap-2 px-4 text-base-content/80">
+            <li class="menu-title font-medium opacity-70">
+              <span>Main Menu</span>
+            </li>
+            <li>
+              <button
+                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 active:bg-base-200 active:font-medium active:text-primary"
+                data-section="profile"
+              >
+                <Icon
+                  name="heroicons:home"
+                  class="h-5 w-5 group-[.active]:text-primary"
+                />
+                Dashboard
+              </button>
+            </li>
+            <li>
+              <button
+                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
+                data-section="events"
+              >
+                <Icon name="heroicons:calendar" class="h-5 w-5" />
+                Events
+              </button>
+            </li>
+            <li>
+              <button
+                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
+                data-section="reimbursement"
+              >
+                <Icon name="heroicons:credit-card" class="h-5 w-5" />
+                Reimbursement
+              </button>
+            </li>
+
+            <li class="menu-title mt-6 font-medium opacity-70">
+              <span>Account</span>
+            </li>
+            <li>
+              <button
+                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
+                data-section="settings"
+              >
+                <Icon name="heroicons:cog-6-tooth" class="h-5 w-5" />
+                Settings
+              </button>
+            </li>
+            <li>
+              <button
+                id="logoutButton"
+                class="gap-4 text-error hover:bg-error/10 transition-all duration-200 outline-none focus:outline-none"
+              >
+                <Icon
+                  name="heroicons:arrow-right-on-rectangle"
+                  class="h-5 w-5"
+                />
+                Logout
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="flex-1 overflow-x-hidden overflow-y-auto bg-base-200">
+        <!-- Mobile Header -->
+        <header class="bg-base-100 p-4 shadow-md lg:hidden">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <button id="mobileSidebarToggle" class="btn btn-square btn-ghost">
+                <Icon name="heroicons:bars-3" class="h-6 w-6" />
+              </button>
+              <h1 class="text-xl font-bold">IEEE UCSD</h1>
+            </div>
+          </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="p-6 max-w-[1600px] mx-auto">
+          <!-- Loading State -->
+          <div id="pageLoadingState" class="w-full">
+            <div class="flex flex-col items-center justify-center p-8">
+              <div class="loading loading-spinner loading-lg"></div>
+              <p class="mt-4 opacity-70">Loading dashboard...</p>
+            </div>
+          </div>
+
+          <!-- Error State -->
+          <div id="pageErrorState" class="hidden w-full">
+            <div class="alert alert-error">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                  clip-rule="evenodd"></path>
+              </svg>
+              <span>Failed to load dashboard content</span>
+            </div>
+          </div>
+
+          <!-- Not Authenticated State -->
+          <div id="notAuthenticatedState" class="hidden w-full">
+            <div class="card bg-base-100 shadow-xl">
+              <div class="card-body items-center text-center">
+                <div class="mb-6">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-16 w-16 opacity-30"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                      clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <h2 class="card-title text-2xl mb-2">
+                  Sign in to Access Dashboard
+                </h2>
+                <p class="opacity-70 mb-6">
+                  Please sign in with your IEEE UCSD account to access the
+                  dashboard.
+                </p>
+                <button class="login-button btn btn-primary btn-lg gap-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z"
+                      clip-rule="evenodd"></path>
+                  </svg>
+                  Sign in with IEEEUCSD SSO
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Content -->
+          <div id="mainContent" class="hidden">
+            <ProfileSection />
+            <EventsSection />
+            <ReimbursementSection />
+            <SettingsSection />
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
 </html>
 
 <script>
-    import { Authentication } from "../components/pocketbase/Authentication";
-    import { Get } from "../components/pocketbase/Get";
-    import { SendLog } from "../components/pocketbase/SendLog";
+  import { Authentication } from "../components/pocketbase/Authentication";
+  import { Get } from "../components/pocketbase/Get";
+  import { SendLog } from "../components/pocketbase/SendLog";
 
-    const auth = Authentication.getInstance();
-    const get = Get.getInstance();
-    const logger = SendLog.getInstance();
+  const auth = Authentication.getInstance();
+  const get = Get.getInstance();
+  const logger = SendLog.getInstance();
 
-    // Initialize page state
-    const pageLoadingState = document.getElementById("pageLoadingState");
-    const pageErrorState = document.getElementById("pageErrorState");
-    const notAuthenticatedState = document.getElementById(
-        "notAuthenticatedState"
-    );
-    const mainContent = document.getElementById("mainContent");
-    const sidebar = document.querySelector("aside");
+  // Initialize page state
+  const pageLoadingState = document.getElementById("pageLoadingState");
+  const pageErrorState = document.getElementById("pageErrorState");
+  const notAuthenticatedState = document.getElementById(
+    "notAuthenticatedState",
+  );
+  const mainContent = document.getElementById("mainContent");
+  const sidebar = document.querySelector("aside");
 
-    // User profile elements
-    const userInitials = document.getElementById("userInitials");
-    const userName = document.getElementById("userName");
-    const userRole = document.getElementById("userRole");
+  // User profile elements
+  const userInitials = document.getElementById("userInitials");
+  const userName = document.getElementById("userName");
+  const userRole = document.getElementById("userRole");
 
-    // Display user profile information
-    const updateUserProfile = async (user: any) => {
-        if (!user) return;
+  // Display user profile information
+  const updateUserProfile = async (user: any) => {
+    if (!user) return;
 
-        try {
-            // Get user information including member type
-            const extendedUser = await get.getOne("users", user.id, {
-                fields: ["id", "name", "member_type", "expand.member_type"],
-            });
+    try {
+      // Get user information including member type
+      const extendedUser = await get.getOne("users", user.id, {
+        fields: ["id", "name", "member_type", "expand.member_type"],
+      });
 
-            // Update display elements
-            if (userName) {
-                userName.textContent = extendedUser.name || "Unknown User";
-            }
+      // Update display elements
+      if (userName) {
+        userName.textContent = extendedUser.name || "Unknown User";
+      }
 
-            if (userRole) {
-                userRole.textContent = extendedUser.member_type || "Member";
-            }
+      if (userRole) {
+        userRole.textContent = extendedUser.member_type || "Member";
+      }
 
-            if (userInitials) {
-                const initials = (extendedUser.name || "U")
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .join("")
-                    .toUpperCase();
-                userInitials.textContent = initials;
-            }
-        } catch (error) {
-            console.error("Error fetching user profile:", error);
-            if (userName) userName.textContent = "Unknown User";
-            if (userRole) userRole.textContent = "Member";
-            if (userInitials) userInitials.textContent = "?";
-        }
-    };
-
-    // Mobile sidebar toggle
-    const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
-    if (mobileSidebarToggle && sidebar) {
-        mobileSidebarToggle.addEventListener("click", () => {
-            sidebar.classList.toggle("-translate-x-full");
-        });
+      if (userInitials) {
+        const initials = (extendedUser.name || "U")
+          .split(" ")
+          .map((n: string) => n[0])
+          .join("")
+          .toUpperCase();
+        userInitials.textContent = initials;
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      if (userName) userName.textContent = "Unknown User";
+      if (userRole) userRole.textContent = "Member";
+      if (userInitials) userInitials.textContent = "?";
     }
+  };
 
-    // Handle navigation
-    const handleNavigation = () => {
-        const navButtons = document.querySelectorAll(".dashboard-nav-btn");
-        const sections = document.querySelectorAll(".dashboard-section");
+  // Mobile sidebar toggle
+  const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
+  if (mobileSidebarToggle && sidebar) {
+    mobileSidebarToggle.addEventListener("click", () => {
+      sidebar.classList.toggle("-translate-x-full");
+    });
+  }
 
-        navButtons.forEach((button) => {
-            button.addEventListener("click", () => {
-                // Remove active class from all buttons
-                navButtons.forEach((btn) =>
-                    btn.classList.remove("active", "bg-base-200")
-                );
-                // Add active class to clicked button
-                button.classList.add("active", "bg-base-200");
+  // Handle navigation
+  const handleNavigation = () => {
+    const navButtons = document.querySelectorAll(".dashboard-nav-btn");
+    const sections = document.querySelectorAll(".dashboard-section");
 
-                // Hide all sections
-                sections.forEach((section) => section.classList.add("hidden"));
-                // Show selected section
-                const sectionId = `${button.getAttribute("data-section")}Section`;
-                document.getElementById(sectionId)?.classList.remove("hidden");
+    navButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        // Remove active class from all buttons
+        navButtons.forEach((btn) =>
+          btn.classList.remove("active", "bg-base-200"),
+        );
+        // Add active class to clicked button
+        button.classList.add("active", "bg-base-200");
 
-                // Close sidebar on mobile after selection
-                if (window.innerWidth < 1024 && sidebar) {
-                    sidebar.classList.add("-translate-x-full");
-                }
-            });
-        });
-    };
+        // Hide all sections
+        sections.forEach((section) => section.classList.add("hidden"));
+        // Show selected section
+        const sectionId = `${button.getAttribute("data-section")}Section`;
+        document.getElementById(sectionId)?.classList.remove("hidden");
 
-    // Initialize page
-    const initializePage = async () => {
-        try {
-            if (pageLoadingState) pageLoadingState.classList.remove("hidden");
-            if (pageErrorState) pageErrorState.classList.add("hidden");
-            if (notAuthenticatedState)
-                notAuthenticatedState.classList.add("hidden");
-            if (mainContent) mainContent.classList.add("hidden");
-
-            // Check authentication
-            if (!auth.isAuthenticated()) {
-                if (pageLoadingState) pageLoadingState.classList.add("hidden");
-                if (notAuthenticatedState)
-                    notAuthenticatedState.classList.remove("hidden");
-                return;
-            }
-
-            const user = auth.getCurrentUser();
-            await updateUserProfile(user);
-
-            // Initialize navigation
-            handleNavigation();
-
-            // Show main content
-            if (mainContent) mainContent.classList.remove("hidden");
-            if (pageLoadingState) pageLoadingState.classList.add("hidden");
-        } catch (error) {
-            console.error("Error initializing dashboard:", error);
-            if (pageLoadingState) pageLoadingState.classList.add("hidden");
-            if (pageErrorState) pageErrorState.classList.remove("hidden");
+        // Close sidebar on mobile after selection
+        if (window.innerWidth < 1024 && sidebar) {
+          sidebar.classList.add("-translate-x-full");
         }
-    };
+      });
+    });
+  };
 
-    // Initialize when DOM is loaded
-    document.addEventListener("DOMContentLoaded", initializePage);
+  // Initialize page
+  const initializePage = async () => {
+    try {
+      if (pageLoadingState) pageLoadingState.classList.remove("hidden");
+      if (pageErrorState) pageErrorState.classList.add("hidden");
+      if (notAuthenticatedState) notAuthenticatedState.classList.add("hidden");
+      if (mainContent) mainContent.classList.add("hidden");
 
-    // Handle login button click
-    document
-        .querySelector(".login-button")
-        ?.addEventListener("click", async () => {
-            try {
-                if (pageLoadingState)
-                    pageLoadingState.classList.remove("hidden");
-                if (notAuthenticatedState)
-                    notAuthenticatedState.classList.add("hidden");
-                await auth.login();
-            } catch (error) {
-                console.error("Login error:", error);
-                if (pageLoadingState) pageLoadingState.classList.add("hidden");
-                if (pageErrorState) pageErrorState.classList.remove("hidden");
-            }
-        });
+      // Check authentication
+      if (!auth.isAuthenticated()) {
+        if (pageLoadingState) pageLoadingState.classList.add("hidden");
+        if (notAuthenticatedState)
+          notAuthenticatedState.classList.remove("hidden");
+        return;
+      }
 
-    // Handle logout button click
-    document.getElementById("logoutButton")?.addEventListener("click", () => {
-        auth.logout();
-        window.location.reload();
+      const user = auth.getCurrentUser();
+      await updateUserProfile(user);
+
+      // Initialize navigation
+      handleNavigation();
+
+      // Show main content
+      if (mainContent) mainContent.classList.remove("hidden");
+      if (pageLoadingState) pageLoadingState.classList.add("hidden");
+    } catch (error) {
+      console.error("Error initializing dashboard:", error);
+      if (pageLoadingState) pageLoadingState.classList.add("hidden");
+      if (pageErrorState) pageErrorState.classList.remove("hidden");
+    }
+  };
+
+  // Initialize when DOM is loaded
+  document.addEventListener("DOMContentLoaded", initializePage);
+
+  // Handle login button click
+  document
+    .querySelector(".login-button")
+    ?.addEventListener("click", async () => {
+      try {
+        if (pageLoadingState) pageLoadingState.classList.remove("hidden");
+        if (notAuthenticatedState)
+          notAuthenticatedState.classList.add("hidden");
+        await auth.login();
+      } catch (error) {
+        console.error("Login error:", error);
+        if (pageLoadingState) pageLoadingState.classList.add("hidden");
+        if (pageErrorState) pageErrorState.classList.remove("hidden");
+      }
     });
 
-    // Handle responsive sidebar
-    if (sidebar) {
-        // Hide sidebar by default on mobile
-        if (window.innerWidth < 1024) {
-            sidebar.classList.add("-translate-x-full");
-        }
+  // Handle logout button click
+  document.getElementById("logoutButton")?.addEventListener("click", () => {
+    auth.logout();
+    window.location.reload();
+  });
 
-        // Add transition class
-        sidebar.classList.add(
-            "transition-transform",
-            "duration-300",
-            "ease-in-out",
-            "lg:translate-x-0",
-            "fixed",
-            "lg:relative",
-            "h-full",
-            "z-50"
-        );
+  // Handle responsive sidebar
+  if (sidebar) {
+    // Hide sidebar by default on mobile
+    if (window.innerWidth < 1024) {
+      sidebar.classList.add("-translate-x-full");
     }
+
+    // Add transition class
+    sidebar.classList.add(
+      "transition-transform",
+      "duration-300",
+      "ease-in-out",
+      "lg:translate-x-0",
+      "fixed",
+      "lg:relative",
+      "h-full",
+      "z-50",
+    );
+  }
 </script>
