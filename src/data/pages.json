@@ -1,26 +1,40 @@
 [
-    {
-        "name": "Join",
-        "path": "/join"
-    },
-    {
-        "name": "Events",
-        "path": "/events"
-    },
-    {
-        "name": "Projects",
-        "path": "/projects"
-    },
-    {
-        "name": "Board",
-        "path": "/board"
-    },
-    {
-        "name": "Find Us",
-        "path": "/find"
-    },
-    {
-        "name": "Online Store",
-        "path": "/online-store"
-    }
+  {
+    "name": "Join",
+    "path": "/join"
+  },
+  {
+    "name": "Events",
+    "path": "/events"
+  },
+  {
+    "name": "Projects",
+    "path": "/projects",
+    "subpages": [
+      {
+        "name": "Robocup",
+        "path": "/projects/robocup"
+      },
+      {
+        "name": "Signal Processing",
+        "path": "/projects/signal-processing"
+      },
+      {
+        "name": "Supercomputing",
+        "path": "/projects/supercomputing"
+      }
+    ]
+  },
+  {
+    "name": "Board",
+    "path": "/board"
+  },
+  {
+    "name": "Find Us",
+    "path": "/find"
+  },
+  {
+    "name": "Online Store",
+    "path": "/online-store"
+  }
 ]
