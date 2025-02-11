@@ -12,6 +12,30 @@ interface RequestOptions {
   disableAutoCancellation?: boolean;
 }
 
+// Utility function to check if a value is a UTC date string
+function isUTCDateString(value: any): boolean {
+  if (typeof value !== "string") return false;
+  const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+  return isoDateRegex.test(value);
+}
+
+// Utility function to convert UTC date strings to local time
+function convertUTCToLocal<T>(data: T): T {
+  if (!data || typeof data !== "object") return data;
+
+  const converted = { ...data };
+  for (const [key, value] of Object.entries(converted)) {
+    if (isUTCDateString(value)) {
+      (converted as any)[key] = new Date(value).toISOString();
+    } else if (Array.isArray(value)) {
+      (converted as any)[key] = value.map((item) => convertUTCToLocal(item));
+    } else if (typeof value === "object" && value !== null) {
+      (converted as any)[key] = convertUTCToLocal(value);
+    }
+  }
+  return converted;
+}
+
 export class Get {
   private auth: Authentication;
   private static instance: Get;
@@ -28,6 +52,24 @@ export class Get {
       Get.instance = new Get();
     }
     return Get.instance;
+  }
+
+  /**
+   * Convert UTC date strings to local time
+   * @param data The data to convert
+   * @returns The converted data
+   */
+  public static convertUTCToLocal<T>(data: T): T {
+    return convertUTCToLocal(data);
+  }
+
+  /**
+   * Check if a value is a UTC date string
+   * @param value The value to check
+   * @returns True if the value is a UTC date string
+   */
+  public static isUTCDateString(value: any): boolean {
+    return isUTCDateString(value);
   }
 
   /**
@@ -52,9 +94,10 @@ export class Get {
         ...(options?.fields && { fields: options.fields.join(",") }),
         ...(options?.disableAutoCancellation && { requestKey: null }),
       };
-      return await pb
+      const result = await pb
         .collection(collectionName)
         .getOne<T>(recordId, requestOptions);
+      return convertUTCToLocal(result);
     } catch (err) {
       console.error(`Failed to get record from ${collectionName}:`, err);
       throw err;
@@ -90,8 +133,10 @@ export class Get {
         .collection(collectionName)
         .getFullList<T>(requestOptions);
 
-      // Sort results to match the order of requested IDs
-      const recordMap = new Map(result.map((record) => [record.id, record]));
+      // Sort results to match the order of requested IDs and convert times
+      const recordMap = new Map(
+        result.map((record) => [record.id, convertUTCToLocal(record)]),
+      );
       return recordIds.map((id) => recordMap.get(id)).filter(Boolean) as T[];
     } catch (err) {
       console.error(`Failed to get records from ${collectionName}:`, err);
@@ -145,7 +190,7 @@ export class Get {
         perPage: result.perPage,
         totalItems: result.totalItems,
         totalPages: result.totalPages,
-        items: result.items,
+        items: result.items.map((item) => convertUTCToLocal(item)),
       };
     } catch (err) {
       console.error(`Failed to get list from ${collectionName}:`, err);
@@ -180,7 +225,10 @@ export class Get {
         ...(options?.disableAutoCancellation && { requestKey: null }),
       };
 
-      return await pb.collection(collectionName).getFullList<T>(requestOptions);
+      const result = await pb
+        .collection(collectionName)
+        .getFullList<T>(requestOptions);
+      return result.map((item) => convertUTCToLocal(item));
     } catch (err) {
       console.error(`Failed to get all records from ${collectionName}:`, err);
       throw err;
@@ -216,7 +264,9 @@ export class Get {
       const result = await pb
         .collection(collectionName)
         .getList<T>(1, 1, requestOptions);
-      return result.items.length > 0 ? result.items[0] : null;
+      return result.items.length > 0
+        ? convertUTCToLocal(result.items[0])
+        : null;
     } catch (err) {
       console.error(`Failed to get first record from ${collectionName}:`, err);
       throw err;
