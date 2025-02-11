@@ -25,6 +25,14 @@ interface Event {
   start_date: string;
   end_date: string;
   published: boolean;
+  has_food: boolean;
+  attendees: AttendeeEntry[];
+}
+
+interface AttendeeEntry {
+  user_id: string;
+  time_checked_in: string;
+  food: string;
 }
 
 interface ListResponse<T> {
@@ -369,6 +377,24 @@ declare global {
         </label>
       </div>
 
+      <!-- Has Food -->
+      <div class="form-control">
+        <label class="label cursor-pointer justify-start gap-4">
+          <input
+            type="checkbox"
+            id="editEventHasFood"
+            name="editEventHasFood"
+            class="toggle"
+          />
+          <span class="label-text">Has Food</span>
+        </label>
+        <label class="label">
+          <span class="label-text-alt text-info"
+            >Check this if food will be provided at the event</span
+          >
+        </label>
+      </div>
+
       <div class="modal-action">
         <button type="submit" class="btn btn-primary">Save Changes</button>
         <button type="button" class="btn" onclick="editEventModal.close()"
@@ -548,6 +574,11 @@ declare global {
     codeInput.value = localEvent?.event_code || "";
     locationInput.value = localEvent?.location || "";
     pointsInput.value = localEvent?.points_to_reward?.toString() || "0";
+    publishedInput.checked = localEvent?.published || false;
+    const hasFoodInput = document.getElementById(
+      "editEventHasFood",
+    ) as HTMLInputElement;
+    hasFoodInput.checked = localEvent?.has_food || false;
 
     // Format dates properly for datetime-local input
     try {
@@ -575,8 +606,6 @@ declare global {
     } catch (e) {
       console.error("Error formatting dates:", e);
     }
-
-    publishedInput.checked = localEvent?.published || false;
 
     // Reset temp files
     tempFiles = [];
@@ -772,6 +801,7 @@ declare global {
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
           published: formData.get("editEventPublished") === "on",
+          has_food: formData.get("editEventHasFood") === "on",
         };
 
         // For new events, add empty attendees list
@@ -782,14 +812,14 @@ declare global {
         // Update event details
         auth.setUpdating(true);
         try {
-          const pb = auth.getPocketBase();
           let result;
 
           if (eventId) {
-            // Update existing event
+            // Update existing event using Update class
             result = await update.updateFields("events", eventId, eventData);
           } else {
-            // Create new event
+            // Create new event using PocketBase
+            const pb = auth.getPocketBase();
             result = await pb.collection("events").create(eventData);
           }
 
@@ -1031,10 +1061,12 @@ declare global {
 
             // Fetch user details for each attendee
             const pb = auth.getPocketBase();
-            const attendeePromises = localEvent.attendees.map(
-              (userId: string) => pb.collection("users").getOne(userId),
-            );
-            const attendees = await Promise.all(attendeePromises);
+            const attendeePromises = localEvent.attendees.map(function (
+              attendee: any,
+            ) {
+              return pb.collection("users").getOne(attendee.user_id);
+            });
+            const users = await Promise.all(attendeePromises);
 
             // Display attendees in a table
             attendeesContent.innerHTML = `
@@ -1046,25 +1078,33 @@ declare global {
                       <th>Email</th>
                       <th>Major</th>
                       <th>Year</th>
+                      <th>Check-in Time</th>
+                      <th>Food Selection</th>
                     </tr>
                   </thead>
                   <tbody>
-                    ${attendees
-                      .map(
-                        (user) => `
-                      <tr>
-                        <td>${user.name || "N/A"}</td>
-                        <td>${user.email || "N/A"}</td>
-                        <td>${user.major || "N/A"}</td>
-                        <td>${user.year || "N/A"}</td>
-                      </tr>
-                    `,
-                      )
+                    ${localEvent.attendees
+                      .map(function (attendee: any, index: number): string {
+                        const user = users[index];
+                        const checkInTime = new Date(
+                          attendee.time_checked_in,
+                        ).toLocaleString();
+                        return `
+                        <tr>
+                          <td>${user.name || "N/A"}</td>
+                          <td>${user.email || "N/A"}</td>
+                          <td>${user.major || "N/A"}</td>
+                          <td>${user.year || "N/A"}</td>
+                          <td>${checkInTime}</td>
+                          <td>${attendee.food || "N/A"}</td>
+                        </tr>
+                      `;
+                      })
                       .join("")}
                   </tbody>
                 </table>
                 <div class="mt-4 text-sm opacity-70 text-right">
-                  Total Attendees: ${attendees.length}
+                  Total Attendees: ${localEvent.attendees.length}
                 </div>
               </div>
             `;

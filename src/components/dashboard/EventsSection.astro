@@ -29,6 +29,45 @@ import { Icon } from "astro-icon/components";
       </div>
     </div>
 
+    <!-- Food Selection Modal -->
+    <dialog id="foodSelectionModal" class="modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Food Selection</h3>
+        <form id="foodSelectionForm" class="space-y-4">
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">What food would you like?</span>
+              <span class="label-text-alt text-error">*</span>
+            </label>
+            <input
+              type="text"
+              id="foodInput"
+              name="foodInput"
+              class="input input-bordered"
+              placeholder="Enter your food choice or 'none'"
+              required
+            />
+            <label class="label">
+              <span class="label-text-alt text-info"
+                >Enter 'none' if you don't want any food</span
+              >
+            </label>
+          </div>
+          <div class="modal-action">
+            <button type="submit" class="btn btn-primary">Submit</button>
+            <button
+              type="button"
+              class="btn"
+              onclick="foodSelectionModal.close()">Cancel</button
+            >
+          </div>
+        </form>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+      </form>
+    </dialog>
+
     <!-- Event Registration Card -->
     <div class="card bg-base-100 shadow-xl border border-base-200">
       <div class="card-body">
@@ -160,24 +199,30 @@ import { Icon } from "astro-icon/components";
 
   interface Event {
     id: string;
-    event_id: string;
     event_name: string;
     event_code: string;
     location: string;
-    files: string[];
     points_to_reward: number;
-    attendees: string[];
+    attendees: AttendeeEntry[];
     start_date: string;
     end_date: string;
+    has_food: boolean;
     description: string;
+    files: string[];
   }
 
-  async function handleEventCheckIn(eventCode: string) {
+  interface AttendeeEntry {
+    user_id: string;
+    time_checked_in: string;
+    food: string;
+  }
+
+  let currentCheckInEvent: Event | null = null;
+
+  async function handleEventCheckIn(eventCode: string): Promise<void> {
     try {
       const get = Get.getInstance();
       const auth = Authentication.getInstance();
-      const update = Update.getInstance();
-      const logger = SendLog.getInstance();
 
       const currentUser = auth.getCurrentUser();
       if (!currentUser) {
@@ -185,18 +230,16 @@ import { Icon } from "astro-icon/components";
       }
 
       // Find the event with the given code
-      const events = await get.getFirst<Event>(
+      const event = await get.getFirst<Event>(
         "events",
         `event_code = "${eventCode}"`,
       );
-      if (!events) {
+      if (!event) {
         throw new Error("Invalid event code");
       }
 
-      const event = events;
-
       // Check if user is already checked in
-      if (event.attendees.includes(currentUser.id)) {
+      if (event.attendees.some((entry) => entry.user_id === currentUser.id)) {
         throw new Error("You have already checked in to this event");
       }
 
@@ -206,14 +249,97 @@ import { Icon } from "astro-icon/components";
         throw new Error("This event has already ended");
       }
 
-      // Add user to attendees
-      const updatedAttendees = [...event.attendees, currentUser.id];
+      // If event has food, show food selection modal
+      if (event.has_food) {
+        currentCheckInEvent = event;
+        const modal = document.getElementById(
+          "foodSelectionModal",
+        ) as HTMLDialogElement;
+        modal.showModal();
+      } else {
+        // If no food, complete check-in directly
+        await completeCheckIn(event, null);
+      }
+    } catch (error: any) {
+      createToast(error?.message || "Failed to check in to event", "error");
+    }
+  }
+
+  // Add food selection form handler
+  const foodSelectionForm = document.getElementById(
+    "foodSelectionForm",
+  ) as HTMLFormElement;
+  if (foodSelectionForm) {
+    foodSelectionForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const modal = document.getElementById(
+        "foodSelectionModal",
+      ) as HTMLDialogElement;
+      const foodInput = document.getElementById(
+        "foodInput",
+      ) as HTMLInputElement;
+
+      try {
+        if (currentCheckInEvent) {
+          await completeCheckIn(currentCheckInEvent, foodInput.value.trim());
+          modal.close();
+          foodInput.value = ""; // Reset input
+          currentCheckInEvent = null;
+        }
+      } catch (error: any) {
+        createToast(error?.message || "Failed to check in to event", "error");
+      }
+    });
+  }
+
+  async function completeCheckIn(
+    event: Event,
+    foodSelection: string | null,
+  ): Promise<void> {
+    try {
+      const auth = Authentication.getInstance();
+      const update = Update.getInstance();
+      const logger = SendLog.getInstance();
+
+      const currentUser = auth.getCurrentUser();
+      if (!currentUser) {
+        throw new Error("You must be logged in to check in to events");
+      }
+
+      // Create attendee entry with check-in details
+      const attendeeEntry: AttendeeEntry = {
+        user_id: currentUser.id,
+        time_checked_in: new Date().toISOString(),
+        food: foodSelection || "none",
+      };
+
+      // Get existing attendees or initialize empty array
+      const existingAttendees = event.attendees || [];
+
+      // Check if user is already checked in
+      if (existingAttendees.some((entry) => entry.user_id === currentUser.id)) {
+        throw new Error("You have already checked in to this event");
+      }
+
+      // Add new attendee entry to the array
+      const updatedAttendees = [...existingAttendees, attendeeEntry];
+
+      // Update attendees array with the new entry
       await update.updateField(
         "events",
         event.id,
         "attendees",
         updatedAttendees,
       );
+
+      // If food selection was made, log it
+      if (foodSelection) {
+        await logger.send(
+          "update",
+          "event check-in",
+          `Food selection for ${event.event_name}: ${foodSelection}`,
+        );
+      }
 
       // Award points to user if available
       if (event.points_to_reward > 0) {
@@ -243,7 +369,6 @@ import { Icon } from "astro-icon/components";
         "success",
       );
     } catch (error: any) {
-      // Show error message
       createToast(error?.message || "Failed to check in to event", "error");
     }
   }
