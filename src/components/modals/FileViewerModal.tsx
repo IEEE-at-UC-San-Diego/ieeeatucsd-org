@@ -360,8 +360,8 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({ isOpen, onClose, file
                 checked={isOpen}
                 onChange={onClose}
             />
-            <div className="modal">
-                <div className="modal-box max-w-4xl">
+            <div className="modal ">
+                <div className="modal-box  max-w-4xl">
                     <div className="flex justify-between items-center mb-4">
                         {showPreview && selectedFile ? (
                             <>
