@@ -1,5 +1,6 @@
 ---
 import { Icon } from "astro-icon/components";
+import JSZip from "jszip";
 ---
 
 <div id="eventsSection" class="dashboard-section hidden">
@@ -138,11 +139,9 @@ import { Icon } from "astro-icon/components";
         <div class="flex justify-between items-center mb-4">
             <div class="flex items-center gap-3">
                 <h3 class="font-bold text-lg" id="modalTitle">Event Files</h3>
-            </div>
-            <div class="flex gap-2">
                 <button
                     id="downloadAllBtn"
-                    class="btn btn-primary btn-sm gap-2"
+                    class="btn btn-primary btn-sm gap-1"
                     onclick="window.downloadAllFiles()"
                 >
                     <svg
@@ -158,25 +157,25 @@ import { Icon } from "astro-icon/components";
                     </svg>
                     Download All
                 </button>
-                <button
-                    class="btn btn-circle btn-ghost"
-                    onclick="eventDetailsModal.close()"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-6 w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
             </div>
+            <button
+                class="btn btn-circle btn-ghost"
+                onclick="eventDetailsModal.close()"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
         </div>
 
         <div id="filesContent" class="space-y-4">
@@ -218,6 +217,7 @@ import { Icon } from "astro-icon/components";
     import { Authentication } from "../pocketbase/Authentication";
     import { Update } from "../pocketbase/Update";
     import { SendLog } from "../pocketbase/SendLog";
+    import JSZip from "jszip";
 
     // Toast management system
     const createToast = (
@@ -733,7 +733,7 @@ import { Icon } from "astro-icon/components";
                                         event.files &&
                                         event.files.length > 0
                                         ? `
-                                    <button onclick="window.openDetailsModal(window['${eventDataId}'])" class="btn btn-sm btn-primary w-[90px] inline-flex items-center justify-center">
+                                    <button onclick="window.openDetailsModal(window['event_${event.id}'])" class="btn btn-sm btn-primary w-[90px] inline-flex items-center justify-center">
                                         <div class="flex items-center gap-1">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M5 19a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2 2h4a2 2 0 0 1 2 2v1M5 19h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2z" />
@@ -807,7 +807,7 @@ import { Icon } from "astro-icon/components";
                                 ${
                                     event.files && event.files.length > 0
                                         ? `
-                                    <button onclick="window.openDetailsModal(window['${eventDataId}'])" class="btn btn-sm btn-primary w-[90px] inline-flex items-center justify-center">
+                                    <button onclick="window.openDetailsModal(window['event_${event.id}'])" class="btn btn-sm btn-primary w-[90px] inline-flex items-center justify-center">
                                         <div class="flex items-center gap-1">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M5 19a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2 2h4a2 2 0 0 1 2 2v1M5 19h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2z" />
@@ -1127,11 +1127,6 @@ import { Icon } from "astro-icon/components";
                 '<span class="loading loading-spinner loading-xs"></span> Preparing...';
             downloadBtn.disabled = true;
 
-            // Load JSZip dynamically
-            // @ts-ignore - Dynamically importing JSZip from CDN
-            const JSZip = (
-                await import("https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm")
-            ).default;
             const zip = new JSZip();
 
             // Get current event files
