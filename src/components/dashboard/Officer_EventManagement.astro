@@ -446,6 +446,23 @@ declare global {
     </div>
 
     <div id="attendeesContent" class="space-y-4 hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold">Event Attendees</h3>
+        <button id="downloadAttendeesCSV" class="btn btn-primary btn-sm gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+              clip-rule="evenodd"></path>
+          </svg>
+          Download CSV
+        </button>
+      </div>
       <!-- Attendees list will be populated here -->
     </div>
 
@@ -481,6 +498,27 @@ declare global {
   import { Update } from "../pocketbase/Update";
   import { FileManager } from "../pocketbase/FileManager";
   import { SendLog } from "../pocketbase/SendLog";
+
+  interface AttendeeEntry {
+    user_id: string;
+    time_checked_in: string;
+    food: string;
+  }
+
+  interface Event {
+    id: string;
+    event_name: string;
+    event_description: string;
+    event_code: string;
+    location: string;
+    files: string[];
+    points_to_reward: number;
+    start_date: string;
+    end_date: string;
+    published: boolean;
+    has_food: boolean;
+    attendees: AttendeeEntry[];
+  }
 
   const get = Get.getInstance();
   const auth = Authentication.getInstance();
@@ -1036,7 +1074,117 @@ declare global {
     }
   }
 
-  // Update the openDetailsModal function
+  // Add CSV export functionality
+  async function exportAttendeesToCSV(event: Event) {
+    try {
+      const pb = auth.getPocketBase();
+
+      // Fetch all user details for the attendees
+      const attendeePromises = event.attendees.map(function (
+        attendee: AttendeeEntry,
+      ) {
+        return pb.collection("users").getOne(attendee.user_id);
+      });
+      const users = await Promise.all(attendeePromises);
+
+      // Create CSV header
+      const csvHeader = [
+        "Name",
+        "Email",
+        "Member ID",
+        "Member Type",
+        "Graduation Year",
+        "Major",
+        "Time Checked In",
+        "Food Selection",
+      ].join(",");
+
+      // Create CSV rows
+      const csvRows = event.attendees.map(
+        (attendee: AttendeeEntry, index: number) => {
+          const user = users[index];
+          const checkInTime = new Date(
+            attendee.time_checked_in,
+          ).toLocaleString();
+
+          // Escape and format fields to handle commas and quotes
+          const formatField = (field: any) => {
+            if (field === null || field === undefined) return '""';
+            return `"${String(field).replace(/"/g, '""')}"`;
+          };
+
+          return [
+            formatField(user.name),
+            formatField(user.email),
+            formatField(user.member_id),
+            formatField(user.member_type),
+            formatField(user.graduation_year),
+            formatField(user.major),
+            formatField(checkInTime),
+            formatField(attendee.food),
+          ].join(",");
+        },
+      );
+
+      // Combine header and rows
+      const csvContent = [csvHeader, ...csvRows].join("\n");
+
+      // Create and trigger download
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `${event.event_name}_attendees.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Show toast using the existing toast function
+      const toastContainer = document.querySelector(".toast-container");
+      if (toastContainer) {
+        const toast = document.createElement("div");
+        toast.className = "toast translate-x-full";
+        toast.setAttribute("data-index", "0");
+        toast.innerHTML = `
+          <div class="alert alert-success shadow-lg min-w-[300px]">
+            <span>Attendees list downloaded successfully</span>
+          </div>
+        `;
+        toastContainer.appendChild(toast);
+        requestAnimationFrame(() => {
+          toast.classList.remove("translate-x-full");
+        });
+        setTimeout(() => {
+          toast.classList.add("toast-exit");
+          setTimeout(() => toast.remove(), 150);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Failed to export attendees:", error);
+      // Show error toast using the existing toast container
+      const toastContainer = document.querySelector(".toast-container");
+      if (toastContainer) {
+        const toast = document.createElement("div");
+        toast.className = "toast translate-x-full";
+        toast.setAttribute("data-index", "0");
+        toast.innerHTML = `
+          <div class="alert alert-error shadow-lg min-w-[300px]">
+            <span>Failed to download attendees list</span>
+          </div>
+        `;
+        toastContainer.appendChild(toast);
+        requestAnimationFrame(() => {
+          toast.classList.remove("translate-x-full");
+        });
+        setTimeout(() => {
+          toast.classList.add("toast-exit");
+          setTimeout(() => toast.remove(), 150);
+        }, 3000);
+      }
+    }
+  }
+
+  // Update the openDetailsModal function to add click handler for CSV download
   window.openDetailsModal = function (event: any) {
     // Convert event times to local time
     const localEvent = Get.convertUTCToLocal(event);
@@ -1104,7 +1252,7 @@ declare global {
             // Fetch user details for each attendee
             const pb = auth.getPocketBase();
             const attendeePromises = localEvent.attendees.map(function (
-              attendee: any,
+              attendee: AttendeeEntry,
             ) {
               return pb.collection("users").getOne(attendee.user_id);
             });
@@ -1112,6 +1260,15 @@ declare global {
 
             // Display attendees in a table
             attendeesContent.innerHTML = `
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Event Attendees</h3>
+                <button id="downloadAttendeesCSV" class="btn btn-primary btn-sm gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                  </svg>
+                  Download CSV
+                </button>
+              </div>
               <div class="overflow-x-auto">
                 <table class="table table-zebra w-full">
                   <thead>
@@ -1126,7 +1283,10 @@ declare global {
                   </thead>
                   <tbody>
                     ${localEvent.attendees
-                      .map(function (attendee: any, index: number): string {
+                      .map(function (
+                        attendee: AttendeeEntry,
+                        index: number,
+                      ): string {
                         const user = users[index];
                         const checkInTime = new Date(
                           attendee.time_checked_in,
@@ -1136,7 +1296,7 @@ declare global {
                           <td>${user.name || "N/A"}</td>
                           <td>${user.email || "N/A"}</td>
                           <td>${user.major || "N/A"}</td>
-                          <td>${user.year || "N/A"}</td>
+                          <td>${user.graduation_year || "N/A"}</td>
                           <td>${checkInTime}</td>
                           <td>${attendee.food || "N/A"}</td>
                         </tr>
@@ -1150,6 +1310,14 @@ declare global {
                 </div>
               </div>
             `;
+
+            // Add click handler for CSV download button
+            const downloadButton = document.getElementById(
+              "downloadAttendeesCSV",
+            );
+            if (downloadButton) {
+              downloadButton.onclick = () => exportAttendeesToCSV(localEvent);
+            }
           } catch (error) {
             console.error("Failed to fetch attendees:", error);
             attendeesContent.innerHTML = `
