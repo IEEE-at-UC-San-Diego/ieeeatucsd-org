@@ -147,6 +147,46 @@ declare global {
       </h3>
       <div class="divider"></div>
 
+      <!-- Filter Controls -->
+      <div class="flex flex-col md:flex-row gap-4 mb-4">
+        <div class="form-control flex-1">
+          <div class="join w-full">
+            <div class="join-item bg-base-200 flex items-center px-3">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 opacity-70"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                  clip-rule="evenodd"></path>
+              </svg>
+            </div>
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Search events..."
+              class="input input-bordered join-item w-full"
+            />
+          </div>
+        </div>
+        <div class="form-control w-full md:w-auto">
+          <div class="join">
+            <div class="join-item bg-base-200 flex items-center px-3">
+              Per Page
+            </div>
+            <select id="perPageSelect" class="select select-bordered join-item">
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <!-- Event Items -->
       <div class="space-y-4" id="eventsList">
         <div class="text-center py-8 text-base-content/70">
@@ -423,9 +463,39 @@ declare global {
 
   let currentPage = 1;
   let totalPages = 0;
+  let searchQuery = "";
+  let perPage = 5;
 
   // Store temporary files
   let tempFiles: File[] = [];
+
+  // Add event listeners for filters
+  const searchInput = document.getElementById(
+    "searchInput",
+  ) as HTMLInputElement;
+  const perPageSelect = document.getElementById(
+    "perPageSelect",
+  ) as HTMLSelectElement;
+
+  if (searchInput) {
+    let debounceTimeout: NodeJS.Timeout;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(() => {
+        searchQuery = searchInput.value;
+        currentPage = 1; // Reset to first page when searching
+        fetchEvents();
+      }, 300); // Debounce for 300ms
+    });
+  }
+
+  if (perPageSelect) {
+    perPageSelect.addEventListener("change", () => {
+      perPage = parseInt(perPageSelect.value);
+      currentPage = 1; // Reset to first page when changing items per page
+      fetchEvents();
+    });
+  }
 
   // Make openEditModal available globally
   window.openEditModal = function (event?: any) {
@@ -923,7 +993,7 @@ declare global {
 
     // Handle tab switching
     tabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
+      tab.addEventListener("click", async () => {
         tabs.forEach((t) => t.classList.remove("tab-active"));
         tab.classList.add("tab-active");
 
@@ -932,10 +1002,83 @@ declare global {
           filesContent.classList.remove("hidden");
           attendeesContent.classList.add("hidden");
           filePreviewSection.classList.add("hidden");
-        } else {
+        } else if (tabName === "attendees") {
           filesContent.classList.add("hidden");
           attendeesContent.classList.remove("hidden");
           filePreviewSection.classList.add("hidden");
+
+          // Show loading state
+          attendeesContent.innerHTML = `
+            <div class="text-center py-8">
+              <span class="loading loading-spinner loading-lg"></span>
+              <p class="mt-4">Loading attendees...</p>
+            </div>
+          `;
+
+          try {
+            // Check if event has attendees
+            if (!localEvent.attendees || localEvent.attendees.length === 0) {
+              attendeesContent.innerHTML = `
+                <div class="text-center py-8 text-base-content/70">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                  </svg>
+                  <p>No attendees for this event</p>
+                </div>
+              `;
+              return;
+            }
+
+            // Fetch user details for each attendee
+            const pb = auth.getPocketBase();
+            const attendeePromises = localEvent.attendees.map(
+              (userId: string) => pb.collection("users").getOne(userId),
+            );
+            const attendees = await Promise.all(attendeePromises);
+
+            // Display attendees in a table
+            attendeesContent.innerHTML = `
+              <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Major</th>
+                      <th>Year</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${attendees
+                      .map(
+                        (user) => `
+                      <tr>
+                        <td>${user.name || "N/A"}</td>
+                        <td>${user.email || "N/A"}</td>
+                        <td>${user.major || "N/A"}</td>
+                        <td>${user.year || "N/A"}</td>
+                      </tr>
+                    `,
+                      )
+                      .join("")}
+                  </tbody>
+                </table>
+                <div class="mt-4 text-sm opacity-70 text-right">
+                  Total Attendees: ${attendees.length}
+                </div>
+              </div>
+            `;
+          } catch (error) {
+            console.error("Failed to fetch attendees:", error);
+            attendeesContent.innerHTML = `
+              <div class="alert alert-error">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Failed to load attendees. Please try again.</span>
+              </div>
+            `;
+          }
         }
       });
     });
@@ -1005,16 +1148,6 @@ declare global {
       `;
     }
 
-    // TODO: Implement attendees list in the future
-    attendeesContent.innerHTML = `
-      <div class="text-center py-8 text-base-content/70">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
-          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-        </svg>
-        <p>Attendees list coming soon</p>
-      </div>
-    `;
-
     modal.showModal();
   };
 
@@ -1072,11 +1205,17 @@ declare global {
       auth.setUpdating(true);
 
       try {
+        // Build filter string
+        let filter = "";
+        if (searchQuery) {
+          filter = `event_name ~ "${searchQuery}" || event_code ~ "${searchQuery}" || location ~ "${searchQuery}"`;
+        }
+
         const response = await get.getList(
           "events",
           currentPage,
-          5,
-          "",
+          perPage,
+          filter,
           "-start_date",
           { disableAutoCancellation: true },
         );
