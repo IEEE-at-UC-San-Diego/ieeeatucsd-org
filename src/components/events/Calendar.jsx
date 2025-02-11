@@ -45,9 +45,17 @@ const Calendar = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
     if (!day) return [];
     const dayStr = formatDate(day);
     return events.filter((event) => {
-      const eventDate = event.start.dateTime
-        ? new Date(event.start.dateTime).toISOString().split("T")[0]
-        : event.start.date;
+      let eventDate;
+      if (event.start.dateTime) {
+        // For events with specific times, convert to local timezone
+        const date = new Date(event.start.dateTime);
+        eventDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+          .toISOString()
+          .split("T")[0];
+      } else {
+        // For all-day events, use the date directly
+        eventDate = event.start.date;
+      }
       return eventDate === dayStr;
     });
   };
