@@ -2,19 +2,29 @@
 import { Icon } from "astro-icon/components";
 import { Get } from "../pocketbase/Get";
 import { Authentication } from "../pocketbase/Authentication";
+import { Update } from "../pocketbase/Update";
+import { FileManager } from "../pocketbase/FileManager";
+import { SendLog } from "../pocketbase/SendLog";
 
 // Get instances
 const get = Get.getInstance();
 const auth = Authentication.getInstance();
+const update = Update.getInstance();
+const fileManager = FileManager.getInstance();
+const sendLog = SendLog.getInstance();
 
 // Interface for Event type
 interface Event {
   id: string;
   event_name: string;
   event_description: string;
-  start_date: string;
-  location: string;
   event_code: string;
+  location: string;
+  files: string[];
+  points_to_award: number;
+  start_date: string;
+  end_date: string;
+  published: boolean;
 }
 
 interface ListResponse<T> {
@@ -54,6 +64,7 @@ declare global {
   interface Window {
     [key: string]: any;
     openEditModal: (event: Event) => void;
+    deleteFile: (eventId: string, filename: string) => void;
   }
 }
 ---
@@ -148,51 +159,141 @@ declare global {
 
 <!-- Edit Event Modal -->
 <dialog id="editEventModal" class="modal">
-  <div class="modal-box">
+  <div class="modal-box max-w-2xl">
     <h3 class="font-bold text-lg mb-4">Edit Event</h3>
     <form id="editEventForm" class="space-y-4">
       <input type="hidden" id="editEventId" />
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text">Event Name</span>
-        </label>
-        <input
-          type="text"
-          id="editEventName"
-          class="input input-bordered"
-          required
-        />
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Event Name -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Event Name</span>
+            <span class="label-text-alt text-error">*</span>
+          </label>
+          <input
+            type="text"
+            id="editEventName"
+            class="input input-bordered"
+            required
+          />
+        </div>
+
+        <!-- Event Code -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Event Code</span>
+            <span class="label-text-alt text-error">*</span>
+          </label>
+          <input
+            type="text"
+            id="editEventCode"
+            class="input input-bordered"
+            required
+          />
+        </div>
+
+        <!-- Location -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Location</span>
+            <span class="label-text-alt text-error">*</span>
+          </label>
+          <input
+            type="text"
+            id="editEventLocation"
+            class="input input-bordered"
+            required
+          />
+        </div>
+
+        <!-- Points to Award -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Points to Award</span>
+            <span class="label-text-alt text-error">*</span>
+          </label>
+          <input
+            type="number"
+            id="editEventPoints"
+            class="input input-bordered"
+            min="0"
+            required
+          />
+        </div>
+
+        <!-- Start Date -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">Start Date</span>
+            <span class="label-text-alt text-error">*</span>
+          </label>
+          <input
+            type="datetime-local"
+            id="editEventStartDate"
+            class="input input-bordered"
+            required
+          />
+        </div>
+
+        <!-- End Date -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text">End Date</span>
+            <span class="label-text-alt text-error">*</span>
+          </label>
+          <input
+            type="datetime-local"
+            id="editEventEndDate"
+            class="input input-bordered"
+            required
+          />
+        </div>
       </div>
+
+      <!-- Description -->
       <div class="form-control">
         <label class="label">
           <span class="label-text">Description</span>
+          <span class="label-text-alt text-error">*</span>
         </label>
         <textarea
           id="editEventDescription"
           class="textarea textarea-bordered"
-          rows="3"></textarea>
+          rows="3"
+          required></textarea>
       </div>
+
+      <!-- Files -->
       <div class="form-control">
         <label class="label">
-          <span class="label-text">Location</span>
+          <span class="label-text">Files</span>
         </label>
         <input
-          type="text"
-          id="editEventLocation"
-          class="input input-bordered"
+          type="file"
+          id="editEventFiles"
+          class="file-input file-input-bordered"
+          multiple
         />
+        <div id="currentFiles" class="mt-2 space-y-2">
+          <!-- Current files will be listed here -->
+        </div>
       </div>
+
+      <!-- Published -->
       <div class="form-control">
-        <label class="label">
-          <span class="label-text">Start Date</span>
+        <label class="label cursor-pointer justify-start gap-4">
+          <input type="checkbox" id="editEventPublished" class="toggle" />
+          <span class="label-text">Publish Event</span>
         </label>
-        <input
-          type="datetime-local"
-          id="editEventStartDate"
-          class="input input-bordered"
-          required
-        />
+        <label class="label">
+          <span class="label-text-alt text-info"
+            >This has to be clicked if you want to make this event available to
+            the public</span
+          >
+        </label>
       </div>
+
       <div class="modal-action">
         <button type="submit" class="btn btn-primary">Save Changes</button>
         <button type="button" class="btn" onclick="editEventModal.close()"
@@ -209,9 +310,15 @@ declare global {
 <script>
   import { Get } from "../pocketbase/Get";
   import { Authentication } from "../pocketbase/Authentication";
+  import { Update } from "../pocketbase/Update";
+  import { FileManager } from "../pocketbase/FileManager";
+  import { SendLog } from "../pocketbase/SendLog";
 
   const get = Get.getInstance();
   const auth = Authentication.getInstance();
+  const update = Update.getInstance();
+  const fileManager = FileManager.getInstance();
+  const sendLog = SendLog.getInstance();
 
   let currentPage = 1;
   let totalPages = 0;
@@ -229,23 +336,140 @@ declare global {
     const descInput = document.getElementById(
       "editEventDescription",
     ) as HTMLTextAreaElement;
+    const codeInput = document.getElementById(
+      "editEventCode",
+    ) as HTMLInputElement;
     const locationInput = document.getElementById(
       "editEventLocation",
+    ) as HTMLInputElement;
+    const pointsInput = document.getElementById(
+      "editEventPoints",
     ) as HTMLInputElement;
     const startDateInput = document.getElementById(
       "editEventStartDate",
     ) as HTMLInputElement;
+    const endDateInput = document.getElementById(
+      "editEventEndDate",
+    ) as HTMLInputElement;
+    const publishedInput = document.getElementById(
+      "editEventPublished",
+    ) as HTMLInputElement;
+    const currentFilesDiv = document.getElementById(
+      "currentFiles",
+    ) as HTMLDivElement;
 
+    // Set values
     idInput.value = event.id;
     nameInput.value = event.event_name;
     descInput.value = event.event_description || "";
+    codeInput.value = event.event_code || "";
     locationInput.value = event.location || "";
+    pointsInput.value = event.points_to_award?.toString() || "0";
     startDateInput.value = new Date(event.start_date)
       .toISOString()
       .slice(0, 16);
+    endDateInput.value = new Date(event.end_date).toISOString().slice(0, 16);
+    publishedInput.checked = event.published || false;
+
+    // Display current files if any
+    if (event.files && event.files.length > 0) {
+      currentFilesDiv.innerHTML = event.files
+        .map(
+          (file: string) => `
+        <div class="flex items-center gap-2">
+          <span class="text-sm">${file}</span>
+          <button type="button" class="btn btn-ghost btn-xs text-error" onclick="deleteFile('${event.id}', '${file}')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      `,
+        )
+        .join("");
+    } else {
+      currentFilesDiv.innerHTML =
+        '<p class="text-sm opacity-70">No files attached</p>';
+    }
 
     modal.showModal();
   };
+
+  // Handle file deletion
+  window.deleteFile = async function (eventId: string, filename: string) {
+    try {
+      await fileManager.deleteFile("events", eventId, "files");
+      await sendLog.send(
+        "delete",
+        "event_files",
+        `Deleted file ${filename} from event ${eventId}`,
+      );
+      await fetchEvents(); // Refresh the list
+    } catch (error) {
+      console.error("Failed to delete file:", error);
+    }
+  };
+
+  // Handle edit form submission
+  const editForm = document.getElementById("editEventForm") as HTMLFormElement;
+  if (editForm) {
+    editForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const modal = document.getElementById(
+        "editEventModal",
+      ) as HTMLDialogElement;
+
+      try {
+        const formData = new FormData(editForm);
+        const eventId = (
+          document.getElementById("editEventId") as HTMLInputElement
+        ).value;
+
+        // Prepare update data
+        const updateData = {
+          event_name: formData.get("editEventName"),
+          event_description: formData.get("editEventDescription"),
+          event_code: formData.get("editEventCode"),
+          location: formData.get("editEventLocation"),
+          points_to_award: parseInt(formData.get("editEventPoints") as string),
+          start_date: formData.get("editEventStartDate"),
+          end_date: formData.get("editEventEndDate"),
+          published: (
+            document.getElementById("editEventPublished") as HTMLInputElement
+          ).checked,
+        };
+
+        // Update event details
+        await update.updateFields("events", eventId, updateData);
+
+        // Handle file uploads if any
+        const fileInput = document.getElementById(
+          "editEventFiles",
+        ) as HTMLInputElement;
+        if (fileInput.files && fileInput.files.length > 0) {
+          await fileManager.uploadFiles(
+            "events",
+            eventId,
+            "files",
+            Array.from(fileInput.files),
+          );
+        }
+
+        // Log the update
+        await sendLog.send(
+          "update",
+          "events",
+          `Updated event ${updateData.event_name}`,
+        );
+
+        modal.close();
+        await fetchEvents(); // Refresh the list
+      } catch (error) {
+        console.error("Failed to update event:", error);
+        // You might want to show an error message to the user here
+      }
+    });
+  }
 
   async function fetchEvents() {
     try {
@@ -382,20 +606,6 @@ declare global {
         currentPage++;
         await fetchEvents();
       }
-    });
-  }
-
-  // Handle edit form submission
-  const editForm = document.getElementById("editEventForm") as HTMLFormElement;
-  if (editForm) {
-    editForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const modal = document.getElementById(
-        "editEventModal",
-      ) as HTMLDialogElement;
-      // TODO: Implement save changes functionality
-      modal.close();
-      await fetchEvents(); // Refresh the list
     });
   }
 
