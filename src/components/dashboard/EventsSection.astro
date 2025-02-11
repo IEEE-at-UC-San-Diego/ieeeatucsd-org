@@ -368,6 +368,13 @@ import { Icon } from "astro-icon/components";
         }`,
         "success",
       );
+
+      // Log the check-in
+      await logger.send(
+        "check_in",
+        "events",
+        `User ${currentUser.name} (${currentUser.graduation_year}) checked in to event ${event.event_name}`,
+      );
     } catch (error: any) {
       createToast(error?.message || "Failed to check in to event", "error");
     }
