@@ -1,4 +1,5 @@
-officerRoles:
-  - "IEEE Officer"
-  - "IEEE Executive"
-  - "IEEE Administrator"
+officer:
+  roles:
+    - "IEEE Officer"
+    - "IEEE Executive"
+    - "IEEE Administrator"

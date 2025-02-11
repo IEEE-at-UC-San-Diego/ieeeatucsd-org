@@ -5,7 +5,7 @@ import ProfileSection from "../components/dashboard/ProfileSection.astro";
 import EventsSection from "../components/dashboard/EventsSection.astro";
 import ReimbursementSection from "../components/dashboard/ReimbursementSection.astro";
 import SettingsSection from "../components/dashboard/SettingsSection.astro";
-
+import Officer_EventManagement from "../components/dashboard/Officer_EventManagement.astro";
 const title = "Dashboard";
 ---
 
@@ -61,6 +61,7 @@ const title = "Dashboard";
         <!-- Navigation -->
         <nav class="flex-1 overflow-y-auto scrollbar-hide py-6">
           <ul class="menu gap-2 px-4 text-base-content/80">
+            <!-- All Members -->
             <li class="menu-title font-medium opacity-70">
               <span>Main Menu</span>
             </li>
@@ -92,6 +93,19 @@ const title = "Dashboard";
               >
                 <Icon name="heroicons:credit-card" class="h-5 w-5" />
                 Reimbursement
+              </button>
+            </li>
+            <!-- Officers Only -->
+            <li>
+              <button
+                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 active:bg-base-200 active:font-medium active:text-primary"
+                data-section="eventManagement"
+              >
+                <Icon
+                  name="heroicons:home"
+                  class="h-5 w-5 group-[.active]:text-primary"
+                />
+                Event Management
               </button>
             </li>
 
@@ -213,6 +227,7 @@ const title = "Dashboard";
             <EventsSection />
             <ReimbursementSection />
             <SettingsSection />
+            <Officer_EventManagement />
           </div>
         </div>
       </main>
