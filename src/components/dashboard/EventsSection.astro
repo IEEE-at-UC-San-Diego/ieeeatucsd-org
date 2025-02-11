@@ -483,8 +483,6 @@ import { Icon } from "astro-icon/components";
                                     <h3 class="card-title text-lg font-semibold mb-1 line-clamp-2">${event.event_name}</h3>
                                     <div class="flex items-center gap-2 text-sm text-base-content/70">
                                         <div class="badge badge-primary badge-sm">${event.points_to_reward} pts</div>
-                                        <span>•</span>
-                                        <span class="badge badge-sm badge-outline">${event.event_code}</span>
                                     </div>
                                 </div>
                                 <div class="text-right shrink-0 text-base-content/80">
@@ -514,11 +512,29 @@ import { Icon } from "astro-icon/components";
                                 ${event.description || "No description available"}
                             </div>
                             
-                            <div class="space-y-3 flex-1">
+                            <div class="flex items-center justify-between">
                                 <div class="flex items-start gap-2.5 text-base-content/80">
                                     <Icon name="mdi:map-marker" class="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                                    <span class="text-sm leading-tight">${event.location}</span>
+                                    <span class="text-sm leading-tight truncate max-w-[200px]">${event.location}</span>
                                 </div>
+                                ${(() => {
+                                  const endDate = Get.isUTCDateString(
+                                    event.end_date,
+                                  )
+                                    ? new Date(event.end_date)
+                                    : new Date();
+                                  const now = new Date();
+                                  return endDate < now &&
+                                    event.files &&
+                                    event.files.length > 0
+                                    ? `
+                                      <button onclick="window.openDetailsModal(window['${eventDataId}'])" class="btn btn-ghost btn-xs gap-1">
+                                          <Icon name="heroicons:folder-open" class="w-4 h-4" />
+                                          Files (${event.files.length})
+                                      </button>
+                                    `
+                                    : "";
+                                })()}
                             </div>
                         </div>
                     </div>
