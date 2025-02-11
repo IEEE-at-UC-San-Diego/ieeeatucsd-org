@@ -63,7 +63,7 @@ const currentPage = eventResponse.page;
 declare global {
   interface Window {
     [key: string]: any;
-    openEditModal: (event: Event) => void;
+    openEditModal: (event?: any) => void;
     deleteFile: (eventId: string, filename: string) => void;
     previewFile: (url: string, filename: string) => void;
     openDetailsModal: (event: Event) => void;
@@ -87,7 +87,7 @@ declare global {
       <h2 class="text-2xl font-bold">Event Management</h2>
       <p class="opacity-70">Manage and create IEEE UCSD events</p>
     </div>
-    <button class="btn btn-primary gap-2">
+    <button class="btn btn-primary gap-2" onclick="window.openEditModal()">
       <Icon name="heroicons:plus" class="h-5 w-5" />
       Add New Event
     </button>
@@ -158,12 +158,17 @@ declare global {
         </div>
       </div>
 
-      <!-- Load More Button -->
-      <div class="flex justify-center mt-6 hidden" id="loadMoreContainer">
-        <button class="btn btn-outline btn-primary gap-2" id="loadMoreButton">
-          <Icon name="heroicons:arrow-down" class="h-5 w-5" />
-          Load More Events
-        </button>
+      <!-- Pagination -->
+      <div class="flex justify-center mt-6" id="paginationContainer">
+        <div class="join">
+          <button class="join-item btn btn-sm" id="firstPageBtn">«</button>
+          <button class="join-item btn btn-sm" id="prevPageBtn">‹</button>
+          <button class="join-item btn btn-sm"
+            >Page <span id="currentPageNumber">1</span></button
+          >
+          <button class="join-item btn btn-sm" id="nextPageBtn">›</button>
+          <button class="join-item btn btn-sm" id="lastPageBtn">»</button>
+        </div>
       </div>
     </div>
   </div>
@@ -172,7 +177,7 @@ declare global {
 <!-- Edit Event Modal -->
 <dialog id="editEventModal" class="modal">
   <div class="modal-box max-w-2xl">
-    <h3 class="font-bold text-lg mb-4">Edit Event</h3>
+    <h3 class="font-bold text-lg mb-4" id="editModalTitle">Edit Event</h3>
     <form id="editEventForm" class="space-y-4">
       <input type="hidden" id="editEventId" />
 
@@ -423,13 +428,14 @@ declare global {
   let tempFiles: File[] = [];
 
   // Make openEditModal available globally
-  window.openEditModal = function (event: any) {
-    // Convert event times to local time
-    const localEvent = Get.convertUTCToLocal(event);
+  window.openEditModal = function (event?: any) {
+    // Convert event times to local time if event exists
+    const localEvent = event ? Get.convertUTCToLocal(event) : null;
 
     const modal = document.getElementById(
       "editEventModal",
     ) as HTMLDialogElement;
+    const modalTitle = document.getElementById("editModalTitle");
     const form = document.getElementById("editEventForm") as HTMLFormElement;
     const idInput = document.getElementById("editEventId") as HTMLInputElement;
     const nameInput = document.getElementById(
@@ -460,21 +466,28 @@ declare global {
       "currentFiles",
     ) as HTMLDivElement;
 
+    // Update modal title based on whether we're editing or creating
+    if (modalTitle) {
+      modalTitle.textContent = localEvent ? "Edit Event" : "Create New Event";
+    }
+
     // Set values
-    idInput.value = localEvent.id;
-    nameInput.value = localEvent.event_name;
-    descInput.value = localEvent.event_description || "";
-    codeInput.value = localEvent.event_code || "";
-    locationInput.value = localEvent.location || "";
-    pointsInput.value = localEvent.points_to_reward?.toString() || "0";
+    idInput.value = localEvent?.id || "";
+    nameInput.value = localEvent?.event_name || "";
+    descInput.value = localEvent?.event_description || "";
+    codeInput.value = localEvent?.event_code || "";
+    locationInput.value = localEvent?.location || "";
+    pointsInput.value = localEvent?.points_to_reward?.toString() || "0";
 
     // Format dates properly for datetime-local input
     try {
-      const startDate = new Date(localEvent.start_date);
-      const endDate = new Date(localEvent.end_date);
+      const now = new Date();
+      const startDate = localEvent ? new Date(localEvent.start_date) : now;
+      const endDate = localEvent
+        ? new Date(localEvent.end_date)
+        : new Date(now.getTime() + 60 * 60 * 1000); // Default to 1 hour duration
 
       if (!isNaN(startDate.getTime())) {
-        // Format date as YYYY-MM-DDThh:mm in local timezone
         startDateInput.value = new Date(
           startDate.getTime() - startDate.getTimezoneOffset() * 60000,
         )
@@ -483,7 +496,6 @@ declare global {
       }
 
       if (!isNaN(endDate.getTime())) {
-        // Format date as YYYY-MM-DDThh:mm in local timezone
         endDateInput.value = new Date(
           endDate.getTime() - endDate.getTimezoneOffset() * 60000,
         )
@@ -494,7 +506,7 @@ declare global {
       console.error("Error formatting dates:", e);
     }
 
-    publishedInput.checked = localEvent.published || false;
+    publishedInput.checked = localEvent?.published || false;
 
     // Reset temp files
     tempFiles = [];
@@ -502,7 +514,7 @@ declare global {
     newFilesDiv.innerHTML = "";
 
     // Display current files if any
-    if (localEvent.files && localEvent.files.length > 0) {
+    if (localEvent?.files && localEvent.files.length > 0) {
       const baseUrl = "https://pocketbase.ieeeucsd.org";
       const collectionId = "events";
       const recordId = localEvent.id;
@@ -653,7 +665,7 @@ declare global {
       .join("");
   };
 
-  // Update form submission to handle temp files
+  // Update form submission to handle both create and edit
   const editForm = document.getElementById("editEventForm") as HTMLFormElement;
   if (editForm) {
     editForm.addEventListener("submit", async (e) => {
@@ -680,8 +692,8 @@ declare global {
         const pointsValue = parseInt(formData.get("editEventPoints") as string);
         const points = isNaN(pointsValue) ? 0 : pointsValue;
 
-        // Prepare update data with dates in UTC
-        const updateData = {
+        // Prepare base event data without attendees
+        const baseEventData = {
           event_name: formData.get("editEventName"),
           event_description: formData.get("editEventDescription"),
           event_code: formData.get("editEventCode"),
@@ -692,26 +704,40 @@ declare global {
           published: formData.get("editEventPublished") === "on",
         };
 
+        // For new events, add empty attendees list
+        const eventData = eventId
+          ? baseEventData
+          : { ...baseEventData, attendees: [] };
+
         // Update event details
         auth.setUpdating(true);
         try {
-          await update.updateFields("events", eventId, updateData);
+          const pb = auth.getPocketBase();
+          let result;
+
+          if (eventId) {
+            // Update existing event
+            result = await update.updateFields("events", eventId, eventData);
+          } else {
+            // Create new event
+            result = await pb.collection("events").create(eventData);
+          }
 
           // Upload temp files if any
           if (tempFiles.length > 0) {
             await fileManager.uploadFiles(
               "events",
-              eventId,
+              result.id,
               "files",
               tempFiles,
             );
           }
 
-          // Log the update
+          // Log the action
           await sendLog.send(
-            "update",
+            eventId ? "update" : "create",
             "events",
-            `Updated event ${updateData.event_name}`,
+            `${eventId ? "Updated" : "Created"} event ${eventData.event_name}`,
           );
 
           modal.close();
@@ -720,8 +746,8 @@ declare global {
           auth.setUpdating(false);
         }
       } catch (error) {
-        console.error("Failed to update event:", error);
-        alert("Failed to update event. Please try again.");
+        console.error("Failed to save event:", error);
+        alert("Failed to save event. Please try again.");
       }
     });
   }
@@ -1025,7 +1051,8 @@ declare global {
 
   async function fetchEvents() {
     const eventsList = document.getElementById("eventsList");
-    if (!eventsList) return;
+    const paginationContainer = document.getElementById("paginationContainer");
+    if (!eventsList || !paginationContainer) return;
 
     try {
       if (!auth.isAuthenticated()) {
@@ -1037,6 +1064,7 @@ declare global {
             <p>Please log in to view events</p>
           </div>
         `;
+        paginationContainer.classList.add("hidden");
         return;
       }
 
@@ -1064,6 +1092,7 @@ declare global {
         const totalEventsLabelEl = document.getElementById("totalEventsLabel");
         const currentPageEl = document.getElementById("currentPage");
         const totalPagesLabelEl = document.getElementById("totalPagesLabel");
+        const currentPageNumber = document.getElementById("currentPageNumber");
 
         if (totalEventsEl)
           totalEventsEl.textContent = response.totalItems.toString();
@@ -1074,6 +1103,36 @@ declare global {
         if (currentPageEl) currentPageEl.textContent = response.page.toString();
         if (totalPagesLabelEl)
           totalPagesLabelEl.textContent = `of ${response.totalPages}`;
+        if (currentPageNumber)
+          currentPageNumber.textContent = response.page.toString();
+
+        // Update pagination buttons state
+        const firstPageBtn = document.getElementById(
+          "firstPageBtn",
+        ) as HTMLButtonElement;
+        const prevPageBtn = document.getElementById(
+          "prevPageBtn",
+        ) as HTMLButtonElement;
+        const nextPageBtn = document.getElementById(
+          "nextPageBtn",
+        ) as HTMLButtonElement;
+        const lastPageBtn = document.getElementById(
+          "lastPageBtn",
+        ) as HTMLButtonElement;
+
+        if (firstPageBtn) firstPageBtn.disabled = response.page <= 1;
+        if (prevPageBtn) prevPageBtn.disabled = response.page <= 1;
+        if (nextPageBtn)
+          nextPageBtn.disabled = response.page >= response.totalPages;
+        if (lastPageBtn)
+          lastPageBtn.disabled = response.page >= response.totalPages;
+
+        // Show/hide pagination based on total pages
+        if (response.totalPages <= 1) {
+          paginationContainer.classList.add("hidden");
+        } else {
+          paginationContainer.classList.remove("hidden");
+        }
 
         // Update events list
         if (localEvents.length === 0) {
@@ -1154,16 +1213,6 @@ declare global {
           })
           .join("");
 
-        // Update load more button
-        const loadMoreContainer = document.getElementById("loadMoreContainer");
-        if (loadMoreContainer) {
-          if (response.page < response.totalPages) {
-            loadMoreContainer.classList.remove("hidden");
-          } else {
-            loadMoreContainer.classList.add("hidden");
-          }
-        }
-
         totalPages = response.totalPages;
       } finally {
         auth.setUpdating(false);
@@ -1178,19 +1227,38 @@ declare global {
           <span>Failed to load events. Please try refreshing the page.</span>
         </div>
       `;
+      paginationContainer.classList.add("hidden");
     }
   }
 
-  // Load more events when button is clicked
-  const loadMoreButton = document.getElementById("loadMoreButton");
-  if (loadMoreButton) {
-    loadMoreButton.addEventListener("click", async (e: MouseEvent) => {
-      if (currentPage < totalPages) {
-        currentPage++;
-        await fetchEvents();
-      }
-    });
-  }
+  // Add pagination event listeners
+  document.getElementById("firstPageBtn")?.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage = 1;
+      fetchEvents();
+    }
+  });
+
+  document.getElementById("prevPageBtn")?.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      fetchEvents();
+    }
+  });
+
+  document.getElementById("nextPageBtn")?.addEventListener("click", () => {
+    if (currentPage < totalPages) {
+      currentPage++;
+      fetchEvents();
+    }
+  });
+
+  document.getElementById("lastPageBtn")?.addEventListener("click", () => {
+    if (currentPage < totalPages) {
+      currentPage = totalPages;
+      fetchEvents();
+    }
+  });
 
   // Initial fetch - only call once
   fetchEvents();
