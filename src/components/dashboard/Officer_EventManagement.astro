@@ -15,497 +15,6 @@ const sendLog = SendLog.getInstance();
 
 // Interface for Event type
 interface Event {
-  id: string;
-  event_name: string;
-  event_description: string;
-  event_code: string;
-  location: string;
-  files: string[];
-  points_to_reward: number;
-  start_date: string;
-  end_date: string;
-  published: boolean;
-  has_food: boolean;
-  attendees: AttendeeEntry[];
-}
-
-interface AttendeeEntry {
-  user_id: string;
-  time_checked_in: string;
-  food: string;
-}
-
-interface ListResponse<T> {
-  page: number;
-  perPage: number;
-  totalItems: number;
-  totalPages: number;
-  items: T[];
-}
-
-// Initialize variables
-let eventResponse: ListResponse<Event> = {
-  page: 1,
-  perPage: 5,
-  totalItems: 0,
-  totalPages: 0,
-  items: [],
-};
-let upcomingEvents: Event[] = [];
-
-// Fetch events
-try {
-  if (auth.isAuthenticated()) {
-    eventResponse = await get.getList<Event>("events", 1, 5, "", "-start_date");
-    upcomingEvents = eventResponse.items;
-  }
-} catch (error) {
-  console.error("Failed to fetch events:", error);
-}
-
-const totalEvents = eventResponse.totalItems;
-const totalPages = eventResponse.totalPages;
-const currentPage = eventResponse.page;
-
-// Add type declaration for window
-declare global {
-  interface Window {
-    [key: string]: any;
-    openEditModal: (event?: any) => void;
-    deleteFile: (eventId: string, filename: string) => void;
-    previewFile: (url: string, filename: string) => void;
-    openDetailsModal: (event: Event) => void;
-    showFilePreview: (file: {
-      url: string;
-      type: string;
-      name: string;
-    }) => void;
-    backToFileList: () => void;
-    handlePreviewError: () => void;
-    showLoading: () => void;
-    hideLoading: () => void;
-    deleteEvent: (eventId: string, eventName: string) => Promise<void>;
-    resetAndCloseModal: () => void;
-  }
-}
----
-
-<div id="eventManagementSection" class="dashboard-section hidden">
-  <div class="mb-6 flex justify-between items-center">
-    <div>
-      <h2 class="text-2xl font-bold">Event Management</h2>
-      <p class="opacity-70">Manage and create IEEE UCSD events</p>
-    </div>
-    <button class="btn btn-primary gap-2" onclick="window.openEditModal()">
-      <Icon name="heroicons:plus" class="h-5 w-5" />
-      Add New Event
-    </button>
-  </div>
-
-  <!-- Stats Cards -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div
-      class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
-    >
-      <div class="stat">
-        <div class="stat-title font-medium opacity-80">Total Events</div>
-        <div class="stat-value text-primary" id="totalEvents">-</div>
-        <div class="stat-desc flex items-center gap-2 mt-1">
-          <div class="badge badge-primary badge-sm">All Time</div>
-        </div>
-      </div>
-    </div>
-    <div
-      class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-secondary transition-all duration-300 hover:-translate-y-1 transform"
-    >
-      <div class="stat">
-        <div class="stat-title font-medium opacity-80">Showing</div>
-        <div class="stat-value text-secondary" id="showingEvents">-</div>
-        <div class="stat-desc flex items-center gap-2 mt-1">
-          <div class="badge badge-secondary badge-sm" id="totalEventsLabel">
-            of - Events
-          </div>
-        </div>
-      </div>
-    </div>
-    <div
-      class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-accent transition-all duration-300 hover:-translate-y-1 transform"
-    >
-      <div class="stat">
-        <div class="stat-title font-medium opacity-80">Pages</div>
-        <div class="stat-value text-accent" id="currentPage">-</div>
-        <div class="stat-desc flex items-center gap-2 mt-1">
-          <div class="badge badge-accent badge-sm" id="totalPagesLabel">
-            of -
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Events List -->
-  <div
-    class="card bg-base-100 shadow-lg border border-base-200 hover:border-primary transition-all duration-300"
-  >
-    <div class="card-body">
-      <h3 class="card-title text-xl font-bold flex items-center gap-3">
-        <div class="badge badge-primary p-3">
-          <Icon name="heroicons:calendar" class="h-5 w-5" />
-        </div>
-        Events List
-      </h3>
-      <div class="divider"></div>
-
-      <!-- Filter Controls -->
-      <div class="flex flex-col md:flex-row gap-4 mb-4">
-        <div class="form-control flex-1">
-          <div class="join w-full">
-            <div class="join-item bg-base-200 flex items-center px-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5 opacity-70"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                  clip-rule="evenodd"></path>
-              </svg>
-            </div>
-            <input
-              type="text"
-              id="searchInput"
-              placeholder="Search events..."
-              class="input input-bordered join-item w-full"
-            />
-          </div>
-        </div>
-        <div class="form-control w-full md:w-auto">
-          <div class="join">
-            <div class="join-item bg-base-200 flex items-center px-3">
-              Per Page
-            </div>
-            <select id="perPageSelect" class="select select-bordered join-item">
-              <option value="5">5</option>
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Event Items -->
-      <div class="space-y-4" id="eventsList">
-        <div class="text-center py-8 text-base-content/70">
-          <Icon
-            name="heroicons:calendar"
-            class="h-12 w-12 mx-auto mb-4 opacity-50"
-          />
-          <p>Loading events...</p>
-        </div>
-      </div>
-
-      <!-- Pagination -->
-      <div class="flex justify-center mt-6" id="paginationContainer">
-        <div class="join">
-          <button class="join-item btn btn-sm" id="firstPageBtn">«</button>
-          <button class="join-item btn btn-sm" id="prevPageBtn">‹</button>
-          <button class="join-item btn btn-sm"
-            >Page <span id="currentPageNumber">1</span></button
-          >
-          <button class="join-item btn btn-sm" id="nextPageBtn">›</button>
-          <button class="join-item btn btn-sm" id="lastPageBtn">»</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Edit Event Modal -->
-<dialog id="editEventModal" class="modal">
-  <div class="modal-box max-w-2xl">
-    <h3 class="font-bold text-lg mb-4" id="editModalTitle">Edit Event</h3>
-    <form id="editEventForm" class="space-y-4">
-      <input type="hidden" id="editEventId" />
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Event Name -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Event Name</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="text"
-            id="editEventName"
-            name="editEventName"
-            class="input input-bordered"
-            required
-          />
-        </div>
-
-        <!-- Event Code -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Event Code</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="text"
-            id="editEventCode"
-            name="editEventCode"
-            class="input input-bordered"
-            required
-          />
-        </div>
-
-        <!-- Location -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Location</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="text"
-            id="editEventLocation"
-            name="editEventLocation"
-            class="input input-bordered"
-            required
-          />
-        </div>
-
-        <!-- Points to Reward -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Points to Reward</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="number"
-            id="editEventPoints"
-            name="editEventPoints"
-            class="input input-bordered"
-            min="0"
-            required
-          />
-        </div>
-
-        <!-- Start Date -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Start Date</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="datetime-local"
-            id="editEventStartDate"
-            name="editEventStartDate"
-            class="input input-bordered"
-            required
-          />
-        </div>
-
-        <!-- End Date -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">End Date</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="datetime-local"
-            id="editEventEndDate"
-            name="editEventEndDate"
-            class="input input-bordered"
-            required
-          />
-        </div>
-      </div>
-
-      <!-- Description -->
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text">Description</span>
-          <span class="label-text-alt text-error">*</span>
-        </label>
-        <textarea
-          id="editEventDescription"
-          name="editEventDescription"
-          class="textarea textarea-bordered"
-          rows="3"
-          required></textarea>
-      </div>
-
-      <!-- Files -->
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text">Upload Files</span>
-        </label>
-        <input
-          type="file"
-          id="editEventFiles"
-          class="file-input file-input-bordered"
-          multiple
-        />
-        <div class="mt-4 space-y-2">
-          <div id="newFiles" class="space-y-2">
-            <!-- New files will be listed here -->
-          </div>
-          <div class="divider">Current Files</div>
-          <div id="currentFiles" class="space-y-2">
-            <!-- Current files will be listed here -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Published -->
-      <div class="form-control">
-        <label class="label cursor-pointer justify-start gap-4">
-          <input
-            type="checkbox"
-            id="editEventPublished"
-            name="editEventPublished"
-            class="toggle"
-          />
-          <span class="label-text">Publish Event</span>
-        </label>
-        <label class="label">
-          <span class="label-text-alt text-info"
-            >This has to be clicked if you want to make this event available to
-            the public</span
-          >
-        </label>
-      </div>
-
-      <!-- Has Food -->
-      <div class="form-control">
-        <label class="label cursor-pointer justify-start gap-4">
-          <input
-            type="checkbox"
-            id="editEventHasFood"
-            name="editEventHasFood"
-            class="toggle"
-          />
-          <span class="label-text">Has Food</span>
-        </label>
-        <label class="label">
-          <span class="label-text-alt text-info"
-            >Check this if food will be provided at the event</span
-          >
-        </label>
-      </div>
-
-      <div class="modal-action">
-        <button type="submit" class="btn btn-primary">Save Changes</button>
-        <button type="button" class="btn" onclick="editEventModal.close()"
-          >Cancel</button
-        >
-      </div>
-    </form>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button>close</button>
-  </form>
-</dialog>
-
-<!-- Event Details Modal -->
-<dialog id="eventDetailsModal" class="modal">
-  <div class="modal-box max-w-4xl">
-    <div class="flex justify-between items-center mb-4">
-      <div class="flex items-center gap-3">
-        <h3 class="font-bold text-lg" id="modalTitle">Event Details</h3>
-      </div>
-      <button
-        class="btn btn-circle btn-ghost"
-        onclick="eventDetailsModal.close()"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
-    </div>
-
-    <div class="tabs tabs-boxed mb-4">
-      <button class="tab tab-active" data-tab="files">Files</button>
-      <button class="tab" data-tab="attendees">Attendees</button>
-    </div>
-
-    <div id="filesContent" class="space-y-4">
-      <!-- Files list will be populated here -->
-    </div>
-
-    <div id="attendeesContent" class="space-y-4 hidden">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-semibold">Event Attendees</h3>
-        <button id="downloadAttendeesCSV" class="btn btn-primary btn-sm gap-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-              clip-rule="evenodd"></path>
-          </svg>
-          Download CSV
-        </button>
-      </div>
-      <!-- Attendees list will be populated here -->
-    </div>
-
-    <!-- File Preview Section -->
-    <div id="filePreviewSection" class="hidden">
-      <div class="flex justify-between items-center mb-4">
-        <div class="flex items-center gap-3">
-          <button class="btn btn-ghost btn-sm" onclick="backToFileList()">
-            ← Back
-          </button>
-          <h3 class="font-bold text-lg truncate" id="previewFileName"></h3>
-        </div>
-      </div>
-      <div class="relative" id="previewContainer">
-        <div
-          id="loadingSpinner"
-          class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
-        >
-          <span class="loading loading-spinner loading-lg"></span>
-        </div>
-        <div id="previewContent" class="w-full"></div>
-      </div>
-    </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button>close</button>
-  </form>
-</dialog>
-
-<script>
-  import { Get } from "../pocketbase/Get";
-  import { Authentication } from "../pocketbase/Authentication";
-  import { Update } from "../pocketbase/Update";
-  import { FileManager } from "../pocketbase/FileManager";
-  import { SendLog } from "../pocketbase/SendLog";
-
-  interface AttendeeEntry {
-    user_id: string;
-    time_checked_in: string;
-    food: string;
-  }
-
-  interface Event {
     id: string;
     event_name: string;
     event_description: string;
@@ -518,189 +27,733 @@ declare global {
     published: boolean;
     has_food: boolean;
     attendees: AttendeeEntry[];
-  }
+}
 
-  const get = Get.getInstance();
-  const auth = Authentication.getInstance();
-  const update = Update.getInstance();
-  const fileManager = FileManager.getInstance();
-  const sendLog = SendLog.getInstance();
+interface AttendeeEntry {
+    user_id: string;
+    time_checked_in: string;
+    food: string;
+}
 
-  let currentPage = 1;
-  let totalPages = 0;
-  let searchQuery = "";
-  let perPage = 5;
+interface ListResponse<T> {
+    page: number;
+    perPage: number;
+    totalItems: number;
+    totalPages: number;
+    items: T[];
+}
 
-  // Store temporary files
-  let tempFiles: File[] = [];
+// Initialize variables
+let eventResponse: ListResponse<Event> = {
+    page: 1,
+    perPage: 5,
+    totalItems: 0,
+    totalPages: 0,
+    items: [],
+};
+let upcomingEvents: Event[] = [];
 
-  // Add resetModalState function
-  function resetModalState() {
-    const filesContent = document.getElementById("filesContent");
-    const attendeesContent = document.getElementById("attendeesContent");
-    const filePreviewSection = document.getElementById("filePreviewSection");
-    const modalTitle = document.getElementById("modalTitle");
-    const tabs = document.querySelectorAll(
-      ".tab",
-    ) as NodeListOf<HTMLButtonElement>;
+// Fetch events
+try {
+    if (auth.isAuthenticated()) {
+        eventResponse = await get.getList<Event>(
+            "events",
+            1,
+            5,
+            "",
+            "-start_date"
+        );
+        upcomingEvents = eventResponse.items;
+    }
+} catch (error) {
+    console.error("Failed to fetch events:", error);
+}
 
-    // Reset tab states
-    tabs.forEach((tab) => {
-      if (tab.getAttribute("data-tab") === "files") {
-        tab.classList.add("tab-active");
-      } else {
-        tab.classList.remove("tab-active");
-      }
+const totalEvents = eventResponse.totalItems;
+const totalPages = eventResponse.totalPages;
+const currentPage = eventResponse.page;
+
+// Add type declaration for window
+declare global {
+    interface Window {
+        [key: string]: any;
+        openEditModal: (event?: any) => void;
+        deleteFile: (eventId: string, filename: string) => void;
+        previewFile: (url: string, filename: string) => void;
+        openDetailsModal: (event: Event) => void;
+        showFilePreview: (file: {
+            url: string;
+            type: string;
+            name: string;
+        }) => void;
+        backToFileList: () => void;
+        handlePreviewError: () => void;
+        showLoading: () => void;
+        hideLoading: () => void;
+        deleteEvent: (eventId: string, eventName: string) => Promise<void>;
+        resetAndCloseModal: () => void;
+    }
+}
+---
+
+<div id="eventManagementSection" class="dashboard-section hidden">
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h2 class="text-2xl font-bold">Event Management</h2>
+            <p class="opacity-70">Manage and create IEEE UCSD events</p>
+        </div>
+        <button class="btn btn-primary gap-2" onclick="window.openEditModal()">
+            <Icon name="heroicons:plus" class="h-5 w-5" />
+            Add New Event
+        </button>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div
+            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
+        >
+            <div class="stat">
+                <div class="stat-title font-medium opacity-80">
+                    Total Events
+                </div>
+                <div class="stat-value text-primary" id="totalEvents">-</div>
+                <div class="stat-desc flex items-center gap-2 mt-1">
+                    <div class="badge badge-primary badge-sm">All Time</div>
+                </div>
+            </div>
+        </div>
+        <div
+            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-secondary transition-all duration-300 hover:-translate-y-1 transform"
+        >
+            <div class="stat">
+                <div class="stat-title font-medium opacity-80">Showing</div>
+                <div class="stat-value text-secondary" id="showingEvents">
+                    -
+                </div>
+                <div class="stat-desc flex items-center gap-2 mt-1">
+                    <div
+                        class="badge badge-secondary badge-sm"
+                        id="totalEventsLabel"
+                    >
+                        of - Events
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div
+            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-accent transition-all duration-300 hover:-translate-y-1 transform"
+        >
+            <div class="stat">
+                <div class="stat-title font-medium opacity-80">Pages</div>
+                <div class="stat-value text-accent" id="currentPage">-</div>
+                <div class="stat-desc flex items-center gap-2 mt-1">
+                    <div
+                        class="badge badge-accent badge-sm"
+                        id="totalPagesLabel"
+                    >
+                        of -
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Events List -->
+    <div
+        class="card bg-base-100 shadow-lg border border-base-200 hover:border-primary transition-all duration-300"
+    >
+        <div class="card-body">
+            <h3 class="card-title text-xl font-bold flex items-center gap-3">
+                <div class="badge badge-primary p-3">
+                    <Icon name="heroicons:calendar" class="h-5 w-5" />
+                </div>
+                Events List
+            </h3>
+            <div class="divider"></div>
+
+            <!-- Filter Controls -->
+            <div class="flex flex-col md:flex-row gap-4 mb-4">
+                <div class="form-control flex-1">
+                    <div class="join w-full">
+                        <div
+                            class="join-item bg-base-200 flex items-center px-3"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5 opacity-70"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                    clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Search events..."
+                            class="input input-bordered join-item w-full"
+                        />
+                    </div>
+                </div>
+                <div class="form-control w-full md:w-auto">
+                    <div class="join">
+                        <div
+                            class="join-item bg-base-200 flex items-center px-3"
+                        >
+                            Per Page
+                        </div>
+                        <select
+                            id="perPageSelect"
+                            class="select select-bordered join-item"
+                        >
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Event Items -->
+            <div class="space-y-4" id="eventsList">
+                <div class="text-center py-8 text-base-content/70">
+                    <Icon
+                        name="heroicons:calendar"
+                        class="h-12 w-12 mx-auto mb-4 opacity-50"
+                    />
+                    <p>Loading events...</p>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex justify-center mt-6" id="paginationContainer">
+                <div class="join">
+                    <button class="join-item btn btn-sm" id="firstPageBtn"
+                        >«</button
+                    >
+                    <button class="join-item btn btn-sm" id="prevPageBtn"
+                        >‹</button
+                    >
+                    <button class="join-item btn btn-sm"
+                        >Page <span id="currentPageNumber">1</span></button
+                    >
+                    <button class="join-item btn btn-sm" id="nextPageBtn"
+                        >›</button
+                    >
+                    <button class="join-item btn btn-sm" id="lastPageBtn"
+                        >»</button
+                    >
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Event Modal -->
+<dialog id="editEventModal" class="modal">
+    <div class="modal-box max-w-2xl">
+        <h3 class="font-bold text-lg mb-4" id="editModalTitle">Edit Event</h3>
+        <form id="editEventForm" class="space-y-4">
+            <input type="hidden" id="editEventId" />
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Event Name -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Event Name</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="editEventName"
+                        name="editEventName"
+                        class="input input-bordered"
+                        required
+                    />
+                </div>
+
+                <!-- Event Code -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Event Code</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="editEventCode"
+                        name="editEventCode"
+                        class="input input-bordered"
+                        required
+                    />
+                </div>
+
+                <!-- Location -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Location</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="editEventLocation"
+                        name="editEventLocation"
+                        class="input input-bordered"
+                        required
+                    />
+                </div>
+
+                <!-- Points to Reward -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Points to Reward</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="number"
+                        id="editEventPoints"
+                        name="editEventPoints"
+                        class="input input-bordered"
+                        min="0"
+                        required
+                    />
+                </div>
+
+                <!-- Start Date -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Start Date</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="datetime-local"
+                        id="editEventStartDate"
+                        name="editEventStartDate"
+                        class="input input-bordered"
+                        required
+                    />
+                </div>
+
+                <!-- End Date -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">End Date</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="datetime-local"
+                        id="editEventEndDate"
+                        name="editEventEndDate"
+                        class="input input-bordered"
+                        required
+                    />
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Description</span>
+                    <span class="label-text-alt text-error">*</span>
+                </label>
+                <textarea
+                    id="editEventDescription"
+                    name="editEventDescription"
+                    class="textarea textarea-bordered"
+                    rows="3"
+                    required></textarea>
+            </div>
+
+            <!-- Files -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Upload Files</span>
+                </label>
+                <input
+                    type="file"
+                    id="editEventFiles"
+                    class="file-input file-input-bordered"
+                    multiple
+                />
+                <div class="mt-4 space-y-2">
+                    <div id="newFiles" class="space-y-2">
+                        <!-- New files will be listed here -->
+                    </div>
+                    <div class="divider">Current Files</div>
+                    <div id="currentFiles" class="space-y-2">
+                        <!-- Current files will be listed here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Published -->
+            <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-4">
+                    <input
+                        type="checkbox"
+                        id="editEventPublished"
+                        name="editEventPublished"
+                        class="toggle"
+                    />
+                    <span class="label-text">Publish Event</span>
+                </label>
+                <label class="label">
+                    <span class="label-text-alt text-info"
+                        >This has to be clicked if you want to make this event
+                        available to the public</span
+                    >
+                </label>
+            </div>
+
+            <!-- Has Food -->
+            <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-4">
+                    <input
+                        type="checkbox"
+                        id="editEventHasFood"
+                        name="editEventHasFood"
+                        class="toggle"
+                    />
+                    <span class="label-text">Has Food</span>
+                </label>
+                <label class="label">
+                    <span class="label-text-alt text-info"
+                        >Check this if food will be provided at the event</span
+                    >
+                </label>
+            </div>
+
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary"
+                    >Save Changes</button
+                >
+                <button
+                    type="button"
+                    class="btn"
+                    onclick="editEventModal.close()">Cancel</button
+                >
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Event Details Modal -->
+<dialog id="eventDetailsModal" class="modal">
+    <div class="modal-box max-w-4xl">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-3">
+                <h3 class="font-bold text-lg" id="modalTitle">Event Details</h3>
+            </div>
+            <button
+                class="btn btn-circle btn-ghost"
+                onclick="eventDetailsModal.close()"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="tabs tabs-boxed mb-4">
+            <button class="tab tab-active" data-tab="files">Files</button>
+            <button class="tab" data-tab="attendees">Attendees</button>
+        </div>
+
+        <div id="filesContent" class="space-y-4">
+            <!-- Files list will be populated here -->
+        </div>
+
+        <div id="attendeesContent" class="space-y-4 hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Event Attendees</h3>
+                <button
+                    id="downloadAttendeesCSV"
+                    class="btn btn-primary btn-sm gap-2"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    Download CSV
+                </button>
+            </div>
+            <!-- Attendees list will be populated here -->
+        </div>
+
+        <!-- File Preview Section -->
+        <div id="filePreviewSection" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
+                    <button
+                        class="btn btn-ghost btn-sm"
+                        onclick="backToFileList()"
+                    >
+                        ← Back
+                    </button>
+                    <h3 class="font-bold text-lg truncate" id="previewFileName">
+                    </h3>
+                </div>
+            </div>
+            <div class="relative" id="previewContainer">
+                <div
+                    id="loadingSpinner"
+                    class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
+                >
+                    <span class="loading loading-spinner loading-lg"></span>
+                </div>
+                <div id="previewContent" class="w-full"></div>
+            </div>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<script>
+    import { Get } from "../pocketbase/Get";
+    import { Authentication } from "../pocketbase/Authentication";
+    import { Update } from "../pocketbase/Update";
+    import { FileManager } from "../pocketbase/FileManager";
+    import { SendLog } from "../pocketbase/SendLog";
+
+    interface AttendeeEntry {
+        user_id: string;
+        time_checked_in: string;
+        food: string;
+    }
+
+    interface Event {
+        id: string;
+        event_name: string;
+        event_description: string;
+        event_code: string;
+        location: string;
+        files: string[];
+        points_to_reward: number;
+        start_date: string;
+        end_date: string;
+        published: boolean;
+        has_food: boolean;
+        attendees: AttendeeEntry[];
+    }
+
+    const get = Get.getInstance();
+    const auth = Authentication.getInstance();
+    const update = Update.getInstance();
+    const fileManager = FileManager.getInstance();
+    const sendLog = SendLog.getInstance();
+
+    let currentPage = 1;
+    let totalPages = 0;
+    let searchQuery = "";
+    let perPage = 5;
+
+    // Store temporary files
+    let tempFiles: File[] = [];
+
+    // Add resetModalState function
+    function resetModalState() {
+        const filesContent = document.getElementById("filesContent");
+        const attendeesContent = document.getElementById("attendeesContent");
+        const filePreviewSection =
+            document.getElementById("filePreviewSection");
+        const modalTitle = document.getElementById("modalTitle");
+        const tabs = document.querySelectorAll(
+            ".tab"
+        ) as NodeListOf<HTMLButtonElement>;
+
+        // Reset tab states
+        tabs.forEach((tab) => {
+            if (tab.getAttribute("data-tab") === "files") {
+                tab.classList.add("tab-active");
+            } else {
+                tab.classList.remove("tab-active");
+            }
+        });
+
+        // Reset content visibility
+        if (filesContent) filesContent.classList.remove("hidden");
+        if (attendeesContent) attendeesContent.classList.add("hidden");
+        if (filePreviewSection) filePreviewSection.classList.add("hidden");
+        if (modalTitle) modalTitle.textContent = "Event Details";
+
+        // Clear any existing content
+        if (attendeesContent) {
+            attendeesContent.innerHTML = "";
+        }
+    }
+
+    // Add event listener for modal close when the DOM is loaded
+    document.addEventListener("DOMContentLoaded", () => {
+        const eventDetailsModal = document.getElementById(
+            "eventDetailsModal"
+        ) as HTMLDialogElement;
+        if (eventDetailsModal) {
+            eventDetailsModal.addEventListener("close", resetModalState);
+        }
     });
 
-    // Reset content visibility
-    if (filesContent) filesContent.classList.remove("hidden");
-    if (attendeesContent) attendeesContent.classList.add("hidden");
-    if (filePreviewSection) filePreviewSection.classList.add("hidden");
-    if (modalTitle) modalTitle.textContent = "Event Details";
-
-    // Clear any existing content
-    if (attendeesContent) {
-      attendeesContent.innerHTML = "";
-    }
-  }
-
-  // Add event listener for modal close when the DOM is loaded
-  document.addEventListener("DOMContentLoaded", () => {
-    const eventDetailsModal = document.getElementById(
-      "eventDetailsModal",
-    ) as HTMLDialogElement;
-    if (eventDetailsModal) {
-      eventDetailsModal.addEventListener("close", resetModalState);
-    }
-  });
-
-  // Add event listeners for filters
-  const searchInput = document.getElementById(
-    "searchInput",
-  ) as HTMLInputElement;
-  const perPageSelect = document.getElementById(
-    "perPageSelect",
-  ) as HTMLSelectElement;
-
-  if (searchInput) {
-    let debounceTimeout: NodeJS.Timeout;
-    searchInput.addEventListener("input", () => {
-      clearTimeout(debounceTimeout);
-      debounceTimeout = setTimeout(() => {
-        searchQuery = searchInput.value;
-        currentPage = 1; // Reset to first page when searching
-        fetchEvents();
-      }, 300); // Debounce for 300ms
-    });
-  }
-
-  if (perPageSelect) {
-    perPageSelect.addEventListener("change", () => {
-      perPage = parseInt(perPageSelect.value);
-      currentPage = 1; // Reset to first page when changing items per page
-      fetchEvents();
-    });
-  }
-
-  // Make openEditModal available globally
-  window.openEditModal = function (event?: any) {
-    // Convert event times to local time if event exists
-    const localEvent = event ? Get.convertUTCToLocal(event) : null;
-
-    const modal = document.getElementById(
-      "editEventModal",
-    ) as HTMLDialogElement;
-    const modalTitle = document.getElementById("editModalTitle");
-    const form = document.getElementById("editEventForm") as HTMLFormElement;
-    const idInput = document.getElementById("editEventId") as HTMLInputElement;
-    const nameInput = document.getElementById(
-      "editEventName",
+    // Add event listeners for filters
+    const searchInput = document.getElementById(
+        "searchInput"
     ) as HTMLInputElement;
-    const descInput = document.getElementById(
-      "editEventDescription",
-    ) as HTMLTextAreaElement;
-    const codeInput = document.getElementById(
-      "editEventCode",
-    ) as HTMLInputElement;
-    const locationInput = document.getElementById(
-      "editEventLocation",
-    ) as HTMLInputElement;
-    const pointsInput = document.getElementById(
-      "editEventPoints",
-    ) as HTMLInputElement;
-    const startDateInput = document.getElementById(
-      "editEventStartDate",
-    ) as HTMLInputElement;
-    const endDateInput = document.getElementById(
-      "editEventEndDate",
-    ) as HTMLInputElement;
-    const publishedInput = document.getElementById(
-      "editEventPublished",
-    ) as HTMLInputElement;
-    const currentFilesDiv = document.getElementById(
-      "currentFiles",
-    ) as HTMLDivElement;
+    const perPageSelect = document.getElementById(
+        "perPageSelect"
+    ) as HTMLSelectElement;
 
-    // Update modal title based on whether we're editing or creating
-    if (modalTitle) {
-      modalTitle.textContent = localEvent ? "Edit Event" : "Create New Event";
+    if (searchInput) {
+        let debounceTimeout: NodeJS.Timeout;
+        searchInput.addEventListener("input", () => {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                searchQuery = searchInput.value;
+                currentPage = 1; // Reset to first page when searching
+                fetchEvents();
+            }, 300); // Debounce for 300ms
+        });
     }
 
-    // Set values
-    idInput.value = localEvent?.id || "";
-    nameInput.value = localEvent?.event_name || "";
-    descInput.value = localEvent?.event_description || "";
-    codeInput.value = localEvent?.event_code || "";
-    locationInput.value = localEvent?.location || "";
-    pointsInput.value = localEvent?.points_to_reward?.toString() || "0";
-    publishedInput.checked = localEvent?.published || false;
-    const hasFoodInput = document.getElementById(
-      "editEventHasFood",
-    ) as HTMLInputElement;
-    hasFoodInput.checked = localEvent?.has_food || false;
-
-    // Format dates properly for datetime-local input
-    try {
-      const now = new Date();
-      const startDate = localEvent ? new Date(localEvent.start_date) : now;
-      const endDate = localEvent
-        ? new Date(localEvent.end_date)
-        : new Date(now.getTime() + 60 * 60 * 1000); // Default to 1 hour duration
-
-      if (!isNaN(startDate.getTime())) {
-        startDateInput.value = new Date(
-          startDate.getTime() - startDate.getTimezoneOffset() * 60000,
-        )
-          .toISOString()
-          .slice(0, 16);
-      }
-
-      if (!isNaN(endDate.getTime())) {
-        endDateInput.value = new Date(
-          endDate.getTime() - endDate.getTimezoneOffset() * 60000,
-        )
-          .toISOString()
-          .slice(0, 16);
-      }
-    } catch (e) {
-      console.error("Error formatting dates:", e);
+    if (perPageSelect) {
+        perPageSelect.addEventListener("change", () => {
+            perPage = parseInt(perPageSelect.value);
+            currentPage = 1; // Reset to first page when changing items per page
+            fetchEvents();
+        });
     }
 
-    // Reset temp files
-    tempFiles = [];
-    const newFilesDiv = document.getElementById("newFiles") as HTMLDivElement;
-    newFilesDiv.innerHTML = "";
+    // Make openEditModal available globally
+    window.openEditModal = function (event?: any) {
+        // Convert event times to local time if event exists
+        const localEvent = event ? Get.convertUTCToLocal(event) : null;
 
-    // Display current files if any
-    if (localEvent?.files && localEvent.files.length > 0) {
-      const baseUrl = "https://pocketbase.ieeeucsd.org";
-      const collectionId = "events";
-      const recordId = localEvent.id;
+        const modal = document.getElementById(
+            "editEventModal"
+        ) as HTMLDialogElement;
+        const modalTitle = document.getElementById("editModalTitle");
+        const form = document.getElementById(
+            "editEventForm"
+        ) as HTMLFormElement;
+        const idInput = document.getElementById(
+            "editEventId"
+        ) as HTMLInputElement;
+        const nameInput = document.getElementById(
+            "editEventName"
+        ) as HTMLInputElement;
+        const descInput = document.getElementById(
+            "editEventDescription"
+        ) as HTMLTextAreaElement;
+        const codeInput = document.getElementById(
+            "editEventCode"
+        ) as HTMLInputElement;
+        const locationInput = document.getElementById(
+            "editEventLocation"
+        ) as HTMLInputElement;
+        const pointsInput = document.getElementById(
+            "editEventPoints"
+        ) as HTMLInputElement;
+        const startDateInput = document.getElementById(
+            "editEventStartDate"
+        ) as HTMLInputElement;
+        const endDateInput = document.getElementById(
+            "editEventEndDate"
+        ) as HTMLInputElement;
+        const publishedInput = document.getElementById(
+            "editEventPublished"
+        ) as HTMLInputElement;
+        const currentFilesDiv = document.getElementById(
+            "currentFiles"
+        ) as HTMLDivElement;
 
-      currentFilesDiv.innerHTML = localEvent.files
-        .map(
-          (file: string) => `
+        // Update modal title based on whether we're editing or creating
+        if (modalTitle) {
+            modalTitle.textContent = localEvent
+                ? "Edit Event"
+                : "Create New Event";
+        }
+
+        // Set values
+        idInput.value = localEvent?.id || "";
+        nameInput.value = localEvent?.event_name || "";
+        descInput.value = localEvent?.event_description || "";
+        codeInput.value = localEvent?.event_code || "";
+        locationInput.value = localEvent?.location || "";
+        pointsInput.value = localEvent?.points_to_reward?.toString() || "0";
+        publishedInput.checked = localEvent?.published || false;
+        const hasFoodInput = document.getElementById(
+            "editEventHasFood"
+        ) as HTMLInputElement;
+        hasFoodInput.checked = localEvent?.has_food || false;
+
+        // Format dates properly for datetime-local input
+        try {
+            const now = new Date();
+            const startDate = localEvent
+                ? new Date(localEvent.start_date)
+                : now;
+            const endDate = localEvent
+                ? new Date(localEvent.end_date)
+                : new Date(now.getTime() + 60 * 60 * 1000); // Default to 1 hour duration
+
+            if (!isNaN(startDate.getTime())) {
+                startDateInput.value = new Date(
+                    startDate.getTime() - startDate.getTimezoneOffset() * 60000
+                )
+                    .toISOString()
+                    .slice(0, 16);
+            }
+
+            if (!isNaN(endDate.getTime())) {
+                endDateInput.value = new Date(
+                    endDate.getTime() - endDate.getTimezoneOffset() * 60000
+                )
+                    .toISOString()
+                    .slice(0, 16);
+            }
+        } catch (e) {
+            console.error("Error formatting dates:", e);
+        }
+
+        // Reset temp files
+        tempFiles = [];
+        const newFilesDiv = document.getElementById(
+            "newFiles"
+        ) as HTMLDivElement;
+        newFilesDiv.innerHTML = "";
+
+        // Display current files if any
+        if (localEvent?.files && localEvent.files.length > 0) {
+            const baseUrl = "https://pocketbase.ieeeucsd.org";
+            const collectionId = "events";
+            const recordId = localEvent.id;
+
+            currentFilesDiv.innerHTML = localEvent.files
+                .map(
+                    (file: string) => `
         <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg">
           <span class="text-sm truncate flex-1">${file}</span>
           <div class="flex gap-2">
@@ -711,90 +764,90 @@ declare global {
             </button>
           </div>
         </div>
-      `,
-        )
-        .join("");
-    } else {
-      currentFilesDiv.innerHTML =
-        '<p class="text-sm opacity-70">No files attached</p>';
-    }
+      `
+                )
+                .join("");
+        } else {
+            currentFilesDiv.innerHTML =
+                '<p class="text-sm opacity-70">No files attached</p>';
+        }
 
-    modal.showModal();
-  };
-
-  // Preview file using FileViewerModal
-  window.previewFile = function (url: string, filename: string) {
-    const fileType = getFileType(filename);
-    const fileData = {
-      url,
-      type: fileType,
-      name: filename,
+        modal.showModal();
     };
 
-    // Create and dispatch custom event for FileViewerModal
-    const event = new CustomEvent("showFileViewer", {
-      detail: { files: fileData },
-    });
-    window.dispatchEvent(event);
-  };
+    // Preview file using FileViewerModal
+    window.previewFile = function (url: string, filename: string) {
+        const fileType = getFileType(filename);
+        const fileData = {
+            url,
+            type: fileType,
+            name: filename,
+        };
 
-  // Helper function to determine file type
-  function getFileType(filename: string): string {
-    const extension = filename.split(".").pop()?.toLowerCase();
-    const mimeTypes: { [key: string]: string } = {
-      pdf: "application/pdf",
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      png: "image/png",
-      gif: "image/gif",
-      mp4: "video/mp4",
-      mp3: "audio/mpeg",
-      txt: "text/plain",
-      doc: "application/msword",
-      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      xls: "application/vnd.ms-excel",
-      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      json: "application/json",
-    };
-
-    return mimeTypes[extension || ""] || "application/octet-stream";
-  }
-
-  // Handle file deletion
-  window.deleteFile = async function (eventId: string, filename: string) {
-    try {
-      await fileManager.deleteFile("events", eventId, "files");
-      await sendLog.send(
-        "delete",
-        "event_files",
-        `Deleted file ${filename} from event ${eventId}`,
-      );
-      await fetchEvents(); // Refresh the list
-    } catch (error) {
-      console.error("Failed to delete file:", error);
-    }
-  };
-
-  // Handle file input change
-  const fileInput = document.getElementById(
-    "editEventFiles",
-  ) as HTMLInputElement;
-  if (fileInput) {
-    fileInput.addEventListener("change", function () {
-      if (this.files && this.files.length > 0) {
-        const newFilesDiv = document.getElementById(
-          "newFiles",
-        ) as HTMLDivElement;
-
-        // Add new files to temp storage
-        Array.from(this.files).forEach((file) => {
-          tempFiles.push(file);
+        // Create and dispatch custom event for FileViewerModal
+        const event = new CustomEvent("showFileViewer", {
+            detail: { files: fileData },
         });
+        window.dispatchEvent(event);
+    };
 
-        // Update preview
-        newFilesDiv.innerHTML = tempFiles
-          .map(
-            (file, index) => `
+    // Helper function to determine file type
+    function getFileType(filename: string): string {
+        const extension = filename.split(".").pop()?.toLowerCase();
+        const mimeTypes: { [key: string]: string } = {
+            pdf: "application/pdf",
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            png: "image/png",
+            gif: "image/gif",
+            mp4: "video/mp4",
+            mp3: "audio/mpeg",
+            txt: "text/plain",
+            doc: "application/msword",
+            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            xls: "application/vnd.ms-excel",
+            xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            json: "application/json",
+        };
+
+        return mimeTypes[extension || ""] || "application/octet-stream";
+    }
+
+    // Handle file deletion
+    window.deleteFile = async function (eventId: string, filename: string) {
+        try {
+            await fileManager.deleteFile("events", eventId, "files");
+            await sendLog.send(
+                "delete",
+                "event_files",
+                `Deleted file ${filename} from event ${eventId}`
+            );
+            await fetchEvents(); // Refresh the list
+        } catch (error) {
+            console.error("Failed to delete file:", error);
+        }
+    };
+
+    // Handle file input change
+    const fileInput = document.getElementById(
+        "editEventFiles"
+    ) as HTMLInputElement;
+    if (fileInput) {
+        fileInput.addEventListener("change", function () {
+            if (this.files && this.files.length > 0) {
+                const newFilesDiv = document.getElementById(
+                    "newFiles"
+                ) as HTMLDivElement;
+
+                // Add new files to temp storage
+                Array.from(this.files).forEach((file) => {
+                    tempFiles.push(file);
+                });
+
+                // Update preview
+                newFilesDiv.innerHTML = tempFiles
+                    .map(
+                        (file, index) => `
           <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg">
             <span class="text-sm truncate flex-1">${file.name}</span>
             <div class="flex gap-2">
@@ -805,30 +858,32 @@ declare global {
               </button>
             </div>
           </div>
-        `,
-          )
-          .join("");
+        `
+                    )
+                    .join("");
 
-        // Clear the file input
-        this.value = "";
-      }
-    });
-  }
-
-  // Remove temp file
-  window.removeTempFile = function (index: number) {
-    tempFiles.splice(index, 1);
-    const newFilesDiv = document.getElementById("newFiles") as HTMLDivElement;
-
-    if (tempFiles.length === 0) {
-      newFilesDiv.innerHTML = "";
-      return;
+                // Clear the file input
+                this.value = "";
+            }
+        });
     }
 
-    // Update preview
-    newFilesDiv.innerHTML = tempFiles
-      .map(
-        (file, idx) => `
+    // Remove temp file
+    window.removeTempFile = function (index: number) {
+        tempFiles.splice(index, 1);
+        const newFilesDiv = document.getElementById(
+            "newFiles"
+        ) as HTMLDivElement;
+
+        if (tempFiles.length === 0) {
+            newFilesDiv.innerHTML = "";
+            return;
+        }
+
+        // Update preview
+        newFilesDiv.innerHTML = tempFiles
+            .map(
+                (file, idx) => `
       <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg">
         <span class="text-sm truncate flex-1">${file.name}</span>
         <div class="flex gap-2">
@@ -839,163 +894,191 @@ declare global {
           </button>
         </div>
       </div>
-    `,
-      )
-      .join("");
-  };
+    `
+            )
+            .join("");
+    };
 
-  // Update form submission to handle both create and edit
-  const editForm = document.getElementById("editEventForm") as HTMLFormElement;
-  if (editForm) {
-    editForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const modal = document.getElementById(
-        "editEventModal",
-      ) as HTMLDialogElement;
+    // Update form submission to handle both create and edit
+    const editForm = document.getElementById(
+        "editEventForm"
+    ) as HTMLFormElement;
+    if (editForm) {
+        editForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const modal = document.getElementById(
+                "editEventModal"
+            ) as HTMLDialogElement;
 
-      try {
-        const formData = new FormData(editForm);
-        const eventId = (
-          document.getElementById("editEventId") as HTMLInputElement
-        ).value;
+            try {
+                const formData = new FormData(editForm);
+                const eventId = (
+                    document.getElementById("editEventId") as HTMLInputElement
+                ).value;
 
-        // Get the date strings from the form
-        const startDateStr = formData.get("editEventStartDate") as string;
-        const endDateStr = formData.get("editEventEndDate") as string;
+                // Get the date strings from the form
+                const startDateStr = formData.get(
+                    "editEventStartDate"
+                ) as string;
+                const endDateStr = formData.get("editEventEndDate") as string;
 
-        // Convert local dates to UTC ISO strings
-        const startDate = new Date(startDateStr);
-        const endDate = new Date(endDateStr);
+                // Convert local dates to UTC ISO strings
+                const startDate = new Date(startDateStr);
+                const endDate = new Date(endDateStr);
 
-        // Get points value and ensure it's a number
-        const pointsValue = parseInt(formData.get("editEventPoints") as string);
-        const points = isNaN(pointsValue) ? 0 : pointsValue;
+                // Get points value and ensure it's a number
+                const pointsValue = parseInt(
+                    formData.get("editEventPoints") as string
+                );
+                const points = isNaN(pointsValue) ? 0 : pointsValue;
 
-        // Prepare base event data without attendees
-        const baseEventData = {
-          event_name: formData.get("editEventName"),
-          event_description: formData.get("editEventDescription"),
-          event_code: formData.get("editEventCode"),
-          location: formData.get("editEventLocation"),
-          points_to_reward: points,
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
-          published: formData.get("editEventPublished") === "on",
-          has_food: formData.get("editEventHasFood") === "on",
-        };
+                // Prepare base event data without attendees
+                const baseEventData = {
+                    event_name: formData.get("editEventName"),
+                    event_description: formData.get("editEventDescription"),
+                    event_code: formData.get("editEventCode"),
+                    location: formData.get("editEventLocation"),
+                    points_to_reward: points,
+                    start_date: startDate.toISOString(),
+                    end_date: endDate.toISOString(),
+                    published: formData.get("editEventPublished") === "on",
+                    has_food: formData.get("editEventHasFood") === "on",
+                };
 
-        // For new events, add empty attendees list
-        const eventData = eventId
-          ? baseEventData
-          : { ...baseEventData, attendees: [] };
+                // For new events, add empty attendees list
+                const eventData = eventId
+                    ? baseEventData
+                    : { ...baseEventData, attendees: [] };
 
-        // Update event details
-        auth.setUpdating(true);
-        try {
-          let result;
+                // Update event details
+                auth.setUpdating(true);
+                try {
+                    let result;
 
-          if (eventId) {
-            // Update existing event using Update class
-            result = await update.updateFields("events", eventId, eventData);
-          } else {
-            // Create new event using PocketBase
-            const pb = auth.getPocketBase();
-            result = await pb.collection("events").create(eventData);
-          }
+                    if (eventId) {
+                        // Update existing event using Update class
+                        result = await update.updateFields(
+                            "events",
+                            eventId,
+                            eventData
+                        );
 
-          // Upload temp files if any
-          if (tempFiles.length > 0) {
-            await fileManager.uploadFiles(
-              "events",
-              result.id,
-              "files",
-              tempFiles,
-            );
-          }
+                        // Append new files if any, using appendFiles to preserve existing ones
+                        if (tempFiles.length > 0) {
+                            await fileManager.appendFiles(
+                                "events",
+                                result.id,
+                                "files",
+                                tempFiles
+                            );
+                        }
+                    } else {
+                        // Create new event using PocketBase
+                        const pb = auth.getPocketBase();
+                        result = await pb
+                            .collection("events")
+                            .create(eventData);
 
-          // Log the action
-          await sendLog.send(
-            eventId ? "update" : "create",
-            "events",
-            `${eventId ? "Updated" : "Created"} event ${eventData.event_name}`,
-          );
+                        // For new events, use uploadFiles since there are no existing files
+                        if (tempFiles.length > 0) {
+                            await fileManager.uploadFiles(
+                                "events",
+                                result.id,
+                                "files",
+                                tempFiles
+                            );
+                        }
+                    }
 
-          modal.close();
-          await fetchEvents(); // Refresh the list
-        } finally {
-          auth.setUpdating(false);
-        }
-      } catch (error) {
-        console.error("Failed to save event:", error);
-        alert("Failed to save event. Please try again.");
-      }
-    });
-  }
+                    // Log the action
+                    await sendLog.send(
+                        eventId ? "update" : "create",
+                        "events",
+                        `${eventId ? "Updated" : "Created"} event ${eventData.event_name}`
+                    );
 
-  // File preview functionality
-  let currentFiles = [];
-  let currentEventId = "";
+                    modal.close();
+                    await fetchEvents(); // Refresh the list
+                } finally {
+                    auth.setUpdating(false);
+                }
+            } catch (error) {
+                console.error("Failed to save event:", error);
+                alert("Failed to save event. Please try again.");
+            }
+        });
+    }
 
-  function showLoading() {
-    const spinner = document.getElementById("loadingSpinner");
-    if (spinner) spinner.classList.remove("hidden");
-  }
+    // File preview functionality
+    let currentFiles = [];
+    let currentEventId = "";
 
-  function hideLoading() {
-    const spinner = document.getElementById("loadingSpinner");
-    if (spinner) spinner.classList.add("hidden");
-  }
+    function showLoading() {
+        const spinner = document.getElementById("loadingSpinner");
+        if (spinner) spinner.classList.remove("hidden");
+    }
 
-  function isPreviewableType(fileType: string): boolean {
-    return (
-      fileType.startsWith("image/") ||
-      fileType.startsWith("video/") ||
-      fileType.startsWith("audio/") ||
-      fileType === "application/pdf" ||
-      fileType.startsWith("text/") ||
-      fileType === "application/json"
-    );
-  }
+    function hideLoading() {
+        const spinner = document.getElementById("loadingSpinner");
+        if (spinner) spinner.classList.add("hidden");
+    }
 
-  function backToFileList() {
-    const filePreviewSection = document.getElementById("filePreviewSection");
-    const filesContent = document.getElementById("filesContent");
-    const modalTitle = document.getElementById("modalTitle");
+    function isPreviewableType(fileType: string): boolean {
+        return (
+            fileType.startsWith("image/") ||
+            fileType.startsWith("video/") ||
+            fileType.startsWith("audio/") ||
+            fileType === "application/pdf" ||
+            fileType.startsWith("text/") ||
+            fileType === "application/json"
+        );
+    }
 
-    if (filePreviewSection) filePreviewSection.classList.add("hidden");
-    if (filesContent) filesContent.classList.remove("hidden");
-    if (modalTitle) modalTitle.textContent = "Event Details";
-  }
+    function backToFileList() {
+        const filePreviewSection =
+            document.getElementById("filePreviewSection");
+        const filesContent = document.getElementById("filesContent");
+        const modalTitle = document.getElementById("modalTitle");
 
-  function showFilePreview(file: { url: string; type: string; name: string }) {
-    const filePreviewSection = document.getElementById("filePreviewSection");
-    const filesContent = document.getElementById("filesContent");
-    const previewContent = document.getElementById("previewContent");
-    const previewFileName = document.getElementById("previewFileName");
-    const modalTitle = document.getElementById("modalTitle");
+        if (filePreviewSection) filePreviewSection.classList.add("hidden");
+        if (filesContent) filesContent.classList.remove("hidden");
+        if (modalTitle) modalTitle.textContent = "Event Details";
+    }
 
-    if (
-      !filePreviewSection ||
-      !filesContent ||
-      !previewContent ||
-      !previewFileName
-    )
-      return;
+    function showFilePreview(file: {
+        url: string;
+        type: string;
+        name: string;
+    }) {
+        const filePreviewSection =
+            document.getElementById("filePreviewSection");
+        const filesContent = document.getElementById("filesContent");
+        const previewContent = document.getElementById("previewContent");
+        const previewFileName = document.getElementById("previewFileName");
+        const modalTitle = document.getElementById("modalTitle");
 
-    filePreviewSection.classList.remove("hidden");
-    filesContent.classList.add("hidden");
-    previewFileName.textContent = file.name;
-    if (modalTitle) modalTitle.textContent = "File Preview";
+        if (
+            !filePreviewSection ||
+            !filesContent ||
+            !previewContent ||
+            !previewFileName
+        )
+            return;
 
-    const fileType = file.type.toLowerCase();
-    showLoading();
+        filePreviewSection.classList.remove("hidden");
+        filesContent.classList.add("hidden");
+        previewFileName.textContent = file.name;
+        if (modalTitle) modalTitle.textContent = "File Preview";
 
-    // Create the PocketBase URL
-    const baseUrl = "https://pocketbase.ieeeucsd.org";
-    const fileUrl = `${baseUrl}/api/files/events/${currentEventId}/${file.name}`;
+        const fileType = file.type.toLowerCase();
+        showLoading();
 
-    if (!isPreviewableType(fileType)) {
-      previewContent.innerHTML = `
+        // Create the PocketBase URL
+        const baseUrl = "https://pocketbase.ieeeucsd.org";
+        const fileUrl = `${baseUrl}/api/files/events/${currentEventId}/${file.name}`;
+
+        if (!isPreviewableType(fileType)) {
+            previewContent.innerHTML = `
         <div class="flex flex-col items-center justify-center p-8">
           <div class="text-4xl mb-4">📄</div>
           <p class="text-center">
@@ -1007,12 +1090,12 @@ declare global {
           </p>
         </div>
       `;
-      hideLoading();
-      return;
-    }
+            hideLoading();
+            return;
+        }
 
-    if (fileType.startsWith("image/")) {
-      previewContent.innerHTML = `
+        if (fileType.startsWith("image/")) {
+            previewContent.innerHTML = `
         <img
           src="${fileUrl}"
           alt="${file.name}"
@@ -1021,15 +1104,15 @@ declare global {
           onerror="handlePreviewError()"
         />
       `;
-    } else if (fileType.startsWith("video/")) {
-      previewContent.innerHTML = `
+        } else if (fileType.startsWith("video/")) {
+            previewContent.innerHTML = `
         <video controls class="max-w-full max-h-[70vh]" onloadeddata="hideLoading()" onerror="handlePreviewError()">
           <source src="${fileUrl}" type="${file.type}" />
           Your browser does not support the video tag.
         </video>
       `;
-    } else if (fileType === "application/pdf") {
-      previewContent.innerHTML = `
+        } else if (fileType === "application/pdf") {
+            previewContent.innerHTML = `
         <iframe
           src="${fileUrl}"
           class="w-full h-[70vh]"
@@ -1037,11 +1120,11 @@ declare global {
           onerror="handlePreviewError()"
         ></iframe>
       `;
-    } else if (
-      fileType.startsWith("text/") ||
-      fileType === "application/json"
-    ) {
-      previewContent.innerHTML = `
+        } else if (
+            fileType.startsWith("text/") ||
+            fileType === "application/json"
+        ) {
+            previewContent.innerHTML = `
         <iframe
           src="${fileUrl}"
           class="w-full h-[70vh] font-mono"
@@ -1049,21 +1132,21 @@ declare global {
           onerror="handlePreviewError()"
         ></iframe>
       `;
-    } else if (fileType.startsWith("audio/")) {
-      previewContent.innerHTML = `
+        } else if (fileType.startsWith("audio/")) {
+            previewContent.innerHTML = `
         <audio controls class="w-full" onloadeddata="hideLoading()" onerror="handlePreviewError()">
           <source src="${fileUrl}" type="${file.type}" />
           Your browser does not support the audio element.
         </audio>
       `;
+        }
     }
-  }
 
-  function handlePreviewError() {
-    hideLoading();
-    const previewContent = document.getElementById("previewContent");
-    if (previewContent) {
-      previewContent.innerHTML = `
+    function handlePreviewError() {
+        hideLoading();
+        const previewContent = document.getElementById("previewContent");
+        if (previewContent) {
+            previewContent.innerHTML = `
         <div class="alert alert-error">
           <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1071,174 +1154,179 @@ declare global {
           <span>Failed to load file preview</span>
         </div>
       `;
+        }
     }
-  }
 
-  // Add CSV export functionality
-  async function exportAttendeesToCSV(event: Event) {
-    try {
-      const pb = auth.getPocketBase();
+    // Add CSV export functionality
+    async function exportAttendeesToCSV(event: Event) {
+        try {
+            const pb = auth.getPocketBase();
 
-      // Fetch all user details for the attendees
-      const attendeePromises = event.attendees.map(function (
-        attendee: AttendeeEntry,
-      ) {
-        return pb.collection("users").getOne(attendee.user_id);
-      });
-      const users = await Promise.all(attendeePromises);
+            // Fetch all user details for the attendees
+            const attendeePromises = event.attendees.map(function (
+                attendee: AttendeeEntry
+            ) {
+                return pb.collection("users").getOne(attendee.user_id);
+            });
+            const users = await Promise.all(attendeePromises);
 
-      // Create CSV header
-      const csvHeader = [
-        "Name",
-        "Email",
-        "Member ID",
-        "Member Type",
-        "Graduation Year",
-        "Major",
-        "Time Checked In",
-        "Food Selection",
-      ].join(",");
+            // Create CSV header
+            const csvHeader = [
+                "Name",
+                "Email",
+                "Member ID",
+                "Member Type",
+                "Graduation Year",
+                "Major",
+                "Time Checked In",
+                "Food Selection",
+            ].join(",");
 
-      // Create CSV rows
-      const csvRows = event.attendees.map(
-        (attendee: AttendeeEntry, index: number) => {
-          const user = users[index];
-          const checkInTime = new Date(
-            attendee.time_checked_in,
-          ).toLocaleString();
+            // Create CSV rows
+            const csvRows = event.attendees.map(
+                (attendee: AttendeeEntry, index: number) => {
+                    const user = users[index];
+                    const checkInTime = new Date(
+                        attendee.time_checked_in
+                    ).toLocaleString();
 
-          // Escape and format fields to handle commas and quotes
-          const formatField = (field: any) => {
-            if (field === null || field === undefined) return '""';
-            return `"${String(field).replace(/"/g, '""')}"`;
-          };
+                    // Escape and format fields to handle commas and quotes
+                    const formatField = (field: any) => {
+                        if (field === null || field === undefined) return '""';
+                        return `"${String(field).replace(/"/g, '""')}"`;
+                    };
 
-          return [
-            formatField(user.name),
-            formatField(user.email),
-            formatField(user.member_id),
-            formatField(user.member_type),
-            formatField(user.graduation_year),
-            formatField(user.major),
-            formatField(checkInTime),
-            formatField(attendee.food),
-          ].join(",");
-        },
-      );
+                    return [
+                        formatField(user.name),
+                        formatField(user.email),
+                        formatField(user.member_id),
+                        formatField(user.member_type),
+                        formatField(user.graduation_year),
+                        formatField(user.major),
+                        formatField(checkInTime),
+                        formatField(attendee.food),
+                    ].join(",");
+                }
+            );
 
-      // Combine header and rows
-      const csvContent = [csvHeader, ...csvRows].join("\n");
+            // Combine header and rows
+            const csvContent = [csvHeader, ...csvRows].join("\n");
 
-      // Create and trigger download
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `${event.event_name}_attendees.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+            // Create and trigger download
+            const blob = new Blob([csvContent], {
+                type: "text/csv;charset=utf-8;",
+            });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `${event.event_name}_attendees.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
 
-      // Show toast using the existing toast function
-      const toastContainer = document.querySelector(".toast-container");
-      if (toastContainer) {
-        const toast = document.createElement("div");
-        toast.className = "toast translate-x-full";
-        toast.setAttribute("data-index", "0");
-        toast.innerHTML = `
+            // Show toast using the existing toast function
+            const toastContainer = document.querySelector(".toast-container");
+            if (toastContainer) {
+                const toast = document.createElement("div");
+                toast.className = "toast translate-x-full";
+                toast.setAttribute("data-index", "0");
+                toast.innerHTML = `
           <div class="alert alert-success shadow-lg min-w-[300px]">
             <span>Attendees list downloaded successfully</span>
           </div>
         `;
-        toastContainer.appendChild(toast);
-        requestAnimationFrame(() => {
-          toast.classList.remove("translate-x-full");
-        });
-        setTimeout(() => {
-          toast.classList.add("toast-exit");
-          setTimeout(() => toast.remove(), 150);
-        }, 3000);
-      }
-    } catch (error) {
-      console.error("Failed to export attendees:", error);
-      // Show error toast using the existing toast container
-      const toastContainer = document.querySelector(".toast-container");
-      if (toastContainer) {
-        const toast = document.createElement("div");
-        toast.className = "toast translate-x-full";
-        toast.setAttribute("data-index", "0");
-        toast.innerHTML = `
+                toastContainer.appendChild(toast);
+                requestAnimationFrame(() => {
+                    toast.classList.remove("translate-x-full");
+                });
+                setTimeout(() => {
+                    toast.classList.add("toast-exit");
+                    setTimeout(() => toast.remove(), 150);
+                }, 3000);
+            }
+        } catch (error) {
+            console.error("Failed to export attendees:", error);
+            // Show error toast using the existing toast container
+            const toastContainer = document.querySelector(".toast-container");
+            if (toastContainer) {
+                const toast = document.createElement("div");
+                toast.className = "toast translate-x-full";
+                toast.setAttribute("data-index", "0");
+                toast.innerHTML = `
           <div class="alert alert-error shadow-lg min-w-[300px]">
             <span>Failed to download attendees list</span>
           </div>
         `;
-        toastContainer.appendChild(toast);
-        requestAnimationFrame(() => {
-          toast.classList.remove("translate-x-full");
-        });
-        setTimeout(() => {
-          toast.classList.add("toast-exit");
-          setTimeout(() => toast.remove(), 150);
-        }, 3000);
-      }
+                toastContainer.appendChild(toast);
+                requestAnimationFrame(() => {
+                    toast.classList.remove("translate-x-full");
+                });
+                setTimeout(() => {
+                    toast.classList.add("toast-exit");
+                    setTimeout(() => toast.remove(), 150);
+                }, 3000);
+            }
+        }
     }
-  }
 
-  // Update the openDetailsModal function to add click handler for CSV download
-  window.openDetailsModal = function (event: any) {
-    // Convert event times to local time
-    const localEvent = Get.convertUTCToLocal(event);
+    // Update the openDetailsModal function to add click handler for CSV download
+    window.openDetailsModal = function (event: any) {
+        // Convert event times to local time
+        const localEvent = Get.convertUTCToLocal(event);
 
-    const modal = document.getElementById(
-      "eventDetailsModal",
-    ) as HTMLDialogElement;
-    const filesContent = document.getElementById(
-      "filesContent",
-    ) as HTMLDivElement;
-    const attendeesContent = document.getElementById(
-      "attendeesContent",
-    ) as HTMLDivElement;
-    const filePreviewSection = document.getElementById(
-      "filePreviewSection",
-    ) as HTMLDivElement;
-    const tabs = modal.querySelectorAll(
-      ".tab",
-    ) as NodeListOf<HTMLButtonElement>;
+        const modal = document.getElementById(
+            "eventDetailsModal"
+        ) as HTMLDialogElement;
+        const filesContent = document.getElementById(
+            "filesContent"
+        ) as HTMLDivElement;
+        const attendeesContent = document.getElementById(
+            "attendeesContent"
+        ) as HTMLDivElement;
+        const filePreviewSection = document.getElementById(
+            "filePreviewSection"
+        ) as HTMLDivElement;
+        const tabs = modal.querySelectorAll(
+            ".tab"
+        ) as NodeListOf<HTMLButtonElement>;
 
-    // Reset state
-    currentFiles = [];
-    currentEventId = localEvent.id;
-    if (filePreviewSection) filePreviewSection.classList.add("hidden");
-    if (filesContent) filesContent.classList.remove("hidden");
+        // Reset state
+        currentFiles = [];
+        currentEventId = localEvent.id;
+        if (filePreviewSection) filePreviewSection.classList.add("hidden");
+        if (filesContent) filesContent.classList.remove("hidden");
 
-    // Handle tab switching
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", async () => {
-        tabs.forEach((t) => t.classList.remove("tab-active"));
-        tab.classList.add("tab-active");
+        // Handle tab switching
+        tabs.forEach((tab) => {
+            tab.addEventListener("click", async () => {
+                tabs.forEach((t) => t.classList.remove("tab-active"));
+                tab.classList.add("tab-active");
 
-        const tabName = tab.getAttribute("data-tab");
-        if (tabName === "files") {
-          filesContent.classList.remove("hidden");
-          attendeesContent.classList.add("hidden");
-          filePreviewSection.classList.add("hidden");
-        } else if (tabName === "attendees") {
-          filesContent.classList.add("hidden");
-          attendeesContent.classList.remove("hidden");
-          filePreviewSection.classList.add("hidden");
+                const tabName = tab.getAttribute("data-tab");
+                if (tabName === "files") {
+                    filesContent.classList.remove("hidden");
+                    attendeesContent.classList.add("hidden");
+                    filePreviewSection.classList.add("hidden");
+                } else if (tabName === "attendees") {
+                    filesContent.classList.add("hidden");
+                    attendeesContent.classList.remove("hidden");
+                    filePreviewSection.classList.add("hidden");
 
-          // Show loading state
-          attendeesContent.innerHTML = `
+                    // Show loading state
+                    attendeesContent.innerHTML = `
             <div class="text-center py-8">
               <span class="loading loading-spinner loading-lg"></span>
               <p class="mt-4">Loading attendees...</p>
             </div>
           `;
 
-          try {
-            // Check if event has attendees
-            if (!localEvent.attendees || localEvent.attendees.length === 0) {
-              attendeesContent.innerHTML = `
+                    try {
+                        // Check if event has attendees
+                        if (
+                            !localEvent.attendees ||
+                            localEvent.attendees.length === 0
+                        ) {
+                            attendeesContent.innerHTML = `
                 <div class="text-center py-8 text-base-content/70">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
@@ -1246,20 +1334,22 @@ declare global {
                   <p>No attendees for this event</p>
                 </div>
               `;
-              return;
-            }
+                            return;
+                        }
 
-            // Fetch user details for each attendee
-            const pb = auth.getPocketBase();
-            const attendeePromises = localEvent.attendees.map(function (
-              attendee: AttendeeEntry,
-            ) {
-              return pb.collection("users").getOne(attendee.user_id);
-            });
-            const users = await Promise.all(attendeePromises);
+                        // Fetch user details for each attendee
+                        const pb = auth.getPocketBase();
+                        const attendeePromises = localEvent.attendees.map(
+                            function (attendee: AttendeeEntry) {
+                                return pb
+                                    .collection("users")
+                                    .getOne(attendee.user_id);
+                            }
+                        );
+                        const users = await Promise.all(attendeePromises);
 
-            // Display attendees in a table
-            attendeesContent.innerHTML = `
+                        // Display attendees in a table
+                        attendeesContent.innerHTML = `
               <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold">Event Attendees</h3>
                 <button id="downloadAttendeesCSV" class="btn btn-primary btn-sm gap-2">
@@ -1283,15 +1373,15 @@ declare global {
                   </thead>
                   <tbody>
                     ${localEvent.attendees
-                      .map(function (
-                        attendee: AttendeeEntry,
-                        index: number,
-                      ): string {
-                        const user = users[index];
-                        const checkInTime = new Date(
-                          attendee.time_checked_in,
-                        ).toLocaleString();
-                        return `
+                        .map(function (
+                            attendee: AttendeeEntry,
+                            index: number
+                        ): string {
+                            const user = users[index];
+                            const checkInTime = new Date(
+                                attendee.time_checked_in
+                            ).toLocaleString();
+                            return `
                         <tr>
                           <td>${user.name || "N/A"}</td>
                           <td>${user.email || "N/A"}</td>
@@ -1301,8 +1391,8 @@ declare global {
                           <td>${attendee.food || "N/A"}</td>
                         </tr>
                       `;
-                      })
-                      .join("")}
+                        })
+                        .join("")}
                   </tbody>
                 </table>
                 <div class="mt-4 text-sm opacity-70 text-right">
@@ -1311,16 +1401,17 @@ declare global {
               </div>
             `;
 
-            // Add click handler for CSV download button
-            const downloadButton = document.getElementById(
-              "downloadAttendeesCSV",
-            );
-            if (downloadButton) {
-              downloadButton.onclick = () => exportAttendeesToCSV(localEvent);
-            }
-          } catch (error) {
-            console.error("Failed to fetch attendees:", error);
-            attendeesContent.innerHTML = `
+                        // Add click handler for CSV download button
+                        const downloadButton = document.getElementById(
+                            "downloadAttendeesCSV"
+                        );
+                        if (downloadButton) {
+                            downloadButton.onclick = () =>
+                                exportAttendeesToCSV(localEvent);
+                        }
+                    } catch (error) {
+                        console.error("Failed to fetch attendees:", error);
+                        attendeesContent.innerHTML = `
               <div class="alert alert-error">
                 <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1328,22 +1419,22 @@ declare global {
                 <span>Failed to load attendees. Please try again.</span>
               </div>
             `;
-          }
-        }
-      });
-    });
+                    }
+                }
+            });
+        });
 
-    // Populate files content
-    if (
-      localEvent.files &&
-      Array.isArray(localEvent.files) &&
-      localEvent.files.length > 0
-    ) {
-      const baseUrl = "https://pocketbase.ieeeucsd.org";
-      const collectionId = "events";
-      const recordId = localEvent.id;
+        // Populate files content
+        if (
+            localEvent.files &&
+            Array.isArray(localEvent.files) &&
+            localEvent.files.length > 0
+        ) {
+            const baseUrl = "https://pocketbase.ieeeucsd.org";
+            const collectionId = "events";
+            const recordId = localEvent.id;
 
-      filesContent.innerHTML = `
+            filesContent.innerHTML = `
         <div class="overflow-x-auto">
           <table class="table table-zebra w-full">
             <thead>
@@ -1354,19 +1445,19 @@ declare global {
             </thead>
             <tbody>
               ${localEvent.files
-                .map((file: string) => {
-                  const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
-                  const fileType = getFileType(file);
-                  return `
+                  .map((file: string) => {
+                      const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
+                      const fileType = getFileType(file);
+                      return `
                     <tr>
                       <td>${file}</td>
                       <td class="text-right">
                         <button class="btn btn-ghost btn-sm" onclick='window.showFilePreview(${JSON.stringify(
-                          {
-                            url: fileUrl,
-                            type: fileType,
-                            name: file,
-                          },
+                            {
+                                url: fileUrl,
+                                type: fileType,
+                                name: file,
+                            }
                         )})'>
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
@@ -1381,14 +1472,14 @@ declare global {
                       </td>
                     </tr>
                   `;
-                })
-                .join("")}
+                  })
+                  .join("")}
             </tbody>
           </table>
         </div>
       `;
-    } else {
-      filesContent.innerHTML = `
+        } else {
+            filesContent.innerHTML = `
         <div class="text-center py-8 text-base-content/70">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
@@ -1396,50 +1487,56 @@ declare global {
           <p>No files attached to this event</p>
         </div>
       `;
-    }
+        }
 
-    modal.showModal();
-  };
+        modal.showModal();
+    };
 
-  // Make helper functions available globally
-  window.showFilePreview = showFilePreview;
-  window.backToFileList = backToFileList;
-  window.handlePreviewError = handlePreviewError;
-  window.showLoading = showLoading;
-  window.hideLoading = hideLoading;
+    // Make helper functions available globally
+    window.showFilePreview = showFilePreview;
+    window.backToFileList = backToFileList;
+    window.handlePreviewError = handlePreviewError;
+    window.showLoading = showLoading;
+    window.hideLoading = hideLoading;
 
-  // Add deleteEvent function to window
-  window.deleteEvent = async function (eventId: string, eventName: string) {
-    if (
-      !confirm(
-        `Are you sure you want to delete "${eventName}"? This action cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    // Add deleteEvent function to window
+    window.deleteEvent = async function (eventId: string, eventName: string) {
+        if (
+            !confirm(
+                `Are you sure you want to delete "${eventName}"? This action cannot be undone.`
+            )
+        ) {
+            return;
+        }
 
-    try {
-      auth.setUpdating(true);
-      const pb = auth.getPocketBase();
-      await pb.collection("events").delete(eventId);
-      await sendLog.send("delete", "events", `Deleted event ${eventName}`);
-      await fetchEvents(); // Refresh the list
-    } catch (error) {
-      console.error("Failed to delete event:", error);
-      alert("Failed to delete event. Please try again.");
-    } finally {
-      auth.setUpdating(false);
-    }
-  };
+        try {
+            auth.setUpdating(true);
+            const pb = auth.getPocketBase();
+            await pb.collection("events").delete(eventId);
+            await sendLog.send(
+                "delete",
+                "events",
+                `Deleted event ${eventName}`
+            );
+            await fetchEvents(); // Refresh the list
+        } catch (error) {
+            console.error("Failed to delete event:", error);
+            alert("Failed to delete event. Please try again.");
+        } finally {
+            auth.setUpdating(false);
+        }
+    };
 
-  async function fetchEvents() {
-    const eventsList = document.getElementById("eventsList");
-    const paginationContainer = document.getElementById("paginationContainer");
-    if (!eventsList || !paginationContainer) return;
+    async function fetchEvents() {
+        const eventsList = document.getElementById("eventsList");
+        const paginationContainer = document.getElementById(
+            "paginationContainer"
+        );
+        if (!eventsList || !paginationContainer) return;
 
-    try {
-      if (!auth.isAuthenticated()) {
-        eventsList.innerHTML = `
+        try {
+            if (!auth.isAuthenticated()) {
+                eventsList.innerHTML = `
           <div class="text-center py-8 text-base-content/70">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
@@ -1447,85 +1544,90 @@ declare global {
             <p>Please log in to view events</p>
           </div>
         `;
-        paginationContainer.classList.add("hidden");
-        return;
-      }
+                paginationContainer.classList.add("hidden");
+                return;
+            }
 
-      // Set updating flag to prevent auto-cancellation
-      auth.setUpdating(true);
+            // Set updating flag to prevent auto-cancellation
+            auth.setUpdating(true);
 
-      try {
-        // Build filter string
-        let filter = "";
-        if (searchQuery) {
-          filter = `event_name ~ "${searchQuery}" || event_code ~ "${searchQuery}" || location ~ "${searchQuery}"`;
-        }
+            try {
+                // Build filter string
+                let filter = "";
+                if (searchQuery) {
+                    filter = `event_name ~ "${searchQuery}" || event_code ~ "${searchQuery}" || location ~ "${searchQuery}"`;
+                }
 
-        const response = await get.getList(
-          "events",
-          currentPage,
-          perPage,
-          filter,
-          "-start_date",
-          { disableAutoCancellation: true },
-        );
+                const response = await get.getList(
+                    "events",
+                    currentPage,
+                    perPage,
+                    filter,
+                    "-start_date",
+                    { disableAutoCancellation: true }
+                );
 
-        // Convert response items to local time
-        const localEvents = response.items.map((event) =>
-          Get.convertUTCToLocal(event),
-        );
+                // Convert response items to local time
+                const localEvents = response.items.map((event) =>
+                    Get.convertUTCToLocal(event)
+                );
 
-        // Update stats
-        const totalEventsEl = document.getElementById("totalEvents");
-        const showingEventsEl = document.getElementById("showingEvents");
-        const totalEventsLabelEl = document.getElementById("totalEventsLabel");
-        const currentPageEl = document.getElementById("currentPage");
-        const totalPagesLabelEl = document.getElementById("totalPagesLabel");
-        const currentPageNumber = document.getElementById("currentPageNumber");
+                // Update stats
+                const totalEventsEl = document.getElementById("totalEvents");
+                const showingEventsEl =
+                    document.getElementById("showingEvents");
+                const totalEventsLabelEl =
+                    document.getElementById("totalEventsLabel");
+                const currentPageEl = document.getElementById("currentPage");
+                const totalPagesLabelEl =
+                    document.getElementById("totalPagesLabel");
+                const currentPageNumber =
+                    document.getElementById("currentPageNumber");
 
-        if (totalEventsEl)
-          totalEventsEl.textContent = response.totalItems.toString();
-        if (showingEventsEl)
-          showingEventsEl.textContent = localEvents.length.toString();
-        if (totalEventsLabelEl)
-          totalEventsLabelEl.textContent = `of ${response.totalItems} Events`;
-        if (currentPageEl) currentPageEl.textContent = response.page.toString();
-        if (totalPagesLabelEl)
-          totalPagesLabelEl.textContent = `of ${response.totalPages}`;
-        if (currentPageNumber)
-          currentPageNumber.textContent = response.page.toString();
+                if (totalEventsEl)
+                    totalEventsEl.textContent = response.totalItems.toString();
+                if (showingEventsEl)
+                    showingEventsEl.textContent = localEvents.length.toString();
+                if (totalEventsLabelEl)
+                    totalEventsLabelEl.textContent = `of ${response.totalItems} Events`;
+                if (currentPageEl)
+                    currentPageEl.textContent = response.page.toString();
+                if (totalPagesLabelEl)
+                    totalPagesLabelEl.textContent = `of ${response.totalPages}`;
+                if (currentPageNumber)
+                    currentPageNumber.textContent = response.page.toString();
 
-        // Update pagination buttons state
-        const firstPageBtn = document.getElementById(
-          "firstPageBtn",
-        ) as HTMLButtonElement;
-        const prevPageBtn = document.getElementById(
-          "prevPageBtn",
-        ) as HTMLButtonElement;
-        const nextPageBtn = document.getElementById(
-          "nextPageBtn",
-        ) as HTMLButtonElement;
-        const lastPageBtn = document.getElementById(
-          "lastPageBtn",
-        ) as HTMLButtonElement;
+                // Update pagination buttons state
+                const firstPageBtn = document.getElementById(
+                    "firstPageBtn"
+                ) as HTMLButtonElement;
+                const prevPageBtn = document.getElementById(
+                    "prevPageBtn"
+                ) as HTMLButtonElement;
+                const nextPageBtn = document.getElementById(
+                    "nextPageBtn"
+                ) as HTMLButtonElement;
+                const lastPageBtn = document.getElementById(
+                    "lastPageBtn"
+                ) as HTMLButtonElement;
 
-        if (firstPageBtn) firstPageBtn.disabled = response.page <= 1;
-        if (prevPageBtn) prevPageBtn.disabled = response.page <= 1;
-        if (nextPageBtn)
-          nextPageBtn.disabled = response.page >= response.totalPages;
-        if (lastPageBtn)
-          lastPageBtn.disabled = response.page >= response.totalPages;
+                if (firstPageBtn) firstPageBtn.disabled = response.page <= 1;
+                if (prevPageBtn) prevPageBtn.disabled = response.page <= 1;
+                if (nextPageBtn)
+                    nextPageBtn.disabled = response.page >= response.totalPages;
+                if (lastPageBtn)
+                    lastPageBtn.disabled = response.page >= response.totalPages;
 
-        // Show/hide pagination based on total pages
-        if (response.totalPages <= 1) {
-          paginationContainer.classList.add("hidden");
-        } else {
-          paginationContainer.classList.remove("hidden");
-        }
+                // Show/hide pagination based on total pages
+                if (response.totalPages <= 1) {
+                    paginationContainer.classList.add("hidden");
+                } else {
+                    paginationContainer.classList.remove("hidden");
+                }
 
-        // Update events list
-        if (localEvents.length === 0) {
-          eventsList.innerHTML = `
+                // Update events list
+                if (localEvents.length === 0) {
+                    eventsList.innerHTML = `
             <div class="text-center py-8 text-base-content/70">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
@@ -1533,39 +1635,43 @@ declare global {
               <p>No events found</p>
             </div>
           `;
-          return;
-        }
+                    return;
+                }
 
-        eventsList.innerHTML = localEvents
-          .map((event) => {
-            // Safely parse and format the date
-            let dateStr = "Invalid date";
-            try {
-              const date = new Date(event.start_date);
-              if (!isNaN(date.getTime())) {
-                dateStr = date.toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-              }
-            } catch (e) {
-              console.error("Error formatting date:", e);
-            }
+                eventsList.innerHTML = localEvents
+                    .map((event) => {
+                        // Safely parse and format the date
+                        let dateStr = "Invalid date";
+                        try {
+                            const date = new Date(event.start_date);
+                            if (!isNaN(date.getTime())) {
+                                dateStr = date.toLocaleDateString("en-US", {
+                                    month: "long",
+                                    day: "numeric",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                });
+                            }
+                        } catch (e) {
+                            console.error("Error formatting date:", e);
+                        }
 
-            const locationStr = event.location ? `${event.location}` : "";
-            const codeStr = event.event_code ? `${event.event_code}` : "";
-            const detailsStr = [locationStr, codeStr]
-              .filter(Boolean)
-              .join(" | code: ");
+                        const locationStr = event.location
+                            ? `${event.location}`
+                            : "";
+                        const codeStr = event.event_code
+                            ? `${event.event_code}`
+                            : "";
+                        const detailsStr = [locationStr, codeStr]
+                            .filter(Boolean)
+                            .join(" | code: ");
 
-            // Store event data in a global map using the event ID as key
-            const eventDataId = `event_${event.id}`;
-            window[eventDataId] = event;
+                        // Store event data in a global map using the event ID as key
+                        const eventDataId = `event_${event.id}`;
+                        window[eventDataId] = event;
 
-            return `
+                        return `
               <div class="flex items-center justify-between p-4 bg-base-200 rounded-xl hover:bg-base-300 transition-all duration-300">
                 <div class="flex items-center gap-4">
                   <div class="badge badge-lg p-3 badge-primary">
@@ -1598,16 +1704,16 @@ declare global {
                 </div>
               </div>
             `;
-          })
-          .join("");
+                    })
+                    .join("");
 
-        totalPages = response.totalPages;
-      } finally {
-        auth.setUpdating(false);
-      }
-    } catch (error) {
-      console.error("Failed to fetch events:", error);
-      eventsList.innerHTML = `
+                totalPages = response.totalPages;
+            } finally {
+                auth.setUpdating(false);
+            }
+        } catch (error) {
+            console.error("Failed to fetch events:", error);
+            eventsList.innerHTML = `
         <div class="alert alert-error">
           <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1615,39 +1721,39 @@ declare global {
           <span>Failed to load events. Please try refreshing the page.</span>
         </div>
       `;
-      paginationContainer.classList.add("hidden");
+            paginationContainer.classList.add("hidden");
+        }
     }
-  }
 
-  // Add pagination event listeners
-  document.getElementById("firstPageBtn")?.addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage = 1;
-      fetchEvents();
-    }
-  });
+    // Add pagination event listeners
+    document.getElementById("firstPageBtn")?.addEventListener("click", () => {
+        if (currentPage > 1) {
+            currentPage = 1;
+            fetchEvents();
+        }
+    });
 
-  document.getElementById("prevPageBtn")?.addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage--;
-      fetchEvents();
-    }
-  });
+    document.getElementById("prevPageBtn")?.addEventListener("click", () => {
+        if (currentPage > 1) {
+            currentPage--;
+            fetchEvents();
+        }
+    });
 
-  document.getElementById("nextPageBtn")?.addEventListener("click", () => {
-    if (currentPage < totalPages) {
-      currentPage++;
-      fetchEvents();
-    }
-  });
+    document.getElementById("nextPageBtn")?.addEventListener("click", () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            fetchEvents();
+        }
+    });
 
-  document.getElementById("lastPageBtn")?.addEventListener("click", () => {
-    if (currentPage < totalPages) {
-      currentPage = totalPages;
-      fetchEvents();
-    }
-  });
+    document.getElementById("lastPageBtn")?.addEventListener("click", () => {
+        if (currentPage < totalPages) {
+            currentPage = totalPages;
+            fetchEvents();
+        }
+    });
 
-  // Initial fetch - only call once
-  fetchEvents();
+    // Initial fetch - only call once
+    fetchEvents();
 </script>

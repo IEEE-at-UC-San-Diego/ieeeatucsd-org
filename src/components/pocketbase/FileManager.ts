@@ -90,6 +90,64 @@ export class FileManager {
   }
 
   /**
+   * Append multiple files to a record without overriding existing ones
+   * @param collectionName The name of the collection
+   * @param recordId The ID of the record to attach the files to
+   * @param field The field name for the files
+   * @param files Array of files to upload
+   * @returns The updated record
+   */
+  public async appendFiles<T = any>(
+    collectionName: string,
+    recordId: string,
+    field: string,
+    files: File[]
+  ): Promise<T> {
+    if (!this.auth.isAuthenticated()) {
+      throw new Error("User must be authenticated to upload files");
+    }
+
+    try {
+      this.auth.setUpdating(true);
+      const pb = this.auth.getPocketBase();
+      
+      // First, get the current record to check existing files
+      const record = await pb.collection(collectionName).getOne<T>(recordId);
+      
+      // Create FormData with existing files
+      const formData = new FormData();
+
+      // Get existing files from the record
+      const existingFiles = (record as any)[field] || [];
+
+      // For each existing file, we need to fetch it and add it to the FormData
+      for (const existingFile of existingFiles) {
+        try {
+          const response = await fetch(this.getFileUrl(collectionName, recordId, existingFile));
+          const blob = await response.blob();
+          const file = new File([blob], existingFile, { type: blob.type });
+          formData.append(field, file);
+        } catch (error) {
+          console.warn(`Failed to fetch existing file ${existingFile}:`, error);
+        }
+      }
+      
+      // Append new files
+      files.forEach(file => {
+        formData.append(field, file);
+      });
+
+      const result = await pb.collection(collectionName).update<T>(recordId, formData);
+      return result;
+    } catch (err) {
+      console.error(`Failed to append files to ${collectionName}:`, err);
+      throw err;
+    } finally {
+      this.auth.setUpdating(false);
+    }
+  }
+
+  /**
    * Get the URL for a file
    * @param collectionName The name of the collection
    * @param recordId The ID of the record containing the file
