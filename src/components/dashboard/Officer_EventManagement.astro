@@ -85,6 +85,7 @@ declare global {
     showLoading: () => void;
     hideLoading: () => void;
     deleteEvent: (eventId: string, eventName: string) => Promise<void>;
+    resetAndCloseModal: () => void;
   }
 }
 ---
@@ -494,6 +495,47 @@ declare global {
 
   // Store temporary files
   let tempFiles: File[] = [];
+
+  // Add resetModalState function
+  function resetModalState() {
+    const filesContent = document.getElementById("filesContent");
+    const attendeesContent = document.getElementById("attendeesContent");
+    const filePreviewSection = document.getElementById("filePreviewSection");
+    const modalTitle = document.getElementById("modalTitle");
+    const tabs = document.querySelectorAll(
+      ".tab",
+    ) as NodeListOf<HTMLButtonElement>;
+
+    // Reset tab states
+    tabs.forEach((tab) => {
+      if (tab.getAttribute("data-tab") === "files") {
+        tab.classList.add("tab-active");
+      } else {
+        tab.classList.remove("tab-active");
+      }
+    });
+
+    // Reset content visibility
+    if (filesContent) filesContent.classList.remove("hidden");
+    if (attendeesContent) attendeesContent.classList.add("hidden");
+    if (filePreviewSection) filePreviewSection.classList.add("hidden");
+    if (modalTitle) modalTitle.textContent = "Event Details";
+
+    // Clear any existing content
+    if (attendeesContent) {
+      attendeesContent.innerHTML = "";
+    }
+  }
+
+  // Add event listener for modal close when the DOM is loaded
+  document.addEventListener("DOMContentLoaded", () => {
+    const eventDetailsModal = document.getElementById(
+      "eventDetailsModal",
+    ) as HTMLDialogElement;
+    if (eventDetailsModal) {
+      eventDetailsModal.addEventListener("close", resetModalState);
+    }
+  });
 
   // Add event listeners for filters
   const searchInput = document.getElementById(
