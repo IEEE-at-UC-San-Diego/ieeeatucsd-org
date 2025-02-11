@@ -25,7 +25,10 @@ export class Authentication {
   private constructor() {
     // Use the baseUrl from the config file
     this.pb = new PocketBase(config.api.baseUrl);
-    
+
+    // Configure PocketBase client
+    this.pb.autoCancellation(false); // Disable auto-cancellation globally
+
     // Listen for auth state changes
     this.pb.authStore.onChange(() => {
       if (!this.isUpdating) {
@@ -58,7 +61,7 @@ export class Authentication {
     try {
       const authMethods = await this.pb.collection("users").listAuthMethods();
       const oidcProvider = authMethods.oauth2?.providers?.find(
-        (p: { name: string }) => p.name === config.api.oauth2.providerName
+        (p: { name: string }) => p.name === config.api.oauth2.providerName,
       );
 
       if (!oidcProvider) {
@@ -66,7 +69,8 @@ export class Authentication {
       }
 
       localStorage.setItem("provider", JSON.stringify(oidcProvider));
-      const redirectUrl = window.location.origin + config.api.oauth2.redirectPath;
+      const redirectUrl =
+        window.location.origin + config.api.oauth2.redirectPath;
       const authUrl = oidcProvider.authURL + encodeURIComponent(redirectUrl);
       window.location.href = authUrl;
     } catch (err) {
@@ -109,7 +113,9 @@ export class Authentication {
    * @param callback Function to remove from subscribers
    */
   public offAuthStateChange(callback: (isValid: boolean) => void): void {
-    this.authChangeCallbacks = this.authChangeCallbacks.filter(cb => cb !== callback);
+    this.authChangeCallbacks = this.authChangeCallbacks.filter(
+      (cb) => cb !== callback,
+    );
   }
 
   /**
@@ -124,6 +130,6 @@ export class Authentication {
    */
   private notifyAuthChange(): void {
     const isValid = this.pb.authStore.isValid;
-    this.authChangeCallbacks.forEach(callback => callback(isValid));
+    this.authChangeCallbacks.forEach((callback) => callback(isValid));
   }
-} 
+}
