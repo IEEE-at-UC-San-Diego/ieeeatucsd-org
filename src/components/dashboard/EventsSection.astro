@@ -132,6 +132,67 @@ import { Icon } from "astro-icon/components";
     </div>
 </div>
 
+<!-- Event Details Modal -->
+<dialog id="eventDetailsModal" class="modal">
+    <div class="modal-box max-w-4xl">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-3">
+                <h3 class="font-bold text-lg" id="modalTitle">Event Files</h3>
+            </div>
+            <button
+                class="btn btn-circle btn-ghost"
+                onclick="eventDetailsModal.close()"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div id="filesContent" class="space-y-4">
+            <!-- Files list will be populated here -->
+        </div>
+
+        <!-- File Preview Section -->
+        <div id="filePreviewSection" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
+                    <button
+                        class="btn btn-ghost btn-sm"
+                        onclick="backToFileList()"
+                    >
+                        ← Back
+                    </button>
+                    <h3 class="font-bold text-lg truncate" id="previewFileName">
+                    </h3>
+                </div>
+            </div>
+            <div class="relative" id="previewContainer">
+                <div
+                    id="loadingSpinner"
+                    class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
+                >
+                    <span class="loading loading-spinner loading-lg"></span>
+                </div>
+                <div id="previewContent" class="w-full"></div>
+            </div>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
 <script>
     import { Get } from "../pocketbase/Get";
     import { Authentication } from "../pocketbase/Authentication";
@@ -670,6 +731,10 @@ import { Icon } from "astro-icon/components";
                 const startDate = new Date(event.start_date);
                 const endDate = new Date(event.end_date);
 
+                // Store event data in window object with unique ID
+                const eventDataId = `event_${event.id}`;
+                window[eventDataId] = event;
+
                 const card = document.createElement("div");
                 card.className =
                     "card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden";
@@ -715,24 +780,16 @@ import { Icon } from "astro-icon/components";
                                     <Icon name="mdi:map-marker" class="w-4 h-4 text-primary shrink-0 mt-0.5" />
                                     <span class="text-sm leading-tight truncate max-w-[200px]">${event.location}</span>
                                 </div>
-                                ${(() => {
-                                    const endDate = Get.isUTCDateString(
-                                        event.end_date
-                                    )
-                                        ? new Date(event.end_date)
-                                        : new Date();
-                                    const now = new Date();
-                                    return endDate < now &&
-                                        event.files &&
-                                        event.files.length > 0
+                                ${
+                                    event.files && event.files.length > 0
                                         ? `
-                                      <button onclick="window.openDetailsModal(window['${eventDataId}'])" class="btn btn-ghost btn-xs gap-1">
-                                          <Icon name="heroicons:folder-open" class="w-4 h-4" />
-                                          Files (${event.files.length})
-                                      </button>
-                                    `
-                                        : "";
-                                })()}
+                                    <button onclick="window.openDetailsModal(window['${eventDataId}'])" class="btn btn-ghost btn-xs gap-1">
+                                        <Icon name="heroicons:folder-open" class="w-4 h-4" />
+                                        Files (${event.files.length})
+                                    </button>
+                                `
+                                        : ""
+                                }
                             </div>
                         </div>
                     </div>
@@ -759,4 +816,264 @@ import { Icon } from "astro-icon/components";
     if (eventsSection) {
         observer.observe(eventsSection);
     }
+
+    // Add helper functions for file preview
+    function getFileType(filename: string): string {
+        const extension = filename.split(".").pop()?.toLowerCase();
+        const mimeTypes: { [key: string]: string } = {
+            pdf: "application/pdf",
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            png: "image/png",
+            gif: "image/gif",
+            mp4: "video/mp4",
+            mp3: "audio/mpeg",
+            txt: "text/plain",
+            doc: "application/msword",
+            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            xls: "application/vnd.ms-excel",
+            xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            json: "application/json",
+        };
+
+        return mimeTypes[extension || ""] || "application/octet-stream";
+    }
+
+    let currentEventId = "";
+
+    function showLoading() {
+        const spinner = document.getElementById("loadingSpinner");
+        if (spinner) spinner.classList.remove("hidden");
+    }
+
+    function hideLoading() {
+        const spinner = document.getElementById("loadingSpinner");
+        if (spinner) spinner.classList.add("hidden");
+    }
+
+    function isPreviewableType(fileType: string): boolean {
+        return (
+            fileType.startsWith("image/") ||
+            fileType.startsWith("video/") ||
+            fileType.startsWith("audio/") ||
+            fileType === "application/pdf" ||
+            fileType.startsWith("text/") ||
+            fileType === "application/json"
+        );
+    }
+
+    function backToFileList() {
+        const filePreviewSection =
+            document.getElementById("filePreviewSection");
+        const filesContent = document.getElementById("filesContent");
+        const modalTitle = document.getElementById("modalTitle");
+
+        if (filePreviewSection) filePreviewSection.classList.add("hidden");
+        if (filesContent) filesContent.classList.remove("hidden");
+        if (modalTitle) modalTitle.textContent = "Event Files";
+    }
+
+    function showFilePreview(file: {
+        url: string;
+        type: string;
+        name: string;
+    }) {
+        const filePreviewSection =
+            document.getElementById("filePreviewSection");
+        const filesContent = document.getElementById("filesContent");
+        const previewContent = document.getElementById("previewContent");
+        const previewFileName = document.getElementById("previewFileName");
+        const modalTitle = document.getElementById("modalTitle");
+
+        if (
+            !filePreviewSection ||
+            !filesContent ||
+            !previewContent ||
+            !previewFileName
+        )
+            return;
+
+        filePreviewSection.classList.remove("hidden");
+        filesContent.classList.add("hidden");
+        previewFileName.textContent = file.name;
+        if (modalTitle) modalTitle.textContent = "File Preview";
+
+        const fileType = file.type.toLowerCase();
+        showLoading();
+
+        // Create the PocketBase URL
+        const baseUrl = "https://pocketbase.ieeeucsd.org";
+        const fileUrl = `${baseUrl}/api/files/events/${currentEventId}/${file.name}`;
+
+        if (!isPreviewableType(fileType)) {
+            previewContent.innerHTML = `
+                <div class="flex flex-col items-center justify-center p-8">
+                    <div class="text-4xl mb-4">📄</div>
+                    <p class="text-center">
+                        This file type (${file.type}) cannot be previewed.
+                        <br />
+                        <a href="${fileUrl}" download="${file.name}" class="btn btn-primary mt-4" target="_blank" rel="noopener noreferrer">
+                            Open in New Tab
+                        </a>
+                    </p>
+                </div>
+            `;
+            hideLoading();
+            return;
+        }
+
+        if (fileType.startsWith("image/")) {
+            previewContent.innerHTML = `
+                <img
+                    src="${fileUrl}"
+                    alt="${file.name}"
+                    class="max-w-full max-h-[70vh] object-contain"
+                    onload="hideLoading()"
+                    onerror="handlePreviewError()"
+                />
+            `;
+        } else if (fileType.startsWith("video/")) {
+            previewContent.innerHTML = `
+                <video controls class="max-w-full max-h-[70vh]" onloadeddata="hideLoading()" onerror="handlePreviewError()">
+                    <source src="${fileUrl}" type="${file.type}" />
+                    Your browser does not support the video tag.
+                </video>
+            `;
+        } else if (fileType === "application/pdf") {
+            previewContent.innerHTML = `
+                <iframe
+                    src="${fileUrl}"
+                    class="w-full h-[70vh]"
+                    onload="hideLoading()"
+                    onerror="handlePreviewError()"
+                ></iframe>
+            `;
+        } else if (
+            fileType.startsWith("text/") ||
+            fileType === "application/json"
+        ) {
+            previewContent.innerHTML = `
+                <iframe
+                    src="${fileUrl}"
+                    class="w-full h-[70vh] font-mono"
+                    onload="hideLoading()"
+                    onerror="handlePreviewError()"
+                ></iframe>
+            `;
+        } else if (fileType.startsWith("audio/")) {
+            previewContent.innerHTML = `
+                <audio controls class="w-full" onloadeddata="hideLoading()" onerror="handlePreviewError()">
+                    <source src="${fileUrl}" type="${file.type}" />
+                    Your browser does not support the audio element.
+                </audio>
+            `;
+        }
+    }
+
+    function handlePreviewError() {
+        hideLoading();
+        const previewContent = document.getElementById("previewContent");
+        if (previewContent) {
+            previewContent.innerHTML = `
+                <div class="alert alert-error">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Failed to load file preview</span>
+                </div>
+            `;
+        }
+    }
+
+    // Make helper functions available globally
+    window.showFilePreview = showFilePreview;
+    window.backToFileList = backToFileList;
+    window.handlePreviewError = handlePreviewError;
+    window.showLoading = showLoading;
+    window.hideLoading = hideLoading;
+
+    // Add openDetailsModal function
+    window.openDetailsModal = function (event: any) {
+        const modal = document.getElementById(
+            "eventDetailsModal"
+        ) as HTMLDialogElement;
+        const filesContent = document.getElementById(
+            "filesContent"
+        ) as HTMLDivElement;
+        const filePreviewSection = document.getElementById(
+            "filePreviewSection"
+        ) as HTMLDivElement;
+
+        // Reset state
+        currentEventId = event.id;
+        if (filePreviewSection) filePreviewSection.classList.add("hidden");
+        if (filesContent) filesContent.classList.remove("hidden");
+
+        // Populate files content
+        if (
+            event.files &&
+            Array.isArray(event.files) &&
+            event.files.length > 0
+        ) {
+            const baseUrl = "https://pocketbase.ieeeucsd.org";
+            const collectionId = "events";
+            const recordId = event.id;
+
+            filesContent.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full">
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${event.files
+                                .map((file: string) => {
+                                    const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
+                                    const fileType = getFileType(file);
+                                    return `
+                                    <tr>
+                                        <td>${file}</td>
+                                        <td class="text-right">
+                                            <button class="btn btn-ghost btn-sm" onclick='window.showFilePreview(${JSON.stringify(
+                                                {
+                                                    url: fileUrl,
+                                                    type: fileType,
+                                                    name: file,
+                                                }
+                                            )})'>
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                                                </svg>
+                                            </button>
+                                            <a href="${fileUrl}" download="${file}" class="btn btn-ghost btn-sm">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                </svg>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                `;
+                                })
+                                .join("")}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else {
+            filesContent.innerHTML = `
+                <div class="text-center py-8 text-base-content/70">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                    </svg>
+                    <p>No files attached to this event</p>
+                </div>
+            `;
+        }
+
+        modal.showModal();
+    };
 </script>
