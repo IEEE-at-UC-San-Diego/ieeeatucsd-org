@@ -175,16 +175,16 @@ declare global {
             <div class="divider"></div>
 
             <!-- Filter Controls -->
-            <div class="flex flex-col gap-4 mb-4">
-                <!-- Time Filters -->
-                <div class="flex flex-wrap gap-4">
+            <div class="mb-4">
+                <!-- All Filters in One Line -->
+                <div class="flex flex-wrap items-end gap-4">
                     <div class="form-control">
                         <label class="label">
                             <span class="label-text font-medium"
                                 >Time Filter</span
                             >
                         </label>
-                        <div class="join">
+                        <div class="join m-1">
                             <input
                                 type="radio"
                                 name="timeFilter"
@@ -217,7 +217,7 @@ declare global {
                         <div class="dropdown">
                             <label
                                 tabindex="0"
-                                class="btn btn-sm m-1 w-full justify-between"
+                                class="btn btn-sm m-1 w-[140px] justify-between"
                             >
                                 <span id="yearFilterLabel">All Years</span>
                                 <svg
@@ -254,10 +254,7 @@ declare global {
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Other Filters -->
-                <div class="flex flex-wrap gap-4">
                     <div class="form-control">
                         <label class="label">
                             <span class="label-text font-medium">Published</span
@@ -266,7 +263,7 @@ declare global {
                         <div class="dropdown">
                             <label
                                 tabindex="0"
-                                class="btn btn-sm m-1 w-full justify-between"
+                                class="btn btn-sm m-1 w-[140px] justify-between"
                             >
                                 <span id="publishedFilterLabel">All</span>
                                 <svg
@@ -331,7 +328,7 @@ declare global {
                         <div class="dropdown">
                             <label
                                 tabindex="0"
-                                class="btn btn-sm m-1 w-full justify-between"
+                                class="btn btn-sm m-1 w-[140px] justify-between"
                             >
                                 <span id="hasFilesFilterLabel">All</span>
                                 <svg
@@ -395,7 +392,7 @@ declare global {
                         <div class="dropdown">
                             <label
                                 tabindex="0"
-                                class="btn btn-sm m-1 w-full justify-between"
+                                class="btn btn-sm m-1 w-[140px] justify-between"
                             >
                                 <span id="hasFoodFilterLabel">All</span>
                                 <svg
