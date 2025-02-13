@@ -5,6 +5,7 @@ import { Authentication } from "../pocketbase/Authentication";
 import { Update } from "../pocketbase/Update";
 import { FileManager } from "../pocketbase/FileManager";
 import { SendLog } from "../pocketbase/SendLog";
+import FilePreview from "../modals/FilePreview";
 
 // Get instances
 const get = Get.getInstance();
@@ -92,6 +93,7 @@ declare global {
         hideLoading: () => void;
         deleteEvent: (eventId: string, eventName: string) => Promise<void>;
         resetAndCloseModal: () => void;
+        previewFileInEditModal: (url: string, filename: string) => void;
     }
 }
 ---
@@ -621,187 +623,190 @@ declare global {
 <!-- Edit Event Modal -->
 <dialog id="editEventModal" class="modal">
     <div class="modal-box max-w-2xl">
-        <h3 class="font-bold text-lg mb-4" id="editModalTitle">Edit Event</h3>
-        <form id="editEventForm" class="space-y-4">
-            <input type="hidden" id="editEventId" />
+        <!-- Main Edit Form Section -->
+        <div id="editFormSection">
+            <h3 class="font-bold text-lg mb-4" id="editModalTitle">
+                Edit Event
+            </h3>
+            <form id="editEventForm" class="space-y-4">
+                <input type="hidden" id="editEventId" />
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Event Name -->
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Event Name</span>
-                        <span class="label-text-alt text-error">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        id="editEventName"
-                        name="editEventName"
-                        class="input input-bordered"
-                        required
-                    />
-                </div>
-
-                <!-- Event Code -->
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Event Code</span>
-                        <span class="label-text-alt text-error">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        id="editEventCode"
-                        name="editEventCode"
-                        class="input input-bordered"
-                        required
-                    />
-                </div>
-
-                <!-- Location -->
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Location</span>
-                        <span class="label-text-alt text-error">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        id="editEventLocation"
-                        name="editEventLocation"
-                        class="input input-bordered"
-                        required
-                    />
-                </div>
-
-                <!-- Points to Reward -->
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Points to Reward</span>
-                        <span class="label-text-alt text-error">*</span>
-                    </label>
-                    <input
-                        type="number"
-                        id="editEventPoints"
-                        name="editEventPoints"
-                        class="input input-bordered"
-                        min="0"
-                        required
-                    />
-                </div>
-
-                <!-- Start Date -->
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Start Date</span>
-                        <span class="label-text-alt text-error">*</span>
-                    </label>
-                    <input
-                        type="datetime-local"
-                        id="editEventStartDate"
-                        name="editEventStartDate"
-                        class="input input-bordered"
-                        required
-                    />
-                </div>
-
-                <!-- End Date -->
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">End Date</span>
-                        <span class="label-text-alt text-error">*</span>
-                    </label>
-                    <input
-                        type="datetime-local"
-                        id="editEventEndDate"
-                        name="editEventEndDate"
-                        class="input input-bordered"
-                        required
-                    />
-                </div>
-            </div>
-
-            <!-- Description -->
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Description</span>
-                    <span class="label-text-alt text-error">*</span>
-                </label>
-                <textarea
-                    id="editEventDescription"
-                    name="editEventDescription"
-                    class="textarea textarea-bordered"
-                    rows="3"
-                    required></textarea>
-            </div>
-
-            <!-- Files -->
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Upload Files</span>
-                </label>
-                <input
-                    type="file"
-                    id="editEventFiles"
-                    class="file-input file-input-bordered"
-                    multiple
-                />
-                <div class="mt-4 space-y-2">
-                    <div id="newFiles" class="space-y-2">
-                        <!-- New files will be listed here -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Event Name -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Event Name</span>
+                            <span class="label-text-alt text-error">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="editEventName"
+                            name="editEventName"
+                            class="input input-bordered"
+                            required
+                        />
                     </div>
-                    <div class="divider">Current Files</div>
-                    <div id="currentFiles" class="space-y-2">
-                        <!-- Current files will be listed here -->
+
+                    <!-- Event Code -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Event Code</span>
+                            <span class="label-text-alt text-error">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="editEventCode"
+                            name="editEventCode"
+                            class="input input-bordered"
+                            required
+                        />
+                    </div>
+
+                    <!-- Location -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Location</span>
+                            <span class="label-text-alt text-error">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="editEventLocation"
+                            name="editEventLocation"
+                            class="input input-bordered"
+                            required
+                        />
+                    </div>
+
+                    <!-- Points to Reward -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Points to Reward</span>
+                            <span class="label-text-alt text-error">*</span>
+                        </label>
+                        <input
+                            type="number"
+                            id="editEventPoints"
+                            name="editEventPoints"
+                            class="input input-bordered"
+                            min="0"
+                            required
+                        />
+                    </div>
+
+                    <!-- Start Date -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Start Date</span>
+                            <span class="label-text-alt text-error">*</span>
+                        </label>
+                        <input
+                            type="datetime-local"
+                            id="editEventStartDate"
+                            name="editEventStartDate"
+                            class="input input-bordered"
+                            required
+                        />
+                    </div>
+
+                    <!-- End Date -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">End Date</span>
+                            <span class="label-text-alt text-error">*</span>
+                        </label>
+                        <input
+                            type="datetime-local"
+                            id="editEventEndDate"
+                            name="editEventEndDate"
+                            class="input input-bordered"
+                            required
+                        />
                     </div>
                 </div>
-            </div>
 
-            <!-- Published -->
-            <div class="form-control">
-                <label class="label cursor-pointer justify-start gap-4">
+                <!-- Description -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Description</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <textarea
+                        id="editEventDescription"
+                        name="editEventDescription"
+                        class="textarea textarea-bordered"
+                        rows="3"
+                        required></textarea>
+                </div>
+
+                <!-- Files -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Upload Files</span>
+                    </label>
                     <input
-                        type="checkbox"
-                        id="editEventPublished"
-                        name="editEventPublished"
-                        class="toggle"
+                        type="file"
+                        id="editEventFiles"
+                        class="file-input file-input-bordered"
+                        multiple
                     />
-                    <span class="label-text">Publish Event</span>
-                </label>
-                <label class="label">
-                    <span class="label-text-alt text-info"
-                        >This has to be clicked if you want to make this event
-                        available to the public</span
-                    >
-                </label>
-            </div>
+                    <div class="mt-4 space-y-2">
+                        <div id="newFiles" class="space-y-2">
+                            <!-- New files will be listed here -->
+                        </div>
+                        <div class="divider">Current Files</div>
+                        <div id="currentFiles" class="space-y-2">
+                            <!-- Current files will be listed here -->
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Has Food -->
-            <div class="form-control">
-                <label class="label cursor-pointer justify-start gap-4">
-                    <input
-                        type="checkbox"
-                        id="editEventHasFood"
-                        name="editEventHasFood"
-                        class="toggle"
-                    />
-                    <span class="label-text">Has Food</span>
-                </label>
-                <label class="label">
-                    <span class="label-text-alt text-info"
-                        >Check this if food will be provided at the event</span
-                    >
-                </label>
-            </div>
+                <!-- Published -->
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-4">
+                        <input
+                            type="checkbox"
+                            id="editEventPublished"
+                            name="editEventPublished"
+                            class="toggle"
+                        />
+                        <span class="label-text">Publish Event</span>
+                    </label>
+                    <label class="label">
+                        <span class="label-text-alt text-info"
+                            >This has to be clicked if you want to make this
+                            event available to the public</span
+                        >
+                    </label>
+                </div>
 
-            <div class="modal-action">
-                <button type="submit" class="btn btn-primary"
-                    >Save Changes</button
-                >
-                <button
-                    type="button"
-                    class="btn"
-                    onclick="editEventModal.close()">Cancel</button
-                >
-            </div>
-        </form>
+                <!-- Has Food -->
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-4">
+                        <input
+                            type="checkbox"
+                            id="editEventHasFood"
+                            name="editEventHasFood"
+                            class="toggle"
+                        />
+                        <span class="label-text">Has Food</span>
+                    </label>
+                    <label class="label">
+                        <span class="label-text-alt text-info"
+                            >Check this if food will be provided at the event</span
+                        >
+                    </label>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-action">
+            <button type="submit" class="btn btn-primary" form="editEventForm"
+                >Save Changes</button
+            >
+            <button type="button" class="btn" onclick="editEventModal.close()"
+                >Cancel</button
+            >
+        </div>
     </div>
     <form method="dialog" class="modal-backdrop">
         <button>close</button>
@@ -812,9 +817,7 @@ declare global {
 <dialog id="eventDetailsModal" class="modal">
     <div class="modal-box max-w-4xl">
         <div class="flex justify-between items-center mb-4">
-            <div class="flex items-center gap-3">
-                <h3 class="font-bold text-lg" id="modalTitle">Event Details</h3>
-            </div>
+            <h3 class="font-bold text-lg">Event Details</h3>
             <button
                 class="btn btn-circle btn-ghost"
                 onclick="eventDetailsModal.close()"
@@ -867,29 +870,41 @@ declare global {
             </div>
             <!-- Attendees list will be populated here -->
         </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
 
-        <!-- File Preview Section -->
-        <div id="filePreviewSection" class="hidden">
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex items-center gap-3">
-                    <button
-                        class="btn btn-ghost btn-sm"
-                        onclick="backToFileList()"
-                    >
-                        ← Back
-                    </button>
-                    <h3 class="font-bold text-lg truncate" id="previewFileName">
-                    </h3>
-                </div>
-            </div>
-            <div class="relative" id="previewContainer">
-                <div
-                    id="loadingSpinner"
-                    class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
+<!-- Universal File Preview Modal -->
+<dialog id="filePreviewModal" class="modal">
+    <div class="modal-box max-w-4xl">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-3">
+                <button
+                    class="btn btn-ghost btn-sm"
+                    onclick="window.closeFilePreview()"
                 >
-                    <span class="loading loading-spinner loading-lg"></span>
-                </div>
-                <div id="previewContent" class="w-full"></div>
+                    ← Back
+                </button>
+                <h3 class="font-bold text-lg truncate" id="previewFileName">
+                </h3>
+            </div>
+        </div>
+        <div class="relative" id="previewContainer">
+            <div
+                id="previewLoadingSpinner"
+                class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
+            >
+                <span class="loading loading-spinner loading-lg"></span>
+            </div>
+            <div id="previewContent" class="w-full">
+                <FilePreview
+                    client:load
+                    url=""
+                    filename=""
+                    id="universalFilePreview"
+                />
             </div>
         </div>
     </div>
@@ -904,6 +919,10 @@ declare global {
     import { Update } from "../pocketbase/Update";
     import { FileManager } from "../pocketbase/FileManager";
     import { SendLog } from "../pocketbase/SendLog";
+    import FilePreview from "../modals/FilePreview";
+
+    // Add file storage
+    const selectedFileStorage = new Map<string, File>();
 
     interface AttendeeEntry {
         user_id: string;
@@ -1839,28 +1858,10 @@ declare global {
                     freshEventData.files &&
                     freshEventData.files.length > 0
                 ) {
-                    currentFiles.innerHTML = freshEventData.files
-                        .map(
-                            (filename) => `
-                        <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg">
-                            <span class="truncate">${filename}</span>
-                            <div class="flex gap-2">
-                                <button type="button" class="btn btn-ghost btn-xs" onclick="window.previewFile('${fileManager.getFileUrl("events", freshEventData.id, filename)}', '${filename}')">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </button>
-                                <button type="button" class="btn btn-ghost btn-xs text-error" onclick="window.deleteFile('${freshEventData.id}', '${filename}')">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    `
-                        )
-                        .join("");
+                    currentFiles.innerHTML = updateFilePreviewButtons(
+                        freshEventData.files,
+                        freshEventData.id
+                    );
                 }
             }
 
@@ -1869,6 +1870,494 @@ declare global {
         } catch (error) {
             console.error("Failed to open edit modal:", error);
             // Show error toast or alert
+        }
+    };
+
+    // Update the previewFileInEditModal function
+    window.previewFileInEditModal = async function (
+        url: string,
+        filename: string
+    ) {
+        const editFormSection = document.getElementById("editFormSection");
+        const previewSection = document.getElementById(
+            "editModalPreviewSection"
+        );
+        const editFilePreview = document.getElementById("editFilePreview");
+        const previewFileName = document.getElementById("editPreviewFileName");
+        const loadingSpinner = document.getElementById("editLoadingSpinner");
+
+        if (
+            !editFormSection ||
+            !previewSection ||
+            !editFilePreview ||
+            !previewFileName ||
+            !loadingSpinner
+        )
+            return;
+
+        // Hide form and show preview section
+        editFormSection.classList.add("hidden");
+        previewSection.classList.remove("hidden");
+        previewFileName.textContent = filename;
+
+        // Show loading spinner
+        loadingSpinner.classList.remove("hidden");
+
+        try {
+            // Dispatch a custom event to update the FilePreview
+            const event = new CustomEvent("updateFilePreview", {
+                detail: { url, filename },
+            });
+            editFilePreview.dispatchEvent(event);
+        } finally {
+            // Hide loading spinner
+            loadingSpinner.classList.add("hidden");
+        }
+    };
+
+    // Update the showFilePreview function
+    window.showFilePreview = function (file: { url: string; name: string }) {
+        const fileListSection = document.getElementById("filesContent");
+        const previewSection = document.getElementById("filePreviewSection");
+        const mainFilePreview = document.getElementById("mainFilePreview");
+        const previewFileName = document.getElementById("previewFileName");
+
+        if (
+            !fileListSection ||
+            !previewSection ||
+            !mainFilePreview ||
+            !previewFileName
+        )
+            return;
+
+        // Hide file list and show preview section
+        fileListSection.classList.add("hidden");
+        previewSection.classList.remove("hidden");
+        previewFileName.textContent = file.name;
+
+        // Dispatch a custom event to update the FilePreview
+        const event = new CustomEvent("updateFilePreview", {
+            detail: { url: file.url, filename: file.name },
+        });
+        mainFilePreview.dispatchEvent(event);
+    };
+
+    // Add backToEditForm function
+    window.backToEditForm = function () {
+        const editFormSection = document.getElementById("editFormSection");
+        const previewSection = document.getElementById(
+            "editModalPreviewSection"
+        );
+        const editFilePreview = document.getElementById("editFilePreview");
+        const previewFileName = document.getElementById("editPreviewFileName");
+
+        if (
+            editFormSection &&
+            previewSection &&
+            editFilePreview &&
+            previewFileName
+        ) {
+            editFormSection.classList.remove("hidden");
+            previewSection.classList.add("hidden");
+            // Reset the preview
+            const event = new CustomEvent("updateFilePreview", {
+                detail: { url: "", filename: "" },
+            });
+            editFilePreview.dispatchEvent(event);
+            previewFileName.textContent = "";
+        }
+    };
+
+    // Universal file preview function
+    window.previewFile = function (url: string, filename: string) {
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        const previewFileName = document.getElementById("previewFileName");
+        const filePreview = document.getElementById("universalFilePreview");
+        const loadingSpinner = document.getElementById("previewLoadingSpinner");
+
+        if (!modal || !previewFileName || !filePreview || !loadingSpinner)
+            return;
+
+        // Show modal and update filename
+        modal.showModal();
+        previewFileName.textContent = filename;
+
+        // Show loading spinner
+        loadingSpinner.classList.remove("hidden");
+
+        try {
+            // Update the FilePreview component
+            const event = new CustomEvent("updateFilePreview", {
+                detail: { url, filename },
+            });
+            filePreview.dispatchEvent(event);
+        } finally {
+            // Hide loading spinner
+            loadingSpinner.classList.add("hidden");
+        }
+    };
+
+    // Close file preview
+    window.closeFilePreview = function () {
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        const filePreview = document.getElementById("universalFilePreview");
+
+        if (modal && filePreview) {
+            // Reset the preview
+            const event = new CustomEvent("updateFilePreview", {
+                detail: { url: "", filename: "" },
+            });
+            filePreview.dispatchEvent(event);
+            modal.close();
+        }
+    };
+
+    // Update all file preview buttons to use the universal preview
+    function updateFilePreviewButtons(files: string[], eventId: string) {
+        return files
+            .map(
+                (filename) => `
+            <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg">
+                <span class="truncate">${filename}</span>
+                <div class="flex gap-2">
+                    <button type="button" class="btn btn-ghost btn-xs" onclick="window.previewFile('${fileManager.getFileUrl("events", eventId, filename)}', '${filename}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-xs text-error" onclick="window.deleteFile('${eventId}', '${filename}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `
+            )
+            .join("");
+    }
+
+    // Update the openDetailsModal function to use the universal preview
+    window.openDetailsModal = function (event: Event) {
+        const modal = document.getElementById(
+            "eventDetailsModal"
+        ) as HTMLDialogElement;
+        const filesContent = document.getElementById("filesContent");
+        const attendeesContent = document.getElementById("attendeesContent");
+
+        if (!modal || !filesContent || !attendeesContent) return;
+
+        // Show modal
+        modal.showModal();
+
+        // Update files list
+        if (event.files && event.files.length > 0) {
+            filesContent.innerHTML = `
+                <div class="space-y-2">
+                    ${updateFilePreviewButtons(event.files, event.id)}
+                </div>
+            `;
+        } else {
+            filesContent.innerHTML = `
+                <div class="text-center py-8 text-base-content/70">
+                    <p>No files attached to this event</p>
+                </div>
+            `;
+        }
+    };
+
+    // Add file input change handler to show selected files
+    document
+        .getElementById("editEventFiles")
+        ?.addEventListener("change", function (e) {
+            const fileInput = e.target as HTMLInputElement;
+            const newFiles = document.getElementById("newFiles");
+
+            if (newFiles && fileInput.files) {
+                // Get existing files if any
+                const existingFiles = newFiles.querySelectorAll(".file-item");
+                const existingFilesArray = Array.from(existingFiles).map(
+                    (item) => {
+                        const nameSpan = item.querySelector(".file-name");
+                        return nameSpan ? nameSpan.textContent : "";
+                    }
+                );
+
+                // Store new files in the storage and update UI
+                Array.from(fileInput.files)
+                    .filter((file) => !existingFilesArray.includes(file.name))
+                    .forEach((file) => {
+                        selectedFileStorage.set(file.name, file);
+                        const fileDiv = document.createElement("div");
+                        fileDiv.className =
+                            "flex items-center justify-between p-2 bg-base-200 rounded-lg file-item";
+                        fileDiv.innerHTML = `
+                            <span class="truncate file-name">${file.name}</span>
+                            <div class="flex gap-2">
+                                <div class="badge badge-primary">New</div>
+                                <button type="button" class="btn btn-ghost btn-xs text-error" onclick="this.closest('.file-item').remove(); selectedFileStorage.delete('${file.name}');">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        `;
+                        newFiles.appendChild(fileDiv);
+                    });
+            }
+
+            // Clear the file input
+            fileInput.value = "";
+        });
+
+    // Modify form submission handler to use selectedFileStorage
+    document
+        .getElementById("editEventForm")
+        ?.addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const form = e.target as HTMLFormElement;
+            // Get the submit and cancel buttons from the modal-action div
+            const modalAction = document.querySelector(".modal-action");
+            const submitButton = modalAction?.querySelector(
+                ".btn-primary"
+            ) as HTMLButtonElement;
+            const cancelButton = modalAction?.querySelector(
+                ".btn:not(.btn-primary)"
+            ) as HTMLButtonElement;
+
+            if (!submitButton || !cancelButton) {
+                console.error("Could not find submit or cancel buttons");
+                return;
+            }
+
+            const originalText = submitButton.innerHTML;
+
+            try {
+                const formData = new FormData(form);
+                const eventId = (
+                    document.getElementById("editEventId") as HTMLInputElement
+                )?.value;
+
+                // Get files from storage
+                const selectedFiles = Array.from(selectedFileStorage.values());
+
+                // Disable buttons and show loading state
+                submitButton.disabled = true;
+                cancelButton.disabled = true;
+                submitButton.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="loading loading-spinner loading-sm"></span>
+                        <span>Saving...</span>
+                    </div>
+                `;
+                window.showLoading?.();
+
+                // Prepare event data
+                const eventData = {
+                    event_name: formData.get("editEventName"),
+                    event_code: formData.get("editEventCode"),
+                    event_description: formData.get("editEventDescription"),
+                    location: formData.get("editEventLocation"),
+                    points_to_reward: Number(formData.get("editEventPoints")),
+                    start_date: new Date(
+                        formData.get("editEventStartDate") as string
+                    ).toISOString(),
+                    end_date: new Date(
+                        formData.get("editEventEndDate") as string
+                    ).toISOString(),
+                    published: formData.get("editEventPublished") === "on",
+                    has_food: formData.get("editEventHasFood") === "on",
+                };
+
+                let updatedEvent;
+
+                try {
+                    if (eventId) {
+                        // Update existing event
+                        submitButton.innerHTML = `
+                            <div class="flex items-center gap-2">
+                                <span class="loading loading-spinner loading-sm"></span>
+                                <span>Updating event...</span>
+                            </div>
+                        `;
+                        updatedEvent = await update.updateFields(
+                            "events",
+                            eventId,
+                            eventData
+                        );
+
+                        // Handle file uploads if any
+                        if (selectedFiles.length > 0) {
+                            submitButton.innerHTML = `
+                                <div class="flex items-center gap-2">
+                                    <span class="loading loading-spinner loading-sm"></span>
+                                    <span>Uploading files (0/${selectedFiles.length})...</span>
+                                </div>
+                            `;
+                            await fileManager.appendFiles(
+                                "events",
+                                eventId,
+                                "files",
+                                selectedFiles
+                            );
+                        }
+
+                        await sendLog.send(
+                            "update",
+                            "event",
+                            `Updated event: ${eventData.event_name}`
+                        );
+                    } else {
+                        // Create new event
+                        submitButton.innerHTML = `
+                            <div class="flex items-center gap-2">
+                                <span class="loading loading-spinner loading-sm"></span>
+                                <span>Creating event...</span>
+                            </div>
+                        `;
+                        const pb = auth.getPocketBase();
+                        const newEvent = await pb
+                            .collection("events")
+                            .create(eventData);
+
+                        // Handle file uploads if any
+                        if (selectedFiles.length > 0) {
+                            submitButton.innerHTML = `
+                                <div class="flex items-center gap-2">
+                                    <span class="loading loading-spinner loading-sm"></span>
+                                    <span>Uploading files (0/${selectedFiles.length})...</span>
+                                </div>
+                            `;
+                            await fileManager.uploadFiles(
+                                "events",
+                                newEvent.id,
+                                "files",
+                                selectedFiles
+                            );
+                        }
+
+                        await sendLog.send(
+                            "create",
+                            "event",
+                            `Created event: ${eventData.event_name}`
+                        );
+                    }
+
+                    // Show success state briefly
+                    submitButton.innerHTML = `
+                        <div class="flex items-center gap-2 text-success">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>Saved!</span>
+                        </div>
+                    `;
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+                    // Close modal and refresh events list
+                    const modal = document.getElementById(
+                        "editEventModal"
+                    ) as HTMLDialogElement;
+                    modal?.close();
+
+                    // Force cache refresh and update events list
+                    lastCacheUpdate = 0; // Reset cache timestamp to force refresh
+                    await refreshCache(); // Refresh the cache
+                    await fetchEvents(); // Update the UI
+
+                    // Clear form inputs
+                    const formFileInput = document.getElementById(
+                        "editEventFiles"
+                    ) as HTMLInputElement;
+                    const newFiles = document.getElementById("newFiles");
+                    if (formFileInput) formFileInput.value = "";
+                    if (newFiles) newFiles.innerHTML = "";
+
+                    // Clear storage after successful upload
+                    selectedFileStorage.clear();
+                } catch (error) {
+                    throw error; // Re-throw to be caught by outer try-catch
+                }
+            } catch (error) {
+                console.error("Failed to save event:", error);
+                // Show error message in the button with icon
+                submitButton.innerHTML = `
+                    <div class="flex items-center gap-2 text-error">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Failed</span>
+                    </div>
+                `;
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+                // Show detailed error to user
+                alert("Failed to save event. Please try again.");
+            } finally {
+                // Reset button state
+                submitButton.disabled = false;
+                cancelButton.disabled = false;
+                submitButton.innerHTML = originalText;
+                window.hideLoading?.();
+            }
+        });
+
+    // Clear storage when modal is closed
+    document.getElementById("editEventModal")?.addEventListener("close", () => {
+        selectedFileStorage.clear();
+    });
+
+    // Add delete file handler
+    window.deleteFile = async function (eventId: string, filename: string) {
+        if (!confirm("Are you sure you want to delete this file?")) return;
+
+        try {
+            window.showLoading?.();
+            const pb = auth.getPocketBase();
+
+            // Get current event data
+            const event = await pb.collection("events").getOne(eventId);
+
+            // Filter out the file to delete
+            const updatedFiles = event.files.filter(
+                (f: string) => f !== filename
+            );
+
+            // Update the event with the new files array
+            await pb.collection("events").update(eventId, {
+                files: updatedFiles,
+            });
+
+            await sendLog.send(
+                "delete",
+                "event_file",
+                `Deleted file ${filename} from event ${event.event_name}`
+            );
+
+            // Refresh the current files display
+            const currentFiles = document.getElementById("currentFiles");
+            if (currentFiles && updatedFiles.length > 0) {
+                currentFiles.innerHTML = updateFilePreviewButtons(
+                    updatedFiles,
+                    eventId
+                );
+            } else if (currentFiles) {
+                currentFiles.innerHTML = `
+                    <div class="text-center py-4 text-base-content/70">
+                        <p>No files attached</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error("Failed to delete file:", error);
+            alert("Failed to delete file. Please try again.");
+        } finally {
+            window.hideLoading?.();
         }
     };
 </script>
