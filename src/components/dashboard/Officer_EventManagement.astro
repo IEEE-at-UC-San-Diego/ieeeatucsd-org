@@ -214,13 +214,45 @@ declare global {
                         <label class="label">
                             <span class="label-text font-medium">Year</span>
                         </label>
-                        <select
-                            id="yearFilter"
-                            class="select select-bordered select-sm"
-                        >
-                            <option value="all">All Years</option>
-                            <!-- Years will be populated dynamically -->
-                        </select>
+                        <div class="dropdown">
+                            <label
+                                tabindex="0"
+                                class="btn btn-sm m-1 w-full justify-between"
+                            >
+                                <span id="yearFilterLabel">All Years</span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </label>
+                            <div
+                                tabindex="0"
+                                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+                            >
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">All Years</span
+                                        >
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="all"
+                                            checked
+                                        />
+                                    </label>
+                                </div>
+                                <div id="yearCheckboxes" class="space-y-1">
+                                    <!-- Year checkboxes will be populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -231,14 +263,64 @@ declare global {
                             <span class="label-text font-medium">Published</span
                             >
                         </label>
-                        <select
-                            id="publishedFilter"
-                            class="select select-bordered select-sm"
-                        >
-                            <option value="all">All</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                        </select>
+                        <div class="dropdown">
+                            <label
+                                tabindex="0"
+                                class="btn btn-sm m-1 w-full justify-between"
+                            >
+                                <span id="publishedFilterLabel">All</span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </label>
+                            <div
+                                tabindex="0"
+                                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+                            >
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">All</span>
+                                        <input
+                                            type="radio"
+                                            name="publishedFilter"
+                                            class="radio"
+                                            value="all"
+                                            checked
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Yes</span>
+                                        <input
+                                            type="radio"
+                                            name="publishedFilter"
+                                            class="radio"
+                                            value="yes"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">No</span>
+                                        <input
+                                            type="radio"
+                                            name="publishedFilter"
+                                            class="radio"
+                                            value="no"
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-control">
@@ -246,28 +328,128 @@ declare global {
                             <span class="label-text font-medium">Has Files</span
                             >
                         </label>
-                        <select
-                            id="hasFilesFilter"
-                            class="select select-bordered select-sm"
-                        >
-                            <option value="all">All</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                        </select>
+                        <div class="dropdown">
+                            <label
+                                tabindex="0"
+                                class="btn btn-sm m-1 w-full justify-between"
+                            >
+                                <span id="hasFilesFilterLabel">All</span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </label>
+                            <div
+                                tabindex="0"
+                                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+                            >
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">All</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFilesFilter"
+                                            class="radio"
+                                            value="all"
+                                            checked
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Yes</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFilesFilter"
+                                            class="radio"
+                                            value="yes"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">No</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFilesFilter"
+                                            class="radio"
+                                            value="no"
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-control">
                         <label class="label">
                             <span class="label-text font-medium">Has Food</span>
                         </label>
-                        <select
-                            id="hasFoodFilter"
-                            class="select select-bordered select-sm"
-                        >
-                            <option value="all">All</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                        </select>
+                        <div class="dropdown">
+                            <label
+                                tabindex="0"
+                                class="btn btn-sm m-1 w-full justify-between"
+                            >
+                                <span id="hasFoodFilterLabel">All</span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </label>
+                            <div
+                                tabindex="0"
+                                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+                            >
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">All</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFoodFilter"
+                                            class="radio"
+                                            value="all"
+                                            checked
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Yes</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFoodFilter"
+                                            class="radio"
+                                            value="yes"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">No</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFoodFilter"
+                                            class="radio"
+                                            value="no"
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -681,7 +863,7 @@ declare global {
     // Add filter state
     let filterState = {
         time: "all",
-        year: "all",
+        year: ["all"],
         published: "all",
         hasFiles: "all",
         hasFood: "all",
@@ -697,7 +879,6 @@ declare global {
         try {
             const now = Date.now();
 
-            // Always refresh on page load (when lastCacheUpdate is 0)
             if (
                 lastCacheUpdate === 0 ||
                 now - lastCacheUpdate >= CACHE_DURATION ||
@@ -717,23 +898,74 @@ declare global {
                     years.add(year);
                 });
 
-                const yearFilter = document.getElementById(
-                    "yearFilter"
-                ) as HTMLSelectElement;
-                if (yearFilter) {
+                const yearCheckboxes =
+                    document.getElementById("yearCheckboxes");
+                if (yearCheckboxes) {
                     const sortedYears = Array.from(years).sort((a, b) => b - a);
-                    yearFilter.innerHTML =
-                        '<option value="all">All Years</option>' +
-                        sortedYears
-                            .map(
-                                (year) =>
-                                    `<option value="${year}">${year}</option>`
-                            )
-                            .join("");
+                    yearCheckboxes.innerHTML = sortedYears
+                        .map(
+                            (year) => `
+                            <label class="label cursor-pointer">
+                                <span class="label-text">${year}</span>
+                                <input type="checkbox" class="checkbox" value="${year}" />
+                            </label>
+                        `
+                        )
+                        .join("");
 
-                    if (filterState.year !== "all") {
-                        yearFilter.value = filterState.year;
+                    // Add event listeners to checkboxes
+                    const allYearsCheckbox = document.querySelector(
+                        'input[type="checkbox"][value="all"]'
+                    ) as HTMLInputElement;
+                    const yearInputs = Array.from(
+                        yearCheckboxes.querySelectorAll(
+                            'input[type="checkbox"]'
+                        )
+                    ) as HTMLInputElement[];
+
+                    if (allYearsCheckbox) {
+                        allYearsCheckbox.addEventListener("change", (e) => {
+                            const target = e.target as HTMLInputElement;
+                            yearInputs.forEach((input) => {
+                                input.checked = false;
+                            });
+                            if (target.checked) {
+                                filterState.year = ["all"];
+                                document.getElementById(
+                                    "yearFilterLabel"
+                                )!.textContent = "All Years";
+                            }
+                            currentPage = 1;
+                            fetchEvents();
+                        });
                     }
+
+                    yearInputs.forEach((input) => {
+                        input.addEventListener("change", () => {
+                            const checkedYears = yearInputs
+                                .filter((inp) => inp.checked)
+                                .map((inp) => inp.value);
+
+                            if (checkedYears.length === 0) {
+                                allYearsCheckbox.checked = true;
+                                filterState.year = ["all"];
+                                document.getElementById(
+                                    "yearFilterLabel"
+                                )!.textContent = "All Years";
+                            } else {
+                                allYearsCheckbox.checked = false;
+                                filterState.year = checkedYears;
+                                document.getElementById(
+                                    "yearFilterLabel"
+                                )!.textContent =
+                                    checkedYears.length === 1
+                                        ? checkedYears[0]
+                                        : `${checkedYears.length} Years Selected`;
+                            }
+                            currentPage = 1;
+                            fetchEvents();
+                        });
+                    });
                 }
             }
         } catch (error) {
@@ -821,15 +1053,18 @@ declare global {
         return events.filter((event) => {
             const now = new Date().toISOString();
 
-            // Time and Year filters
+            // Time filter
             if (filterState.time === "upcoming" && event.start_date < now)
                 return false;
             if (filterState.time === "past" && event.start_date >= now)
                 return false;
 
-            if (filterState.year !== "all") {
-                const eventYear = new Date(event.start_date).getFullYear();
-                if (eventYear.toString() !== filterState.year) return false;
+            // Year filter
+            if (!filterState.year.includes("all")) {
+                const eventYear = new Date(event.start_date)
+                    .getFullYear()
+                    .toString();
+                if (!filterState.year.includes(eventYear)) return false;
             }
 
             // Published filter
@@ -1152,41 +1387,71 @@ declare global {
     });
 
     // Year filter
-    document.getElementById("yearFilter")?.addEventListener("change", (e) => {
-        const target = e.target as HTMLSelectElement;
-        filterState.year = target.value;
-        currentPage = 1;
-        fetchEvents();
-    });
+    document
+        .getElementById("yearCheckboxes")
+        ?.addEventListener("change", () => {
+            const checkedYears = Array.from(
+                document.querySelectorAll('input[type="checkbox"]:checked')
+            ).map((inp) => (inp as HTMLInputElement).value);
+
+            if (checkedYears.length === 0) {
+                document.getElementById("yearFilterLabel")!.textContent =
+                    "All Years";
+                filterState.year = ["all"];
+            } else {
+                document.getElementById("yearFilterLabel")!.textContent =
+                    checkedYears.length === 1
+                        ? checkedYears[0]
+                        : `${checkedYears.length} Years Selected`;
+                filterState.year = checkedYears;
+            }
+            currentPage = 1;
+            fetchEvents();
+        });
 
     // Published filter
     document
-        .getElementById("publishedFilter")
-        ?.addEventListener("change", (e) => {
-            const target = e.target as HTMLSelectElement;
-            filterState.published = target.value;
-            currentPage = 1;
-            fetchEvents();
+        .querySelectorAll('input[name="publishedFilter"]')
+        .forEach((radio: Element) => {
+            (radio as HTMLInputElement).addEventListener("change", (e) => {
+                const target = e.target as HTMLInputElement;
+                filterState.published = target.value;
+                document.getElementById("publishedFilterLabel")!.textContent =
+                    target.parentElement?.querySelector(".label-text")
+                        ?.textContent || "All";
+                currentPage = 1;
+                fetchEvents();
+            });
         });
 
     // Has Files filter
     document
-        .getElementById("hasFilesFilter")
-        ?.addEventListener("change", (e) => {
-            const target = e.target as HTMLSelectElement;
-            filterState.hasFiles = target.value;
-            currentPage = 1;
-            fetchEvents();
+        .querySelectorAll('input[name="hasFilesFilter"]')
+        .forEach((radio: Element) => {
+            (radio as HTMLInputElement).addEventListener("change", (e) => {
+                const target = e.target as HTMLInputElement;
+                filterState.hasFiles = target.value;
+                document.getElementById("hasFilesFilterLabel")!.textContent =
+                    target.parentElement?.querySelector(".label-text")
+                        ?.textContent || "All";
+                currentPage = 1;
+                fetchEvents();
+            });
         });
 
     // Has Food filter
     document
-        .getElementById("hasFoodFilter")
-        ?.addEventListener("change", (e) => {
-            const target = e.target as HTMLSelectElement;
-            filterState.hasFood = target.value;
-            currentPage = 1;
-            fetchEvents();
+        .querySelectorAll('input[name="hasFoodFilter"]')
+        .forEach((radio: Element) => {
+            (radio as HTMLInputElement).addEventListener("change", (e) => {
+                const target = e.target as HTMLInputElement;
+                filterState.hasFood = target.value;
+                document.getElementById("hasFoodFilterLabel")!.textContent =
+                    target.parentElement?.querySelector(".label-text")
+                        ?.textContent || "All";
+                currentPage = 1;
+                fetchEvents();
+            });
         });
 
     // Search input with instant search (no debounce needed for cached data)
@@ -1235,9 +1500,19 @@ declare global {
             }
 
             const yearFilter = document.getElementById(
-                "yearFilter"
-            ) as HTMLSelectElement;
-            if (yearFilter) yearFilter.value = "all";
+                "yearCheckboxes"
+            ) as HTMLDivElement;
+            if (yearFilter) {
+                const yearInputs = yearFilter.querySelectorAll(
+                    'input[type="checkbox"]'
+                );
+                yearInputs.forEach((input: HTMLInputElement) => {
+                    input.checked = true;
+                });
+                filterState.year = ["all"];
+                document.getElementById("yearFilterLabel")!.textContent =
+                    "All Years";
+            }
 
             const publishedFilter = document.getElementById(
                 "publishedFilter"
@@ -1272,7 +1547,7 @@ declare global {
             // Reset filter state
             filterState = {
                 time: "all",
-                year: "all",
+                year: ["all"],
                 published: "all",
                 hasFiles: "all",
                 hasFood: "all",
