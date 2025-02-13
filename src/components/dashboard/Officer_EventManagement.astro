@@ -2180,15 +2180,14 @@ declare global {
                     has_food: formData.get("editEventHasFood") === "on",
                 };
 
-                let updatedEvent;
+                const pb = auth.getPocketBase();
 
                 try {
                     if (eventId) {
                         // Update existing event
                         submitButton.innerHTML = `<span class="loading loading-spinner"></span>`;
 
-                        // Get current event data to process file changes
-                        const pb = auth.getPocketBase();
+                        // Get current event data
                         const currentEvent = await pb
                             .collection("events")
                             .getOne(eventId);
@@ -2199,65 +2198,94 @@ declare global {
                             (filename: string) => !filesToDelete.has(filename)
                         );
 
-                        // Update event with remaining files
-                        const eventDataWithFiles = {
-                            ...eventData,
-                            files: remainingFiles,
-                        };
+                        // Create a single FormData instance for the entire update
+                        const updateFormData = new FormData();
 
-                        // Update the event data first
-                        updatedEvent = await update.updateFields(
-                            "events",
-                            eventId,
-                            eventDataWithFiles
+                        // Add all event data fields
+                        Object.entries(eventData).forEach(([key, value]) => {
+                            updateFormData.append(key, String(value));
+                        });
+
+                        // Handle files
+                        // First, fetch all remaining files as blobs
+                        const filePromises = remainingFiles.map(
+                            async (filename: string) => {
+                                try {
+                                    const response = await fetch(
+                                        fileManager.getFileUrl(
+                                            "events",
+                                            eventId,
+                                            filename
+                                        )
+                                    );
+                                    const blob = await response.blob();
+                                    return new File([blob], filename, {
+                                        type: blob.type,
+                                    });
+                                } catch (error) {
+                                    console.error(
+                                        `Failed to fetch file ${filename}:`,
+                                        error
+                                    );
+                                    return null;
+                                }
+                            }
                         );
 
-                        // Process file deletions
-                        for (const filename of filesToDelete) {
-                            await fileManager.deleteFile(
-                                "events",
-                                eventId,
-                                filename
+                        try {
+                            const existingFiles = (
+                                await Promise.all(filePromises)
+                            ).filter((file): file is File => file !== null);
+
+                            // Add all files (both existing and new) to FormData
+                            [...existingFiles, ...selectedFiles].forEach(
+                                (file: File) => {
+                                    updateFormData.append("files", file);
+                                }
                             );
+
+                            // Perform single update operation
+                            const updatedEvent = await pb
+                                .collection("events")
+                                .update(eventId, updateFormData);
+
+                            // Log the update
                             await sendLog.send(
-                                "delete",
-                                "event_file",
-                                `Deleted file ${filename} from event ${eventData.event_name}`
+                                "update",
+                                "event",
+                                `Updated event: ${eventData.event_name}`
                             );
-                        }
 
-                        // Then handle new file uploads if any
-                        if (selectedFiles.length > 0) {
-                            await fileManager.appendFiles(
-                                "events",
-                                eventId,
-                                "files",
-                                selectedFiles
-                            );
+                            // Log file deletions
+                            for (const filename of filesToDelete) {
+                                await sendLog.send(
+                                    "delete",
+                                    "event_file",
+                                    `Deleted file ${filename} from event ${eventData.event_name}`
+                                );
+                            }
+                        } catch (error) {
+                            console.error("Failed to process files:", error);
+                            throw error;
                         }
-
-                        await sendLog.send(
-                            "update",
-                            "event",
-                            `Updated event: ${eventData.event_name}`
-                        );
                     } else {
-                        // Create new event
-                        submitButton.innerHTML = `<span class="loading loading-spinner"></span>`;
-                        const pb = auth.getPocketBase();
+                        // Create new event with files in a single operation
+                        const createFormData = new FormData();
+
+                        // Add all event data fields
+                        Object.entries(eventData).forEach(([key, value]) => {
+                            createFormData.append(key, String(value));
+                        });
+
+                        // Add new files
+                        selectedFiles.forEach((file: File) => {
+                            createFormData.append("files", file);
+                        });
+
+                        // Create event with files in a single operation
                         const newEvent = await pb
                             .collection("events")
-                            .create(eventData);
-
-                        // Handle file uploads if any
-                        if (selectedFiles.length > 0) {
-                            await fileManager.uploadFiles(
-                                "events",
-                                newEvent.id,
-                                "files",
-                                selectedFiles
-                            );
-                        }
+                            .create(createFormData);
 
                         await sendLog.send(
                             "create",
