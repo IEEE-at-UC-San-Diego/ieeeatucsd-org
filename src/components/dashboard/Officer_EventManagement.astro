@@ -80,6 +80,7 @@ declare global {
         [key: string]: any;
         openEditModal: (event?: any) => void;
         deleteFile: (eventId: string, filename: string) => void;
+        undoDeleteFile: (eventId: string, filename: string) => void;
         previewFile: (url: string, filename: string) => void;
         openDetailsModal: (event: Event) => void;
         showFilePreview: (file: {
@@ -923,6 +924,7 @@ declare global {
 
     // Add file storage
     const selectedFileStorage = new Map<string, File>();
+    const filesToDelete = new Set<string>(); // Add storage for files to delete
 
     interface AttendeeEntry {
         user_id: string;
@@ -2021,7 +2023,7 @@ declare global {
         return files
             .map(
                 (filename) => `
-            <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg">
+            <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg${filesToDelete.has(filename) ? " opacity-50" : ""}" data-filename="${filename}">
                 <span class="truncate">${filename}</span>
                 <div class="flex gap-2">
                     <button type="button" class="btn btn-ghost btn-xs" onclick="window.previewFile('${fileManager.getFileUrl("events", eventId, filename)}', '${filename}')">
@@ -2030,11 +2032,17 @@ declare global {
                             <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
                         </svg>
                     </button>
-                    <button type="button" class="btn btn-ghost btn-xs text-error" onclick="window.deleteFile('${eventId}', '${filename}')">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                        </svg>
-                    </button>
+                    <div class="text-error">
+                        ${
+                            filesToDelete.has(filename)
+                                ? `<button type="button" class="btn btn-ghost btn-xs" onclick="window.undoDeleteFile('${eventId}', '${filename}')">Undo</button>`
+                                : `<button type="button" class="btn btn-ghost btn-xs text-error" onclick="window.deleteFile('${eventId}', '${filename}')">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>`
+                        }
+                    </div>
                 </div>
             </div>
         `
@@ -2141,10 +2149,8 @@ declare global {
             // Immediately disable buttons and show loading state
             submitButton.disabled = true;
             cancelButton.disabled = true;
-            submitButton.innerHTML = `
-                <span class="loading loading-spinner loading-sm"></span>
-                Saving...
-            `;
+            submitButton.classList.add("btn-disabled");
+            submitButton.innerHTML = `<span class="loading loading-spinner"></span>`;
 
             try {
                 const formData = new FormData(form);
@@ -2179,22 +2185,49 @@ declare global {
                 try {
                     if (eventId) {
                         // Update existing event
-                        submitButton.innerHTML = `
-                            <span class="loading loading-spinner loading-sm"></span>
-                            Updating event...
-                        `;
+                        submitButton.innerHTML = `<span class="loading loading-spinner"></span>`;
+
+                        // Get current event data to process file changes
+                        const pb = auth.getPocketBase();
+                        const currentEvent = await pb
+                            .collection("events")
+                            .getOne(eventId);
+                        const currentFiles = currentEvent.files || [];
+
+                        // Filter out files marked for deletion
+                        const remainingFiles = currentFiles.filter(
+                            (filename: string) => !filesToDelete.has(filename)
+                        );
+
+                        // Update event with remaining files
+                        const eventDataWithFiles = {
+                            ...eventData,
+                            files: remainingFiles,
+                        };
+
+                        // Update the event data first
                         updatedEvent = await update.updateFields(
                             "events",
                             eventId,
-                            eventData
+                            eventDataWithFiles
                         );
 
-                        // Handle file uploads if any
+                        // Process file deletions
+                        for (const filename of filesToDelete) {
+                            await fileManager.deleteFile(
+                                "events",
+                                eventId,
+                                filename
+                            );
+                            await sendLog.send(
+                                "delete",
+                                "event_file",
+                                `Deleted file ${filename} from event ${eventData.event_name}`
+                            );
+                        }
+
+                        // Then handle new file uploads if any
                         if (selectedFiles.length > 0) {
-                            submitButton.innerHTML = `
-                                <span class="loading loading-spinner loading-sm"></span>
-                                Uploading files (0/${selectedFiles.length})...
-                            `;
                             await fileManager.appendFiles(
                                 "events",
                                 eventId,
@@ -2210,10 +2243,7 @@ declare global {
                         );
                     } else {
                         // Create new event
-                        submitButton.innerHTML = `
-                            <span class="loading loading-spinner loading-sm"></span>
-                            Creating event...
-                        `;
+                        submitButton.innerHTML = `<span class="loading loading-spinner"></span>`;
                         const pb = auth.getPocketBase();
                         const newEvent = await pb
                             .collection("events")
@@ -2221,10 +2251,6 @@ declare global {
 
                         // Handle file uploads if any
                         if (selectedFiles.length > 0) {
-                            submitButton.innerHTML = `
-                                <span class="loading loading-spinner loading-sm"></span>
-                                Uploading files (0/${selectedFiles.length})...
-                            `;
                             await fileManager.uploadFiles(
                                 "events",
                                 newEvent.id,
@@ -2241,13 +2267,12 @@ declare global {
                     }
 
                     // Show success state briefly
+                    submitButton.classList.remove("btn-disabled");
+                    submitButton.classList.add("btn-success");
                     submitButton.innerHTML = `
-                        <div class="flex items-center gap-2 text-success">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                            </svg>
-                            <span>Saved!</span>
-                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
                     `;
                     await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -2262,7 +2287,7 @@ declare global {
                     await refreshCache(); // Refresh the cache
                     await fetchEvents(); // Update the UI
 
-                    // Clear form inputs
+                    // Clear form inputs and storage
                     const formFileInput = document.getElementById(
                         "editEventFiles"
                     ) as HTMLInputElement;
@@ -2270,85 +2295,98 @@ declare global {
                     if (formFileInput) formFileInput.value = "";
                     if (newFiles) newFiles.innerHTML = "";
 
-                    // Clear storage after successful upload
+                    // Clear storages after successful save
                     selectedFileStorage.clear();
+                    filesToDelete.clear();
                 } catch (error) {
-                    throw error; // Re-throw to be caught by outer try-catch
+                    throw error;
                 }
             } catch (error) {
                 console.error("Failed to save event:", error);
-                // Show error message in the button with icon
+                submitButton.classList.remove("btn-disabled");
+                submitButton.classList.add("btn-error");
                 submitButton.innerHTML = `
-                    <div class="flex items-center gap-2 text-error">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                     </svg>
-                    <span>Failed</span>
-                </div>
-            `;
+                `;
                 await new Promise((resolve) => setTimeout(resolve, 2000));
-                // Show detailed error to user
                 alert("Failed to save event. Please try again.");
             } finally {
-                // Reset button state
                 submitButton.disabled = false;
                 cancelButton.disabled = false;
+                submitButton.classList.remove(
+                    "btn-disabled",
+                    "btn-success",
+                    "btn-error"
+                );
                 submitButton.innerHTML = originalText;
                 window.hideLoading?.();
             }
         });
 
-    // Clear storage when modal is closed
+    // Clear both storages when modal is closed
     document.getElementById("editEventModal")?.addEventListener("close", () => {
         selectedFileStorage.clear();
+        filesToDelete.clear();
     });
 
     // Add delete file handler
     window.deleteFile = async function (eventId: string, filename: string) {
-        if (!confirm("Are you sure you want to delete this file?")) return;
+        if (!confirm("Are you sure you want to remove this file?")) return;
 
         try {
-            window.showLoading?.();
-            const pb = auth.getPocketBase();
+            // Add file to deletion set
+            filesToDelete.add(filename);
 
-            // Get current event data
-            const event = await pb.collection("events").getOne(eventId);
-
-            // Filter out the file to delete
-            const updatedFiles = event.files.filter(
-                (f: string) => f !== filename
-            );
-
-            // Update the event with the new files array
-            await pb.collection("events").update(eventId, {
-                files: updatedFiles,
-            });
-
-            await sendLog.send(
-                "delete",
-                "event_file",
-                `Deleted file ${filename} from event ${event.event_name}`
-            );
-
-            // Refresh the current files display
+            // Update the UI to show file as pending deletion
             const currentFiles = document.getElementById("currentFiles");
-            if (currentFiles && updatedFiles.length > 0) {
-                currentFiles.innerHTML = updateFilePreviewButtons(
-                    updatedFiles,
-                    eventId
+            if (currentFiles) {
+                const fileElement = currentFiles.querySelector(
+                    `[data-filename="${filename}"]`
                 );
-            } else if (currentFiles) {
-                currentFiles.innerHTML = `
-                    <div class="text-center py-4 text-base-content/70">
-                        <p>No files attached</p>
-                    </div>
-                `;
+                if (fileElement) {
+                    fileElement.classList.add("opacity-50");
+                    const deleteButton =
+                        fileElement.querySelector(".text-error");
+                    if (deleteButton) {
+                        deleteButton.innerHTML = `
+                            <button type="button" class="btn btn-ghost btn-xs" onclick="window.undoDeleteFile('${eventId}', '${filename}')">
+                                Undo
+                            </button>
+                        `;
+                    }
+                }
             }
         } catch (error) {
-            console.error("Failed to delete file:", error);
-            alert("Failed to delete file. Please try again.");
-        } finally {
-            window.hideLoading?.();
+            console.error("Failed to stage file deletion:", error);
+            alert("Failed to stage file deletion. Please try again.");
+        }
+    };
+
+    // Add undo delete function
+    window.undoDeleteFile = function (eventId: string, filename: string) {
+        filesToDelete.delete(filename);
+
+        // Update the UI to show file as restored
+        const currentFiles = document.getElementById("currentFiles");
+        if (currentFiles) {
+            const fileElement = currentFiles.querySelector(
+                `[data-filename="${filename}"]`
+            );
+            if (fileElement) {
+                fileElement.classList.remove("opacity-50");
+                const undoButton = fileElement.querySelector(".text-error");
+                if (undoButton) {
+                    undoButton.innerHTML = `
+                        <button type="button" class="btn btn-ghost btn-xs text-error" onclick="window.deleteFile('${eventId}', '${filename}')">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    `;
+                }
+            }
         }
     };
 </script>
