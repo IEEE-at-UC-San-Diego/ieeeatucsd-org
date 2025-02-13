@@ -2122,7 +2122,6 @@ declare global {
             e.preventDefault();
 
             const form = e.target as HTMLFormElement;
-            // Get the submit and cancel buttons from the modal-action div
             const modalAction = document.querySelector(".modal-action");
             const submitButton = modalAction?.querySelector(
                 ".btn-primary"
@@ -2136,7 +2135,16 @@ declare global {
                 return;
             }
 
+            // Store original button content
             const originalText = submitButton.innerHTML;
+
+            // Immediately disable buttons and show loading state
+            submitButton.disabled = true;
+            cancelButton.disabled = true;
+            submitButton.innerHTML = `
+                <span class="loading loading-spinner loading-sm"></span>
+                Saving...
+            `;
 
             try {
                 const formData = new FormData(form);
@@ -2147,15 +2155,6 @@ declare global {
                 // Get files from storage
                 const selectedFiles = Array.from(selectedFileStorage.values());
 
-                // Disable buttons and show loading state
-                submitButton.disabled = true;
-                cancelButton.disabled = true;
-                submitButton.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <span class="loading loading-spinner loading-sm"></span>
-                        <span>Saving...</span>
-                    </div>
-                `;
                 window.showLoading?.();
 
                 // Prepare event data
@@ -2181,10 +2180,8 @@ declare global {
                     if (eventId) {
                         // Update existing event
                         submitButton.innerHTML = `
-                            <div class="flex items-center gap-2">
-                                <span class="loading loading-spinner loading-sm"></span>
-                                <span>Updating event...</span>
-                            </div>
+                            <span class="loading loading-spinner loading-sm"></span>
+                            Updating event...
                         `;
                         updatedEvent = await update.updateFields(
                             "events",
@@ -2195,10 +2192,8 @@ declare global {
                         // Handle file uploads if any
                         if (selectedFiles.length > 0) {
                             submitButton.innerHTML = `
-                                <div class="flex items-center gap-2">
-                                    <span class="loading loading-spinner loading-sm"></span>
-                                    <span>Uploading files (0/${selectedFiles.length})...</span>
-                                </div>
+                                <span class="loading loading-spinner loading-sm"></span>
+                                Uploading files (0/${selectedFiles.length})...
                             `;
                             await fileManager.appendFiles(
                                 "events",
@@ -2216,10 +2211,8 @@ declare global {
                     } else {
                         // Create new event
                         submitButton.innerHTML = `
-                            <div class="flex items-center gap-2">
-                                <span class="loading loading-spinner loading-sm"></span>
-                                <span>Creating event...</span>
-                            </div>
+                            <span class="loading loading-spinner loading-sm"></span>
+                            Creating event...
                         `;
                         const pb = auth.getPocketBase();
                         const newEvent = await pb
@@ -2229,10 +2222,8 @@ declare global {
                         // Handle file uploads if any
                         if (selectedFiles.length > 0) {
                             submitButton.innerHTML = `
-                                <div class="flex items-center gap-2">
-                                    <span class="loading loading-spinner loading-sm"></span>
-                                    <span>Uploading files (0/${selectedFiles.length})...</span>
-                                </div>
+                                <span class="loading loading-spinner loading-sm"></span>
+                                Uploading files (0/${selectedFiles.length})...
                             `;
                             await fileManager.uploadFiles(
                                 "events",
@@ -2291,10 +2282,10 @@ declare global {
                     <div class="flex items-center gap-2 text-error">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                        </svg>
-                        <span>Failed</span>
-                    </div>
-                `;
+                    </svg>
+                    <span>Failed</span>
+                </div>
+            `;
                 await new Promise((resolve) => setTimeout(resolve, 2000));
                 // Show detailed error to user
                 alert("Failed to save event. Please try again.");
