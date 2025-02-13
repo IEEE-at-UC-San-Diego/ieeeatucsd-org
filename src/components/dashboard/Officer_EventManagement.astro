@@ -15,587 +15,6 @@ const sendLog = SendLog.getInstance();
 
 // Interface for Event type
 interface Event {
-  id: string;
-  event_name: string;
-  event_description: string;
-  event_code: string;
-  location: string;
-  files: string[];
-  points_to_reward: number;
-  start_date: string;
-  end_date: string;
-  published: boolean;
-  has_food: boolean;
-  attendees: AttendeeEntry[];
-}
-
-interface AttendeeEntry {
-  user_id: string;
-  time_checked_in: string;
-  food: string;
-}
-
-interface ListResponse<T> {
-  page: number;
-  perPage: number;
-  totalItems: number;
-  totalPages: number;
-  items: T[];
-}
-
-// Initialize variables
-let eventResponse: ListResponse<Event> = {
-  page: 1,
-  perPage: 5,
-  totalItems: 0,
-  totalPages: 0,
-  items: [],
-};
-let upcomingEvents: Event[] = [];
-
-// Fetch events
-try {
-  if (auth.isAuthenticated()) {
-    eventResponse = await get.getList<Event>("events", 1, 5, "", "-start_date");
-    upcomingEvents = eventResponse.items;
-  }
-} catch (error) {
-  console.error("Failed to fetch events:", error);
-}
-
-const totalEvents = eventResponse.totalItems;
-const totalPages = eventResponse.totalPages;
-const currentPage = eventResponse.page;
-
-// Add type declaration for window
-declare global {
-  interface Window {
-    [key: string]: any;
-    openEditModal: (event?: any) => void;
-    deleteFile: (eventId: string, filename: string) => void;
-    previewFile: (url: string, filename: string) => void;
-    openDetailsModal: (event: Event) => void;
-    showFilePreview: (file: {
-      url: string;
-      type: string;
-      name: string;
-    }) => void;
-    backToFileList: () => void;
-    handlePreviewError: () => void;
-    showLoading: () => void;
-    hideLoading: () => void;
-    deleteEvent: (eventId: string, eventName: string) => Promise<void>;
-    resetAndCloseModal: () => void;
-  }
-}
----
-
-<div id="eventManagementSection" class="dashboard-section hidden">
-  <div class="mb-6 flex justify-between items-center">
-    <div>
-      <h2 class="text-2xl font-bold">Event Management</h2>
-      <p class="opacity-70">Manage and create IEEE UCSD events</p>
-    </div>
-    <button class="btn btn-primary gap-2" onclick="window.openEditModal()">
-      <Icon name="heroicons:plus" class="h-5 w-5" />
-      Add New Event
-    </button>
-  </div>
-
-  <!-- Stats Cards -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div
-      class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
-    >
-      <div class="stat">
-        <div class="stat-title font-medium opacity-80">Total Events</div>
-        <div class="stat-value text-primary" id="totalEvents">-</div>
-        <div class="stat-desc flex items-center gap-2 mt-1">
-          <div class="badge badge-primary badge-sm" id="quarterLabel">
-            Current Academic Term
-          </div>
-        </div>
-      </div>
-    </div>
-    <div
-      class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-secondary transition-all duration-300 hover:-translate-y-1 transform"
-    >
-      <div class="stat">
-        <div class="stat-title font-medium opacity-80">Unique Attendees</div>
-        <div class="stat-value text-secondary" id="uniqueAttendees">-</div>
-        <div class="stat-desc flex items-center gap-2 mt-1">
-          <div class="badge badge-secondary badge-sm">
-            Current Academic Term
-          </div>
-        </div>
-      </div>
-    </div>
-    <div
-      class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-accent transition-all duration-300 hover:-translate-y-1 transform"
-    >
-      <div class="stat">
-        <div class="stat-title font-medium opacity-80">Recurring Attendees</div>
-        <div class="stat-value text-accent" id="recurringAttendees">-</div>
-        <div class="stat-desc flex items-center gap-2 mt-1">
-          <div class="badge badge-accent badge-sm">
-            Current Quarter (<span id="quarterName">-</span>)
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Events List -->
-  <div
-    class="card bg-base-100 shadow-lg border border-base-200 hover:border-primary transition-all duration-300"
-  >
-    <div class="card-body">
-      <h3 class="card-title text-xl font-bold flex items-center gap-3">
-        <div class="badge badge-primary p-3">
-          <Icon name="heroicons:calendar" class="h-5 w-5" />
-        </div>
-        Events List
-      </h3>
-      <div class="divider"></div>
-
-      <!-- Filter Controls -->
-      <div class="flex flex-col gap-4 mb-4">
-        <!-- Time Filters -->
-        <div class="flex flex-wrap gap-4">
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Time Filter</span>
-            </label>
-            <div class="join">
-              <input
-                type="radio"
-                name="timeFilter"
-                value="all"
-                class="join-item btn btn-sm"
-                checked
-                aria-label="All Years"
-              />
-              <input
-                type="radio"
-                name="timeFilter"
-                value="upcoming"
-                class="join-item btn btn-sm"
-                aria-label="Upcoming"
-              />
-              <input
-                type="radio"
-                name="timeFilter"
-                value="past"
-                class="join-item btn btn-sm"
-                aria-label="Past"
-              />
-            </div>
-          </div>
-
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Year</span>
-            </label>
-            <select id="yearFilter" class="select select-bordered select-sm">
-              <option value="all">All Years</option>
-              <!-- Years will be populated dynamically -->
-            </select>
-          </div>
-        </div>
-
-        <!-- Other Filters -->
-        <div class="flex flex-wrap gap-4">
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Published</span>
-            </label>
-            <select
-              id="publishedFilter"
-              class="select select-bordered select-sm"
-            >
-              <option value="all">All</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Has Files</span>
-            </label>
-            <select
-              id="hasFilesFilter"
-              class="select select-bordered select-sm"
-            >
-              <option value="all">All</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">Has Food</span>
-            </label>
-            <select id="hasFoodFilter" class="select select-bordered select-sm">
-              <option value="all">All</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Search and Per Page Controls -->
-      <div class="flex flex-col md:flex-row gap-4 mb-4">
-        <div class="form-control flex-1">
-          <div class="join w-full">
-            <div class="join-item bg-base-200 flex items-center px-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5 opacity-70"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                  clip-rule="evenodd"></path>
-              </svg>
-            </div>
-            <input
-              type="text"
-              id="searchInput"
-              placeholder="Search events..."
-              class="input input-bordered join-item w-full"
-            />
-          </div>
-        </div>
-        <div class="form-control w-full md:w-auto">
-          <div class="join">
-            <div class="join-item bg-base-200 flex items-center px-3">
-              Per Page
-            </div>
-            <select id="perPageSelect" class="select select-bordered join-item">
-              <option value="5">5</option>
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Event Items -->
-      <div class="space-y-4" id="eventsList">
-        <div class="text-center py-8 text-base-content/70">
-          <Icon
-            name="heroicons:calendar"
-            class="h-12 w-12 mx-auto mb-4 opacity-50"
-          />
-          <p>Loading events...</p>
-        </div>
-      </div>
-
-      <!-- Pagination -->
-      <div class="flex justify-center mt-6" id="paginationContainer">
-        <div class="join">
-          <button class="join-item btn btn-sm" id="firstPageBtn">«</button>
-          <button class="join-item btn btn-sm" id="prevPageBtn">‹</button>
-          <button class="join-item btn btn-sm"
-            >Page <span id="currentPageNumber">1</span></button
-          >
-          <button class="join-item btn btn-sm" id="nextPageBtn">›</button>
-          <button class="join-item btn btn-sm" id="lastPageBtn">»</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Edit Event Modal -->
-<dialog id="editEventModal" class="modal">
-  <div class="modal-box max-w-2xl">
-    <h3 class="font-bold text-lg mb-4" id="editModalTitle">Edit Event</h3>
-    <form id="editEventForm" class="space-y-4">
-      <input type="hidden" id="editEventId" />
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Event Name -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Event Name</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="text"
-            id="editEventName"
-            name="editEventName"
-            class="input input-bordered"
-            required
-          />
-        </div>
-
-        <!-- Event Code -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Event Code</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="text"
-            id="editEventCode"
-            name="editEventCode"
-            class="input input-bordered"
-            required
-          />
-        </div>
-
-        <!-- Location -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Location</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="text"
-            id="editEventLocation"
-            name="editEventLocation"
-            class="input input-bordered"
-            required
-          />
-        </div>
-
-        <!-- Points to Reward -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Points to Reward</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="number"
-            id="editEventPoints"
-            name="editEventPoints"
-            class="input input-bordered"
-            min="0"
-            required
-          />
-        </div>
-
-        <!-- Start Date -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Start Date</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="datetime-local"
-            id="editEventStartDate"
-            name="editEventStartDate"
-            class="input input-bordered"
-            required
-          />
-        </div>
-
-        <!-- End Date -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">End Date</span>
-            <span class="label-text-alt text-error">*</span>
-          </label>
-          <input
-            type="datetime-local"
-            id="editEventEndDate"
-            name="editEventEndDate"
-            class="input input-bordered"
-            required
-          />
-        </div>
-      </div>
-
-      <!-- Description -->
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text">Description</span>
-          <span class="label-text-alt text-error">*</span>
-        </label>
-        <textarea
-          id="editEventDescription"
-          name="editEventDescription"
-          class="textarea textarea-bordered"
-          rows="3"
-          required></textarea>
-      </div>
-
-      <!-- Files -->
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text">Upload Files</span>
-        </label>
-        <input
-          type="file"
-          id="editEventFiles"
-          class="file-input file-input-bordered"
-          multiple
-        />
-        <div class="mt-4 space-y-2">
-          <div id="newFiles" class="space-y-2">
-            <!-- New files will be listed here -->
-          </div>
-          <div class="divider">Current Files</div>
-          <div id="currentFiles" class="space-y-2">
-            <!-- Current files will be listed here -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Published -->
-      <div class="form-control">
-        <label class="label cursor-pointer justify-start gap-4">
-          <input
-            type="checkbox"
-            id="editEventPublished"
-            name="editEventPublished"
-            class="toggle"
-          />
-          <span class="label-text">Publish Event</span>
-        </label>
-        <label class="label">
-          <span class="label-text-alt text-info"
-            >This has to be clicked if you want to make this event available to
-            the public</span
-          >
-        </label>
-      </div>
-
-      <!-- Has Food -->
-      <div class="form-control">
-        <label class="label cursor-pointer justify-start gap-4">
-          <input
-            type="checkbox"
-            id="editEventHasFood"
-            name="editEventHasFood"
-            class="toggle"
-          />
-          <span class="label-text">Has Food</span>
-        </label>
-        <label class="label">
-          <span class="label-text-alt text-info"
-            >Check this if food will be provided at the event</span
-          >
-        </label>
-      </div>
-
-      <div class="modal-action">
-        <button type="submit" class="btn btn-primary">Save Changes</button>
-        <button type="button" class="btn" onclick="editEventModal.close()"
-          >Cancel</button
-        >
-      </div>
-    </form>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button>close</button>
-  </form>
-</dialog>
-
-<!-- Event Details Modal -->
-<dialog id="eventDetailsModal" class="modal">
-  <div class="modal-box max-w-4xl">
-    <div class="flex justify-between items-center mb-4">
-      <div class="flex items-center gap-3">
-        <h3 class="font-bold text-lg" id="modalTitle">Event Details</h3>
-      </div>
-      <button
-        class="btn btn-circle btn-ghost"
-        onclick="eventDetailsModal.close()"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
-    </div>
-
-    <div class="tabs tabs-boxed mb-4">
-      <button class="tab tab-active" data-tab="files">Files</button>
-      <button class="tab" data-tab="attendees">Attendees</button>
-    </div>
-
-    <div id="filesContent" class="space-y-4">
-      <!-- Files list will be populated here -->
-    </div>
-
-    <div id="attendeesContent" class="space-y-4 hidden">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-semibold">Event Attendees</h3>
-        <button id="downloadAttendeesCSV" class="btn btn-primary btn-sm gap-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-              clip-rule="evenodd"></path>
-          </svg>
-          Download CSV
-        </button>
-      </div>
-      <!-- Attendees list will be populated here -->
-    </div>
-
-    <!-- File Preview Section -->
-    <div id="filePreviewSection" class="hidden">
-      <div class="flex justify-between items-center mb-4">
-        <div class="flex items-center gap-3">
-          <button class="btn btn-ghost btn-sm" onclick="backToFileList()">
-            ← Back
-          </button>
-          <h3 class="font-bold text-lg truncate" id="previewFileName"></h3>
-        </div>
-      </div>
-      <div class="relative" id="previewContainer">
-        <div
-          id="loadingSpinner"
-          class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
-        >
-          <span class="loading loading-spinner loading-lg"></span>
-        </div>
-        <div id="previewContent" class="w-full"></div>
-      </div>
-    </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button>close</button>
-  </form>
-</dialog>
-
-<script>
-  import { Get } from "../pocketbase/Get";
-  import { Authentication } from "../pocketbase/Authentication";
-  import { Update } from "../pocketbase/Update";
-  import { FileManager } from "../pocketbase/FileManager";
-  import { SendLog } from "../pocketbase/SendLog";
-
-  interface AttendeeEntry {
-    user_id: string;
-    time_checked_in: string;
-    food: string;
-  }
-
-  interface Event {
     id: string;
     event_name: string;
     event_description: string;
@@ -608,1291 +27,852 @@ declare global {
     published: boolean;
     has_food: boolean;
     attendees: AttendeeEntry[];
-  }
+}
 
-  const get = Get.getInstance();
-  const auth = Authentication.getInstance();
-  const update = Update.getInstance();
-  const fileManager = FileManager.getInstance();
-  const sendLog = SendLog.getInstance();
+interface AttendeeEntry {
+    user_id: string;
+    time_checked_in: string;
+    food: string;
+}
 
-  let currentPage = 1;
-  let totalPages = 0;
-  let searchQuery = "";
-  let perPage = 5;
+interface ListResponse<T> {
+    page: number;
+    perPage: number;
+    totalItems: number;
+    totalPages: number;
+    items: T[];
+}
 
-  // Store temporary files
-  let tempFiles: File[] = [];
+// Initialize variables
+let eventResponse: ListResponse<Event> = {
+    page: 1,
+    perPage: 5,
+    totalItems: 0,
+    totalPages: 0,
+    items: [],
+};
+let upcomingEvents: Event[] = [];
 
-  // Add resetModalState function
-  function resetModalState() {
-    const filesContent = document.getElementById("filesContent");
-    const attendeesContent = document.getElementById("attendeesContent");
-    const filePreviewSection = document.getElementById("filePreviewSection");
-    const modalTitle = document.getElementById("modalTitle");
-    const tabs = document.querySelectorAll(
-      ".tab",
-    ) as NodeListOf<HTMLButtonElement>;
-
-    // Reset tab states
-    tabs.forEach((tab) => {
-      if (tab.getAttribute("data-tab") === "files") {
-        tab.classList.add("tab-active");
-      } else {
-        tab.classList.remove("tab-active");
-      }
-    });
-
-    // Reset content visibility
-    if (filesContent) filesContent.classList.remove("hidden");
-    if (attendeesContent) attendeesContent.classList.add("hidden");
-    if (filePreviewSection) filePreviewSection.classList.add("hidden");
-    if (modalTitle) modalTitle.textContent = "Event Details";
-
-    // Clear any existing content
-    if (attendeesContent) {
-      attendeesContent.innerHTML = "";
-    }
-  }
-
-  // Add event listener for modal close when the DOM is loaded
-  document.addEventListener("DOMContentLoaded", () => {
-    const eventDetailsModal = document.getElementById(
-      "eventDetailsModal",
-    ) as HTMLDialogElement;
-    if (eventDetailsModal) {
-      eventDetailsModal.addEventListener("close", resetModalState);
-    }
-  });
-
-  // Add event listeners for filters
-  const searchInput = document.getElementById(
-    "searchInput",
-  ) as HTMLInputElement;
-  const perPageSelect = document.getElementById(
-    "perPageSelect",
-  ) as HTMLSelectElement;
-
-  if (searchInput) {
-    let debounceTimeout: NodeJS.Timeout;
-    searchInput.addEventListener("input", () => {
-      clearTimeout(debounceTimeout);
-      debounceTimeout = setTimeout(() => {
-        searchQuery = searchInput.value;
-        currentPage = 1; // Reset to first page when searching
-        fetchEvents();
-      }, 300); // Debounce for 300ms
-    });
-  }
-
-  if (perPageSelect) {
-    perPageSelect.addEventListener("change", () => {
-      perPage = parseInt(perPageSelect.value);
-      currentPage = 1; // Reset to first page when changing items per page
-      fetchEvents();
-    });
-  }
-
-  // Make openEditModal available globally
-  window.openEditModal = function (event?: any) {
-    // Convert event times to local time if event exists
-    const localEvent = event ? Get.convertUTCToLocal(event) : null;
-
-    const modal = document.getElementById(
-      "editEventModal",
-    ) as HTMLDialogElement;
-    const modalTitle = document.getElementById("editModalTitle");
-    const form = document.getElementById("editEventForm") as HTMLFormElement;
-    const idInput = document.getElementById("editEventId") as HTMLInputElement;
-    const nameInput = document.getElementById(
-      "editEventName",
-    ) as HTMLInputElement;
-    const descInput = document.getElementById(
-      "editEventDescription",
-    ) as HTMLTextAreaElement;
-    const codeInput = document.getElementById(
-      "editEventCode",
-    ) as HTMLInputElement;
-    const locationInput = document.getElementById(
-      "editEventLocation",
-    ) as HTMLInputElement;
-    const pointsInput = document.getElementById(
-      "editEventPoints",
-    ) as HTMLInputElement;
-    const startDateInput = document.getElementById(
-      "editEventStartDate",
-    ) as HTMLInputElement;
-    const endDateInput = document.getElementById(
-      "editEventEndDate",
-    ) as HTMLInputElement;
-    const publishedInput = document.getElementById(
-      "editEventPublished",
-    ) as HTMLInputElement;
-    const currentFilesDiv = document.getElementById(
-      "currentFiles",
-    ) as HTMLDivElement;
-
-    // Update modal title based on whether we're editing or creating
-    if (modalTitle) {
-      modalTitle.textContent = localEvent ? "Edit Event" : "Create New Event";
-    }
-
-    // Set values
-    idInput.value = localEvent?.id || "";
-    nameInput.value = localEvent?.event_name || "";
-    descInput.value = localEvent?.event_description || "";
-    codeInput.value = localEvent?.event_code || "";
-    locationInput.value = localEvent?.location || "";
-    pointsInput.value = localEvent?.points_to_reward?.toString() || "0";
-    publishedInput.checked = localEvent?.published || false;
-    const hasFoodInput = document.getElementById(
-      "editEventHasFood",
-    ) as HTMLInputElement;
-    hasFoodInput.checked = localEvent?.has_food || false;
-
-    // Format dates properly for datetime-local input
-    try {
-      const now = new Date();
-      const startDate = localEvent ? new Date(localEvent.start_date) : now;
-      const endDate = localEvent
-        ? new Date(localEvent.end_date)
-        : new Date(now.getTime() + 60 * 60 * 1000); // Default to 1 hour duration
-
-      if (!isNaN(startDate.getTime())) {
-        startDateInput.value = new Date(
-          startDate.getTime() - startDate.getTimezoneOffset() * 60000,
-        )
-          .toISOString()
-          .slice(0, 16);
-      }
-
-      if (!isNaN(endDate.getTime())) {
-        endDateInput.value = new Date(
-          endDate.getTime() - endDate.getTimezoneOffset() * 60000,
-        )
-          .toISOString()
-          .slice(0, 16);
-      }
-    } catch (e) {
-      console.error("Error formatting dates:", e);
-    }
-
-    // Reset temp files
-    tempFiles = [];
-    const newFilesDiv = document.getElementById("newFiles") as HTMLDivElement;
-    newFilesDiv.innerHTML = "";
-
-    // Display current files if any
-    if (localEvent?.files && localEvent.files.length > 0) {
-      const baseUrl = "https://pocketbase.ieeeucsd.org";
-      const collectionId = "events";
-      const recordId = localEvent.id;
-
-      currentFilesDiv.innerHTML = localEvent.files
-        .map(
-          (file: string) => `
-        <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg">
-          <span class="text-sm truncate flex-1">${file}</span>
-          <div class="flex gap-2">
-            <button type="button" class="btn btn-ghost btn-sm text-error" onclick="deleteFile('${localEvent.id}', '${file}')">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      `,
-        )
-        .join("");
-    } else {
-      currentFilesDiv.innerHTML =
-        '<p class="text-sm opacity-70">No files attached</p>';
-    }
-
-    modal.showModal();
-  };
-
-  // Preview file using FileViewerModal
-  window.previewFile = function (url: string, filename: string) {
-    const fileType = getFileType(filename);
-    const fileData = {
-      url,
-      type: fileType,
-      name: filename,
-    };
-
-    // Create and dispatch custom event for FileViewerModal
-    const event = new CustomEvent("showFileViewer", {
-      detail: { files: fileData },
-    });
-    window.dispatchEvent(event);
-  };
-
-  // Helper function to determine file type
-  function getFileType(filename: string): string {
-    const extension = filename.split(".").pop()?.toLowerCase();
-    const mimeTypes: { [key: string]: string } = {
-      pdf: "application/pdf",
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      png: "image/png",
-      gif: "image/gif",
-      mp4: "video/mp4",
-      mp3: "audio/mpeg",
-      txt: "text/plain",
-      doc: "application/msword",
-      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      xls: "application/vnd.ms-excel",
-      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      json: "application/json",
-    };
-
-    return mimeTypes[extension || ""] || "application/octet-stream";
-  }
-
-  // Handle file deletion
-  window.deleteFile = async function (eventId: string, filename: string) {
-    try {
-      await fileManager.deleteFile("events", eventId, "files");
-      await sendLog.send(
-        "delete",
-        "event_files",
-        `Deleted file ${filename} from event ${eventId}`,
-      );
-      await fetchEvents(); // Refresh the list
-    } catch (error) {
-      console.error("Failed to delete file:", error);
-    }
-  };
-
-  // Handle file input change
-  const fileInput = document.getElementById(
-    "editEventFiles",
-  ) as HTMLInputElement;
-  if (fileInput) {
-    fileInput.addEventListener("change", function () {
-      if (this.files && this.files.length > 0) {
-        const newFilesDiv = document.getElementById(
-          "newFiles",
-        ) as HTMLDivElement;
-
-        // Add new files to temp storage
-        Array.from(this.files).forEach((file) => {
-          tempFiles.push(file);
-        });
-
-        // Update preview
-        newFilesDiv.innerHTML = tempFiles
-          .map(
-            (file, index) => `
-          <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg">
-            <span class="text-sm truncate flex-1">${file.name}</span>
-            <div class="flex gap-2">
-              <button type="button" class="btn btn-ghost btn-sm text-error" onclick="removeTempFile(${index})">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        `,
-          )
-          .join("");
-
-        // Clear the file input
-        this.value = "";
-      }
-    });
-  }
-
-  // Remove temp file
-  window.removeTempFile = function (index: number) {
-    tempFiles.splice(index, 1);
-    const newFilesDiv = document.getElementById("newFiles") as HTMLDivElement;
-
-    if (tempFiles.length === 0) {
-      newFilesDiv.innerHTML = "";
-      return;
-    }
-
-    // Update preview
-    newFilesDiv.innerHTML = tempFiles
-      .map(
-        (file, idx) => `
-      <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg">
-        <span class="text-sm truncate flex-1">${file.name}</span>
-        <div class="flex gap-2">
-          <button type="button" class="btn btn-ghost btn-sm text-error" onclick="removeTempFile(${idx})">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
-          </button>
-        </div>
-      </div>
-    `,
-      )
-      .join("");
-  };
-
-  // Update form submission to handle both create and edit
-  const editForm = document.getElementById("editEventForm") as HTMLFormElement;
-  if (editForm) {
-    editForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const modal = document.getElementById(
-        "editEventModal",
-      ) as HTMLDialogElement;
-
-      try {
-        const formData = new FormData(editForm);
-        const eventId = (
-          document.getElementById("editEventId") as HTMLInputElement
-        ).value;
-
-        // Get the date strings from the form
-        const startDateStr = formData.get("editEventStartDate") as string;
-        const endDateStr = formData.get("editEventEndDate") as string;
-
-        // Convert local dates to UTC ISO strings
-        const startDate = new Date(startDateStr);
-        const endDate = new Date(endDateStr);
-
-        // Get points value and ensure it's a number
-        const pointsValue = parseInt(formData.get("editEventPoints") as string);
-        const points = isNaN(pointsValue) ? 0 : pointsValue;
-
-        // Prepare base event data without attendees
-        const baseEventData = {
-          event_name: formData.get("editEventName"),
-          event_description: formData.get("editEventDescription"),
-          event_code: formData.get("editEventCode"),
-          location: formData.get("editEventLocation"),
-          points_to_reward: points,
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
-          published: formData.get("editEventPublished") === "on",
-          has_food: formData.get("editEventHasFood") === "on",
-        };
-
-        // For new events, add empty attendees list
-        const eventData = eventId
-          ? baseEventData
-          : { ...baseEventData, attendees: [] };
-
-        // Update event details
-        auth.setUpdating(true);
-        try {
-          let result;
-
-          if (eventId) {
-            // Update existing event using Update class
-            result = await update.updateFields("events", eventId, eventData);
-
-            // Append new files if any, using appendFiles to preserve existing ones
-            if (tempFiles.length > 0) {
-              await fileManager.appendFiles(
-                "events",
-                result.id,
-                "files",
-                tempFiles,
-              );
-            }
-          } else {
-            // Create new event using PocketBase
-            const pb = auth.getPocketBase();
-            result = await pb.collection("events").create(eventData);
-
-            // For new events, use uploadFiles since there are no existing files
-            if (tempFiles.length > 0) {
-              await fileManager.uploadFiles(
-                "events",
-                result.id,
-                "files",
-                tempFiles,
-              );
-            }
-          }
-
-          // Log the action
-          await sendLog.send(
-            eventId ? "update" : "create",
+// Fetch events
+try {
+    if (auth.isAuthenticated()) {
+        eventResponse = await get.getList<Event>(
             "events",
-            `${eventId ? "Updated" : "Created"} event ${eventData.event_name}`,
-          );
+            1,
+            5,
+            "",
+            "-start_date"
+        );
+        upcomingEvents = eventResponse.items;
+    }
+} catch (error) {
+    console.error("Failed to fetch events:", error);
+}
 
-          modal.close();
-          await fetchEvents(); // Refresh the list
-        } finally {
-          auth.setUpdating(false);
-        }
-      } catch (error) {
-        console.error("Failed to save event:", error);
-        alert("Failed to save event. Please try again.");
-      }
-    });
-  }
+const totalEvents = eventResponse.totalItems;
+const totalPages = eventResponse.totalPages;
+const currentPage = eventResponse.page;
 
-  // File preview functionality
-  let currentFiles = [];
-  let currentEventId = "";
+// Add type declaration for window
+declare global {
+    interface Window {
+        [key: string]: any;
+        openEditModal: (event?: any) => void;
+        deleteFile: (eventId: string, filename: string) => void;
+        previewFile: (url: string, filename: string) => void;
+        openDetailsModal: (event: Event) => void;
+        showFilePreview: (file: {
+            url: string;
+            type: string;
+            name: string;
+        }) => void;
+        backToFileList: () => void;
+        handlePreviewError: () => void;
+        showLoading: () => void;
+        hideLoading: () => void;
+        deleteEvent: (eventId: string, eventName: string) => Promise<void>;
+        resetAndCloseModal: () => void;
+    }
+}
+---
 
-  function showLoading() {
-    const spinner = document.getElementById("loadingSpinner");
-    if (spinner) spinner.classList.remove("hidden");
-  }
-
-  function hideLoading() {
-    const spinner = document.getElementById("loadingSpinner");
-    if (spinner) spinner.classList.add("hidden");
-  }
-
-  function isPreviewableType(fileType: string): boolean {
-    return (
-      fileType.startsWith("image/") ||
-      fileType.startsWith("video/") ||
-      fileType.startsWith("audio/") ||
-      fileType === "application/pdf" ||
-      fileType.startsWith("text/") ||
-      fileType === "application/json"
-    );
-  }
-
-  function backToFileList() {
-    const filePreviewSection = document.getElementById("filePreviewSection");
-    const filesContent = document.getElementById("filesContent");
-    const modalTitle = document.getElementById("modalTitle");
-
-    if (filePreviewSection) filePreviewSection.classList.add("hidden");
-    if (filesContent) filesContent.classList.remove("hidden");
-    if (modalTitle) modalTitle.textContent = "Event Details";
-  }
-
-  function showFilePreview(file: { url: string; type: string; name: string }) {
-    const filePreviewSection = document.getElementById("filePreviewSection");
-    const filesContent = document.getElementById("filesContent");
-    const previewContent = document.getElementById("previewContent");
-    const previewFileName = document.getElementById("previewFileName");
-    const modalTitle = document.getElementById("modalTitle");
-
-    if (
-      !filePreviewSection ||
-      !filesContent ||
-      !previewContent ||
-      !previewFileName
-    )
-      return;
-
-    filePreviewSection.classList.remove("hidden");
-    filesContent.classList.add("hidden");
-    previewFileName.textContent = file.name;
-    if (modalTitle) modalTitle.textContent = "File Preview";
-
-    const fileType = file.type.toLowerCase();
-    showLoading();
-
-    // Create the PocketBase URL
-    const baseUrl = "https://pocketbase.ieeeucsd.org";
-    const fileUrl = `${baseUrl}/api/files/events/${currentEventId}/${file.name}`;
-
-    if (!isPreviewableType(fileType)) {
-      previewContent.innerHTML = `
-        <div class="flex flex-col items-center justify-center p-8">
-          <div class="text-4xl mb-4">📄</div>
-          <p class="text-center">
-            This file type (${file.type}) cannot be previewed.
-            <br />
-            <a href="${fileUrl}" download="${file.name}" class="btn btn-primary mt-4" target="_blank" rel="noopener noreferrer">
-              Open in New Tab
-            </a>
-          </p>
+<div id="eventManagementSection" class="dashboard-section hidden">
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h2 class="text-2xl font-bold">Event Management</h2>
+            <p class="opacity-70">Manage and create IEEE UCSD events</p>
         </div>
-      `;
-      hideLoading();
-      return;
-    }
+        <button class="btn btn-primary gap-2" onclick="window.openEditModal()">
+            <Icon name="heroicons:plus" class="h-5 w-5" />
+            Add New Event
+        </button>
+    </div>
 
-    if (fileType.startsWith("image/")) {
-      previewContent.innerHTML = `
-        <img
-          src="${fileUrl}"
-          alt="${file.name}"
-          class="max-w-full max-h-[70vh] object-contain"
-          onload="hideLoading()"
-          onerror="handlePreviewError()"
-        />
-      `;
-    } else if (fileType.startsWith("video/")) {
-      previewContent.innerHTML = `
-        <video controls class="max-w-full max-h-[70vh]" onloadeddata="hideLoading()" onerror="handlePreviewError()">
-          <source src="${fileUrl}" type="${file.type}" />
-          Your browser does not support the video tag.
-        </video>
-      `;
-    } else if (fileType === "application/pdf") {
-      previewContent.innerHTML = `
-        <iframe
-          src="${fileUrl}"
-          class="w-full h-[70vh]"
-          onload="hideLoading()"
-          onerror="handlePreviewError()"
-        ></iframe>
-      `;
-    } else if (
-      fileType.startsWith("text/") ||
-      fileType === "application/json"
-    ) {
-      previewContent.innerHTML = `
-        <iframe
-          src="${fileUrl}"
-          class="w-full h-[70vh] font-mono"
-          onload="hideLoading()"
-          onerror="handlePreviewError()"
-        ></iframe>
-      `;
-    } else if (fileType.startsWith("audio/")) {
-      previewContent.innerHTML = `
-        <audio controls class="w-full" onloadeddata="hideLoading()" onerror="handlePreviewError()">
-          <source src="${fileUrl}" type="${file.type}" />
-          Your browser does not support the audio element.
-        </audio>
-      `;
-    }
-  }
-
-  function handlePreviewError() {
-    hideLoading();
-    const previewContent = document.getElementById("previewContent");
-    if (previewContent) {
-      previewContent.innerHTML = `
-        <div class="alert alert-error">
-          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>Failed to load file preview</span>
-        </div>
-      `;
-    }
-  }
-
-  // Add CSV export functionality
-  async function exportAttendeesToCSV(event: Event) {
-    try {
-      const pb = auth.getPocketBase();
-
-      // Fetch all user details for the attendees
-      const attendeePromises = event.attendees.map(function (
-        attendee: AttendeeEntry,
-      ) {
-        return pb.collection("users").getOne(attendee.user_id);
-      });
-      const users = await Promise.all(attendeePromises);
-
-      // Create CSV header
-      const csvHeader = [
-        "Name",
-        "Email",
-        "Member ID",
-        "Member Type",
-        "Graduation Year",
-        "Major",
-        "Time Checked In",
-        "Food Selection",
-      ].join(",");
-
-      // Create CSV rows
-      const csvRows = event.attendees.map(
-        (attendee: AttendeeEntry, index: number) => {
-          const user = users[index];
-          const checkInTime = new Date(
-            attendee.time_checked_in,
-          ).toLocaleString();
-
-          // Escape and format fields to handle commas and quotes
-          const formatField = (field: any) => {
-            if (field === null || field === undefined) return '""';
-            return `"${String(field).replace(/"/g, '""')}"`;
-          };
-
-          return [
-            formatField(user.name),
-            formatField(user.email),
-            formatField(user.member_id),
-            formatField(user.member_type),
-            formatField(user.graduation_year),
-            formatField(user.major),
-            formatField(checkInTime),
-            formatField(attendee.food),
-          ].join(",");
-        },
-      );
-
-      // Combine header and rows
-      const csvContent = [csvHeader, ...csvRows].join("\n");
-
-      // Create and trigger download
-      const blob = new Blob([csvContent], {
-        type: "text/csv;charset=utf-8;",
-      });
-      const link = document.createElement("a");
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `${event.event_name}_attendees.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Show toast using the existing toast function
-      const toastContainer = document.querySelector(".toast-container");
-      if (toastContainer) {
-        const toast = document.createElement("div");
-        toast.className = "toast translate-x-full";
-        toast.setAttribute("data-index", "0");
-        toast.innerHTML = `
-          <div class="alert alert-success shadow-lg min-w-[300px]">
-            <span>Attendees list downloaded successfully</span>
-          </div>
-        `;
-        toastContainer.appendChild(toast);
-        requestAnimationFrame(() => {
-          toast.classList.remove("translate-x-full");
-        });
-        setTimeout(() => {
-          toast.classList.add("toast-exit");
-          setTimeout(() => toast.remove(), 150);
-        }, 3000);
-      }
-    } catch (error) {
-      console.error("Failed to export attendees:", error);
-      // Show error toast using the existing toast container
-      const toastContainer = document.querySelector(".toast-container");
-      if (toastContainer) {
-        const toast = document.createElement("div");
-        toast.className = "toast translate-x-full";
-        toast.setAttribute("data-index", "0");
-        toast.innerHTML = `
-          <div class="alert alert-error shadow-lg min-w-[300px]">
-            <span>Failed to download attendees list</span>
-          </div>
-        `;
-        toastContainer.appendChild(toast);
-        requestAnimationFrame(() => {
-          toast.classList.remove("translate-x-full");
-        });
-        setTimeout(() => {
-          toast.classList.add("toast-exit");
-          setTimeout(() => toast.remove(), 150);
-        }, 3000);
-      }
-    }
-  }
-
-  // Update the openDetailsModal function to add click handler for CSV download
-  window.openDetailsModal = function (event: any) {
-    // Convert event times to local time
-    const localEvent = Get.convertUTCToLocal(event);
-
-    const modal = document.getElementById(
-      "eventDetailsModal",
-    ) as HTMLDialogElement;
-    const filesContent = document.getElementById(
-      "filesContent",
-    ) as HTMLDivElement;
-    const attendeesContent = document.getElementById(
-      "attendeesContent",
-    ) as HTMLDivElement;
-    const filePreviewSection = document.getElementById(
-      "filePreviewSection",
-    ) as HTMLDivElement;
-    const tabs = modal.querySelectorAll(
-      ".tab",
-    ) as NodeListOf<HTMLButtonElement>;
-
-    // Reset state
-    currentFiles = [];
-    currentEventId = localEvent.id;
-    if (filePreviewSection) filePreviewSection.classList.add("hidden");
-    if (filesContent) filesContent.classList.remove("hidden");
-
-    // Handle tab switching
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", async () => {
-        tabs.forEach((t) => t.classList.remove("tab-active"));
-        tab.classList.add("tab-active");
-
-        const tabName = tab.getAttribute("data-tab");
-        if (tabName === "files") {
-          filesContent.classList.remove("hidden");
-          attendeesContent.classList.add("hidden");
-          filePreviewSection.classList.add("hidden");
-        } else if (tabName === "attendees") {
-          filesContent.classList.add("hidden");
-          attendeesContent.classList.remove("hidden");
-          filePreviewSection.classList.add("hidden");
-
-          // Show loading state
-          attendeesContent.innerHTML = `
-            <div class="text-center py-8">
-              <span class="loading loading-spinner loading-lg"></span>
-              <p class="mt-4">Loading attendees...</p>
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div
+            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
+        >
+            <div class="stat">
+                <div class="stat-title font-medium opacity-80">
+                    Total Events
+                </div>
+                <div class="stat-value text-primary" id="totalEvents">-</div>
+                <div class="stat-desc flex items-center gap-2 mt-1">
+                    <div class="badge badge-primary badge-sm" id="quarterLabel">
+                        Current Academic Term
+                    </div>
+                </div>
             </div>
-          `;
+        </div>
+        <div
+            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-secondary transition-all duration-300 hover:-translate-y-1 transform"
+        >
+            <div class="stat">
+                <div class="stat-title font-medium opacity-80">
+                    Unique Attendees
+                </div>
+                <div class="stat-value text-secondary" id="uniqueAttendees">
+                    -
+                </div>
+                <div class="stat-desc flex items-center gap-2 mt-1">
+                    <div class="badge badge-secondary badge-sm">
+                        Current Academic Term
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div
+            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-accent transition-all duration-300 hover:-translate-y-1 transform"
+        >
+            <div class="stat">
+                <div class="stat-title font-medium opacity-80">
+                    Recurring Attendees
+                </div>
+                <div class="stat-value text-accent" id="recurringAttendees">
+                    -
+                </div>
+                <div class="stat-desc flex items-center gap-2 mt-1">
+                    <div class="badge badge-accent badge-sm">
+                        Current Quarter (<span id="quarterName">-</span>)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-          try {
-            // Check if event has attendees
-            if (!localEvent.attendees || localEvent.attendees.length === 0) {
-              attendeesContent.innerHTML = `
+    <!-- Events List -->
+    <div
+        class="card bg-base-100 shadow-lg border border-base-200 hover:border-primary transition-all duration-300"
+    >
+        <div class="card-body">
+            <h3 class="card-title text-xl font-bold flex items-center gap-3">
+                <div class="badge badge-primary p-3">
+                    <Icon name="heroicons:calendar" class="h-5 w-5" />
+                </div>
+                Events List
+            </h3>
+            <div class="divider"></div>
+
+            <!-- Filter Controls -->
+            <div class="flex flex-col gap-4 mb-4">
+                <!-- Time Filters -->
+                <div class="flex flex-wrap gap-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium"
+                                >Time Filter</span
+                            >
+                        </label>
+                        <div class="join">
+                            <input
+                                type="radio"
+                                name="timeFilter"
+                                value="all"
+                                class="join-item btn btn-sm"
+                                checked
+                                aria-label="All Years"
+                            />
+                            <input
+                                type="radio"
+                                name="timeFilter"
+                                value="upcoming"
+                                class="join-item btn btn-sm"
+                                aria-label="Upcoming"
+                            />
+                            <input
+                                type="radio"
+                                name="timeFilter"
+                                value="past"
+                                class="join-item btn btn-sm"
+                                aria-label="Past"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Year</span>
+                        </label>
+                        <select
+                            id="yearFilter"
+                            class="select select-bordered select-sm"
+                        >
+                            <option value="all">All Years</option>
+                            <!-- Years will be populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Other Filters -->
+                <div class="flex flex-wrap gap-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Published</span
+                            >
+                        </label>
+                        <select
+                            id="publishedFilter"
+                            class="select select-bordered select-sm"
+                        >
+                            <option value="all">All</option>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Has Files</span
+                            >
+                        </label>
+                        <select
+                            id="hasFilesFilter"
+                            class="select select-bordered select-sm"
+                        >
+                            <option value="all">All</option>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Has Food</span>
+                        </label>
+                        <select
+                            id="hasFoodFilter"
+                            class="select select-bordered select-sm"
+                        >
+                            <option value="all">All</option>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Per Page Controls -->
+            <div class="flex flex-col md:flex-row gap-4 mb-4">
+                <div class="form-control flex-1">
+                    <div class="join w-full">
+                        <div
+                            class="join-item bg-base-200 flex items-center px-3"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5 opacity-70"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                    clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Search events..."
+                            class="input input-bordered join-item w-full"
+                        />
+                    </div>
+                </div>
+                <div class="form-control w-full md:w-auto">
+                    <div class="join">
+                        <div
+                            class="join-item bg-base-200 flex items-center px-3"
+                        >
+                            Per Page
+                        </div>
+                        <select
+                            id="perPageSelect"
+                            class="select select-bordered join-item"
+                        >
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Event Items -->
+            <div class="space-y-4" id="eventsList">
                 <div class="text-center py-8 text-base-content/70">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                  </svg>
-                  <p>No attendees for this event</p>
+                    <Icon
+                        name="heroicons:calendar"
+                        class="h-12 w-12 mx-auto mb-4 opacity-50"
+                    />
+                    <p>Loading events...</p>
                 </div>
-              `;
-              return;
-            }
+            </div>
 
-            // Fetch user details for each attendee
-            const pb = auth.getPocketBase();
-            const attendeePromises = localEvent.attendees.map(function (
-              attendee: AttendeeEntry,
-            ) {
-              return pb.collection("users").getOne(attendee.user_id);
-            });
-            const users = await Promise.all(attendeePromises);
-
-            // Display attendees in a table
-            attendeesContent.innerHTML = `
-              <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Event Attendees</h3>
-                <button id="downloadAttendeesCSV" class="btn btn-primary btn-sm gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                  </svg>
-                  Download CSV
-                </button>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="table table-zebra w-full">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Major</th>
-                      <th>Year</th>
-                      <th>Check-in Time</th>
-                      <th>Food Selection</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${localEvent.attendees
-                      .map(function (
-                        attendee: AttendeeEntry,
-                        index: number,
-                      ): string {
-                        const user = users[index];
-                        const checkInTime = new Date(
-                          attendee.time_checked_in,
-                        ).toLocaleString();
-                        return `
-                        <tr>
-                          <td>${user.name || "N/A"}</td>
-                          <td>${user.email || "N/A"}</td>
-                          <td>${user.major || "N/A"}</td>
-                          <td>${user.graduation_year || "N/A"}</td>
-                          <td>${checkInTime}</td>
-                          <td>${attendee.food || "N/A"}</td>
-                        </tr>
-                      `;
-                      })
-                      .join("")}
-                  </tbody>
-                </table>
-                <div class="mt-4 text-sm opacity-70 text-right">
-                  Total Attendees: ${localEvent.attendees.length}
+            <!-- Pagination -->
+            <div class="flex justify-center mt-6" id="paginationContainer">
+                <div class="join">
+                    <button class="join-item btn btn-sm" id="firstPageBtn"
+                        >«</button
+                    >
+                    <button class="join-item btn btn-sm" id="prevPageBtn"
+                        >‹</button
+                    >
+                    <button class="join-item btn btn-sm"
+                        >Page <span id="currentPageNumber">1</span></button
+                    >
+                    <button class="join-item btn btn-sm" id="nextPageBtn"
+                        >›</button
+                    >
+                    <button class="join-item btn btn-sm" id="lastPageBtn"
+                        >»</button
+                    >
                 </div>
-              </div>
-            `;
+            </div>
+        </div>
+    </div>
+</div>
 
-            // Add click handler for CSV download button
-            const downloadButton = document.getElementById(
-              "downloadAttendeesCSV",
-            );
-            if (downloadButton) {
-              downloadButton.onclick = () => exportAttendeesToCSV(localEvent);
-            }
-          } catch (error) {
-            console.error("Failed to fetch attendees:", error);
-            attendeesContent.innerHTML = `
-              <div class="alert alert-error">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+<!-- Edit Event Modal -->
+<dialog id="editEventModal" class="modal">
+    <div class="modal-box max-w-2xl">
+        <h3 class="font-bold text-lg mb-4" id="editModalTitle">Edit Event</h3>
+        <form id="editEventForm" class="space-y-4">
+            <input type="hidden" id="editEventId" />
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Event Name -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Event Name</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="editEventName"
+                        name="editEventName"
+                        class="input input-bordered"
+                        required
+                    />
+                </div>
+
+                <!-- Event Code -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Event Code</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="editEventCode"
+                        name="editEventCode"
+                        class="input input-bordered"
+                        required
+                    />
+                </div>
+
+                <!-- Location -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Location</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        id="editEventLocation"
+                        name="editEventLocation"
+                        class="input input-bordered"
+                        required
+                    />
+                </div>
+
+                <!-- Points to Reward -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Points to Reward</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="number"
+                        id="editEventPoints"
+                        name="editEventPoints"
+                        class="input input-bordered"
+                        min="0"
+                        required
+                    />
+                </div>
+
+                <!-- Start Date -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Start Date</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="datetime-local"
+                        id="editEventStartDate"
+                        name="editEventStartDate"
+                        class="input input-bordered"
+                        required
+                    />
+                </div>
+
+                <!-- End Date -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">End Date</span>
+                        <span class="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="datetime-local"
+                        id="editEventEndDate"
+                        name="editEventEndDate"
+                        class="input input-bordered"
+                        required
+                    />
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Description</span>
+                    <span class="label-text-alt text-error">*</span>
+                </label>
+                <textarea
+                    id="editEventDescription"
+                    name="editEventDescription"
+                    class="textarea textarea-bordered"
+                    rows="3"
+                    required></textarea>
+            </div>
+
+            <!-- Files -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Upload Files</span>
+                </label>
+                <input
+                    type="file"
+                    id="editEventFiles"
+                    class="file-input file-input-bordered"
+                    multiple
+                />
+                <div class="mt-4 space-y-2">
+                    <div id="newFiles" class="space-y-2">
+                        <!-- New files will be listed here -->
+                    </div>
+                    <div class="divider">Current Files</div>
+                    <div id="currentFiles" class="space-y-2">
+                        <!-- Current files will be listed here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Published -->
+            <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-4">
+                    <input
+                        type="checkbox"
+                        id="editEventPublished"
+                        name="editEventPublished"
+                        class="toggle"
+                    />
+                    <span class="label-text">Publish Event</span>
+                </label>
+                <label class="label">
+                    <span class="label-text-alt text-info"
+                        >This has to be clicked if you want to make this event
+                        available to the public</span
+                    >
+                </label>
+            </div>
+
+            <!-- Has Food -->
+            <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-4">
+                    <input
+                        type="checkbox"
+                        id="editEventHasFood"
+                        name="editEventHasFood"
+                        class="toggle"
+                    />
+                    <span class="label-text">Has Food</span>
+                </label>
+                <label class="label">
+                    <span class="label-text-alt text-info"
+                        >Check this if food will be provided at the event</span
+                    >
+                </label>
+            </div>
+
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary"
+                    >Save Changes</button
+                >
+                <button
+                    type="button"
+                    class="btn"
+                    onclick="editEventModal.close()">Cancel</button
+                >
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Event Details Modal -->
+<dialog id="eventDetailsModal" class="modal">
+    <div class="modal-box max-w-4xl">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-3">
+                <h3 class="font-bold text-lg" id="modalTitle">Event Details</h3>
+            </div>
+            <button
+                class="btn btn-circle btn-ghost"
+                onclick="eventDetailsModal.close()"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
-                <span>Failed to load attendees. Please try again.</span>
-              </div>
-            `;
-          }
-        }
-      });
-    });
-
-    // Populate files content
-    if (
-      localEvent.files &&
-      Array.isArray(localEvent.files) &&
-      localEvent.files.length > 0
-    ) {
-      const baseUrl = "https://pocketbase.ieeeucsd.org";
-      const collectionId = "events";
-      const recordId = localEvent.id;
-
-      filesContent.innerHTML = `
-        <div class="overflow-x-auto">
-          <table class="table table-zebra w-full">
-            <thead>
-              <tr>
-                <th>File Name</th>
-                <th class="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${localEvent.files
-                .map((file: string) => {
-                  const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
-                  const fileType = getFileType(file);
-                  return `
-                    <tr>
-                      <td>${file}</td>
-                      <td class="text-right">
-                        <button class="btn btn-ghost btn-sm" onclick='window.showFilePreview(${JSON.stringify(
-                          {
-                            url: fileUrl,
-                            type: fileType,
-                            name: file,
-                          },
-                        )})'>
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
-                          </svg>
-                        </button>
-                        <a href="${fileUrl}" download="${file}" class="btn btn-ghost btn-sm">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                          </svg>
-                        </a>
-                      </td>
-                    </tr>
-                  `;
-                })
-                .join("")}
-            </tbody>
-          </table>
+            </button>
         </div>
-      `;
-    } else {
-      filesContent.innerHTML = `
-        <div class="text-center py-8 text-base-content/70">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
-          </svg>
-          <p>No files attached to this event</p>
+
+        <div class="tabs tabs-boxed mb-4">
+            <button class="tab tab-active" data-tab="files">Files</button>
+            <button class="tab" data-tab="attendees">Attendees</button>
         </div>
-      `;
+
+        <div id="filesContent" class="space-y-4">
+            <!-- Files list will be populated here -->
+        </div>
+
+        <div id="attendeesContent" class="space-y-4 hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Event Attendees</h3>
+                <button
+                    id="downloadAttendeesCSV"
+                    class="btn btn-primary btn-sm gap-2"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    Download CSV
+                </button>
+            </div>
+            <!-- Attendees list will be populated here -->
+        </div>
+
+        <!-- File Preview Section -->
+        <div id="filePreviewSection" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
+                    <button
+                        class="btn btn-ghost btn-sm"
+                        onclick="backToFileList()"
+                    >
+                        ← Back
+                    </button>
+                    <h3 class="font-bold text-lg truncate" id="previewFileName">
+                    </h3>
+                </div>
+            </div>
+            <div class="relative" id="previewContainer">
+                <div
+                    id="loadingSpinner"
+                    class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
+                >
+                    <span class="loading loading-spinner loading-lg"></span>
+                </div>
+                <div id="previewContent" class="w-full"></div>
+            </div>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<script>
+    import { Get } from "../pocketbase/Get";
+    import { Authentication } from "../pocketbase/Authentication";
+    import { Update } from "../pocketbase/Update";
+    import { FileManager } from "../pocketbase/FileManager";
+    import { SendLog } from "../pocketbase/SendLog";
+
+    interface AttendeeEntry {
+        user_id: string;
+        time_checked_in: string;
+        food: string;
     }
 
-    modal.showModal();
-  };
-
-  // Make helper functions available globally
-  window.showFilePreview = showFilePreview;
-  window.backToFileList = backToFileList;
-  window.handlePreviewError = handlePreviewError;
-  window.showLoading = showLoading;
-  window.hideLoading = hideLoading;
-
-  // Add deleteEvent function to window
-  window.deleteEvent = async function (eventId: string, eventName: string) {
-    if (
-      !confirm(
-        `Are you sure you want to delete "${eventName}"? This action cannot be undone.`,
-      )
-    ) {
-      return;
+    interface Event {
+        id: string;
+        event_name: string;
+        event_description: string;
+        event_code: string;
+        location: string;
+        files: string[];
+        points_to_reward: number;
+        start_date: string;
+        end_date: string;
+        published: boolean;
+        has_food: boolean;
+        attendees: AttendeeEntry[];
     }
 
-    try {
-      auth.setUpdating(true);
-      const pb = auth.getPocketBase();
-      await pb.collection("events").delete(eventId);
-      await sendLog.send("delete", "events", `Deleted event ${eventName}`);
-      await fetchEvents(); // Refresh the list
-    } catch (error) {
-      console.error("Failed to delete event:", error);
-      alert("Failed to delete event. Please try again.");
-    } finally {
-      auth.setUpdating(false);
-    }
-  };
+    const get = Get.getInstance();
+    const auth = Authentication.getInstance();
+    const update = Update.getInstance();
+    const fileManager = FileManager.getInstance();
+    const sendLog = SendLog.getInstance();
 
-  // Helper function to determine current academic term
-  function getCurrentTerm(): { start: Date; end: Date } {
-    const now = new Date();
-    const year = now.getFullYear();
-    let start: Date, end: Date;
+    let currentPage = 1;
+    let totalPages = 0;
+    let searchQuery = "";
+    let perPage = 5;
+    let quarterlyStats = {
+        totalEvents: 0,
+        uniqueAttendees: 0,
+        recurringAttendees: 0,
+    };
 
-    // If we're before September, term started last year
-    if (now.getMonth() < 8) {
-      // Before September
-      start = new Date(year - 1, 8, 1); // Sept 1 of last year
-      end = new Date(year, 8, 0); // Aug 31 of current year
-    } else {
-      start = new Date(year, 8, 1); // Sept 1 of current year
-      end = new Date(year + 1, 8, 0); // Aug 31 of next year
-    }
+    // Add filter state
+    let filterState = {
+        time: "all",
+        year: "all",
+        published: "all",
+        hasFiles: "all",
+        hasFood: "all",
+    };
 
-    return { start, end };
-  }
+    // Helper function to determine current academic term
+    function getCurrentTerm(): { start: Date; end: Date } {
+        const now = new Date();
+        const year = now.getFullYear();
+        let start: Date, end: Date;
 
-  // Helper function to get term name
-  function getTermName(): string {
-    const now = new Date();
-    const year = now.getFullYear();
-
-    // If we're before September, we're in the previous year's term
-    if (now.getMonth() < 8) {
-      return `${year - 1}-${year}`;
-    }
-    return `${year}-${year + 1}`;
-  }
-
-  // Initialize variables for quarterly stats
-  let quarterlyStats = {
-    totalEvents: 0,
-    uniqueAttendees: 0,
-    recurringAttendees: 0,
-  };
-
-  // Helper function to determine current quarter
-  function getCurrentQuarter(): { start: Date; end: Date } {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    let start: Date, end: Date;
-
-    // Determine quarter (0-based months: 0-11)
-    // Q1: Sept-Dec (8-11)
-    // Q2: Jan-Mar (0-2)
-    // Q3: Mar-Jun (2-5)
-    // Q4: Jun-Sept (5-8)
-
-    if (month >= 8) {
-      // Q1: Sept-Dec
-      start = new Date(year, 8, 1);
-      end = new Date(year, 11, 31);
-    } else if (month < 2) {
-      // Q2: Jan-Mar
-      start = new Date(year, 0, 1);
-      end = new Date(year, 2, 31);
-    } else if (month < 5) {
-      // Q3: Mar-Jun
-      start = new Date(year, 2, 1);
-      end = new Date(year, 5, 30);
-    } else {
-      // Q4: Jun-Sept
-      start = new Date(year, 5, 1);
-      end = new Date(year, 8, 0); // End on Aug 31
-    }
-
-    return { start, end };
-  }
-
-  // Helper function to get quarter name
-  function getQuarterName(): string {
-    const month = new Date().getMonth();
-
-    if (month >= 8) {
-      // Sept-Dec
-      return "Fall";
-    } else if (month < 2) {
-      // Jan-Mar
-      return "Winter";
-    } else if (month < 5) {
-      // Mar-Jun
-      return "Spring";
-    } else {
-      // Jun-Sept
-      return "Summer";
-    }
-  }
-
-  // Function to calculate quarterly stats
-  async function calculateQuarterlyStats() {
-    try {
-      const { start: termStart, end: termEnd } = getCurrentTerm();
-      const { start: quarterStart, end: quarterEnd } = getCurrentQuarter();
-
-      // Update quarter name in UI
-      const quarterNameEl = document.getElementById("quarterName");
-      if (quarterNameEl) {
-        quarterNameEl.textContent = getQuarterName();
-      }
-
-      // Get all events in the current term for total events and unique attendees
-      const termFilter = `start_date >= "${termStart.toISOString()}" && start_date <= "${termEnd.toISOString()}"`;
-      const termEvents = await get.getList<Event>("events", 1, 100, termFilter);
-
-      // Get all events in the current quarter for recurring attendees
-      const quarterFilter = `start_date >= "${quarterStart.toISOString()}" && start_date <= "${quarterEnd.toISOString()}"`;
-      const quarterEvents = await get.getList<Event>(
-        "events",
-        1,
-        100,
-        quarterFilter,
-      );
-
-      // Calculate total events and unique attendees from term data
-      quarterlyStats.totalEvents = termEvents.items.length;
-      const termAttendees = new Map<string, number>();
-
-      // Count attendance for term stats
-      termEvents.items.forEach((event) => {
-        event.attendees?.forEach((attendee) => {
-          const count = termAttendees.get(attendee.user_id) || 0;
-          termAttendees.set(attendee.user_id, count + 1);
-        });
-      });
-
-      // Calculate unique attendees from term data
-      quarterlyStats.uniqueAttendees = termAttendees.size;
-
-      // Calculate recurring attendees from quarter data
-      const quarterAttendees = new Map<string, number>();
-      quarterEvents.items.forEach((event) => {
-        event.attendees?.forEach((attendee) => {
-          const count = quarterAttendees.get(attendee.user_id) || 0;
-          quarterAttendees.set(attendee.user_id, count + 1);
-        });
-      });
-
-      // Count users who attended more than once in the quarter
-      quarterlyStats.recurringAttendees = Array.from(
-        quarterAttendees.values(),
-      ).filter((count) => count > 1).length;
-
-      // Update the UI
-      const totalEventsEl = document.getElementById("totalEvents");
-      const uniqueAttendeesEl = document.getElementById("uniqueAttendees");
-      const recurringAttendeesEl =
-        document.getElementById("recurringAttendees");
-
-      if (totalEventsEl)
-        totalEventsEl.textContent = quarterlyStats.totalEvents.toString();
-      if (uniqueAttendeesEl)
-        uniqueAttendeesEl.textContent =
-          quarterlyStats.uniqueAttendees.toString();
-      if (recurringAttendeesEl)
-        recurringAttendeesEl.textContent =
-          quarterlyStats.recurringAttendees.toString();
-    } catch (error) {
-      console.error("Failed to calculate stats:", error);
-    }
-  }
-
-  // Add filter state
-  let filterState = {
-    time: "all",
-    year: "all",
-    published: "all",
-    hasFiles: "all",
-    hasFood: "all",
-  };
-
-  // Load filter state from localStorage
-  function loadFilterState() {
-    const savedState = localStorage.getItem("eventFilterState");
-    if (savedState) {
-      filterState = JSON.parse(savedState);
-
-      // Apply saved state to UI
-      const timeRadios = document.querySelectorAll<HTMLInputElement>(
-        'input[name="timeFilter"]',
-      );
-      Array.from(timeRadios).forEach((radio) => {
-        if (radio.value === filterState.time) {
-          radio.checked = true;
+        // If we're before September, term started last year
+        if (now.getMonth() < 8) {
+            // Before September
+            start = new Date(year - 1, 8, 1); // Sept 1 of last year
+            end = new Date(year, 8, 0); // Aug 31 of current year
+        } else {
+            start = new Date(year, 8, 1); // Sept 1 of current year
+            end = new Date(year + 1, 8, 0); // Aug 31 of next year
         }
-      });
 
-      (document.getElementById("yearFilter") as HTMLSelectElement).value =
-        filterState.year;
-      (document.getElementById("publishedFilter") as HTMLSelectElement).value =
-        filterState.published;
-      (document.getElementById("hasFilesFilter") as HTMLSelectElement).value =
-        filterState.hasFiles;
-      (document.getElementById("hasFoodFilter") as HTMLSelectElement).value =
-        filterState.hasFood;
-    }
-  }
-
-  // Save filter state to localStorage
-  function saveFilterState() {
-    localStorage.setItem("eventFilterState", JSON.stringify(filterState));
-  }
-
-  // Initialize year filter options
-  async function initializeYearFilter() {
-    try {
-      const events = await get.getAll<Event>("events");
-      const years = new Set<number>();
-
-      events.forEach((event) => {
-        const year = new Date(event.start_date).getFullYear();
-        years.add(year);
-      });
-
-      const yearFilter = document.getElementById(
-        "yearFilter",
-      ) as HTMLSelectElement;
-      const sortedYears = Array.from(years).sort((a, b) => b - a); // Sort descending
-
-      yearFilter.innerHTML =
-        '<option value="all">All Years</option>' +
-        sortedYears
-          .map((year) => `<option value="${year}">${year}</option>`)
-          .join("");
-
-      // Apply saved year filter if exists
-      if (filterState.year !== "all") {
-        yearFilter.value = filterState.year;
-      }
-    } catch (error) {
-      console.error("Failed to initialize year filter:", error);
-    }
-  }
-
-  // Build filter string based on current filters
-  function buildFilterString(): string {
-    const filters: string[] = [];
-    const now = new Date().toISOString();
-
-    // Time and Year filters
-    if (filterState.time === "upcoming") {
-      filters.push(`start_date >= "${now}"`);
-    } else if (filterState.time === "past") {
-      filters.push(`start_date < "${now}"`);
+        return { start, end };
     }
 
-    if (filterState.year !== "all") {
-      const year = parseInt(filterState.year);
-      const yearStart = new Date(year, 0, 1).toISOString();
-      const yearEnd = new Date(year + 1, 0, 1).toISOString();
-      filters.push(`start_date >= "${yearStart}" && start_date < "${yearEnd}"`);
+    // Helper function to determine current quarter
+    function getCurrentQuarter(): { start: Date; end: Date } {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        let start: Date, end: Date;
+
+        // Determine quarter (0-based months: 0-11)
+        // Q1: Sept-Dec (8-11)
+        // Q2: Jan-Mar (0-2)
+        // Q3: Mar-Jun (2-5)
+        // Q4: Jun-Sept (5-8)
+
+        if (month >= 8) {
+            // Q1: Sept-Dec
+            start = new Date(year, 8, 1);
+            end = new Date(year, 11, 31);
+        } else if (month < 2) {
+            // Q2: Jan-Mar
+            start = new Date(year, 0, 1);
+            end = new Date(year, 2, 31);
+        } else if (month < 5) {
+            // Q3: Mar-Jun
+            start = new Date(year, 2, 1);
+            end = new Date(year, 5, 30);
+        } else {
+            // Q4: Jun-Sept
+            start = new Date(year, 5, 1);
+            end = new Date(year, 8, 0); // End on Aug 31
+        }
+
+        return { start, end };
     }
 
-    // Published filter
-    if (filterState.published !== "all") {
-      filters.push(`published = ${filterState.published === "yes"}`);
+    // Helper function to get quarter name
+    function getQuarterName(): string {
+        const month = new Date().getMonth();
+
+        if (month >= 8) {
+            // Sept-Dec
+            return "Fall";
+        } else if (month < 2) {
+            // Jan-Mar
+            return "Winter";
+        } else if (month < 5) {
+            // Mar-Jun
+            return "Spring";
+        } else {
+            // Jun-Sept
+            return "Summer";
+        }
     }
 
-    // Has Files filter
-    if (filterState.hasFiles !== "all") {
-      if (filterState.hasFiles === "yes") {
-        filters.push("files.length > 0");
-      } else {
-        filters.push("files.length = 0");
-      }
+    // Add cache for events
+    let cachedEvents: Event[] = [];
+    let lastCacheUpdate = 0;
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+    // Function to refresh cache
+    async function refreshCache() {
+        try {
+            const now = Date.now();
+            if (
+                now - lastCacheUpdate < CACHE_DURATION &&
+                cachedEvents.length > 0
+            ) {
+                return; // Use cached data if it's fresh
+            }
+
+            auth.setUpdating(true);
+            const response = await get.getAll<Event>("events");
+            cachedEvents = response.map((event) =>
+                Get.convertUTCToLocal(event)
+            );
+            lastCacheUpdate = now;
+
+            // Initialize year filter options from cache
+            const years = new Set<number>();
+            cachedEvents.forEach((event) => {
+                const year = new Date(event.start_date).getFullYear();
+                years.add(year);
+            });
+
+            const yearFilter = document.getElementById(
+                "yearFilter"
+            ) as HTMLSelectElement;
+            if (yearFilter) {
+                const sortedYears = Array.from(years).sort((a, b) => b - a);
+                yearFilter.innerHTML =
+                    '<option value="all">All Years</option>' +
+                    sortedYears
+                        .map(
+                            (year) => `<option value="${year}">${year}</option>`
+                        )
+                        .join("");
+
+                if (filterState.year !== "all") {
+                    yearFilter.value = filterState.year;
+                }
+            }
+        } catch (error) {
+            console.error("Failed to refresh cache:", error);
+            throw error;
+        } finally {
+            auth.setUpdating(false);
+        }
     }
 
-    // Has Food filter
-    if (filterState.hasFood !== "all") {
-      filters.push(`has_food = ${filterState.hasFood === "yes"}`);
+    // Function to apply filters to cached data
+    function filterEvents(events: Event[]): Event[] {
+        return events.filter((event) => {
+            const now = new Date().toISOString();
+
+            // Time and Year filters
+            if (filterState.time === "upcoming" && event.start_date < now)
+                return false;
+            if (filterState.time === "past" && event.start_date >= now)
+                return false;
+
+            if (filterState.year !== "all") {
+                const eventYear = new Date(event.start_date).getFullYear();
+                if (eventYear.toString() !== filterState.year) return false;
+            }
+
+            // Published filter
+            if (filterState.published !== "all") {
+                if ((filterState.published === "yes") !== event.published)
+                    return false;
+            }
+
+            // Has Files filter
+            if (filterState.hasFiles !== "all") {
+                const hasFiles = event.files && event.files.length > 0;
+                if ((filterState.hasFiles === "yes") !== hasFiles) return false;
+            }
+
+            // Has Food filter
+            if (filterState.hasFood !== "all") {
+                if ((filterState.hasFood === "yes") !== event.has_food)
+                    return false;
+            }
+
+            // Search query
+            if (searchQuery) {
+                const searchLower = searchQuery.toLowerCase();
+                return (
+                    event.event_name.toLowerCase().includes(searchLower) ||
+                    event.event_code.toLowerCase().includes(searchLower) ||
+                    event.location.toLowerCase().includes(searchLower)
+                );
+            }
+
+            return true;
+        });
     }
 
-    // Search query
-    if (searchQuery) {
-      filters.push(
-        `(event_name ~ "${searchQuery}" || event_code ~ "${searchQuery}" || location ~ "${searchQuery}")`,
-      );
-    }
+    // Fetch and display events using cached data
+    async function fetchEvents() {
+        const eventsList = document.getElementById("eventsList");
+        const paginationContainer = document.getElementById(
+            "paginationContainer"
+        );
+        if (!eventsList || !paginationContainer) return;
 
-    return filters.join(" && ");
-  }
-
-  // Add event listeners for filters
-  document.addEventListener("DOMContentLoaded", () => {
-    // Load saved filter state
-    loadFilterState();
-
-    // Initialize year filter
-    initializeYearFilter();
-
-    // Time filter
-    const timeRadios = document.querySelectorAll<HTMLInputElement>(
-      'input[name="timeFilter"]',
-    );
-    Array.from(timeRadios).forEach((radio) => {
-      radio.addEventListener("change", () => {
-        filterState.time = radio.value;
-        saveFilterState();
-        currentPage = 1;
-        fetchEvents();
-      });
-    });
-
-    // Year filter
-    const yearFilter = document.getElementById("yearFilter");
-    if (yearFilter) {
-      yearFilter.addEventListener("change", (e) => {
-        filterState.year = (e.target as HTMLSelectElement).value;
-        saveFilterState();
-        currentPage = 1;
-        fetchEvents();
-      });
-    }
-
-    // Published filter
-    const publishedFilter = document.getElementById("publishedFilter");
-    if (publishedFilter) {
-      publishedFilter.addEventListener("change", (e) => {
-        filterState.published = (e.target as HTMLSelectElement).value;
-        saveFilterState();
-        currentPage = 1;
-        fetchEvents();
-      });
-    }
-
-    // Has Files filter
-    const hasFilesFilter = document.getElementById("hasFilesFilter");
-    if (hasFilesFilter) {
-      hasFilesFilter.addEventListener("change", (e) => {
-        filterState.hasFiles = (e.target as HTMLSelectElement).value;
-        saveFilterState();
-        currentPage = 1;
-        fetchEvents();
-      });
-    }
-
-    // Has Food filter
-    const hasFoodFilter = document.getElementById("hasFoodFilter");
-    if (hasFoodFilter) {
-      hasFoodFilter.addEventListener("change", (e) => {
-        filterState.hasFood = (e.target as HTMLSelectElement).value;
-        saveFilterState();
-        currentPage = 1;
-        fetchEvents();
-      });
-    }
-  });
-
-  // Modify fetchEvents to use the new filter system
-  async function fetchEvents() {
-    const eventsList = document.getElementById("eventsList");
-    const paginationContainer = document.getElementById("paginationContainer");
-    if (!eventsList || !paginationContainer) return;
-
-    try {
-      if (!auth.isAuthenticated()) {
-        eventsList.innerHTML = `
+        try {
+            if (!auth.isAuthenticated()) {
+                eventsList.innerHTML = `
           <div class="text-center py-8 text-base-content/70">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
@@ -1900,164 +880,147 @@ declare global {
             <p>Please log in to view events</p>
           </div>
         `;
-        paginationContainer.classList.add("hidden");
-        return;
-      }
-
-      auth.setUpdating(true);
-
-      try {
-        const filter = buildFilterString();
-        const response = await get.getList(
-          "events",
-          currentPage,
-          perPage,
-          filter,
-          "-start_date",
-          { disableAutoCancellation: true },
-        );
-
-        // Convert response items to local time
-        const localEvents = response.items.map((event) =>
-          Get.convertUTCToLocal(event),
-        );
-
-        // Update stats
-        const totalEventsEl = document.getElementById("totalEvents");
-        const showingEventsEl = document.getElementById("showingEvents");
-        const totalEventsLabelEl = document.getElementById("totalEventsLabel");
-        const currentPageEl = document.getElementById("currentPage");
-        const totalPagesLabelEl = document.getElementById("totalPagesLabel");
-        const currentPageNumber = document.getElementById("currentPageNumber");
-
-        if (totalEventsEl)
-          totalEventsEl.textContent = response.totalItems.toString();
-        if (showingEventsEl)
-          showingEventsEl.textContent = localEvents.length.toString();
-        if (totalEventsLabelEl)
-          totalEventsLabelEl.textContent = `of ${response.totalItems} Events`;
-        if (currentPageEl) currentPageEl.textContent = response.page.toString();
-        if (totalPagesLabelEl)
-          totalPagesLabelEl.textContent = `of ${response.totalPages}`;
-        if (currentPageNumber)
-          currentPageNumber.textContent = response.page.toString();
-
-        // Update pagination buttons state
-        const firstPageBtn = document.getElementById(
-          "firstPageBtn",
-        ) as HTMLButtonElement;
-        const prevPageBtn = document.getElementById(
-          "prevPageBtn",
-        ) as HTMLButtonElement;
-        const nextPageBtn = document.getElementById(
-          "nextPageBtn",
-        ) as HTMLButtonElement;
-        const lastPageBtn = document.getElementById(
-          "lastPageBtn",
-        ) as HTMLButtonElement;
-
-        if (firstPageBtn) firstPageBtn.disabled = response.page <= 1;
-        if (prevPageBtn) prevPageBtn.disabled = response.page <= 1;
-        if (nextPageBtn)
-          nextPageBtn.disabled = response.page >= response.totalPages;
-        if (lastPageBtn)
-          lastPageBtn.disabled = response.page >= response.totalPages;
-
-        // Show/hide pagination based on total pages
-        if (response.totalPages <= 1) {
-          paginationContainer.classList.add("hidden");
-        } else {
-          paginationContainer.classList.remove("hidden");
-        }
-
-        // Update events list
-        if (localEvents.length === 0) {
-          eventsList.innerHTML = `
-            <div class="text-center py-8 text-base-content/70">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-              </svg>
-              <p>No events found</p>
-            </div>
-          `;
-          return;
-        }
-
-        eventsList.innerHTML = localEvents
-          .map((event) => {
-            // Safely parse and format the date
-            let dateStr = "Invalid date";
-            try {
-              const date = new Date(event.start_date);
-              if (!isNaN(date.getTime())) {
-                dateStr = date.toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-              }
-            } catch (e) {
-              console.error("Error formatting date:", e);
+                paginationContainer.classList.add("hidden");
+                return;
             }
 
-            const locationStr = event.location ? `${event.location}` : "";
-            const codeStr = event.event_code ? `${event.event_code}` : "";
-            const detailsStr = [locationStr, codeStr]
-              .filter(Boolean)
-              .join(" | code: ");
+            // Refresh cache if needed
+            await refreshCache();
 
-            // Store event data in a global map using the event ID as key
-            const eventDataId = `event_${event.id}`;
-            window[eventDataId] = event;
+            // Apply filters to cached data
+            const filteredEvents = filterEvents(cachedEvents);
 
-            return `
-              <div class="flex items-center justify-between p-4 bg-base-200 rounded-xl hover:bg-base-300 transition-all duration-300">
-                <div class="flex items-center gap-4">
-                  <div class="badge badge-lg p-3 badge-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 class="font-semibold">${event.event_name}</h4>
-                    <p class="text-sm opacity-70">${dateStr}${detailsStr ? ` • ${detailsStr}` : ""}</p>
-                  </div>
-                </div>
-                <div class="flex gap-2">
-                  <button class="btn btn-ghost btn-sm" onclick="window.openDetailsModal(window['${eventDataId}'])">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                      <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
-                    </svg>
-                  </button>
-                  <button class="btn btn-ghost btn-sm" onclick="window.openEditModal(window['${eventDataId}'])">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                    </svg>
-                  </button>
-                  <button class="btn btn-ghost btn-sm text-error" onclick="window.deleteEvent('${event.id}', '${event.event_name.replace(/'/g, "\\'")}')">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
+            // Sort events by start date (newest first)
+            filteredEvents.sort(
+                (a, b) =>
+                    new Date(b.start_date).getTime() -
+                    new Date(a.start_date).getTime()
+            );
+
+            // Calculate pagination
+            const totalItems = filteredEvents.length;
+            totalPages = Math.ceil(totalItems / perPage);
+            const startIndex = (currentPage - 1) * perPage;
+            const endIndex = startIndex + perPage;
+            const paginatedEvents = filteredEvents.slice(startIndex, endIndex);
+
+            // Update pagination UI
+            const firstPageBtn = document.getElementById(
+                "firstPageBtn"
+            ) as HTMLButtonElement;
+            const prevPageBtn = document.getElementById(
+                "prevPageBtn"
+            ) as HTMLButtonElement;
+            const nextPageBtn = document.getElementById(
+                "nextPageBtn"
+            ) as HTMLButtonElement;
+            const lastPageBtn = document.getElementById(
+                "lastPageBtn"
+            ) as HTMLButtonElement;
+            const currentPageNumber =
+                document.getElementById("currentPageNumber");
+
+            if (firstPageBtn) firstPageBtn.disabled = currentPage <= 1;
+            if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
+            if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
+            if (lastPageBtn) lastPageBtn.disabled = currentPage >= totalPages;
+            if (currentPageNumber)
+                currentPageNumber.textContent = currentPage.toString();
+
+            // Show/hide pagination based on total pages
+            if (totalPages <= 1) {
+                paginationContainer.classList.add("hidden");
+            } else {
+                paginationContainer.classList.remove("hidden");
+            }
+
+            // Update events list
+            if (paginatedEvents.length === 0) {
+                eventsList.innerHTML = `
+          <div class="text-center py-8 text-base-content/70">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+            </svg>
+            <p>No events found</p>
+          </div>
+        `;
+                return;
+            }
+
+            eventsList.innerHTML = paginatedEvents
+                .map((event) => {
+                    // Safely parse and format the date
+                    let dateStr = "Invalid date";
+                    try {
+                        const date = new Date(event.start_date);
+                        if (!isNaN(date.getTime())) {
+                            dateStr = date.toLocaleDateString("en-US", {
+                                month: "long",
+                                day: "numeric",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Error formatting date:", e);
+                    }
+
+                    const locationStr = event.location
+                        ? `${event.location}`
+                        : "";
+                    const codeStr = event.event_code
+                        ? `${event.event_code}`
+                        : "";
+                    const detailsStr = [locationStr, codeStr]
+                        .filter(Boolean)
+                        .join(" | code: ");
+
+                    // Store event data in a global map using the event ID as key
+                    const eventDataId = `event_${event.id}`;
+                    window[eventDataId] = event;
+
+                    return `
+          <div class="flex items-center justify-between p-4 bg-base-200 rounded-xl hover:bg-base-300 transition-all duration-300">
+            <div class="flex items-center gap-4">
+              <div class="badge badge-lg p-3 badge-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                </svg>
               </div>
-            `;
-          })
-          .join("");
+              <div>
+                <h4 class="font-semibold">${event.event_name}</h4>
+                <p class="text-sm opacity-70">${dateStr}${detailsStr ? ` • ${detailsStr}` : ""}</p>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-ghost btn-sm" onclick="window.openDetailsModal(window['${eventDataId}'])">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                  <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                </svg>
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="window.openEditModal(window['${eventDataId}'])">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+              </button>
+              <button class="btn btn-ghost btn-sm text-error" onclick="window.deleteEvent('${event.id}', '${event.event_name.replace(/'/g, "\\'")}')">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+                })
+                .join("");
 
-        totalPages = response.totalPages;
-
-        // Calculate and update quarterly stats
-        await calculateQuarterlyStats();
-      } finally {
-        auth.setUpdating(false);
-      }
-    } catch (error) {
-      console.error("Failed to fetch events:", error);
-      eventsList.innerHTML = `
+            // Calculate and update stats using cached data
+            await calculateQuarterlyStats();
+        } catch (error) {
+            console.error("Failed to fetch events:", error);
+            eventsList.innerHTML = `
         <div class="alert alert-error">
           <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2065,39 +1028,180 @@ declare global {
           <span>Failed to load events. Please try refreshing the page.</span>
         </div>
       `;
-      paginationContainer.classList.add("hidden");
+            paginationContainer.classList.add("hidden");
+        }
     }
-  }
 
-  // Add pagination event listeners
-  document.getElementById("firstPageBtn")?.addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage = 1;
-      fetchEvents();
+    // Calculate quarterly stats using cached data
+    async function calculateQuarterlyStats() {
+        try {
+            const { start: termStart, end: termEnd } = getCurrentTerm();
+            const { start: quarterStart, end: quarterEnd } =
+                getCurrentQuarter();
+
+            // Update quarter name in UI
+            const quarterNameEl = document.getElementById("quarterName");
+            if (quarterNameEl) {
+                quarterNameEl.textContent = getQuarterName();
+            }
+
+            // Filter events for current term and quarter
+            const termEvents = cachedEvents.filter((event) => {
+                const eventDate = new Date(event.start_date);
+                return eventDate >= termStart && eventDate <= termEnd;
+            });
+
+            const quarterEvents = cachedEvents.filter((event) => {
+                const eventDate = new Date(event.start_date);
+                return eventDate >= quarterStart && eventDate <= quarterEnd;
+            });
+
+            // Calculate stats
+            quarterlyStats.totalEvents = termEvents.length;
+
+            const termAttendees = new Map<string, number>();
+            termEvents.forEach((event) => {
+                event.attendees?.forEach((attendee) => {
+                    const count = termAttendees.get(attendee.user_id) || 0;
+                    termAttendees.set(attendee.user_id, count + 1);
+                });
+            });
+
+            quarterlyStats.uniqueAttendees = termAttendees.size;
+
+            const quarterAttendees = new Map<string, number>();
+            quarterEvents.forEach((event) => {
+                event.attendees?.forEach((attendee) => {
+                    const count = quarterAttendees.get(attendee.user_id) || 0;
+                    quarterAttendees.set(attendee.user_id, count + 1);
+                });
+            });
+
+            quarterlyStats.recurringAttendees = Array.from(
+                quarterAttendees.values()
+            ).filter((count) => count > 1).length;
+
+            // Update the UI
+            const totalEventsEl = document.getElementById("totalEvents");
+            const uniqueAttendeesEl =
+                document.getElementById("uniqueAttendees");
+            const recurringAttendeesEl =
+                document.getElementById("recurringAttendees");
+
+            if (totalEventsEl)
+                totalEventsEl.textContent =
+                    quarterlyStats.totalEvents.toString();
+            if (uniqueAttendeesEl)
+                uniqueAttendeesEl.textContent =
+                    quarterlyStats.uniqueAttendees.toString();
+            if (recurringAttendeesEl)
+                recurringAttendeesEl.textContent =
+                    quarterlyStats.recurringAttendees.toString();
+        } catch (error) {
+            console.error("Failed to calculate quarterly stats:", error);
+        }
     }
-  });
 
-  document.getElementById("prevPageBtn")?.addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage--;
-      fetchEvents();
-    }
-  });
+    // Add pagination event listeners
+    document.getElementById("firstPageBtn")?.addEventListener("click", () => {
+        if (currentPage > 1) {
+            currentPage = 1;
+            fetchEvents();
+        }
+    });
 
-  document.getElementById("nextPageBtn")?.addEventListener("click", () => {
-    if (currentPage < totalPages) {
-      currentPage++;
-      fetchEvents();
-    }
-  });
+    document.getElementById("prevPageBtn")?.addEventListener("click", () => {
+        if (currentPage > 1) {
+            currentPage--;
+            fetchEvents();
+        }
+    });
 
-  document.getElementById("lastPageBtn")?.addEventListener("click", () => {
-    if (currentPage < totalPages) {
-      currentPage = totalPages;
-      fetchEvents();
-    }
-  });
+    document.getElementById("nextPageBtn")?.addEventListener("click", () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            fetchEvents();
+        }
+    });
 
-  // Initial fetch - only call once
-  fetchEvents();
+    document.getElementById("lastPageBtn")?.addEventListener("click", () => {
+        if (currentPage < totalPages) {
+            currentPage = totalPages;
+            fetchEvents();
+        }
+    });
+
+    // Add filter event listeners
+    // Time filter
+    document.querySelectorAll('input[name="timeFilter"]').forEach((radio) => {
+        radio.addEventListener("change", (e) => {
+            const target = e.target as HTMLInputElement;
+            filterState.time = target.value;
+            currentPage = 1;
+            fetchEvents();
+        });
+    });
+
+    // Year filter
+    document.getElementById("yearFilter")?.addEventListener("change", (e) => {
+        const target = e.target as HTMLSelectElement;
+        filterState.year = target.value;
+        currentPage = 1;
+        fetchEvents();
+    });
+
+    // Published filter
+    document
+        .getElementById("publishedFilter")
+        ?.addEventListener("change", (e) => {
+            const target = e.target as HTMLSelectElement;
+            filterState.published = target.value;
+            currentPage = 1;
+            fetchEvents();
+        });
+
+    // Has Files filter
+    document
+        .getElementById("hasFilesFilter")
+        ?.addEventListener("change", (e) => {
+            const target = e.target as HTMLSelectElement;
+            filterState.hasFiles = target.value;
+            currentPage = 1;
+            fetchEvents();
+        });
+
+    // Has Food filter
+    document
+        .getElementById("hasFoodFilter")
+        ?.addEventListener("change", (e) => {
+            const target = e.target as HTMLSelectElement;
+            filterState.hasFood = target.value;
+            currentPage = 1;
+            fetchEvents();
+        });
+
+    // Search input with debounce
+    let searchTimeout: number | undefined;
+    document.getElementById("searchInput")?.addEventListener("input", (e) => {
+        const target = e.target as HTMLInputElement;
+        clearTimeout(searchTimeout);
+        searchTimeout = window.setTimeout(() => {
+            searchQuery = target.value;
+            currentPage = 1;
+            fetchEvents();
+        }, 300); // 300ms debounce
+    });
+
+    // Per page select
+    document
+        .getElementById("perPageSelect")
+        ?.addEventListener("change", (e) => {
+            const target = e.target as HTMLSelectElement;
+            perPage = parseInt(target.value);
+            currentPage = 1;
+            fetchEvents();
+        });
+
+    // Initial fetch
+    fetchEvents();
 </script>
