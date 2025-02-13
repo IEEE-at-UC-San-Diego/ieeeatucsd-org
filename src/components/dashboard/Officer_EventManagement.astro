@@ -1187,27 +1187,22 @@ declare global {
             fetchEvents();
         });
 
-    // Search input with optimized debounce
-    let searchTimeout: number | undefined;
+    // Search input with instant search (no debounce needed for cached data)
     const searchInput = document.getElementById("searchInput");
     if (searchInput) {
-        // Add input event
+        // Add input event for instant search
         searchInput.addEventListener("input", (e) => {
             const target = e.target as HTMLInputElement;
-            clearTimeout(searchTimeout);
-            searchTimeout = window.setTimeout(() => {
-                searchQuery = target.value.trim();
-                currentPage = 1;
-                fetchEvents();
-            }, 150); // Reduced to 150ms for faster response
+            searchQuery = target.value.trim();
+            currentPage = 1;
+            fetchEvents();
         });
 
-        // Add keydown event for Enter key
+        // Clear search on Escape key
         searchInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                clearTimeout(searchTimeout);
-                const target = e.target as HTMLInputElement;
-                searchQuery = target.value.trim();
+            if (e.key === "Escape") {
+                (e.target as HTMLInputElement).value = "";
+                searchQuery = "";
                 currentPage = 1;
                 fetchEvents();
             }
