@@ -217,7 +217,7 @@ declare global {
                         <div class="dropdown">
                             <label
                                 tabindex="0"
-                                class="btn btn-sm m-1 w-[140px] justify-between"
+                                class="btn btn-sm m-1 w-[180px] justify-between"
                             >
                                 <span id="yearFilterLabel">All Years</span>
                                 <svg
@@ -250,6 +250,91 @@ declare global {
                                 </div>
                                 <div id="yearCheckboxes" class="space-y-1">
                                     <!-- Year checkboxes will be populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-medium">Quarter</span>
+                        </label>
+                        <div class="dropdown">
+                            <label
+                                tabindex="0"
+                                class="btn btn-sm m-1 w-[180px] justify-between"
+                            >
+                                <span id="quarterFilterLabel">All Quarters</span
+                                >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </label>
+                            <div
+                                tabindex="0"
+                                id="quarterDropdownContent"
+                                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+                            >
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text"
+                                            >All Quarters</span
+                                        >
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="all"
+                                            checked
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Fall</span>
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="fall"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Winter</span>
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="winter"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Spring</span>
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="spring"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Summer</span>
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="summer"
+                                        />
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -861,6 +946,7 @@ declare global {
     let filterState = {
         time: "all",
         year: ["all"],
+        quarter: ["all"],
         published: "all",
         hasFiles: "all",
         hasFood: "all",
@@ -1062,6 +1148,36 @@ declare global {
                     .getFullYear()
                     .toString();
                 if (!filterState.year.includes(eventYear)) return false;
+            }
+
+            // Quarter filter
+            if (!filterState.quarter.includes("all")) {
+                const eventDate = new Date(event.start_date);
+                const month = eventDate.getMonth();
+                let isInSelectedQuarter = false;
+
+                for (const quarter of filterState.quarter) {
+                    let isInQuarter = false;
+                    switch (quarter) {
+                        case "fall":
+                            isInQuarter = month >= 8 && month <= 11; // Sept-Dec
+                            break;
+                        case "winter":
+                            isInQuarter = month >= 0 && month <= 2; // Jan-Mar
+                            break;
+                        case "spring":
+                            isInQuarter = month >= 2 && month <= 5; // Mar-Jun
+                            break;
+                        case "summer":
+                            isInQuarter = month >= 5 && month <= 8; // Jun-Sept
+                            break;
+                    }
+                    if (isInQuarter) {
+                        isInSelectedQuarter = true;
+                        break;
+                    }
+                }
+                if (!isInSelectedQuarter) return false;
             }
 
             // Published filter
@@ -1391,7 +1507,7 @@ declare global {
                 document.querySelectorAll('input[type="checkbox"]:checked')
             ).map((inp) => (inp as HTMLInputElement).value);
 
-            if (checkedYears.length === 0) {
+            if (checkedYears.length === 0 || checkedYears.includes("all")) {
                 document.getElementById("yearFilterLabel")!.textContent =
                     "All Years";
                 filterState.year = ["all"];
@@ -1401,6 +1517,58 @@ declare global {
                         ? checkedYears[0]
                         : `${checkedYears.length} Years Selected`;
                 filterState.year = checkedYears;
+            }
+            currentPage = 1;
+            fetchEvents();
+        });
+
+    // Quarter filter
+    document
+        .getElementById("quarterDropdownContent")
+        ?.addEventListener("change", (e) => {
+            const target = e.target as HTMLInputElement;
+            if (!target.matches('input[type="checkbox"]')) return;
+
+            const allQuartersCheckbox = target
+                .closest("#quarterDropdownContent")
+                ?.querySelector(
+                    'input[type="checkbox"][value="all"]'
+                ) as HTMLInputElement;
+
+            const quarterInputs = Array.from(
+                target
+                    .closest("#quarterDropdownContent")
+                    ?.querySelectorAll('input[type="checkbox"]') || []
+            ).filter(
+                (inp) => (inp as HTMLInputElement).value !== "all"
+            ) as HTMLInputElement[];
+
+            if (target.value === "all" && target.checked) {
+                quarterInputs.forEach((input) => {
+                    input.checked = false;
+                });
+                filterState.quarter = ["all"];
+                document.getElementById("quarterFilterLabel")!.textContent =
+                    "All Quarters";
+            } else {
+                const checkedQuarters = quarterInputs
+                    .filter((inp) => inp.checked)
+                    .map((inp) => inp.value);
+
+                if (checkedQuarters.length === 0) {
+                    allQuartersCheckbox.checked = true;
+                    filterState.quarter = ["all"];
+                    document.getElementById("quarterFilterLabel")!.textContent =
+                        "All Quarters";
+                } else {
+                    allQuartersCheckbox.checked = false;
+                    filterState.quarter = checkedQuarters;
+                    document.getElementById("quarterFilterLabel")!.textContent =
+                        checkedQuarters.length === 1
+                            ? checkedQuarters[0].charAt(0).toUpperCase() +
+                              checkedQuarters[0].slice(1)
+                            : `${checkedQuarters.length} Quarters Selected`;
+                }
             }
             currentPage = 1;
             fetchEvents();
@@ -1496,19 +1664,38 @@ declare global {
                 filterState.time = "all";
             }
 
-            const yearFilter = document.getElementById(
-                "yearCheckboxes"
-            ) as HTMLDivElement;
-            if (yearFilter) {
-                const yearInputs = yearFilter.querySelectorAll(
-                    'input[type="checkbox"]'
-                );
-                yearInputs.forEach((input: HTMLInputElement) => {
-                    input.checked = true;
+            // Reset year filter
+            const yearAllCheckbox = document.querySelector(
+                'input[type="checkbox"][value="all"]'
+            ) as HTMLInputElement;
+            const yearCheckboxes = document.querySelectorAll(
+                '#yearCheckboxes input[type="checkbox"]'
+            );
+            if (yearAllCheckbox && yearCheckboxes) {
+                yearAllCheckbox.checked = true;
+                yearCheckboxes.forEach((checkbox: Element) => {
+                    (checkbox as HTMLInputElement).checked = false;
                 });
                 filterState.year = ["all"];
                 document.getElementById("yearFilterLabel")!.textContent =
                     "All Years";
+            }
+
+            // Reset quarter filter
+            const quarterAllCheckbox = document.querySelector(
+                '#quarterDropdownContent input[type="checkbox"][value="all"]'
+            ) as HTMLInputElement;
+            const quarterCheckboxes = document.querySelectorAll(
+                '#quarterDropdownContent input[type="checkbox"]:not([value="all"])'
+            );
+            if (quarterAllCheckbox && quarterCheckboxes) {
+                quarterAllCheckbox.checked = true;
+                quarterCheckboxes.forEach((checkbox: Element) => {
+                    (checkbox as HTMLInputElement).checked = false;
+                });
+                filterState.quarter = ["all"];
+                document.getElementById("quarterFilterLabel")!.textContent =
+                    "All Quarters";
             }
 
             const publishedFilter = document.getElementById(
@@ -1545,6 +1732,7 @@ declare global {
             filterState = {
                 time: "all",
                 year: ["all"],
+                quarter: ["all"],
                 published: "all",
                 hasFiles: "all",
                 hasFood: "all",
