@@ -227,4 +227,44 @@ export class FileManager {
       this.auth.setUpdating(false);
     }
   }
+
+  /**
+   * Get multiple files from a record
+   * @param collectionName The name of the collection
+   * @param recordId The ID of the record containing the files
+   * @param field The field name containing the files
+   * @returns Array of file URLs
+   */
+  public async getFiles(
+    collectionName: string,
+    recordId: string,
+    field: string
+  ): Promise<string[]> {
+    if (!this.auth.isAuthenticated()) {
+      throw new Error("User must be authenticated to get files");
+    }
+
+    try {
+      this.auth.setUpdating(true);
+      const pb = this.auth.getPocketBase();
+      
+      // Get the record to retrieve the filenames
+      const record = await pb.collection(collectionName).getOne(recordId);
+      
+      // Get the filenames from the specified field
+      const filenames = record[field] || [];
+      
+      // Convert filenames to URLs
+      const fileUrls = filenames.map((filename: string) => 
+        this.getFileUrl(collectionName, recordId, filename)
+      );
+      
+      return fileUrls;
+    } catch (err) {
+      console.error(`Failed to get files from ${collectionName}:`, err);
+      throw err;
+    } finally {
+      this.auth.setUpdating(false);
+    }
+  }
 } 

@@ -1106,19 +1106,11 @@ import JSZip from "jszip";
     };
 
     // Add downloadAllFiles function
-    declare global {
-        interface Window {
-            downloadAllFiles: () => Promise<void>;
-            [key: string]: any;
-        }
-    }
-
     window.downloadAllFiles = async function () {
         const downloadBtn = document.getElementById(
             "downloadAllBtn"
         ) as HTMLButtonElement;
         if (!downloadBtn) return;
-
         const originalBtnContent = downloadBtn.innerHTML;
 
         try {
@@ -1146,6 +1138,9 @@ import JSZip from "jszip";
             const filePromises = event.files.map(async (filename: string) => {
                 const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${filename}`;
                 const response = await fetch(fileUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to download ${filename}`);
+                }
                 const blob = await response.blob();
                 zip.file(filename, blob);
             });
@@ -1163,14 +1158,26 @@ import JSZip from "jszip";
             document.body.removeChild(link);
             URL.revokeObjectURL(downloadUrl);
 
-            // Reset button state
-            downloadBtn.innerHTML = originalBtnContent;
-            downloadBtn.disabled = false;
-        } catch (error) {
+            // Show success message
+            createToast("Files downloaded successfully!", "success");
+        } catch (error: any) {
             console.error("Failed to download files:", error);
-            createToast("Failed to download files. Please try again.", "error");
+            createToast(
+                error?.message || "Failed to download files. Please try again.",
+                "error"
+            );
+        } finally {
+            // Reset button state
             downloadBtn.innerHTML = originalBtnContent;
             downloadBtn.disabled = false;
         }
     };
+
+    // Add TypeScript interface for Window
+    declare global {
+        interface Window {
+            downloadAllFiles: () => Promise<void>;
+            [key: string]: any;
+        }
+    }
 </script>
