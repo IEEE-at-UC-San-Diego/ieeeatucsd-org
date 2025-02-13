@@ -851,10 +851,17 @@ declare global {
             // Search query
             if (searchQuery) {
                 const searchLower = searchQuery.toLowerCase();
+                const searchTerms = searchLower.split(/\s+/).filter(Boolean);
+
                 return (
-                    event.event_name.toLowerCase().includes(searchLower) ||
-                    event.event_code.toLowerCase().includes(searchLower) ||
-                    event.location.toLowerCase().includes(searchLower)
+                    searchTerms.length === 0 || // If no search terms, return true
+                    searchTerms.every(
+                        (term) =>
+                            event.event_name.toLowerCase().includes(term) ||
+                            event.event_code.toLowerCase().includes(term) ||
+                            event.location.toLowerCase().includes(term) ||
+                            event.event_description.toLowerCase().includes(term)
+                    )
                 );
             }
 
@@ -1180,17 +1187,32 @@ declare global {
             fetchEvents();
         });
 
-    // Search input with debounce
+    // Search input with optimized debounce
     let searchTimeout: number | undefined;
-    document.getElementById("searchInput")?.addEventListener("input", (e) => {
-        const target = e.target as HTMLInputElement;
-        clearTimeout(searchTimeout);
-        searchTimeout = window.setTimeout(() => {
-            searchQuery = target.value;
-            currentPage = 1;
-            fetchEvents();
-        }, 300); // 300ms debounce
-    });
+    const searchInput = document.getElementById("searchInput");
+    if (searchInput) {
+        // Add input event
+        searchInput.addEventListener("input", (e) => {
+            const target = e.target as HTMLInputElement;
+            clearTimeout(searchTimeout);
+            searchTimeout = window.setTimeout(() => {
+                searchQuery = target.value.trim();
+                currentPage = 1;
+                fetchEvents();
+            }, 150); // Reduced to 150ms for faster response
+        });
+
+        // Add keydown event for Enter key
+        searchInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                clearTimeout(searchTimeout);
+                const target = e.target as HTMLInputElement;
+                searchQuery = target.value.trim();
+                currentPage = 1;
+                fetchEvents();
+            }
+        });
+    }
 
     // Per page select
     document
