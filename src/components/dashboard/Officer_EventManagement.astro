@@ -2202,6 +2202,9 @@ declare global {
               createFormData.append(key, String(value));
             });
 
+            // Initialize attendees as empty array
+            createFormData.append("attendees", JSON.stringify([]));
+
             // Add new files
             selectedFiles.forEach((file: File) => {
               createFormData.append("files", file);
