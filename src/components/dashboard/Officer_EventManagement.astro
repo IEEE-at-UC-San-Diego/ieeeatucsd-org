@@ -176,7 +176,14 @@ declare global {
                 value="all"
                 class="join-item btn btn-sm"
                 checked
-                aria-label="All Years"
+                aria-label="All Events"
+              />
+              <input
+                type="radio"
+                name="timeFilter"
+                value="ongoing"
+                class="join-item btn btn-sm"
+                aria-label="Ongoing"
               />
               <input
                 type="radio"
@@ -963,10 +970,10 @@ declare global {
           if (allYearsCheckbox) {
             allYearsCheckbox.addEventListener("change", (e) => {
               const target = e.target as HTMLInputElement;
-              yearInputs.forEach((input) => {
-                input.checked = false;
-              });
               if (target.checked) {
+                yearInputs.forEach((input) => {
+                  input.checked = false;
+                });
                 filterState.year = ["all"];
                 document.getElementById("yearFilterLabel")!.textContent =
                   "All Years";
@@ -1085,16 +1092,30 @@ declare global {
   function filterEvents(events: Event[]): Event[] {
     return events.filter((event) => {
       const now = new Date().toISOString();
+      const eventStart = new Date(event.start_date).toISOString();
+      const eventEnd = new Date(event.end_date).toISOString();
 
       // Time filter
-      if (filterState.time === "upcoming" && event.start_date < now)
+      if (filterState.time === "upcoming" && eventStart <= now) return false;
+      if (filterState.time === "past" && eventEnd >= now) return false;
+      if (
+        filterState.time === "ongoing" &&
+        (eventStart > now || eventEnd < now)
+      )
         return false;
-      if (filterState.time === "past" && event.start_date >= now) return false;
 
       // Year filter
       if (!filterState.year.includes("all")) {
-        const eventYear = new Date(event.start_date).getFullYear().toString();
-        if (!filterState.year.includes(eventYear)) return false;
+        const eventStartDate = new Date(event.start_date);
+        const eventEndDate = new Date(event.end_date);
+        const eventStartYear = eventStartDate.getFullYear().toString();
+        const eventEndYear = eventEndDate.getFullYear().toString();
+
+        // Check if either the start year or end year matches any selected year
+        const yearMatches = filterState.year.some(
+          (year) => year === eventStartYear || year === eventEndYear,
+        );
+        if (!yearMatches) return false;
       }
 
       // Quarter filter
