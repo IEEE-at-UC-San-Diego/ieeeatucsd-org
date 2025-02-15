@@ -4,7 +4,7 @@ import { Authentication } from "../../pocketbase/Authentication";
 import { Update } from "../../pocketbase/Update";
 import { FileManager } from "../../pocketbase/FileManager";
 import { SendLog } from "../../pocketbase/SendLog";
-import FilePreview from "../../modals/FilePreview";
+import FilePreview from "./FilePreview";
 
 // Extend Window interface
 declare global {
@@ -129,6 +129,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         setPreviewFilename(filename);
         setShowPreview(true);
     };
+
     // Handle form submission
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -256,290 +257,306 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         }
     };
 
-    // Add preview section
-    const previewSection = showPreview && event?.id && (
-        <FilePreview
-            url={fileManager.getFileUrl("events", event.id, previewFilename)}
-            filename={previewFilename}
-            onClose={() => {
-                setShowPreview(false);
-                const modal = document.getElementById('filePreviewModal') as HTMLDialogElement;
-                if (modal) {
-                    modal.close();
-                }
-            }}
-        />
-    );
-
     return (
         <dialog id="editEventModal" className="modal">
-            {/* Preview Section */}
-            {previewSection}
-            <div className="modal-box max-w-2xl">
-                {/* Main Edit Form Section */}
-                <div id="editFormSection">
-                    <h3 className="font-bold text-lg mb-4" id="editModalTitle">Edit Event</h3>
-                    <form id="editEventForm" onSubmit={handleSubmit} className="space-y-4">
-                        <input type="hidden" id="editEventId" name="editEventId" value={event?.id || ''} />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Event Name */}
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Event Name</span>
-                                    <span className="label-text-alt text-error">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    name="editEventName"
-                                    className="input input-bordered"
-                                    value={event?.event_name || ""}
-                                    onChange={(e) => setEvent(prev => prev ? { ...prev, event_name: e.target.value } : null)}
-                                    required
-                                />
-                            </div>
-
-                            {/* Event Code */}
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Event Code</span>
-                                    <span className="label-text-alt text-error">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    name="editEventCode"
-                                    className="input input-bordered"
-                                    value={event?.event_code || ""}
-                                    onChange={(e) => setEvent(prev => prev ? { ...prev, event_code: e.target.value } : null)}
-                                    required
-                                />
-                            </div>
-
-                            {/* Location */}
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Location</span>
-                                    <span className="label-text-alt text-error">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    name="editEventLocation"
-                                    className="input input-bordered"
-                                    value={event?.location || ""}
-                                    onChange={(e) => setEvent(prev => prev ? { ...prev, location: e.target.value } : null)}
-                                    required
-                                />
-                            </div>
-
-                            {/* Points to Reward */}
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Points to Reward</span>
-                                    <span className="label-text-alt text-error">*</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    name="editEventPoints"
-                                    className="input input-bordered"
-                                    value={event?.points_to_reward || 0}
-                                    onChange={(e) => setEvent(prev => prev ? { ...prev, points_to_reward: Number(e.target.value) } : null)}
-                                    min="0"
-                                    required
-                                />
-                            </div>
-
-                            {/* Start Date */}
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Start Date</span>
-                                    <span className="label-text-alt text-error">*</span>
-                                </label>
-                                <input
-                                    type="datetime-local"
-                                    name="editEventStartDate"
-                                    className="input input-bordered"
-                                    value={event?.start_date ? new Date(event.start_date).toISOString().slice(0, 16) : ""}
-                                    onChange={(e) => setEvent(prev => prev ? { ...prev, start_date: e.target.value } : null)}
-                                    required
-                                />
-                            </div>
-
-                            {/* End Date */}
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">End Date</span>
-                                    <span className="label-text-alt text-error">*</span>
-                                </label>
-                                <input
-                                    type="datetime-local"
-                                    name="editEventEndDate"
-                                    className="input input-bordered"
-                                    value={event?.end_date ? new Date(event.end_date).toISOString().slice(0, 16) : ""}
-                                    onChange={(e) => setEvent(prev => prev ? { ...prev, end_date: e.target.value } : null)}
-                                    required
-                                />
-                            </div>
+            {showPreview ? (
+                <div className="modal-box max-w-4xl">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
+                            <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => setShowPreview(false)}
+                            >
+                                ← Back
+                            </button>
+                            <h3 className="font-bold text-lg truncate">
+                                {previewFilename}
+                            </h3>
                         </div>
+                    </div>
+                    <div className="relative">
+                        <FilePreview
+                            url={previewUrl}
+                            filename={previewFilename}
+                        />
+                    </div>
+                </div>
+            ) : (
+                <div className="modal-box max-w-2xl">
+                    {/* Main Edit Form Section */}
+                    <div id="editFormSection">
+                        <h3 className="font-bold text-lg mb-4" id="editModalTitle">
+                            {event?.id ? 'Edit Event' : 'Add New Event'}
+                        </h3>
+                        <form id="editEventForm" onSubmit={handleSubmit} className="space-y-4">
+                            <input type="hidden" id="editEventId" name="editEventId" value={event?.id || ''} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Event Name */}
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Event Name</span>
+                                        <span className="label-text-alt text-error">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="editEventName"
+                                        className="input input-bordered"
+                                        value={event?.event_name || ""}
+                                        onChange={(e) => setEvent(prev => prev ? { ...prev, event_name: e.target.value } : null)}
+                                        required
+                                    />
+                                </div>
 
-                        {/* Description */}
-                        <div className="form-control">
-                            <label className="label">
-                                <span className="label-text">Description</span>
-                                <span className="label-text-alt text-error">*</span>
-                            </label>
-                            <textarea
-                                name="editEventDescription"
-                                className="textarea textarea-bordered"
-                                value={event?.event_description || ""}
-                                onChange={(e) => setEvent(prev => prev ? { ...prev, event_description: e.target.value } : null)}
-                                rows={3}
-                                required
-                            ></textarea>
-                        </div>
+                                {/* Event Code */}
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Event Code</span>
+                                        <span className="label-text-alt text-error">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="editEventCode"
+                                        className="input input-bordered"
+                                        value={event?.event_code || ""}
+                                        onChange={(e) => setEvent(prev => prev ? { ...prev, event_code: e.target.value } : null)}
+                                        required
+                                    />
+                                </div>
 
-                        {/* Files */}
-                        <div className="form-control">
-                            <label className="label">
-                                <span className="label-text">Upload Files</span>
-                            </label>
-                            <input
-                                type="file"
-                                onChange={handleFileSelect}
-                                className="file-input file-input-bordered"
-                                multiple
-                            />
-                            <div className="mt-4 space-y-2">
-                                {/* New Files */}
-                                {Array.from(selectedFiles.entries()).map(([name, file]) => (
-                                    <div key={name} className="flex items-center justify-between p-2 bg-base-200 rounded-lg">
-                                        <span className="truncate">{name}</span>
-                                        <div className="flex gap-2">
-                                            <div className="badge badge-primary">New</div>
-                                            <button
-                                                type="button"
-                                                className="btn btn-ghost btn-xs text-error"
-                                                onClick={() => {
-                                                    const updatedFiles = new Map(selectedFiles);
-                                                    updatedFiles.delete(name);
-                                                    setSelectedFiles(updatedFiles);
-                                                }}
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                                </svg>
-                                            </button>
+                                {/* Location */}
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Location</span>
+                                        <span className="label-text-alt text-error">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="editEventLocation"
+                                        className="input input-bordered"
+                                        value={event?.location || ""}
+                                        onChange={(e) => setEvent(prev => prev ? { ...prev, location: e.target.value } : null)}
+                                        required
+                                    />
+                                </div>
+
+                                {/* Points to Reward */}
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Points to Reward</span>
+                                        <span className="label-text-alt text-error">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="editEventPoints"
+                                        className="input input-bordered"
+                                        value={event?.points_to_reward || 0}
+                                        onChange={(e) => setEvent(prev => prev ? { ...prev, points_to_reward: Number(e.target.value) } : null)}
+                                        min="0"
+                                        required
+                                    />
+                                </div>
+
+                                {/* Start Date */}
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Start Date</span>
+                                        <span className="label-text-alt text-error">*</span>
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        name="editEventStartDate"
+                                        className="input input-bordered"
+                                        value={event?.start_date ? new Date(event.start_date).toISOString().slice(0, 16) : ""}
+                                        onChange={(e) => setEvent(prev => prev ? { ...prev, start_date: e.target.value } : null)}
+                                        required
+                                    />
+                                </div>
+
+                                {/* End Date */}
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">End Date</span>
+                                        <span className="label-text-alt text-error">*</span>
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        name="editEventEndDate"
+                                        className="input input-bordered"
+                                        value={event?.end_date ? new Date(event.end_date).toISOString().slice(0, 16) : ""}
+                                        onChange={(e) => setEvent(prev => prev ? { ...prev, end_date: e.target.value } : null)}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Description */}
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Description</span>
+                                    <span className="label-text-alt text-error">*</span>
+                                </label>
+                                <textarea
+                                    name="editEventDescription"
+                                    className="textarea textarea-bordered"
+                                    value={event?.event_description || ""}
+                                    onChange={(e) => setEvent(prev => prev ? { ...prev, event_description: e.target.value } : null)}
+                                    rows={3}
+                                    required
+                                ></textarea>
+                            </div>
+
+                            {/* Files */}
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Upload Files</span>
+                                </label>
+                                <input
+                                    type="file"
+                                    onChange={handleFileSelect}
+                                    className="file-input file-input-bordered"
+                                    multiple
+                                />
+                                <div className="mt-4 space-y-2">
+                                    {/* New Files */}
+                                    {Array.from(selectedFiles.entries()).map(([name, file]) => (
+                                        <div key={name} className="flex items-center justify-between p-2 bg-base-200 rounded-lg">
+                                            <span className="truncate">{name}</span>
+                                            <div className="flex gap-2">
+                                                <div className="badge badge-primary">New</div>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-ghost btn-xs text-error"
+                                                    onClick={() => {
+                                                        const updatedFiles = new Map(selectedFiles);
+                                                        updatedFiles.delete(name);
+                                                        setSelectedFiles(updatedFiles);
+                                                    }}
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
 
-                                {/* Current Files */}
-                                {event?.files && event.files.length > 0 && (
-                                    <>
-                                        <div className="divider">Current Files</div>
-                                        {event.files.map((filename) => (
-                                            <div key={filename} className={`flex items-center justify-between p-2 bg-base-200 rounded-lg${filesToDelete.has(filename) ? " opacity-50" : ""}`}>
-                                                <span className="truncate">{filename}</span>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-ghost btn-xs"
-                                                        onClick={() => handlePreviewFile(fileManager.getFileUrl("events", event.id, filename), filename)}
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                                                        </svg>
-                                                    </button>
-                                                    <div className="text-error">
-                                                        {filesToDelete.has(filename) ? (
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn-ghost btn-xs"
-                                                                onClick={() => handleUndoFileDelete(filename)}
-                                                            >
-                                                                Undo
-                                                            </button>
-                                                        ) : (
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn-ghost btn-xs text-error"
-                                                                onClick={() => handleFileDelete(filename)}
-                                                            >
-                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                                                </svg>
-                                                            </button>
-                                                        )}
+                                    {/* Current Files */}
+                                    {event?.files && event.files.length > 0 && (
+                                        <>
+                                            <div className="divider">Current Files</div>
+                                            {event.files.map((filename) => (
+                                                <div key={filename} className={`flex items-center justify-between p-2 bg-base-200 rounded-lg${filesToDelete.has(filename) ? " opacity-50" : ""}`}>
+                                                    <span className="truncate">{filename}</span>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-ghost btn-xs"
+                                                            onClick={() => {
+                                                                if (event?.id) {
+                                                                    handlePreviewFile(
+                                                                        fileManager.getFileUrl("events", event.id, filename),
+                                                                        filename
+                                                                    );
+                                                                }
+                                                            }}
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                                <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                        <div className="text-error">
+                                                            {filesToDelete.has(filename) ? (
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-ghost btn-xs"
+                                                                    onClick={() => handleUndoFileDelete(filename)}
+                                                                >
+                                                                    Undo
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-ghost btn-xs text-error"
+                                                                    onClick={() => handleFileDelete(filename)}
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </>
-                                )}
+                                            ))}
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Published */}
-                        <div className="form-control">
-                            <label className="label cursor-pointer justify-start gap-4">
-                                <input
-                                    type="checkbox"
-                                    name="editEventPublished"
-                                    className="toggle"
-                                    checked={event?.published || false}
-                                    onChange={(e) => setEvent(prev => prev ? { ...prev, published: e.target.checked } : null)}
-                                />
-                                <span className="label-text">Publish Event</span>
-                            </label>
-                            <label className="label">
-                                <span className="label-text-alt text-info">
-                                    This has to be clicked if you want to make this event available
-                                    to the public
-                                </span>
-                            </label>
-                        </div>
+                            {/* Published */}
+                            <div className="form-control">
+                                <label className="label cursor-pointer justify-start gap-4">
+                                    <input
+                                        type="checkbox"
+                                        name="editEventPublished"
+                                        className="toggle"
+                                        checked={event?.published || false}
+                                        onChange={(e) => setEvent(prev => prev ? { ...prev, published: e.target.checked } : null)}
+                                    />
+                                    <span className="label-text">Publish Event</span>
+                                </label>
+                                <label className="label">
+                                    <span className="label-text-alt text-info">
+                                        This has to be clicked if you want to make this event available
+                                        to the public
+                                    </span>
+                                </label>
+                            </div>
 
-                        {/* Has Food */}
-                        <div className="form-control">
-                            <label className="label cursor-pointer justify-start gap-4">
-                                <input
-                                    type="checkbox"
-                                    name="editEventHasFood"
-                                    className="toggle"
-                                    checked={event?.has_food || false}
-                                    onChange={(e) => setEvent(prev => prev ? { ...prev, has_food: e.target.checked } : null)}
-                                />
-                                <span className="label-text">Has Food</span>
-                            </label>
-                            <label className="label">
-                                <span className="label-text-alt text-info">
-                                    Check this if food will be provided at the event
-                                </span>
-                            </label>
-                        </div>
-                    </form>
+                            {/* Has Food */}
+                            <div className="form-control">
+                                <label className="label cursor-pointer justify-start gap-4">
+                                    <input
+                                        type="checkbox"
+                                        name="editEventHasFood"
+                                        className="toggle"
+                                        checked={event?.has_food || false}
+                                        onChange={(e) => setEvent(prev => prev ? { ...prev, has_food: e.target.checked } : null)}
+                                    />
+                                    <span className="label-text">Has Food</span>
+                                </label>
+                                <label className="label">
+                                    <span className="label-text-alt text-info">
+                                        Check this if food will be provided at the event
+                                    </span>
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div className="modal-action">
+                        <button
+                            type="submit"
+                            className={`btn btn-primary ${isSubmitting ? 'loading' : ''}`}
+                            form="editEventForm"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting ? 'Saving...' : 'Save Changes'}
+                        </button>
+                        <button
+                            type="button"
+                            className="btn"
+                            onClick={() => {
+                                const modal = document.getElementById("editEventModal") as HTMLDialogElement;
+                                if (modal) modal.close();
+                            }}
+                        >
+                            Cancel
+                        </button>
+                    </div>
                 </div>
-
-                <div className="modal-action">
-                    <button
-                        type="submit"
-                        className={`btn btn-primary ${isSubmitting ? 'loading' : ''}`}
-                        form="editEventForm"
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? 'Saving...' : 'Save Changes'}
-                    </button>
-                    <button
-                        type="button"
-                        className="btn"
-                        onClick={() => {
-                            const modal = document.getElementById("editEventModal") as HTMLDialogElement;
-                            if (modal) modal.close();
-                        }}
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </div>
+            )}
             <form method="dialog" className="modal-backdrop">
                 <button>close</button>
             </form>

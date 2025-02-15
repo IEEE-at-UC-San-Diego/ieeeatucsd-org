@@ -3,7 +3,7 @@ import { Icon } from "astro-icon/components";
 import { Get } from "../pocketbase/Get";
 import { Authentication } from "../pocketbase/Authentication";
 import EventEditor from "./Officer_EventManagement/EventEditor";
-import FilePreview from "../modals/FilePreview";
+import FilePreview from "./Officer_EventManagement/FilePreview";
 
 // Get instances
 const get = Get.getInstance();
@@ -714,7 +714,7 @@ const currentPage = eventResponse.page;
     import { Update } from "../pocketbase/Update";
     import { FileManager } from "../pocketbase/FileManager";
     import { SendLog } from "../pocketbase/SendLog";
-    import FilePreview from "../modals/FilePreview";
+    import FilePreview from "./Officer_EventManagement/FilePreview";
 
     // Add file storage
     const selectedFileStorage = new Map<string, File>();
@@ -1832,12 +1832,8 @@ const currentPage = eventResponse.page;
         const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
         const filePreview = document.getElementById("universalFilePreview") as any;
         const previewFileName = document.getElementById("previewFileName");
-        const loadingSpinner = document.getElementById("previewLoadingSpinner");
         
-        if (filePreview && modal && previewFileName && loadingSpinner) {
-            // Show loading spinner
-            loadingSpinner.classList.remove("hidden");
-            
+        if (filePreview && modal && previewFileName) {
             // Update the filename display
             previewFileName.textContent = filename;
             
@@ -1847,27 +1843,20 @@ const currentPage = eventResponse.page;
             // Update the preview component
             filePreview.setAttribute("url", url);
             filePreview.setAttribute("filename", filename);
-            
-            // Hide loading spinner after a short delay
-            setTimeout(() => {
-                loadingSpinner.classList.add("hidden");
-            }, 500);
         }
     };
 
     // Close file preview
     window.closeFilePreview = function () {
         const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
-        const filePreview = document.getElementById("universalFilePreview");
+        const filePreview = document.getElementById("universalFilePreview") as any;
         const previewFileName = document.getElementById("previewFileName");
         const filesContent = document.getElementById("filesContent");
 
         if (modal && filePreview && previewFileName) {
             // Reset the preview
-            const event = new CustomEvent("updateFilePreview", {
-                detail: { url: "", filename: "" },
-            });
-            filePreview.dispatchEvent(event);
+            filePreview.setAttribute("url", "");
+            filePreview.setAttribute("filename", "");
             previewFileName.textContent = "";
             modal.close();
 
