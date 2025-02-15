@@ -1,4 +1,10 @@
 import { useState, useEffect } from "react";
+import { Get } from "../../pocketbase/Get";
+import { Authentication } from "../../pocketbase/Authentication";
+import { Update } from "../../pocketbase/Update";
+import { FileManager } from "../../pocketbase/FileManager";
+import { SendLog } from "../../pocketbase/SendLog";
+import FilePreview from "../../modals/FilePreview";
 
 // Extend Window interface
 declare global {
@@ -7,12 +13,6 @@ declare global {
         hideLoading?: () => void;
     }
 }
-import FilePreview from "../../modals/FilePreview";
-import { Get } from "../../pocketbase/Get";
-import { Authentication } from "../../pocketbase/Authentication";
-import { Update } from "../../pocketbase/Update";
-import { FileManager } from "../../pocketbase/FileManager";
-import { SendLog } from "../../pocketbase/SendLog";
 
 interface Event {
     id: string;
@@ -257,35 +257,18 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
     };
 
     // Add preview section
-    const previewSection = (
-        <div id="editModalPreviewSection" className={`${showPreview ? "" : "hidden"}`}>
-            <div className="flex items-center gap-3 mb-4">
-                <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => setShowPreview(false)}
-                >
-                    ← Back
-                </button>
-                <h3 className="font-bold text-lg truncate" id="editPreviewFileName">
-                    {previewFilename}
-                </h3>
-            </div>
-            <div className="relative">
-                <div
-                    id="editLoadingSpinner"
-                    className="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
-                >
-                    <span className="loading loading-spinner loading-lg"></span>
-                </div>
-                <div id="previewContent" className="w-full">
-                    <FilePreview
-                        url={previewUrl}
-                        filename={previewFilename}
-                        id="editFilePreview"
-                    />
-                </div>
-            </div>
-        </div>
+    const previewSection = showPreview && event?.id && (
+        <FilePreview
+            url={fileManager.getFileUrl("events", event.id, previewFilename)}
+            filename={previewFilename}
+            onClose={() => {
+                setShowPreview(false);
+                const modal = document.getElementById('filePreviewModal') as HTMLDialogElement;
+                if (modal) {
+                    modal.close();
+                }
+            }}
+        />
     );
 
     return (
