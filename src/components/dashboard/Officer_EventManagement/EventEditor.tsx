@@ -267,7 +267,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                                 className="btn btn-ghost btn-sm"
                                 onClick={() => setShowPreview(false)}
                             >
-                                ← Back
+                                Close
                             </button>
                             <h3 className="font-bold text-lg truncate">
                                 {previewFilename}
@@ -278,6 +278,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                         <FilePreview
                             url={previewUrl}
                             filename={previewFilename}
+                            isModal={false}
                         />
                     </div>
                 </div>

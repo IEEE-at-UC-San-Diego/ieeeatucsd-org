@@ -648,27 +648,7 @@ const currentPage = eventResponse.page;
         </div>
 
         <div id="attendeesContent" class="space-y-4 hidden">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Event Attendees</h3>
-                <button
-                    id="downloadAttendeesCSV"
-                    class="btn btn-primary btn-sm gap-2"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            fill-rule="evenodd"
-                            d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                            clip-rule="evenodd"></path>
-                    </svg>
-                    Download CSV
-                </button>
-            </div>
-            <!-- Attendees list will be populated here -->
+            <!-- Attendees content -->
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
@@ -683,9 +663,9 @@ const currentPage = eventResponse.page;
             <div class="flex items-center gap-3">
                 <button
                     class="btn btn-ghost btn-sm"
-                    onclick="window.closeFilePreview()"
+                    onclick="window.closeFilePreviewOfficer()"
                 >
-                    ← Back
+                    Close
                 </button>
                 <h3 class="font-bold text-lg truncate" id="previewFileName">
                 </h3>
@@ -699,12 +679,12 @@ const currentPage = eventResponse.page;
                 <span class="loading loading-spinner loading-lg"></span>
             </div>
             <div id="previewContent" class="w-full">
-                <FilePreview client:only url="" filename="" id="universalFilePreview" />
+                <FilePreview client:only="react" />
             </div>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-        <button onclick="window.closeFilePreview()">close</button>
+        <button onclick="window.closeFilePreviewOfficer()">close</button>
     </form>
 </dialog>
 
@@ -1776,29 +1756,8 @@ const currentPage = eventResponse.page;
 
     // Update the showFilePreview function
     window.showFilePreview = function (file: { url: string; name: string }) {
-        const fileListSection = document.getElementById("filesContent");
-        const previewSection = document.getElementById("filePreviewSection");
-        const mainFilePreview = document.getElementById("mainFilePreview");
-        const previewFileName = document.getElementById("previewFileName");
-
-        if (
-            !fileListSection ||
-            !previewSection ||
-            !mainFilePreview ||
-            !previewFileName
-        )
-            return;
-
-        // Hide file list and show preview section
-        fileListSection.classList.add("hidden");
-        previewSection.classList.remove("hidden");
-        previewFileName.textContent = file.name;
-
-        // Dispatch a custom event to update the FilePreview
-        const event = new CustomEvent("updateFilePreview", {
-            detail: { url: file.url, filename: file.name },
-        });
-        mainFilePreview.dispatchEvent(event);
+        console.log('showFilePreview called with:', file);
+        window.previewFile(file.url, file.name);
     };
 
     // Add backToEditForm function
@@ -1829,11 +1788,13 @@ const currentPage = eventResponse.page;
 
     // Universal file preview function
     window.previewFile = function (url: string, filename: string) {
+        console.log('previewFile called with:', { url, filename });
         const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
-        const filePreview = document.getElementById("universalFilePreview") as any;
+        const filePreview = document.getElementById("officerFilePreview") as any;
         const previewFileName = document.getElementById("previewFileName");
         
         if (filePreview && modal && previewFileName) {
+            console.log('Found all required elements');
             // Update the filename display
             previewFileName.textContent = filename;
             
@@ -1841,29 +1802,36 @@ const currentPage = eventResponse.page;
             modal.showModal();
 
             // Update the preview component
-            filePreview.setAttribute("url", url);
-            filePreview.setAttribute("filename", filename);
+            console.log('Dispatching updateFilePreview event');
+            const event = new CustomEvent("updateFilePreview", {
+                detail: { url, filename }
+            });
+            filePreview.dispatchEvent(event);
+        } else {
+            console.error('Missing required elements:', {
+                modal: !!modal,
+                filePreview: !!filePreview,
+                previewFileName: !!previewFileName
+            });
         }
     };
 
     // Close file preview
     window.closeFilePreview = function () {
+        console.log('closeFilePreview called');
         const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
-        const filePreview = document.getElementById("universalFilePreview") as any;
+        const filePreview = document.getElementById("officerFilePreview") as any;
         const previewFileName = document.getElementById("previewFileName");
-        const filesContent = document.getElementById("filesContent");
 
         if (modal && filePreview && previewFileName) {
+            console.log('Resetting preview and closing modal');
             // Reset the preview
-            filePreview.setAttribute("url", "");
-            filePreview.setAttribute("filename", "");
+            const event = new CustomEvent("updateFilePreview", {
+                detail: { url: "", filename: "" }
+            });
+            filePreview.dispatchEvent(event);
             previewFileName.textContent = "";
             modal.close();
-
-            // Show the files list if we're in the event details modal
-            if (filesContent) {
-                filesContent.classList.remove('hidden');
-            }
         }
     };
 
@@ -1891,13 +1859,14 @@ const currentPage = eventResponse.page;
             .map(
                 (filename) => {
                     const fileUrl = fileManager.getFileUrl("events", eventId, filename);
+                    const previewData = JSON.stringify({ url: fileUrl, name: filename }).replace(/'/g, "\\'");
                     return `
                         <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg${filesToDelete.has(filename) ? " opacity-50" : ""}" data-filename="${filename}">
                             <div class="flex items-center gap-2 flex-1 min-w-0">
                                 <span class="truncate">${filename}</span>
                             </div>
                             <div class="flex gap-2 flex-shrink-0">
-                                <button type="button" class="btn btn-ghost btn-xs" onclick="window.previewFile('${fileUrl}', '${filename}')">
+                                <button type="button" class="btn btn-ghost btn-xs" onclick='window.showFilePreviewOfficer(${previewData})'>
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                         <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
                                         <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
@@ -2318,4 +2287,69 @@ const currentPage = eventResponse.page;
             }
         }
     };
+
+    // Create a custom event for file preview state management
+    const FILE_PREVIEW_STATE_CHANGE = 'filePreviewStateChange';
+
+    // Universal file preview function for officer section
+    window.previewFileOfficer = function (url: string, filename: string) {
+        console.log('previewFileOfficer called with:', { url, filename });
+        const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
+        const previewFileName = document.getElementById("previewFileName");
+        
+        if (modal && previewFileName) {
+            console.log('Found all required elements');
+            // Update the filename display
+            previewFileName.textContent = filename;
+            
+            // Show the modal
+            modal.showModal();
+
+            // Dispatch state change event
+            console.log('Dispatching state change event');
+            window.dispatchEvent(new CustomEvent(FILE_PREVIEW_STATE_CHANGE, {
+                detail: { url, filename }
+            }));
+        } else {
+            console.error('Missing required elements:', {
+                modal: !!modal,
+                previewFileName: !!previewFileName
+            });
+        }
+    };
+
+    // Close file preview for officer section
+    window.closeFilePreviewOfficer = function () {
+        console.log('closeFilePreviewOfficer called');
+        const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
+        const previewContent = document.getElementById("previewContent");
+        const previewFileName = document.getElementById("previewFileName");
+
+        if (modal && previewContent && previewFileName) {
+            console.log('Resetting preview and closing modal');
+            // Reset the preview
+            const filePreview = previewContent.querySelector('astro-island') as any;
+            if (filePreview) {
+                const component = filePreview.querySelector('[data-astro-cid]') as any;
+                if (component) {
+                    component.setAttribute('url', '');
+                    component.setAttribute('filename', '');
+                }
+            }
+            previewFileName.textContent = "";
+            modal.close();
+        }
+    };
+
+    // Update the showFilePreview function for officer section
+    window.showFilePreviewOfficer = function (file: { url: string; name: string }) {
+        console.log('showFilePreviewOfficer called with:', file);
+        window.previewFileOfficer(file.url, file.name);
+    };
+
+    // Make helper functions available globally
+    window.updateFilePreviewButtons = updateFilePreviewButtons;
+    window.previewFileOfficer = previewFileOfficer;
+    window.closeFilePreviewOfficer = closeFilePreviewOfficer;
+    window.showFilePreviewOfficer = showFilePreviewOfficer;
 </script>

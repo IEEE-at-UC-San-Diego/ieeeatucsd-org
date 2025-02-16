@@ -1,6 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
 import JSZip from "jszip";
+import FilePreview from "./Officer_EventManagement/FilePreview";
 ---
 
 <div id="eventsSection" class="dashboard-section hidden">
@@ -149,7 +150,7 @@ import JSZip from "jszip";
       </div>
       <button
         class="btn btn-circle btn-ghost"
-        onclick="eventDetailsModal.close()"
+        onclick="window.closeEventDetailsModal()"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -170,30 +171,41 @@ import JSZip from "jszip";
     <div id="filesContent" class="space-y-4">
       <!-- Files list will be populated here -->
     </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button onclick="window.closeEventDetailsModal()">close</button>
+  </form>
+</dialog>
 
-    <!-- File Preview Section -->
-    <div id="filePreviewSection" class="hidden">
-      <div class="flex justify-between items-center mb-4">
-        <div class="flex items-center gap-3">
-          <button class="btn btn-ghost btn-sm" onclick="backToFileList()">
-            ← Back
-          </button>
-          <h3 class="font-bold text-lg truncate" id="previewFileName"></h3>
-        </div>
-      </div>
-      <div class="relative" id="previewContainer">
-        <div
-          id="loadingSpinner"
-          class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
+<!-- Universal File Preview Modal -->
+<dialog id="filePreviewModal" class="modal">
+  <div class="modal-box max-w-4xl">
+    <div class="flex justify-between items-center mb-4">
+      <div class="flex items-center gap-3">
+        <button
+          class="btn btn-ghost btn-sm"
+          onclick="window.closeFilePreviewEvents()"
         >
-          <span class="loading loading-spinner loading-lg"></span>
-        </div>
-        <div id="previewContent" class="w-full"></div>
+          Close
+        </button>
+        <h3 class="font-bold text-lg truncate" id="previewFileName">
+        </h3>
+      </div>
+    </div>
+    <div class="relative" id="previewContainer">
+      <div
+        id="previewLoadingSpinner"
+        class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
+      >
+        <span class="loading loading-spinner loading-lg"></span>
+      </div>
+      <div id="previewContent" class="w-full">
+        <FilePreview client:load isModal={true} />
       </div>
     </div>
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button>close</button>
+    <button onclick="window.closeFilePreviewEvents()">close</button>
   </form>
 </dialog>
 
@@ -858,95 +870,8 @@ import JSZip from "jszip";
   }
 
   function showFilePreview(file: { url: string; type: string; name: string }) {
-    const filePreviewSection = document.getElementById("filePreviewSection");
-    const filesContent = document.getElementById("filesContent");
-    const previewContent = document.getElementById("previewContent");
-    const previewFileName = document.getElementById("previewFileName");
-    const modalTitle = document.getElementById("modalTitle");
-
-    if (
-      !filePreviewSection ||
-      !filesContent ||
-      !previewContent ||
-      !previewFileName
-    )
-      return;
-
-    filePreviewSection.classList.remove("hidden");
-    filesContent.classList.add("hidden");
-    previewFileName.textContent = file.name;
-    if (modalTitle) modalTitle.textContent = "File Preview";
-
-    const fileType = file.type.toLowerCase();
-    showLoading();
-
-    // Create the PocketBase URL
-    const baseUrl = "https://pocketbase.ieeeucsd.org";
-    const fileUrl = `${baseUrl}/api/files/events/${currentEventId}/${file.name}`;
-
-    if (!isPreviewableType(fileType)) {
-      previewContent.innerHTML = `
-                <div class="flex flex-col items-center justify-center p-8">
-                    <div class="text-4xl mb-4">📄</div>
-                    <p class="text-center">
-                        This file type (${file.type}) cannot be previewed.
-                        <br />
-                        <a href="${fileUrl}" download="${file.name}" class="btn btn-primary mt-4" target="_blank" rel="noopener noreferrer">
-                            Open in New Tab
-                        </a>
-                    </p>
-                </div>
-            `;
-      hideLoading();
-      return;
-    }
-
-    if (fileType.startsWith("image/")) {
-      previewContent.innerHTML = `
-                <img
-                    src="${fileUrl}"
-                    alt="${file.name}"
-                    class="max-w-full max-h-[70vh] object-contain"
-                    onload="hideLoading()"
-                    onerror="handlePreviewError()"
-                />
-            `;
-    } else if (fileType.startsWith("video/")) {
-      previewContent.innerHTML = `
-                <video controls class="max-w-full max-h-[70vh]" onloadeddata="hideLoading()" onerror="handlePreviewError()">
-                    <source src="${fileUrl}" type="${file.type}" />
-                    Your browser does not support the video tag.
-                </video>
-            `;
-    } else if (fileType === "application/pdf") {
-      previewContent.innerHTML = `
-                <iframe
-                    src="${fileUrl}"
-                    class="w-full h-[70vh]"
-                    onload="hideLoading()"
-                    onerror="handlePreviewError()"
-                ></iframe>
-            `;
-    } else if (
-      fileType.startsWith("text/") ||
-      fileType === "application/json"
-    ) {
-      previewContent.innerHTML = `
-                <iframe
-                    src="${fileUrl}"
-                    class="w-full h-[70vh] font-mono"
-                    onload="hideLoading()"
-                    onerror="handlePreviewError()"
-                ></iframe>
-            `;
-    } else if (fileType.startsWith("audio/")) {
-      previewContent.innerHTML = `
-                <audio controls class="w-full" onloadeddata="hideLoading()" onerror="handlePreviewError()">
-                    <source src="${fileUrl}" type="${file.type}" />
-                    Your browser does not support the audio element.
-                </audio>
-            `;
-    }
+    console.log('showFilePreview called with:', file);
+    window.previewFileEvents(file.url, file.name);
   }
 
   function handlePreviewError() {
@@ -954,24 +879,67 @@ import JSZip from "jszip";
     const previewContent = document.getElementById("previewContent");
     if (previewContent) {
       previewContent.innerHTML = `
-                <div class="alert alert-error">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Failed to load file preview</span>
-                </div>
-            `;
+        <div class="alert alert-error">
+          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Failed to load file preview</span>
+        </div>
+      `;
     }
   }
 
-  // Make helper functions available globally
-  window.showFilePreview = showFilePreview;
-  window.backToFileList = backToFileList;
-  window.handlePreviewError = handlePreviewError;
-  window.showLoading = showLoading;
-  window.hideLoading = hideLoading;
+  // Universal file preview function for events section
+  window.previewFileEvents = function (url: string, filename: string) {
+    console.log('previewFileEvents called with:', { url, filename });
+    const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
+    const previewFileName = document.getElementById("previewFileName");
+    const previewContent = document.getElementById("previewContent");
+    
+    if (modal && previewFileName && previewContent) {
+      console.log('Found all required elements');
+      // Update the filename display
+      previewFileName.textContent = filename;
+      
+      // Show the modal
+      modal.showModal();
 
-  // Add openDetailsModal function
+      // Dispatch state change event
+      window.dispatchEvent(new CustomEvent('filePreviewStateChange', {
+        detail: { url, filename }
+      }));
+    }
+  };
+
+  // Close file preview for events section
+  window.closeFilePreviewEvents = function () {
+    console.log('closeFilePreviewEvents called');
+    const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
+    const previewFileName = document.getElementById("previewFileName");
+    const previewContent = document.getElementById("previewContent");
+
+    if (modal && previewFileName && previewContent) {
+      console.log('Resetting preview and closing modal');
+      // Reset the preview state
+      window.dispatchEvent(new CustomEvent('filePreviewStateChange', {
+        detail: { url: "", filename: "" }
+      }));
+      
+      // Reset the UI
+      previewFileName.textContent = "";
+      
+      // Close the modal
+      modal.close();
+    }
+  };
+
+  // Update the showFilePreview function for events section
+  window.showFilePreviewEvents = function (file: { url: string; name: string }) {
+    console.log('showFilePreviewEvents called with:', file);
+    window.previewFileEvents(file.url, file.name);
+  };
+
+  // Update the openDetailsModal function to use the events-specific preview
   window.openDetailsModal = function (event: any) {
     const modal = document.getElementById(
       "eventDetailsModal",
@@ -979,13 +947,9 @@ import JSZip from "jszip";
     const filesContent = document.getElementById(
       "filesContent",
     ) as HTMLDivElement;
-    const filePreviewSection = document.getElementById(
-      "filePreviewSection",
-    ) as HTMLDivElement;
 
     // Reset state
     currentEventId = event.id;
-    if (filePreviewSection) filePreviewSection.classList.add("hidden");
     if (filesContent) filesContent.classList.remove("hidden");
 
     // Populate files content
@@ -995,58 +959,53 @@ import JSZip from "jszip";
       const recordId = event.id;
 
       filesContent.innerHTML = `
-                <div class="overflow-x-auto">
-                    <table class="table table-zebra w-full">
-                        <thead>
-                            <tr>
-                                <th>File Name</th>
-                                <th class="text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${event.files
-                              .map((file: string) => {
-                                const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
-                                const fileType = getFileType(file);
-                                return `
-                                    <tr>
-                                        <td>${file}</td>
-                                        <td class="text-right">
-                                            <button class="btn btn-ghost btn-sm" onclick='window.showFilePreview(${JSON.stringify(
-                                              {
-                                                url: fileUrl,
-                                                type: fileType,
-                                                name: file,
-                                              },
-                                            )})'>
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
-                                                </svg>
-                                            </button>
-                                            <a href="${fileUrl}" download="${file}" class="btn btn-ghost btn-sm">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                                </svg>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                `;
-                              })
-                              .join("")}
-                        </tbody>
-                    </table>
-                </div>
-            `;
+        <div class="overflow-x-auto">
+          <table class="table table-zebra w-full">
+            <thead>
+              <tr>
+                <th>File Name</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${event.files
+                .map((file: string) => {
+                  const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
+                  const fileType = getFileType(file);
+                  const previewData = JSON.stringify({ url: fileUrl, name: file }).replace(/'/g, "\\'");
+                  return `
+                    <tr>
+                      <td>${file}</td>
+                      <td class="text-right">
+                        <button class="btn btn-ghost btn-sm" onclick='window.showFilePreviewEvents(${previewData})'>
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                          </svg>
+                        </button>
+                        <a href="${fileUrl}" download="${file}" class="btn btn-ghost btn-sm">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                          </svg>
+                        </a>
+                      </td>
+                    </tr>
+                  `;
+                })
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
     } else {
       filesContent.innerHTML = `
-                <div class="text-center py-8 text-base-content/70">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
-                    </svg>
-                    <p>No files attached to this event</p>
-                </div>
-            `;
+        <div class="text-center py-8 text-base-content/70">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+          </svg>
+          <p>No files attached to this event</p>
+        </div>
+      `;
     }
 
     modal.showModal();
@@ -1119,6 +1078,36 @@ import JSZip from "jszip";
       downloadBtn.disabled = false;
     }
   };
+
+  // Close event details modal
+  window.closeEventDetailsModal = function () {
+    const modal = document.getElementById("eventDetailsModal") as HTMLDialogElement;
+    const filesContent = document.getElementById("filesContent");
+
+    if (modal) {
+      // Reset the files content
+      if (filesContent) {
+        filesContent.innerHTML = '';
+      }
+
+      // Reset any other state if needed
+      currentEventId = '';
+
+      // Close the modal
+      modal.close();
+    }
+  };
+
+  // Make helper functions available globally
+  window.showFilePreview = showFilePreview;
+  window.handlePreviewError = handlePreviewError;
+  window.showLoading = showLoading;
+  window.hideLoading = hideLoading;
+  window.previewFileEvents = previewFileEvents;
+  window.closeFilePreviewEvents = closeFilePreviewEvents;
+  window.showFilePreviewEvents = showFilePreviewEvents;
+  window.openDetailsModal = openDetailsModal;
+  window.closeEventDetailsModal = closeEventDetailsModal;
 
   // Add TypeScript interface for Window
   declare global {

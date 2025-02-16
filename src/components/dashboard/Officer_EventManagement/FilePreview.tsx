@@ -1,18 +1,57 @@
 import React, { useEffect, useState } from 'react';
 
 interface FilePreviewProps {
-    url: string;
-    filename: string;
+    url?: string;
+    filename?: string;
+    isModal?: boolean;
 }
 
-const FilePreview: React.FC<FilePreviewProps> = ({ url, filename }) => {
+const FilePreview: React.FC<FilePreviewProps> = ({ url: initialUrl = '', filename: initialFilename = '', isModal = false }) => {
+    const [url, setUrl] = useState(initialUrl);
+    const [filename, setFilename] = useState(initialFilename);
     const [content, setContent] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [fileType, setFileType] = useState<string | null>(null);
 
     useEffect(() => {
+        console.log('FilePreview component mounted');
+
+        if (isModal) {
+            const handleStateChange = (event: CustomEvent<{ url: string; filename: string }>) => {
+                console.log('Received state change event:', event.detail);
+                const { url: newUrl, filename: newFilename } = event.detail;
+                setUrl(newUrl);
+                setFilename(newFilename);
+
+                // Reset state when url is empty (modal closing)
+                if (!newUrl) {
+                    setContent(null);
+                    setError(null);
+                    setFileType(null);
+                    setLoading(false);
+                }
+            };
+
+            // Add event listener only for modal mode
+            window.addEventListener('filePreviewStateChange', handleStateChange as EventListener);
+
+            // Cleanup
+            return () => {
+                window.removeEventListener('filePreviewStateChange', handleStateChange as EventListener);
+            };
+        } else {
+            // For integrated preview, use props directly
+            setUrl(initialUrl);
+            setFilename(initialFilename);
+        }
+    }, [isModal, initialUrl, initialFilename]);
+
+    useEffect(() => {
+        console.log('FilePreview state updated:', { url, filename });
+
         if (!url || !filename) {
+            console.log('No URL or filename, resetting state');
             setContent(null);
             setError(null);
             setFileType(null);
@@ -20,38 +59,47 @@ const FilePreview: React.FC<FilePreviewProps> = ({ url, filename }) => {
         }
 
         const loadContent = async () => {
+            console.log('Loading content for:', { url, filename });
             setLoading(true);
             setError(null);
 
             try {
+                console.log('Fetching file...');
                 const response = await fetch(url);
                 const contentType = response.headers.get('content-type');
+                console.log('Received content type:', contentType);
                 setFileType(contentType);
 
                 if (contentType?.startsWith('image/')) {
+                    console.log('Setting content type as image');
                     setContent('image');
                 } else if (contentType?.startsWith('video/')) {
+                    console.log('Setting content type as video');
                     setContent('video');
                 } else if (contentType?.startsWith('application/pdf')) {
+                    console.log('Setting content type as pdf');
                     setContent('pdf');
                 } else if (contentType?.startsWith('text/')) {
+                    console.log('Loading text content');
                     const text = await response.text();
-                    // Truncate text if it's too long (e.g., more than 100KB)
                     if (text.length > 100000) {
+                        console.log('Text content truncated due to length');
                         setContent(text.substring(0, 100000) + '\n\n... Content truncated. Please download the file to view the complete content.');
                     } else {
                         setContent(text);
                     }
                 } else if (filename.toLowerCase().endsWith('.mp4')) {
-                    // Fallback for video files when content-type might not be correct
+                    console.log('Fallback to video for .mp4 file');
                     setContent('video');
                 } else {
+                    console.log('Unsupported file type');
                     setError(`This file type (${contentType || 'unknown'}) is not supported for preview. Please download the file to view it.`);
                 }
             } catch (err) {
-                setError('Failed to load file');
                 console.error('Error loading file:', err);
+                setError('Failed to load file');
             } finally {
+                console.log('Finished loading content');
                 setLoading(false);
             }
         };
@@ -76,6 +124,8 @@ const FilePreview: React.FC<FilePreviewProps> = ({ url, filename }) => {
             alert('Failed to download file. Please try again.');
         }
     };
+
+    console.log('Rendering FilePreview with:', { content, error, loading, fileType });
 
     return (
         <div className="space-y-4">
