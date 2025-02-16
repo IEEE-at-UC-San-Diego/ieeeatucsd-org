@@ -4,6 +4,7 @@ import { Get } from "../pocketbase/Get";
 import { Authentication } from "../pocketbase/Authentication";
 import EventEditor from "./Officer_EventManagement/EventEditor";
 import FilePreview from "./Officer_EventManagement/FilePreview";
+import Attendees from "./Officer_EventManagement/Attendees";
 
 // Get instances
 const get = Get.getInstance();
@@ -648,7 +649,7 @@ const currentPage = eventResponse.page;
         </div>
 
         <div id="attendeesContent" class="space-y-4 hidden">
-            <!-- Attendees content -->
+            <Attendees client:load eventId="" attendees={[]} />
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
@@ -685,6 +686,26 @@ const currentPage = eventResponse.page;
     </div>
     <form method="dialog" class="modal-backdrop">
         <button onclick="window.closeFilePreviewOfficer()">close</button>
+    </form>
+</dialog>
+
+<!-- Add a separate Attendees Modal -->
+<dialog id="attendeesModal" class="modal">
+    <div class="modal-box max-w-4xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg" id="attendeesModalTitle"></h3>
+            <button class="btn btn-circle btn-ghost" onclick="attendeesModal.close()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="attendeesModalContent">
+            <Attendees client:load />
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
     </form>
 </dialog>
 
@@ -1162,6 +1183,11 @@ const currentPage = eventResponse.page;
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                  </button>
+                  <button class="btn btn-ghost btn-sm" onclick="window.openAttendeesModal(window['${eventDataId}'])">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
                     </svg>
                   </button>
                   <button class="btn btn-ghost btn-sm" onclick="window.openEditModal(window['${eventDataId}'])">
@@ -1892,10 +1918,8 @@ const currentPage = eventResponse.page;
     }
 
     // Update the openDetailsModal function to use the universal preview
-    window.openDetailsModal = function (event: Event) {
-        const modal = document.getElementById(
-            "eventDetailsModal"
-        ) as HTMLDialogElement;
+    window.openDetailsModal = function (event: Event, activeTab: string = 'files') {
+        const modal = document.getElementById("eventDetailsModal") as HTMLDialogElement;
         const filesContent = document.getElementById("filesContent");
         const attendeesContent = document.getElementById("attendeesContent");
         const tabs = document.querySelectorAll('.tabs .tab');
@@ -1904,6 +1928,46 @@ const currentPage = eventResponse.page;
 
         // Show modal
         modal.showModal();
+
+        // Update files list
+        if (event.files && event.files.length > 0) {
+            filesContent.innerHTML = `
+                <div class="space-y-2">
+                    ${updateFilePreviewButtons(event.files, event.id)}
+                </div>
+            `;
+        } else {
+            filesContent.innerHTML = `
+                <div class="text-center py-8 text-base-content/70">
+                    <p>No files attached to this event</p>
+                </div>
+            `;
+        }
+
+        // Update Attendees component props initially
+        const attendeesComponent = attendeesContent.querySelector('astro-island');
+        if (attendeesComponent) {
+            const component = attendeesComponent.querySelector('[data-astro-cid]');
+            if (component) {
+                component.setAttribute('eventId', event.id);
+                component.setAttribute('attendees', JSON.stringify(event.attendees || []));
+            }
+        }
+
+        // Show the requested tab
+        const targetTab = Array.from(tabs).find(tab => (tab as HTMLElement).dataset.tab === activeTab);
+        if (targetTab) {
+            tabs.forEach(t => t.classList.remove('tab-active'));
+            targetTab.classList.add('tab-active');
+            
+            if (activeTab === 'files') {
+                filesContent.classList.remove('hidden');
+                attendeesContent.classList.add('hidden');
+            } else {
+                filesContent.classList.add('hidden');
+                attendeesContent.classList.remove('hidden');
+            }
+        }
 
         // Add tab functionality
         tabs.forEach(tab => {
@@ -1921,29 +1985,6 @@ const currentPage = eventResponse.page;
                 }
             });
         });
-
-        // Update files list
-        if (event.files && event.files.length > 0) {
-            filesContent.innerHTML = `
-                <div class="space-y-2">
-                    ${updateFilePreviewButtons(event.files, event.id)}
-                </div>
-            `;
-        } else {
-            filesContent.innerHTML = `
-                <div class="text-center py-8 text-base-content/70">
-                    <p>No files attached to this event</p>
-                </div>
-            `;
-        }
-
-        // Show files tab by default
-        const filesTab = Array.from(tabs).find(tab => (tab as HTMLElement).dataset.tab === 'files');
-        if (filesTab) {
-            filesTab.classList.add('tab-active');
-            filesContent.classList.remove('hidden');
-            attendeesContent.classList.add('hidden');
-        }
     };
 
     // Add file input change handler to show selected files
@@ -2352,4 +2393,31 @@ const currentPage = eventResponse.page;
     window.previewFileOfficer = previewFileOfficer;
     window.closeFilePreviewOfficer = closeFilePreviewOfficer;
     window.showFilePreviewOfficer = showFilePreviewOfficer;
+
+    // Add openAttendeesModal function
+    window.openAttendeesModal = function (event: Event) {
+        console.log('Opening attendees modal for event:', event.id);
+
+        const modal = document.getElementById("attendeesModal") as HTMLDialogElement;
+        const modalTitle = document.getElementById("attendeesModalTitle");
+
+        if (!modal || !modalTitle) {
+            console.error('Missing required elements');
+            return;
+        }
+
+        // Set modal title
+        modalTitle.textContent = `Attendees - ${event.event_name}`;
+
+        // Dispatch custom event with event data
+        window.dispatchEvent(new CustomEvent('updateAttendees', {
+            detail: {
+                eventId: event.id,
+                eventName: event.event_name
+            }
+        }));
+
+        // Show modal
+        modal.showModal();
+    };
 </script>
