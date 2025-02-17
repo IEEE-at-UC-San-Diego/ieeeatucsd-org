@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Get } from '../../../scripts/pocketbase/Get';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { SendLog } from '../../../scripts/pocketbase/SendLog';
+import { Icon } from "@iconify/react";
 
 // Cache for storing user data
 const userCache = new Map<string, {
@@ -378,9 +379,7 @@ export default function Attendees() {
     if (error) {
         return (
             <div className="alert alert-error">
-                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <Icon icon="heroicons:exclamation-circle" className="h-6 w-6" />
                 <span>{error}</span>
             </div>
         );
@@ -393,9 +392,7 @@ export default function Attendees() {
     if (!attendeesList || attendeesList.length === 0) {
         return (
             <div className="text-center py-8 text-base-content/70">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                </svg>
+                <Icon icon="heroicons:user-group" className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No attendees yet</p>
             </div>
         );
@@ -409,9 +406,7 @@ export default function Attendees() {
                     <div className="flex-1 flex gap-2">
                         <div className="join flex-1">
                             <div className="join-item bg-base-200 flex items-center px-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 opacity-70" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                                </svg>
+                                <Icon icon="heroicons:magnifying-glass" className="h-5 w-5 opacity-70" />
                             </div>
                             <input
                                 type="text"
@@ -426,9 +421,7 @@ export default function Attendees() {
                         className="btn btn-primary btn-sm gap-2"
                         onClick={downloadAttendeesCSV}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
+                        <Icon icon="heroicons:arrow-down-tray" className="h-4 w-4" />
                         Download CSV
                     </button>
                 </div>

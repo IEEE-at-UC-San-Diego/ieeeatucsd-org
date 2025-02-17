@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { Icon } from "@iconify/react";
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
 
@@ -312,9 +313,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                             onClick={handleDownload}
                             className="btn btn-sm btn-ghost gap-2 whitespace-nowrap"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
+                            <Icon icon="mdi:download" className="h-4 w-4" />
                             Download
                         </button>
                     </div>
@@ -342,9 +341,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                             onClick={handleDownload}
                             className="btn btn-sm btn-ghost gap-2 whitespace-nowrap"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
+                            <Icon icon="mdi:download" className="h-4 w-4" />
                             Download
                         </button>
                     </div>
@@ -375,9 +372,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                             onClick={handleDownload}
                             className="btn btn-sm btn-ghost gap-2 whitespace-nowrap"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
+                            <Icon icon="mdi:download" className="h-4 w-4" />
                             Download
                         </button>
                     </div>
@@ -422,9 +417,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                                 onClick={handleDownload}
                                 className="btn btn-sm btn-ghost gap-2 whitespace-nowrap"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                                </svg>
+                                <Icon icon="mdi:download" className="h-4 w-4" />
                                 Download
                             </button>
                         </div>
@@ -451,9 +444,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
             {error && (
                 <div className="flex flex-col items-center justify-center p-8 bg-base-200 rounded-lg text-center space-y-4">
                     <div className="bg-warning/20 p-4 rounded-full">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
+                        <Icon icon="mdi:alert" className="h-12 w-12 text-warning" />
                     </div>
                     <div className="space-y-2">
                         <h3 className="text-lg font-semibold">Preview Unavailable</h3>
@@ -463,9 +454,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                         onClick={handleDownload}
                         className="btn btn-warning btn-sm gap-2 mt-4"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
+                        <Icon icon="mdi:download" className="h-4 w-4" />
                         Download File Instead
                     </button>
                 </div>

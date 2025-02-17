@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
+import { Icon } from "@iconify/react";
 import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { Update } from "../../../scripts/pocketbase/Update";
@@ -239,9 +240,7 @@ const EventForm = memo(({
                                             setSelectedFiles(updatedFiles);
                                         }}
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                        </svg>
+                                        <Icon icon="heroicons:x-circle" className="h-4 w-4" />
                                     </button>
                                 </div>
                             </div>
@@ -267,10 +266,7 @@ const EventForm = memo(({
                                                     }
                                                 }}
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                                                </svg>
+                                                <Icon icon="heroicons:eye" className="h-4 w-4" />
                                             </button>
                                             <div className="text-error">
                                                 {filesToDelete.has(filename) ? (
@@ -283,7 +279,7 @@ const EventForm = memo(({
                                                             setFilesToDelete(newFilesToDelete);
                                                         }}
                                                     >
-                                                        Undo
+                                                        <Icon icon="heroicons:trash" className="h-4 w-4" />
                                                     </button>
                                                 ) : (
                                                     <button
@@ -295,9 +291,7 @@ const EventForm = memo(({
                                                             setFilesToDelete(newFilesToDelete);
                                                         }}
                                                     >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                                        </svg>
+                                                        <Icon icon="heroicons:trash" className="h-4 w-4" />
                                                     </button>
                                                 )}
                                             </div>
@@ -510,9 +504,7 @@ const LoadingSpinner = memo(() => (
 const ErrorDisplay = memo(({ error, onRetry }: { error: string; onRetry: () => void }) => (
     <div className="flex flex-col items-center justify-center p-8 space-y-4">
         <div className="text-error">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
+            <Icon icon="heroicons:x-circle" className="h-12 w-12" />
         </div>
         <p className="text-error font-medium">{error}</p>
         <button className="btn btn-error btn-sm" onClick={onRetry}>
@@ -762,11 +754,10 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             if (submitButton) {
                 submitButton.classList.remove("btn-disabled");
                 submitButton.classList.add("btn-success");
-                submitButton.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                    </svg>
-                `;
+                const successIcon = document.createElement('span');
+                successIcon.innerHTML = '<i class="iconify" data-icon="heroicons:check" style="width: 20px; height: 20px;"></i>';
+                submitButton.textContent = '';
+                submitButton.appendChild(successIcon);
             }
 
             // Reset all state
@@ -809,11 +800,10 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             if (submitButton) {
                 submitButton.classList.remove("btn-disabled");
                 submitButton.classList.add("btn-error");
-                submitButton.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                    </svg>
-                `;
+                const errorIcon = document.createElement('span');
+                errorIcon.innerHTML = '<i class="iconify" data-icon="heroicons:x-circle" style="width: 20px; height: 20px;"></i>';
+                submitButton.textContent = '';
+                submitButton.appendChild(errorIcon);
             }
             alert(error.message || "Failed to save event. Please try again.");
         } finally {
@@ -821,7 +811,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             if (submitButton) {
                 submitButton.disabled = false;
                 submitButton.classList.remove("btn-disabled", "btn-success", "btn-error");
-                submitButton.innerHTML = 'Save Changes';
+                submitButton.textContent = 'Save Changes';
             }
             if (cancelButton) cancelButton.disabled = false;
             window.hideLoading?.();
