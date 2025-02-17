@@ -3,7 +3,7 @@ import { Icon } from "astro-icon/components";
 import { Get } from "../../scripts/pocketbase/Get";
 import { Authentication } from "../../scripts/pocketbase/Authentication";
 import EventEditor from "./Officer_EventManagement/EventEditor";
-import FilePreview from "./Officer_EventManagement/FilePreview";
+import FilePreview from "./universal/FilePreview";
 import Attendees from "./Officer_EventManagement/Attendees";
 
 // Get instances
@@ -610,7 +610,7 @@ const currentPage = eventResponse.page;
         // Reset cache timestamp to force refresh
         window.lastCacheUpdate = 0;
         // Refresh events list
-        window.fetchEvents();
+        window.fetchEvents?.();
     }}
 />
 
@@ -725,7 +725,7 @@ const currentPage = eventResponse.page;
     import { Update } from "../../scripts/pocketbase/Update";
     import { FileManager } from "../../scripts/pocketbase/FileManager";
     import { SendLog } from "../../scripts/pocketbase/SendLog";
-    import FilePreview from "./Officer_EventManagement/FilePreview";
+    import FilePreview from "./universal/FilePreview";
 
     // Add file storage
     const selectedFileStorage = new Map<string, File>();

@@ -4,7 +4,7 @@ import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { Update } from "../../../scripts/pocketbase/Update";
 import { FileManager } from "../../../scripts/pocketbase/FileManager";
 import { SendLog } from "../../../scripts/pocketbase/SendLog";
-import FilePreview from "./FilePreview";
+import FilePreview from "../universal/FilePreview";
 
 // Extend Window interface
 declare global {
