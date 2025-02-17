@@ -660,17 +660,13 @@ const currentPage = eventResponse.page;
 <!-- Universal File Preview Modal -->
 <dialog id="filePreviewModal" class="modal">
     <div class="modal-box max-w-4xl">
-        <div class="flex justify-between items-center mb-4">
-            <div class="flex items-center gap-3">
-                <button
-                    class="btn btn-ghost btn-sm"
-                    onclick="window.closeFilePreviewOfficer()"
-                >
-                    Close
-                </button>
-                <h3 class="font-bold text-lg truncate" id="previewFileName">
-                </h3>
-            </div>
+        <div class="flex justify-end mb-4">
+            <button
+                class="btn btn-ghost btn-sm"
+                onclick="window.closeFilePreviewOfficer()"
+            >
+                Close
+            </button>
         </div>
         <div class="relative" id="previewContainer">
             <div
@@ -2378,13 +2374,9 @@ const currentPage = eventResponse.page;
         const modal = document.getElementById(
             "filePreviewModal"
         ) as HTMLDialogElement;
-        const previewFileName = document.getElementById("previewFileName");
 
-        if (modal && previewFileName) {
+        if (modal) {
             console.log("Found all required elements");
-            // Update the filename display
-            previewFileName.textContent = filename;
-
             // Show the modal
             modal.showModal();
 
@@ -2398,7 +2390,6 @@ const currentPage = eventResponse.page;
         } else {
             console.error("Missing required elements:", {
                 modal: !!modal,
-                previewFileName: !!previewFileName,
             });
         }
     };
@@ -2410,9 +2401,8 @@ const currentPage = eventResponse.page;
             "filePreviewModal"
         ) as HTMLDialogElement;
         const previewContent = document.getElementById("previewContent");
-        const previewFileName = document.getElementById("previewFileName");
 
-        if (modal && previewContent && previewFileName) {
+        if (modal && previewContent) {
             console.log("Resetting preview and closing modal");
             // Reset the preview
             const filePreview = previewContent.querySelector(
@@ -2427,7 +2417,6 @@ const currentPage = eventResponse.page;
                     component.setAttribute("filename", "");
                 }
             }
-            previewFileName.textContent = "";
             modal.close();
         }
     };
