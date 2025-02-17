@@ -1,4 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+
+// Cache for file content
+const contentCache = new Map<string, { content: string | 'image' | 'video' | 'pdf', fileType: string, timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 interface FilePreviewProps {
     url?: string;
@@ -13,6 +17,100 @@ const FilePreview: React.FC<FilePreviewProps> = ({ url: initialUrl = '', filenam
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [fileType, setFileType] = useState<string | null>(null);
+    const [isVisible, setIsVisible] = useState(false);
+
+    // Memoize the truncated filename
+    const truncatedFilename = useMemo(() => {
+        if (!filename) return '';
+        const maxLength = 40;
+        if (filename.length <= maxLength) return filename;
+        const extension = filename.split('.').pop();
+        const name = filename.substring(0, filename.lastIndexOf('.'));
+        const truncatedName = name.substring(0, maxLength - 3 - (extension?.length || 0));
+        return `${truncatedName}...${extension ? `.${extension}` : ''}`;
+    }, [filename]);
+
+    // Intersection Observer callback
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setIsVisible(entry.isIntersecting);
+            },
+            { threshold: 0.1 }
+        );
+
+        const previewElement = document.querySelector('.preview-content');
+        if (previewElement) {
+            observer.observe(previewElement);
+        }
+
+        return () => observer.disconnect();
+    }, []);
+
+    const loadContent = useCallback(async () => {
+        if (!url || !filename) return;
+
+        console.log('Loading content for:', { url, filename });
+        setLoading(true);
+        setError(null);
+
+        // Check cache first
+        const cacheKey = `${url}_${filename}`;
+        const cachedData = contentCache.get(cacheKey);
+        if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
+            console.log('Using cached content');
+            setContent(cachedData.content);
+            setFileType(cachedData.fileType);
+            setLoading(false);
+            return;
+        }
+
+        try {
+            console.log('Fetching file...');
+            const response = await fetch(url);
+            const contentType = response.headers.get('content-type');
+            console.log('Received content type:', contentType);
+            setFileType(contentType);
+
+            let contentValue: string | 'image' | 'video' | 'pdf';
+            if (contentType?.startsWith('image/')) {
+                contentValue = 'image';
+            } else if (contentType?.startsWith('video/')) {
+                contentValue = 'video';
+            } else if (contentType?.startsWith('application/pdf')) {
+                contentValue = 'pdf';
+            } else if (contentType?.startsWith('text/')) {
+                const text = await response.text();
+                contentValue = text.length > 100000
+                    ? text.substring(0, 100000) + '\n\n... Content truncated. Please download the file to view the complete content.'
+                    : text;
+            } else if (filename.toLowerCase().endsWith('.mp4')) {
+                contentValue = 'video';
+            } else {
+                throw new Error(`Unsupported file type (${contentType || 'unknown'})`);
+            }
+
+            // Cache the content
+            contentCache.set(cacheKey, {
+                content: contentValue,
+                fileType: contentType || 'unknown',
+                timestamp: Date.now()
+            });
+
+            setContent(contentValue);
+        } catch (err) {
+            console.error('Error loading file:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load file');
+        } finally {
+            setLoading(false);
+        }
+    }, [url, filename]);
+
+    useEffect(() => {
+        if (isVisible) {
+            loadContent();
+        }
+    }, [isVisible, loadContent]);
 
     useEffect(() => {
         console.log('FilePreview component mounted');
@@ -24,7 +122,6 @@ const FilePreview: React.FC<FilePreviewProps> = ({ url: initialUrl = '', filenam
                 setUrl(newUrl);
                 setFilename(newFilename);
 
-                // Reset state when url is empty (modal closing)
                 if (!newUrl) {
                     setContent(null);
                     setError(null);
@@ -33,79 +130,15 @@ const FilePreview: React.FC<FilePreviewProps> = ({ url: initialUrl = '', filenam
                 }
             };
 
-            // Add event listener only for modal mode
             window.addEventListener('filePreviewStateChange', handleStateChange as EventListener);
-
-            // Cleanup
             return () => {
                 window.removeEventListener('filePreviewStateChange', handleStateChange as EventListener);
             };
         } else {
-            // For integrated preview, use props directly
             setUrl(initialUrl);
             setFilename(initialFilename);
         }
     }, [isModal, initialUrl, initialFilename]);
-
-    useEffect(() => {
-        console.log('FilePreview state updated:', { url, filename });
-
-        if (!url || !filename) {
-            console.log('No URL or filename, resetting state');
-            setContent(null);
-            setError(null);
-            setFileType(null);
-            return;
-        }
-
-        const loadContent = async () => {
-            console.log('Loading content for:', { url, filename });
-            setLoading(true);
-            setError(null);
-
-            try {
-                console.log('Fetching file...');
-                const response = await fetch(url);
-                const contentType = response.headers.get('content-type');
-                console.log('Received content type:', contentType);
-                setFileType(contentType);
-
-                if (contentType?.startsWith('image/')) {
-                    console.log('Setting content type as image');
-                    setContent('image');
-                } else if (contentType?.startsWith('video/')) {
-                    console.log('Setting content type as video');
-                    setContent('video');
-                } else if (contentType?.startsWith('application/pdf')) {
-                    console.log('Setting content type as pdf');
-                    setContent('pdf');
-                } else if (contentType?.startsWith('text/')) {
-                    console.log('Loading text content');
-                    const text = await response.text();
-                    if (text.length > 100000) {
-                        console.log('Text content truncated due to length');
-                        setContent(text.substring(0, 100000) + '\n\n... Content truncated. Please download the file to view the complete content.');
-                    } else {
-                        setContent(text);
-                    }
-                } else if (filename.toLowerCase().endsWith('.mp4')) {
-                    console.log('Fallback to video for .mp4 file');
-                    setContent('video');
-                } else {
-                    console.log('Unsupported file type');
-                    setError(`This file type (${contentType || 'unknown'}) is not supported for preview. Please download the file to view it.`);
-                }
-            } catch (err) {
-                console.error('Error loading file:', err);
-                setError('Failed to load file');
-            } finally {
-                console.log('Finished loading content');
-                setLoading(false);
-            }
-        };
-
-        loadContent();
-    }, [url, filename]);
 
     const handleDownload = async () => {
         try {
@@ -125,21 +158,18 @@ const FilePreview: React.FC<FilePreviewProps> = ({ url: initialUrl = '', filenam
         }
     };
 
-    console.log('Rendering FilePreview with:', { content, error, loading, fileType });
-
     return (
         <div className="space-y-4">
-            {/* Header with filename and download button */}
             <div className="flex justify-between items-center bg-base-200 p-3 rounded-lg">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="truncate font-medium">{filename}</span>
+                    <span className="truncate font-medium" title={filename}>{truncatedFilename}</span>
                     {fileType && (
-                        <span className="badge badge-sm">{fileType.split('/')[1]}</span>
+                        <span className="badge badge-sm whitespace-nowrap">{fileType.split('/')[1]}</span>
                     )}
                 </div>
                 <button
                     onClick={handleDownload}
-                    className="btn btn-sm btn-ghost gap-2"
+                    className="btn btn-sm btn-ghost gap-2 whitespace-nowrap"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -148,7 +178,6 @@ const FilePreview: React.FC<FilePreviewProps> = ({ url: initialUrl = '', filenam
                 </button>
             </div>
 
-            {/* Preview content */}
             <div className="preview-content">
                 {loading && (
                     <div className="flex justify-center items-center p-8">
@@ -181,7 +210,12 @@ const FilePreview: React.FC<FilePreviewProps> = ({ url: initialUrl = '', filenam
 
                 {!loading && !error && content === 'image' && (
                     <div className="flex justify-center">
-                        <img src={url} alt={filename} className="max-w-full h-auto rounded-lg" />
+                        <img
+                            src={url}
+                            alt={filename}
+                            className="max-w-full h-auto rounded-lg"
+                            loading="lazy"
+                        />
                     </div>
                 )}
 
@@ -191,6 +225,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ url: initialUrl = '', filenam
                             controls
                             className="max-w-full rounded-lg"
                             style={{ maxHeight: '600px' }}
+                            preload="metadata"
                         >
                             <source src={url} type="video/mp4" />
                             Your browser does not support the video tag.
@@ -204,6 +239,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ url: initialUrl = '', filenam
                             src={url}
                             className="w-full h-full rounded-lg"
                             title={filename}
+                            loading="lazy"
                         ></iframe>
                     </div>
                 )}
