@@ -21,6 +21,8 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
     const [fileType, setFileType] = useState<string | null>(null);
     const [isVisible, setIsVisible] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [visibleLines, setVisibleLines] = useState(20);
+    const CHUNK_SIZE = 50; // Number of additional lines to show when expanding
     const INITIAL_LINES_TO_SHOW = 20;
 
     // Memoize the truncated filename
@@ -86,9 +88,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                 contentValue = 'pdf';
             } else if (contentType?.startsWith('text/')) {
                 const text = await response.text();
-                contentValue = text.length > 100000
-                    ? text.substring(0, 100000) + '\n\n... Content truncated. Please download the file to view the complete content.'
-                    : text;
+                contentValue = text;
             } else if (filename.toLowerCase().endsWith('.mp4')) {
                 contentValue = 'video';
             } else {
@@ -199,32 +199,49 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
             )
         );
         const headers = lines[0];
-        const rows = lines.slice(1).filter(row => row.some(cell => cell.length > 0)); // Skip empty rows
-        return { headers, rows };
+        const dataRows = lines.slice(1).filter(row => row.some(cell => cell.length > 0)); // Skip empty rows
+
+        // Remove the truncation message if it exists
+        const lastRow = dataRows[dataRows.length - 1];
+        if (lastRow && lastRow[0] && lastRow[0].includes('Content truncated')) {
+            dataRows.pop();
+        }
+
+        return { headers, rows: dataRows };
     }, []);
 
     const renderCSVTable = useCallback((csvContent: string) => {
         const { headers, rows } = parseCSV(csvContent);
+        const totalRows = rows.length;
+        const rowsToShow = Math.min(visibleLines, totalRows);
+        const displayedRows = rows.slice(0, rowsToShow);
 
         return `
             <div class="overflow-x-auto">
-                <table class="table table-zebra w-full">
+                <table class="table w-full">
                     <thead>
-                        <tr>
-                            ${headers.map(header => `<th class="bg-base-200">${header}</th>`).join('')}
+                        <tr class="bg-base-200">
+                            ${headers.map(header => `<th class="px-4 py-2 text-left font-medium">${header}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
-                        ${rows.map(row => `
-                            <tr>
-                                ${row.map(cell => `<td>${cell}</td>`).join('')}
+                        ${displayedRows.map((row, rowIndex) => `
+                            <tr class="${rowIndex % 2 === 0 ? 'bg-base-100' : 'bg-base-200/50'}">
+                                ${row.map(cell => `<td class="px-4 py-2 border-t border-base-300">${cell}</td>`).join('')}
                             </tr>
                         `).join('')}
+                        ${rowsToShow < totalRows ? `
+                            <tr>
+                                <td colspan="${headers.length}" class="px-4 py-3 text-base-content/70 bg-base-200/30 border-t border-base-300">
+                                    ... ${totalRows - rowsToShow} more rows
+                                </td>
+                            </tr>
+                        ` : ''}
                     </tbody>
                 </table>
             </div>
         `;
-    }, []);
+    }, [visibleLines]);
 
     const highlightCode = useCallback((code: string, language: string) => {
         // Skip highlighting for CSV
@@ -246,10 +263,9 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
             return renderCSVTable(code);
         }
 
-        const highlighted = highlightCode(code, language);
         const lines = code.split('\n');
         const totalLines = lines.length;
-        const linesToShow = isExpanded ? totalLines : Math.min(INITIAL_LINES_TO_SHOW, totalLines);
+        const linesToShow = Math.min(visibleLines, totalLines);
 
         let formattedCode = lines
             .slice(0, linesToShow)
@@ -263,15 +279,23 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
             })
             .join('');
 
-        if (!isExpanded && totalLines > INITIAL_LINES_TO_SHOW) {
+        if (linesToShow < totalLines) {
             formattedCode += `<div class="table-row ">
                 <div class="table-cell"></div>
-                <div class="table-cell pl-4 pt-2 text-base-content/70">... ${totalLines - INITIAL_LINES_TO_SHOW} more lines</div>
+                <div class="table-cell pl-4 pt-2 text-base-content/70">... ${totalLines - linesToShow} more lines</div>
             </div>`;
         }
 
         return formattedCode;
-    }, [highlightCode, isExpanded, renderCSVTable]);
+    }, [highlightCode, visibleLines, renderCSVTable]);
+
+    const handleShowMore = useCallback(() => {
+        setVisibleLines(prev => Math.min(prev + CHUNK_SIZE, content?.split('\n').length || 0));
+    }, [content]);
+
+    const handleShowLess = useCallback(() => {
+        setVisibleLines(INITIAL_LINES_TO_SHOW);
+    }, []);
 
     return (
         <div className="file-preview-container space-y-4">
@@ -378,12 +402,20 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                             )}
                         </div>
                         <div className="flex items-center gap-2">
-                            {content.split('\n').length > INITIAL_LINES_TO_SHOW && (
+                            {content && content.split('\n').length > visibleLines && (
                                 <button
-                                    onClick={() => setIsExpanded(!isExpanded)}
+                                    onClick={handleShowMore}
                                     className="btn btn-sm btn-ghost"
                                 >
-                                    {isExpanded ? 'Show Less' : 'Show More'}
+                                    Show More
+                                </button>
+                            )}
+                            {visibleLines > INITIAL_LINES_TO_SHOW && (
+                                <button
+                                    onClick={handleShowLess}
+                                    className="btn btn-sm btn-ghost"
+                                >
+                                    Show Less
                                 </button>
                             )}
                             <button
@@ -397,10 +429,10 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                             </button>
                         </div>
                     </div>
-                    <div className="overflow-x-auto max-h-[600px] bg-base-200 ">
-                        <div className="p-1">
+                    <div className="overflow-x-auto max-h-[600px] bg-base-200">
+                        <div className={`p-1 ${filename.toLowerCase().endsWith('.csv') ? 'p-4' : ''}`}>
                             <div
-                                className="hljs table w-full font-mono text-sm rounded-lg py-4 px-2"
+                                className={filename.toLowerCase().endsWith('.csv') ? '' : 'hljs table w-full font-mono text-sm rounded-lg py-4 px-2'}
                                 dangerouslySetInnerHTML={{
                                     __html: formatCodeWithLineNumbers(content, getLanguageFromFilename(filename))
                                 }}
