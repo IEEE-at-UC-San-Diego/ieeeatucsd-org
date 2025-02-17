@@ -1,4 +1,14 @@
+member:
+  tabs:
+    - "Dashboard"
+    - "Events"
+    - "Reimbursements"
+
 officer:
+  tabs:
+    - "Event Management"
+  include:
+    - "member"
   roles:
     - "IEEE Officer"
 
