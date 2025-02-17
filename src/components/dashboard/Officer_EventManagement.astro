@@ -76,10 +76,6 @@ const currentPage = eventResponse.page;
             <h2 class="text-2xl font-bold">Event Management</h2>
             <p class="opacity-70">Manage and create IEEE UCSD events</p>
         </div>
-        <button class="btn btn-primary gap-2" onclick="window.openEditModal()">
-            <Icon name="heroicons:plus" class="h-5 w-5" />
-            Add New Event
-        </button>
     </div>
 
     <!-- Stats Cards -->
@@ -145,7 +141,17 @@ const currentPage = eventResponse.page;
                     <Icon name="heroicons:calendar" class="h-5 w-5" />
                 </div>
                 Events List
+                <div class="ml-auto justify-end">
+                    <button
+                        class="btn btn-primary gap-2"
+                        onclick="window.openEditModal()"
+                    >
+                        <Icon name="heroicons:plus" class="h-5 w-5" />
+                        Add New Event
+                    </button>
+                </div>
             </h3>
+
             <div class="divider"></div>
 
             <!-- Filter Controls -->
@@ -718,7 +724,6 @@ const currentPage = eventResponse.page;
         <button>close</button>
     </form>
 </dialog>
-
 <script>
     import { Get } from "../../scripts/pocketbase/Get";
     import { Authentication } from "../../scripts/pocketbase/Authentication";
