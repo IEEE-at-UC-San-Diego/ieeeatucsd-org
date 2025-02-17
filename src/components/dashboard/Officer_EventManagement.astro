@@ -141,7 +141,14 @@ const currentPage = eventResponse.page;
                     <Icon name="heroicons:calendar" class="h-5 w-5" />
                 </div>
                 Events List
-                <div class="ml-auto justify-end">
+                <div class="ml-auto justify-end flex gap-2">
+                    <button
+                        class="btn btn-ghost gap-2"
+                        onclick="window.refreshEvents()"
+                    >
+                        <Icon name="heroicons:arrow-path" class="h-5 w-5" />
+                        Refresh
+                    </button>
                     <button
                         class="btn btn-primary gap-2"
                         onclick="window.openEditModal()"
@@ -2307,4 +2314,38 @@ const currentPage = eventResponse.page;
             });
         }
     });
+
+    // Make refreshEvents available globally
+    window.refreshEvents = async function () {
+        try {
+            // Reset cache timestamp to force refresh
+            lastCacheUpdate = 0;
+            // Show loading state
+            const eventsList = document.getElementById("eventsList");
+            if (eventsList) {
+                eventsList.innerHTML = `
+                    <div class="text-center py-8 text-base-content/70">
+                        <Icon name="heroicons:arrow-path" class="h-12 w-12 mx-auto mb-4 opacity-50 animate-spin" />
+                        <p>Refreshing events...</p>
+                    </div>
+                `;
+            }
+            // Fetch events with reset cache
+            await fetchEvents();
+        } catch (error) {
+            console.error("Failed to refresh events:", error);
+            // Show error message
+            const eventsList = document.getElementById("eventsList");
+            if (eventsList) {
+                eventsList.innerHTML = `
+                    <div class="alert alert-error">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Failed to refresh events. Please try again.</span>
+                    </div>
+                `;
+            }
+        }
+    };
 </script>
