@@ -11,6 +11,8 @@ declare global {
     interface Window {
         showLoading?: () => void;
         hideLoading?: () => void;
+        lastCacheUpdate?: number;
+        fetchEvents?: () => void;
     }
 }
 
@@ -45,7 +47,7 @@ const MemoizedFilePreview = memo(FilePreview);
 // Define EventForm props interface
 interface EventFormProps {
     event: Event | null;
-    setEvent: React.Dispatch<React.SetStateAction<Event | null>>;
+    setEvent: (field: keyof Event, value: any) => void;
     selectedFiles: Map<string, File>;
     setSelectedFiles: React.Dispatch<React.SetStateAction<Map<string, File>>>;
     filesToDelete: Set<string>;
@@ -71,6 +73,10 @@ const EventForm = memo(({
     onSubmit,
     onCancel
 }: EventFormProps): React.ReactElement => {
+    const handleChange = (field: keyof Event, value: any) => {
+        setEvent(field, value);
+    };
+
     return (
         <div id="editFormSection">
             <h3 className="font-bold text-lg mb-4" id="editModalTitle">
@@ -79,12 +85,7 @@ const EventForm = memo(({
             <form
                 id="editEventForm"
                 className="space-y-4"
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!isSubmitting) {
-                        onSubmit(e);
-                    }
-                }}
+                onSubmit={onSubmit}
             >
                 <input type="hidden" id="editEventId" name="editEventId" value={event?.id || ''} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -99,7 +100,7 @@ const EventForm = memo(({
                             name="editEventName"
                             className="input input-bordered"
                             value={event?.event_name || ""}
-                            onChange={(e) => setEvent(prev => prev ? { ...prev, event_name: e.target.value } : null)}
+                            onChange={(e) => handleChange('event_name', e.target.value)}
                             required
                         />
                     </div>
@@ -115,7 +116,7 @@ const EventForm = memo(({
                             name="editEventCode"
                             className="input input-bordered"
                             value={event?.event_code || ""}
-                            onChange={(e) => setEvent(prev => prev ? { ...prev, event_code: e.target.value } : null)}
+                            onChange={(e) => handleChange('event_code', e.target.value)}
                             required
                         />
                     </div>
@@ -131,7 +132,7 @@ const EventForm = memo(({
                             name="editEventLocation"
                             className="input input-bordered"
                             value={event?.location || ""}
-                            onChange={(e) => setEvent(prev => prev ? { ...prev, location: e.target.value } : null)}
+                            onChange={(e) => handleChange('location', e.target.value)}
                             required
                         />
                     </div>
@@ -147,7 +148,7 @@ const EventForm = memo(({
                             name="editEventPoints"
                             className="input input-bordered"
                             value={event?.points_to_reward || 0}
-                            onChange={(e) => setEvent(prev => prev ? { ...prev, points_to_reward: Number(e.target.value) } : null)}
+                            onChange={(e) => handleChange('points_to_reward', Number(e.target.value))}
                             min="0"
                             required
                         />
@@ -164,7 +165,7 @@ const EventForm = memo(({
                             name="editEventStartDate"
                             className="input input-bordered"
                             value={event?.start_date ? new Date(event.start_date).toISOString().slice(0, 16) : ""}
-                            onChange={(e) => setEvent(prev => prev ? { ...prev, start_date: e.target.value } : null)}
+                            onChange={(e) => handleChange('start_date', e.target.value)}
                             required
                         />
                     </div>
@@ -180,7 +181,7 @@ const EventForm = memo(({
                             name="editEventEndDate"
                             className="input input-bordered"
                             value={event?.end_date ? new Date(event.end_date).toISOString().slice(0, 16) : ""}
-                            onChange={(e) => setEvent(prev => prev ? { ...prev, end_date: e.target.value } : null)}
+                            onChange={(e) => handleChange('end_date', e.target.value)}
                             required
                         />
                     </div>
@@ -196,7 +197,7 @@ const EventForm = memo(({
                         name="editEventDescription"
                         className="textarea textarea-bordered"
                         value={event?.event_description || ""}
-                        onChange={(e) => setEvent(prev => prev ? { ...prev, event_description: e.target.value } : null)}
+                        onChange={(e) => handleChange('event_description', e.target.value)}
                         rows={3}
                         required
                     ></textarea>
@@ -316,7 +317,7 @@ const EventForm = memo(({
                             name="editEventPublished"
                             className="toggle"
                             checked={event?.published || false}
-                            onChange={(e) => setEvent(prev => prev ? { ...prev, published: e.target.checked } : null)}
+                            onChange={(e) => handleChange('published', e.target.checked)}
                         />
                         <span className="label-text">Publish Event</span>
                     </label>
@@ -336,7 +337,7 @@ const EventForm = memo(({
                             name="editEventHasFood"
                             className="toggle"
                             checked={event?.has_food || false}
-                            onChange={(e) => setEvent(prev => prev ? { ...prev, has_food: e.target.checked } : null)}
+                            onChange={(e) => handleChange('has_food', e.target.checked)}
                         />
                         <span className="label-text">Has Food</span>
                     </label>
@@ -523,29 +524,28 @@ const ErrorDisplay = memo(({ error, onRetry }: { error: string; onRetry: () => v
 // Modify EventEditor component
 export default function EventEditor({ onEventSaved }: EventEditorProps) {
     // State for form data and UI
-    const [event, setEvent] = useState<Event | null>(null);
+    const [event, setEvent] = useState<Event>({
+        id: '',
+        event_name: '',
+        event_description: '',
+        event_code: '',
+        location: '',
+        files: [],
+        points_to_reward: 0,
+        start_date: new Date().toISOString(),
+        end_date: new Date().toISOString(),
+        published: false,
+        has_food: false,
+        attendees: []
+    });
+
     const [previewUrl, setPreviewUrl] = useState("");
     const [previewFilename, setPreviewFilename] = useState("");
     const [showPreview, setShowPreview] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<Map<string, File>>(new Map());
     const [filesToDelete, setFilesToDelete] = useState<Set<string>>(new Set());
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // Add new state and utilities
-    const changeTracker = useMemo(() => new ChangeTracker(), []);
-    const uploadQueue = useMemo(() => new UploadQueue(), []);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-
-    // Add loading state
-    const [loadingState, setLoadingState] = useState<LoadingState>({
-        isLoading: false,
-        error: null,
-        timeoutId: null
-    });
-
-    // Add constants for timeouts
-    const FETCH_TIMEOUT = 15000; // 15 seconds
-    const TRANSITION_DURATION = 300; // 300ms for smooth transitions
 
     // Memoize service instances
     const services = useMemo(() => ({
@@ -556,67 +556,110 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         sendLog: SendLog.getInstance()
     }), []);
 
-    // Memoize handlers
-    const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            setSelectedFiles(prev => {
-                const newFiles = new Map(prev);
-                Array.from(e.target.files!).forEach(file => {
-                    newFiles.set(file.name, file);
-                });
-                return newFiles;
-            });
-        }
-    }, []);
-
-    const handleFileDelete = useCallback((filename: string) => {
-        if (confirm("Are you sure you want to remove this file?")) {
-            setFilesToDelete(prev => new Set([...prev, filename]));
-        }
-    }, []);
-
-    const handleUndoFileDelete = useCallback((filename: string) => {
-        setFilesToDelete(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(filename);
-            return newSet;
+    // Handle field changes
+    const handleFieldChange = useCallback((field: keyof Event, value: any) => {
+        setEvent(prev => {
+            const newEvent = { ...prev, [field]: value };
+            // Only set hasUnsavedChanges if the value actually changed
+            if (prev[field] !== value) {
+                setHasUnsavedChanges(true);
+            }
+            return newEvent;
         });
     }, []);
 
+    // Initialize event data
+    const initializeEventData = useCallback(async (eventId: string) => {
+        try {
+            if (eventId) {
+                const eventData = await services.get.getOne<Event>("events", eventId);
+                setEvent(eventData);
+            } else {
+                setEvent({
+                    id: '',
+                    event_name: '',
+                    event_description: '',
+                    event_code: '',
+                    location: '',
+                    files: [],
+                    points_to_reward: 0,
+                    start_date: new Date().toISOString(),
+                    end_date: new Date().toISOString(),
+                    published: false,
+                    has_food: false,
+                    attendees: []
+                });
+            }
+            setSelectedFiles(new Map());
+            setFilesToDelete(new Set());
+            setShowPreview(false);
+            setHasUnsavedChanges(false);
+        } catch (error) {
+            console.error("Failed to initialize event data:", error);
+            alert("Failed to load event data. Please try again.");
+        }
+    }, [services.get]);
+
+    // Expose initializeEventData to window
+    useEffect(() => {
+        (window as any).openEditModal = async (event?: Event) => {
+            const modal = document.getElementById("editEventModal") as HTMLDialogElement;
+            if (!modal) return;
+
+            try {
+                if (event?.id) {
+                    await initializeEventData(event.id);
+                } else {
+                    await initializeEventData('');
+                }
+                modal.showModal();
+            } catch (error) {
+                console.error("Failed to open edit modal:", error);
+                alert("Failed to open edit modal. Please try again.");
+            }
+        };
+
+        return () => {
+            delete (window as any).openEditModal;
+        };
+    }, [initializeEventData]);
+
+    // Handler functions
     const handlePreviewFile = useCallback((url: string, filename: string) => {
         setPreviewUrl(url);
         setPreviewFilename(filename);
         setShowPreview(true);
     }, []);
 
-    // Add modal close handling
-    const handleModalClose = useCallback(async (e?: MouseEvent | React.MouseEvent) => {
-        if (e) e.preventDefault();
-
+    const handleModalClose = useCallback(() => {
         if (hasUnsavedChanges) {
             const confirmed = window.confirm('You have unsaved changes. Are you sure you want to close?');
             if (!confirmed) return;
         }
 
-        // Reset all state
-        setEvent(null);
+        setEvent({
+            id: '',
+            event_name: '',
+            event_description: '',
+            event_code: '',
+            location: '',
+            files: [],
+            points_to_reward: 0,
+            start_date: new Date().toISOString(),
+            end_date: new Date().toISOString(),
+            published: false,
+            has_food: false,
+            attendees: []
+        });
         setSelectedFiles(new Map());
         setFilesToDelete(new Set());
         setShowPreview(false);
         setHasUnsavedChanges(false);
-        changeTracker.initialize(null);
 
-        // Close the modal
         const modal = document.getElementById("editEventModal") as HTMLDialogElement;
         if (modal) modal.close();
-    }, [hasUnsavedChanges, changeTracker]);
+    }, [hasUnsavedChanges]);
 
-    // Update the EventForm cancel button handler
-    const handleCancel = useCallback(() => {
-        handleModalClose();
-    }, [handleModalClose]);
-
-    // Modify form submission to use the new close handler
     const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (isSubmitting) return;
@@ -624,11 +667,6 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         const form = e.target as HTMLFormElement;
         const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
         const cancelButton = form.querySelector('button[type="button"]') as HTMLButtonElement;
-
-        if (!changeTracker.hasChanges()) {
-            handleModalClose();
-            return;
-        }
 
         setIsSubmitting(true);
         if (submitButton) submitButton.disabled = true;
@@ -638,88 +676,89 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             window.showLoading?.();
             const pb = services.auth.getPocketBase();
 
-            if (event?.id) {
-                // Handle existing event update
-                const changes = changeTracker.getChanges();
-                const fileChanges = changeTracker.getFileChanges();
+            console.log('Form submission started');
+            console.log('Event data:', event);
 
-                // Process files in parallel
-                const fileProcessingTasks: Promise<any>[] = [];
+            const formData = new FormData(form);
+            const eventData = {
+                event_name: formData.get("editEventName"),
+                event_code: formData.get("editEventCode"),
+                event_description: formData.get("editEventDescription"),
+                location: formData.get("editEventLocation"),
+                points_to_reward: Number(formData.get("editEventPoints")),
+                start_date: new Date(formData.get("editEventStartDate") as string).toISOString(),
+                end_date: new Date(formData.get("editEventEndDate") as string).toISOString(),
+                published: formData.get("editEventPublished") === "on",
+                has_food: formData.get("editEventHasFood") === "on",
+                attendees: event.attendees || []
+            };
 
-                // Handle file deletions
-                if (fileChanges.deleted.size > 0) {
-                    const deletePromises = Array.from(fileChanges.deleted).map(filename =>
-                        uploadQueue.add(async () => {
-                            await services.sendLog.send(
-                                "delete",
-                                "event_file",
-                                `Deleted file ${filename} from event ${event.event_name}`
-                            );
-                        })
-                    );
-                    fileProcessingTasks.push(...deletePromises);
+            if (event.id) {
+                // Update existing event
+                console.log('Updating event:', event.id);
+                await services.update.updateFields("events", event.id, eventData);
+
+                // Handle file deletions first
+                if (filesToDelete.size > 0) {
+                    console.log('Deleting files:', Array.from(filesToDelete));
+                    // Get current files
+                    const currentRecord = await pb.collection("events").getOne(event.id);
+                    let remainingFiles = [...currentRecord.files];
+
+                    // Remove files marked for deletion
+                    for (const filename of filesToDelete) {
+                        const fileIndex = remainingFiles.indexOf(filename);
+                        if (fileIndex > -1) {
+                            remainingFiles.splice(fileIndex, 1);
+                        }
+                    }
+
+                    // Update record with remaining files
+                    await pb.collection("events").update(event.id, {
+                        files: remainingFiles
+                    });
                 }
 
                 // Handle file additions
-                if (fileChanges.added.size > 0) {
-                    const uploadTasks = Array.from(fileChanges.added.values()).map(file =>
-                        uploadQueue.add(async () => {
-                            const formData = new FormData();
-                            formData.append("files", file);
-                            await pb.collection("events").update(event.id, formData);
-                        })
-                    );
-                    fileProcessingTasks.push(...uploadTasks);
-                }
+                if (selectedFiles.size > 0) {
+                    try {
+                        // Convert Map to array of Files
+                        const filesToUpload = Array.from(selectedFiles.values());
+                        console.log('Uploading files:', filesToUpload.map(f => f.name));
 
-                // Update event data if there are changes
-                if (Object.keys(changes).length > 0) {
-                    await services.update.updateFields("events", event.id, changes);
-                    await services.sendLog.send(
-                        "update",
-                        "event",
-                        `Updated event: ${changes.event_name || event.event_name}`
-                    );
+                        // Use appendFiles to preserve existing files
+                        await services.fileManager.appendFiles("events", event.id, "files", filesToUpload);
+                    } catch (error: any) {
+                        if (error.status === 413) {
+                            throw new Error("Files are too large. Please try uploading smaller files or fewer files at once.");
+                        }
+                        throw error;
+                    }
                 }
-
-                // Wait for all file operations to complete
-                await Promise.all(fileProcessingTasks);
             } else {
-                // Handle new event creation
-                const formData = new FormData(form);
-                const eventData = {
-                    event_name: formData.get("editEventName"),
-                    event_code: formData.get("editEventCode"),
-                    event_description: formData.get("editEventDescription"),
-                    location: formData.get("editEventLocation"),
-                    points_to_reward: Number(formData.get("editEventPoints")),
-                    start_date: new Date(formData.get("editEventStartDate") as string).toISOString(),
-                    end_date: new Date(formData.get("editEventEndDate") as string).toISOString(),
-                    published: formData.get("editEventPublished") === "on",
-                    has_food: formData.get("editEventHasFood") === "on",
-                    attendees: []
-                };
+                // Create new event
+                console.log('Creating new event');
+                const newEvent = await pb.collection("events").create(eventData);
+                console.log('New event created:', newEvent);
 
-                // Create event and upload files in parallel
-                const [newEvent] = await Promise.all([
-                    pb.collection("events").create(eventData),
-                    ...Array.from(selectedFiles.values()).map(file =>
-                        uploadQueue.add(async () => {
-                            const fileFormData = new FormData();
-                            fileFormData.append("files", file);
-                            await pb.collection("events").update(newEvent.id, fileFormData);
-                        })
-                    )
-                ]);
+                // Upload files if any
+                if (selectedFiles.size > 0) {
+                    try {
+                        const filesToUpload = Array.from(selectedFiles.values());
+                        console.log('Uploading files:', filesToUpload.map(f => f.name));
 
-                await services.sendLog.send(
-                    "create",
-                    "event",
-                    `Created event: ${eventData.event_name}`
-                );
+                        // Use uploadFiles for new event
+                        await services.fileManager.uploadFiles("events", newEvent.id, "files", filesToUpload);
+                    } catch (error: any) {
+                        if (error.status === 413) {
+                            throw new Error("Files are too large. Please try uploading smaller files or fewer files at once.");
+                        }
+                        throw error;
+                    }
+                }
             }
 
-            // Show success state
+            // Show success message
             if (submitButton) {
                 submitButton.classList.remove("btn-disabled");
                 submitButton.classList.add("btn-success");
@@ -728,13 +767,44 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                     </svg>
                 `;
-                await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
-            form.reset();
+            // Reset all state
+            setHasUnsavedChanges(false);
+            setSelectedFiles(new Map());
+            setFilesToDelete(new Set());
+            setEvent({
+                id: '',
+                event_name: '',
+                event_description: '',
+                event_code: '',
+                location: '',
+                files: [],
+                points_to_reward: 0,
+                start_date: new Date().toISOString(),
+                end_date: new Date().toISOString(),
+                published: false,
+                has_food: false,
+                attendees: []
+            });
+
+            // Reset cache timestamp to force refresh
+            if (window.lastCacheUpdate) {
+                window.lastCacheUpdate = 0;
+            }
+
+            // Trigger the callback
             onEventSaved?.();
-            handleModalClose();
-        } catch (error) {
+
+            // Close modal directly instead of using handleModalClose
+            const modal = document.getElementById("editEventModal") as HTMLDialogElement;
+            if (modal) modal.close();
+
+            // Force refresh of events list
+            if (typeof window.fetchEvents === 'function') {
+                window.fetchEvents();
+            }
+        } catch (error: any) {
             console.error("Failed to save event:", error);
             if (submitButton) {
                 submitButton.classList.remove("btn-disabled");
@@ -744,9 +814,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                     </svg>
                 `;
-                await new Promise(resolve => setTimeout(resolve, 2000));
             }
-            alert("Failed to save event. Please try again.");
+            alert(error.message || "Failed to save event. Please try again.");
         } finally {
             setIsSubmitting(false);
             if (submitButton) {
@@ -757,150 +826,22 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             if (cancelButton) cancelButton.disabled = false;
             window.hideLoading?.();
         }
-    }, [event, selectedFiles, filesToDelete, services, onEventSaved, isSubmitting, changeTracker, uploadQueue, handleModalClose]);
-
-    // Update change tracking when event data changes
-    useEffect(() => {
-        changeTracker.initialize(event);
-        setHasUnsavedChanges(false);
-    }, [event, changeTracker]);
-
-    // Add change detection to form inputs
-    const handleFieldChange = useCallback((field: keyof Event, value: any) => {
-        changeTracker.trackChange(field, value);
-        setHasUnsavedChanges(true);
-        setEvent(prev => prev ? { ...prev, [field]: value } : null);
-    }, [changeTracker]);
-
-    // Add change detection to file operations
-    const handleFileChange = useCallback((files: Map<string, File>, deletedFiles: Set<string>) => {
-        changeTracker.trackFileChange(files, deletedFiles);
-        setHasUnsavedChanges(true);
-        setSelectedFiles(files);
-        setFilesToDelete(deletedFiles);
-    }, [changeTracker]);
-
-    // Add unsaved changes warning
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (hasUnsavedChanges) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        };
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [hasUnsavedChanges]);
-
-    // Method to initialize form with event data
-    const initializeEventData = useCallback(async (eventId: string) => {
-        // Clear any existing timeouts
-        if (loadingState.timeoutId) {
-            clearTimeout(loadingState.timeoutId);
-        }
-
-        // Set loading state
-        setLoadingState(prev => ({
-            ...prev,
-            isLoading: true,
-            error: null
-        }));
-
-        // Set timeout for fetch request
-        const timeoutId = setTimeout(() => {
-            setLoadingState(prev => ({
-                ...prev,
-                isLoading: false,
-                error: "Request timed out. Please try again."
-            }));
-        }, FETCH_TIMEOUT);
-
-        try {
-            const eventData = await services.get.getOne<Event>("events", eventId);
-
-            // Add a small delay for smooth transition
-            await new Promise(resolve => setTimeout(resolve, TRANSITION_DURATION));
-
-            setEvent(eventData);
-            setSelectedFiles(new Map());
-            setFilesToDelete(new Set());
-            setShowPreview(false);
-            setLoadingState(prev => ({
-                ...prev,
-                isLoading: false,
-                error: null
-            }));
-        } catch (error) {
-            console.error("Failed to fetch event data:", error);
-            setLoadingState(prev => ({
-                ...prev,
-                isLoading: false,
-                error: "Failed to load event data. Please try again."
-            }));
-        } finally {
-            clearTimeout(timeoutId);
-        }
-    }, [services.get, loadingState.timeoutId]);
-
-    // Expose initializeEventData to window with loading states
-    useEffect(() => {
-        (window as any).openEditModal = async (event?: Event) => {
-            const modal = document.getElementById("editEventModal") as HTMLDialogElement;
-            if (!modal) return;
-
-            // Reset states
-            setLoadingState({
-                isLoading: false,
-                error: null,
-                timeoutId: null
-            });
-
-            if (event?.id) {
-                modal.showModal();
-                await initializeEventData(event.id);
-            } else {
-                setEvent(null);
-                setSelectedFiles(new Map());
-                setFilesToDelete(new Set());
-                setShowPreview(false);
-                modal.showModal();
-            }
-        };
-
-        return () => {
-            delete (window as any).openEditModal;
-        };
-    }, [initializeEventData]);
-
-    // Add cleanup for timeouts
-    useEffect(() => {
-        return () => {
-            if (loadingState.timeoutId) {
-                clearTimeout(loadingState.timeoutId);
-            }
-        };
-    }, [loadingState.timeoutId]);
+    }, [event, selectedFiles, filesToDelete, services, onEventSaved, isSubmitting]);
 
     return (
         <dialog id="editEventModal" className="modal">
             {showPreview ? (
                 <div className="modal-box max-w-4xl">
                     <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-3">
-                            <button
-                                className="btn btn-ghost btn-sm"
-                                onClick={() => setShowPreview(false)}
-                            >
-                                Close
-                            </button>
-                            <h3 className="font-bold text-lg truncate">
-                                {previewFilename}
-                            </h3>
-                        </div>
+                        <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => setShowPreview(false)}
+                        >
+                            Close
+                        </button>
                     </div>
                     <div className="relative">
-                        <MemoizedFilePreview
+                        <FilePreview
                             url={previewUrl}
                             filename={previewFilename}
                             isModal={false}
@@ -909,38 +850,21 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 </div>
             ) : (
                 <div className="modal-box max-w-2xl">
-                    {loadingState.isLoading ? (
-                        <LoadingSpinner />
-                    ) : loadingState.error ? (
-                        <ErrorDisplay
-                            error={loadingState.error}
-                            onRetry={() => event?.id && initializeEventData(event.id)}
-                        />
-                    ) : (
-                        <div className="transition-opacity duration-300 ease-in-out">
-                            <EventForm
-                                event={event}
-                                setEvent={setEvent}
-                                selectedFiles={selectedFiles}
-                                setSelectedFiles={setSelectedFiles}
-                                filesToDelete={filesToDelete}
-                                setFilesToDelete={setFilesToDelete}
-                                handlePreviewFile={handlePreviewFile}
-                                isSubmitting={isSubmitting}
-                                fileManager={services.fileManager}
-                                onSubmit={handleSubmit}
-                                onCancel={handleCancel}
-                            />
-                        </div>
-                    )}
+                    <EventForm
+                        event={event}
+                        setEvent={handleFieldChange}
+                        selectedFiles={selectedFiles}
+                        setSelectedFiles={setSelectedFiles}
+                        filesToDelete={filesToDelete}
+                        setFilesToDelete={setFilesToDelete}
+                        handlePreviewFile={handlePreviewFile}
+                        isSubmitting={isSubmitting}
+                        fileManager={services.fileManager}
+                        onSubmit={handleSubmit}
+                        onCancel={handleModalClose}
+                    />
                 </div>
             )}
-            <div
-                className="modal-backdrop"
-                onClick={(e: React.MouseEvent) => handleModalClose(e)}
-            >
-                <button onClick={(e) => e.preventDefault()}>close</button>
-            </div>
         </dialog>
     );
 }

@@ -1,6 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Get } from '../../../scripts/pocketbase/Get';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
+import { SendLog } from '../../../scripts/pocketbase/SendLog';
+
+// Cache for storing user data
+const userCache = new Map<string, {
+    data: User;
+    timestamp: number;
+}>();
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const ITEMS_PER_PAGE = 50;
 
 // Add HighlightText component
 const HighlightText = ({ text, searchTerms }: { text: string | number | null | undefined, searchTerms: string[] }) => {
@@ -58,6 +68,28 @@ interface Event {
     attendees: AttendeeEntry[];
 }
 
+// Add new interface for selected fields
+interface EventFields {
+    id: true;
+    event_name: true;
+    attendees: true;
+}
+
+interface UserFields {
+    id: true;
+    name: true;
+    email: true;
+    pid: true;
+    member_id: true;
+    member_type: true;
+    graduation_year: true;
+    major: true;
+}
+
+// Constants for field selection
+const EVENT_FIELDS: (keyof EventFields)[] = ['id', 'event_name', 'attendees'];
+const USER_FIELDS: (keyof UserFields)[] = ['id', 'name', 'email', 'pid', 'member_id', 'member_type', 'graduation_year', 'major'];
+
 export default function Attendees() {
     const [eventId, setEventId] = useState<string>('');
     const [eventName, setEventName] = useState<string>('');
@@ -66,41 +98,24 @@ export default function Attendees() {
     const [error, setError] = useState<string | null>(null);
     const [attendeesList, setAttendeesList] = useState<AttendeeEntry[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filteredAttendees, setFilteredAttendees] = useState<AttendeeEntry[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
     const [processedSearchTerms, setProcessedSearchTerms] = useState<string[]>([]);
 
     const get = Get.getInstance();
     const auth = Authentication.getInstance();
 
-    // Listen for the custom event
-    useEffect(() => {
-        const handleUpdateAttendees = (e: CustomEvent<{ eventId: string; eventName: string }>) => {
-            console.log('Received updateAttendees event:', e.detail);
-            setEventId(e.detail.eventId);
-            setEventName(e.detail.eventName);
-        };
-
-        // Add event listener
-        window.addEventListener('updateAttendees', handleUpdateAttendees as EventListener);
-
-        // Cleanup
-        return () => {
-            window.removeEventListener('updateAttendees', handleUpdateAttendees as EventListener);
-        };
-    }, []);
-
-    // Filter attendees when search term or attendees list changes
-    useEffect(() => {
-        if (!searchTerm.trim()) {
-            setFilteredAttendees(attendeesList);
-            setProcessedSearchTerms([]);
-            return;
-        }
-
+    // Memoize search terms processing
+    const updateProcessedSearchTerms = useCallback((searchTerm: string) => {
         const terms = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
         setProcessedSearchTerms(terms);
+        setCurrentPage(1); // Reset to first page on new search
+    }, []);
 
-        const filtered = attendeesList.filter(attendee => {
+    // Memoize filtered attendees
+    const filteredAttendees = useMemo(() => {
+        if (!searchTerm.trim()) return attendeesList;
+
+        return attendeesList.filter(attendee => {
             const user = users.get(attendee.user_id);
             if (!user) return false;
 
@@ -116,13 +131,172 @@ export default function Attendees() {
                 new Date(attendee.time_checked_in).toLocaleString(),
             ].map(value => (value || '').toString().toLowerCase());
 
-            return terms.every(term =>
+            return processedSearchTerms.every(term =>
                 searchableValues.some(value => value.includes(term))
             );
         });
+    }, [attendeesList, users, processedSearchTerms]);
 
-        setFilteredAttendees(filtered);
-    }, [searchTerm, attendeesList, users]);
+    // Memoize paginated attendees
+    const paginatedAttendees = useMemo(() => {
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredAttendees.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredAttendees, currentPage]);
+
+    // Memoize pagination info
+    const paginationInfo = useMemo(() => {
+        const totalPages = Math.ceil(filteredAttendees.length / ITEMS_PER_PAGE);
+        return {
+            totalPages,
+            hasNextPage: currentPage < totalPages,
+            hasPrevPage: currentPage > 1
+        };
+    }, [filteredAttendees.length, currentPage]);
+
+    // Optimized user data fetching with cache
+    const fetchUserData = useCallback(async (userIds: string[]) => {
+        const now = Date.now();
+        const uncachedIds: string[] = [];
+        const cachedUsers = new Map<string, User>();
+
+        // Check cache first
+        userIds.forEach(id => {
+            const cached = userCache.get(id);
+            if (cached && now - cached.timestamp < CACHE_DURATION) {
+                cachedUsers.set(id, cached.data);
+            } else {
+                uncachedIds.push(id);
+            }
+        });
+
+        // If we have all users in cache, return early
+        if (uncachedIds.length === 0) {
+            return cachedUsers;
+        }
+
+        // Fetch uncached users
+        try {
+            const users = await get.getMany<User>('users', uncachedIds, {
+                fields: USER_FIELDS,
+                disableAutoCancellation: false
+            });
+
+            // Update cache and merge with cached users
+            users.forEach(user => {
+                if (user) {
+                    userCache.set(user.id, { data: user, timestamp: now });
+                    cachedUsers.set(user.id, user);
+                }
+            });
+        } catch (error) {
+            console.error('Failed to fetch uncached users:', error);
+        }
+
+        return cachedUsers;
+    }, [get]);
+
+    // Listen for the custom event
+    useEffect(() => {
+        const handleUpdateAttendees = async (e: CustomEvent<{ eventId: string; eventName: string }>) => {
+            setEventId(e.detail.eventId);
+            setEventName(e.detail.eventName);
+            setCurrentPage(1); // Reset pagination on new event
+
+            // Log the attendees view action
+            try {
+                const sendLog = SendLog.getInstance();
+                await sendLog.send(
+                    "view",
+                    "event_attendees",
+                    `Viewed attendees for event: ${e.detail.eventName} (${e.detail.eventId})`
+                );
+            } catch (error) {
+                console.error('Failed to log attendees view:', error);
+            }
+        };
+
+        window.addEventListener('updateAttendees', handleUpdateAttendees as unknown as EventListener);
+        return () => {
+            window.removeEventListener('updateAttendees', handleUpdateAttendees as unknown as EventListener);
+        };
+    }, []);
+
+    // Update search terms when search input changes
+    useEffect(() => {
+        updateProcessedSearchTerms(searchTerm);
+    }, [searchTerm, updateProcessedSearchTerms]);
+
+    // Fetch event data when eventId changes
+    useEffect(() => {
+        let isMounted = true;
+        const fetchEventData = async () => {
+            if (!eventId || !auth.isAuthenticated()) {
+                if (!eventId) console.log('No eventId provided');
+                if (!auth.isAuthenticated()) {
+                    console.log('User not authenticated');
+                    setError('Authentication required');
+                }
+                return;
+            }
+
+            try {
+                setLoading(true);
+                setError(null);
+
+                const event = await get.getOne<Event>('events', eventId, {
+                    fields: EVENT_FIELDS,
+                    disableAutoCancellation: false
+                });
+
+                if (!isMounted) return;
+
+                if (!event.attendees?.length) {
+                    setAttendeesList([]);
+                    setUsers(new Map());
+                    return;
+                }
+
+                setAttendeesList(event.attendees);
+
+                // Fetch user details with cache
+                const userIds = [...new Set(event.attendees.map(a => a.user_id))];
+                const userMap = await fetchUserData(userIds);
+
+                if (isMounted) {
+                    setUsers(userMap);
+                }
+            } catch (error) {
+                if (isMounted) {
+                    console.error('Failed to fetch event data:', error);
+                    setError('Failed to load event data');
+                    setAttendeesList([]);
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchEventData();
+        return () => { isMounted = false; };
+    }, [eventId, auth, get, fetchUserData]);
+
+    // Reset state when modal is closed
+    useEffect(() => {
+        const handleModalClose = () => {
+            setEventId('');
+            setAttendeesList([]);
+            setUsers(new Map());
+            setError(null);
+        };
+
+        const modal = document.getElementById('attendeesModal');
+        if (modal) {
+            modal.addEventListener('close', handleModalClose);
+            return () => modal.removeEventListener('close', handleModalClose);
+        }
+    }, []);
 
     // Function to download attendees as CSV
     const downloadAttendeesCSV = () => {
@@ -174,94 +348,6 @@ export default function Attendees() {
         link.click();
         document.body.removeChild(link);
     };
-
-    // Fetch event data when eventId changes
-    useEffect(() => {
-        const fetchEventData = async () => {
-            if (!eventId) {
-                console.log('No eventId provided');
-                return;
-            }
-
-            if (!auth.isAuthenticated()) {
-                console.log('User not authenticated');
-                setError('Authentication required');
-                return;
-            }
-
-            try {
-                setLoading(true);
-                setError(null);
-
-                console.log('Fetching event data for:', eventId);
-                const event = await get.getOne<Event>('events', eventId);
-
-                if (!event.attendees || !Array.isArray(event.attendees)) {
-                    console.log('No attendees found or invalid format');
-                    setAttendeesList([]);
-                    return;
-                }
-
-                console.log('Found attendees:', {
-                    count: event.attendees.length,
-                    sample: event.attendees.slice(0, 2)
-                });
-                setAttendeesList(event.attendees);
-
-                // Fetch user details
-                const userIds = [...new Set(event.attendees.map(a => a.user_id))];
-                console.log('Fetching details for users:', userIds);
-
-                const userPromises = userIds.map(async (userId) => {
-                    try {
-                        return await get.getOne<User>('users', userId);
-                    } catch (error) {
-                        console.error(`Failed to fetch user ${userId}:`, error);
-                        return null;
-                    }
-                });
-
-                const userResults = await Promise.all(userPromises);
-                const userMap = new Map<string, User>();
-
-                userResults.forEach(user => {
-                    if (user) {
-                        userMap.set(user.id, user);
-                    }
-                });
-
-                console.log('Fetched user details:', {
-                    totalUsers: userMap.size,
-                    userIds: Array.from(userMap.keys())
-                });
-                setUsers(userMap);
-            } catch (error) {
-                console.error('Failed to fetch event data:', error);
-                setError('Failed to load event data');
-                setAttendeesList([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchEventData();
-    }, [eventId]); // Re-run when eventId changes
-
-    // Reset state when modal is closed
-    useEffect(() => {
-        const handleModalClose = () => {
-            setEventId('');
-            setAttendeesList([]);
-            setUsers(new Map());
-            setError(null);
-        };
-
-        const modal = document.getElementById('attendeesModal');
-        if (modal) {
-            modal.addEventListener('close', handleModalClose);
-            return () => modal.removeEventListener('close', handleModalClose);
-        }
-    }, []);
 
     if (loading) {
         return (
@@ -342,7 +428,7 @@ export default function Attendees() {
                 </div>
             </div>
 
-            {/* Updated table with highlighting */}
+            {/* Table with pagination */}
             <div className="overflow-x-auto flex-1">
                 <table className="table table-zebra w-full">
                     <thead className="sticky top-0 bg-base-100">
@@ -359,7 +445,7 @@ export default function Attendees() {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredAttendees.map((attendee, index) => {
+                        {paginatedAttendees.map((attendee, index) => {
                             const user = users.get(attendee.user_id);
                             const checkInTime = new Date(attendee.time_checked_in).toLocaleString();
 
@@ -380,6 +466,45 @@ export default function Attendees() {
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination Controls */}
+            {paginationInfo.totalPages > 1 && (
+                <div className="flex justify-center mt-4">
+                    <div className="join">
+                        <button
+                            className="join-item btn btn-sm"
+                            disabled={!paginationInfo.hasPrevPage}
+                            onClick={() => setCurrentPage(1)}
+                        >
+                            «
+                        </button>
+                        <button
+                            className="join-item btn btn-sm"
+                            disabled={!paginationInfo.hasPrevPage}
+                            onClick={() => setCurrentPage(p => p - 1)}
+                        >
+                            ‹
+                        </button>
+                        <button className="join-item btn btn-sm">
+                            Page {currentPage} of {paginationInfo.totalPages}
+                        </button>
+                        <button
+                            className="join-item btn btn-sm"
+                            disabled={!paginationInfo.hasNextPage}
+                            onClick={() => setCurrentPage(p => p + 1)}
+                        >
+                            ›
+                        </button>
+                        <button
+                            className="join-item btn btn-sm"
+                            disabled={!paginationInfo.hasNextPage}
+                            onClick={() => setCurrentPage(paginationInfo.totalPages)}
+                        >
+                            »
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

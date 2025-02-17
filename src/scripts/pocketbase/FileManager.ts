@@ -53,7 +53,7 @@ export class FileManager {
   }
 
   /**
-   * Upload multiple files to a record
+   * Upload multiple files to a record with chunked upload support
    * @param collectionName The name of the collection
    * @param recordId The ID of the record to attach the files to
    * @param field The field name for the files
@@ -73,19 +73,106 @@ export class FileManager {
     try {
       this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
-      const formData = new FormData();
       
-      files.forEach(file => {
-        formData.append(field, file);
-      });
+      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB per file limit
+      const MAX_BATCH_SIZE = 25 * 1024 * 1024; // 25MB per batch
+      
+      // Validate file sizes first
+      for (const file of files) {
+        if (file.size > MAX_FILE_SIZE) {
+          throw new Error(`File ${file.name} is too large. Maximum size is 50MB.`);
+        }
+      }
 
-      const result = await pb.collection(collectionName).update<T>(recordId, formData);
-      return result;
+      // Get existing record if updating
+      let existingFiles: string[] = [];
+      if (recordId) {
+        try {
+          const record = await pb.collection(collectionName).getOne<T>(recordId);
+          existingFiles = (record as any)[field] || [];
+        } catch (error) {
+          console.warn('Failed to fetch existing record:', error);
+        }
+      }
+
+      // Process files in batches
+      let currentBatchSize = 0;
+      let currentBatch: File[] = [];
+      let allProcessedFiles: File[] = [];
+
+      // Process each file
+      for (const file of files) {
+        let processedFile = file;
+        
+        try {
+          // Try to compress image files if needed
+          if (file.type.startsWith('image/')) {
+            processedFile = await this.compressImageIfNeeded(file, 50); // 50MB max size
+          }
+        } catch (error) {
+          console.warn(`Failed to process file ${file.name}:`, error);
+          processedFile = file; // Use original file if processing fails
+        }
+
+        // Check if adding this file would exceed batch size
+        if (currentBatchSize + processedFile.size > MAX_BATCH_SIZE) {
+          // Upload current batch
+          if (currentBatch.length > 0) {
+            await this.uploadBatch(collectionName, recordId, field, currentBatch);
+            allProcessedFiles.push(...currentBatch);
+          }
+          // Reset batch
+          currentBatch = [processedFile];
+          currentBatchSize = processedFile.size;
+        } else {
+          // Add to current batch
+          currentBatch.push(processedFile);
+          currentBatchSize += processedFile.size;
+        }
+      }
+
+      // Upload any remaining files
+      if (currentBatch.length > 0) {
+        await this.uploadBatch(collectionName, recordId, field, currentBatch);
+        allProcessedFiles.push(...currentBatch);
+      }
+
+      // Get the final record state
+      const finalRecord = await pb.collection(collectionName).getOne<T>(recordId);
+      return finalRecord;
     } catch (err) {
       console.error(`Failed to upload files to ${collectionName}:`, err);
       throw err;
     } finally {
       this.auth.setUpdating(false);
+    }
+  }
+
+  /**
+   * Upload a batch of files
+   * @private
+   */
+  private async uploadBatch<T = any>(
+    collectionName: string,
+    recordId: string,
+    field: string,
+    files: File[]
+  ): Promise<void> {
+    const pb = this.auth.getPocketBase();
+    const formData = new FormData();
+
+    // Add new files
+    for (const file of files) {
+      formData.append(field, file);
+    }
+
+    try {
+      await pb.collection(collectionName).update(recordId, formData);
+    } catch (error: any) {
+      if (error.status === 413) {
+        throw new Error(`Upload failed: Batch size too large. Please try uploading smaller files.`);
+      }
+      throw error;
     }
   }
 
@@ -160,7 +247,9 @@ export class FileManager {
     filename: string
   ): string {
     const pb = this.auth.getPocketBase();
-    return `${pb.baseUrl}/api/files/${collectionName}/${recordId}/${filename}`;
+    const token = pb.authStore.token;
+    const url = `${pb.baseUrl}/api/files/${collectionName}/${recordId}/${filename}`;
+    return url;
   }
 
   /**
@@ -266,5 +355,77 @@ export class FileManager {
     } finally {
       this.auth.setUpdating(false);
     }
+  }
+
+  /**
+   * Compress an image file if it's too large
+   * @param file The image file to compress
+   * @param maxSizeInMB Maximum size in MB
+   * @returns Promise<File> The compressed file
+   */
+  public async compressImageIfNeeded(file: File, maxSizeInMB: number = 50): Promise<File> {
+    if (!file.type.startsWith('image/')) {
+      return file;
+    }
+
+    const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+    if (file.size <= maxSizeInBytes) {
+      return file;
+    }
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target?.result as string;
+        
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Calculate new dimensions while maintaining aspect ratio
+          const maxDimension = 3840; // Higher quality for larger files
+          if (width > height && width > maxDimension) {
+            height *= maxDimension / width;
+            width = maxDimension;
+          } else if (height > maxDimension) {
+            width *= maxDimension / height;
+            height = maxDimension;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Convert to blob with higher quality for larger files
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Failed to compress image'));
+                return;
+              }
+              resolve(new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              }));
+            },
+            'image/jpeg',
+            0.85 // Higher quality setting for larger files
+          );
+        };
+        
+        img.onerror = () => {
+          reject(new Error('Failed to load image for compression'));
+        };
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Failed to read file for compression'));
+      };
+    });
   }
 } 
