@@ -664,6 +664,7 @@ const currentPage = eventResponse.page;
             <button
                 class="btn btn-ghost btn-sm"
                 onclick="window.closeFilePreviewOfficer()"
+                type="button"
             >
                 Close
             </button>
@@ -681,7 +682,7 @@ const currentPage = eventResponse.page;
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-        <button onclick="window.closeFilePreviewOfficer()">close</button>
+        <button type="button">close</button>
     </form>
 </dialog>
 
@@ -2370,55 +2371,61 @@ const currentPage = eventResponse.page;
 
     // Universal file preview function for officer section
     window.previewFileOfficer = function (url: string, filename: string) {
-        console.log("previewFileOfficer called with:", { url, filename });
         const modal = document.getElementById(
             "filePreviewModal"
         ) as HTMLDialogElement;
 
-        if (modal) {
-            console.log("Found all required elements");
-            // Show the modal
-            modal.showModal();
-
-            // Dispatch state change event
-            console.log("Dispatching state change event");
-            window.dispatchEvent(
-                new CustomEvent(FILE_PREVIEW_STATE_CHANGE, {
-                    detail: { url, filename },
-                })
-            );
-        } else {
-            console.error("Missing required elements:", {
-                modal: !!modal,
-            });
+        if (!modal) {
+            console.error("Modal element not found");
+            return;
         }
+
+        // Dispatch state change event before showing modal
+        window.dispatchEvent(
+            new CustomEvent(FILE_PREVIEW_STATE_CHANGE, {
+                detail: { url, filename },
+            })
+        );
+
+        // Show modal after event dispatch
+        requestAnimationFrame(() => {
+            modal.showModal();
+        });
     };
 
     // Close file preview for officer section
     window.closeFilePreviewOfficer = function () {
-        console.log("closeFilePreviewOfficer called");
         const modal = document.getElementById(
             "filePreviewModal"
         ) as HTMLDialogElement;
         const previewContent = document.getElementById("previewContent");
 
-        if (modal && previewContent) {
-            console.log("Resetting preview and closing modal");
-            // Reset the preview
-            const filePreview = previewContent.querySelector(
-                "astro-island"
-            ) as any;
-            if (filePreview) {
-                const component = filePreview.querySelector(
-                    "[data-astro-cid]"
-                ) as any;
-                if (component) {
-                    component.setAttribute("url", "");
-                    component.setAttribute("filename", "");
-                }
-            }
-            modal.close();
+        if (!modal || !previewContent) {
+            console.error("Required elements not found");
+            return;
         }
+
+        // Reset the preview content
+        const filePreview = previewContent.querySelector("astro-island");
+        if (filePreview) {
+            const component = filePreview.querySelector("[data-astro-cid]");
+            if (component) {
+                component.setAttribute("url", "");
+                component.setAttribute("filename", "");
+            }
+        }
+
+        // Dispatch cleanup event
+        window.dispatchEvent(
+            new CustomEvent(FILE_PREVIEW_STATE_CHANGE, {
+                detail: { url: "", filename: "" },
+            })
+        );
+
+        // Close modal after cleanup
+        requestAnimationFrame(() => {
+            modal.close();
+        });
     };
 
     // Update the showFilePreview function for officer section
@@ -2426,7 +2433,10 @@ const currentPage = eventResponse.page;
         url: string;
         name: string;
     }) {
-        console.log("showFilePreviewOfficer called with:", file);
+        if (!file || !file.url || !file.name) {
+            console.error("Invalid file data provided");
+            return;
+        }
         window.previewFileOfficer(file.url, file.name);
     };
 
@@ -2463,4 +2473,39 @@ const currentPage = eventResponse.page;
         // Show modal
         modal.showModal();
     };
+
+    // Add event listeners when the document loads
+    document.addEventListener("DOMContentLoaded", () => {
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        if (modal) {
+            // Handle modal close via backdrop
+            modal.addEventListener("click", (e) => {
+                const modalDimensions = modal.getBoundingClientRect();
+                if (
+                    e.clientX < modalDimensions.left ||
+                    e.clientX > modalDimensions.right ||
+                    e.clientY < modalDimensions.top ||
+                    e.clientY > modalDimensions.bottom
+                ) {
+                    window.closeFilePreviewOfficer();
+                }
+            });
+
+            // Prevent modal content clicks from closing
+            const modalContent = modal.querySelector(".modal-box");
+            if (modalContent) {
+                modalContent.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                });
+            }
+
+            // Handle escape key
+            modal.addEventListener("cancel", (e) => {
+                e.preventDefault();
+                window.closeFilePreviewOfficer();
+            });
+        }
+    });
 </script>
