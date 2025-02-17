@@ -720,6 +720,8 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
             const renderEventCard = (event: Event, container: HTMLElement) => {
                 const startDate = new Date(event.start_date);
                 const endDate = new Date(event.end_date);
+                const now = new Date();
+                const isPastEvent = endDate < now;
 
                 // Store event data in window object with unique ID
                 const eventDataId = `event_${event.id}`;
@@ -771,7 +773,9 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
                                     <span class="text-sm leading-tight truncate max-w-[200px]">${event.location}</span>
                                 </div>
                                 ${
-                                    event.files && event.files.length > 0
+                                    isPastEvent &&
+                                    event.files &&
+                                    event.files.length > 0
                                         ? `
                                     <button onclick="window.openDetailsModal(window['event_${event.id}'])" class="btn btn-sm btn-primary w-[90px] inline-flex items-center justify-center">
                                         <div class="flex items-center gap-1">
