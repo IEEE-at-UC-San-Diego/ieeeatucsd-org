@@ -2,6 +2,7 @@
 import { Icon } from "astro-icon/components";
 import JSZip from "jszip";
 import FilePreview from "./universal/FilePreview";
+import EventCheckIn from "./EventsSection/EventCheckIn";
 ---
 
 <div id="eventsSection" class="dashboard-section hidden">
@@ -12,74 +13,17 @@ import FilePreview from "./universal/FilePreview";
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <!-- Event Check-in Card -->
-        <div class="card bg-base-100 shadow-xl border border-base-200">
-            <div class="card-body">
-                <h3 class="card-title text-lg mb-4">Event Check-in</h3>
-                <div class="form-control w-full">
-                    <label class="label">
-                        <span class="label-text"
-                            >Enter event code to check in</span
-                        >
-                    </label>
-                    <div class="flex gap-2">
-                        <input
-                            type="password"
-                            placeholder="Enter code"
-                            class="input input-bordered flex-1"
-                        />
-                        <button class="btn btn-primary min-w-[90px]"
-                            >Check In</button
-                        >
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Food Selection Modal -->
-        <dialog id="foodSelectionModal" class="modal">
-            <div class="modal-box">
-                <h3 class="font-bold text-lg mb-4">Food Selection</h3>
-                <form id="foodSelectionForm" class="space-y-4">
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text"
-                                >What food would you like?</span
-                            >
-                            <span class="label-text-alt text-error">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            id="foodInput"
-                            name="foodInput"
-                            class="input input-bordered"
-                            placeholder="Enter your food choice or 'none'"
-                            required
-                        />
-                        <label class="label">
-                            <span class="label-text-alt text-info"
-                                >Enter 'none' if you don't want any food</span
-                            >
-                        </label>
-                    </div>
-                    <div class="modal-action">
-                        <button type="submit" class="btn btn-primary"
-                            >Submit</button
-                        >
-                        <button
-                            type="button"
-                            class="btn"
-                            onclick="foodSelectionModal.close()">Cancel</button
-                        >
-                    </div>
-                </form>
-            </div>
-            <form method="dialog" class="modal-backdrop">
-                <button>close</button>
-            </form>
-        </dialog>
+        <EventCheckIn client:load />
 
         <!-- Event Registration Card -->
-        <div class="card bg-base-100 shadow-xl border border-base-200">
+        <div
+            class="card bg-base-100 shadow-xl border border-base-200 opacity-50 cursor-not-allowed relative group"
+        >
+            <div
+                class="absolute inset-0 bg-base-100 opacity-0 group-hover:opacity-90 transition-opacity duration-300 flex items-center justify-center z-10"
+            >
+                <span class="text-base-content font-medium">Coming Soon</span>
+            </div>
             <div class="card-body">
                 <h3 class="card-title text-lg mb-4">Event Registration</h3>
                 <div class="form-control w-full">
@@ -89,14 +33,16 @@ import FilePreview from "./universal/FilePreview";
                         >
                     </label>
                     <div class="flex gap-2">
-                        <select class="select select-bordered flex-1">
+                        <select class="select select-bordered flex-1" disabled>
                             <option disabled selected>Pick an event</option>
                             <option>Technical Workshop - Web Development</option
                             >
                             <option>Professional Development Workshop</option>
                             <option>Social Event - Game Night</option>
                         </select>
-                        <button class="btn btn-primary">Register</button>
+                        <button class="btn btn-primary" disabled
+                            >Register</button
+                        >
                     </div>
                 </div>
             </div>
@@ -210,10 +156,8 @@ import FilePreview from "./universal/FilePreview";
             <div class="flex items-center gap-3">
                 <button
                     class="btn btn-ghost btn-sm"
-                    onclick="window.closeFilePreviewEvents()"
+                    onclick="window.closeFilePreviewEvents()">Close</button
                 >
-                    Close
-                </button>
                 <h3 class="font-bold text-lg truncate" id="previewFileName">
                 </h3>
             </div>
@@ -371,227 +315,306 @@ import FilePreview from "./universal/FilePreview";
         food: string;
     }
 
-    let currentCheckInEvent: Event | null = null;
+    let currentEventId = "";
 
-    async function handleEventCheckIn(eventCode: string): Promise<void> {
-        try {
-            const get = Get.getInstance();
-            const auth = Authentication.getInstance();
+    // Add helper functions for file preview
+    function getFileType(filename: string): string {
+        const extension = filename.split(".").pop()?.toLowerCase();
+        const mimeTypes: { [key: string]: string } = {
+            pdf: "application/pdf",
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            png: "image/png",
+            gif: "image/gif",
+            mp4: "video/mp4",
+            mp3: "audio/mpeg",
+            txt: "text/plain",
+            doc: "application/msword",
+            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            xls: "application/vnd.ms-excel",
+            xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            json: "application/json",
+        };
 
-            const currentUser = auth.getCurrentUser();
-            if (!currentUser) {
-                throw new Error("You must be logged in to check in to events");
-            }
+        return mimeTypes[extension || ""] || "application/octet-stream";
+    }
 
-            // Find the event with the given code
-            const event = await get.getFirst<Event>(
-                "events",
-                `event_code = "${eventCode}"`
-            );
-            if (!event) {
-                throw new Error("Invalid event code");
-            }
+    function showLoading() {
+        const spinner = document.getElementById("loadingSpinner");
+        if (spinner) spinner.classList.remove("hidden");
+    }
 
-            // Check if user is already checked in
-            if (
-                event.attendees.some(
-                    (entry) => entry.user_id === currentUser.id
-                )
-            ) {
-                throw new Error("You have already checked in to this event");
-            }
+    function hideLoading() {
+        const spinner = document.getElementById("loadingSpinner");
+        if (spinner) spinner.classList.add("hidden");
+    }
 
-            // Check if the event hasn't ended yet
-            const eventEndDate = new Date(event.end_date);
-            if (eventEndDate < new Date()) {
-                throw new Error("This event has already ended");
-            }
+    function showFilePreview(file: {
+        url: string;
+        type: string;
+        name: string;
+    }) {
+        console.log("showFilePreview called with:", file);
+        window.previewFileEvents(file.url, file.name);
+    }
 
-            // If event has food, show food selection modal
-            if (event.has_food) {
-                currentCheckInEvent = event;
-                const modal = document.getElementById(
-                    "foodSelectionModal"
-                ) as HTMLDialogElement;
-                modal.showModal();
-            } else {
-                // If no food, complete check-in directly
-                await completeCheckIn(event, null);
-            }
-        } catch (error: any) {
-            createToast(
-                error?.message || "Failed to check in to event",
-                "error"
-            );
+    function handlePreviewError() {
+        hideLoading();
+        const previewContent = document.getElementById("previewContent");
+        if (previewContent) {
+            previewContent.innerHTML = `
+                <div class="alert alert-error">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Failed to load file preview</span>
+                </div>
+            `;
         }
     }
 
-    // Add food selection form handler
-    const foodSelectionForm = document.getElementById(
-        "foodSelectionForm"
-    ) as HTMLFormElement;
-    if (foodSelectionForm) {
-        foodSelectionForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const modal = document.getElementById(
-                "foodSelectionModal"
-            ) as HTMLDialogElement;
-            const foodInput = document.getElementById(
-                "foodInput"
-            ) as HTMLInputElement;
+    // Universal file preview function for events section
+    window.previewFileEvents = function (url: string, filename: string) {
+        console.log("previewFileEvents called with:", { url, filename });
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        const previewFileName = document.getElementById("previewFileName");
+        const previewContent = document.getElementById("previewContent");
 
-            try {
-                if (currentCheckInEvent) {
-                    await completeCheckIn(
-                        currentCheckInEvent,
-                        foodInput.value.trim()
-                    );
-                    modal.close();
-                    foodInput.value = ""; // Reset input
-                    currentCheckInEvent = null;
-                }
-            } catch (error: any) {
-                createToast(
-                    error?.message || "Failed to check in to event",
-                    "error"
-                );
-            }
-        });
-    }
+        if (modal && previewFileName && previewContent) {
+            console.log("Found all required elements");
+            // Update the filename display
+            previewFileName.textContent = filename;
 
-    async function completeCheckIn(
-        event: Event,
-        foodSelection: string | null
-    ): Promise<void> {
-        try {
-            const auth = Authentication.getInstance();
-            const update = Update.getInstance();
-            const logger = SendLog.getInstance();
+            // Show the modal
+            modal.showModal();
 
-            const currentUser = auth.getCurrentUser();
-            if (!currentUser) {
-                throw new Error("You must be logged in to check in to events");
-            }
-
-            // Create attendee entry with check-in details
-            const attendeeEntry: AttendeeEntry = {
-                user_id: currentUser.id,
-                time_checked_in: new Date().toISOString(),
-                food: foodSelection || "none",
-            };
-
-            // Get existing attendees or initialize empty array
-            const existingAttendees = event.attendees || [];
-
-            // Check if user is already checked in
-            if (
-                existingAttendees.some(
-                    (entry) => entry.user_id === currentUser.id
-                )
-            ) {
-                throw new Error("You have already checked in to this event");
-            }
-
-            // Add new attendee entry to the array
-            const updatedAttendees = [...existingAttendees, attendeeEntry];
-
-            // Update attendees array with the new entry
-            await update.updateField(
-                "events",
-                event.id,
-                "attendees",
-                updatedAttendees
-            );
-
-            // If food selection was made, log it
-            if (foodSelection) {
-                await logger.send(
-                    "update",
-                    "event check-in",
-                    `Food selection for ${event.event_name}: ${foodSelection}`
-                );
-            }
-
-            // Award points to user if available
-            if (event.points_to_reward > 0) {
-                const userPoints = currentUser.points || 0;
-                await update.updateField(
-                    "users",
-                    currentUser.id,
-                    "points",
-                    userPoints + event.points_to_reward
-                );
-
-                // Log the points award
-                await logger.send(
-                    "update",
-                    "event check-in",
-                    `Awarded ${event.points_to_reward} points for checking in to ${event.event_name}`
-                );
-            }
-
-            // Show success message with points if awarded
-            createToast(
-                `Successfully checked in to ${event.event_name}${
-                    event.points_to_reward > 0
-                        ? ` (+${event.points_to_reward} points!)`
-                        : ""
-                }`,
-                "success"
-            );
-
-            // Log the check-in
-            await logger.send(
-                "check_in",
-                "events",
-                `User ${currentUser.name} (${currentUser.graduation_year}) checked in to event ${event.event_name}`
-            );
-        } catch (error: any) {
-            createToast(
-                error?.message || "Failed to check in to event",
-                "error"
+            // Dispatch state change event
+            window.dispatchEvent(
+                new CustomEvent("filePreviewStateChange", {
+                    detail: { url, filename },
+                })
             );
         }
-    }
+    };
 
-    // Add event listener to check-in button
-    document.addEventListener("DOMContentLoaded", () => {
-        const checkInForm = document.querySelector(".form-control");
-        const checkInInput = checkInForm?.querySelector("input");
-        const checkInButton = checkInForm?.querySelector("button");
+    // Close file preview for events section
+    window.closeFilePreviewEvents = function () {
+        console.log("closeFilePreviewEvents called");
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        const previewFileName = document.getElementById("previewFileName");
+        const previewContent = document.getElementById("previewContent");
 
-        if (checkInForm && checkInInput && checkInButton) {
-            checkInButton.addEventListener("click", async () => {
-                const eventCode = checkInInput.value.trim();
-                if (!eventCode) {
-                    createToast("Please enter an event code", "warning");
-                    return;
+        if (modal && previewFileName && previewContent) {
+            console.log("Resetting preview and closing modal");
+            // Reset the preview state
+            window.dispatchEvent(
+                new CustomEvent("filePreviewStateChange", {
+                    detail: { url: "", filename: "" },
+                })
+            );
+
+            // Reset the UI
+            previewFileName.textContent = "";
+
+            // Close the modal
+            modal.close();
+        }
+    };
+
+    // Update the showFilePreview function for events section
+    window.showFilePreviewEvents = function (file: {
+        url: string;
+        name: string;
+    }) {
+        console.log("showFilePreviewEvents called with:", file);
+        window.previewFileEvents(file.url, file.name);
+    };
+
+    // Update the openDetailsModal function to use the events-specific preview
+    window.openDetailsModal = function (event: any) {
+        const modal = document.getElementById(
+            "eventDetailsModal"
+        ) as HTMLDialogElement;
+        const filesContent = document.getElementById(
+            "filesContent"
+        ) as HTMLDivElement;
+
+        // Reset state
+        currentEventId = event.id;
+        if (filesContent) filesContent.classList.remove("hidden");
+
+        // Populate files content
+        if (
+            event.files &&
+            Array.isArray(event.files) &&
+            event.files.length > 0
+        ) {
+            const baseUrl = "https://pocketbase.ieeeucsd.org";
+            const collectionId = "events";
+            const recordId = event.id;
+
+            filesContent.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full">
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${event.files
+                                .map((file: string) => {
+                                    const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
+                                    const fileType = getFileType(file);
+                                    const previewData = JSON.stringify({
+                                        url: fileUrl,
+                                        name: file,
+                                    }).replace(/'/g, "\\'");
+                                    return `
+                                        <tr>
+                                            <td>${file}</td>
+                                            <td class="text-right">
+                                                <button class="btn btn-ghost btn-sm" onclick='window.showFilePreviewEvents(${previewData})'>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                                        <polyline points="14 2 14 8 20 8" />
+                                                    </svg>
+                                                </button>
+                                                <a href="${fileUrl}" download="${file}" class="btn btn-ghost btn-sm">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    `;
+                                })
+                                .join("")}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else {
+            filesContent.innerHTML = `
+                <div class="text-center py-8 text-base-content/70">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                    </svg>
+                    <p>No files attached to this event</p>
+                </div>
+            `;
+        }
+
+        modal.showModal();
+    };
+
+    // Add downloadAllFiles function
+    window.downloadAllFiles = async function () {
+        const downloadBtn = document.getElementById(
+            "downloadAllBtn"
+        ) as HTMLButtonElement;
+        if (!downloadBtn) return;
+        const originalBtnContent = downloadBtn.innerHTML;
+
+        try {
+            // Show loading state
+            downloadBtn.innerHTML =
+                '<span class="loading loading-spinner loading-xs"></span> Preparing...';
+            downloadBtn.disabled = true;
+
+            const zip = new JSZip();
+
+            // Get current event files
+            const baseUrl = "https://pocketbase.ieeeucsd.org";
+            const collectionId = "events";
+            const recordId = currentEventId;
+
+            // Get the current event from the window object
+            const eventDataId = `event_${currentEventId}`;
+            const event = window[eventDataId] as Event;
+
+            if (!event || !event.files || event.files.length === 0) {
+                throw new Error("No files available to download");
+            }
+
+            // Download each file and add to zip
+            const filePromises = event.files.map(async (filename: string) => {
+                const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${filename}`;
+                const response = await fetch(fileUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to download ${filename}`);
                 }
-
-                checkInButton.classList.add("btn-disabled");
-                const loadingSpinner = document.createElement("span");
-                loadingSpinner.className = "loading loading-spinner loading-xs";
-                const originalText = checkInButton.textContent;
-                checkInButton.textContent = "";
-                checkInButton.appendChild(loadingSpinner);
-
-                await handleEventCheckIn(eventCode);
-
-                checkInButton.classList.remove("btn-disabled");
-                checkInButton.removeChild(loadingSpinner);
-                checkInButton.textContent = originalText;
-                checkInInput.value = "";
+                const blob = await response.blob();
+                zip.file(filename, blob);
             });
 
-            // Allow Enter key to submit
-            checkInInput.addEventListener("keypress", async (e) => {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    checkInButton.click();
-                }
-            });
+            await Promise.all(filePromises);
+
+            // Generate and download zip
+            const zipBlob = await zip.generateAsync({ type: "blob" });
+            const downloadUrl = URL.createObjectURL(zipBlob);
+            const link = document.createElement("a");
+            link.href = downloadUrl;
+            link.download = `${event.event_name}_files.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+
+            // Show success message
+            createToast("Files downloaded successfully!", "success");
+        } catch (error: any) {
+            console.error("Failed to download files:", error);
+            createToast(
+                error?.message || "Failed to download files. Please try again.",
+                "error"
+            );
+        } finally {
+            // Reset button state
+            downloadBtn.innerHTML = originalBtnContent;
+            downloadBtn.disabled = false;
         }
-    });
+    };
+
+    // Close event details modal
+    window.closeEventDetailsModal = function () {
+        const modal = document.getElementById(
+            "eventDetailsModal"
+        ) as HTMLDialogElement;
+        const filesContent = document.getElementById("filesContent");
+
+        if (modal) {
+            // Reset the files content
+            if (filesContent) {
+                filesContent.innerHTML = "";
+            }
+
+            // Reset any other state if needed
+            currentEventId = "";
+
+            // Close the modal
+            modal.close();
+        }
+    };
+
+    // Make helper functions available globally
+    window.showFilePreview = showFilePreview;
+    window.handlePreviewError = handlePreviewError;
+    window.showLoading = showLoading;
+    window.hideLoading = hideLoading;
+
+    // Add TypeScript interface for Window
+    declare global {
+        interface Window {
+            downloadAllFiles: () => Promise<void>;
+            [key: string]: any;
+        }
+    }
 
     async function loadEvents() {
         try {
@@ -851,328 +874,5 @@ import FilePreview from "./universal/FilePreview";
     const eventsSection = document.getElementById("eventsSection");
     if (eventsSection) {
         observer.observe(eventsSection);
-    }
-
-    // Add helper functions for file preview
-    function getFileType(filename: string): string {
-        const extension = filename.split(".").pop()?.toLowerCase();
-        const mimeTypes: { [key: string]: string } = {
-            pdf: "application/pdf",
-            jpg: "image/jpeg",
-            jpeg: "image/jpeg",
-            png: "image/png",
-            gif: "image/gif",
-            mp4: "video/mp4",
-            mp3: "audio/mpeg",
-            txt: "text/plain",
-            doc: "application/msword",
-            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            xls: "application/vnd.ms-excel",
-            xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            json: "application/json",
-        };
-
-        return mimeTypes[extension || ""] || "application/octet-stream";
-    }
-
-    let currentEventId = "";
-
-    function showLoading() {
-        const spinner = document.getElementById("loadingSpinner");
-        if (spinner) spinner.classList.remove("hidden");
-    }
-
-    function hideLoading() {
-        const spinner = document.getElementById("loadingSpinner");
-        if (spinner) spinner.classList.add("hidden");
-    }
-
-    function isPreviewableType(fileType: string): boolean {
-        return (
-            fileType.startsWith("image/") ||
-            fileType.startsWith("video/") ||
-            fileType.startsWith("audio/") ||
-            fileType === "application/pdf" ||
-            fileType.startsWith("text/") ||
-            fileType === "application/json"
-        );
-    }
-
-    function backToFileList() {
-        const filePreviewSection =
-            document.getElementById("filePreviewSection");
-        const filesContent = document.getElementById("filesContent");
-        const modalTitle = document.getElementById("modalTitle");
-
-        if (filePreviewSection) filePreviewSection.classList.add("hidden");
-        if (filesContent) filesContent.classList.remove("hidden");
-        if (modalTitle) modalTitle.textContent = "Event Files";
-    }
-
-    function showFilePreview(file: {
-        url: string;
-        type: string;
-        name: string;
-    }) {
-        console.log("showFilePreview called with:", file);
-        window.previewFileEvents(file.url, file.name);
-    }
-
-    function handlePreviewError() {
-        hideLoading();
-        const previewContent = document.getElementById("previewContent");
-        if (previewContent) {
-            previewContent.innerHTML = `
-        <div class="alert alert-error">
-          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>Failed to load file preview</span>
-        </div>
-      `;
-        }
-    }
-
-    // Universal file preview function for events section
-    window.previewFileEvents = function (url: string, filename: string) {
-        console.log("previewFileEvents called with:", { url, filename });
-        const modal = document.getElementById(
-            "filePreviewModal"
-        ) as HTMLDialogElement;
-        const previewFileName = document.getElementById("previewFileName");
-        const previewContent = document.getElementById("previewContent");
-
-        if (modal && previewFileName && previewContent) {
-            console.log("Found all required elements");
-            // Update the filename display
-            previewFileName.textContent = filename;
-
-            // Show the modal
-            modal.showModal();
-
-            // Dispatch state change event
-            window.dispatchEvent(
-                new CustomEvent("filePreviewStateChange", {
-                    detail: { url, filename },
-                })
-            );
-        }
-    };
-
-    // Close file preview for events section
-    window.closeFilePreviewEvents = function () {
-        console.log("closeFilePreviewEvents called");
-        const modal = document.getElementById(
-            "filePreviewModal"
-        ) as HTMLDialogElement;
-        const previewFileName = document.getElementById("previewFileName");
-        const previewContent = document.getElementById("previewContent");
-
-        if (modal && previewFileName && previewContent) {
-            console.log("Resetting preview and closing modal");
-            // Reset the preview state
-            window.dispatchEvent(
-                new CustomEvent("filePreviewStateChange", {
-                    detail: { url: "", filename: "" },
-                })
-            );
-
-            // Reset the UI
-            previewFileName.textContent = "";
-
-            // Close the modal
-            modal.close();
-        }
-    };
-
-    // Update the showFilePreview function for events section
-    window.showFilePreviewEvents = function (file: {
-        url: string;
-        name: string;
-    }) {
-        console.log("showFilePreviewEvents called with:", file);
-        window.previewFileEvents(file.url, file.name);
-    };
-
-    // Update the openDetailsModal function to use the events-specific preview
-    window.openDetailsModal = function (event: any) {
-        const modal = document.getElementById(
-            "eventDetailsModal"
-        ) as HTMLDialogElement;
-        const filesContent = document.getElementById(
-            "filesContent"
-        ) as HTMLDivElement;
-
-        // Reset state
-        currentEventId = event.id;
-        if (filesContent) filesContent.classList.remove("hidden");
-
-        // Populate files content
-        if (
-            event.files &&
-            Array.isArray(event.files) &&
-            event.files.length > 0
-        ) {
-            const baseUrl = "https://pocketbase.ieeeucsd.org";
-            const collectionId = "events";
-            const recordId = event.id;
-
-            filesContent.innerHTML = `
-        <div class="overflow-x-auto">
-          <table class="table table-zebra w-full">
-            <thead>
-              <tr>
-                <th>File Name</th>
-                <th class="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${event.files
-                  .map((file: string) => {
-                      const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
-                      const fileType = getFileType(file);
-                      const previewData = JSON.stringify({
-                          url: fileUrl,
-                          name: file,
-                      }).replace(/'/g, "\\'");
-                      return `
-                    <tr>
-                      <td>${file}</td>
-                      <td class="text-right">
-                        <button class="btn btn-ghost btn-sm" onclick='window.showFilePreviewEvents(${previewData})'>
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                            <polyline points="14 2 14 8 20 8" />
-                          </svg>
-                        </button>
-                        <a href="${fileUrl}" download="${file}" class="btn btn-ghost btn-sm">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                          </svg>
-                        </a>
-                      </td>
-                    </tr>
-                  `;
-                  })
-                  .join("")}
-            </tbody>
-          </table>
-        </div>
-      `;
-        } else {
-            filesContent.innerHTML = `
-        <div class="text-center py-8 text-base-content/70">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
-          </svg>
-          <p>No files attached to this event</p>
-        </div>
-      `;
-        }
-
-        modal.showModal();
-    };
-
-    // Add downloadAllFiles function
-    window.downloadAllFiles = async function () {
-        const downloadBtn = document.getElementById(
-            "downloadAllBtn"
-        ) as HTMLButtonElement;
-        if (!downloadBtn) return;
-        const originalBtnContent = downloadBtn.innerHTML;
-
-        try {
-            // Show loading state
-            downloadBtn.innerHTML =
-                '<span class="loading loading-spinner loading-xs"></span> Preparing...';
-            downloadBtn.disabled = true;
-
-            const zip = new JSZip();
-
-            // Get current event files
-            const baseUrl = "https://pocketbase.ieeeucsd.org";
-            const collectionId = "events";
-            const recordId = currentEventId;
-
-            // Get the current event from the window object
-            const eventDataId = `event_${currentEventId}`;
-            const event = window[eventDataId] as Event;
-
-            if (!event || !event.files || event.files.length === 0) {
-                throw new Error("No files available to download");
-            }
-
-            // Download each file and add to zip
-            const filePromises = event.files.map(async (filename: string) => {
-                const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${filename}`;
-                const response = await fetch(fileUrl);
-                if (!response.ok) {
-                    throw new Error(`Failed to download ${filename}`);
-                }
-                const blob = await response.blob();
-                zip.file(filename, blob);
-            });
-
-            await Promise.all(filePromises);
-
-            // Generate and download zip
-            const zipBlob = await zip.generateAsync({ type: "blob" });
-            const downloadUrl = URL.createObjectURL(zipBlob);
-            const link = document.createElement("a");
-            link.href = downloadUrl;
-            link.download = `${event.event_name}_files.zip`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(downloadUrl);
-
-            // Show success message
-            createToast("Files downloaded successfully!", "success");
-        } catch (error: any) {
-            console.error("Failed to download files:", error);
-            createToast(
-                error?.message || "Failed to download files. Please try again.",
-                "error"
-            );
-        } finally {
-            // Reset button state
-            downloadBtn.innerHTML = originalBtnContent;
-            downloadBtn.disabled = false;
-        }
-    };
-
-    // Close event details modal
-    window.closeEventDetailsModal = function () {
-        const modal = document.getElementById(
-            "eventDetailsModal"
-        ) as HTMLDialogElement;
-        const filesContent = document.getElementById("filesContent");
-
-        if (modal) {
-            // Reset the files content
-            if (filesContent) {
-                filesContent.innerHTML = "";
-            }
-
-            // Reset any other state if needed
-            currentEventId = "";
-
-            // Close the modal
-            modal.close();
-        }
-    };
-
-    // Make helper functions available globally
-    window.showFilePreview = showFilePreview;
-    window.handlePreviewError = handlePreviewError;
-    window.showLoading = showLoading;
-    window.hideLoading = hideLoading;
-
-    // Add TypeScript interface for Window
-    declare global {
-        interface Window {
-            downloadAllFiles: () => Promise<void>;
-            [key: string]: any;
-        }
     }
 </script>
