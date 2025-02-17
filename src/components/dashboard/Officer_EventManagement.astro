@@ -1943,7 +1943,7 @@ const currentPage = eventResponse.page;
     }
 
     // Update the openDetailsModal function to use the universal preview
-    window.openDetailsModal = function (
+    window.openDetailsModal = async function (
         event: Event,
         activeTab: string = "files"
     ) {
@@ -1956,72 +1956,71 @@ const currentPage = eventResponse.page;
 
         if (!modal || !filesContent || !attendeesContent || !tabs) return;
 
-        // Show modal
-        modal.showModal();
+        try {
+            // Fetch fresh event data
+            const freshEvent = await get.getOne<Event>("events", event.id);
 
-        // Update files list
-        if (event.files && event.files.length > 0) {
-            filesContent.innerHTML = `
-                <div class="space-y-2">
-                    ${updateFilePreviewButtons(event.files, event.id)}
-                </div>
-            `;
-        } else {
-            filesContent.innerHTML = `
-                <div class="text-center py-8 text-base-content/70">
-                    <p>No files attached to this event</p>
-                </div>
-            `;
-        }
+            // Show modal
+            modal.showModal();
 
-        // Update Attendees component props initially
-        const attendeesComponent =
-            attendeesContent.querySelector("astro-island");
-        if (attendeesComponent) {
-            const component =
-                attendeesComponent.querySelector("[data-astro-cid]");
-            if (component) {
-                component.setAttribute("eventId", event.id);
-                component.setAttribute(
-                    "attendees",
-                    JSON.stringify(event.attendees || [])
-                );
-            }
-        }
-
-        // Show the requested tab
-        const targetTab = Array.from(tabs).find(
-            (tab) => (tab as HTMLElement).dataset.tab === activeTab
-        );
-        if (targetTab) {
-            tabs.forEach((t) => t.classList.remove("tab-active"));
-            targetTab.classList.add("tab-active");
-
-            if (activeTab === "files") {
-                filesContent.classList.remove("hidden");
-                attendeesContent.classList.add("hidden");
+            // Update files list with fresh data
+            if (freshEvent.files && freshEvent.files.length > 0) {
+                filesContent.innerHTML = `
+                    <div class="space-y-2">
+                        ${updateFilePreviewButtons(freshEvent.files, freshEvent.id)}
+                    </div>
+                `;
             } else {
-                filesContent.classList.add("hidden");
-                attendeesContent.classList.remove("hidden");
+                filesContent.innerHTML = `
+                    <div class="text-center py-8 text-base-content/70">
+                        <p>No files attached to this event</p>
+                    </div>
+                `;
             }
-        }
 
-        // Add tab functionality
-        tabs.forEach((tab) => {
-            tab.addEventListener("click", () => {
-                const tabName = (tab as HTMLElement).dataset.tab;
+            // Update Attendees component props with fresh data
+            const attendeesComponent =
+                attendeesContent.querySelector("astro-island");
+            if (attendeesComponent) {
+                const component =
+                    attendeesComponent.querySelector("[data-astro-cid]");
+                if (component) {
+                    component.setAttribute("eventId", freshEvent.id);
+                    component.setAttribute(
+                        "attendees",
+                        JSON.stringify(freshEvent.attendees || [])
+                    );
+                }
+            }
+
+            // Show the requested tab
+            const targetTab = Array.from(tabs).find(
+                (tab) => (tab as HTMLElement).dataset.tab === activeTab
+            );
+            if (targetTab) {
                 tabs.forEach((t) => t.classList.remove("tab-active"));
-                tab.classList.add("tab-active");
+                targetTab.classList.add("tab-active");
 
-                if (tabName === "files") {
+                if (activeTab === "files") {
                     filesContent.classList.remove("hidden");
                     attendeesContent.classList.add("hidden");
                 } else {
                     filesContent.classList.add("hidden");
                     attendeesContent.classList.remove("hidden");
                 }
-            });
-        });
+            }
+        } catch (error) {
+            console.error("Failed to fetch fresh event data:", error);
+            // Show error message in modal
+            filesContent.innerHTML = `
+                <div class="alert alert-error">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Failed to load event data. Please try again.</span>
+                </div>
+            `;
+        }
     };
 
     // Add file input change handler to show selected files
@@ -2196,7 +2195,7 @@ const currentPage = eventResponse.page;
     };
 
     // Update the showFilePreview function for officer section
-    window.showFilePreviewOfficer = function (file: {
+    window.showFilePreviewOfficer = async function (file: {
         url: string;
         name: string;
     }) {
@@ -2204,7 +2203,35 @@ const currentPage = eventResponse.page;
             console.error("Invalid file data provided");
             return;
         }
-        window.previewFileOfficer(file.url, file.name);
+
+        try {
+            // Extract event ID from the URL
+            const urlParts = file.url.split("/");
+            const eventId = urlParts[urlParts.length - 2]; // Event ID is second to last in the URL
+
+            // Fetch fresh event data to ensure we have the latest file information
+            const freshEvent = await get.getOne<Event>("events", eventId);
+
+            // Verify the file still exists in the event
+            if (!freshEvent.files.includes(file.name)) {
+                throw new Error("File no longer exists in the event");
+            }
+
+            // Get fresh URL from FileManager to ensure we have the latest
+            const freshUrl = fileManager.getFileUrl(
+                "events",
+                eventId,
+                file.name
+            );
+
+            // Show the preview with fresh URL
+            window.previewFileOfficer(freshUrl, file.name);
+        } catch (error) {
+            console.error("Failed to fetch fresh file data:", error);
+            alert(
+                "Failed to load file preview. The file may have been deleted or modified."
+            );
+        }
     };
 
     // Make helper functions available globally
