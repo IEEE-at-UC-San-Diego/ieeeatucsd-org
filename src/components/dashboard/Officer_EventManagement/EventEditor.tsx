@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
-import { Get } from "../../pocketbase/Get";
-import { Authentication } from "../../pocketbase/Authentication";
-import { Update } from "../../pocketbase/Update";
-import { FileManager } from "../../pocketbase/FileManager";
-import { SendLog } from "../../pocketbase/SendLog";
+import { Get } from "../../../scripts/pocketbase/Get";
+import { Authentication } from "../../../scripts/pocketbase/Authentication";
+import { Update } from "../../../scripts/pocketbase/Update";
+import { FileManager } from "../../../scripts/pocketbase/FileManager";
+import { SendLog } from "../../../scripts/pocketbase/SendLog";
 import FilePreview from "./FilePreview";
 
 // Extend Window interface

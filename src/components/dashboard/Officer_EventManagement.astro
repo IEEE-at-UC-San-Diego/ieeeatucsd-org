@@ -1,7 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
-import { Get } from "../pocketbase/Get";
-import { Authentication } from "../pocketbase/Authentication";
+import { Get } from "../../scripts/pocketbase/Get";
+import { Authentication } from "../../scripts/pocketbase/Authentication";
 import EventEditor from "./Officer_EventManagement/EventEditor";
 import FilePreview from "./Officer_EventManagement/FilePreview";
 import Attendees from "./Officer_EventManagement/Attendees";
@@ -649,7 +649,7 @@ const currentPage = eventResponse.page;
         </div>
 
         <div id="attendeesContent" class="space-y-4 hidden">
-            <Attendees client:load eventId="" attendees={[]} />
+            <Attendees client:load />
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
@@ -694,9 +694,22 @@ const currentPage = eventResponse.page;
     <div class="modal-box max-w-4xl">
         <div class="flex justify-between items-center mb-4">
             <h3 class="font-bold text-lg" id="attendeesModalTitle"></h3>
-            <button class="btn btn-circle btn-ghost" onclick="attendeesModal.close()">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            <button
+                class="btn btn-circle btn-ghost"
+                onclick="attendeesModal.close()"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         </div>
@@ -1782,7 +1795,7 @@ const currentPage = eventResponse.page;
 
     // Update the showFilePreview function
     window.showFilePreview = function (file: { url: string; name: string }) {
-        console.log('showFilePreview called with:', file);
+        console.log("showFilePreview called with:", file);
         window.previewFile(file.url, file.name);
     };
 
@@ -1814,46 +1827,54 @@ const currentPage = eventResponse.page;
 
     // Universal file preview function
     window.previewFile = function (url: string, filename: string) {
-        console.log('previewFile called with:', { url, filename });
-        const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
-        const filePreview = document.getElementById("officerFilePreview") as any;
+        console.log("previewFile called with:", { url, filename });
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        const filePreview = document.getElementById(
+            "officerFilePreview"
+        ) as any;
         const previewFileName = document.getElementById("previewFileName");
-        
+
         if (filePreview && modal && previewFileName) {
-            console.log('Found all required elements');
+            console.log("Found all required elements");
             // Update the filename display
             previewFileName.textContent = filename;
-            
+
             // Show the modal
             modal.showModal();
 
             // Update the preview component
-            console.log('Dispatching updateFilePreview event');
+            console.log("Dispatching updateFilePreview event");
             const event = new CustomEvent("updateFilePreview", {
-                detail: { url, filename }
+                detail: { url, filename },
             });
             filePreview.dispatchEvent(event);
         } else {
-            console.error('Missing required elements:', {
+            console.error("Missing required elements:", {
                 modal: !!modal,
                 filePreview: !!filePreview,
-                previewFileName: !!previewFileName
+                previewFileName: !!previewFileName,
             });
         }
     };
 
     // Close file preview
     window.closeFilePreview = function () {
-        console.log('closeFilePreview called');
-        const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
-        const filePreview = document.getElementById("officerFilePreview") as any;
+        console.log("closeFilePreview called");
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        const filePreview = document.getElementById(
+            "officerFilePreview"
+        ) as any;
         const previewFileName = document.getElementById("previewFileName");
 
         if (modal && filePreview && previewFileName) {
-            console.log('Resetting preview and closing modal');
+            console.log("Resetting preview and closing modal");
             // Reset the preview
             const event = new CustomEvent("updateFilePreview", {
-                detail: { url: "", filename: "" }
+                detail: { url: "", filename: "" },
             });
             filePreview.dispatchEvent(event);
             previewFileName.textContent = "";
@@ -1863,15 +1884,17 @@ const currentPage = eventResponse.page;
 
     // Close event details modal
     window.closeEventDetailsModal = function () {
-        const modal = document.getElementById("eventDetailsModal") as HTMLDialogElement;
+        const modal = document.getElementById(
+            "eventDetailsModal"
+        ) as HTMLDialogElement;
         const filesContent = document.getElementById("filesContent");
         const attendeesContent = document.getElementById("attendeesContent");
 
         if (modal) {
             // Reset tab states
             if (filesContent && attendeesContent) {
-                filesContent.classList.remove('hidden');
-                attendeesContent.classList.add('hidden');
+                filesContent.classList.remove("hidden");
+                attendeesContent.classList.add("hidden");
             }
 
             // Close the modal
@@ -1882,11 +1905,17 @@ const currentPage = eventResponse.page;
     // Update all file preview buttons to use the universal preview
     function updateFilePreviewButtons(files: string[], eventId: string) {
         return files
-            .map(
-                (filename) => {
-                    const fileUrl = fileManager.getFileUrl("events", eventId, filename);
-                    const previewData = JSON.stringify({ url: fileUrl, name: filename }).replace(/'/g, "\\'");
-                    return `
+            .map((filename) => {
+                const fileUrl = fileManager.getFileUrl(
+                    "events",
+                    eventId,
+                    filename
+                );
+                const previewData = JSON.stringify({
+                    url: fileUrl,
+                    name: filename,
+                }).replace(/'/g, "\\'");
+                return `
                         <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg${filesToDelete.has(filename) ? " opacity-50" : ""}" data-filename="${filename}">
                             <div class="flex items-center gap-2 flex-1 min-w-0">
                                 <span class="truncate">${filename}</span>
@@ -1912,17 +1941,21 @@ const currentPage = eventResponse.page;
                             </div>
                         </div>
                     `;
-                }
-            )
+            })
             .join("");
     }
 
     // Update the openDetailsModal function to use the universal preview
-    window.openDetailsModal = function (event: Event, activeTab: string = 'files') {
-        const modal = document.getElementById("eventDetailsModal") as HTMLDialogElement;
+    window.openDetailsModal = function (
+        event: Event,
+        activeTab: string = "files"
+    ) {
+        const modal = document.getElementById(
+            "eventDetailsModal"
+        ) as HTMLDialogElement;
         const filesContent = document.getElementById("filesContent");
         const attendeesContent = document.getElementById("attendeesContent");
-        const tabs = document.querySelectorAll('.tabs .tab');
+        const tabs = document.querySelectorAll(".tabs .tab");
 
         if (!modal || !filesContent || !attendeesContent || !tabs) return;
 
@@ -1945,43 +1978,50 @@ const currentPage = eventResponse.page;
         }
 
         // Update Attendees component props initially
-        const attendeesComponent = attendeesContent.querySelector('astro-island');
+        const attendeesComponent =
+            attendeesContent.querySelector("astro-island");
         if (attendeesComponent) {
-            const component = attendeesComponent.querySelector('[data-astro-cid]');
+            const component =
+                attendeesComponent.querySelector("[data-astro-cid]");
             if (component) {
-                component.setAttribute('eventId', event.id);
-                component.setAttribute('attendees', JSON.stringify(event.attendees || []));
+                component.setAttribute("eventId", event.id);
+                component.setAttribute(
+                    "attendees",
+                    JSON.stringify(event.attendees || [])
+                );
             }
         }
 
         // Show the requested tab
-        const targetTab = Array.from(tabs).find(tab => (tab as HTMLElement).dataset.tab === activeTab);
+        const targetTab = Array.from(tabs).find(
+            (tab) => (tab as HTMLElement).dataset.tab === activeTab
+        );
         if (targetTab) {
-            tabs.forEach(t => t.classList.remove('tab-active'));
-            targetTab.classList.add('tab-active');
-            
-            if (activeTab === 'files') {
-                filesContent.classList.remove('hidden');
-                attendeesContent.classList.add('hidden');
+            tabs.forEach((t) => t.classList.remove("tab-active"));
+            targetTab.classList.add("tab-active");
+
+            if (activeTab === "files") {
+                filesContent.classList.remove("hidden");
+                attendeesContent.classList.add("hidden");
             } else {
-                filesContent.classList.add('hidden');
-                attendeesContent.classList.remove('hidden');
+                filesContent.classList.add("hidden");
+                attendeesContent.classList.remove("hidden");
             }
         }
 
         // Add tab functionality
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
+        tabs.forEach((tab) => {
+            tab.addEventListener("click", () => {
                 const tabName = (tab as HTMLElement).dataset.tab;
-                tabs.forEach(t => t.classList.remove('tab-active'));
-                tab.classList.add('tab-active');
-                
-                if (tabName === 'files') {
-                    filesContent.classList.remove('hidden');
-                    attendeesContent.classList.add('hidden');
+                tabs.forEach((t) => t.classList.remove("tab-active"));
+                tab.classList.add("tab-active");
+
+                if (tabName === "files") {
+                    filesContent.classList.remove("hidden");
+                    attendeesContent.classList.add("hidden");
                 } else {
-                    filesContent.classList.add('hidden');
-                    attendeesContent.classList.remove('hidden');
+                    filesContent.classList.add("hidden");
+                    attendeesContent.classList.remove("hidden");
                 }
             });
         });
@@ -2330,51 +2370,61 @@ const currentPage = eventResponse.page;
     };
 
     // Create a custom event for file preview state management
-    const FILE_PREVIEW_STATE_CHANGE = 'filePreviewStateChange';
+    const FILE_PREVIEW_STATE_CHANGE = "filePreviewStateChange";
 
     // Universal file preview function for officer section
     window.previewFileOfficer = function (url: string, filename: string) {
-        console.log('previewFileOfficer called with:', { url, filename });
-        const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
+        console.log("previewFileOfficer called with:", { url, filename });
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
         const previewFileName = document.getElementById("previewFileName");
-        
+
         if (modal && previewFileName) {
-            console.log('Found all required elements');
+            console.log("Found all required elements");
             // Update the filename display
             previewFileName.textContent = filename;
-            
+
             // Show the modal
             modal.showModal();
 
             // Dispatch state change event
-            console.log('Dispatching state change event');
-            window.dispatchEvent(new CustomEvent(FILE_PREVIEW_STATE_CHANGE, {
-                detail: { url, filename }
-            }));
+            console.log("Dispatching state change event");
+            window.dispatchEvent(
+                new CustomEvent(FILE_PREVIEW_STATE_CHANGE, {
+                    detail: { url, filename },
+                })
+            );
         } else {
-            console.error('Missing required elements:', {
+            console.error("Missing required elements:", {
                 modal: !!modal,
-                previewFileName: !!previewFileName
+                previewFileName: !!previewFileName,
             });
         }
     };
 
     // Close file preview for officer section
     window.closeFilePreviewOfficer = function () {
-        console.log('closeFilePreviewOfficer called');
-        const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
+        console.log("closeFilePreviewOfficer called");
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
         const previewContent = document.getElementById("previewContent");
         const previewFileName = document.getElementById("previewFileName");
 
         if (modal && previewContent && previewFileName) {
-            console.log('Resetting preview and closing modal');
+            console.log("Resetting preview and closing modal");
             // Reset the preview
-            const filePreview = previewContent.querySelector('astro-island') as any;
+            const filePreview = previewContent.querySelector(
+                "astro-island"
+            ) as any;
             if (filePreview) {
-                const component = filePreview.querySelector('[data-astro-cid]') as any;
+                const component = filePreview.querySelector(
+                    "[data-astro-cid]"
+                ) as any;
                 if (component) {
-                    component.setAttribute('url', '');
-                    component.setAttribute('filename', '');
+                    component.setAttribute("url", "");
+                    component.setAttribute("filename", "");
                 }
             }
             previewFileName.textContent = "";
@@ -2383,26 +2433,28 @@ const currentPage = eventResponse.page;
     };
 
     // Update the showFilePreview function for officer section
-    window.showFilePreviewOfficer = function (file: { url: string; name: string }) {
-        console.log('showFilePreviewOfficer called with:', file);
+    window.showFilePreviewOfficer = function (file: {
+        url: string;
+        name: string;
+    }) {
+        console.log("showFilePreviewOfficer called with:", file);
         window.previewFileOfficer(file.url, file.name);
     };
 
     // Make helper functions available globally
     window.updateFilePreviewButtons = updateFilePreviewButtons;
-    window.previewFileOfficer = previewFileOfficer;
-    window.closeFilePreviewOfficer = closeFilePreviewOfficer;
-    window.showFilePreviewOfficer = showFilePreviewOfficer;
 
     // Add openAttendeesModal function
     window.openAttendeesModal = function (event: Event) {
-        console.log('Opening attendees modal for event:', event.id);
+        console.log("Opening attendees modal for event:", event.id);
 
-        const modal = document.getElementById("attendeesModal") as HTMLDialogElement;
+        const modal = document.getElementById(
+            "attendeesModal"
+        ) as HTMLDialogElement;
         const modalTitle = document.getElementById("attendeesModalTitle");
 
         if (!modal || !modalTitle) {
-            console.error('Missing required elements');
+            console.error("Missing required elements");
             return;
         }
 
@@ -2410,12 +2462,14 @@ const currentPage = eventResponse.page;
         modalTitle.textContent = `Attendees - ${event.event_name}`;
 
         // Dispatch custom event with event data
-        window.dispatchEvent(new CustomEvent('updateAttendees', {
-            detail: {
-                eventId: event.id,
-                eventName: event.event_name
-            }
-        }));
+        window.dispatchEvent(
+            new CustomEvent("updateAttendees", {
+                detail: {
+                    eventId: event.id,
+                    eventName: event.event_name,
+                },
+            })
+        );
 
         // Show modal
         modal.showModal();

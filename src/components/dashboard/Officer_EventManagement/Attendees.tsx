@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Get } from '../../pocketbase/Get';
-import { Authentication } from '../../pocketbase/Authentication';
+import { Get } from '../../../scripts/pocketbase/Get';
+import { Authentication } from '../../../scripts/pocketbase/Authentication';
 
 // Add HighlightText component
 const HighlightText = ({ text, searchTerms }: { text: string | number | null | undefined, searchTerms: string[] }) => {
