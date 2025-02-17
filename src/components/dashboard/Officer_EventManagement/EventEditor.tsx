@@ -490,7 +490,37 @@ class ChangeTracker {
     }
 }
 
-// Modify EventEditor component to use optimizations
+// Add new interfaces for loading states
+interface LoadingState {
+    isLoading: boolean;
+    error: string | null;
+    timeoutId: NodeJS.Timeout | null;
+}
+
+// Add loading spinner component
+const LoadingSpinner = memo(() => (
+    <div className="flex flex-col items-center justify-center p-8 space-y-4">
+        <div className="loading loading-spinner loading-lg text-primary"></div>
+        <p className="text-base-content/70">Loading event data...</p>
+    </div>
+));
+
+// Add error display component
+const ErrorDisplay = memo(({ error, onRetry }: { error: string; onRetry: () => void }) => (
+    <div className="flex flex-col items-center justify-center p-8 space-y-4">
+        <div className="text-error">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+        </div>
+        <p className="text-error font-medium">{error}</p>
+        <button className="btn btn-error btn-sm" onClick={onRetry}>
+            Try Again
+        </button>
+    </div>
+));
+
+// Modify EventEditor component
 export default function EventEditor({ onEventSaved }: EventEditorProps) {
     // State for form data and UI
     const [event, setEvent] = useState<Event | null>(null);
@@ -505,6 +535,17 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
     const changeTracker = useMemo(() => new ChangeTracker(), []);
     const uploadQueue = useMemo(() => new UploadQueue(), []);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+    // Add loading state
+    const [loadingState, setLoadingState] = useState<LoadingState>({
+        isLoading: false,
+        error: null,
+        timeoutId: null
+    });
+
+    // Add constants for timeouts
+    const FETCH_TIMEOUT = 15000; // 15 seconds
+    const TRANSITION_DURATION = 300; // 300ms for smooth transitions
 
     // Memoize service instances
     const services = useMemo(() => ({
@@ -753,58 +794,93 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
     }, [hasUnsavedChanges]);
 
     // Method to initialize form with event data
-    const initializeEventData = async (eventId: string) => {
+    const initializeEventData = useCallback(async (eventId: string) => {
+        // Clear any existing timeouts
+        if (loadingState.timeoutId) {
+            clearTimeout(loadingState.timeoutId);
+        }
+
+        // Set loading state
+        setLoadingState(prev => ({
+            ...prev,
+            isLoading: true,
+            error: null
+        }));
+
+        // Set timeout for fetch request
+        const timeoutId = setTimeout(() => {
+            setLoadingState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: "Request timed out. Please try again."
+            }));
+        }, FETCH_TIMEOUT);
+
         try {
             const eventData = await services.get.getOne<Event>("events", eventId);
+
+            // Add a small delay for smooth transition
+            await new Promise(resolve => setTimeout(resolve, TRANSITION_DURATION));
+
             setEvent(eventData);
             setSelectedFiles(new Map());
             setFilesToDelete(new Set());
             setShowPreview(false);
+            setLoadingState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: null
+            }));
         } catch (error) {
             console.error("Failed to fetch event data:", error);
-            alert("Failed to load event data. Please try again.");
+            setLoadingState(prev => ({
+                ...prev,
+                isLoading: false,
+                error: "Failed to load event data. Please try again."
+            }));
+        } finally {
+            clearTimeout(timeoutId);
         }
-    };
+    }, [services.get, loadingState.timeoutId]);
 
-    // Expose initializeEventData to window
+    // Expose initializeEventData to window with loading states
     useEffect(() => {
         (window as any).openEditModal = async (event?: Event) => {
             const modal = document.getElementById("editEventModal") as HTMLDialogElement;
             if (!modal) return;
 
+            // Reset states
+            setLoadingState({
+                isLoading: false,
+                error: null,
+                timeoutId: null
+            });
+
             if (event?.id) {
+                modal.showModal();
                 await initializeEventData(event.id);
             } else {
                 setEvent(null);
                 setSelectedFiles(new Map());
                 setFilesToDelete(new Set());
                 setShowPreview(false);
+                modal.showModal();
             }
-
-            modal.showModal();
         };
 
         return () => {
             delete (window as any).openEditModal;
         };
-    }, []);
+    }, [initializeEventData]);
 
-    // Add modal close event listener
+    // Add cleanup for timeouts
     useEffect(() => {
-        const modal = document.getElementById("editEventModal") as HTMLDialogElement;
-        if (modal) {
-            const closeHandler = (e: { preventDefault: () => void }) => {
-                if (isSubmitting) {
-                    e.preventDefault();
-                    return;
-                }
-                handleModalClose();
-            };
-
-            modal.addEventListener('close', closeHandler);
-            return () => modal.removeEventListener('close', closeHandler);
-        }
-    }, [handleModalClose, isSubmitting]);
+        return () => {
+            if (loadingState.timeoutId) {
+                clearTimeout(loadingState.timeoutId);
+            }
+        };
+    }, [loadingState.timeoutId]);
 
     return (
         <dialog id="editEventModal" className="modal">
@@ -833,19 +909,30 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 </div>
             ) : (
                 <div className="modal-box max-w-2xl">
-                    <EventForm
-                        event={event}
-                        setEvent={setEvent}
-                        selectedFiles={selectedFiles}
-                        setSelectedFiles={setSelectedFiles}
-                        filesToDelete={filesToDelete}
-                        setFilesToDelete={setFilesToDelete}
-                        handlePreviewFile={handlePreviewFile}
-                        isSubmitting={isSubmitting}
-                        fileManager={services.fileManager}
-                        onSubmit={handleSubmit}
-                        onCancel={handleCancel}
-                    />
+                    {loadingState.isLoading ? (
+                        <LoadingSpinner />
+                    ) : loadingState.error ? (
+                        <ErrorDisplay
+                            error={loadingState.error}
+                            onRetry={() => event?.id && initializeEventData(event.id)}
+                        />
+                    ) : (
+                        <div className="transition-opacity duration-300 ease-in-out">
+                            <EventForm
+                                event={event}
+                                setEvent={setEvent}
+                                selectedFiles={selectedFiles}
+                                setSelectedFiles={setSelectedFiles}
+                                filesToDelete={filesToDelete}
+                                setFilesToDelete={setFilesToDelete}
+                                handlePreviewFile={handlePreviewFile}
+                                isSubmitting={isSubmitting}
+                                fileManager={services.fileManager}
+                                onSubmit={handleSubmit}
+                                onCancel={handleCancel}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
             <div
