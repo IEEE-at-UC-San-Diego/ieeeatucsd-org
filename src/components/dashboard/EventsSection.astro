@@ -5,273 +5,289 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
 ---
 
 <div id="eventsSection" class="dashboard-section hidden">
-  <div class="mb-6">
-    <h2 class="text-2xl font-bold">Events</h2>
-    <p class="opacity-70">View and manage your IEEE UCSD events</p>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-    <!-- Event Check-in Card -->
-    <div class="card bg-base-100 shadow-xl border border-base-200">
-      <div class="card-body">
-        <h3 class="card-title text-lg mb-4">Event Check-in</h3>
-        <div class="form-control w-full">
-          <label class="label">
-            <span class="label-text">Enter event code to check in</span>
-          </label>
-          <div class="flex gap-2">
-            <input
-              type="text"
-              placeholder="Enter code"
-              class="input input-bordered flex-1"
-            />
-            <button class="btn btn-primary min-w-[90px]">Check In</button>
-          </div>
-        </div>
-      </div>
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold">Events</h2>
+        <p class="opacity-70">View and manage your IEEE UCSD events</p>
     </div>
 
-    <!-- Food Selection Modal -->
-    <dialog id="foodSelectionModal" class="modal">
-      <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4">Food Selection</h3>
-        <form id="foodSelectionForm" class="space-y-4">
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">What food would you like?</span>
-              <span class="label-text-alt text-error">*</span>
-            </label>
-            <input
-              type="text"
-              id="foodInput"
-              name="foodInput"
-              class="input input-bordered"
-              placeholder="Enter your food choice or 'none'"
-              required
-            />
-            <label class="label">
-              <span class="label-text-alt text-info"
-                >Enter 'none' if you don't want any food</span
-              >
-            </label>
-          </div>
-          <div class="modal-action">
-            <button type="submit" class="btn btn-primary">Submit</button>
-            <button
-              type="button"
-              class="btn"
-              onclick="foodSelectionModal.close()">Cancel</button
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <!-- Event Check-in Card -->
+        <div class="card bg-base-100 shadow-xl border border-base-200">
+            <div class="card-body">
+                <h3 class="card-title text-lg mb-4">Event Check-in</h3>
+                <div class="form-control w-full">
+                    <label class="label">
+                        <span class="label-text"
+                            >Enter event code to check in</span
+                        >
+                    </label>
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            placeholder="Enter code"
+                            class="input input-bordered flex-1"
+                        />
+                        <button class="btn btn-primary min-w-[90px]"
+                            >Check In</button
+                        >
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Food Selection Modal -->
+        <dialog id="foodSelectionModal" class="modal">
+            <div class="modal-box">
+                <h3 class="font-bold text-lg mb-4">Food Selection</h3>
+                <form id="foodSelectionForm" class="space-y-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text"
+                                >What food would you like?</span
+                            >
+                            <span class="label-text-alt text-error">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="foodInput"
+                            name="foodInput"
+                            class="input input-bordered"
+                            placeholder="Enter your food choice or 'none'"
+                            required
+                        />
+                        <label class="label">
+                            <span class="label-text-alt text-info"
+                                >Enter 'none' if you don't want any food</span
+                            >
+                        </label>
+                    </div>
+                    <div class="modal-action">
+                        <button type="submit" class="btn btn-primary"
+                            >Submit</button
+                        >
+                        <button
+                            type="button"
+                            class="btn"
+                            onclick="foodSelectionModal.close()">Cancel</button
+                        >
+                    </div>
+                </form>
+            </div>
+            <form method="dialog" class="modal-backdrop">
+                <button>close</button>
+            </form>
+        </dialog>
+
+        <!-- Event Registration Card -->
+        <div class="card bg-base-100 shadow-xl border border-base-200">
+            <div class="card-body">
+                <h3 class="card-title text-lg mb-4">Event Registration</h3>
+                <div class="form-control w-full">
+                    <label class="label">
+                        <span class="label-text"
+                            >Select an event to register</span
+                        >
+                    </label>
+                    <div class="flex gap-2">
+                        <select class="select select-bordered flex-1">
+                            <option disabled selected>Pick an event</option>
+                            <option>Technical Workshop - Web Development</option
+                            >
+                            <option>Professional Development Workshop</option>
+                            <option>Social Event - Game Night</option>
+                        </select>
+                        <button class="btn btn-primary">Register</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Events -->
+    <div
+        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+    >
+        <div class="card-body">
+            <h3 class="card-title mb-4">Upcoming Events</h3>
+            <div
+                id="upcomingEventsContainer"
+                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
-          </div>
-        </form>
-      </div>
-      <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-      </form>
-    </dialog>
-
-    <!-- Event Registration Card -->
-    <div class="card bg-base-100 shadow-xl border border-base-200">
-      <div class="card-body">
-        <h3 class="card-title text-lg mb-4">Event Registration</h3>
-        <div class="form-control w-full">
-          <label class="label">
-            <span class="label-text">Select an event to register</span>
-          </label>
-          <div class="flex gap-2">
-            <select class="select select-bordered flex-1">
-              <option disabled selected>Pick an event</option>
-              <option>Technical Workshop - Web Development</option>
-              <option>Professional Development Workshop</option>
-              <option>Social Event - Game Night</option>
-            </select>
-            <button class="btn btn-primary">Register</button>
-          </div>
+                <!-- Upcoming events will be dynamically inserted here -->
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 
-  <!-- Upcoming Events -->
-  <div
-    class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
-  >
-    <div class="card-body">
-      <h3 class="card-title mb-4">Upcoming Events</h3>
-      <div
-        id="upcomingEventsContainer"
-        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-      >
-        <!-- Upcoming events will be dynamically inserted here -->
-      </div>
+    <!-- Past Events -->
+    <div
+        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
+    >
+        <div class="card-body">
+            <h3 class="card-title mb-4">Past Events</h3>
+            <div
+                id="pastEventsContainer"
+                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+                <!-- Past events will be dynamically inserted here -->
+            </div>
+        </div>
     </div>
-  </div>
-
-  <!-- Past Events -->
-  <div
-    class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
-  >
-    <div class="card-body">
-      <h3 class="card-title mb-4">Past Events</h3>
-      <div
-        id="pastEventsContainer"
-        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-      >
-        <!-- Past events will be dynamically inserted here -->
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- Event Details Modal -->
 <dialog id="eventDetailsModal" class="modal">
-  <div class="modal-box max-w-4xl">
-    <div class="flex justify-between items-center mb-4">
-      <div class="flex items-center gap-3">
-        <h3 class="font-bold text-lg" id="modalTitle">Event Files</h3>
-        <button
-          id="downloadAllBtn"
-          class="btn btn-primary btn-sm gap-1"
-          onclick="window.downloadAllFiles()"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-              clip-rule="evenodd"></path>
-          </svg>
-          Download All
-        </button>
-      </div>
-      <button
-        class="btn btn-circle btn-ghost"
-        onclick="window.closeEventDetailsModal()"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
-    </div>
+    <div class="modal-box max-w-4xl">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-3">
+                <h3 class="font-bold text-lg" id="modalTitle">Event Files</h3>
+                <button
+                    id="downloadAllBtn"
+                    class="btn btn-primary btn-sm gap-1"
+                    onclick="window.downloadAllFiles()"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    Download All
+                </button>
+            </div>
+            <button
+                class="btn btn-circle btn-ghost"
+                onclick="window.closeEventDetailsModal()"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
 
-    <div id="filesContent" class="space-y-4">
-      <!-- Files list will be populated here -->
+        <div id="filesContent" class="space-y-4">
+            <!-- Files list will be populated here -->
+        </div>
     </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button onclick="window.closeEventDetailsModal()">close</button>
-  </form>
+    <form method="dialog" class="modal-backdrop">
+        <button onclick="window.closeEventDetailsModal()">close</button>
+    </form>
 </dialog>
 
 <!-- Universal File Preview Modal -->
 <dialog id="filePreviewModal" class="modal">
-  <div class="modal-box max-w-4xl">
-    <div class="flex justify-between items-center mb-4">
-      <div class="flex items-center gap-3">
-        <button
-          class="btn btn-ghost btn-sm"
-          onclick="window.closeFilePreviewEvents()"
-        >
-          Close
-        </button>
-        <h3 class="font-bold text-lg truncate" id="previewFileName">
-        </h3>
-      </div>
+    <div class="modal-box max-w-4xl">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-3">
+                <button
+                    class="btn btn-ghost btn-sm"
+                    onclick="window.closeFilePreviewEvents()"
+                >
+                    Close
+                </button>
+                <h3 class="font-bold text-lg truncate" id="previewFileName">
+                </h3>
+            </div>
+        </div>
+        <div class="relative" id="previewContainer">
+            <div
+                id="previewLoadingSpinner"
+                class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
+            >
+                <span class="loading loading-spinner loading-lg"></span>
+            </div>
+            <div id="previewContent" class="w-full">
+                <FilePreview client:load isModal={true} />
+            </div>
+        </div>
     </div>
-    <div class="relative" id="previewContainer">
-      <div
-        id="previewLoadingSpinner"
-        class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
-      >
-        <span class="loading loading-spinner loading-lg"></span>
-      </div>
-      <div id="previewContent" class="w-full">
-        <FilePreview client:load isModal={true} />
-      </div>
-    </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button onclick="window.closeFilePreviewEvents()">close</button>
-  </form>
+    <form method="dialog" class="modal-backdrop">
+        <button onclick="window.closeFilePreviewEvents()">close</button>
+    </form>
 </dialog>
 
 <script>
-  import { Get } from "../pocketbase/Get";
-  import { Authentication } from "../pocketbase/Authentication";
-  import { Update } from "../pocketbase/Update";
-  import { SendLog } from "../pocketbase/SendLog";
-  import JSZip from "jszip";
+    import { Get } from "../pocketbase/Get";
+    import { Authentication } from "../pocketbase/Authentication";
+    import { Update } from "../pocketbase/Update";
+    import { SendLog } from "../pocketbase/SendLog";
+    import JSZip from "jszip";
 
-  // Toast management system
-  const createToast = (
-    message: string,
-    type: "success" | "error" | "warning" = "success",
-  ) => {
-    let toastContainer = document.querySelector(".toast-container");
-    if (!toastContainer) {
-      toastContainer = document.createElement("div");
-      toastContainer.className = "toast-container fixed bottom-4 right-4 z-50";
-      document.body.appendChild(toastContainer);
-    }
+    // Toast management system
+    const createToast = (
+        message: string,
+        type: "success" | "error" | "warning" = "success"
+    ) => {
+        let toastContainer = document.querySelector(".toast-container");
+        if (!toastContainer) {
+            toastContainer = document.createElement("div");
+            toastContainer.className =
+                "toast-container fixed bottom-4 right-4 z-50";
+            document.body.appendChild(toastContainer);
+        }
 
-    const existingToasts = document.querySelectorAll(".toast-container .toast");
-    if (existingToasts.length >= 2) {
-      const oldestToast = existingToasts[0];
-      oldestToast.classList.add("toast-exit");
-      setTimeout(() => oldestToast.remove(), 150);
-    }
+        const existingToasts = document.querySelectorAll(
+            ".toast-container .toast"
+        );
+        if (existingToasts.length >= 2) {
+            const oldestToast = existingToasts[0];
+            oldestToast.classList.add("toast-exit");
+            setTimeout(() => oldestToast.remove(), 150);
+        }
 
-    // Update positions of existing toasts
-    existingToasts.forEach((t) => {
-      const toast = t as HTMLElement;
-      const currentIndex = parseInt(toast.getAttribute("data-index") || "0");
-      toast.setAttribute("data-index", (currentIndex + 1).toString());
-    });
+        // Update positions of existing toasts
+        existingToasts.forEach((t) => {
+            const toast = t as HTMLElement;
+            const currentIndex = parseInt(
+                toast.getAttribute("data-index") || "0"
+            );
+            toast.setAttribute("data-index", (currentIndex + 1).toString());
+        });
 
-    const toast = document.createElement("div");
-    toast.className = "toast translate-x-full";
-    toast.setAttribute("data-index", "0");
-    toast.innerHTML = `
+        const toast = document.createElement("div");
+        toast.className = "toast translate-x-full";
+        toast.setAttribute("data-index", "0");
+        toast.innerHTML = `
       <div class="alert alert-${type} shadow-lg min-w-[300px]">
         <span>${message}</span>
       </div>
     `;
 
-    toastContainer.appendChild(toast);
+        toastContainer.appendChild(toast);
 
-    // Force a reflow to ensure the animation triggers
-    toast.offsetHeight;
+        // Force a reflow to ensure the animation triggers
+        toast.offsetHeight;
 
-    // Add the transition class and remove transform
-    toast.classList.add("transition-all", "duration-300", "ease-out");
-    requestAnimationFrame(() => {
-      toast.classList.remove("translate-x-full");
-    });
+        // Add the transition class and remove transform
+        toast.classList.add("transition-all", "duration-300", "ease-out");
+        requestAnimationFrame(() => {
+            toast.classList.remove("translate-x-full");
+        });
 
-    // Setup exit animation
-    setTimeout(() => {
-      toast.classList.add("toast-exit");
-      setTimeout(() => toast.remove(), 150);
-    }, 3000);
-  };
+        // Setup exit animation
+        setTimeout(() => {
+            toast.classList.add("toast-exit");
+            setTimeout(() => toast.remove(), 150);
+        }, 3000);
+    };
 
-  // Add styles to the document
-  const style = document.createElement("style");
-  style.textContent = `
+    // Add styles to the document
+    const style = document.createElement("style");
+    style.textContent = `
     .toast-container {
       display: flex;
       flex-direction: column;
@@ -300,246 +316,267 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
       transform: translateY(-0.025rem);
     }
   `;
-  document.head.appendChild(style);
+    document.head.appendChild(style);
 
-  interface Event {
-    id: string;
-    event_name: string;
-    event_code: string;
-    location: string;
-    points_to_reward: number;
-    attendees: AttendeeEntry[];
-    start_date: string;
-    end_date: string;
-    has_food: boolean;
-    description: string;
-    files: string[];
-  }
-
-  interface AttendeeEntry {
-    user_id: string;
-    time_checked_in: string;
-    food: string;
-  }
-
-  let currentCheckInEvent: Event | null = null;
-
-  async function handleEventCheckIn(eventCode: string): Promise<void> {
-    try {
-      const get = Get.getInstance();
-      const auth = Authentication.getInstance();
-
-      const currentUser = auth.getCurrentUser();
-      if (!currentUser) {
-        throw new Error("You must be logged in to check in to events");
-      }
-
-      // Find the event with the given code
-      const event = await get.getFirst<Event>(
-        "events",
-        `event_code = "${eventCode}"`,
-      );
-      if (!event) {
-        throw new Error("Invalid event code");
-      }
-
-      // Check if user is already checked in
-      if (event.attendees.some((entry) => entry.user_id === currentUser.id)) {
-        throw new Error("You have already checked in to this event");
-      }
-
-      // Check if the event hasn't ended yet
-      const eventEndDate = new Date(event.end_date);
-      if (eventEndDate < new Date()) {
-        throw new Error("This event has already ended");
-      }
-
-      // If event has food, show food selection modal
-      if (event.has_food) {
-        currentCheckInEvent = event;
-        const modal = document.getElementById(
-          "foodSelectionModal",
-        ) as HTMLDialogElement;
-        modal.showModal();
-      } else {
-        // If no food, complete check-in directly
-        await completeCheckIn(event, null);
-      }
-    } catch (error: any) {
-      createToast(error?.message || "Failed to check in to event", "error");
+    interface Event {
+        id: string;
+        event_name: string;
+        event_code: string;
+        location: string;
+        points_to_reward: number;
+        attendees: AttendeeEntry[];
+        start_date: string;
+        end_date: string;
+        has_food: boolean;
+        description: string;
+        files: string[];
     }
-  }
 
-  // Add food selection form handler
-  const foodSelectionForm = document.getElementById(
-    "foodSelectionForm",
-  ) as HTMLFormElement;
-  if (foodSelectionForm) {
-    foodSelectionForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const modal = document.getElementById(
-        "foodSelectionModal",
-      ) as HTMLDialogElement;
-      const foodInput = document.getElementById(
-        "foodInput",
-      ) as HTMLInputElement;
+    interface AttendeeEntry {
+        user_id: string;
+        time_checked_in: string;
+        food: string;
+    }
 
-      try {
-        if (currentCheckInEvent) {
-          await completeCheckIn(currentCheckInEvent, foodInput.value.trim());
-          modal.close();
-          foodInput.value = ""; // Reset input
-          currentCheckInEvent = null;
+    let currentCheckInEvent: Event | null = null;
+
+    async function handleEventCheckIn(eventCode: string): Promise<void> {
+        try {
+            const get = Get.getInstance();
+            const auth = Authentication.getInstance();
+
+            const currentUser = auth.getCurrentUser();
+            if (!currentUser) {
+                throw new Error("You must be logged in to check in to events");
+            }
+
+            // Find the event with the given code
+            const event = await get.getFirst<Event>(
+                "events",
+                `event_code = "${eventCode}"`
+            );
+            if (!event) {
+                throw new Error("Invalid event code");
+            }
+
+            // Check if user is already checked in
+            if (
+                event.attendees.some(
+                    (entry) => entry.user_id === currentUser.id
+                )
+            ) {
+                throw new Error("You have already checked in to this event");
+            }
+
+            // Check if the event hasn't ended yet
+            const eventEndDate = new Date(event.end_date);
+            if (eventEndDate < new Date()) {
+                throw new Error("This event has already ended");
+            }
+
+            // If event has food, show food selection modal
+            if (event.has_food) {
+                currentCheckInEvent = event;
+                const modal = document.getElementById(
+                    "foodSelectionModal"
+                ) as HTMLDialogElement;
+                modal.showModal();
+            } else {
+                // If no food, complete check-in directly
+                await completeCheckIn(event, null);
+            }
+        } catch (error: any) {
+            createToast(
+                error?.message || "Failed to check in to event",
+                "error"
+            );
         }
-      } catch (error: any) {
-        createToast(error?.message || "Failed to check in to event", "error");
-      }
+    }
+
+    // Add food selection form handler
+    const foodSelectionForm = document.getElementById(
+        "foodSelectionForm"
+    ) as HTMLFormElement;
+    if (foodSelectionForm) {
+        foodSelectionForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const modal = document.getElementById(
+                "foodSelectionModal"
+            ) as HTMLDialogElement;
+            const foodInput = document.getElementById(
+                "foodInput"
+            ) as HTMLInputElement;
+
+            try {
+                if (currentCheckInEvent) {
+                    await completeCheckIn(
+                        currentCheckInEvent,
+                        foodInput.value.trim()
+                    );
+                    modal.close();
+                    foodInput.value = ""; // Reset input
+                    currentCheckInEvent = null;
+                }
+            } catch (error: any) {
+                createToast(
+                    error?.message || "Failed to check in to event",
+                    "error"
+                );
+            }
+        });
+    }
+
+    async function completeCheckIn(
+        event: Event,
+        foodSelection: string | null
+    ): Promise<void> {
+        try {
+            const auth = Authentication.getInstance();
+            const update = Update.getInstance();
+            const logger = SendLog.getInstance();
+
+            const currentUser = auth.getCurrentUser();
+            if (!currentUser) {
+                throw new Error("You must be logged in to check in to events");
+            }
+
+            // Create attendee entry with check-in details
+            const attendeeEntry: AttendeeEntry = {
+                user_id: currentUser.id,
+                time_checked_in: new Date().toISOString(),
+                food: foodSelection || "none",
+            };
+
+            // Get existing attendees or initialize empty array
+            const existingAttendees = event.attendees || [];
+
+            // Check if user is already checked in
+            if (
+                existingAttendees.some(
+                    (entry) => entry.user_id === currentUser.id
+                )
+            ) {
+                throw new Error("You have already checked in to this event");
+            }
+
+            // Add new attendee entry to the array
+            const updatedAttendees = [...existingAttendees, attendeeEntry];
+
+            // Update attendees array with the new entry
+            await update.updateField(
+                "events",
+                event.id,
+                "attendees",
+                updatedAttendees
+            );
+
+            // If food selection was made, log it
+            if (foodSelection) {
+                await logger.send(
+                    "update",
+                    "event check-in",
+                    `Food selection for ${event.event_name}: ${foodSelection}`
+                );
+            }
+
+            // Award points to user if available
+            if (event.points_to_reward > 0) {
+                const userPoints = currentUser.points || 0;
+                await update.updateField(
+                    "users",
+                    currentUser.id,
+                    "points",
+                    userPoints + event.points_to_reward
+                );
+
+                // Log the points award
+                await logger.send(
+                    "update",
+                    "event check-in",
+                    `Awarded ${event.points_to_reward} points for checking in to ${event.event_name}`
+                );
+            }
+
+            // Show success message with points if awarded
+            createToast(
+                `Successfully checked in to ${event.event_name}${
+                    event.points_to_reward > 0
+                        ? ` (+${event.points_to_reward} points!)`
+                        : ""
+                }`,
+                "success"
+            );
+
+            // Log the check-in
+            await logger.send(
+                "check_in",
+                "events",
+                `User ${currentUser.name} (${currentUser.graduation_year}) checked in to event ${event.event_name}`
+            );
+        } catch (error: any) {
+            createToast(
+                error?.message || "Failed to check in to event",
+                "error"
+            );
+        }
+    }
+
+    // Add event listener to check-in button
+    document.addEventListener("DOMContentLoaded", () => {
+        const checkInForm = document.querySelector(".form-control");
+        const checkInInput = checkInForm?.querySelector("input");
+        const checkInButton = checkInForm?.querySelector("button");
+
+        if (checkInForm && checkInInput && checkInButton) {
+            checkInButton.addEventListener("click", async () => {
+                const eventCode = checkInInput.value.trim();
+                if (!eventCode) {
+                    createToast("Please enter an event code", "warning");
+                    return;
+                }
+
+                checkInButton.classList.add("btn-disabled");
+                const loadingSpinner = document.createElement("span");
+                loadingSpinner.className = "loading loading-spinner loading-xs";
+                const originalText = checkInButton.textContent;
+                checkInButton.textContent = "";
+                checkInButton.appendChild(loadingSpinner);
+
+                await handleEventCheckIn(eventCode);
+
+                checkInButton.classList.remove("btn-disabled");
+                checkInButton.removeChild(loadingSpinner);
+                checkInButton.textContent = originalText;
+                checkInInput.value = "";
+            });
+
+            // Allow Enter key to submit
+            checkInInput.addEventListener("keypress", async (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    checkInButton.click();
+                }
+            });
+        }
     });
-  }
 
-  async function completeCheckIn(
-    event: Event,
-    foodSelection: string | null,
-  ): Promise<void> {
-    try {
-      const auth = Authentication.getInstance();
-      const update = Update.getInstance();
-      const logger = SendLog.getInstance();
+    async function loadEvents() {
+        try {
+            // Show skeletons first
+            const upcomingEventsContainer = document.getElementById(
+                "upcomingEventsContainer"
+            );
+            const pastEventsContainer = document.getElementById(
+                "pastEventsContainer"
+            );
+            if (!upcomingEventsContainer || !pastEventsContainer) return;
 
-      const currentUser = auth.getCurrentUser();
-      if (!currentUser) {
-        throw new Error("You must be logged in to check in to events");
-      }
-
-      // Create attendee entry with check-in details
-      const attendeeEntry: AttendeeEntry = {
-        user_id: currentUser.id,
-        time_checked_in: new Date().toISOString(),
-        food: foodSelection || "none",
-      };
-
-      // Get existing attendees or initialize empty array
-      const existingAttendees = event.attendees || [];
-
-      // Check if user is already checked in
-      if (existingAttendees.some((entry) => entry.user_id === currentUser.id)) {
-        throw new Error("You have already checked in to this event");
-      }
-
-      // Add new attendee entry to the array
-      const updatedAttendees = [...existingAttendees, attendeeEntry];
-
-      // Update attendees array with the new entry
-      await update.updateField(
-        "events",
-        event.id,
-        "attendees",
-        updatedAttendees,
-      );
-
-      // If food selection was made, log it
-      if (foodSelection) {
-        await logger.send(
-          "update",
-          "event check-in",
-          `Food selection for ${event.event_name}: ${foodSelection}`,
-        );
-      }
-
-      // Award points to user if available
-      if (event.points_to_reward > 0) {
-        const userPoints = currentUser.points || 0;
-        await update.updateField(
-          "users",
-          currentUser.id,
-          "points",
-          userPoints + event.points_to_reward,
-        );
-
-        // Log the points award
-        await logger.send(
-          "update",
-          "event check-in",
-          `Awarded ${event.points_to_reward} points for checking in to ${event.event_name}`,
-        );
-      }
-
-      // Show success message with points if awarded
-      createToast(
-        `Successfully checked in to ${event.event_name}${
-          event.points_to_reward > 0
-            ? ` (+${event.points_to_reward} points!)`
-            : ""
-        }`,
-        "success",
-      );
-
-      // Log the check-in
-      await logger.send(
-        "check_in",
-        "events",
-        `User ${currentUser.name} (${currentUser.graduation_year}) checked in to event ${event.event_name}`,
-      );
-    } catch (error: any) {
-      createToast(error?.message || "Failed to check in to event", "error");
-    }
-  }
-
-  // Add event listener to check-in button
-  document.addEventListener("DOMContentLoaded", () => {
-    const checkInForm = document.querySelector(".form-control");
-    const checkInInput = checkInForm?.querySelector("input");
-    const checkInButton = checkInForm?.querySelector("button");
-
-    if (checkInForm && checkInInput && checkInButton) {
-      checkInButton.addEventListener("click", async () => {
-        const eventCode = checkInInput.value.trim();
-        if (!eventCode) {
-          createToast("Please enter an event code", "warning");
-          return;
-        }
-
-        checkInButton.classList.add("btn-disabled");
-        const loadingSpinner = document.createElement("span");
-        loadingSpinner.className = "loading loading-spinner loading-xs";
-        const originalText = checkInButton.textContent;
-        checkInButton.textContent = "";
-        checkInButton.appendChild(loadingSpinner);
-
-        await handleEventCheckIn(eventCode);
-
-        checkInButton.classList.remove("btn-disabled");
-        checkInButton.removeChild(loadingSpinner);
-        checkInButton.textContent = originalText;
-        checkInInput.value = "";
-      });
-
-      // Allow Enter key to submit
-      checkInInput.addEventListener("keypress", async (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          checkInButton.click();
-        }
-      });
-    }
-  });
-
-  async function loadEvents() {
-    try {
-      // Show skeletons first
-      const upcomingEventsContainer = document.getElementById(
-        "upcomingEventsContainer",
-      );
-      const pastEventsContainer = document.getElementById(
-        "pastEventsContainer",
-      );
-      if (!upcomingEventsContainer || !pastEventsContainer) return;
-
-      // Add 3 skeleton cards to each container initially
-      const createSkeletonCard = () => {
-        const skeletonCard = document.createElement("div");
-        skeletonCard.className = "card bg-base-200 shadow-lg animate-pulse";
-        skeletonCard.innerHTML = `
+            // Add 3 skeleton cards to each container initially
+            const createSkeletonCard = () => {
+                const skeletonCard = document.createElement("div");
+                skeletonCard.className =
+                    "card bg-base-200 shadow-lg animate-pulse";
+                skeletonCard.innerHTML = `
                     <div class="card-body p-5">
                         <div class="flex flex-col h-full">
                             <div class="flex items-start justify-between gap-3 mb-2">
@@ -565,91 +602,93 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
                         </div>
                     </div>
                 `;
-        return skeletonCard;
-      };
+                return skeletonCard;
+            };
 
-      for (let i = 0; i < 3; i++) {
-        upcomingEventsContainer.appendChild(createSkeletonCard());
-        pastEventsContainer.appendChild(createSkeletonCard());
-      }
+            for (let i = 0; i < 3; i++) {
+                upcomingEventsContainer.appendChild(createSkeletonCard());
+                pastEventsContainer.appendChild(createSkeletonCard());
+            }
 
-      const get = Get.getInstance();
-      const events = await get.getAll<Event>(
-        "events",
-        "published = true",
-        "-start_date",
-      ); // Sort by start date descending
+            const get = Get.getInstance();
+            const events = await get.getAll<Event>(
+                "events",
+                "published = true",
+                "-start_date"
+            ); // Sort by start date descending
 
-      // Clear skeletons
-      upcomingEventsContainer.innerHTML = "";
-      pastEventsContainer.innerHTML = "";
+            // Clear skeletons
+            upcomingEventsContainer.innerHTML = "";
+            pastEventsContainer.innerHTML = "";
 
-      // Split events into upcoming and past based on start and end dates
-      const now = new Date();
-      const { upcoming, past } = events.reduce(
-        (acc, event) => {
-          // Convert UTC dates to local time
-          const startDate = new Date(event.start_date);
-          const endDate = new Date(event.end_date);
+            // Split events into upcoming and past based on start and end dates
+            const now = new Date();
+            const { upcoming, past } = events.reduce(
+                (acc, event) => {
+                    // Convert UTC dates to local time
+                    const startDate = new Date(event.start_date);
+                    const endDate = new Date(event.end_date);
 
-          // Set both dates and now to midnight for date-only comparison
-          const startLocal = new Date(
-            startDate.getFullYear(),
-            startDate.getMonth(),
-            startDate.getDate(),
-            startDate.getHours(),
-            startDate.getMinutes(),
-          );
-          const endLocal = new Date(
-            endDate.getFullYear(),
-            endDate.getMonth(),
-            endDate.getDate(),
-            endDate.getHours(),
-            endDate.getMinutes(),
-          );
-          const nowLocal = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate(),
-            now.getHours(),
-            now.getMinutes(),
-          );
+                    // Set both dates and now to midnight for date-only comparison
+                    const startLocal = new Date(
+                        startDate.getFullYear(),
+                        startDate.getMonth(),
+                        startDate.getDate(),
+                        startDate.getHours(),
+                        startDate.getMinutes()
+                    );
+                    const endLocal = new Date(
+                        endDate.getFullYear(),
+                        endDate.getMonth(),
+                        endDate.getDate(),
+                        endDate.getHours(),
+                        endDate.getMinutes()
+                    );
+                    const nowLocal = new Date(
+                        now.getFullYear(),
+                        now.getMonth(),
+                        now.getDate(),
+                        now.getHours(),
+                        now.getMinutes()
+                    );
 
-          if (startLocal > nowLocal) {
-            // If start date is in future, it's upcoming
-            acc.upcoming.push(event);
-          } else if (endLocal < nowLocal) {
-            // If end date is in past, it's past
-            acc.past.push(event);
-          } else {
-            // If start date is past but end date is future, it's in progress (show in upcoming)
-            acc.upcoming.push(event);
-          }
-          return acc;
-        },
-        { upcoming: [] as Event[], past: [] as Event[] },
-      );
+                    if (startLocal > nowLocal) {
+                        // If start date is in future, it's upcoming
+                        acc.upcoming.push(event);
+                    } else if (endLocal < nowLocal) {
+                        // If end date is in past, it's past
+                        acc.past.push(event);
+                    } else {
+                        // If start date is past but end date is future, it's in progress (show in upcoming)
+                        acc.upcoming.push(event);
+                    }
+                    return acc;
+                },
+                { upcoming: [] as Event[], past: [] as Event[] }
+            );
 
-      // Sort upcoming events by start date (closest first)
-      upcoming.sort(
-        (a, b) =>
-          new Date(a.start_date).getTime() - new Date(b.start_date).getTime(),
-      );
+            // Sort upcoming events by start date (closest first)
+            upcoming.sort(
+                (a, b) =>
+                    new Date(a.start_date).getTime() -
+                    new Date(b.start_date).getTime()
+            );
 
-      // Sort past events by end date (most recent first)
-      past.sort(
-        (a, b) =>
-          new Date(b.end_date).getTime() - new Date(a.end_date).getTime(),
-      );
+            // Sort past events by end date (most recent first)
+            past.sort(
+                (a, b) =>
+                    new Date(b.end_date).getTime() -
+                    new Date(a.end_date).getTime()
+            );
 
-      upcoming.forEach((event) => {
-        const startDate = new Date(event.start_date);
-        const endDate = new Date(event.end_date);
+            upcoming.forEach((event) => {
+                const startDate = new Date(event.start_date);
+                const endDate = new Date(event.end_date);
 
-        const card = document.createElement("div");
-        card.className =
-          "card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden";
-        card.innerHTML = `
+                const card = document.createElement("div");
+                card.className =
+                    "card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden";
+                card.innerHTML = `
                     <div class="card-body p-5">
                         <div class="flex flex-col h-full">
                             <div class="flex items-start justify-between gap-3 mb-2">
@@ -662,21 +701,21 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
                                 <div class="text-right shrink-0 text-base-content/80">
                                     <div class="text-sm font-medium">
                                         ${startDate.toLocaleDateString(
-                                          "en-US",
-                                          {
-                                            weekday: "short",
-                                            month: "short",
-                                            day: "numeric",
-                                          },
+                                            "en-US",
+                                            {
+                                                weekday: "short",
+                                                month: "short",
+                                                day: "numeric",
+                                            }
                                         )}
                                     </div>
                                     <div class="text-xs mt-0.5 opacity-75">
                                         ${startDate.toLocaleTimeString(
-                                          "en-US",
-                                          {
-                                            hour: "numeric",
-                                            minute: "2-digit",
-                                          },
+                                            "en-US",
+                                            {
+                                                hour: "numeric",
+                                                minute: "2-digit",
+                                            }
                                         )}
                                     </div>
                                 </div>
@@ -692,16 +731,16 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
                                     <span class="text-sm leading-tight truncate max-w-[200px]">${event.location}</span>
                                 </div>
                                 ${(() => {
-                                  const endDate = Get.isUTCDateString(
-                                    event.end_date,
-                                  )
-                                    ? new Date(event.end_date)
-                                    : new Date();
-                                  const now = new Date();
-                                  return endDate < now &&
-                                    event.files &&
-                                    event.files.length > 0
-                                    ? `
+                                    const endDate = Get.isUTCDateString(
+                                        event.end_date
+                                    )
+                                        ? new Date(event.end_date)
+                                        : new Date();
+                                    const now = new Date();
+                                    return endDate < now &&
+                                        event.files &&
+                                        event.files.length > 0
+                                        ? `
                                     <button onclick="window.openDetailsModal(window['event_${event.id}'])" class="btn btn-sm btn-primary w-[90px] inline-flex items-center justify-center">
                                         <div class="flex items-center gap-1">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -712,27 +751,27 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
                                         </div>
                                     </button>
                                 `
-                                    : "";
+                                        : "";
                                 })()}
                             </div>
                         </div>
                     </div>
                 `;
-        upcomingEventsContainer.appendChild(card);
-      });
+                upcomingEventsContainer.appendChild(card);
+            });
 
-      past.forEach((event) => {
-        const startDate = new Date(event.start_date);
-        const endDate = new Date(event.end_date);
+            past.forEach((event) => {
+                const startDate = new Date(event.start_date);
+                const endDate = new Date(event.end_date);
 
-        // Store event data in window object with unique ID
-        const eventDataId = `event_${event.id}`;
-        window[eventDataId] = event;
+                // Store event data in window object with unique ID
+                const eventDataId = `event_${event.id}`;
+                window[eventDataId] = event;
 
-        const card = document.createElement("div");
-        card.className =
-          "card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden";
-        card.innerHTML = `
+                const card = document.createElement("div");
+                card.className =
+                    "card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden";
+                card.innerHTML = `
                     <div class="card-body p-5">
                         <div class="flex flex-col h-full">
                             <div class="flex items-start justify-between gap-3 mb-2">
@@ -745,21 +784,21 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
                                 <div class="text-right shrink-0 text-base-content/80">
                                     <div class="text-sm font-medium">
                                         ${startDate.toLocaleDateString(
-                                          "en-US",
-                                          {
-                                            weekday: "short",
-                                            month: "short",
-                                            day: "numeric",
-                                          },
+                                            "en-US",
+                                            {
+                                                weekday: "short",
+                                                month: "short",
+                                                day: "numeric",
+                                            }
                                         )}
                                     </div>
                                     <div class="text-xs mt-0.5 opacity-75">
                                         ${startDate.toLocaleTimeString(
-                                          "en-US",
-                                          {
-                                            hour: "numeric",
-                                            minute: "2-digit",
-                                          },
+                                            "en-US",
+                                            {
+                                                hour: "numeric",
+                                                minute: "2-digit",
+                                            }
                                         )}
                                     </div>
                                 </div>
@@ -775,8 +814,8 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
                                     <span class="text-sm leading-tight truncate max-w-[200px]">${event.location}</span>
                                 </div>
                                 ${
-                                  event.files && event.files.length > 0
-                                    ? `
+                                    event.files && event.files.length > 0
+                                        ? `
                                     <button onclick="window.openDetailsModal(window['event_${event.id}'])" class="btn btn-sm btn-primary w-[90px] inline-flex items-center justify-center">
                                         <div class="flex items-center gap-1">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -787,100 +826,105 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
                                         </div>
                                     </button>
                                 `
-                                    : ""
+                                        : ""
                                 }
                             </div>
                         </div>
                     </div>
                 `;
-        pastEventsContainer.appendChild(card);
-      });
-    } catch (error) {
-      console.error("Failed to load events:", error);
-      // You might want to show an error message to the user here
+                pastEventsContainer.appendChild(card);
+            });
+        } catch (error) {
+            console.error("Failed to load events:", error);
+            // You might want to show an error message to the user here
+        }
     }
-  }
 
-  // Load events when the section becomes visible
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        loadEvents();
-        observer.disconnect(); // Only load once
-      }
+    // Load events when the section becomes visible
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+                loadEvents();
+                observer.disconnect(); // Only load once
+            }
+        });
     });
-  });
 
-  const eventsSection = document.getElementById("eventsSection");
-  if (eventsSection) {
-    observer.observe(eventsSection);
-  }
+    const eventsSection = document.getElementById("eventsSection");
+    if (eventsSection) {
+        observer.observe(eventsSection);
+    }
 
-  // Add helper functions for file preview
-  function getFileType(filename: string): string {
-    const extension = filename.split(".").pop()?.toLowerCase();
-    const mimeTypes: { [key: string]: string } = {
-      pdf: "application/pdf",
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      png: "image/png",
-      gif: "image/gif",
-      mp4: "video/mp4",
-      mp3: "audio/mpeg",
-      txt: "text/plain",
-      doc: "application/msword",
-      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      xls: "application/vnd.ms-excel",
-      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      json: "application/json",
-    };
+    // Add helper functions for file preview
+    function getFileType(filename: string): string {
+        const extension = filename.split(".").pop()?.toLowerCase();
+        const mimeTypes: { [key: string]: string } = {
+            pdf: "application/pdf",
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            png: "image/png",
+            gif: "image/gif",
+            mp4: "video/mp4",
+            mp3: "audio/mpeg",
+            txt: "text/plain",
+            doc: "application/msword",
+            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            xls: "application/vnd.ms-excel",
+            xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            json: "application/json",
+        };
 
-    return mimeTypes[extension || ""] || "application/octet-stream";
-  }
+        return mimeTypes[extension || ""] || "application/octet-stream";
+    }
 
-  let currentEventId = "";
+    let currentEventId = "";
 
-  function showLoading() {
-    const spinner = document.getElementById("loadingSpinner");
-    if (spinner) spinner.classList.remove("hidden");
-  }
+    function showLoading() {
+        const spinner = document.getElementById("loadingSpinner");
+        if (spinner) spinner.classList.remove("hidden");
+    }
 
-  function hideLoading() {
-    const spinner = document.getElementById("loadingSpinner");
-    if (spinner) spinner.classList.add("hidden");
-  }
+    function hideLoading() {
+        const spinner = document.getElementById("loadingSpinner");
+        if (spinner) spinner.classList.add("hidden");
+    }
 
-  function isPreviewableType(fileType: string): boolean {
-    return (
-      fileType.startsWith("image/") ||
-      fileType.startsWith("video/") ||
-      fileType.startsWith("audio/") ||
-      fileType === "application/pdf" ||
-      fileType.startsWith("text/") ||
-      fileType === "application/json"
-    );
-  }
+    function isPreviewableType(fileType: string): boolean {
+        return (
+            fileType.startsWith("image/") ||
+            fileType.startsWith("video/") ||
+            fileType.startsWith("audio/") ||
+            fileType === "application/pdf" ||
+            fileType.startsWith("text/") ||
+            fileType === "application/json"
+        );
+    }
 
-  function backToFileList() {
-    const filePreviewSection = document.getElementById("filePreviewSection");
-    const filesContent = document.getElementById("filesContent");
-    const modalTitle = document.getElementById("modalTitle");
+    function backToFileList() {
+        const filePreviewSection =
+            document.getElementById("filePreviewSection");
+        const filesContent = document.getElementById("filesContent");
+        const modalTitle = document.getElementById("modalTitle");
 
-    if (filePreviewSection) filePreviewSection.classList.add("hidden");
-    if (filesContent) filesContent.classList.remove("hidden");
-    if (modalTitle) modalTitle.textContent = "Event Files";
-  }
+        if (filePreviewSection) filePreviewSection.classList.add("hidden");
+        if (filesContent) filesContent.classList.remove("hidden");
+        if (modalTitle) modalTitle.textContent = "Event Files";
+    }
 
-  function showFilePreview(file: { url: string; type: string; name: string }) {
-    console.log('showFilePreview called with:', file);
-    window.previewFileEvents(file.url, file.name);
-  }
+    function showFilePreview(file: {
+        url: string;
+        type: string;
+        name: string;
+    }) {
+        console.log("showFilePreview called with:", file);
+        window.previewFileEvents(file.url, file.name);
+    }
 
-  function handlePreviewError() {
-    hideLoading();
-    const previewContent = document.getElementById("previewContent");
-    if (previewContent) {
-      previewContent.innerHTML = `
+    function handlePreviewError() {
+        hideLoading();
+        const previewContent = document.getElementById("previewContent");
+        if (previewContent) {
+            previewContent.innerHTML = `
         <div class="alert alert-error">
           <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -888,79 +932,94 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
           <span>Failed to load file preview</span>
         </div>
       `;
+        }
     }
-  }
 
-  // Universal file preview function for events section
-  window.previewFileEvents = function (url: string, filename: string) {
-    console.log('previewFileEvents called with:', { url, filename });
-    const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
-    const previewFileName = document.getElementById("previewFileName");
-    const previewContent = document.getElementById("previewContent");
-    
-    if (modal && previewFileName && previewContent) {
-      console.log('Found all required elements');
-      // Update the filename display
-      previewFileName.textContent = filename;
-      
-      // Show the modal
-      modal.showModal();
+    // Universal file preview function for events section
+    window.previewFileEvents = function (url: string, filename: string) {
+        console.log("previewFileEvents called with:", { url, filename });
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        const previewFileName = document.getElementById("previewFileName");
+        const previewContent = document.getElementById("previewContent");
 
-      // Dispatch state change event
-      window.dispatchEvent(new CustomEvent('filePreviewStateChange', {
-        detail: { url, filename }
-      }));
-    }
-  };
+        if (modal && previewFileName && previewContent) {
+            console.log("Found all required elements");
+            // Update the filename display
+            previewFileName.textContent = filename;
 
-  // Close file preview for events section
-  window.closeFilePreviewEvents = function () {
-    console.log('closeFilePreviewEvents called');
-    const modal = document.getElementById("filePreviewModal") as HTMLDialogElement;
-    const previewFileName = document.getElementById("previewFileName");
-    const previewContent = document.getElementById("previewContent");
+            // Show the modal
+            modal.showModal();
 
-    if (modal && previewFileName && previewContent) {
-      console.log('Resetting preview and closing modal');
-      // Reset the preview state
-      window.dispatchEvent(new CustomEvent('filePreviewStateChange', {
-        detail: { url: "", filename: "" }
-      }));
-      
-      // Reset the UI
-      previewFileName.textContent = "";
-      
-      // Close the modal
-      modal.close();
-    }
-  };
+            // Dispatch state change event
+            window.dispatchEvent(
+                new CustomEvent("filePreviewStateChange", {
+                    detail: { url, filename },
+                })
+            );
+        }
+    };
 
-  // Update the showFilePreview function for events section
-  window.showFilePreviewEvents = function (file: { url: string; name: string }) {
-    console.log('showFilePreviewEvents called with:', file);
-    window.previewFileEvents(file.url, file.name);
-  };
+    // Close file preview for events section
+    window.closeFilePreviewEvents = function () {
+        console.log("closeFilePreviewEvents called");
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        const previewFileName = document.getElementById("previewFileName");
+        const previewContent = document.getElementById("previewContent");
 
-  // Update the openDetailsModal function to use the events-specific preview
-  window.openDetailsModal = function (event: any) {
-    const modal = document.getElementById(
-      "eventDetailsModal",
-    ) as HTMLDialogElement;
-    const filesContent = document.getElementById(
-      "filesContent",
-    ) as HTMLDivElement;
+        if (modal && previewFileName && previewContent) {
+            console.log("Resetting preview and closing modal");
+            // Reset the preview state
+            window.dispatchEvent(
+                new CustomEvent("filePreviewStateChange", {
+                    detail: { url: "", filename: "" },
+                })
+            );
 
-    // Reset state
-    currentEventId = event.id;
-    if (filesContent) filesContent.classList.remove("hidden");
+            // Reset the UI
+            previewFileName.textContent = "";
 
-    // Populate files content
-    if (event.files && Array.isArray(event.files) && event.files.length > 0) {
-      const baseUrl = "https://pocketbase.ieeeucsd.org";
-      const collectionId = "events";
-      const recordId = event.id;
+            // Close the modal
+            modal.close();
+        }
+    };
 
-      filesContent.innerHTML = `
+    // Update the showFilePreview function for events section
+    window.showFilePreviewEvents = function (file: {
+        url: string;
+        name: string;
+    }) {
+        console.log("showFilePreviewEvents called with:", file);
+        window.previewFileEvents(file.url, file.name);
+    };
+
+    // Update the openDetailsModal function to use the events-specific preview
+    window.openDetailsModal = function (event: any) {
+        const modal = document.getElementById(
+            "eventDetailsModal"
+        ) as HTMLDialogElement;
+        const filesContent = document.getElementById(
+            "filesContent"
+        ) as HTMLDivElement;
+
+        // Reset state
+        currentEventId = event.id;
+        if (filesContent) filesContent.classList.remove("hidden");
+
+        // Populate files content
+        if (
+            event.files &&
+            Array.isArray(event.files) &&
+            event.files.length > 0
+        ) {
+            const baseUrl = "https://pocketbase.ieeeucsd.org";
+            const collectionId = "events";
+            const recordId = event.id;
+
+            filesContent.innerHTML = `
         <div class="overflow-x-auto">
           <table class="table table-zebra w-full">
             <thead>
@@ -971,11 +1030,14 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
             </thead>
             <tbody>
               ${event.files
-                .map((file: string) => {
-                  const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
-                  const fileType = getFileType(file);
-                  const previewData = JSON.stringify({ url: fileUrl, name: file }).replace(/'/g, "\\'");
-                  return `
+                  .map((file: string) => {
+                      const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
+                      const fileType = getFileType(file);
+                      const previewData = JSON.stringify({
+                          url: fileUrl,
+                          name: file,
+                      }).replace(/'/g, "\\'");
+                      return `
                     <tr>
                       <td>${file}</td>
                       <td class="text-right">
@@ -993,14 +1055,14 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
                       </td>
                     </tr>
                   `;
-                })
-                .join("")}
+                  })
+                  .join("")}
             </tbody>
           </table>
         </div>
       `;
-    } else {
-      filesContent.innerHTML = `
+        } else {
+            filesContent.innerHTML = `
         <div class="text-center py-8 text-base-content/70">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
@@ -1008,114 +1070,111 @@ import FilePreview from "./Officer_EventManagement/FilePreview";
           <p>No files attached to this event</p>
         </div>
       `;
-    }
-
-    modal.showModal();
-  };
-
-  // Add downloadAllFiles function
-  window.downloadAllFiles = async function () {
-    const downloadBtn = document.getElementById(
-      "downloadAllBtn",
-    ) as HTMLButtonElement;
-    if (!downloadBtn) return;
-    const originalBtnContent = downloadBtn.innerHTML;
-
-    try {
-      // Show loading state
-      downloadBtn.innerHTML =
-        '<span class="loading loading-spinner loading-xs"></span> Preparing...';
-      downloadBtn.disabled = true;
-
-      const zip = new JSZip();
-
-      // Get current event files
-      const baseUrl = "https://pocketbase.ieeeucsd.org";
-      const collectionId = "events";
-      const recordId = currentEventId;
-
-      // Get the current event from the window object
-      const eventDataId = `event_${currentEventId}`;
-      const event = window[eventDataId] as Event;
-
-      if (!event || !event.files || event.files.length === 0) {
-        throw new Error("No files available to download");
-      }
-
-      // Download each file and add to zip
-      const filePromises = event.files.map(async (filename: string) => {
-        const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${filename}`;
-        const response = await fetch(fileUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to download ${filename}`);
         }
-        const blob = await response.blob();
-        zip.file(filename, blob);
-      });
 
-      await Promise.all(filePromises);
+        modal.showModal();
+    };
 
-      // Generate and download zip
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      const downloadUrl = URL.createObjectURL(zipBlob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = `${event.event_name}_files.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(downloadUrl);
+    // Add downloadAllFiles function
+    window.downloadAllFiles = async function () {
+        const downloadBtn = document.getElementById(
+            "downloadAllBtn"
+        ) as HTMLButtonElement;
+        if (!downloadBtn) return;
+        const originalBtnContent = downloadBtn.innerHTML;
 
-      // Show success message
-      createToast("Files downloaded successfully!", "success");
-    } catch (error: any) {
-      console.error("Failed to download files:", error);
-      createToast(
-        error?.message || "Failed to download files. Please try again.",
-        "error",
-      );
-    } finally {
-      // Reset button state
-      downloadBtn.innerHTML = originalBtnContent;
-      downloadBtn.disabled = false;
+        try {
+            // Show loading state
+            downloadBtn.innerHTML =
+                '<span class="loading loading-spinner loading-xs"></span> Preparing...';
+            downloadBtn.disabled = true;
+
+            const zip = new JSZip();
+
+            // Get current event files
+            const baseUrl = "https://pocketbase.ieeeucsd.org";
+            const collectionId = "events";
+            const recordId = currentEventId;
+
+            // Get the current event from the window object
+            const eventDataId = `event_${currentEventId}`;
+            const event = window[eventDataId] as Event;
+
+            if (!event || !event.files || event.files.length === 0) {
+                throw new Error("No files available to download");
+            }
+
+            // Download each file and add to zip
+            const filePromises = event.files.map(async (filename: string) => {
+                const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${filename}`;
+                const response = await fetch(fileUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to download ${filename}`);
+                }
+                const blob = await response.blob();
+                zip.file(filename, blob);
+            });
+
+            await Promise.all(filePromises);
+
+            // Generate and download zip
+            const zipBlob = await zip.generateAsync({ type: "blob" });
+            const downloadUrl = URL.createObjectURL(zipBlob);
+            const link = document.createElement("a");
+            link.href = downloadUrl;
+            link.download = `${event.event_name}_files.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+
+            // Show success message
+            createToast("Files downloaded successfully!", "success");
+        } catch (error: any) {
+            console.error("Failed to download files:", error);
+            createToast(
+                error?.message || "Failed to download files. Please try again.",
+                "error"
+            );
+        } finally {
+            // Reset button state
+            downloadBtn.innerHTML = originalBtnContent;
+            downloadBtn.disabled = false;
+        }
+    };
+
+    // Close event details modal
+    window.closeEventDetailsModal = function () {
+        const modal = document.getElementById(
+            "eventDetailsModal"
+        ) as HTMLDialogElement;
+        const filesContent = document.getElementById("filesContent");
+
+        if (modal) {
+            // Reset the files content
+            if (filesContent) {
+                filesContent.innerHTML = "";
+            }
+
+            // Reset any other state if needed
+            currentEventId = "";
+
+            // Close the modal
+            modal.close();
+        }
+    };
+
+    // Make helper functions available globally
+    window.showFilePreview = showFilePreview;
+    window.handlePreviewError = handlePreviewError;
+    window.showLoading = showLoading;
+    window.hideLoading = hideLoading;
+
+    // Add TypeScript interface for Window
+    declare global {
+        interface Window {
+            downloadAllFiles: () => Promise<void>;
+            [key: string]: any;
+        }
     }
-  };
-
-  // Close event details modal
-  window.closeEventDetailsModal = function () {
-    const modal = document.getElementById("eventDetailsModal") as HTMLDialogElement;
-    const filesContent = document.getElementById("filesContent");
-
-    if (modal) {
-      // Reset the files content
-      if (filesContent) {
-        filesContent.innerHTML = '';
-      }
-
-      // Reset any other state if needed
-      currentEventId = '';
-
-      // Close the modal
-      modal.close();
-    }
-  };
-
-  // Make helper functions available globally
-  window.showFilePreview = showFilePreview;
-  window.handlePreviewError = handlePreviewError;
-  window.showLoading = showLoading;
-  window.hideLoading = hideLoading;
-  window.previewFileEvents = previewFileEvents;
-  window.closeFilePreviewEvents = closeFilePreviewEvents;
-  window.showFilePreviewEvents = showFilePreviewEvents;
-  window.openDetailsModal = openDetailsModal;
-  window.closeEventDetailsModal = closeEventDetailsModal;
-
-  // Add TypeScript interface for Window
-  declare global {
-    interface Window {
-      downloadAllFiles: () => Promise<void>;
-      [key: string]: any;
-    }
-  }
 </script>
