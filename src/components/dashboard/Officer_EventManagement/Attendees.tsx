@@ -300,6 +300,18 @@ export default function Attendees() {
 
     // Function to download attendees as CSV
     const downloadAttendeesCSV = () => {
+        // Function to sanitize and format CSV cell content
+        const escapeCSV = (cell: any): string => {
+            // Convert to string and replace any newlines with spaces
+            const value = (cell?.toString() || '').replace(/[\r\n]+/g, ' ').trim();
+
+            // If the value contains quotes or commas, wrap in quotes and escape internal quotes
+            if (value.includes('"') || value.includes(',')) {
+                return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+        };
+
         // Create CSV headers
         const headers = [
             'Name',
@@ -311,7 +323,7 @@ export default function Attendees() {
             'Major',
             'Check-in Time',
             'Food Choice'
-        ];
+        ].map(escapeCSV);
 
         // Create CSV rows
         const rows = attendeesList.map(attendee => {
@@ -327,26 +339,32 @@ export default function Attendees() {
                 user?.major || 'N/A',
                 checkInTime,
                 attendee.food || 'N/A'
-            ];
+            ].map(escapeCSV);
         });
 
-        // Combine headers and rows
+        // Combine headers and rows with Windows-style line endings
         const csvContent = [
             headers.join(','),
-            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-        ].join('\n');
+            ...rows.map(row => row.join(','))
+        ].join('\r\n');
 
-        // Create blob and download
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        // Create blob with UTF-8 BOM for better Excel compatibility
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
 
+        // Create filename with date and time
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const filename = `${eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_attendees_${timestamp}.csv`;
+
         link.setAttribute('href', url);
-        link.setAttribute('download', `${eventName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_attendees.csv`);
+        link.setAttribute('download', filename);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url); // Clean up the URL object
     };
 
     if (loading) {
