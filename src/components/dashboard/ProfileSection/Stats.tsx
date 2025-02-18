@@ -12,6 +12,15 @@ interface Event {
     }>;
 }
 
+interface Log {
+    id: string;
+    message: string;
+    created: string;
+    type: string;
+    part: string;
+    user_id: string;
+}
+
 export function Stats() {
     const [eventsAttended, setEventsAttended] = useState(0);
     const [loyaltyPoints, setLoyaltyPoints] = useState(0);
@@ -30,34 +39,68 @@ export function Stats() {
 
                 if (!userId) return;
 
-                // Fetch all events
-                const events = await get.getAll<Event>("events");
+                // Get current quarter dates
+                const now = new Date();
+                const month = now.getMonth(); // 0-11
 
-                // Count events where user is in attendees
+                let quarterStart = new Date();
+                // Fall: Sept-Dec
+                if (month >= 8 && month <= 11) {
+                    quarterStart = new Date(now.getFullYear(), 8, 1); // Sept 1
+                }
+                // Winter: Jan-Mar
+                else if (month >= 0 && month <= 2) {
+                    quarterStart = new Date(now.getFullYear(), 0, 1); // Jan 1
+                }
+                // Spring: Apr-Jun
+                else if (month >= 3 && month <= 5) {
+                    quarterStart = new Date(now.getFullYear(), 3, 1); // Apr 1
+                }
+                // Summer: Jul-Aug
+                else {
+                    quarterStart = new Date(now.getFullYear(), 6, 1); // Jul 1
+                }
+
+                // Get user's total points
+                const user = await get.getOne("users", userId);
+                const totalPoints = user.points || 0;
+
+                // Fetch quarterly points from logs
+                const logs = await get.getList<Log>("logs", 1, 50,
+                    `user_id = "${userId}" && created >= "${quarterStart.toISOString()}" && type = "update" && part = "event check-in"`,
+                    "-created"
+                );
+
+                // Calculate quarterly points
+                const quarterlyPoints = logs.items.reduce((total, log) => {
+                    const pointsMatch = log.message.match(/Awarded (\d+) points/);
+                    if (pointsMatch) {
+                        return total + parseInt(pointsMatch[1]);
+                    }
+                    return total;
+                }, 0);
+
+                // Fetch all events for total count
+                const events = await get.getAll<Event>("events");
                 const attendedEvents = events.filter(event =>
                     event.attendees?.some(attendee => attendee.user_id === userId)
                 );
 
                 const numEventsAttended = attendedEvents.length;
                 setEventsAttended(numEventsAttended);
+                setLoyaltyPoints(totalPoints);
 
-                // Calculate loyalty points (1 point per event)
-                const points = numEventsAttended;
-                setLoyaltyPoints(points);
-
-                // Set points change message
-                if (points > 0) {
-                    setPointsChange(`+${points} this semester`);
-                }
+                // Set points change message with quarterly points
+                setPointsChange(quarterlyPoints > 0 ? `+${quarterlyPoints} this quarter` : "No activity");
 
                 // Determine activity level
-                if (points >= 10) {
+                if (numEventsAttended >= 10) {
                     setActivityLevel("High");
                     setActivityDesc("Very Active");
-                } else if (points >= 5) {
+                } else if (numEventsAttended >= 5) {
                     setActivityLevel("Medium");
                     setActivityDesc("Active Member");
-                } else if (points >= 1) {
+                } else if (numEventsAttended >= 1) {
                     setActivityLevel("Low");
                     setActivityDesc("Getting Started");
                 }
