@@ -5,6 +5,7 @@ import { Update } from "../../../scripts/pocketbase/Update";
 import { SendLog } from "../../../scripts/pocketbase/SendLog";
 import { Icon } from "@iconify/react";
 
+
 interface Event {
     id: string;
     event_name: string;
@@ -63,15 +64,16 @@ const createToast = (
                 ? "alert-error bg-error text-error-content"
                 : "alert-warning bg-warning text-warning-content";
 
+    const iconName = type === "success"
+        ? "heroicons:check-circle"
+        : type === "error"
+            ? "heroicons:x-circle"
+            : "heroicons:exclamation-triangle";
+
     toast.innerHTML = `
       <div class="alert ${alertClass} shadow-lg min-w-[300px]">
         <div class="flex items-center gap-2">
-            <span class="iconify w-6 h-6" data-icon="${type === "success"
-            ? "mdi:check-circle-outline"
-            : type === "error"
-                ? "mdi:alert-circle-outline"
-                : "mdi:alert-outline"
-        }"></span>
+            <iconify-icon icon="${iconName}" width="20" height="20"></iconify-icon>
             <span>${message}</span>
         </div>
       </div>
@@ -273,11 +275,15 @@ const EventCheckIn = () => {
                                 />
                                 <button
                                     type="submit"
-                                    className={`btn btn-primary h-10 min-h-[2.5rem] text-sm sm:text-base w-full sm:w-auto ${isLoading ? "loading" : ""}`}
+                                    className={`btn btn-primary h-10 min-h-[2.5rem] text-sm sm:text-base w-full sm:w-auto`}
                                     disabled={isLoading}
                                 >
                                     {isLoading ? (
-                                        <span className="loading loading-spinner loading-xs"></span>
+                                        <Icon
+                                            icon="line-md:loading-twotone-loop"
+                                            className="w-5 h-5"
+                                            inline={true}
+                                        />
                                     ) : (
                                         "Check In"
                                     )}
