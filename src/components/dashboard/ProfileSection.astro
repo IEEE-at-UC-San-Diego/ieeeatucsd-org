@@ -1,6 +1,7 @@
 ---
 import { Icon } from "astro-icon/components";
 import ShowProfileLogs from "./ProfileSection/ShowProfileLogs";
+import { Stats } from "./ProfileSection/Stats";
 ---
 
 <div id="profileSection" class="dashboard-section">
@@ -9,66 +10,7 @@ import ShowProfileLogs from "./ProfileSection/ShowProfileLogs";
         <p class="opacity-70">Welcome to your IEEE UCSD dashboard</p>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div
-            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
-        >
-            <div class="stat">
-                <div class="stat-title font-medium opacity-80">
-                    Events Attended
-                </div>
-                <div class="stat-value text-primary" id="eventsAttendedValue">
-                    0
-                </div>
-                <div class="stat-desc flex items-center gap-2 mt-1">
-                    <div class="badge badge-primary badge-sm">
-                        Since joining
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div
-            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-secondary transition-all duration-300 hover:-translate-y-1 transform"
-        >
-            <div class="stat">
-                <div class="stat-title font-medium opacity-80">
-                    Loyalty Points
-                </div>
-                <div class="stat-value text-secondary" id="loyaltyPointsValue">
-                    0
-                </div>
-                <div class="stat-desc flex items-center gap-2 mt-1">
-                    <div
-                        class="badge badge-secondary badge-sm"
-                        id="loyaltyPointsChange"
-                    >
-                        No activity
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div
-            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-accent transition-all duration-300 hover:-translate-y-1 transform"
-        >
-            <div class="stat">
-                <div class="stat-title font-medium opacity-80">
-                    Activity Level
-                </div>
-                <div class="stat-value text-accent" id="activityLevelValue">
-                    Low
-                </div>
-                <div class="stat-desc flex items-center gap-2 mt-1">
-                    <div
-                        class="badge badge-accent badge-sm"
-                        id="activityLevelDesc"
-                    >
-                        New Member
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <Stats client:load />
 
     <!-- Dashboard Content -->
     <div
