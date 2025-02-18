@@ -232,7 +232,6 @@ export default function Attendees() {
         let isMounted = true;
         const fetchEventData = async () => {
             if (!eventId || !auth.isAuthenticated()) {
-                if (!eventId) console.log('No eventId provided');
                 if (!auth.isAuthenticated()) {
                     console.log('User not authenticated');
                     setError('Authentication required');

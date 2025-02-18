@@ -247,48 +247,43 @@ const EventCheckIn = () => {
                         <label className="label">
                             <span className="label-text">Enter event code to check in</span>
                         </label>
-                        <div className="flex gap-2">
-                            <input
-                                type="password"
-                                placeholder="Enter code"
-                                className="input input-bordered flex-1"
-                                onKeyPress={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        const input = e.target as HTMLInputElement;
-                                        if (input.value.trim()) {
-                                            setIsLoading(true);
-                                            handleEventCheckIn(input.value.trim()).finally(() => {
-                                                setIsLoading(false);
-                                                input.value = "";
-                                            });
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            const input = e.currentTarget.querySelector('input') as HTMLInputElement;
+                            if (input.value.trim()) {
+                                setIsLoading(true);
+                                handleEventCheckIn(input.value.trim()).finally(() => {
+                                    setIsLoading(false);
+                                    input.value = "";
+                                });
+                            } else {
+                                createToast("Please enter an event code", "warning");
+                            }
+                        }}>
+                            <div className="flex gap-2">
+                                <input
+                                    type="password"
+                                    placeholder="Enter code"
+                                    className="input input-bordered flex-1"
+                                    onKeyPress={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
                                         }
-                                    }
-                                }}
-                            />
-                            <button
-                                className={`btn btn-primary min-w-[90px] ${isLoading ? "loading" : ""}`}
-                                onClick={(e) => {
-                                    const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                                    if (input.value.trim()) {
-                                        setIsLoading(true);
-                                        handleEventCheckIn(input.value.trim()).finally(() => {
-                                            setIsLoading(false);
-                                            input.value = "";
-                                        });
-                                    } else {
-                                        createToast("Please enter an event code", "warning");
-                                    }
-                                }}
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                    <span className="loading loading-spinner loading-xs"></span>
-                                ) : (
-                                    "Check In"
-                                )}
-                            </button>
-                        </div>
+                                    }}
+                                />
+                                <button
+                                    type="submit"
+                                    className={`btn btn-primary min-w-[90px] ${isLoading ? "loading" : ""}`}
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? (
+                                        <span className="loading loading-spinner loading-xs"></span>
+                                    ) : (
+                                        "Check In"
+                                    )}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
