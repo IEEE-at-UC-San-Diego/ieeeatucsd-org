@@ -209,7 +209,7 @@ export default function Attendees() {
                 await sendLog.send(
                     "view",
                     "event_attendees",
-                    `Viewed attendees for event: ${e.detail.eventName} (${e.detail.eventId})`
+                    `Viewed attendees for event: ${e.detail.eventName}`
                 );
             } catch (error) {
                 console.error('Failed to log attendees view:', error);

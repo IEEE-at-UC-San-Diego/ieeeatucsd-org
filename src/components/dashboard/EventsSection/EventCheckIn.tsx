@@ -216,7 +216,7 @@ const EventCheckIn = () => {
             await logger.send(
                 "check_in",
                 "events",
-                `User ${currentUser.name} (${currentUser.graduation_year}) checked in to event ${event.event_name}`
+                `Checked in to event ${event.event_name}`
             );
 
             // Close the food selection modal if it's open
