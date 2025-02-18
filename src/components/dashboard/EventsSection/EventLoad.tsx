@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Get } from "../../../scripts/pocketbase/Get";
+import { Authentication } from "../../../scripts/pocketbase/Authentication";
 
 interface Event {
     id: string;
@@ -82,6 +83,11 @@ const EventLoad = () => {
         const now = new Date();
         const isPastEvent = endDate < now;
 
+        // Get current user to check attendance
+        const auth = Authentication.getInstance();
+        const currentUser = auth.getCurrentUser();
+        const hasAttended = currentUser && event.attendees?.some(entry => entry.user_id === currentUser.id);
+
         // Store event data in window object with unique ID
         const eventDataId = `event_${event.id}`;
         window[eventDataId] = event;
@@ -126,7 +132,13 @@ const EventLoad = () => {
                                 </button>
                             )}
                             {isPastEvent && (
-                                <div className="badge badge-ghost text-xs">Past Event</div>
+                                <div className={`badge ${hasAttended ? 'badge-success' : 'badge-ghost'} text-xs gap-1`}>
+                                    <Icon
+                                        icon={hasAttended ? "heroicons:check-circle" : "heroicons:x-circle"}
+                                        className="h-3 w-3"
+                                    />
+                                    {hasAttended ? 'Attended' : 'Not Attended'}
+                                </div>
                             )}
                             <div className="text-xs sm:text-sm opacity-75 ml-auto">
                                 {event.location}
