@@ -21,7 +21,6 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
     const [loading, setLoading] = useState(false);
     const [fileType, setFileType] = useState<string | null>(null);
     const [isVisible, setIsVisible] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false);
     const [visibleLines, setVisibleLines] = useState(20);
     const CHUNK_SIZE = 50; // Number of additional lines to show when expanding
     const INITIAL_LINES_TO_SHOW = 20;
