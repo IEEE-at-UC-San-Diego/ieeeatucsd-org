@@ -21,7 +21,7 @@ const title = "Dashboard";
         <div class="flex h-screen">
             <!-- Sidebar -->
             <aside
-                class="bg-base-100 w-80 flex flex-col shadow-xl border-r border-base-200 transition-all duration-300"
+                class="bg-base-100 w-80 flex flex-col shadow-xl border-r border-base-200 transition-all duration-300 fixed lg:relative h-full z-50 -translate-x-full lg:translate-x-0"
             >
                 <!-- Logo -->
                 <div class="p-6 border-b border-base-200">
@@ -152,9 +152,13 @@ const title = "Dashboard";
             </aside>
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-base-200">
+            <main
+                class="flex-1 overflow-x-hidden overflow-y-auto bg-base-200 w-full lg:w-[calc(100%-20rem)]"
+            >
                 <!-- Mobile Header -->
-                <header class="bg-base-100 p-4 shadow-md lg:hidden">
+                <header
+                    class="bg-base-100 p-4 shadow-md lg:hidden sticky top-0 z-40"
+                >
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <button
@@ -169,11 +173,11 @@ const title = "Dashboard";
                 </header>
 
                 <!-- Page Content -->
-                <div class="p-6 max-w-[1600px] mx-auto">
+                <div class="p-4 md:p-6 max-w-[1600px] mx-auto">
                     <!-- Loading State -->
                     <div id="pageLoadingState" class="w-full">
                         <div
-                            class="flex flex-col items-center justify-center p-8"
+                            class="flex flex-col items-center justify-center p-4 sm:p-8"
                         >
                             <div class="loading loading-spinner loading-lg">
                             </div>
@@ -183,7 +187,7 @@ const title = "Dashboard";
 
                     <!-- Error State -->
                     <div id="pageErrorState" class="hidden w-full">
-                        <div class="alert alert-error">
+                        <div class="alert alert-error mx-2 sm:mx-0">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 class="h-6 w-6"
@@ -201,12 +205,14 @@ const title = "Dashboard";
 
                     <!-- Not Authenticated State -->
                     <div id="notAuthenticatedState" class="hidden w-full">
-                        <div class="card bg-base-100 shadow-xl">
-                            <div class="card-body items-center text-center">
-                                <div class="mb-6">
+                        <div class="card bg-base-100 shadow-xl mx-2 sm:mx-0">
+                            <div
+                                class="card-body items-center text-center p-4 sm:p-8"
+                            >
+                                <div class="mb-4 sm:mb-6">
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
-                                        class="h-16 w-16 opacity-30"
+                                        class="h-12 w-12 sm:h-16 sm:w-16 opacity-30"
                                         viewBox="0 0 20 20"
                                         fill="currentColor"
                                     >
@@ -216,15 +222,17 @@ const title = "Dashboard";
                                             clip-rule="evenodd"></path>
                                     </svg>
                                 </div>
-                                <h2 class="card-title text-2xl mb-2">
+                                <h2 class="card-title text-xl sm:text-2xl mb-2">
                                     Sign in to Access Dashboard
                                 </h2>
-                                <p class="opacity-70 mb-6">
+                                <p
+                                    class="opacity-70 mb-4 sm:mb-6 text-sm sm:text-base"
+                                >
                                     Please sign in with your IEEE UCSD account
                                     to access the dashboard.
                                 </p>
                                 <button
-                                    class="login-button btn btn-primary btn-lg gap-2"
+                                    class="login-button btn btn-primary btn-lg gap-2 w-full sm:w-auto"
                                 >
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
@@ -237,14 +245,16 @@ const title = "Dashboard";
                                             d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z"
                                             clip-rule="evenodd"></path>
                                     </svg>
-                                    Sign in with IEEEUCSD SSO
+                                    <span class="whitespace-nowrap"
+                                        >Sign in with IEEEUCSD SSO</span
+                                    >
                                 </button>
                             </div>
                         </div>
                     </div>
 
                     <!-- Main Content -->
-                    <div id="mainContent" class="hidden">
+                    <div id="mainContent" class="hidden space-y-4 sm:space-y-6">
                         <ProfileSection />
                         <EventsSection />
                         <ReimbursementSection />
@@ -291,37 +301,75 @@ const title = "Dashboard";
             });
 
             // Update display elements
-            if (userName) {
-                userName.textContent = extendedUser.name || "Unknown User";
-            }
+            const displayName = extendedUser.name || "Unknown User";
+            const displayRole = extendedUser.member_type || "Member";
+            const initials = (extendedUser.name || "U")
+                .split(" ")
+                .map((n: string) => n[0])
+                .join("")
+                .toUpperCase();
 
-            if (userRole) {
-                userRole.textContent = extendedUser.member_type || "Member";
-            }
-
-            if (userInitials) {
-                const initials = (extendedUser.name || "U")
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .join("")
-                    .toUpperCase();
-                userInitials.textContent = initials;
-            }
+            // Update elements
+            if (userName) userName.textContent = displayName;
+            if (userRole) userRole.textContent = displayRole;
+            if (userInitials) userInitials.textContent = initials;
         } catch (error) {
             console.error("Error fetching user profile:", error);
-            if (userName) userName.textContent = "Unknown User";
-            if (userRole) userRole.textContent = "Member";
-            if (userInitials) userInitials.textContent = "?";
+            const fallbackValues = {
+                name: "Unknown User",
+                role: "Member",
+                initials: "?",
+            };
+
+            // Update elements with fallback values
+            if (userName) userName.textContent = fallbackValues.name;
+            if (userRole) userRole.textContent = fallbackValues.role;
+            if (userInitials)
+                userInitials.textContent = fallbackValues.initials;
         }
     };
 
-    // Mobile sidebar toggle
+    // Mobile sidebar toggle with overlay
     const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
     if (mobileSidebarToggle && sidebar) {
-        mobileSidebarToggle.addEventListener("click", () => {
-            sidebar.classList.toggle("-translate-x-full");
-        });
+        const toggleSidebar = () => {
+            const isOpen = !sidebar.classList.contains("-translate-x-full");
+
+            if (isOpen) {
+                sidebar.classList.add("-translate-x-full");
+                document.body.classList.remove("overflow-hidden");
+                // Remove overlay if it exists
+                const overlay = document.getElementById("sidebarOverlay");
+                overlay?.remove();
+            } else {
+                sidebar.classList.remove("-translate-x-full");
+                document.body.classList.add("overflow-hidden");
+                // Add overlay
+                const overlay = document.createElement("div");
+                overlay.id = "sidebarOverlay";
+                overlay.className =
+                    "fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden";
+                overlay.addEventListener("click", toggleSidebar);
+                document.body.appendChild(overlay);
+            }
+        };
+
+        mobileSidebarToggle.addEventListener("click", toggleSidebar);
     }
+
+    // Close sidebar on window resize if screen becomes larger
+    window.addEventListener("resize", () => {
+        if (window.innerWidth >= 1024) {
+            const overlay = document.getElementById("sidebarOverlay");
+            if (overlay) {
+                overlay.remove();
+                document.body.classList.remove("overflow-hidden");
+            }
+            if (sidebar) {
+                sidebar.classList.remove("-translate-x-full");
+            }
+        }
+    });
 
     // Handle navigation
     const handleNavigation = () => {
@@ -343,9 +391,12 @@ const title = "Dashboard";
                 const sectionId = `${button.getAttribute("data-section")}Section`;
                 document.getElementById(sectionId)?.classList.remove("hidden");
 
-                // Close sidebar on mobile after selection
+                // Close sidebar and cleanup overlay on mobile
                 if (window.innerWidth < 1024 && sidebar) {
                     sidebar.classList.add("-translate-x-full");
+                    document.body.classList.remove("overflow-hidden");
+                    const overlay = document.getElementById("sidebarOverlay");
+                    overlay?.remove();
                 }
             });
         });

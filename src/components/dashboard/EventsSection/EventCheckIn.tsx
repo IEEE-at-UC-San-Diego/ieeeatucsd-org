@@ -240,12 +240,12 @@ const EventCheckIn = () => {
 
     return (
         <>
-            <div className="card bg-base-100 shadow-xl border border-base-200">
-                <div className="card-body">
-                    <h3 className="card-title text-lg mb-4">Event Check-in</h3>
+            <div className="card bg-base-100 shadow-xl border border-base-200 h-full">
+                <div className="card-body p-4 sm:p-6">
+                    <h3 className="card-title text-base sm:text-lg mb-3 sm:mb-4">Event Check-in</h3>
                     <div className="form-control w-full">
                         <label className="label">
-                            <span className="label-text">Enter event code to check in</span>
+                            <span className="label-text text-sm sm:text-base">Enter event code to check in</span>
                         </label>
                         <form onSubmit={(e) => {
                             e.preventDefault();
@@ -260,11 +260,11 @@ const EventCheckIn = () => {
                                 createToast("Please enter an event code", "warning");
                             }
                         }}>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
                                 <input
                                     type="password"
                                     placeholder="Enter code"
-                                    className="input input-bordered flex-1"
+                                    className="input input-bordered flex-1 text-sm sm:text-base h-10 min-h-[2.5rem] w-full"
                                     onKeyPress={(e) => {
                                         if (e.key === "Enter") {
                                             e.preventDefault();
@@ -273,7 +273,7 @@ const EventCheckIn = () => {
                                 />
                                 <button
                                     type="submit"
-                                    className={`btn btn-primary min-w-[90px] ${isLoading ? "loading" : ""}`}
+                                    className={`btn btn-primary h-10 min-h-[2.5rem] text-sm sm:text-base w-full sm:w-auto ${isLoading ? "loading" : ""}`}
                                     disabled={isLoading}
                                 >
                                     {isLoading ? (
@@ -289,35 +289,35 @@ const EventCheckIn = () => {
             </div>
 
             <dialog id="foodSelectionModal" className="modal">
-                <div className="modal-box">
-                    <h3 className="font-bold text-lg mb-4">Food Selection</h3>
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="modal-box max-w-[90vw] sm:max-w-lg p-4 sm:p-6">
+                    <h3 className="font-bold text-base sm:text-lg mb-3 sm:mb-4">Food Selection</h3>
+                    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">What food would you like?</span>
+                                <span className="label-text text-sm sm:text-base">What food would you like?</span>
                                 <span className="label-text-alt text-error">*</span>
                             </label>
                             <input
                                 type="text"
                                 value={foodInput}
                                 onChange={(e) => setFoodInput(e.target.value)}
-                                className="input input-bordered"
+                                className="input input-bordered text-sm sm:text-base h-10 min-h-[2.5rem] w-full"
                                 placeholder="Enter your food choice or 'none'"
                                 required
                             />
                             <label className="label">
-                                <span className="label-text-alt text-info">
+                                <span className="label-text-alt text-info text-xs sm:text-sm">
                                     Enter 'none' if you don't want any food
                                 </span>
                             </label>
                         </div>
-                        <div className="modal-action">
-                            <button type="submit" className="btn btn-primary">
+                        <div className="modal-action flex flex-col sm:flex-row gap-2 sm:gap-3">
+                            <button type="submit" className="btn btn-primary text-sm sm:text-base h-10 min-h-[2.5rem] w-full sm:w-auto">
                                 Submit
                             </button>
                             <button
                                 type="button"
-                                className="btn"
+                                className="btn text-sm sm:text-base h-10 min-h-[2.5rem] w-full sm:w-auto"
                                 onClick={() => {
                                     const modal = document.getElementById("foodSelectionModal") as HTMLDialogElement;
                                     modal.close();

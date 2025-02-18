@@ -88,52 +88,49 @@ const EventLoad = () => {
 
         return (
             <div key={event.id} className="card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden">
-                <div className="card-body p-5">
+                <div className="card-body p-3 sm:p-4">
                     <div className="flex flex-col h-full">
-                        <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex flex-col gap-2">
                             <div className="flex-1">
-                                <h3 className="card-title text-lg font-semibold mb-1 line-clamp-2">{event.event_name}</h3>
-                                <div className="flex items-center gap-2 text-sm text-base-content/70">
+                                <h3 className="card-title text-base sm:text-lg font-semibold mb-1 line-clamp-2">{event.event_name}</h3>
+                                <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-base-content/70">
                                     <div className="badge badge-primary badge-sm">{event.points_to_reward} pts</div>
-                                </div>
-                            </div>
-                            <div className="text-right shrink-0 text-base-content/80">
-                                <div className="text-sm font-medium">
-                                    {startDate.toLocaleDateString("en-US", {
-                                        weekday: "short",
-                                        month: "short",
-                                        day: "numeric",
-                                    })}
-                                </div>
-                                <div className="text-xs mt-0.5 opacity-75">
-                                    {startDate.toLocaleTimeString("en-US", {
-                                        hour: "numeric",
-                                        minute: "2-digit",
-                                    })}
+                                    <div className="text-xs sm:text-sm opacity-75">
+                                        {startDate.toLocaleDateString("en-US", {
+                                            weekday: "short",
+                                            month: "short",
+                                            day: "numeric",
+                                        })}
+                                        {" • "}
+                                        {startDate.toLocaleTimeString("en-US", {
+                                            hour: "numeric",
+                                            minute: "2-digit",
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="text-sm text-base-content/70 mb-3 line-clamp-2">
+                        <div className="text-xs sm:text-sm text-base-content/70 my-2 line-clamp-2">
                             {event.description || "No description available"}
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-base-content/80">
-                                <Icon icon="mdi:map-marker" className="w-4 h-4 text-primary shrink-0" />
-                                <span className="text-sm">{event.location}</span>
-                            </div>
-                            {isPastEvent && event.files && event.files.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 mt-auto pt-2">
+                            {event.files && event.files.length > 0 && (
                                 <button
                                     onClick={() => window.openDetailsModal(event)}
-                                    className="btn btn-sm btn-primary w-[90px] inline-flex items-center justify-center"
+                                    className="btn btn-ghost btn-sm text-xs sm:text-sm gap-1 h-8 min-h-0 px-2"
                                 >
-                                    <div className="flex items-center gap-1">
-                                        <Icon icon="mdi:file-document-outline" className="w-4 h-4" />
-                                        <span>Files</span>
-                                    </div>
+                                    <Icon icon="heroicons:document-duplicate" className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    Files ({event.files.length})
                                 </button>
                             )}
+                            {isPastEvent && (
+                                <div className="badge badge-ghost text-xs">Past Event</div>
+                            )}
+                            <div className="text-xs sm:text-sm opacity-75 ml-auto">
+                                {event.location}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -147,7 +144,11 @@ const EventLoad = () => {
             const allEvents = await get.getAll<Event>(
                 "events",
                 "published = true",
-                "-start_date"
+                "-start_date",
+                {
+                    fields: ["*"],
+                    disableAutoCancellation: true
+                }
             );
 
             // Split events into upcoming, ongoing, and past based on start and end dates
@@ -202,7 +203,11 @@ const EventLoad = () => {
             ongoing.sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime());
             past.sort((a, b) => new Date(b.end_date).getTime() - new Date(a.end_date).getTime());
 
-            setEvents({ upcoming, ongoing, past });
+            setEvents({
+                upcoming: upcoming.slice(0, 50),  // Limit to 50 events per section
+                ongoing: ongoing.slice(0, 50),
+                past: past.slice(0, 50)
+            });
             setLoading(false);
         } catch (error) {
             console.error("Failed to load events:", error);
@@ -214,10 +219,10 @@ const EventLoad = () => {
         return (
             <>
                 {/* Ongoing Events */}
-                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6">
-                    <div className="card-body">
-                        <h3 className="card-title mb-4">Ongoing Events</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-4 sm:mb-6 mx-4 sm:mx-6">
+                    <div className="card-body p-4 sm:p-6">
+                        <h3 className="card-title text-base sm:text-lg mb-3 sm:mb-4">Ongoing Events</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             {[...Array(3)].map((_, i) => (
                                 <div key={`ongoing-skeleton-${i}`}>{createSkeletonCard()}</div>
                             ))}
@@ -226,10 +231,10 @@ const EventLoad = () => {
                 </div>
 
                 {/* Upcoming Events */}
-                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6">
-                    <div className="card-body">
-                        <h3 className="card-title mb-4">Upcoming Events</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-4 sm:mb-6 mx-4 sm:mx-6">
+                    <div className="card-body p-4 sm:p-6">
+                        <h3 className="card-title text-base sm:text-lg mb-3 sm:mb-4">Upcoming Events</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             {[...Array(3)].map((_, i) => (
                                 <div key={`upcoming-skeleton-${i}`}>{createSkeletonCard()}</div>
                             ))}
@@ -238,10 +243,10 @@ const EventLoad = () => {
                 </div>
 
                 {/* Past Events */}
-                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform">
-                    <div className="card-body">
-                        <h3 className="card-title mb-4">Past Events</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mx-4 sm:mx-6">
+                    <div className="card-body p-4 sm:p-6">
+                        <h3 className="card-title text-base sm:text-lg mb-3 sm:mb-4">Past Events</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             {[...Array(3)].map((_, i) => (
                                 <div key={`past-skeleton-${i}`}>{createSkeletonCard()}</div>
                             ))}
@@ -256,10 +261,10 @@ const EventLoad = () => {
         <>
             {/* Ongoing Events */}
             {events.ongoing.length > 0 && (
-                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6">
-                    <div className="card-body">
-                        <h3 className="card-title mb-4">Ongoing Events</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-4 sm:mb-6 mx-4 sm:mx-6">
+                    <div className="card-body p-4 sm:p-6">
+                        <h3 className="card-title text-base sm:text-lg mb-3 sm:mb-4">Ongoing Events</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             {events.ongoing.map(renderEventCard)}
                         </div>
                     </div>
@@ -268,10 +273,10 @@ const EventLoad = () => {
 
             {/* Upcoming Events */}
             {events.upcoming.length > 0 && (
-                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6">
-                    <div className="card-body">
-                        <h3 className="card-title mb-4">Upcoming Events</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-4 sm:mb-6 mx-4 sm:mx-6">
+                    <div className="card-body p-4 sm:p-6">
+                        <h3 className="card-title text-base sm:text-lg mb-3 sm:mb-4">Upcoming Events</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             {events.upcoming.map(renderEventCard)}
                         </div>
                     </div>
@@ -280,10 +285,10 @@ const EventLoad = () => {
 
             {/* Past Events */}
             {events.past.length > 0 && (
-                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform">
-                    <div className="card-body">
-                        <h3 className="card-title mb-4">Past Events</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mx-4 sm:mx-6">
+                    <div className="card-body p-4 sm:p-6">
+                        <h3 className="card-title text-base sm:text-lg mb-3 sm:mb-4">Past Events</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             {events.past.map(renderEventCard)}
                         </div>
                     </div>
