@@ -974,7 +974,7 @@ export default function ReimbursementManagementPortal() {
                                 <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                                     {selectedReimbursement.status === 'submitted' && (
                                         <button
-                                            className="btn btn-info btn-sm sm:btn-md gap-2 flex-1 sm:flex-initial"
+                                            className="btn btn-sm btn-info gap-2 flex-1 sm:flex-initial"
                                             onClick={() => updateStatus(selectedReimbursement.id, 'under_review')}
                                             disabled={loadingStatus}
                                         >
@@ -987,38 +987,23 @@ export default function ReimbursementManagementPortal() {
                                         </button>
                                     )}
                                     {selectedReimbursement.status === 'under_review' && (
-                                        <>
-                                            <button
-                                                className="btn btn-success btn-sm sm:btn-md gap-2 flex-1 sm:flex-initial px-6"
-                                                onClick={() => updateStatus(selectedReimbursement.id, 'approved')}
-                                                disabled={loadingStatus || !canApproveOrReject(selectedReimbursement)}
-                                                title={!canApproveOrReject(selectedReimbursement) ? 'All receipts must be audited first' : ''}
-                                            >
-                                                {loadingStatus ? (
-                                                    <span className="loading loading-spinner loading-sm" />
-                                                ) : (
-                                                    <Icon icon="heroicons:check" className="h-4 w-4 flex-shrink-0" />
-                                                )}
-                                                <span className="font-medium">Approve</span>
-                                            </button>
-                                            <button
-                                                className="btn btn-error btn-sm gap-2 flex-1 sm:flex-initial px-6"
-                                                onClick={() => handleReject(selectedReimbursement.id)}
-                                                disabled={loadingStatus || !canApproveOrReject(selectedReimbursement)}
-                                                title={!canApproveOrReject(selectedReimbursement) ? 'All receipts must be audited first' : ''}
-                                            >
-                                                {loadingStatus ? (
-                                                    <span className="loading loading-spinner loading-sm" />
-                                                ) : (
-                                                    <Icon icon="heroicons:x-mark" className="h-4 w-4 flex-shrink-0" />
-                                                )}
-                                                <span className="font-medium">Reject</span>
-                                            </button>
-                                        </>
+                                        <button
+                                            className="btn btn-sm btn-success gap-2 flex-1 sm:flex-initial px-6"
+                                            onClick={() => updateStatus(selectedReimbursement.id, 'approved')}
+                                            disabled={loadingStatus || !canApproveOrReject(selectedReimbursement)}
+                                            title={!canApproveOrReject(selectedReimbursement) ? 'All receipts must be audited first' : ''}
+                                        >
+                                            {loadingStatus ? (
+                                                <span className="loading loading-spinner loading-sm" />
+                                            ) : (
+                                                <Icon icon="heroicons:check" className="h-4 w-4 flex-shrink-0" />
+                                            )}
+                                            <span className="font-medium">Approve</span>
+                                        </button>
                                     )}
                                     {selectedReimbursement.status === 'approved' && (
                                         <button
-                                            className="btn btn-primary btn-sm gap-2 flex-1 sm:flex-initial px-6"
+                                            className="btn btn-sm btn-primary gap-2 flex-1 sm:flex-initial px-6"
                                             onClick={() => updateStatus(selectedReimbursement.id, 'in_progress')}
                                             disabled={loadingStatus}
                                         >
@@ -1032,7 +1017,7 @@ export default function ReimbursementManagementPortal() {
                                     )}
                                     {selectedReimbursement.status === 'in_progress' && (
                                         <button
-                                            className="btn btn-success btn-sm gap-2 flex-1 sm:flex-initial px-6"
+                                            className="btn btn-sm btn-success gap-2 flex-1 sm:flex-initial px-6"
                                             onClick={() => updateStatus(selectedReimbursement.id, 'paid')}
                                             disabled={loadingStatus}
                                         >
@@ -1042,6 +1027,20 @@ export default function ReimbursementManagementPortal() {
                                                 <Icon icon="heroicons:check-circle" className="h-4 w-4 flex-shrink-0" />
                                             )}
                                             <span className="font-medium">Mark as Paid</span>
+                                        </button>
+                                    )}
+                                    {selectedReimbursement.status !== 'rejected' && selectedReimbursement.status !== 'paid' && (
+                                        <button
+                                            className="btn btn-sm btn-error gap-2 flex-1 sm:flex-initial px-6"
+                                            onClick={() => handleReject(selectedReimbursement.id)}
+                                            disabled={loadingStatus}
+                                        >
+                                            {loadingStatus ? (
+                                                <span className="loading loading-spinner loading-sm" />
+                                            ) : (
+                                                <Icon icon="heroicons:x-mark" className="h-4 w-4 flex-shrink-0" />
+                                            )}
+                                            <span className="font-medium">Reject</span>
                                         </button>
                                     )}
                                     <button
@@ -1653,8 +1652,11 @@ export default function ReimbursementManagementPortal() {
                         className="modal-box relative max-w-4xl w-full bg-base-100 p-0 overflow-hidden"
                     >
                         <div className="sticky top-0 flex items-center justify-between p-4 bg-base-100 border-b border-base-300 z-10">
-                            <h3 className="font-bold text-lg">
+                            <h3 className="font-bold text-lg pl-2">
+                                File Preview
                             </h3>
+
+
                             <button
                                 className="btn btn-sm btn-ghost"
                                 onClick={() => {
@@ -1662,34 +1664,18 @@ export default function ReimbursementManagementPortal() {
                                     setSelectedReceipt(null);
                                 }}
                             >
+
                                 <Icon icon="heroicons:x-mark" className="h-5 w-5" />
                             </button>
                         </div>
-                        <div className="p-4">
+                        <div className="px-4 py-0">
                             <FilePreview
                                 url={getReceiptUrl(selectedReceipt)}
                                 filename={`Receipt from ${selectedReceipt.location_name}`}
                             />
                         </div>
                         <div className="sticky bottom-0 flex justify-end gap-2 p-4 bg-base-100 border-t border-base-300">
-                            <a
-                                href={getReceiptUrl(selectedReceipt)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn btn-ghost gap-2"
-                            >
-                                <Icon icon="heroicons:arrow-top-right-on-square" className="h-4 w-4" />
-                                Open in new tab
-                            </a>
-                            <button
-                                className="btn btn-primary gap-2"
-                                onClick={() => {
-                                    setShowReceiptModal(false);
-                                    setSelectedReceipt(null);
-                                }}
-                            >
-                                Close
-                            </button>
+
                         </div>
                     </motion.div>
                 </div>
