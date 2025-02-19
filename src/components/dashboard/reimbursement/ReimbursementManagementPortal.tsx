@@ -1654,7 +1654,6 @@ export default function ReimbursementManagementPortal() {
                     >
                         <div className="sticky top-0 flex items-center justify-between p-4 bg-base-100 border-b border-base-300 z-10">
                             <h3 className="font-bold text-lg">
-                                Receipt from {selectedReceipt.location_name}
                             </h3>
                             <button
                                 className="btn btn-sm btn-ghost"
