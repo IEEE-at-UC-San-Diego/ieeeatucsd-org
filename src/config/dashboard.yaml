@@ -1,29 +1,91 @@
-member:
-  tabs:
-    - "Dashboard"
-    - "Events"
-    - "Reimbursements"
+sections:
+  # Base Menu (accessible to all except sponsors)
+  profile:
+    title: "Dashboard"
+    icon: "heroicons:home"
+    role: "none"
+    component: "ProfileSection"
+    class: "text-primary hover:text-primary-focus"
 
-officer:
-  tabs:
-    - "Event Management"
-  include:
-    - "member"
-  roles:
-    - "IEEE Officer"
+  events:
+    title: "Events"
+    icon: "heroicons:calendar"
+    role: "none"
+    component: "EventsSection"
+    class: "text-secondary hover:text-secondary-focus"
 
-executive:
-  include:
-    - "officer"
-  roles:
-    - "IEEE Executive"
+  reimbursement:
+    title: "Reimbursement"
+    icon: "heroicons:credit-card"
+    role: "none"
+    component: "ReimbursementSection"
+    class: "text-accent hover:text-accent-focus"
 
-administrator:
-  include:
-    - "executive"
-  roles:
-    - "IEEE Administrator"
+  # Officer Menu
+  eventManagement:
+    title: "Event Management"
+    icon: "heroicons:cog-6-tooth"
+    role: "general"
+    component: "Officer_EventManagement"
+    class: "text-info hover:text-info-focus"
 
-sponsor:
-  roles:
-    - "IEEE Sponsor"
+  # Sponsor Menu
+  sponsorDashboard:
+    title: "Sponsor Dashboard"
+    icon: "heroicons:briefcase"
+    role: "sponsor"
+    component: "SponsorDashboard"
+    class: "text-warning hover:text-warning-focus"
+
+  sponsorAnalytics:
+    title: "Analytics"
+    icon: "heroicons:chart-bar"
+    role: "sponsor"
+    component: "SponsorAnalytics"
+    class: "text-warning hover:text-warning-focus"
+
+  # Settings (accessible to all except sponsors)
+  settings:
+    title: "Settings"
+    icon: "heroicons:cog-6-tooth"
+    role: "none"
+    component: "SettingsSection"
+    class: "text-neutral hover:text-neutral-focus"
+
+  logout:
+    title: "Logout"
+    icon: "heroicons:arrow-left-on-rectangle"
+    role: "none"
+    class: "text-error hover:text-error-focus"
+
+# Menu Categories
+categories:
+  main:
+    title: "Main Menu"
+    sections: ["profile", "events", "reimbursement"]
+    role: "none"
+
+  officer:
+    title: "Officer Menu"
+    sections: ["eventManagement"]
+    role: "general"
+
+  executive:
+    title: "Executive Menu"
+    sections: []
+    role: "executive"
+
+  admin:
+    title: "Admin Menu"
+    sections: []
+    role: "admin"
+
+  sponsor:
+    title: "Sponsor Portal"
+    sections: ["sponsorDashboard", "sponsorAnalytics"]
+    role: "sponsor"
+
+  account:
+    title: "Account"
+    sections: ["settings", "logout"]
+    role: "none"

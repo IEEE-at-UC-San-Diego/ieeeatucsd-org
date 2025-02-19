@@ -1,12 +1,32 @@
 ---
 import yaml from "js-yaml";
 import { Icon } from "astro-icon/components";
-import ProfileSection from "../components/dashboard/ProfileSection.astro";
-import EventsSection from "../components/dashboard/EventsSection.astro";
-import ReimbursementSection from "../components/dashboard/ReimbursementSection.astro";
-import SettingsSection from "../components/dashboard/SettingsSection.astro";
-import Officer_EventManagement from "../components/dashboard/Officer_EventManagement.astro";
+import { hasAccess, type OfficerStatus } from "../utils/roleAccess";
+import fs from "node:fs";
+import path from "node:path";
+
 const title = "Dashboard";
+
+// Load and parse dashboard config
+const configPath = path.join(process.cwd(), "src", "config", "dashboard.yaml");
+const dashboardConfig = yaml.load(fs.readFileSync(configPath, "utf8")) as any;
+
+// Dynamically import all dashboard components
+const components = Object.fromEntries(
+    await Promise.all(
+        Object.values(dashboardConfig.sections)
+            .filter((section: any) => section.component) // Only process sections with components
+            .map(async (section: any) => {
+                const component = await import(
+                    `../components/dashboard/${section.component}.astro`
+                );
+                console.log(`Loaded component: ${section.component}`); // Debug log
+                return [section.component, component.default];
+            })
+    )
+);
+
+console.log("Available components:", Object.keys(components)); // Debug log
 ---
 
 <!doctype html>
@@ -38,9 +58,57 @@ const title = "Dashboard";
 
                 <!-- User Profile -->
                 <div class="p-6 border-b border-base-200">
+                    <!-- Loading State -->
                     <div
+                        id="userProfileSkeleton"
                         class="flex items-center gap-4"
+                    >
+                        <div class="avatar flex items-center justify-center">
+                            <div
+                                class="w-12 h-12 rounded-xl bg-base-300 animate-pulse"
+                            >
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div
+                                class="h-6 w-32 bg-base-300 animate-pulse rounded mb-2"
+                            >
+                            </div>
+                            <div
+                                class="h-5 w-20 bg-base-300 animate-pulse rounded"
+                            >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Signed Out State -->
+                    <div
+                        id="userProfileSignedOut"
+                        class="flex items-center gap-4 hidden"
+                    >
+                        <div class="avatar flex items-center justify-center">
+                            <div
+                                class="w-12 h-12 rounded-xl bg-base-300 text-base-content/30 flex items-center justify-center"
+                            >
+                                <Icon name="heroicons:user" class="h-6 w-6" />
+                            </div>
+                        </div>
+                        <div>
+                            <h3
+                                class="font-medium text-lg text-base-content/70"
+                            >
+                                Signed Out
+                            </h3>
+                            <div class="badge badge-outline mt-1 opacity-50">
+                                Guest
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actual Profile -->
+                    <div
                         id="userProfileSummary"
+                        class="flex items-center gap-4 hidden"
                     >
                         <div class="avatar flex items-center justify-center">
                             <div
@@ -69,87 +137,92 @@ const title = "Dashboard";
                 <!-- Navigation -->
                 <nav class="flex-1 overflow-y-auto scrollbar-hide py-6">
                     <ul class="menu gap-2 px-4 text-base-content/80">
-                        <!-- All Members -->
-                        <li class="menu-title font-medium opacity-70">
-                            <span>Main Menu</span>
-                        </li>
-                        <li>
-                            <button
-                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 active:bg-base-200 active:font-medium active:text-primary"
-                                data-section="profile"
-                            >
-                                <Icon
-                                    name="heroicons:home"
-                                    class="h-5 w-5 group-[.active]:text-primary"
-                                />
-                                Dashboard
-                            </button>
-                        </li>
-                        <li>
-                            <button
-                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
-                                data-section="events"
-                            >
-                                <Icon
-                                    name="heroicons:calendar"
-                                    class="h-5 w-5"
-                                />
-                                Events
-                            </button>
-                        </li>
-                        <li>
-                            <button
-                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
-                                data-section="reimbursement"
-                            >
-                                <Icon
-                                    name="heroicons:credit-card"
-                                    class="h-5 w-5"
-                                />
-                                Reimbursement
-                            </button>
-                        </li>
-                        <!-- Officers Only -->
-                        <li>
-                            <button
-                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 active:bg-base-200 active:font-medium active:text-primary"
-                                data-section="eventManagement"
-                            >
-                                <Icon
-                                    name="heroicons:home"
-                                    class="h-5 w-5 group-[.active]:text-primary"
-                                />
-                                Event Management
-                            </button>
-                        </li>
+                        <!-- Loading Skeleton -->
+                        <div id="menuLoadingSkeleton">
+                            {
+                                [1, 2, 3].map((group) => (
+                                    <>
+                                        <li class="menu-title font-medium opacity-70">
+                                            <div class="h-4 w-24 bg-base-300 animate-pulse rounded" />
+                                        </li>
+                                        {[1, 2, 3].map((item) => (
+                                            <li>
+                                                <div class="flex items-center gap-4 py-2">
+                                                    <div class="h-5 w-5 bg-base-300 animate-pulse rounded" />
+                                                    <div class="h-4 w-32 bg-base-300 animate-pulse rounded" />
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </>
+                                ))
+                            }
+                        </div>
 
-                        <li class="menu-title mt-6 font-medium opacity-70">
-                            <span>Account</span>
-                        </li>
-                        <li>
-                            <button
-                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5"
-                                data-section="settings"
-                            >
-                                <Icon
-                                    name="heroicons:cog-6-tooth"
-                                    class="h-5 w-5"
-                                />
-                                Settings
-                            </button>
-                        </li>
-                        <li>
-                            <button
-                                id="logoutButton"
-                                class="gap-4 text-error hover:bg-error/10 transition-all duration-200 outline-none focus:outline-none"
-                            >
-                                <Icon
-                                    name="heroicons:arrow-right-on-rectangle"
-                                    class="h-5 w-5"
-                                />
-                                Logout
-                            </button>
-                        </li>
+                        <!-- Actual Menu -->
+                        <div id="actualMenu" class="hidden">
+                            {
+                                Object.entries(dashboardConfig.categories).map(
+                                    ([categoryKey, category]: [
+                                        string,
+                                        any,
+                                    ]) => (
+                                        <>
+                                            <li
+                                                class={`menu-title font-medium opacity-70 ${
+                                                    category.role &&
+                                                    category.role !== "none"
+                                                        ? "hidden"
+                                                        : ""
+                                                }`}
+                                                data-role-required={
+                                                    category.role || "none"
+                                                }
+                                            >
+                                                <span>{category.title}</span>
+                                            </li>
+                                            {category.sections.map(
+                                                (sectionKey: string) => {
+                                                    const section =
+                                                        dashboardConfig
+                                                            .sections[
+                                                            sectionKey
+                                                        ];
+                                                    return (
+                                                        <li
+                                                            class={
+                                                                section.role &&
+                                                                section.role !==
+                                                                    "none"
+                                                                    ? "hidden"
+                                                                    : ""
+                                                            }
+                                                            data-role-required={
+                                                                section.role
+                                                            }
+                                                        >
+                                                            <button
+                                                                class={`dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 ${section.class || ""}`}
+                                                                data-section={
+                                                                    sectionKey
+                                                                }
+                                                            >
+                                                                <Icon
+                                                                    name={
+                                                                        section.icon
+                                                                    }
+                                                                    class="h-5 w-5"
+                                                                />
+                                                                {section.title}
+                                                            </button>
+                                                        </li>
+                                                    );
+                                                }
+                                            )}
+                                        </>
+                                    )
+                                )
+                            }
+                        </div>
                     </ul>
                 </nav>
             </aside>
@@ -257,12 +330,32 @@ const title = "Dashboard";
                     </div>
 
                     <!-- Main Content -->
-                    <div id="mainContent" class="hidden space-y-4 sm:space-y-6">
-                        <ProfileSection />
-                        <EventsSection />
-                        <ReimbursementSection />
-                        <SettingsSection />
-                        <Officer_EventManagement />
+                    <div id="mainContent" class="space-y-4 sm:space-y-6">
+                        {
+                            Object.entries(dashboardConfig.sections).map(
+                                ([sectionKey, section]: [string, any]) => {
+                                    // Skip if no component is defined
+                                    if (!section.component) return null;
+
+                                    const Component =
+                                        components[section.component];
+                                    return (
+                                        <div
+                                            id={`${sectionKey}Section`}
+                                            class={`dashboard-section hidden ${
+                                                section.role &&
+                                                section.role !== "none"
+                                                    ? "role-restricted"
+                                                    : ""
+                                            }`}
+                                            data-role-required={section.role}
+                                        >
+                                            <Component />
+                                        </div>
+                                    );
+                                }
+                            )
+                        }
                     </div>
                 </div>
             </main>
@@ -274,6 +367,7 @@ const title = "Dashboard";
     import { Authentication } from "../scripts/pocketbase/Authentication";
     import { Get } from "../scripts/pocketbase/Get";
     import { SendLog } from "../scripts/pocketbase/SendLog";
+    import { hasAccess, type OfficerStatus } from "../utils/roleAccess";
 
     const auth = Authentication.getInstance();
     const get = Get.getInstance();
@@ -293,29 +387,132 @@ const title = "Dashboard";
     const userName = document.getElementById("userName");
     const userRole = document.getElementById("userRole");
 
-    // Display user profile information
-    const updateUserProfile = async (user: any) => {
+    // Function to update section visibility based on role
+    const updateSectionVisibility = (officerStatus: OfficerStatus) => {
+        // Special handling for sponsor role
+        if (officerStatus === "sponsor") {
+            // Hide all sections first
+            document
+                .querySelectorAll("[data-role-required]")
+                .forEach((element) => {
+                    element.classList.add("hidden");
+                });
+
+            // Only show sponsor sections
+            document
+                .querySelectorAll('[data-role-required="sponsor"]')
+                .forEach((element) => {
+                    element.classList.remove("hidden");
+                });
+            return;
+        }
+
+        // For non-sponsor roles, handle normally
+        document.querySelectorAll("[data-role-required]").forEach((element) => {
+            const requiredRole = element.getAttribute(
+                "data-role-required"
+            ) as OfficerStatus;
+
+            // Skip elements that don't have a role requirement
+            if (!requiredRole || requiredRole === "none") {
+                element.classList.remove("hidden");
+                return;
+            }
+
+            // Check if user has permission for this role
+            const hasPermission = hasAccess(officerStatus, requiredRole);
+
+            // Only show elements if user has permission
+            element.classList.toggle("hidden", !hasPermission);
+        });
+    };
+
+    // Handle navigation
+    const handleNavigation = () => {
+        const navButtons = document.querySelectorAll(".dashboard-nav-btn");
+        const sections = document.querySelectorAll(".dashboard-section");
+        const mainContentDiv = document.getElementById("mainContent");
+
+        // Ensure mainContent is visible
+        if (mainContentDiv) {
+            mainContentDiv.classList.remove("hidden");
+        }
+
+        navButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const sectionKey = button.getAttribute("data-section");
+
+                // Handle logout button
+                if (sectionKey === "logout") {
+                    auth.logout();
+                    window.location.reload();
+                    return;
+                }
+
+                // Remove active class from all buttons
+                navButtons.forEach((btn) => {
+                    btn.classList.remove("active", "bg-base-200");
+                });
+
+                // Add active class to clicked button
+                button.classList.add("active", "bg-base-200");
+
+                // Hide all sections
+                sections.forEach((section) => {
+                    section.classList.add("hidden");
+                });
+
+                // Show selected section
+                const sectionId = `${sectionKey}Section`;
+                const targetSection = document.getElementById(sectionId);
+                if (targetSection) {
+                    targetSection.classList.remove("hidden");
+                    console.log(`Showing section: ${sectionId}`); // Debug log
+                }
+
+                // Close mobile sidebar if needed
+                if (window.innerWidth < 1024 && sidebar) {
+                    sidebar.classList.add("-translate-x-full");
+                    document.body.classList.remove("overflow-hidden");
+                    const overlay = document.getElementById("sidebarOverlay");
+                    overlay?.remove();
+                }
+            });
+        });
+    };
+
+    // Display user profile information and handle role-based access
+    const updateUserProfile = async (user: { id: string }) => {
         if (!user) return;
 
         try {
-            // Get user information including member type
             const extendedUser = await get.getOne("users", user.id, {
-                fields: ["id", "name", "member_type", "expand.member_type"],
+                fields: [
+                    "id",
+                    "name",
+                    "member_type",
+                    "officer_status",
+                    "expand.member_type",
+                ],
             });
 
-            // Update display elements
             const displayName = extendedUser.name || "Unknown User";
             const displayRole = extendedUser.member_type || "Member";
+            const officerStatus = (extendedUser.officer_status ||
+                "") as OfficerStatus;
             const initials = (extendedUser.name || "U")
                 .split(" ")
                 .map((n: string) => n[0])
                 .join("")
                 .toUpperCase();
 
-            // Update elements
+            // Update profile display
             if (userName) userName.textContent = displayName;
             if (userRole) userRole.textContent = displayRole;
             if (userInitials) userInitials.textContent = initials;
+
+            // Update section visibility based on role
+            updateSectionVisibility(officerStatus);
         } catch (error) {
             console.error("Error fetching user profile:", error);
             const fallbackValues = {
@@ -324,15 +521,16 @@ const title = "Dashboard";
                 initials: "?",
             };
 
-            // Update elements with fallback values
             if (userName) userName.textContent = fallbackValues.name;
             if (userRole) userRole.textContent = fallbackValues.role;
             if (userInitials)
                 userInitials.textContent = fallbackValues.initials;
+
+            updateSectionVisibility("" as OfficerStatus);
         }
     };
 
-    // Mobile sidebar toggle with overlay
+    // Mobile sidebar toggle
     const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
     if (mobileSidebarToggle && sidebar) {
         const toggleSidebar = () => {
@@ -341,13 +539,11 @@ const title = "Dashboard";
             if (isOpen) {
                 sidebar.classList.add("-translate-x-full");
                 document.body.classList.remove("overflow-hidden");
-                // Remove overlay if it exists
                 const overlay = document.getElementById("sidebarOverlay");
                 overlay?.remove();
             } else {
                 sidebar.classList.remove("-translate-x-full");
                 document.body.classList.add("overflow-hidden");
-                // Add overlay
                 const overlay = document.createElement("div");
                 overlay.id = "sidebarOverlay";
                 overlay.className =
@@ -360,51 +556,6 @@ const title = "Dashboard";
         mobileSidebarToggle.addEventListener("click", toggleSidebar);
     }
 
-    // Close sidebar on window resize if screen becomes larger
-    window.addEventListener("resize", () => {
-        if (window.innerWidth >= 1024) {
-            const overlay = document.getElementById("sidebarOverlay");
-            if (overlay) {
-                overlay.remove();
-                document.body.classList.remove("overflow-hidden");
-            }
-            if (sidebar) {
-                sidebar.classList.remove("-translate-x-full");
-            }
-        }
-    });
-
-    // Handle navigation
-    const handleNavigation = () => {
-        const navButtons = document.querySelectorAll(".dashboard-nav-btn");
-        const sections = document.querySelectorAll(".dashboard-section");
-
-        navButtons.forEach((button) => {
-            button.addEventListener("click", () => {
-                // Remove active class from all buttons
-                navButtons.forEach((btn) =>
-                    btn.classList.remove("active", "bg-base-200")
-                );
-                // Add active class to clicked button
-                button.classList.add("active", "bg-base-200");
-
-                // Hide all sections
-                sections.forEach((section) => section.classList.add("hidden"));
-                // Show selected section
-                const sectionId = `${button.getAttribute("data-section")}Section`;
-                document.getElementById(sectionId)?.classList.remove("hidden");
-
-                // Close sidebar and cleanup overlay on mobile
-                if (window.innerWidth < 1024 && sidebar) {
-                    sidebar.classList.add("-translate-x-full");
-                    document.body.classList.remove("overflow-hidden");
-                    const overlay = document.getElementById("sidebarOverlay");
-                    overlay?.remove();
-                }
-            });
-        });
-    };
-
     // Initialize page
     const initializePage = async () => {
         try {
@@ -412,23 +563,98 @@ const title = "Dashboard";
             if (pageErrorState) pageErrorState.classList.add("hidden");
             if (notAuthenticatedState)
                 notAuthenticatedState.classList.add("hidden");
-            if (mainContent) mainContent.classList.add("hidden");
+
+            // Show loading states
+            const userProfileSkeleton = document.getElementById(
+                "userProfileSkeleton"
+            );
+            const userProfileSignedOut = document.getElementById(
+                "userProfileSignedOut"
+            );
+            const userProfileSummary =
+                document.getElementById("userProfileSummary");
+            const menuLoadingSkeleton = document.getElementById(
+                "menuLoadingSkeleton"
+            );
+            const actualMenu = document.getElementById("actualMenu");
+
+            if (userProfileSkeleton)
+                userProfileSkeleton.classList.remove("hidden");
+            if (userProfileSummary) userProfileSummary.classList.add("hidden");
+            if (userProfileSignedOut)
+                userProfileSignedOut.classList.add("hidden");
+            if (menuLoadingSkeleton)
+                menuLoadingSkeleton.classList.remove("hidden");
+            if (actualMenu) actualMenu.classList.add("hidden");
 
             // Check authentication
             if (!auth.isAuthenticated()) {
                 if (pageLoadingState) pageLoadingState.classList.add("hidden");
                 if (notAuthenticatedState)
                     notAuthenticatedState.classList.remove("hidden");
+                if (userProfileSkeleton)
+                    userProfileSkeleton.classList.add("hidden");
+                if (userProfileSignedOut)
+                    userProfileSignedOut.classList.remove("hidden");
                 return;
             }
 
             const user = auth.getCurrentUser();
             await updateUserProfile(user);
 
+            // Show actual profile and hide skeleton
+            if (userProfileSkeleton)
+                userProfileSkeleton.classList.add("hidden");
+            if (userProfileSummary)
+                userProfileSummary.classList.remove("hidden");
+
+            // Hide all sections first
+            document
+                .querySelectorAll(".dashboard-section")
+                .forEach((section) => {
+                    section.classList.add("hidden");
+                });
+
+            // Show appropriate default section based on role
+            const extendedUser = await get.getOne("users", user.id, {
+                fields: ["officer_status"],
+            });
+            const officerStatus = (extendedUser.officer_status ||
+                "") as OfficerStatus;
+
+            let defaultSection;
+            let defaultButton;
+
+            if (officerStatus === "sponsor") {
+                defaultSection = document.getElementById(
+                    "sponsorDashboardSection"
+                );
+                defaultButton = document.querySelector(
+                    '[data-section="sponsorDashboard"]'
+                );
+            } else {
+                defaultSection = document.getElementById("profileSection");
+                defaultButton = document.querySelector(
+                    '[data-section="profile"]'
+                );
+            }
+
+            if (defaultSection) {
+                defaultSection.classList.remove("hidden");
+            }
+            if (defaultButton) {
+                defaultButton.classList.add("active", "bg-base-200");
+            }
+
             // Initialize navigation
             handleNavigation();
 
-            // Show main content
+            // Show actual menu and hide skeleton
+            if (menuLoadingSkeleton)
+                menuLoadingSkeleton.classList.add("hidden");
+            if (actualMenu) actualMenu.classList.remove("hidden");
+
+            // Show main content and hide loading
             if (mainContent) mainContent.classList.remove("hidden");
             if (pageLoadingState) pageLoadingState.classList.add("hidden");
         } catch (error) {
@@ -466,21 +692,19 @@ const title = "Dashboard";
 
     // Handle responsive sidebar
     if (sidebar) {
-        // Hide sidebar by default on mobile
         if (window.innerWidth < 1024) {
             sidebar.classList.add("-translate-x-full");
         }
 
-        // Add transition class
-        sidebar.classList.add(
-            "transition-transform",
-            "duration-300",
-            "ease-in-out",
-            "lg:translate-x-0",
-            "fixed",
-            "lg:relative",
-            "h-full",
-            "z-50"
-        );
+        window.addEventListener("resize", () => {
+            if (window.innerWidth >= 1024) {
+                const overlay = document.getElementById("sidebarOverlay");
+                if (overlay) {
+                    overlay.remove();
+                    document.body.classList.remove("overflow-hidden");
+                }
+                sidebar.classList.remove("-translate-x-full");
+            }
+        });
     }
 </script>
