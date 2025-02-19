@@ -44,7 +44,7 @@ console.log("Available components:", Object.keys(components)); // Debug log
         <div class="flex h-screen">
             <!-- Sidebar -->
             <aside
-                class="bg-base-100 w-80 flex flex-col shadow-xl border-r border-base-200 transition-all duration-300 fixed lg:relative h-full z-50 -translate-x-full lg:translate-x-0"
+                class="bg-base-100 w-80 flex flex-col shadow-xl border-r border-base-200 transition-all duration-300 fixed xl:relative h-full z-50 -translate-x-full xl:translate-x-0"
             >
                 <!-- Logo -->
                 <div class="p-6 border-b border-base-200">
@@ -229,11 +229,11 @@ console.log("Available components:", Object.keys(components)); // Debug log
 
             <!-- Main Content -->
             <main
-                class="flex-1 overflow-x-hidden overflow-y-auto bg-base-200 w-full lg:w-[calc(100%-20rem)]"
+                class="flex-1 overflow-x-hidden overflow-y-auto bg-base-200 w-full xl:w-[calc(100%-20rem)]"
             >
                 <!-- Mobile Header -->
                 <header
-                    class="bg-base-100 p-4 shadow-md lg:hidden sticky top-0 z-40"
+                    class="bg-base-100 p-4 shadow-md xl:hidden sticky top-0 z-40"
                 >
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
@@ -547,7 +547,7 @@ console.log("Available components:", Object.keys(components)); // Debug log
                 const overlay = document.createElement("div");
                 overlay.id = "sidebarOverlay";
                 overlay.className =
-                    "fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden";
+                    "fixed inset-0 bg-black bg-opacity-50 z-40 xl:hidden";
                 overlay.addEventListener("click", toggleSidebar);
                 document.body.appendChild(overlay);
             }

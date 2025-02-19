@@ -88,7 +88,7 @@ export default function ReimbursementManagementPortal() {
     const [currentLogPage, setCurrentLogPage] = useState(1);
     const [currentNotePage, setCurrentNotePage] = useState(1);
     const logsPerPage = 5;
-    const notesPerPage = 5;
+    const [notesPerPage, setNotesPerPage] = useState(5);
     const [isPrivateNote, setIsPrivateNote] = useState(true);
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
@@ -651,16 +651,16 @@ export default function ReimbursementManagementPortal() {
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.8fr),minmax(0,1fr)] gap-6 p-4 max-w-[1600px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.8fr),minmax(0,1fr)] gap-4 p-2 sm:p-4 max-w-[1600px] mx-auto">
             {/* Left side - List of reimbursements */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="sticky top-4 z-10 bg-base-100 p-5 rounded-xl shadow-lg border border-base-300"
+                    className="sticky top-0 lg:top-4 z-10 bg-base-100 p-3 sm:p-5 rounded-xl shadow-lg border border-base-300"
                 >
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-4">
+                        <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                             Reimbursement Requests
                         </h2>
                         <span className="badge badge-primary badge-md font-medium">
@@ -668,7 +668,7 @@ export default function ReimbursementManagementPortal() {
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                         <div className="form-control">
                             <div className="join h-9 relative">
                                 <div className="flex items-center justify-center w-9 bg-base-200 border border-base-300 rounded-l-lg join-item">
@@ -910,60 +910,36 @@ export default function ReimbursementManagementPortal() {
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
-                        className="card bg-base-100 sticky top-4 h-fit max-h-[calc(100vh-2rem)] overflow-y-auto border border-base-300 shadow-xl"
+                        className="card bg-base-100 lg:sticky lg:top-4 h-fit max-h-[calc(100vh-1rem)] overflow-y-auto border border-base-300 shadow-xl"
                     >
-                        <div className="card-body space-y-6">
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                <div className="space-y-1 flex-1">
-                                    <h2 className="text-2xl font-bold">{selectedReimbursement.title}</h2>
+                        <div className="card-body p-3 sm:p-6 space-y-4 sm:space-y-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
+                                <div className="space-y-2 flex-1 min-w-0">
+                                    <h2 className="text-xl sm:text-2xl font-bold break-words">{selectedReimbursement.title}</h2>
                                     <div className="relative" ref={userDropdownRef}>
-                                        <div className="flex items-center gap-2 text-base-content/70">
+                                        <div className="flex flex-wrap items-center gap-2 text-base-content/70">
                                             <span>Submitted by:</span>
                                             <button
-                                                className="btn btn-ghost btn-sm gap-2 hover:bg-base-200 -ml-1"
+                                                className="btn btn-ghost btn-sm gap-2 hover:bg-base-200 -ml-1 truncate"
                                                 onClick={() => setShowUserProfile(prev => prev === selectedReimbursement.submitted_by ? null : selectedReimbursement.submitted_by)}
                                             >
                                                 {selectedReimbursement.submitter?.avatar && (
                                                     <img
                                                         src={getUserAvatarUrl(selectedReimbursement.submitter)}
                                                         alt=""
-                                                        className="w-6 h-6 rounded-full"
+                                                        className="w-6 h-6 rounded-full flex-shrink-0"
                                                     />
                                                 )}
-                                                <span className="font-medium text-base-content">{selectedReimbursement.submitter?.name || 'Unknown User'}</span>
-                                                <Icon icon="heroicons:chevron-down" className="h-4 w-4" />
+                                                <span className="font-medium text-base-content truncate">{selectedReimbursement.submitter?.name || 'Unknown User'}</span>
+                                                <Icon icon="heroicons:chevron-down" className="h-4 w-4 flex-shrink-0" />
                                             </button>
                                         </div>
-
-                                        {showUserProfile === selectedReimbursement.submitted_by && (
-                                            <div className="absolute top-full left-0 mt-2 w-64 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50">
-                                                <div className="p-4 space-y-3">
-                                                    <div className="flex items-center gap-3">
-                                                        {selectedReimbursement.submitter?.avatar && (
-                                                            <img
-                                                                src={getUserAvatarUrl(selectedReimbursement.submitter)}
-                                                                alt=""
-                                                                className="w-12 h-12 rounded-full"
-                                                            />
-                                                        )}
-                                                        <div>
-                                                            <h3 className="font-bold">{selectedReimbursement.submitter?.name}</h3>
-                                                            <p className="text-sm text-base-content/70">{selectedReimbursement.submitter?.email}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-sm space-y-1 text-base-content/70">
-                                                        <p>Member since {new Date(selectedReimbursement.submitter?.created || '').toLocaleDateString()}</p>
-                                                        <p>Last updated {new Date(selectedReimbursement.submitter?.updated || '').toLocaleDateString()}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
-                                <div className="flex gap-2 w-full sm:w-auto">
+                                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                                     {selectedReimbursement.status === 'submitted' && (
                                         <button
-                                            className="btn btn-info btn-sm gap-2 flex-1 sm:flex-initial px-6"
+                                            className="btn btn-info btn-sm sm:btn-md gap-2 flex-1 sm:flex-initial"
                                             onClick={() => updateStatus(selectedReimbursement.id, 'under_review')}
                                             disabled={loadingStatus}
                                         >
@@ -978,7 +954,7 @@ export default function ReimbursementManagementPortal() {
                                     {selectedReimbursement.status === 'under_review' && (
                                         <>
                                             <button
-                                                className="btn btn-success btn-sm gap-2 flex-1 sm:flex-initial px-6"
+                                                className="btn btn-success btn-sm sm:btn-md gap-2 flex-1 sm:flex-initial px-6"
                                                 onClick={() => updateStatus(selectedReimbursement.id, 'approved')}
                                                 disabled={loadingStatus || !canApproveOrReject(selectedReimbursement)}
                                                 title={!canApproveOrReject(selectedReimbursement) ? 'All receipts must be audited first' : ''}
@@ -1042,9 +1018,9 @@ export default function ReimbursementManagementPortal() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-3">
                                 <div className="card bg-base-200 hover:bg-base-300 transition-colors">
-                                    <div className="card-body p-3">
+                                    <div className="card-body !p-3">
                                         <h3 className="text-sm font-medium text-base-content/70">Date of Purchase</h3>
                                         <p className="flex items-center gap-2 font-medium mt-1">
                                             <Icon icon="heroicons:calendar" className="h-4 w-4 text-primary flex-shrink-0" />
@@ -1053,7 +1029,7 @@ export default function ReimbursementManagementPortal() {
                                     </div>
                                 </div>
                                 <div className="card bg-base-200 hover:bg-base-300 transition-colors">
-                                    <div className="card-body p-3">
+                                    <div className="card-body !p-3">
                                         <h3 className="text-sm font-medium text-base-content/70">Payment Method</h3>
                                         <p className="flex items-center gap-2 font-medium mt-1">
                                             <Icon icon="heroicons:credit-card" className="h-4 w-4 text-primary flex-shrink-0" />
@@ -1062,7 +1038,7 @@ export default function ReimbursementManagementPortal() {
                                     </div>
                                 </div>
                                 <div className="card bg-base-200 hover:bg-base-300 transition-colors">
-                                    <div className="card-body p-3">
+                                    <div className="card-body !p-3">
                                         <h3 className="text-sm font-medium text-base-content/70">Department</h3>
                                         <p className="flex items-center gap-2 font-medium mt-1">
                                             <Icon icon="heroicons:building-office" className="h-4 w-4 text-primary flex-shrink-0" />
@@ -1071,7 +1047,7 @@ export default function ReimbursementManagementPortal() {
                                     </div>
                                 </div>
                                 <div className="card bg-base-200 hover:bg-base-300 transition-colors">
-                                    <div className="card-body p-3">
+                                    <div className="card-body !p-3">
                                         <h3 className="text-sm font-medium text-base-content/70">Total Amount</h3>
                                         <p className="font-mono font-bold text-xl text-primary">
                                             ${selectedReimbursement.total_amount.toFixed(2)}
@@ -1084,25 +1060,16 @@ export default function ReimbursementManagementPortal() {
                                 Receipts ({selectedReimbursement.receipts?.length || 0})
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-3 sm:space-y-4">
                                 {selectedReimbursement.receipts?.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center p-8 space-y-3 bg-base-200 rounded-lg border-2 border-dashed border-base-300">
-                                        <Icon icon="heroicons:receipt-percent" className="h-12 w-12 text-base-content/30" />
+                                    <div className="flex flex-col items-center justify-center p-4 sm:p-8 space-y-3 bg-base-200 rounded-lg border-2 border-dashed border-base-300">
+                                        <Icon icon="heroicons:receipt-percent" className="h-10 sm:h-12 w-10 sm:w-12 text-base-content/30" />
                                         <p className="text-base-content/70 text-sm">No receipts attached</p>
                                     </div>
                                 ) : (
                                     selectedReimbursement.receipts?.map(receiptId => {
                                         const receipt = receipts[receiptId];
-                                        if (!receipt) {
-                                            return (
-                                                <div key={receiptId} className="card bg-base-200 p-4 rounded-lg">
-                                                    <div className="flex items-center gap-3 text-base-content/70">
-                                                        <Icon icon="heroicons:exclamation-circle" className="h-5 w-5" />
-                                                        <span>Receipt not found (ID: {receiptId})</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
+                                        if (!receipt) return null;
 
                                         const isExpanded = expandedReceipts.has(receipt.id);
 
@@ -1113,16 +1080,13 @@ export default function ReimbursementManagementPortal() {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 className="card bg-base-200 hover:bg-base-300 transition-all duration-200"
                                             >
-                                                <div className="card-body p-4">
-                                                    <div
-                                                        className="flex justify-between items-start cursor-pointer"
-                                                        onClick={() => toggleReceipt(receipt.id)}
-                                                    >
+                                                <div className="card-body !p-3 sm:!p-4">
+                                                    <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4">
                                                         <div className="space-y-1 flex-1 min-w-0">
-                                                            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors truncate">
+                                                            <h3 className="font-semibold text-base sm:text-lg truncate">
                                                                 {receipt.location_name}
                                                             </h3>
-                                                            <div className="flex items-center gap-2 text-sm text-base-content/70">
+                                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-base-content/70">
                                                                 <div className="flex items-center gap-1.5">
                                                                     <Icon icon="heroicons:map-pin" className="h-4 w-4 flex-shrink-0" />
                                                                     <span className="truncate">{receipt.location_address}</span>
@@ -1133,195 +1097,21 @@ export default function ReimbursementManagementPortal() {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <motion.div
-                                                            animate={{ rotate: isExpanded ? 180 : 0 }}
-                                                            transition={{ duration: 0.2 }}
-                                                            className="flex-shrink-0 ml-4 w-6 h-6 flex items-center justify-center"
+                                                        <button
+                                                            className="btn btn-ghost btn-sm p-1"
+                                                            onClick={() => toggleReceipt(receipt.id)}
                                                         >
-                                                            <Icon
-                                                                icon="heroicons:chevron-down"
-                                                                className="h-5 w-5 text-base-content/70"
-                                                            />
-                                                        </motion.div>
-                                                    </div>
-
-                                                    <AnimatePresence>
-                                                        {isExpanded && (
                                                             <motion.div
-                                                                initial={{ opacity: 0, height: 0 }}
-                                                                animate={{ opacity: 1, height: "auto" }}
-                                                                exit={{ opacity: 0, height: 0 }}
+                                                                animate={{ rotate: isExpanded ? 180 : 0 }}
                                                                 transition={{ duration: 0.2 }}
-                                                                className="mt-4 space-y-6 overflow-hidden"
                                                             >
-                                                                <div className="space-y-2">
-                                                                    <div className="flex justify-between items-center">
-                                                                        <label className="text-sm font-medium text-base-content/70">Receipt File</label>
-                                                                        <a
-                                                                            href={getReceiptUrl(receipt)}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="btn btn-sm btn-ghost gap-1"
-                                                                            onClick={(e) => e.stopPropagation()}
-                                                                        >
-                                                                            <Icon icon="heroicons:arrow-top-right-on-square" className="h-4 w-4" />
-                                                                            Open in New Tab
-                                                                        </a>
-                                                                    </div>
-                                                                    <div className="bg-base-300 rounded-lg p-1">
-                                                                        {receipt.field.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/) ? (
-                                                                            <FilePreview url={getReceiptUrl(receipt)} />
-                                                                        ) : receipt.field.toLowerCase().match(/\.(pdf)$/) ? (
-                                                                            <div className="flex items-center justify-center p-4 gap-2">
-                                                                                <Icon icon="heroicons:document" className="h-8 w-8 text-primary" />
-                                                                                <span>PDF Document</span>
-                                                                            </div>
-                                                                        ) : receipt.field.toLowerCase().match(/\.(doc|docx)$/) ? (
-                                                                            <div className="flex items-center justify-center p-4 gap-2">
-                                                                                <Icon icon="heroicons:document-text" className="h-8 w-8 text-primary" />
-                                                                                <span>Word Document</span>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="flex items-center justify-center p-4 gap-2">
-                                                                                <Icon icon="heroicons:document" className="h-8 w-8 text-primary" />
-                                                                                <span>Document</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="space-y-2">
-                                                                    <label className="text-sm font-medium text-base-content/70">Itemized Expenses</label>
-                                                                    <div className="overflow-x-auto">
-                                                                        <table className="table w-full">
-                                                                            <thead className="bg-base-300">
-                                                                                <tr>
-                                                                                    <th className="rounded-l-lg">Description</th>
-                                                                                    <th>Category</th>
-                                                                                    <th className="rounded-r-lg text-right">Amount</th>
-                                                                                </tr>
-                                                                            </thead>
-                                                                            <tbody>
-                                                                                {(() => {
-                                                                                    try {
-                                                                                        const expenses: ItemizedExpense[] = typeof receipt.itemized_expenses === 'string'
-                                                                                            ? JSON.parse(receipt.itemized_expenses)
-                                                                                            : receipt.itemized_expenses;
-
-                                                                                        if (!Array.isArray(expenses)) {
-                                                                                            console.error('Itemized expenses is not an array:', expenses);
-                                                                                            return (
-                                                                                                <tr>
-                                                                                                    <td colSpan={3} className="text-center text-error">
-                                                                                                        Invalid expense data format
-                                                                                                    </td>
-                                                                                                </tr>
-                                                                                            );
-                                                                                        }
-
-                                                                                        return expenses.map((item: ItemizedExpense, index: number) => (
-                                                                                            <tr key={index} className="hover:bg-base-300 transition-colors">
-                                                                                                <td>{item.description}</td>
-                                                                                                <td>
-                                                                                                    <span className="badge badge-ghost badge-sm">
-                                                                                                        {item.category}
-                                                                                                    </span>
-                                                                                                </td>
-                                                                                                <td className="font-mono text-right">
-                                                                                                    ${item.amount.toFixed(2)}
-                                                                                                </td>
-                                                                                            </tr>
-                                                                                        ));
-                                                                                    } catch (error) {
-                                                                                        console.error('Error parsing itemized expenses:', error);
-                                                                                        return (
-                                                                                            <tr>
-                                                                                                <td colSpan={3} className="text-center text-error">
-                                                                                                    Error loading expense data
-                                                                                                </td>
-                                                                                            </tr>
-                                                                                        );
-                                                                                    }
-                                                                                })()}
-                                                                                <tr className="font-bold bg-base-300">
-                                                                                    <td colSpan={2} className="text-right rounded-l-lg font-medium">
-                                                                                        Tax:
-                                                                                    </td>
-                                                                                    <td className="font-mono text-right rounded-r-lg font-bold">
-                                                                                        ${receipt.tax.toFixed(2)}
-                                                                                    </td>
-                                                                                </tr>
-                                                                            </tbody>
-                                                                        </table>
-                                                                    </div>
-                                                                </div>
-
-                                                                {receipt.notes && (
-                                                                    <div className="space-y-2">
-                                                                        <label className="text-sm font-medium text-base-content/70">Notes</label>
-                                                                        <div className="bg-base-300 p-4 rounded-lg">
-                                                                            <p className="whitespace-pre-wrap text-sm">{receipt.notes}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-
-                                                                <div className="flex flex-col gap-2 text-sm text-base-content/70">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Icon icon="heroicons:clock" className="h-4 w-4" />
-                                                                        <span>Last updated {new Date(receipt.updated).toLocaleString()}</span>
-                                                                    </div>
-
-                                                                    <div className="flex flex-wrap items-center gap-2">
-                                                                        <Icon icon="heroicons:user-group" className="h-4 w-4" />
-                                                                        <span>Audited by:</span>
-                                                                        {receipt.audited_by.length === 0 ? (
-                                                                            <span className="text-base-content/50">No auditors yet</span>
-                                                                        ) : (
-                                                                            <div className="flex flex-wrap gap-1">
-                                                                                {receipt.auditor_names?.map((name, index) => (
-                                                                                    <span key={index} className="badge badge-ghost badge-sm">
-                                                                                        {name}
-                                                                                    </span>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-
-                                                                    {selectedReimbursement.status === 'under_review' && (
-                                                                        <div className="flex items-center gap-2 mt-2">
-                                                                            {(() => {
-                                                                                const userId = Authentication.getInstance().getUserId();
-                                                                                if (!userId) return null;
-
-                                                                                return receipt.audited_by.includes(userId) ? (
-                                                                                    <span className="badge badge-success gap-1">
-                                                                                        <Icon icon="heroicons:check-circle" className="h-4 w-4" />
-                                                                                        You have audited this receipt
-                                                                                    </span>
-                                                                                ) : (
-                                                                                    <button
-                                                                                        className="btn btn-sm btn-primary gap-1"
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            auditReceipt(receipt.id);
-                                                                                        }}
-                                                                                        disabled={auditingReceipt === receipt.id}
-                                                                                    >
-                                                                                        {auditingReceipt === receipt.id ? (
-                                                                                            <span className="loading loading-spinner loading-sm" />
-                                                                                        ) : (
-                                                                                            <Icon icon="heroicons:clipboard-document-check" className="h-4 w-4" />
-                                                                                        )}
-                                                                                        Mark as Audited
-                                                                                    </button>
-                                                                                );
-                                                                            })()}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
+                                                                <Icon
+                                                                    icon="heroicons:chevron-down"
+                                                                    className="h-5 w-5 text-base-content/70"
+                                                                />
                                                             </motion.div>
-                                                        )}
-                                                    </AnimatePresence>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </motion.div>
                                         );
