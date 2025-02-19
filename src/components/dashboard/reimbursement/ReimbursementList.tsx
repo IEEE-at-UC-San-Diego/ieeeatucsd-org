@@ -176,7 +176,8 @@ export default function ReimbursementList() {
             try {
                 const records = await pb.collection('reimbursement').getList(1, 50, {
                     filter: `submitted_by = "${userId}"`,
-                    sort: '-created'
+                    sort: '-created',
+                    expand: 'audit_notes'
                 });
 
                 console.log('Filtered records response:', records);
@@ -411,15 +412,31 @@ export default function ReimbursementList() {
                                                         return (
                                                             <div key={status} className="relative flex flex-col items-center gap-2 z-10">
                                                                 <div className={`w-6 h-6 rounded-full flex items-center justify-center ${isCurrent
-                                                                    ? 'bg-primary text-primary-content ring-2 ring-primary/20'
+                                                                    ? status === 'rejected'
+                                                                        ? 'bg-error text-error-content ring-2 ring-error/20'
+                                                                        : status === 'paid'
+                                                                            ? 'bg-success text-success-content ring-2 ring-success/20'
+                                                                            : status === 'in_progress'
+                                                                                ? 'bg-warning text-warning-content ring-2 ring-warning/20'
+                                                                                : 'bg-primary text-primary-content ring-2 ring-primary/20'
                                                                     : isActive
-                                                                        ? 'bg-primary/20 text-primary'
+                                                                        ? status === 'rejected'
+                                                                            ? 'bg-error/20 text-error'
+                                                                            : status === 'paid'
+                                                                                ? 'bg-success/20 text-success'
+                                                                                : 'bg-primary/20 text-primary'
                                                                         : 'bg-base-300 text-base-content/40'
                                                                     }`}>
                                                                     <Icon icon={STATUS_ICONS[status]} className="h-3.5 w-3.5" />
                                                                 </div>
                                                                 <span className={`text-[10px] font-medium whitespace-nowrap mt-1 ${isCurrent
-                                                                    ? 'text-primary'
+                                                                    ? status === 'rejected'
+                                                                        ? 'text-error'
+                                                                        : status === 'paid'
+                                                                            ? 'text-success'
+                                                                            : status === 'in_progress'
+                                                                                ? 'text-warning'
+                                                                                : 'text-primary'
                                                                     : isActive
                                                                         ? 'text-base-content'
                                                                         : 'text-base-content/40'
@@ -508,7 +525,7 @@ export default function ReimbursementList() {
                                     )}
 
                                     {selectedRequest.audit_notes && selectedRequest.audit_notes.filter(note => !note.is_private).length > 0 && (
-                                        <motion.div variants={itemVariants} className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm border-l-4 border-primary">
+                                        <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm border-l-4 border-primary">
                                             <div className="flex items-center gap-2 mb-3">
                                                 <Icon icon="heroicons:chat-bubble-left-right" className="h-5 w-5 text-primary" />
                                                 <label className="text-base font-medium">Public Notes</label>
@@ -527,10 +544,9 @@ export default function ReimbursementList() {
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                    ))
-                                                }
+                                                    ))}
                                             </div>
-                                        </motion.div>
+                                        </div>
                                     )}
 
                                     <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm">
