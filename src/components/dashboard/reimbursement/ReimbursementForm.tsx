@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import ReceiptForm from './ReceiptForm';
+import { toast } from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
+import FilePreview from '../universal/FilePreview';
+import ToastProvider from './ToastProvider';
 
 interface ExpenseItem {
     description: string;
@@ -56,6 +60,34 @@ const DEPARTMENT_LABELS = {
     other: 'Other'
 };
 
+// Add these animation variants
+const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            type: "spring",
+            stiffness: 300,
+            damping: 30,
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            type: "spring",
+            stiffness: 300,
+            damping: 24
+        }
+    }
+};
+
 export default function ReimbursementForm() {
     const [request, setRequest] = useState<ReimbursementRequest>({
         title: '',
@@ -72,8 +104,76 @@ export default function ReimbursementForm() {
     const [showReceiptForm, setShowReceiptForm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string>('');
+    const [showReceiptDetails, setShowReceiptDetails] = useState(false);
+    const [selectedReceiptDetails, setSelectedReceiptDetails] = useState<ReceiptFormData | null>(null);
+    const [hasZelleInfo, setHasZelleInfo] = useState<boolean | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     const auth = Authentication.getInstance();
+
+    useEffect(() => {
+        checkZelleInformation();
+    }, []);
+
+    const checkZelleInformation = async () => {
+        try {
+            setIsLoading(true);
+            const pb = auth.getPocketBase();
+            const userId = pb.authStore.model?.id;
+
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
+
+            const user = await pb.collection('users').getOne(userId);
+            setHasZelleInfo(!!user.zelle_information);
+        } catch (error) {
+            console.error('Error checking Zelle information:', error);
+            toast.error('Failed to verify Zelle information');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px]">
+                <div className="loading loading-spinner loading-lg text-primary"></div>
+                <p className="mt-4 text-base-content/70">Loading...</p>
+            </div>
+        );
+    }
+
+    if (hasZelleInfo === false) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="max-w-2xl mx-auto text-center py-12"
+            >
+                <div className="card bg-base-200 p-8">
+                    <Icon icon="heroicons:exclamation-triangle" className="h-16 w-16 mx-auto text-warning" />
+                    <h2 className="text-2xl font-bold mt-6">Zelle Information Required</h2>
+                    <p className="mt-4 text-base-content/70">
+                        Before submitting a reimbursement request, you need to provide your Zelle information.
+                        This is required for processing your reimbursement payments.
+                    </p>
+                    <div className="mt-8">
+                        <button
+                            className="btn btn-primary gap-2"
+                            onClick={() => {
+                                const profileBtn = document.querySelector('[data-section="settings"]') as HTMLButtonElement;
+                                if (profileBtn) profileBtn.click();
+                            }}
+                        >
+                            <Icon icon="heroicons:user-circle" className="h-5 w-5" />
+                            Update Profile
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
 
     const handleAddReceipt = async (receiptData: ReceiptFormData) => {
         try {
@@ -81,8 +181,11 @@ export default function ReimbursementForm() {
             const userId = pb.authStore.model?.id;
 
             if (!userId) {
+                toast.error('User not authenticated');
                 throw new Error('User not authenticated');
             }
+
+            toast.loading('Adding receipt...');
 
             // Create receipt record
             const formData = new FormData();
@@ -109,25 +212,32 @@ export default function ReimbursementForm() {
             }));
 
             setShowReceiptForm(false);
+            toast.dismiss();
+            toast.success('Receipt added successfully');
         } catch (error) {
             console.error('Error creating receipt:', error);
+            toast.dismiss();
+            toast.error('Failed to add receipt');
             setError('Failed to add receipt. Please try again.');
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isSubmitting) return;
 
         if (!request.title.trim()) {
+            toast.error('Title is required');
             setError('Title is required');
             return;
         }
         if (!request.payment_method) {
+            toast.error('Payment method is required');
             setError('Payment method is required');
             return;
         }
         if (receipts.length === 0) {
+            toast.error('At least one receipt is required');
             setError('At least one receipt is required');
             return;
         }
@@ -142,6 +252,8 @@ export default function ReimbursementForm() {
             if (!userId) {
                 throw new Error('User not authenticated');
             }
+
+            const loadingToast = toast.loading('Submitting reimbursement request...');
 
             // Create reimbursement record
             const formData = new FormData();
@@ -171,191 +283,377 @@ export default function ReimbursementForm() {
             setReceipts([]);
             setError('');
 
-            // Show success message
-            alert('Reimbursement request submitted successfully!');
+            // Dismiss loading toast and show success
+            toast.dismiss(loadingToast);
+            toast.success('🎉 Reimbursement request submitted successfully! Check "My Requests" to view it.', {
+                duration: 5000,
+                position: 'top-center',
+                style: {
+                    background: '#10B981',
+                    color: '#FFFFFF',
+                    padding: '16px',
+                    borderRadius: '8px',
+                }
+            });
+
         } catch (error) {
             console.error('Error submitting reimbursement request:', error);
-            setError('Failed to submit reimbursement request. Please try again.');
+            toast.error('Failed to submit reimbursement request. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <div>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {error && (
-                    <div className="alert alert-error">
-                        <Icon icon="heroicons:exclamation-circle" className="h-5 w-5" />
-                        <span>{error}</span>
-                    </div>
-                )}
+        <>
+            <ToastProvider />
+            <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="max-w-4xl mx-auto"
+            >
+                <form onSubmit={handleSubmit} className="space-y-8">
+                    <AnimatePresence mode="wait">
+                        {error && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                                className="alert alert-error shadow-lg"
+                            >
+                                <Icon icon="heroicons:exclamation-circle" className="h-5 w-5" />
+                                <span>{error}</span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
-                {/* Title */}
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Title</span>
-                        <span className="label-text-alt text-error">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        className="input input-bordered"
-                        value={request.title}
-                        onChange={(e) => setRequest(prev => ({ ...prev, title: e.target.value }))}
-                        required
-                    />
-                </div>
+                    <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Title */}
+                        <div className="form-control md:col-span-2">
+                            <label className="label">
+                                <span className="label-text font-medium">Title</span>
+                                <span className="label-text-alt text-error">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="input input-bordered focus:input-primary transition-all duration-300"
+                                value={request.title}
+                                onChange={(e) => setRequest(prev => ({ ...prev, title: e.target.value }))}
+                                required
+                            />
+                        </div>
 
-                {/* Date of Purchase */}
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Date of Purchase</span>
-                        <span className="label-text-alt text-error">*</span>
-                    </label>
-                    <input
-                        type="date"
-                        className="input input-bordered"
-                        value={request.date_of_purchase}
-                        onChange={(e) => setRequest(prev => ({ ...prev, date_of_purchase: e.target.value }))}
-                        required
-                    />
-                </div>
+                        {/* Date of Purchase */}
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text font-medium">Date of Purchase</span>
+                                <span className="label-text-alt text-error">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                className="input input-bordered focus:input-primary transition-all duration-300"
+                                value={request.date_of_purchase}
+                                onChange={(e) => setRequest(prev => ({ ...prev, date_of_purchase: e.target.value }))}
+                                required
+                            />
+                        </div>
 
-                {/* Payment Method */}
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Payment Method</span>
-                        <span className="label-text-alt text-error">*</span>
-                    </label>
-                    <select
-                        className="select select-bordered"
-                        value={request.payment_method}
-                        onChange={(e) => setRequest(prev => ({ ...prev, payment_method: e.target.value }))}
-                        required
+                        {/* Payment Method */}
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text font-medium">Payment Method</span>
+                                <span className="label-text-alt text-error">*</span>
+                            </label>
+                            <select
+                                className="select select-bordered focus:select-primary transition-all duration-300"
+                                value={request.payment_method}
+                                onChange={(e) => setRequest(prev => ({ ...prev, payment_method: e.target.value }))}
+                                required
+                            >
+                                <option value="">Select payment method</option>
+                                {PAYMENT_METHODS.map(method => (
+                                    <option key={method} value={method}>{method}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Department */}
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text font-medium">Department</span>
+                                <span className="label-text-alt text-error">*</span>
+                            </label>
+                            <select
+                                className="select select-bordered focus:select-primary transition-all duration-300"
+                                value={request.department}
+                                onChange={(e) => setRequest(prev => ({ ...prev, department: e.target.value as typeof DEPARTMENTS[number] }))}
+                                required
+                            >
+                                {DEPARTMENTS.map(dept => (
+                                    <option key={dept} value={dept}>{DEPARTMENT_LABELS[dept]}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Additional Info */}
+                        <div className="form-control md:col-span-2">
+                            <label className="label">
+                                <span className="label-text font-medium">Additional Information</span>
+                            </label>
+                            <textarea
+                                className="textarea textarea-bordered focus:textarea-primary transition-all duration-300 min-h-[120px]"
+                                value={request.additional_info}
+                                onChange={(e) => setRequest(prev => ({ ...prev, additional_info: e.target.value }))}
+                                rows={3}
+                            />
+                        </div>
+                    </motion.div>
+
+                    {/* Receipts */}
+                    <motion.div variants={itemVariants} className="card bg-base-200/50 backdrop-blur-sm p-6 shadow-sm">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium">Receipts</h3>
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                type="button"
+                                className="btn btn-primary btn-sm gap-2 hover:shadow-lg transition-all duration-300"
+                                onClick={() => setShowReceiptForm(true)}
+                            >
+                                <Icon icon="heroicons:plus" className="h-4 w-4" />
+                                Add Receipt
+                            </motion.button>
+                        </div>
+
+                        {receipts.length > 0 ? (
+                            <motion.div layout className="grid gap-4">
+                                <AnimatePresence>
+                                    {receipts.map((receipt, index) => (
+                                        <motion.div
+                                            key={receipt.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -20 }}
+                                            className="card bg-base-100 hover:bg-base-200 transition-all duration-300 shadow-sm"
+                                        >
+                                            <div className="card-body p-4">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <h3 className="font-medium text-lg">{receipt.location_name}</h3>
+                                                        <p className="text-sm text-base-content/70">{receipt.location_address}</p>
+                                                        <p className="text-sm mt-2">
+                                                            Total: <span className="font-mono font-medium text-primary">${(receipt.itemized_expenses.reduce((sum, item) => sum + item.amount, 0) + receipt.tax).toFixed(2)}</span>
+                                                        </p>
+                                                    </div>
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                        type="button"
+                                                        className="btn btn-ghost btn-sm gap-2"
+                                                        onClick={() => {
+                                                            setSelectedReceiptDetails(receipt);
+                                                            setShowReceiptDetails(true);
+                                                        }}
+                                                    >
+                                                        <Icon icon="heroicons:eye" className="h-4 w-4" />
+                                                        View Details
+                                                    </motion.button>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="text-center py-12 bg-base-100 rounded-lg"
+                            >
+                                <Icon icon="heroicons:receipt" className="h-16 w-16 mx-auto text-base-content/30" />
+                                <h3 className="mt-4 text-lg font-medium">No receipts added</h3>
+                                <p className="text-base-content/70 mt-2">Add receipts to continue</p>
+                            </motion.div>
+                        )}
+
+                        {receipts.length > 0 && (
+                            <div className="mt-4 p-4 bg-base-100 rounded-lg">
+                                <div className="flex justify-between items-center text-lg font-medium">
+                                    <span>Total Amount:</span>
+                                    <span className="font-mono text-primary">${request.total_amount.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        )}
+                    </motion.div>
+
+                    {/* Submit Button */}
+                    <motion.div
+                        variants={itemVariants}
+                        className="mt-8"
                     >
-                        <option value="">Select payment method</option>
-                        {PAYMENT_METHODS.map(method => (
-                            <option key={method} value={method}>{method}</option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Department */}
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Department</span>
-                        <span className="label-text-alt text-error">*</span>
-                    </label>
-                    <select
-                        className="select select-bordered"
-                        value={request.department}
-                        onChange={(e) => setRequest(prev => ({ ...prev, department: e.target.value as typeof DEPARTMENTS[number] }))}
-                        required
-                    >
-                        {DEPARTMENTS.map(dept => (
-                            <option key={dept} value={dept}>{DEPARTMENT_LABELS[dept]}</option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Additional Info */}
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text">Additional Information</span>
-                    </label>
-                    <textarea
-                        className="textarea textarea-bordered"
-                        value={request.additional_info}
-                        onChange={(e) => setRequest(prev => ({ ...prev, additional_info: e.target.value }))}
-                        rows={3}
-                    />
-                </div>
-
-                {/* Receipts */}
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                        <label className="label-text font-medium">Receipts</label>
-                        <button
-                            type="button"
-                            className="btn btn-sm btn-primary"
-                            onClick={() => setShowReceiptForm(true)}
+                        <motion.button
+                            whileHover={{ scale: 1.01, boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)" }}
+                            whileTap={{ scale: 0.99 }}
+                            type="submit"
+                            className="btn btn-primary w-full h-12 shadow-md hover:shadow-lg transition-all duration-300 text-lg"
+                            disabled={isSubmitting || receipts.length === 0}
                         >
-                            <Icon icon="heroicons:plus" className="h-4 w-4" />
-                            Add Receipt
-                        </button>
-                    </div>
+                            {isSubmitting ? (
+                                <span className="loading loading-spinner loading-md"></span>
+                            ) : (
+                                <>
+                                    <Icon icon="heroicons:paper-airplane" className="h-5 w-5" />
+                                    Submit Reimbursement Request
+                                </>
+                            )}
+                        </motion.button>
+                    </motion.div>
+                </form>
 
-                    {receipts.length > 0 ? (
-                        <div className="grid gap-4">
-                            {receipts.map((receipt, index) => (
-                                <div
-                                    key={receipt.id}
-                                    className="card bg-base-200 p-4"
-                                >
-                                    <div className="flex justify-between items-start">
+                {/* Receipt Form Modal */}
+                <AnimatePresence>
+                    {showReceiptForm && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="modal modal-open"
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                className="modal-box max-w-5xl bg-base-100/95 backdrop-blur-md"
+                            >
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Add Receipt</h3>
+                                    <motion.button
+                                        whileHover={{ scale: 1.1, rotate: 90 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        className="btn btn-ghost btn-sm btn-circle"
+                                        onClick={() => setShowReceiptForm(false)}
+                                    >
+                                        <Icon icon="heroicons:x-mark" className="h-5 w-5" />
+                                    </motion.button>
+                                </div>
+                                <ReceiptForm
+                                    onSubmit={handleAddReceipt}
+                                    onCancel={() => setShowReceiptForm(false)}
+                                />
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Receipt Details Modal */}
+                <AnimatePresence>
+                    {showReceiptDetails && selectedReceiptDetails && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="modal modal-open"
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                className="modal-box max-w-4xl bg-base-100/95 backdrop-blur-md"
+                            >
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                                        Receipt Details
+                                    </h3>
+                                    <motion.button
+                                        whileHover={{ scale: 1.1, rotate: 90 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        className="btn btn-ghost btn-sm btn-circle"
+                                        onClick={() => {
+                                            setShowReceiptDetails(false);
+                                            setSelectedReceiptDetails(null);
+                                        }}
+                                    >
+                                        <Icon icon="heroicons:x-mark" className="h-5 w-5" />
+                                    </motion.button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-4">
                                         <div>
-                                            <h3 className="font-medium">{receipt.location_name}</h3>
-                                            <p className="text-sm text-base-content/70">{receipt.location_address}</p>
-                                            <p className="text-sm">
-                                                Total: ${(receipt.itemized_expenses.reduce((sum, item) => sum + item.amount, 0) + receipt.tax).toFixed(2)}
-                                            </p>
+                                            <label className="text-sm font-medium">Location</label>
+                                            <p className="mt-1">{selectedReceiptDetails.location_name}</p>
+                                            <p className="text-sm text-base-content/70">{selectedReceiptDetails.location_address}</p>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                className="btn btn-sm"
-                                                onClick={() => {
-                                                    // Show receipt details in modal
-                                                    // TODO: Implement receipt details view
-                                                }}
-                                            >
-                                                View Details
-                                            </button>
+
+                                        <div>
+                                            <label className="text-sm font-medium">Date</label>
+                                            <p className="mt-1">{new Date(selectedReceiptDetails.date).toLocaleDateString()}</p>
+                                        </div>
+
+                                        {selectedReceiptDetails.notes && (
+                                            <div>
+                                                <label className="text-sm font-medium">Notes</label>
+                                                <p className="mt-1">{selectedReceiptDetails.notes}</p>
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label className="text-sm font-medium">Itemized Expenses</label>
+                                            <div className="mt-2 space-y-2">
+                                                {selectedReceiptDetails.itemized_expenses.map((item, index) => (
+                                                    <div key={index} className="card bg-base-200 p-3">
+                                                        <div className="grid grid-cols-3 gap-4">
+                                                            <div>
+                                                                <label className="text-xs font-medium">Description</label>
+                                                                <p>{item.description}</p>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs font-medium">Category</label>
+                                                                <p>{item.category}</p>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs font-medium">Amount</label>
+                                                                <p>${item.amount.toFixed(2)}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="text-sm font-medium">Tax</label>
+                                                <p className="mt-1">${selectedReceiptDetails.tax.toFixed(2)}</p>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium">Total</label>
+                                                <p className="mt-1">${(selectedReceiptDetails.itemized_expenses.reduce((sum, item) => sum + item.amount, 0) + selectedReceiptDetails.tax).toFixed(2)}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-l border-base-300 pl-6">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-lg font-medium">Receipt Image</h3>
+                                        </div>
+                                        <div className="bg-base-200/50 backdrop-blur-sm rounded-lg p-4 shadow-sm">
+                                            <FilePreview
+                                                url={URL.createObjectURL(selectedReceiptDetails.field)}
+                                                filename={selectedReceiptDetails.field.name}
+                                                isModal={false}
+                                            />
                                         </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-8 bg-base-200 rounded-lg">
-                            <Icon icon="heroicons:receipt" className="h-12 w-12 mx-auto text-base-content/50" />
-                            <h3 className="mt-4 text-lg font-medium">No receipts added</h3>
-                            <p className="text-base-content/70">Add receipts to continue</p>
-                        </div>
+                            </motion.div>
+                        </motion.div>
                     )}
-                </div>
-
-                {/* Total */}
-                <div className="text-right">
-                    <p className="text-lg font-medium">
-                        Total Amount: ${request.total_amount.toFixed(2)}
-                    </p>
-                </div>
-
-                {/* Submit Button */}
-                <div className="mt-6">
-                    <button
-                        type="submit"
-                        className={`btn btn-primary w-full ${isSubmitting ? 'loading' : ''}`}
-                        disabled={isSubmitting || receipts.length === 0}
-                    >
-                        {isSubmitting ? 'Submitting...' : 'Submit Reimbursement Request'}
-                    </button>
-                </div>
-            </form>
-
-            {/* Receipt Form Modal */}
-            {showReceiptForm && (
-                <div className="modal modal-open">
-                    <div className="modal-box max-w-5xl">
-                        <h3 className="font-bold text-lg mb-4">Add Receipt</h3>
-                        <ReceiptForm
-                            onSubmit={handleAddReceipt}
-                            onCancel={() => setShowReceiptForm(false)}
-                        />
-                    </div>
-                </div>
-            )}
-        </div>
+                </AnimatePresence>
+            </motion.div>
+        </>
     );
 } 

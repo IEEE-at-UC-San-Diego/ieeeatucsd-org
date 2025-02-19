@@ -28,6 +28,7 @@ interface User {
     name: string;
     email: string;
     avatar: string;
+    zelle_information: string;
     created: string;
     updated: string;
 }
@@ -68,6 +69,8 @@ export default function ReimbursementManagementPortal() {
     const [reimbursements, setReimbursements] = useState<Reimbursement[]>([]);
     const [receipts, setReceipts] = useState<Record<string, Receipt>>({});
     const [selectedReimbursement, setSelectedReimbursement] = useState<Reimbursement | null>(null);
+    const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+    const [showReceiptModal, setShowReceiptModal] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filters, setFilters] = useState<FilterOptions>({
@@ -933,6 +936,38 @@ export default function ReimbursementManagementPortal() {
                                                 <span className="font-medium text-base-content truncate">{selectedReimbursement.submitter?.name || 'Unknown User'}</span>
                                                 <Icon icon="heroicons:chevron-down" className="h-4 w-4 flex-shrink-0" />
                                             </button>
+                                            {showUserProfile === selectedReimbursement.submitted_by && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="absolute top-full left-0 mt-2 w-72 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50"
+                                                >
+                                                    <div className="p-4 space-y-3">
+                                                        <div className="flex items-center gap-3">
+                                                            {selectedReimbursement.submitter?.avatar && (
+                                                                <img
+                                                                    src={getUserAvatarUrl(selectedReimbursement.submitter)}
+                                                                    alt=""
+                                                                    className="w-12 h-12 rounded-full"
+                                                                />
+                                                            )}
+                                                            <div>
+                                                                <h3 className="font-semibold">{selectedReimbursement.submitter?.name}</h3>
+                                                                <p className="text-sm text-base-content/70">{selectedReimbursement.submitter?.email}</p>
+                                                            </div>
+                                                        </div>
+                                                        {selectedReimbursement.submitter?.zelle_information && (
+                                                            <div className="pt-2 border-t border-base-300">
+                                                                <h4 className="text-sm font-medium text-base-content/70 mb-1">Zelle Information</h4>
+                                                                <p className="text-sm flex items-center gap-2">
+                                                                    <Icon icon="heroicons:banknotes" className="h-4 w-4 text-primary flex-shrink-0" />
+                                                                    {selectedReimbursement.submitter.zelle_information}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1054,6 +1089,17 @@ export default function ReimbursementManagementPortal() {
                                         </p>
                                     </div>
                                 </div>
+                                {selectedReimbursement.submitter?.zelle_information && (
+                                    <div className="card bg-base-200 hover:bg-base-300 transition-colors xs:col-span-2">
+                                        <div className="card-body !p-3">
+                                            <h3 className="text-sm font-medium text-base-content/70">Zelle Information</h3>
+                                            <p className="flex items-center gap-2 font-medium mt-1">
+                                                <Icon icon="heroicons:banknotes" className="h-4 w-4 text-primary flex-shrink-0" />
+                                                {selectedReimbursement.submitter.zelle_information}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="divider before:bg-base-300 after:bg-base-300">
@@ -1112,6 +1158,118 @@ export default function ReimbursementManagementPortal() {
                                                             </motion.div>
                                                         </button>
                                                     </div>
+                                                    {isExpanded && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, height: 0 }}
+                                                            animate={{ opacity: 1, height: "auto" }}
+                                                            exit={{ opacity: 0, height: 0 }}
+                                                            className="border-t border-base-300"
+                                                        >
+                                                            <div className="p-3 sm:p-4 space-y-4">
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                                    {receipt.itemized_expenses && (
+                                                                        <div className="space-y-2">
+                                                                            <h4 className="text-sm font-medium text-base-content/70">Itemized Expenses</h4>
+                                                                            <div className="space-y-2">
+                                                                                {(() => {
+                                                                                    try {
+                                                                                        const expenses: ItemizedExpense[] = typeof receipt.itemized_expenses === 'string'
+                                                                                            ? JSON.parse(receipt.itemized_expenses)
+                                                                                            : receipt.itemized_expenses;
+                                                                                        return expenses.map((expense, index) => (
+                                                                                            <div key={index} className="flex justify-between items-start gap-2 text-sm">
+                                                                                                <div>
+                                                                                                    <p className="font-medium">{expense.description}</p>
+                                                                                                    <p className="text-base-content/70">{expense.category}</p>
+                                                                                                </div>
+                                                                                                <span className="font-mono font-medium whitespace-nowrap">
+                                                                                                    ${expense.amount.toFixed(2)}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        ));
+                                                                                    } catch (error) {
+                                                                                        console.error('Error parsing itemized expenses:', error);
+                                                                                        return <p className="text-error text-sm">Error loading expenses</p>;
+                                                                                    }
+                                                                                })()}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="space-y-2">
+                                                                        <h4 className="text-sm font-medium text-base-content/70">Receipt Details</h4>
+                                                                        <div className="space-y-2">
+                                                                            <div className="flex justify-between items-center text-sm">
+                                                                                <span className="text-base-content/70">Tax</span>
+                                                                                <span className="font-mono font-medium">${receipt.tax.toFixed(2)}</span>
+                                                                            </div>
+                                                                            <div className="flex justify-between items-center text-sm">
+                                                                                <span className="text-base-content/70">Total</span>
+                                                                                <span className="font-mono font-medium">
+                                                                                    ${(() => {
+                                                                                        try {
+                                                                                            const expenses: ItemizedExpense[] = typeof receipt.itemized_expenses === 'string'
+                                                                                                ? JSON.parse(receipt.itemized_expenses)
+                                                                                                : receipt.itemized_expenses;
+                                                                                            const subtotal = expenses.reduce((sum, item) => sum + item.amount, 0);
+                                                                                            return (subtotal + receipt.tax).toFixed(2);
+                                                                                        } catch (error) {
+                                                                                            return '0.00';
+                                                                                        }
+                                                                                    })()}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                {receipt.notes && (
+                                                                    <div className="space-y-2">
+                                                                        <h4 className="text-sm font-medium text-base-content/70">Notes</h4>
+                                                                        <p className="text-sm whitespace-pre-wrap">{receipt.notes}</p>
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex justify-center flex-col items-center gap-2">
+                                                                    <button
+                                                                        className="btn btn-primary btn-sm gap-2 w-full"
+                                                                        onClick={() => {
+                                                                            setSelectedReceipt(receipt);
+                                                                            setShowReceiptModal(true);
+                                                                        }}
+                                                                    >
+                                                                        <Icon icon="heroicons:photo" className="h-4 w-4" />
+                                                                        View Receipt
+                                                                    </button>
+
+                                                                </div>
+                                                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                                                    <div className="flex flex-wrap items-center gap-2">
+                                                                        <h4 className="text-sm font-medium text-base-content/70">Audited by:</h4>
+                                                                        {receipt.auditor_names?.length ? (
+                                                                            <div className="flex flex-wrap gap-1">
+                                                                                {receipt.auditor_names.map((name, index) => (
+                                                                                    <span key={index} className="badge badge-ghost">{name}</span>
+                                                                                ))}
+                                                                            </div>
+                                                                        ) : (
+                                                                            <span className="text-sm text-base-content/70">Not audited yet</span>
+                                                                        )}
+                                                                    </div>
+                                                                    <button
+                                                                        className="btn btn-primary btn-sm gap-2"
+                                                                        onClick={() => auditReceipt(receipt.id)}
+                                                                        disabled={auditingReceipt === receipt.id || receipt.audited_by.includes(Authentication.getInstance().getUserId() || '')}
+                                                                    >
+                                                                        {auditingReceipt === receipt.id ? (
+                                                                            <span className="loading loading-spinner loading-sm" />
+                                                                        ) : (
+                                                                            <Icon icon="heroicons:check-circle" className="h-4 w-4" />
+                                                                        )}
+                                                                        {receipt.audited_by.includes(Authentication.getInstance().getUserId() || '') ? 'Audited' : 'Mark as Audited'}
+                                                                    </button>
+                                                                </div>
+
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
                                                 </div>
                                             </motion.div>
                                         );
@@ -1161,22 +1319,24 @@ export default function ReimbursementManagementPortal() {
                                                 {(() => {
                                                     if (!selectedReimbursement.audit_logs) return null;
 
-                                                    let logs = [];
+                                                    let currentLogs = [];
                                                     try {
-                                                        if (typeof selectedReimbursement.audit_logs === 'string') {
-                                                            logs = JSON.parse(selectedReimbursement.audit_logs);
-                                                        } else {
-                                                            logs = selectedReimbursement.audit_logs;
-                                                        }
-                                                        if (!Array.isArray(logs)) {
-                                                            logs = [];
+                                                        if (selectedReimbursement.audit_logs) {
+                                                            if (typeof selectedReimbursement.audit_logs === 'string') {
+                                                                currentLogs = JSON.parse(selectedReimbursement.audit_logs);
+                                                            } else {
+                                                                currentLogs = selectedReimbursement.audit_logs;
+                                                            }
+                                                            if (!Array.isArray(currentLogs)) {
+                                                                currentLogs = [];
+                                                            }
                                                         }
                                                     } catch (error) {
-                                                        console.error('Error parsing audit logs:', error);
-                                                        logs = [];
+                                                        console.error('Error parsing existing audit logs:', error);
+                                                        currentLogs = [];
                                                     }
 
-                                                    if (logs.length === 0) {
+                                                    if (currentLogs.length === 0) {
                                                         return (
                                                             <div className="bg-base-200 p-4 rounded-lg text-base-content/70 text-center">
                                                                 No audit logs yet
@@ -1184,14 +1344,17 @@ export default function ReimbursementManagementPortal() {
                                                         );
                                                     }
 
-                                                    const totalPages = Math.ceil(logs.length / logsPerPage);
+                                                    // Sort logs by timestamp in descending order (most recent first)
+                                                    currentLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+                                                    const totalPages = Math.ceil(currentLogs.length / logsPerPage);
                                                     const startIndex = (currentLogPage - 1) * logsPerPage;
                                                     const endIndex = startIndex + logsPerPage;
-                                                    const currentLogs = logs.slice(startIndex, endIndex);
+                                                    const currentPageLogs = currentLogs.slice(startIndex, endIndex);
 
                                                     return (
                                                         <>
-                                                            {currentLogs.map((log: { action: string; from?: string; to?: string; receipt_id?: string; receipt_name?: string; receipt_date?: string; receipt_amount?: number; auditor_id: string; timestamp: string }, index: number) => (
+                                                            {currentPageLogs.map((log: { action: string; from?: string; to?: string; receipt_id?: string; receipt_name?: string; receipt_date?: string; receipt_amount?: number; auditor_id: string; timestamp: string }, index: number) => (
                                                                 <div key={index} className="bg-base-200 p-4 rounded-lg space-y-2">
                                                                     <div className="flex items-center justify-between flex-wrap gap-2">
                                                                         <div className="flex items-center gap-2">
@@ -1312,14 +1475,17 @@ export default function ReimbursementManagementPortal() {
                                                         );
                                                     }
 
+                                                    // Sort notes by timestamp in descending order (most recent first)
+                                                    notes.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
                                                     const totalPages = Math.ceil(notes.length / notesPerPage);
                                                     const startIndex = (currentNotePage - 1) * notesPerPage;
                                                     const endIndex = startIndex + notesPerPage;
-                                                    const currentNotes = notes.slice(startIndex, endIndex);
+                                                    const currentPageNotes = notes.slice(startIndex, endIndex);
 
                                                     return (
                                                         <>
-                                                            {currentNotes.map((note: { note: string; auditor_id: string; timestamp: string; is_private: boolean }, index: number) => (
+                                                            {currentPageNotes.map((note, index) => (
                                                                 <div key={index} className="bg-base-200 p-4 rounded-lg space-y-2">
                                                                     <div className="flex items-center justify-between flex-wrap gap-2">
                                                                         <div className="flex items-center gap-2">
@@ -1472,6 +1638,58 @@ export default function ReimbursementManagementPortal() {
                                 ) : (
                                     'Confirm Rejection'
                                 )}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* Receipt Preview Modal */}
+            {showReceiptModal && selectedReceipt && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="modal-box relative max-w-4xl w-full bg-base-100 p-0 overflow-hidden"
+                    >
+                        <div className="sticky top-0 flex items-center justify-between p-4 bg-base-100 border-b border-base-300 z-10">
+                            <h3 className="font-bold text-lg">
+                                Receipt from {selectedReceipt.location_name}
+                            </h3>
+                            <button
+                                className="btn btn-sm btn-ghost"
+                                onClick={() => {
+                                    setShowReceiptModal(false);
+                                    setSelectedReceipt(null);
+                                }}
+                            >
+                                <Icon icon="heroicons:x-mark" className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="p-4">
+                            <FilePreview
+                                url={getReceiptUrl(selectedReceipt)}
+                                filename={`Receipt from ${selectedReceipt.location_name}`}
+                            />
+                        </div>
+                        <div className="sticky bottom-0 flex justify-end gap-2 p-4 bg-base-100 border-t border-base-300">
+                            <a
+                                href={getReceiptUrl(selectedReceipt)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-ghost gap-2"
+                            >
+                                <Icon icon="heroicons:arrow-top-right-on-square" className="h-4 w-4" />
+                                Open in new tab
+                            </a>
+                            <button
+                                className="btn btn-primary gap-2"
+                                onClick={() => {
+                                    setShowReceiptModal(false);
+                                    setSelectedReceipt(null);
+                                }}
+                            >
+                                Close
                             </button>
                         </div>
                     </motion.div>
