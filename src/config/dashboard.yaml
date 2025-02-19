@@ -29,6 +29,13 @@ sections:
     component: "Officer_EventManagement"
     class: "text-info hover:text-info-focus"
 
+  reimbursementManagement:
+    title: "Reimbursement Management"
+    icon: "heroicons:credit-card"
+    role: "general"
+    component: "Officer_ReimbursementManagement"
+    class: "text-info hover:text-info-focus"
+
   # Sponsor Menu
   sponsorDashboard:
     title: "Sponsor Dashboard"
@@ -72,7 +79,7 @@ categories:
 
   executive:
     title: "Executive Menu"
-    sections: []
+    sections: ["reimbursementManagement"]
     role: "executive"
 
   admin:
