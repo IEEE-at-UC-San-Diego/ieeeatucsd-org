@@ -1,14 +1,22 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
-import FilePreview from '../universal/FilePreview';
-import { FileManager } from '../../../scripts/pocketbase/FileManager';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
-import { Update } from '../../../scripts/pocketbase/Update';
+import ReceiptForm from './ReceiptForm';
 
 interface ExpenseItem {
     description: string;
     amount: number;
     category: string;
+}
+
+interface ReceiptFormData {
+    field: File;
+    itemized_expenses: ExpenseItem[];
+    tax: number;
+    date: string;
+    location_name: string;
+    location_address: string;
+    notes: string;
 }
 
 interface ReimbursementRequest {
@@ -17,21 +25,12 @@ interface ReimbursementRequest {
     total_amount: number;
     date_of_purchase: string;
     payment_method: string;
-    status: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'paid';
-    expense_items: ExpenseItem[];
-    receipts: string[];
+    status: 'submitted' | 'under_review' | 'approved' | 'rejected' | 'paid' | 'in_progress';
     submitted_by?: string;
+    additional_info: string;
+    reciepts: string[];
+    department: 'internal' | 'external' | 'projects' | 'events' | 'other';
 }
-
-const EXPENSE_CATEGORIES = [
-    'Travel',
-    'Meals',
-    'Supplies',
-    'Equipment',
-    'Software',
-    'Event Expenses',
-    'Other'
-];
 
 const PAYMENT_METHODS = [
     'Personal Credit Card',
@@ -41,7 +40,21 @@ const PAYMENT_METHODS = [
     'Other'
 ];
 
-const MAX_REIMBURSEMENT_AMOUNT = 1000; // Maximum amount in dollars
+const DEPARTMENTS = [
+    'internal',
+    'external',
+    'projects',
+    'events',
+    'other'
+] as const;
+
+const DEPARTMENT_LABELS = {
+    internal: 'Internal',
+    external: 'External',
+    projects: 'Projects',
+    events: 'Events',
+    other: 'Other'
+};
 
 export default function ReimbursementForm() {
     const [request, setRequest] = useState<ReimbursementRequest>({
@@ -49,121 +62,73 @@ export default function ReimbursementForm() {
         total_amount: 0,
         date_of_purchase: new Date().toISOString().split('T')[0],
         payment_method: '',
-        status: 'draft',
-        expense_items: [{ description: '', amount: 0, category: '' }],
-        receipts: []
+        status: 'submitted',
+        additional_info: '',
+        reciepts: [],
+        department: 'internal'
     });
 
-    const [selectedFiles, setSelectedFiles] = useState<Map<string, File>>(new Map());
-    const [previewUrl, setPreviewUrl] = useState<string>('');
-    const [previewFilename, setPreviewFilename] = useState<string>('');
-    const [showPreview, setShowPreview] = useState(false);
+    const [receipts, setReceipts] = useState<(ReceiptFormData & { id: string })[]>([]);
+    const [showReceiptForm, setShowReceiptForm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string>('');
 
-    const fileManager = FileManager.getInstance();
     const auth = Authentication.getInstance();
-    const update = Update.getInstance();
 
-    const handleExpenseItemChange = (index: number, field: keyof ExpenseItem, value: string | number) => {
-        const newExpenseItems = [...request.expense_items];
-        newExpenseItems[index] = {
-            ...newExpenseItems[index],
-            [field]: value
-        };
+    const handleAddReceipt = async (receiptData: ReceiptFormData) => {
+        try {
+            const pb = auth.getPocketBase();
+            const userId = pb.authStore.model?.id;
 
-        // Recalculate total amount
-        const newTotalAmount = newExpenseItems.reduce((sum, item) => sum + Number(item.amount), 0);
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
 
-        setRequest(prev => ({
-            ...prev,
-            expense_items: newExpenseItems,
-            total_amount: newTotalAmount
-        }));
-    };
+            // Create receipt record
+            const formData = new FormData();
+            formData.append('field', receiptData.field);
+            formData.append('created_by', userId);
+            formData.append('itemized_expenses', JSON.stringify(receiptData.itemized_expenses));
+            formData.append('tax', receiptData.tax.toString());
+            formData.append('date', new Date(receiptData.date).toISOString());
+            formData.append('location_name', receiptData.location_name);
+            formData.append('location_address', receiptData.location_address);
+            formData.append('notes', receiptData.notes);
 
-    const addExpenseItem = () => {
-        setRequest(prev => ({
-            ...prev,
-            expense_items: [...prev.expense_items, { description: '', amount: 0, category: '' }]
-        }));
-    };
+            const response = await pb.collection('reciepts').create(formData);
 
-    const removeExpenseItem = (index: number) => {
-        if (request.expense_items.length === 1) {
-            return; // Keep at least one expense item
+            // Add receipt to state
+            setReceipts(prev => [...prev, { ...receiptData, id: response.id }]);
+
+            // Update total amount
+            const totalAmount = receiptData.itemized_expenses.reduce((sum, item) => sum + item.amount, 0) + receiptData.tax;
+            setRequest(prev => ({
+                ...prev,
+                total_amount: prev.total_amount + totalAmount,
+                reciepts: [...prev.reciepts, response.id]
+            }));
+
+            setShowReceiptForm(false);
+        } catch (error) {
+            console.error('Error creating receipt:', error);
+            setError('Failed to add receipt. Please try again.');
         }
-
-        const newExpenseItems = request.expense_items.filter((_, i) => i !== index);
-        const newTotalAmount = newExpenseItems.reduce((sum, item) => sum + Number(item.amount), 0);
-
-        setRequest(prev => ({
-            ...prev,
-            expense_items: newExpenseItems,
-            total_amount: newTotalAmount
-        }));
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            const newFiles = new Map(selectedFiles);
-            Array.from(e.target.files).forEach(file => {
-                // Validate file type
-                if (!file.type.match('image/*') && file.type !== 'application/pdf') {
-                    setError('Only images and PDF files are allowed');
-                    return;
-                }
-                // Validate file size (5MB limit)
-                if (file.size > 5 * 1024 * 1024) {
-                    setError('File size must be less than 5MB');
-                    return;
-                }
-                newFiles.set(file.name, file);
-            });
-            setSelectedFiles(newFiles);
-            setError('');
-        }
-    };
-
-    const handlePreviewFile = (url: string, filename: string) => {
-        setPreviewUrl(url);
-        setPreviewFilename(filename);
-        setShowPreview(true);
-    };
-
-    const validateForm = (): boolean => {
-        if (!request.title.trim()) {
-            setError('Title is required');
-            return false;
-        }
-        if (!request.payment_method) {
-            setError('Payment method is required');
-            return false;
-        }
-        if (request.total_amount <= 0) {
-            setError('Total amount must be greater than 0');
-            return false;
-        }
-        if (request.total_amount > MAX_REIMBURSEMENT_AMOUNT) {
-            setError(`Total amount cannot exceed $${MAX_REIMBURSEMENT_AMOUNT}`);
-            return false;
-        }
-        if (request.expense_items.some(item => !item.description || !item.category || item.amount <= 0)) {
-            setError('All expense items must be filled out completely');
-            return false;
-        }
-        if (selectedFiles.size === 0 && request.receipts.length === 0) {
-            setError('At least one receipt is required');
-            return false;
-        }
-        return true;
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (isSubmitting) return;
 
-        if (!validateForm()) {
+        if (!request.title.trim()) {
+            setError('Title is required');
+            return;
+        }
+        if (!request.payment_method) {
+            setError('Payment method is required');
+            return;
+        }
+        if (receipts.length === 0) {
+            setError('At least one receipt is required');
             return;
         }
 
@@ -184,17 +149,13 @@ export default function ReimbursementForm() {
             formData.append('total_amount', request.total_amount.toString());
             formData.append('date_of_purchase', new Date(request.date_of_purchase).toISOString());
             formData.append('payment_method', request.payment_method);
-            formData.append('status', 'draft');
-            formData.append('expense_items', JSON.stringify(request.expense_items));
+            formData.append('status', 'submitted');
             formData.append('submitted_by', userId);
+            formData.append('additional_info', request.additional_info);
+            formData.append('reciepts', JSON.stringify(request.reciepts));
+            formData.append('department', request.department);
 
-            // Upload files
-            Array.from(selectedFiles.values()).forEach(file => {
-                formData.append('receipts', file);
-            });
-
-            // Submit the request
-            const response = await pb.collection('reimbursement').create(formData);
+            await pb.collection('reimbursement').create(formData);
 
             // Reset form
             setRequest({
@@ -202,11 +163,12 @@ export default function ReimbursementForm() {
                 total_amount: 0,
                 date_of_purchase: new Date().toISOString().split('T')[0],
                 payment_method: '',
-                status: 'draft',
-                expense_items: [{ description: '', amount: 0, category: '' }],
-                receipts: []
+                status: 'submitted',
+                additional_info: '',
+                reciepts: [],
+                department: 'internal'
             });
-            setSelectedFiles(new Map());
+            setReceipts([]);
             setError('');
 
             // Show success message
@@ -220,218 +182,180 @@ export default function ReimbursementForm() {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-                <div className="alert alert-error">
-                    <Icon icon="heroicons:exclamation-circle" className="h-5 w-5" />
-                    <span>{error}</span>
-                </div>
-            )}
-
-            {/* Title */}
-            <div className="form-control">
-                <label className="label">
-                    <span className="label-text">Title</span>
-                    <span className="label-text-alt text-error">*</span>
-                </label>
-                <input
-                    type="text"
-                    className="input input-bordered"
-                    value={request.title}
-                    onChange={(e) => setRequest(prev => ({ ...prev, title: e.target.value }))}
-                    required
-                />
-            </div>
-
-            {/* Date of Purchase */}
-            <div className="form-control">
-                <label className="label">
-                    <span className="label-text">Date of Purchase</span>
-                    <span className="label-text-alt text-error">*</span>
-                </label>
-                <input
-                    type="date"
-                    className="input input-bordered"
-                    value={request.date_of_purchase}
-                    onChange={(e) => setRequest(prev => ({ ...prev, date_of_purchase: e.target.value }))}
-                    required
-                />
-            </div>
-
-            {/* Payment Method */}
-            <div className="form-control">
-                <label className="label">
-                    <span className="label-text">Payment Method</span>
-                    <span className="label-text-alt text-error">*</span>
-                </label>
-                <select
-                    className="select select-bordered"
-                    value={request.payment_method}
-                    onChange={(e) => setRequest(prev => ({ ...prev, payment_method: e.target.value }))}
-                    required
-                >
-                    <option value="">Select payment method</option>
-                    {PAYMENT_METHODS.map(method => (
-                        <option key={method} value={method}>{method}</option>
-                    ))}
-                </select>
-            </div>
-
-            {/* Expense Items */}
-            <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                    <label className="label-text font-medium">Expense Items</label>
-                    <button
-                        type="button"
-                        className="btn btn-sm btn-primary"
-                        onClick={addExpenseItem}
-                    >
-                        <Icon icon="heroicons:plus" className="h-4 w-4" />
-                        Add Item
-                    </button>
-                </div>
-
-                {request.expense_items.map((item, index) => (
-                    <div key={index} className="card bg-base-200 p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Description</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    className="input input-bordered"
-                                    value={item.description}
-                                    onChange={(e) => handleExpenseItemChange(index, 'description', e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Category</span>
-                                </label>
-                                <select
-                                    className="select select-bordered"
-                                    value={item.category}
-                                    onChange={(e) => handleExpenseItemChange(index, 'category', e.target.value)}
-                                    required
-                                >
-                                    <option value="">Select category</option>
-                                    {EXPENSE_CATEGORIES.map(category => (
-                                        <option key={category} value={category}>{category}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Amount ($)</span>
-                                </label>
-                                <div className="flex items-center space-x-2">
-                                    <input
-                                        type="number"
-                                        className="input input-bordered"
-                                        value={item.amount}
-                                        onChange={(e) => handleExpenseItemChange(index, 'amount', Number(e.target.value))}
-                                        min="0"
-                                        step="0.01"
-                                        required
-                                    />
-                                    {request.expense_items.length > 1 && (
-                                        <button
-                                            type="button"
-                                            className="btn btn-square btn-sm btn-error"
-                                            onClick={() => removeExpenseItem(index)}
-                                        >
-                                            <Icon icon="heroicons:trash" className="h-4 w-4" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+        <div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+                {error && (
+                    <div className="alert alert-error">
+                        <Icon icon="heroicons:exclamation-circle" className="h-5 w-5" />
+                        <span>{error}</span>
                     </div>
-                ))}
+                )}
 
+                {/* Title */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Title</span>
+                        <span className="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        className="input input-bordered"
+                        value={request.title}
+                        onChange={(e) => setRequest(prev => ({ ...prev, title: e.target.value }))}
+                        required
+                    />
+                </div>
+
+                {/* Date of Purchase */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Date of Purchase</span>
+                        <span className="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="date"
+                        className="input input-bordered"
+                        value={request.date_of_purchase}
+                        onChange={(e) => setRequest(prev => ({ ...prev, date_of_purchase: e.target.value }))}
+                        required
+                    />
+                </div>
+
+                {/* Payment Method */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Payment Method</span>
+                        <span className="label-text-alt text-error">*</span>
+                    </label>
+                    <select
+                        className="select select-bordered"
+                        value={request.payment_method}
+                        onChange={(e) => setRequest(prev => ({ ...prev, payment_method: e.target.value }))}
+                        required
+                    >
+                        <option value="">Select payment method</option>
+                        {PAYMENT_METHODS.map(method => (
+                            <option key={method} value={method}>{method}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Department */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Department</span>
+                        <span className="label-text-alt text-error">*</span>
+                    </label>
+                    <select
+                        className="select select-bordered"
+                        value={request.department}
+                        onChange={(e) => setRequest(prev => ({ ...prev, department: e.target.value as typeof DEPARTMENTS[number] }))}
+                        required
+                    >
+                        {DEPARTMENTS.map(dept => (
+                            <option key={dept} value={dept}>{DEPARTMENT_LABELS[dept]}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Additional Info */}
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Additional Information</span>
+                    </label>
+                    <textarea
+                        className="textarea textarea-bordered"
+                        value={request.additional_info}
+                        onChange={(e) => setRequest(prev => ({ ...prev, additional_info: e.target.value }))}
+                        rows={3}
+                    />
+                </div>
+
+                {/* Receipts */}
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <label className="label-text font-medium">Receipts</label>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-primary"
+                            onClick={() => setShowReceiptForm(true)}
+                        >
+                            <Icon icon="heroicons:plus" className="h-4 w-4" />
+                            Add Receipt
+                        </button>
+                    </div>
+
+                    {receipts.length > 0 ? (
+                        <div className="grid gap-4">
+                            {receipts.map((receipt, index) => (
+                                <div
+                                    key={receipt.id}
+                                    className="card bg-base-200 p-4"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-medium">{receipt.location_name}</h3>
+                                            <p className="text-sm text-base-content/70">{receipt.location_address}</p>
+                                            <p className="text-sm">
+                                                Total: ${(receipt.itemized_expenses.reduce((sum, item) => sum + item.amount, 0) + receipt.tax).toFixed(2)}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm"
+                                                onClick={() => {
+                                                    // Show receipt details in modal
+                                                    // TODO: Implement receipt details view
+                                                }}
+                                            >
+                                                View Details
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 bg-base-200 rounded-lg">
+                            <Icon icon="heroicons:receipt" className="h-12 w-12 mx-auto text-base-content/50" />
+                            <h3 className="mt-4 text-lg font-medium">No receipts added</h3>
+                            <p className="text-base-content/70">Add receipts to continue</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Total */}
                 <div className="text-right">
                     <p className="text-lg font-medium">
                         Total Amount: ${request.total_amount.toFixed(2)}
                     </p>
                 </div>
-            </div>
 
-            {/* Receipt Upload */}
-            <div className="form-control">
-                <label className="label">
-                    <span className="label-text">Upload Receipts</span>
-                    <span className="label-text-alt text-error">*</span>
-                </label>
-                <input
-                    type="file"
-                    className="file-input file-input-bordered w-full"
-                    onChange={handleFileChange}
-                    accept="image/*,.pdf"
-                    multiple
-                />
-                <label className="label">
-                    <span className="label-text-alt">Accepted formats: Images and PDF files (max 5MB each)</span>
-                </label>
-
-                {/* Selected Files Preview */}
-                <div className="mt-4 space-y-2">
-                    {Array.from(selectedFiles.entries()).map(([name, file]) => (
-                        <div key={name} className="flex items-center justify-between p-2 bg-base-200 rounded-lg">
-                            <span className="truncate">{name}</span>
-                            <div className="flex gap-2">
-                                <div className="badge badge-primary">New</div>
-                                <button
-                                    type="button"
-                                    className="btn btn-ghost btn-xs text-error"
-                                    onClick={() => {
-                                        const updatedFiles = new Map(selectedFiles);
-                                        updatedFiles.delete(name);
-                                        setSelectedFiles(updatedFiles);
-                                    }}
-                                >
-                                    <Icon icon="heroicons:x-circle" className="h-4 w-4" />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                {/* Submit Button */}
+                <div className="mt-6">
+                    <button
+                        type="submit"
+                        className={`btn btn-primary w-full ${isSubmitting ? 'loading' : ''}`}
+                        disabled={isSubmitting || receipts.length === 0}
+                    >
+                        {isSubmitting ? 'Submitting...' : 'Submit Reimbursement Request'}
+                    </button>
                 </div>
-            </div>
+            </form>
 
-            {/* Submit Button */}
-            <div className="mt-6">
-                <button
-                    type="submit"
-                    className={`btn btn-primary w-full ${isSubmitting ? 'loading' : ''}`}
-                    disabled={isSubmitting}
-                >
-                    {isSubmitting ? 'Submitting...' : 'Submit Reimbursement Request'}
-                </button>
-            </div>
-
-            {/* File Preview Modal */}
-            {showPreview && (
+            {/* Receipt Form Modal */}
+            {showReceiptForm && (
                 <div className="modal modal-open">
-                    <div className="modal-box max-w-4xl">
-                        <FilePreview
-                            url={previewUrl}
-                            filename={previewFilename}
-                            isModal={true}
+                    <div className="modal-box max-w-5xl">
+                        <h3 className="font-bold text-lg mb-4">Add Receipt</h3>
+                        <ReceiptForm
+                            onSubmit={handleAddReceipt}
+                            onCancel={() => setShowReceiptForm(false)}
                         />
-                        <div className="modal-action">
-                            <button
-                                className="btn"
-                                onClick={() => setShowPreview(false)}
-                            >
-                                Close
-                            </button>
-                        </div>
                     </div>
                 </div>
             )}
-        </form>
+        </div>
     );
 } 

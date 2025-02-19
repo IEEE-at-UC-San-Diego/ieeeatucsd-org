@@ -1,0 +1,14 @@
+status:
+  - "submitted"
+  - "under_review"
+  - "approved"
+  - "rejected"
+  - "paid"
+  - "in_progress"
+
+department:
+  - "internal"
+  - "external"
+  - "projects"
+  - "events"
+  - "other"

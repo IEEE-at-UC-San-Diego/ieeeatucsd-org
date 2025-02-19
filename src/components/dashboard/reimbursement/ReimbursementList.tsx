@@ -16,32 +16,55 @@ interface ReimbursementRequest {
     title: string;
     total_amount: number;
     date_of_purchase: string;
-    business_purpose: string;
     payment_method: string;
-    status: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'paid';
-    expense_items: ExpenseItem[];
-    receipts: string[];
+    status: 'submitted' | 'under_review' | 'approved' | 'rejected' | 'paid' | 'in_progress';
     submitted_by: string;
-    submitted_at: string;
-    last_updated: string;
+    additional_info: string;
+    reciepts: string[];
+    department: 'internal' | 'external' | 'projects' | 'events' | 'other';
+    created: string;
+    updated: string;
+}
+
+interface ReceiptDetails {
+    id: string;
+    field: string;
+    created_by: string;
+    itemized_expenses: ExpenseItem[];
+    tax: number;
+    date: string;
+    location_name: string;
+    location_address: string;
+    notes: string;
+    audited_by: string[];
+    created: string;
+    updated: string;
 }
 
 const STATUS_COLORS = {
-    draft: 'badge-ghost',
     submitted: 'badge-primary',
     under_review: 'badge-warning',
     approved: 'badge-success',
     rejected: 'badge-error',
-    paid: 'badge-success'
+    paid: 'badge-success',
+    in_progress: 'badge-info'
 };
 
 const STATUS_LABELS = {
-    draft: 'Draft',
     submitted: 'Submitted',
     under_review: 'Under Review',
     approved: 'Approved',
     rejected: 'Rejected',
-    paid: 'Paid'
+    paid: 'Paid',
+    in_progress: 'In Progress'
+};
+
+const DEPARTMENT_LABELS = {
+    internal: 'Internal',
+    external: 'External',
+    projects: 'Projects',
+    events: 'Events',
+    other: 'Other'
 };
 
 export default function ReimbursementList() {
@@ -52,6 +75,7 @@ export default function ReimbursementList() {
     const [showPreview, setShowPreview] = useState(false);
     const [previewUrl, setPreviewUrl] = useState('');
     const [previewFilename, setPreviewFilename] = useState('');
+    const [selectedReceipt, setSelectedReceipt] = useState<ReceiptDetails | null>(null);
 
     const get = Get.getInstance();
     const auth = Authentication.getInstance();
@@ -83,14 +107,14 @@ export default function ReimbursementList() {
                 title: record.title,
                 total_amount: record.total_amount,
                 date_of_purchase: record.date_of_purchase,
-                business_purpose: record.business_purpose || '', // Add fallback since it might not exist in schema
                 payment_method: record.payment_method,
                 status: record.status,
-                expense_items: typeof record.expense_items === 'string' ? JSON.parse(record.expense_items) : record.expense_items,
-                receipts: record.receipts || [],
                 submitted_by: record.submitted_by,
-                submitted_at: record.created, // Use created field for submitted_at
-                last_updated: record.updated // Use updated field for last_updated
+                additional_info: record.additional_info || '',
+                reciepts: record.reciepts || [],
+                department: record.department,
+                created: record.created,
+                updated: record.updated
             })) as ReimbursementRequest[];
 
             setRequests(reimbursements);
@@ -102,11 +126,48 @@ export default function ReimbursementList() {
         }
     };
 
-    const handlePreviewFile = (request: ReimbursementRequest, filename: string) => {
-        const url = fileManager.getFileUrl('reimbursement', request.id, filename);
-        setPreviewUrl(url);
-        setPreviewFilename(filename);
-        setShowPreview(true);
+    const handlePreviewFile = async (request: ReimbursementRequest, receiptId: string) => {
+        try {
+            const pb = auth.getPocketBase();
+
+            // Get the receipt record using its ID
+            const receiptRecord = await pb.collection('reciepts').getOne(receiptId, {
+                $autoCancel: false
+            });
+
+            if (receiptRecord) {
+                // Parse the itemized expenses if it's a string
+                const itemizedExpenses = typeof receiptRecord.itemized_expenses === 'string'
+                    ? JSON.parse(receiptRecord.itemized_expenses)
+                    : receiptRecord.itemized_expenses;
+
+                setSelectedReceipt({
+                    id: receiptRecord.id,
+                    field: receiptRecord.field,
+                    created_by: receiptRecord.created_by,
+                    itemized_expenses: itemizedExpenses,
+                    tax: receiptRecord.tax,
+                    date: receiptRecord.date,
+                    location_name: receiptRecord.location_name,
+                    location_address: receiptRecord.location_address,
+                    notes: receiptRecord.notes || '',
+                    audited_by: receiptRecord.audited_by || [],
+                    created: receiptRecord.created,
+                    updated: receiptRecord.updated
+                });
+
+                // Get the file URL using the PocketBase URL and collection info
+                const url = `${pb.baseUrl}/api/files/reciepts/${receiptRecord.id}/${receiptRecord.field}`;
+                setPreviewUrl(url);
+                setPreviewFilename(receiptRecord.field);
+                setShowPreview(true);
+            } else {
+                throw new Error('Receipt not found');
+            }
+        } catch (error) {
+            console.error('Error loading receipt:', error);
+            alert('Failed to load receipt. Please try again.');
+        }
     };
 
     const formatDate = (dateString: string) => {
@@ -188,8 +249,14 @@ export default function ReimbursementList() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium">Status</label>
-                                    <div className={`badge ${STATUS_COLORS[selectedRequest.status]} mt-1`}>
+                                    <div className={`badge ${STATUS_COLORS[selectedRequest.status]} mt-1 block`}>
                                         {STATUS_LABELS[selectedRequest.status]}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium">Department</label>
+                                    <div className="badge badge-outline mt-1 block">
+                                        {DEPARTMENT_LABELS[selectedRequest.department]}
                                     </div>
                                 </div>
                                 <div>
@@ -206,46 +273,24 @@ export default function ReimbursementList() {
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="text-sm font-medium">Business Purpose</label>
-                                <p className="mt-1">{selectedRequest.business_purpose}</p>
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-medium">Expense Items</label>
-                                <div className="mt-2 space-y-2">
-                                    {selectedRequest.expense_items.map((item, index) => (
-                                        <div key={index} className="card bg-base-200 p-3">
-                                            <div className="grid grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="text-xs font-medium">Description</label>
-                                                    <p>{item.description}</p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs font-medium">Category</label>
-                                                    <p>{item.category}</p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-xs font-medium">Amount</label>
-                                                    <p>${item.amount.toFixed(2)}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                            {selectedRequest.additional_info && (
+                                <div>
+                                    <label className="text-sm font-medium">Additional Information</label>
+                                    <p className="mt-1">{selectedRequest.additional_info}</p>
                                 </div>
-                            </div>
+                            )}
 
                             <div>
                                 <label className="text-sm font-medium">Receipts</label>
                                 <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
-                                    {selectedRequest.receipts.map((filename) => (
+                                    {(selectedRequest.reciepts || []).map((receiptId, index) => (
                                         <button
-                                            key={filename}
+                                            key={receiptId || index}
                                             className="btn btn-outline btn-sm normal-case"
-                                            onClick={() => handlePreviewFile(selectedRequest, filename)}
+                                            onClick={() => handlePreviewFile(selectedRequest, receiptId)}
                                         >
                                             <Icon icon="heroicons:document" className="h-4 w-4 mr-2" />
-                                            {filename}
+                                            Receipt #{index + 1}
                                         </button>
                                     ))}
                                 </div>
@@ -256,11 +301,11 @@ export default function ReimbursementList() {
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
                                     <label className="font-medium">Submitted At</label>
-                                    <p className="mt-1">{formatDate(selectedRequest.submitted_at)}</p>
+                                    <p className="mt-1">{formatDate(selectedRequest.created)}</p>
                                 </div>
                                 <div>
                                     <label className="font-medium">Last Updated</label>
-                                    <p className="mt-1">{formatDate(selectedRequest.last_updated)}</p>
+                                    <p className="mt-1">{formatDate(selectedRequest.updated)}</p>
                                 </div>
                             </div>
                         </div>
@@ -278,18 +323,99 @@ export default function ReimbursementList() {
             )}
 
             {/* File Preview Modal */}
-            {showPreview && (
+            {showPreview && selectedReceipt && (
                 <div className="modal modal-open">
-                    <div className="modal-box max-w-4xl">
-                        <FilePreview
-                            url={previewUrl}
-                            filename={previewFilename}
-                            isModal={true}
-                        />
+                    <div className="modal-box max-w-7xl">
+                        <div className="grid grid-cols-5 gap-6">
+                            {/* Receipt Details */}
+                            <div className="col-span-2 space-y-4">
+                                <h3 className="font-bold text-lg">Receipt Details</h3>
+
+                                <div>
+                                    <label className="text-sm font-medium">Location</label>
+                                    <p className="mt-1">{selectedReceipt.location_name}</p>
+                                    <p className="text-sm text-base-content/70">{selectedReceipt.location_address}</p>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium">Date</label>
+                                    <p className="mt-1">{formatDate(selectedReceipt.date)}</p>
+                                </div>
+
+                                {selectedReceipt.notes && (
+                                    <div>
+                                        <label className="text-sm font-medium">Notes</label>
+                                        <p className="mt-1">{selectedReceipt.notes}</p>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="text-sm font-medium">Itemized Expenses</label>
+                                    <div className="mt-2 space-y-2">
+                                        {selectedReceipt.itemized_expenses.map((item, index) => (
+                                            <div key={index} className="card bg-base-200 p-3">
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div>
+                                                        <label className="text-xs font-medium">Description</label>
+                                                        <p>{item.description}</p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-medium">Category</label>
+                                                        <p>{item.category}</p>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-medium">Amount</label>
+                                                        <p>${item.amount.toFixed(2)}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium">Tax</label>
+                                        <p className="mt-1">${selectedReceipt.tax.toFixed(2)}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium">Total</label>
+                                        <p className="mt-1">${(selectedReceipt.itemized_expenses.reduce((sum, item) => sum + item.amount, 0) + selectedReceipt.tax).toFixed(2)}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* File Preview */}
+                            <div className="col-span-3 border-l border-base-300 pl-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-bold text-lg">Receipt Image</h3>
+                                    <a
+                                        href={previewUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn btn-sm btn-outline gap-2"
+                                    >
+                                        <Icon icon="heroicons:arrow-top-right-on-square" className="h-4 w-4" />
+                                        View Full Size
+                                    </a>
+                                </div>
+                                <div className="bg-base-200 rounded-lg p-4">
+                                    <FilePreview
+                                        url={previewUrl}
+                                        filename={previewFilename}
+                                        isModal={false}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="modal-action">
                             <button
                                 className="btn"
-                                onClick={() => setShowPreview(false)}
+                                onClick={() => {
+                                    setShowPreview(false);
+                                    setSelectedReceipt(null);
+                                }}
                             >
                                 Close
                             </button>
