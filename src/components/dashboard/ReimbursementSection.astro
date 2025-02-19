@@ -1,18 +1,56 @@
 ---
-import { Icon } from "astro-icon/components";
+import ReimbursementForm from "./reimbursement/ReimbursementForm";
+import ReimbursementList from "./reimbursement/ReimbursementList";
 ---
 
-<div id="" class="">
-    <div class="mb-6">
-        <h2 class="text-2xl font-bold">Reimbursement</h2>
-        <p class="opacity-70">Manage your reimbursement requests</p>
+<div class="space-y-6">
+  <div class="mb-6">
+    <h2 class="text-2xl font-bold">Reimbursement</h2>
+    <p class="opacity-70">Manage your reimbursement requests</p>
+  </div>
+
+  <div class="tabs tabs-boxed">
+    <button class="tab tab-active" data-tab="list">My Requests</button>
+    <button class="tab" data-tab="form">New Request</button>
+  </div>
+
+  <div id="reimbursementContent">
+    <div id="listTab" class="tab-content block">
+      <ReimbursementList client:load />
     </div>
-    <div
-        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
-    >
+    <div id="formTab" class="tab-content hidden">
+      <div class="card bg-base-100 shadow-xl border border-base-200">
         <div class="card-body">
-            <h3 class="card-title">Reimbursement Requests</h3>
-            <!-- Reimbursement content will go here -->
+          <ReimbursementForm client:load />
         </div>
+      </div>
     </div>
+  </div>
 </div>
+
+<script>
+  // Tab switching logic
+  const tabs = document.querySelectorAll(".tab");
+  const tabContents = document.querySelectorAll(".tab-content");
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const targetTab = tab.getAttribute("data-tab");
+
+      // Update tab states
+      tabs.forEach((t) => t.classList.remove("tab-active"));
+      tab.classList.add("tab-active");
+
+      // Update content visibility
+      tabContents.forEach((content) => {
+        if (content.id === `${targetTab}Tab`) {
+          content.classList.remove("hidden");
+          content.classList.add("block");
+        } else {
+          content.classList.remove("block");
+          content.classList.add("hidden");
+        }
+      });
+    });
+  });
+</script>
