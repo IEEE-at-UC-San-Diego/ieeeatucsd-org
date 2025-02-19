@@ -101,6 +101,13 @@ export class Authentication {
   }
 
   /**
+   * Get current user ID
+   */
+  public getUserId(): string | null {
+    return this.pb.authStore.model?.id || null;
+  }
+
+  /**
    * Subscribe to auth state changes
    * @param callback Function to call when auth state changes
    */

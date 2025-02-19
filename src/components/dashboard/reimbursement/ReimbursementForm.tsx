@@ -28,7 +28,7 @@ interface ReimbursementRequest {
     status: 'submitted' | 'under_review' | 'approved' | 'rejected' | 'paid' | 'in_progress';
     submitted_by?: string;
     additional_info: string;
-    reciepts: string[];
+    receipts: string[];
     department: 'internal' | 'external' | 'projects' | 'events' | 'other';
 }
 
@@ -64,7 +64,7 @@ export default function ReimbursementForm() {
         payment_method: '',
         status: 'submitted',
         additional_info: '',
-        reciepts: [],
+        receipts: [],
         department: 'internal'
     });
 
@@ -95,7 +95,7 @@ export default function ReimbursementForm() {
             formData.append('location_address', receiptData.location_address);
             formData.append('notes', receiptData.notes);
 
-            const response = await pb.collection('reciepts').create(formData);
+            const response = await pb.collection('receipts').create(formData);
 
             // Add receipt to state
             setReceipts(prev => [...prev, { ...receiptData, id: response.id }]);
@@ -105,7 +105,7 @@ export default function ReimbursementForm() {
             setRequest(prev => ({
                 ...prev,
                 total_amount: prev.total_amount + totalAmount,
-                reciepts: [...prev.reciepts, response.id]
+                receipts: [...prev.receipts, response.id]
             }));
 
             setShowReceiptForm(false);
@@ -152,7 +152,7 @@ export default function ReimbursementForm() {
             formData.append('status', 'submitted');
             formData.append('submitted_by', userId);
             formData.append('additional_info', request.additional_info);
-            formData.append('reciepts', JSON.stringify(request.reciepts));
+            formData.append('receipts', JSON.stringify(request.receipts));
             formData.append('department', request.department);
 
             await pb.collection('reimbursement').create(formData);
@@ -165,7 +165,7 @@ export default function ReimbursementForm() {
                 payment_method: '',
                 status: 'submitted',
                 additional_info: '',
-                reciepts: [],
+                receipts: [],
                 department: 'internal'
             });
             setReceipts([]);

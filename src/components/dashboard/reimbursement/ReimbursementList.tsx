@@ -20,7 +20,7 @@ interface ReimbursementRequest {
     status: 'submitted' | 'under_review' | 'approved' | 'rejected' | 'paid' | 'in_progress';
     submitted_by: string;
     additional_info: string;
-    reciepts: string[];
+    receipts: string[];
     department: 'internal' | 'external' | 'projects' | 'events' | 'other';
     created: string;
     updated: string;
@@ -111,7 +111,7 @@ export default function ReimbursementList() {
                 status: record.status,
                 submitted_by: record.submitted_by,
                 additional_info: record.additional_info || '',
-                reciepts: record.reciepts || [],
+                receipts: record.receipts || [],
                 department: record.department,
                 created: record.created,
                 updated: record.updated
@@ -131,7 +131,7 @@ export default function ReimbursementList() {
             const pb = auth.getPocketBase();
 
             // Get the receipt record using its ID
-            const receiptRecord = await pb.collection('reciepts').getOne(receiptId, {
+            const receiptRecord = await pb.collection('receipts').getOne(receiptId, {
                 $autoCancel: false
             });
 
@@ -157,7 +157,7 @@ export default function ReimbursementList() {
                 });
 
                 // Get the file URL using the PocketBase URL and collection info
-                const url = `${pb.baseUrl}/api/files/reciepts/${receiptRecord.id}/${receiptRecord.field}`;
+                const url = `${pb.baseUrl}/api/files/receipts/${receiptRecord.id}/${receiptRecord.field}`;
                 setPreviewUrl(url);
                 setPreviewFilename(receiptRecord.field);
                 setShowPreview(true);
@@ -283,7 +283,7 @@ export default function ReimbursementList() {
                             <div>
                                 <label className="text-sm font-medium">Receipts</label>
                                 <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
-                                    {(selectedRequest.reciepts || []).map((receiptId, index) => (
+                                    {(selectedRequest.receipts || []).map((receiptId, index) => (
                                         <button
                                             key={receiptId || index}
                                             className="btn btn-outline btn-sm normal-case"
