@@ -1,0 +1,323 @@
+---
+import { Authentication } from "../../scripts/pocketbase/Authentication";
+import { Update } from "../../scripts/pocketbase/Update";
+import { FileManager } from "../../scripts/pocketbase/FileManager";
+
+// Form sections
+import PRSection from "./Officer_EventRequestForm/PRSection";
+import EventDetailsSection from "./Officer_EventRequestForm/EventDetailsSection";
+import TAPSection from "./Officer_EventRequestForm/TAPSection";
+import ASFundingSection from "./Officer_EventRequestForm/ASFundingSection";
+
+const auth = Authentication.getInstance();
+const update = Update.getInstance();
+const fileManager = FileManager.getInstance();
+---
+
+<div class="w-full max-w-4xl mx-auto p-6">
+  <h1
+    class="text-3xl font-bold mb-8 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
+  >
+    Event Request Form
+  </h1>
+
+  <form id="eventRequestForm" class="space-y-8">
+    <div class="card bg-base-100/95 backdrop-blur-md shadow-lg">
+      <div class="card-body">
+        <h2 class="card-title text-xl">
+          Do you need graphics from our design team?
+        </h2>
+        <div class="space-y-4 mt-4">
+          <label class="label cursor-pointer justify-start gap-3">
+            <input
+              type="radio"
+              name="needsGraphics"
+              value="yes"
+              class="radio radio-primary"
+            />
+            <span class="label-text">Yes (Continue to PR Section)</span>
+          </label>
+          <label class="label cursor-pointer justify-start gap-3">
+            <input
+              type="radio"
+              name="needsGraphics"
+              value="no"
+              class="radio radio-primary"
+            />
+            <span class="label-text">No (Skip to Event Details)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div id="prSection" class="hidden">
+      <PRSection client:load />
+    </div>
+
+    <div id="eventDetailsSection">
+      <EventDetailsSection client:load />
+    </div>
+
+    <div id="tapSection">
+      <TAPSection
+        client:load
+        onDataChange={(data) => {
+          // This will be handled in the client-side script
+          document.dispatchEvent(
+            new CustomEvent("tap-section-change", {
+              detail: data,
+            }),
+          );
+        }}
+      />
+    </div>
+
+    <div id="asFundingSection" class="hidden">
+      <ASFundingSection client:load />
+    </div>
+
+    <div class="flex justify-end space-x-4 mt-8">
+      <button
+        type="button"
+        id="saveAsDraft"
+        class="btn btn-ghost hover:bg-base-200 gap-2"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"
+          ></path>
+        </svg>
+        Save as Draft
+      </button>
+      <button
+        type="submit"
+        class="btn btn-primary gap-2 shadow-md hover:shadow-lg transition-all duration-300"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"
+          ></path>
+        </svg>
+        Submit Request
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  import { Authentication } from "../../scripts/pocketbase/Authentication";
+  import { Update } from "../../scripts/pocketbase/Update";
+  import { FileManager } from "../../scripts/pocketbase/FileManager";
+
+  // Form visibility logic
+  const form = document.getElementById("eventRequestForm") as HTMLFormElement;
+  const prSection = document.getElementById("prSection");
+  const asFundingSection = document.getElementById("asFundingSection");
+  const needsGraphicsRadios = document.getElementsByName("needsGraphics");
+
+  // Debug log for initial state
+  console.log("Initial ASFundingSection state:", {
+    element: asFundingSection,
+    isHidden: asFundingSection?.classList.contains("hidden"),
+    display: asFundingSection?.style.display,
+  });
+
+  // Handle TAPSection changes
+  document.addEventListener("tap-section-change", (event: any) => {
+    const data = event.detail;
+    console.log("TAP section change event received:", data);
+
+    if (asFundingSection) {
+      console.log("Found ASFundingSection element");
+      if (data.as_funding_required) {
+        console.log("Showing AS Funding section");
+        asFundingSection.classList.remove("hidden");
+        asFundingSection.style.removeProperty("display");
+        // Force a reflow
+        void asFundingSection.offsetHeight;
+      } else {
+        console.log("Hiding AS Funding section");
+        asFundingSection.classList.add("hidden");
+        asFundingSection.style.display = "none";
+      }
+
+      // Log the state after change
+      console.log("ASFundingSection state after change:", {
+        isHidden: asFundingSection.classList.contains("hidden"),
+        display: asFundingSection.style.display,
+      });
+    } else {
+      console.error("ASFundingSection element not found");
+    }
+  });
+
+  // Show/hide PR section based on radio selection
+  needsGraphicsRadios.forEach((radio) => {
+    radio.addEventListener("change", (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.value === "yes" && prSection) {
+        prSection.classList.remove("hidden");
+      } else if (prSection) {
+        prSection.classList.add("hidden");
+      }
+    });
+  });
+
+  // Form submission handler
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    // Collect form data
+    const formData = new FormData(form);
+    const data: Record<string, any> = {};
+
+    // Convert FormData to a proper object with correct types
+    formData.forEach((value, key) => {
+      if (value instanceof File) {
+        // Skip file fields as they'll be handled separately
+        return;
+      }
+      data[key] = value;
+    });
+
+    try {
+      // Create event request record
+      const auth = Authentication.getInstance();
+      const update = Update.getInstance();
+
+      // Add user ID to the request
+      const userId = auth.getUserId();
+      if (userId) {
+        data.requested_user = userId;
+      }
+
+      // Create the record
+      const record = await update.updateFields(
+        "event_request",
+        data.id || "",
+        data,
+      );
+
+      // Handle file uploads if any
+      const fileManager = FileManager.getInstance();
+      const fileFields = ["room_booking", "invoice", "other_logos"];
+
+      for (const field of fileFields) {
+        const files = formData
+          .getAll(field)
+          .filter((f): f is File => f instanceof File);
+        if (files.length > 0) {
+          await fileManager.uploadFiles(
+            "event_request",
+            record.id,
+            field,
+            files,
+          );
+        }
+      }
+
+      // Show success message using a toast
+      const toast = document.createElement("div");
+      toast.className = "toast toast-end";
+      toast.innerHTML = `
+        <div class="alert alert-success">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Event request submitted successfully!</span>
+        </div>
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+
+      // Redirect to events management page
+      window.location.href = "/dashboard/events";
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      // Show error toast
+      const toast = document.createElement("div");
+      toast.className = "toast toast-end";
+      toast.innerHTML = `
+        <div class="alert alert-error">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span>Error submitting form. Please try again.</span>
+        </div>
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+  });
+
+  // Save as draft handler
+  document
+    .getElementById("saveAsDraft")
+    ?.addEventListener("click", async () => {
+      // Similar to submit but mark as draft
+      const formData = new FormData(form);
+      const data: Record<string, any> = {};
+
+      // Convert FormData to a proper object with correct types
+      formData.forEach((value, key) => {
+        if (value instanceof File) {
+          // Skip file fields as they'll be handled separately
+          return;
+        }
+        data[key] = value;
+      });
+
+      data.status = "draft";
+
+      try {
+        const auth = Authentication.getInstance();
+        const update = Update.getInstance();
+
+        const userId = auth.getUserId();
+        if (userId) {
+          data.requested_user = userId;
+        }
+
+        await update.updateFields("event_request", data.id || "", data);
+
+        // Show success toast
+        const toast = document.createElement("div");
+        toast.className = "toast toast-end";
+        toast.innerHTML = `
+        <div class="alert alert-success">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Draft saved successfully!</span>
+        </div>
+      `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      } catch (error) {
+        console.error("Error saving draft:", error);
+        // Show error toast
+        const toast = document.createElement("div");
+        toast.className = "toast toast-end";
+        toast.innerHTML = `
+        <div class="alert alert-error">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span>Error saving draft. Please try again.</span>
+        </div>
+      `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      }
+    });
+</script>

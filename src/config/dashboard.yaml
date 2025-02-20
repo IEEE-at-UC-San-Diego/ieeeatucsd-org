@@ -36,6 +36,13 @@ sections:
     component: "Officer_ReimbursementManagement"
     class: "text-info hover:text-info-focus"
 
+  eventRequestForm:
+    title: "Event Request Form"
+    icon: "heroicons:document-text"
+    role: "general"
+    component: "Officer_EventRequestForm"
+    class: "text-info hover:text-info-focus"
+
   # Sponsor Menu
   sponsorDashboard:
     title: "Sponsor Dashboard"
@@ -74,7 +81,7 @@ categories:
 
   officer:
     title: "Officer Menu"
-    sections: ["eventManagement"]
+    sections: ["eventManagement", "eventRequestForm"]
     role: "general"
 
   executive:
