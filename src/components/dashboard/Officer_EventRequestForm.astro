@@ -59,21 +59,9 @@ const fileManager = FileManager.getInstance();
     </div>
 
     <div id="tapSection">
-      <TAPSection
-        client:load
-        onDataChange={(data) => {
-          // This will be handled in the client-side script
-          document.dispatchEvent(
-            new CustomEvent("tap-section-change", {
-              detail: data,
-            }),
-          );
-        }}
-      />
-    </div>
-
-    <div id="asFundingSection" class="hidden">
-      <ASFundingSection client:load />
+      <TAPSection client:load>
+        <ASFundingSection client:load />
+      </TAPSection>
     </div>
 
     <div class="flex justify-end space-x-4 mt-8">
@@ -122,44 +110,7 @@ const fileManager = FileManager.getInstance();
   // Form visibility logic
   const form = document.getElementById("eventRequestForm") as HTMLFormElement;
   const prSection = document.getElementById("prSection");
-  const asFundingSection = document.getElementById("asFundingSection");
   const needsGraphicsRadios = document.getElementsByName("needsGraphics");
-
-  // Debug log for initial state
-  console.log("Initial ASFundingSection state:", {
-    element: asFundingSection,
-    isHidden: asFundingSection?.classList.contains("hidden"),
-    display: asFundingSection?.style.display,
-  });
-
-  // Handle TAPSection changes
-  document.addEventListener("tap-section-change", (event: any) => {
-    const data = event.detail;
-    console.log("TAP section change event received:", data);
-
-    if (asFundingSection) {
-      console.log("Found ASFundingSection element");
-      if (data.as_funding_required) {
-        console.log("Showing AS Funding section");
-        asFundingSection.classList.remove("hidden");
-        asFundingSection.style.removeProperty("display");
-        // Force a reflow
-        void asFundingSection.offsetHeight;
-      } else {
-        console.log("Hiding AS Funding section");
-        asFundingSection.classList.add("hidden");
-        asFundingSection.style.display = "none";
-      }
-
-      // Log the state after change
-      console.log("ASFundingSection state after change:", {
-        isHidden: asFundingSection.classList.contains("hidden"),
-        display: asFundingSection.style.display,
-      });
-    } else {
-      console.error("ASFundingSection element not found");
-    }
-  });
 
   // Show/hide PR section based on radio selection
   needsGraphicsRadios.forEach((radio) => {
