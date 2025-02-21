@@ -51,10 +51,10 @@ export const InfoCard: React.FC<InfoCardProps> = ({
             className={`alert ${typeStyles[type]} shadow-sm ${className}`}
         >
             {icon || defaultIcons[type]}
-            <div className="text-sm space-y-2">
-                <p className="font-medium">{title}</p>
+            <div className="text-sm space-y-2 text-white">
+                <p className="font-medium text-white">{title}</p>
                 <motion.ul
-                    className="space-y-1 ml-1"
+                    className="space-y-1 ml-1 text-white"
                     variants={listVariants}
                     initial="hidden"
                     animate="show"
@@ -63,9 +63,9 @@ export const InfoCard: React.FC<InfoCardProps> = ({
                         <motion.li
                             key={index}
                             variants={itemVariants}
-                            className="flex items-start gap-2"
+                            className="flex items-start gap-2 text-white"
                         >
-                            <span className="text-base leading-6">•</span>
+                            <span className="text-base leading-6 text-white">•</span>
                             <span>{item}</span>
                         </motion.li>
                     ))}
