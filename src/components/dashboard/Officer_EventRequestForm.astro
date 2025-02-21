@@ -2,6 +2,7 @@
 import { Authentication } from "../../scripts/pocketbase/Authentication";
 import { Update } from "../../scripts/pocketbase/Update";
 import { FileManager } from "../../scripts/pocketbase/FileManager";
+import { Get } from "../../scripts/pocketbase/Get";
 
 // Form sections
 import PRSection from "./Officer_EventRequestForm/PRSection";
@@ -9,9 +10,48 @@ import EventDetailsSection from "./Officer_EventRequestForm/EventDetailsSection"
 import TAPSection from "./Officer_EventRequestForm/TAPSection";
 import ASFundingSection from "./Officer_EventRequestForm/ASFundingSection";
 
+interface EventRequest {
+  id: string;
+  created: string;
+  event_name: string;
+  event_description: string;
+  location: string;
+  start_date: string;
+  end_date: string;
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
+  has_food: boolean;
+  [key: string]: any; // For other fields we might need
+}
+
+interface ListResponse<T> {
+  page: number;
+  perPage: number;
+  totalItems: number;
+  totalPages: number;
+  items: T[];
+}
+
 const auth = Authentication.getInstance();
 const update = Update.getInstance();
 const fileManager = FileManager.getInstance();
+const get = Get.getInstance();
+
+// Get user's submitted event requests
+let userEventRequests: ListResponse<EventRequest> = {
+  page: 1,
+  perPage: 50,
+  totalItems: 0,
+  totalPages: 0,
+  items: []
+};
+
+if (auth.isAuthenticated()) {
+  try {
+    userEventRequests = await get.getList<EventRequest>("event_request", 1, 50, `requested_user = "${auth.getUserId()}"`, "-created");
+  } catch (error) {
+    console.error("Failed to fetch event requests:", error);
+  }
+}
 ---
 
 <div class="w-full max-w-4xl mx-auto p-6">
@@ -21,91 +61,253 @@ const fileManager = FileManager.getInstance();
     Event Request Form
   </h1>
 
-  <form id="eventRequestForm" class="space-y-8">
-    <div class="card bg-base-100/95 backdrop-blur-md shadow-lg">
-      <div class="card-body">
-        <h2 class="card-title text-xl">
-          Do you need graphics from our design team?
-        </h2>
-        <div class="space-y-4 mt-4">
-          <label class="label cursor-pointer justify-start gap-3">
-            <input
-              type="radio"
-              name="needsGraphics"
-              value="yes"
-              class="radio radio-primary"
-            />
-            <span class="label-text">Yes (Continue to PR Section)</span>
-          </label>
-          <label class="label cursor-pointer justify-start gap-3">
-            <input
-              type="radio"
-              name="needsGraphics"
-              value="no"
-              class="radio radio-primary"
-            />
-            <span class="label-text">No (Skip to Event Details)</span>
-          </label>
+  <div class="tabs-container">
+    <!-- Tab Navigation -->
+    <div class="tabs tabs-boxed bg-base-200/50 backdrop-blur-sm p-1 rounded-lg mb-6">
+      <input type="radio" name="form_tabs" id="new-request-tab" class="tab-toggle" checked />
+      <input type="radio" name="form_tabs" id="my-requests-tab" class="tab-toggle" />
+      
+      <div class="w-full flex">
+        <label for="new-request-tab" class="tab flex-1 tab-lg transition-all duration-200">
+          <div class="flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+            </svg>
+            New Request
+          </div>
+        </label>
+        <label for="my-requests-tab" class="tab flex-1 tab-lg transition-all duration-200">
+          <div class="flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+              <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
+            </svg>
+            My Requests
+            {userEventRequests.items.length > 0 && (
+              <span class="badge badge-primary badge-sm">{userEventRequests.items.length}</span>
+            )}
+          </div>
+        </label>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="tab-panels mt-6">
+        <div class="tab-panel" id="new-request-panel">
+          <form id="eventRequestForm" class="space-y-8">
+            <div class="card bg-base-100/95 backdrop-blur-md shadow-lg">
+              <div class="card-body">
+                <h2 class="card-title text-xl">
+                  Do you need graphics from our design team?
+                </h2>
+                <div class="space-y-4 mt-4">
+                  <label class="label cursor-pointer justify-start gap-3">
+                    <input
+                      type="radio"
+                      name="needsGraphics"
+                      value="yes"
+                      class="radio radio-primary"
+                    />
+                    <span class="label-text">Yes (Continue to PR Section)</span>
+                  </label>
+                  <label class="label cursor-pointer justify-start gap-3">
+                    <input
+                      type="radio"
+                      name="needsGraphics"
+                      value="no"
+                      class="radio radio-primary"
+                    />
+                    <span class="label-text">No (Skip to Event Details)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div id="prSection" class="hidden">
+              <PRSection client:load />
+            </div>
+
+            <div id="eventDetailsSection">
+              <EventDetailsSection client:load />
+            </div>
+
+            <div id="tapSection">
+              <TAPSection client:load>
+                <ASFundingSection client:load />
+              </TAPSection>
+            </div>
+
+            <div class="flex justify-end space-x-4 mt-8">
+              <button
+                type="button"
+                id="saveAsDraft"
+                class="btn btn-ghost hover:bg-base-200 gap-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"
+                  ></path>
+                </svg>
+                Save as Draft
+              </button>
+              <button
+                type="submit"
+                class="btn btn-primary gap-2 shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"
+                  ></path>
+                </svg>
+                Submit Request
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="tab-panel hidden" id="my-requests-panel">
+          <div class="space-y-4">
+            {userEventRequests.items.length === 0 ? (
+              <div class="text-center py-8 text-base-content/70">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-12 w-12 mx-auto mb-4 opacity-50"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v7h-2l-1 2H8l-1-2H5V5z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                <p>No event requests found</p>
+              </div>
+            ) : (
+              <div class="grid gap-4">
+                {userEventRequests.items.map((request) => (
+                  <div class="card bg-base-100/95 backdrop-blur-md shadow-lg">
+                    <div class="card-body">
+                      <h3 class="card-title text-lg">
+                        {request.event_name || "Untitled Event"}
+                        {request.status === "draft" && (
+                          <span class="badge badge-outline">Draft</span>
+                        )}
+                        {request.status === "pending" && (
+                          <span class="badge badge-warning">Pending</span>
+                        )}
+                        {request.status === "approved" && (
+                          <span class="badge badge-success">Approved</span>
+                        )}
+                        {request.status === "rejected" && (
+                          <span class="badge badge-error">Rejected</span>
+                        )}
+                      </h3>
+                      <p class="text-sm opacity-70">
+                        Submitted: {new Date(request.created).toLocaleDateString()}
+                      </p>
+                      <div class="flex gap-2 mt-4">
+                        <button class="btn btn-sm btn-outline" onclick=`editRequest('${request.id}')`>
+                          Edit
+                        </button>
+                        <button class="btn btn-sm btn-ghost" onclick=`viewRequest('${request.id}')`>
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
-
-    <div id="prSection" class="hidden">
-      <PRSection client:load />
-    </div>
-
-    <div id="eventDetailsSection">
-      <EventDetailsSection client:load />
-    </div>
-
-    <div id="tapSection">
-      <TAPSection client:load>
-        <ASFundingSection client:load />
-      </TAPSection>
-    </div>
-
-    <div class="flex justify-end space-x-4 mt-8">
-      <button
-        type="button"
-        id="saveAsDraft"
-        class="btn btn-ghost hover:bg-base-200 gap-2"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-5 w-5"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"
-          ></path>
-        </svg>
-        Save as Draft
-      </button>
-      <button
-        type="submit"
-        class="btn btn-primary gap-2 shadow-md hover:shadow-lg transition-all duration-300"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-5 w-5"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"
-          ></path>
-        </svg>
-        Submit Request
-      </button>
-    </div>
-  </form>
+  </div>
 </div>
+
+<style>
+  /* Hide radio inputs but keep them functional */
+  .tab-toggle {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Style tabs */
+  .tab {
+    @apply text-base-content/70 hover:text-base-content;
+  }
+
+  /* Active tab styles */
+  #new-request-tab:checked ~ .w-full label[for="new-request-tab"],
+  #my-requests-tab:checked ~ .w-full label[for="my-requests-tab"] {
+    @apply bg-base-100 text-primary tab-active shadow-sm;
+  }
+
+  /* Show/hide panels based on radio selection */
+  #new-request-tab:checked ~ .tab-panels #new-request-panel {
+    display: block;
+  }
+
+  #my-requests-tab:checked ~ .tab-panels #my-requests-panel {
+    display: block;
+  }
+
+  .tab-panel {
+    display: none;
+  }
+
+  .tab-panels {
+    min-height: 300px;
+  }
+
+  /* Smooth transitions */
+  .tab {
+    transition: all 0.2s ease-in-out;
+  }
+
+  .badge {
+    transition: all 0.2s ease-in-out;
+  }
+</style>
 
 <script>
   import { Authentication } from "../../scripts/pocketbase/Authentication";
   import { Update } from "../../scripts/pocketbase/Update";
   import { FileManager } from "../../scripts/pocketbase/FileManager";
+  import { Get } from "../../scripts/pocketbase/Get";
+
+  // Add TypeScript interfaces
+  interface EventRequest {
+    id: string;
+    created: string;
+    event_name: string;
+    event_description: string;
+    location: string;
+    start_date: string;
+    end_date: string;
+    status: 'draft' | 'pending' | 'approved' | 'rejected';
+    has_food: boolean;
+    [key: string]: any; // For other fields we might need
+  }
+
+  // Extend Window interface
+  declare global {
+    interface Window {
+      editRequest: (requestId: string) => void;
+      viewRequest: (requestId: string) => void;
+    }
+  }
 
   // Form visibility logic
   const form = document.getElementById("eventRequestForm") as HTMLFormElement;
@@ -271,4 +473,90 @@ const fileManager = FileManager.getInstance();
         setTimeout(() => toast.remove(), 3000);
       }
     });
+
+  // Remove the old tab switching logic and add new event listeners for the radio buttons
+  const tabToggles = document.querySelectorAll('.tab-toggle');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+
+  tabToggles.forEach(toggle => {
+    toggle.addEventListener('change', (e) => {
+      const target = e.target as HTMLInputElement;
+      const panelId = target.id.replace('-tab', '-panel');
+      
+      // Hide all panels
+      tabPanels.forEach(panel => {
+        panel.classList.add('hidden');
+      });
+      
+      // Show selected panel
+      const selectedPanel = document.getElementById(panelId);
+      if (selectedPanel) {
+        selectedPanel.classList.remove('hidden');
+      }
+    });
+  });
+
+  // Edit request handler
+  window.editRequest = (requestId: string) => {
+    // Load the request data into the form
+    const get = Get.getInstance();
+    get.getOne<EventRequest>("event_request", requestId)
+      .then((request: EventRequest) => {
+        // Populate form fields with request data
+        const form = document.getElementById('eventRequestForm');
+        if (form) {
+          for (const [key, value] of Object.entries(request)) {
+            const input = form.querySelector(`[name="${key}"]`) as HTMLInputElement | null;
+            if (input) {
+              input.value = value;
+            }
+          }
+          
+          // Switch to the form tab
+          const newRequestTab = document.querySelector('[data-tab="new-request"]') as HTMLElement;
+          if (newRequestTab) {
+            newRequestTab.click();
+          }
+        }
+      })
+      .catch((error: Error) => {
+        console.error("Failed to load request:", error);
+        alert("Failed to load request. Please try again.");
+      });
+  };
+
+  // View request handler
+  window.viewRequest = (requestId: string) => {
+    // Open a modal with request details
+    const get = Get.getInstance();
+    get.getOne<EventRequest>("event_request", requestId)
+      .then((request: EventRequest) => {
+        const modal = document.createElement('dialog');
+        modal.className = 'modal';
+        modal.innerHTML = `
+          <div class="modal-box">
+            <h3 class="font-bold text-lg">${request.event_name || "Untitled Event"}</h3>
+            <div class="py-4 space-y-2">
+              <p><strong>Status:</strong> ${request.status}</p>
+              <p><strong>Description:</strong> ${request.event_description || "No description"}</p>
+              <p><strong>Location:</strong> ${request.location || "No location"}</p>
+              <p><strong>Start Date:</strong> ${new Date(request.start_date).toLocaleString()}</p>
+              <p><strong>End Date:</strong> ${new Date(request.end_date).toLocaleString()}</p>
+              ${request.has_food ? '<p><strong>Food:</strong> Yes</p>' : ''}
+            </div>
+            <div class="modal-action">
+              <form method="dialog">
+                <button class="btn">Close</button>
+              </form>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        modal.showModal();
+      })
+      .catch((error: Error) => {
+        console.error("Failed to load request:", error);
+        alert("Failed to load request details. Please try again.");
+      });
+  };
 </script>
