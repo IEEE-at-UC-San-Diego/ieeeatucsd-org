@@ -3,9 +3,8 @@ import { Authentication } from "../../scripts/pocketbase/Authentication";
 import { Update } from "../../scripts/pocketbase/Update";
 import { FileManager } from "../../scripts/pocketbase/FileManager";
 import { Get } from "../../scripts/pocketbase/Get";
-import { toast } from "react-hot-toast";
-import Toast from "./universal/Toast";
-import { Icon } from "@iconify/react";
+import { toast, Toaster } from "react-hot-toast";
+
 
 // Form sections
 import PRSection from "./Officer_EventRequestForm/PRSection";
@@ -58,7 +57,7 @@ if (auth.isAuthenticated()) {
 ---
 
 <div class="w-full max-w-4xl mx-auto p-6">
-  <Toast client:load />
+  <toast client:load />
   <h1
     class="text-3xl font-bold mb-8 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
   >
@@ -291,7 +290,6 @@ if (auth.isAuthenticated()) {
   import { FileManager } from "../../scripts/pocketbase/FileManager";
   import { Get } from "../../scripts/pocketbase/Get";
   import { toast } from "react-hot-toast";
-  import { showLoadingToast, showSuccessToast, showErrorToast } from "./Officer_EventRequestForm/ToastNotifications";
 
   // Add TypeScript interfaces
   interface EventRequest {
@@ -346,7 +344,7 @@ if (auth.isAuthenticated()) {
       }
 
       // Show loading toast
-      const loadingToastId = toast.custom(showLoadingToast, { duration: 0 });
+      const loadingToastId = toast.loading('Submitting event request...');
 
       // Get graphics need value
       const needsGraphics = form.querySelector<HTMLInputElement>('input[name="needsGraphics"]:checked')?.value === "yes";
@@ -421,19 +419,15 @@ if (auth.isAuthenticated()) {
         }
       }
 
-      // Dismiss loading toast
+      // Dismiss loading toast and show success
       toast.dismiss(loadingToastId);
-
-      // Show success toast
-      toast.custom(() => showSuccessToast('Event request submitted successfully!'));
+      toast.success('Event request submitted successfully!');
 
       // Reset form
       form.reset();
     } catch (error) {
       console.error("Error submitting form:", error);
-      
-      // Show error toast
-      toast.custom(() => showErrorToast('Failed to submit event request. Please try again.'));
+      toast.error('Failed to submit event request. Please try again.');
     }
   });
 
@@ -465,13 +459,10 @@ if (auth.isAuthenticated()) {
         }
 
         await update.updateFields("event_request", data.id || "", data);
-
-        // Show success toast
-        toast.custom(() => showSuccessToast('Draft saved successfully!'));
+        toast.success('Draft saved successfully!');
       } catch (error) {
         console.error("Error saving draft:", error);
-        // Show error toast
-        toast.custom(() => showErrorToast('Error saving draft. Please try again.'));
+        toast.error('Error saving draft. Please try again.');
       }
     });
 
@@ -522,7 +513,7 @@ if (auth.isAuthenticated()) {
       })
       .catch((error: Error) => {
         console.error("Failed to load request:", error);
-        alert("Failed to load request. Please try again.");
+        toast.error("Failed to load request. Please try again.");
       });
   };
 
@@ -557,7 +548,7 @@ if (auth.isAuthenticated()) {
       })
       .catch((error: Error) => {
         console.error("Failed to load request:", error);
-        alert("Failed to load request details. Please try again.");
+        toast.error("Failed to load request details. Please try again.");
       });
   };
 </script>
