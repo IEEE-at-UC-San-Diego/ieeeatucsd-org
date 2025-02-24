@@ -6,7 +6,6 @@ import Tooltip from './Tooltip';
 import { tooltips, infoNotes } from './tooltips';
 import { Icon } from '@iconify/react';
 import { FileManager } from '../../../scripts/pocketbase/FileManager';
-import Toast from '../universal/Toast';
 import type { ASFundingSectionProps, InvoiceItem } from './ASFundingSection';
 
 interface TAPSectionProps {
