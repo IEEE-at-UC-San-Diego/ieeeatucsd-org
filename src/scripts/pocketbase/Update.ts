@@ -43,6 +43,34 @@ export class Update {
   }
 
   /**
+   * Create a new record
+   * @param collectionName The name of the collection
+   * @param data The data for the new record
+   * @returns The created record
+   */
+  public async create<T = any>(
+    collectionName: string,
+    data: Record<string, any>,
+  ): Promise<T> {
+    if (!this.auth.isAuthenticated()) {
+      throw new Error("User must be authenticated to create records");
+    }
+
+    try {
+      this.auth.setUpdating(true);
+      const pb = this.auth.getPocketBase();
+      const convertedData = convertLocalToUTC(data);
+      const result = await pb.collection(collectionName).create<T>(convertedData);
+      return result;
+    } catch (err) {
+      console.error(`Failed to create record in ${collectionName}:`, err);
+      throw err;
+    } finally {
+      this.auth.setUpdating(false);
+    }
+  }
+
+  /**
    * Update a single field in a record
    * @param collectionName The name of the collection
    * @param recordId The ID of the record to update
@@ -97,6 +125,12 @@ export class Update {
       this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
       const convertedUpdates = convertLocalToUTC(updates);
+      
+      // If recordId is empty, create a new record instead of updating
+      if (!recordId) {
+        return this.create<T>(collectionName, convertedUpdates);
+      }
+      
       const result = await pb
         .collection(collectionName)
         .update<T>(recordId, convertedUpdates);

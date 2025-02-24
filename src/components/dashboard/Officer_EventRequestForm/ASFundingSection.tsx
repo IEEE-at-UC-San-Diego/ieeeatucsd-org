@@ -6,7 +6,7 @@ import Tooltip from './Tooltip';
 import { tooltips, infoNotes } from './tooltips';
 import { Icon } from '@iconify/react';
 
-interface InvoiceItem {
+export interface InvoiceItem {
     quantity: number;
     item_name: string;
     unit_cost: number;
@@ -20,13 +20,14 @@ interface InvoiceData {
     vendor: string;
 }
 
-interface ASFundingSectionProps {
+export interface ASFundingSectionProps {
     onDataChange?: (data: any) => void;
+    onItemizedItemsUpdate?: (items: InvoiceItem[]) => void;
 }
 
-const ASFundingSection: React.FC<ASFundingSectionProps> = ({ onDataChange }) => {
+const ASFundingSection: React.FC<ASFundingSectionProps> = ({ onDataChange, onItemizedItemsUpdate }) => {
     const [invoiceData, setInvoiceData] = useState<InvoiceData>({
-        items: [{ quantity: 0, item_name: '', unit_cost: 0 }],
+        items: [{ quantity: 1, item_name: '', unit_cost: 0 }],
         tax: 0,
         tip: 0,
         total: 0,
@@ -39,83 +40,99 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ onDataChange }) => 
 
         // Calculate new total
         const itemsTotal = newItems.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
-        const newTotal = itemsTotal + invoiceData.tax + invoiceData.tip;
+        const newTotal = itemsTotal + (invoiceData.tax || 0) + (invoiceData.tip || 0);
 
-        setInvoiceData(prev => ({
-            ...prev,
+        const newInvoiceData = {
+            ...invoiceData,
             items: newItems,
             total: newTotal
-        }));
+        };
 
-        // Notify parent with JSON string
+        setInvoiceData(newInvoiceData);
+        // Send the entire invoice data object
         onDataChange?.({
-            itemized_invoice: JSON.stringify({
-                ...invoiceData,
-                items: newItems,
-                total: newTotal
-            })
+            itemized_invoice: newInvoiceData,
+            total_amount: newTotal
         });
+        // Update parent with itemized items and invoice data
+        onItemizedItemsUpdate?.(newItems);
+        document.querySelector<HTMLInputElement>('input[name="itemized_invoice"]')?.setAttribute('value', JSON.stringify(newInvoiceData));
     };
 
     const addItem = () => {
-        setInvoiceData(prev => ({
-            ...prev,
-            items: [...prev.items, { quantity: 0, item_name: '', unit_cost: 0 }]
-        }));
-        toast('New item added', { icon: '➕' });
+        const newItems = [...invoiceData.items, { quantity: 1, item_name: '', unit_cost: 0 }];
+        const itemsTotal = newItems.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
+        const newTotal = itemsTotal + (invoiceData.tax || 0) + (invoiceData.tip || 0);
+
+        const newInvoiceData = {
+            ...invoiceData,
+            items: newItems,
+            total: newTotal
+        };
+
+        setInvoiceData(newInvoiceData);
+        onDataChange?.({
+            itemized_invoice: newInvoiceData,
+            total_amount: newTotal
+        });
+        onItemizedItemsUpdate?.(newItems);
+        document.querySelector<HTMLInputElement>('input[name="itemized_invoice"]')?.setAttribute('value', JSON.stringify(newInvoiceData));
+        toast('New item added');
     };
 
     const removeItem = (index: number) => {
         if (invoiceData.items.length > 1) {
             const newItems = invoiceData.items.filter((_, i) => i !== index);
-
-            // Recalculate total
             const itemsTotal = newItems.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
-            const newTotal = itemsTotal + invoiceData.tax + invoiceData.tip;
+            const newTotal = itemsTotal + (invoiceData.tax || 0) + (invoiceData.tip || 0);
 
-            setInvoiceData(prev => ({
-                ...prev,
+            const newInvoiceData = {
+                ...invoiceData,
                 items: newItems,
                 total: newTotal
-            }));
+            };
 
-            // Notify parent with JSON string
+            setInvoiceData(newInvoiceData);
             onDataChange?.({
-                itemized_invoice: JSON.stringify({
-                    ...invoiceData,
-                    items: newItems,
-                    total: newTotal
-                })
+                itemized_invoice: newInvoiceData,
+                total_amount: newTotal
             });
-            toast('Item removed', { icon: '🗑️' });
+            onItemizedItemsUpdate?.(newItems);
+            document.querySelector<HTMLInputElement>('input[name="itemized_invoice"]')?.setAttribute('value', JSON.stringify(newInvoiceData));
+            toast('Item removed');
         }
     };
 
     const handleExtraChange = (field: 'tax' | 'tip' | 'vendor', value: string | number) => {
         const numValue = field !== 'vendor' ? Number(value) : value;
-
-        // Calculate new total for tax/tip changes
         const itemsTotal = invoiceData.items.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0);
+
         const newTotal = field === 'tax' ?
-            itemsTotal + Number(value) + invoiceData.tip :
+            itemsTotal + Number(value) + (invoiceData.tip || 0) :
             field === 'tip' ?
-                itemsTotal + invoiceData.tax + Number(value) :
-                itemsTotal + invoiceData.tax + invoiceData.tip;
+                itemsTotal + (invoiceData.tax || 0) + Number(value) :
+                itemsTotal + (invoiceData.tax || 0) + (invoiceData.tip || 0);
 
-        setInvoiceData(prev => ({
-            ...prev,
+        const newInvoiceData = {
+            ...invoiceData,
             [field]: numValue,
-            total: field !== 'vendor' ? newTotal : prev.total
-        }));
+            total: field !== 'vendor' ? newTotal : invoiceData.total
+        };
 
-        // Notify parent with JSON string
+        setInvoiceData(newInvoiceData);
         onDataChange?.({
-            itemized_invoice: JSON.stringify({
-                ...invoiceData,
-                [field]: numValue,
-                total: field !== 'vendor' ? newTotal : invoiceData.total
-            })
+            itemized_invoice: newInvoiceData,
+            total_amount: newTotal
         });
+        document.querySelector<HTMLInputElement>('input[name="itemized_invoice"]')?.setAttribute('value', JSON.stringify(newInvoiceData));
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            onDataChange?.({ invoice: file });
+            toast('Invoice file uploaded');
+        }
     };
 
     return (
@@ -438,14 +455,9 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ onDataChange }) => 
                             <input
                                 type="file"
                                 name="invoice"
+                                className="file-input file-input-bordered file-input-primary w-full"
+                                onChange={handleFileUpload}
                                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                className="file-input file-input-bordered w-full pl-12 transition-all duration-300 focus:ring-2 focus:ring-primary/20"
-                                onChange={(e) => {
-                                    onDataChange?.({ invoice: e.target.files?.[0] });
-                                    if (e.target.files?.[0]) {
-                                        toast('Invoice file uploaded', { icon: '📄' });
-                                    }
-                                }}
                                 required
                             />
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

@@ -5,11 +5,22 @@ import InfoCard from './InfoCard';
 import Tooltip from './Tooltip';
 import { tooltips, infoNotes } from './tooltips';
 import { Icon } from '@iconify/react';
+import { FileManager } from '../../../scripts/pocketbase/FileManager';
+import Toast from '../universal/Toast';
+import type { ASFundingSectionProps, InvoiceItem } from './ASFundingSection';
 
 interface TAPSectionProps {
     onDataChange?: (data: any) => void;
     onASFundingChange?: (enabled: boolean) => void;
-    children?: React.ReactNode;
+    children?: React.ReactElement<ASFundingSectionProps>;
+}
+
+interface TAPData {
+    expected_attendance: number;
+    room_booking: string | File;
+    as_funding_required: boolean;
+    food_drinks_being_served: boolean;
+    itemized_items?: InvoiceItem[];
 }
 
 const TAPSection: React.FC<TAPSectionProps> = ({ onDataChange, onASFundingChange, children }) => {
@@ -17,14 +28,19 @@ const TAPSection: React.FC<TAPSectionProps> = ({ onDataChange, onASFundingChange
     const [roomBooking, setRoomBooking] = useState<string>('');
     const [needsASFunding, setNeedsASFunding] = useState<boolean>(false);
     const [needsFoodDrinks, setNeedsFoodDrinks] = useState<boolean>(false);
+    const [roomBookingFile, setRoomBookingFile] = useState<File | null>(null);
+    const [itemizedItems, setItemizedItems] = useState<InvoiceItem[]>([]);
+    const fileManager = FileManager.getInstance();
 
     const handleAttendanceChange = (value: number) => {
         setExpectedAttendance(value);
         if (value > 100) {
-            toast('Large attendance detected! Please ensure proper room capacity.', {
-                icon: '⚠️',
-                duration: 4000
-            });
+            toast.custom((t) => (
+                <div className="alert alert-warning">
+                    <Icon icon="mdi:warning" className="h-6 w-6" />
+                    <span>Large attendance detected! Please ensure proper room capacity.</span>
+                </div>
+            ), { duration: 4000 });
         }
         onDataChange?.({ expected_attendance: value });
     };
@@ -38,20 +54,66 @@ const TAPSection: React.FC<TAPSectionProps> = ({ onDataChange, onASFundingChange
         setNeedsASFunding(enabled);
         if (!enabled) {
             setNeedsFoodDrinks(false);
-            onDataChange?.({ needs_food_drinks: false });
+            setItemizedItems([]);
+            onDataChange?.({ food_drinks_being_served: false });
         }
         onASFundingChange?.(enabled);
-        onDataChange?.({ as_funding_required: enabled });
-
-        toast(enabled ? 'AS Funding enabled - please fill out funding details.' : 'AS Funding disabled', {
-            icon: enabled ? '💰' : '❌',
-            duration: 3000
+        onDataChange?.({
+            as_funding_required: enabled,
+            itemized_items: enabled ? itemizedItems : undefined
         });
+
+        toast.custom((t) => (
+            <div className={`alert ${enabled ? 'alert-info' : 'alert-warning'}`}>
+                <Icon icon={enabled ? 'mdi:cash' : 'mdi:cash-off'} className="h-6 w-6" />
+                <span>{enabled ? 'AS Funding enabled - please fill out funding details.' : 'AS Funding disabled'}</span>
+            </div>
+        ), { duration: 3000 });
     };
 
     const handleFoodDrinksChange = (enabled: boolean) => {
         setNeedsFoodDrinks(enabled);
-        onDataChange?.({ needs_food_drinks: enabled });
+        onDataChange?.({ food_drinks_being_served: enabled });
+    };
+
+    const handleRoomBookingFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setRoomBookingFile(file);
+            onDataChange?.({ room_booking: file });
+            toast.custom((t) => (
+                <div className="alert alert-success">
+                    <Icon icon="mdi:check-circle" className="h-6 w-6" />
+                    <span>Room booking file uploaded successfully</span>
+                </div>
+            ));
+        }
+    };
+
+    const uploadRoomBookingFile = async (recordId: string) => {
+        if (roomBookingFile) {
+            try {
+                await fileManager.uploadFile(
+                    'event_request',
+                    recordId,
+                    'room_booking',
+                    roomBookingFile
+                );
+            } catch (error) {
+                console.error('Failed to upload room booking file:', error);
+                toast.custom((t) => (
+                    <div className="alert alert-error">
+                        <Icon icon="mdi:error" className="h-6 w-6" />
+                        <span>Failed to upload room booking file</span>
+                    </div>
+                ), { duration: 4000 });
+            }
+        }
+    };
+
+    const handleItemizedItemsUpdate = (items: InvoiceItem[]) => {
+        setItemizedItems(items);
+        onDataChange?.({ itemized_items: items });
     };
 
     return (
@@ -97,14 +159,21 @@ const TAPSection: React.FC<TAPSectionProps> = ({ onDataChange, onASFundingChange
                                     </div>
                                 </Tooltip>
                             </div>
+                            <InfoCard
+                                title={infoNotes.funding.title}
+                                items={infoNotes.funding.items}
+                                type="warning"
+                                className="mb-4"
+                            />
 
                             <div className="relative group">
                                 <input
                                     type="number"
                                     min="0"
+                                    name="expected_attendance"
                                     className="input input-bordered w-full pl-12 transition-all duration-300 focus:ring-2 focus:ring-primary/20"
-                                    value={expectedAttendance || ''}
-                                    onChange={(e) => handleAttendanceChange(Number(e.target.value))}
+                                    value={expectedAttendance}
+                                    onChange={(e) => handleAttendanceChange(parseInt(e.target.value) || 0)}
                                     required
                                 />
                             </div>
@@ -151,6 +220,27 @@ const TAPSection: React.FC<TAPSectionProps> = ({ onDataChange, onASFundingChange
                                     required
                                 />
                             </div>
+
+                            <div className="form-control w-full mt-4">
+                                <label className="label">
+                                    <span className="label-text font-medium text-lg flex items-center gap-2">
+                                        <Icon icon="mdi:upload" className="h-5 w-5 text-primary" />
+                                        Room Booking File Upload
+                                    </span>
+                                </label>
+                                <div className="flex flex-col space-y-2">
+                                    <input
+                                        type="file"
+                                        name="room_booking"
+                                        className="file-input file-input-bordered file-input-primary w-full"
+                                        onChange={handleRoomBookingFileChange}
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                    />
+                                    <div className="text-xs text-gray-500">
+                                        Max file size: 50MB
+                                    </div>
+                                </div>
+                            </div>
                         </motion.div>
 
                         <motion.div
@@ -185,6 +275,7 @@ const TAPSection: React.FC<TAPSectionProps> = ({ onDataChange, onASFundingChange
                                         className="radio radio-primary"
                                         checked={needsASFunding}
                                         onChange={() => handleASFundingChange(true)}
+                                        value="true"
                                     />
                                     <span className="label-text">Yes, I need AS Funding</span>
                                 </label>
@@ -195,6 +286,7 @@ const TAPSection: React.FC<TAPSectionProps> = ({ onDataChange, onASFundingChange
                                         className="radio radio-primary"
                                         checked={!needsASFunding}
                                         onChange={() => handleASFundingChange(false)}
+                                        value="false"
                                     />
                                     <span className="label-text">No, I don't need AS Funding</span>
                                 </label>
@@ -236,6 +328,7 @@ const TAPSection: React.FC<TAPSectionProps> = ({ onDataChange, onASFundingChange
                                                 className="radio radio-primary"
                                                 checked={needsFoodDrinks}
                                                 onChange={() => handleFoodDrinksChange(true)}
+                                                value="true"
                                             />
                                             <span className="label-text">Yes, I need food/drinks</span>
                                         </label>
@@ -246,6 +339,7 @@ const TAPSection: React.FC<TAPSectionProps> = ({ onDataChange, onASFundingChange
                                                 className="radio radio-primary"
                                                 checked={!needsFoodDrinks}
                                                 onChange={() => handleFoodDrinksChange(false)}
+                                                value="false"
                                             />
                                             <span className="label-text">No, I don't need food/drinks</span>
                                         </label>
@@ -256,6 +350,24 @@ const TAPSection: React.FC<TAPSectionProps> = ({ onDataChange, onASFundingChange
                     </div>
                 </div>
             </motion.div>
+
+            <input
+                type="hidden"
+                name="itemized_items"
+                value={JSON.stringify(itemizedItems)}
+            />
+
+            <input
+                type="hidden"
+                name="itemized_invoice"
+                value={JSON.stringify({
+                    items: itemizedItems,
+                    tax: 0,
+                    tip: 0,
+                    total: itemizedItems.reduce((sum, item) => sum + (item.quantity * item.unit_cost), 0),
+                    vendor: ''
+                })}
+            />
 
             <AnimatePresence mode="popLayout">
                 {needsASFunding && (
@@ -271,7 +383,9 @@ const TAPSection: React.FC<TAPSectionProps> = ({ onDataChange, onASFundingChange
                         }}
                         className="mt-8"
                     >
-                        {children}
+                        {children && React.cloneElement(children, {
+                            onItemizedItemsUpdate: handleItemizedItemsUpdate
+                        })}
                     </motion.div>
                 )}
             </AnimatePresence>

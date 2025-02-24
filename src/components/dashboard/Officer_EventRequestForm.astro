@@ -3,6 +3,9 @@ import { Authentication } from "../../scripts/pocketbase/Authentication";
 import { Update } from "../../scripts/pocketbase/Update";
 import { FileManager } from "../../scripts/pocketbase/FileManager";
 import { Get } from "../../scripts/pocketbase/Get";
+import { toast } from "react-hot-toast";
+import Toast from "./universal/Toast";
+import { Icon } from "@iconify/react";
 
 // Form sections
 import PRSection from "./Officer_EventRequestForm/PRSection";
@@ -55,6 +58,7 @@ if (auth.isAuthenticated()) {
 ---
 
 <div class="w-full max-w-4xl mx-auto p-6">
+  <Toast client:load />
   <h1
     class="text-3xl font-bold mb-8 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
   >
@@ -286,6 +290,8 @@ if (auth.isAuthenticated()) {
   import { Update } from "../../scripts/pocketbase/Update";
   import { FileManager } from "../../scripts/pocketbase/FileManager";
   import { Get } from "../../scripts/pocketbase/Get";
+  import { toast } from "react-hot-toast";
+  import { showLoadingToast, showSuccessToast, showErrorToast } from "./Officer_EventRequestForm/ToastNotifications";
 
   // Add TypeScript interfaces
   interface EventRequest {
@@ -330,86 +336,104 @@ if (auth.isAuthenticated()) {
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // Collect form data
-    const formData = new FormData(form);
-    const data: Record<string, any> = {};
-
-    // Convert FormData to a proper object with correct types
-    formData.forEach((value, key) => {
-      if (value instanceof File) {
-        // Skip file fields as they'll be handled separately
-        return;
-      }
-      data[key] = value;
-    });
-
     try {
-      // Create event request record
       const auth = Authentication.getInstance();
       const update = Update.getInstance();
-
-      // Add user ID to the request
       const userId = auth.getUserId();
-      if (userId) {
-        data.requested_user = userId;
+
+      if (!userId) {
+        throw new Error('User not authenticated');
       }
 
+      // Show loading toast
+      const loadingToastId = toast.custom(showLoadingToast, { duration: 0 });
+
+      // Get graphics need value
+      const needsGraphics = form.querySelector<HTMLInputElement>('input[name="needsGraphics"]:checked')?.value === "yes";
+
+      // Collect data from all sections
+      const eventData = {
+        requested_user: userId,
+        name: form.querySelector<HTMLInputElement>('[name="event_name"]')?.value,
+        description: form.querySelector<HTMLTextAreaElement>('[name="event_description"]')?.value,
+        location: form.querySelector<HTMLInputElement>('[name="location"]')?.value,
+        start_date_time: new Date(form.querySelector<HTMLInputElement>('[name="start_date_time"]')?.value || '').toISOString(),
+        end_date_time: new Date(form.querySelector<HTMLInputElement>('[name="end_date_time"]')?.value || '').toISOString(),
+        flyers_needed: needsGraphics,
+        flyer_type: Array.from(form.querySelectorAll<HTMLInputElement>('input[type="checkbox"][name="flyer_type[]"]:checked')).map(cb => cb.value),
+        other_flyer_type: form.querySelector<HTMLInputElement>('[name="other_flyer_type"]')?.value,
+        flyer_advertising_start_date: form.querySelector<HTMLInputElement>('[name="flyer_advertising_start_date"]')?.value,
+        flyer_additional_requests: form.querySelector<HTMLTextAreaElement>('[name="flyer_additional_requests"]')?.value,
+        photography_needed: form.querySelector<HTMLInputElement>('input[name="photography_needed"]:checked')?.value === 'true',
+        required_logos: Array.from(form.querySelectorAll<HTMLInputElement>('input[type="checkbox"][name="required_logos[]"]:checked')).map(cb => cb.value),
+        advertising_format: form.querySelector<HTMLSelectElement>('[name="advertising_format"]')?.value,
+        will_or_have_room_booking: form.querySelector<HTMLInputElement>('input[name="will_or_have_room_booking"]:checked')?.value === 'true',
+        expected_attendance: parseInt(form.querySelector<HTMLInputElement>('[name="expected_attendance"]')?.value || '0'),
+        as_funding_required: form.querySelector<HTMLInputElement>('input[name="as_funding"]:checked')?.value === 'true',
+        food_drinks_being_served: form.querySelector<HTMLInputElement>('input[name="food_drinks"]:checked')?.value === 'true',
+        status: 'pending',
+        draft: false,
+        // Add itemized items if AS funding is required
+        itemized_items: form.querySelector<HTMLInputElement>('input[name="as_funding"]:checked')?.value === 'true' 
+            ? JSON.parse(form.querySelector<HTMLInputElement>('[name="itemized_items"]')?.value || '[]')
+            : undefined,
+        // Add itemized invoice data
+        itemized_invoice: form.querySelector<HTMLInputElement>('input[name="as_funding"]:checked')?.value === 'true'
+            ? JSON.parse(form.querySelector<HTMLInputElement>('[name="itemized_invoice"]')?.value || '{}')
+            : undefined
+      };
+
       // Create the record
-      const record = await update.updateFields(
-        "event_request",
-        data.id || "",
-        data,
-      );
+      const record = await update.create("event_request", eventData);
 
-      // Handle file uploads if any
+      // Handle file uploads
       const fileManager = FileManager.getInstance();
-      const fileFields = ["room_booking", "invoice", "other_logos"];
+      const fileFields = {
+        room_booking: form.querySelector<HTMLInputElement>('input[type="file"][name="room_booking"]')?.files?.[0],
+        itemized_invoice: form.querySelector<HTMLInputElement>('input[type="file"][name="itemized_invoice"]')?.files?.[0],
+        invoice: form.querySelector<HTMLInputElement>('input[type="file"][name="invoice"]')?.files?.[0],
+        other_logos: Array.from(form.querySelector<HTMLInputElement>('input[type="file"][name="other_logos"]')?.files || [])
+      };
 
-      for (const field of fileFields) {
-        const files = formData
-          .getAll(field)
-          .filter((f): f is File => f instanceof File);
-        if (files.length > 0) {
-          await fileManager.uploadFiles(
+      // Upload files one by one
+      for (const [field, files] of Object.entries(fileFields)) {
+        if (!files) continue;
+        
+        if (Array.isArray(files)) {
+          // Handle multiple files (other_logos)
+          const validFiles = files.filter((f): f is File => f instanceof File);
+          if (validFiles.length > 0) {
+            await fileManager.uploadFiles(
+              "event_request",
+              record.id,
+              field,
+              validFiles
+            );
+          }
+        } else {
+          // Handle single file
+          await fileManager.uploadFile(
             "event_request",
             record.id,
             field,
-            files,
+            files
           );
         }
       }
 
-      // Show success message using a toast
-      const toast = document.createElement("div");
-      toast.className = "toast toast-end";
-      toast.innerHTML = `
-        <div class="alert alert-success">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>Event request submitted successfully!</span>
-        </div>
-      `;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 3000);
+      // Dismiss loading toast
+      toast.dismiss(loadingToastId);
 
-      // Redirect to events management page
-      window.location.href = "/dashboard/events";
+      // Show success toast
+      toast.custom(() => showSuccessToast('Event request submitted successfully!'));
+
+      // Reset form
+      form.reset();
     } catch (error) {
       console.error("Error submitting form:", error);
+      
       // Show error toast
-      const toast = document.createElement("div");
-      toast.className = "toast toast-end";
-      toast.innerHTML = `
-        <div class="alert alert-error">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          <span>Error submitting form. Please try again.</span>
-        </div>
-      `;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 3000);
+      toast.custom(() => showErrorToast('Failed to submit event request. Please try again.'));
     }
   });
 
@@ -417,22 +441,21 @@ if (auth.isAuthenticated()) {
   document
     .getElementById("saveAsDraft")
     ?.addEventListener("click", async () => {
-      // Similar to submit but mark as draft
-      const formData = new FormData(form);
-      const data: Record<string, any> = {};
-
-      // Convert FormData to a proper object with correct types
-      formData.forEach((value, key) => {
-        if (value instanceof File) {
-          // Skip file fields as they'll be handled separately
-          return;
-        }
-        data[key] = value;
-      });
-
-      data.status = "draft";
-
       try {
+        const formData = new FormData(form);
+        const data: Record<string, any> = {};
+        
+        // Convert FormData to a proper object with correct types
+        formData.forEach((value, key) => {
+          if (value instanceof File) {
+            // Skip file fields as they'll be handled separately
+            return;
+          }
+          data[key] = value;
+        });
+
+        data.status = "draft";
+
         const auth = Authentication.getInstance();
         const update = Update.getInstance();
 
@@ -444,33 +467,11 @@ if (auth.isAuthenticated()) {
         await update.updateFields("event_request", data.id || "", data);
 
         // Show success toast
-        const toast = document.createElement("div");
-        toast.className = "toast toast-end";
-        toast.innerHTML = `
-        <div class="alert alert-success">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>Draft saved successfully!</span>
-        </div>
-      `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+        toast.custom(() => showSuccessToast('Draft saved successfully!'));
       } catch (error) {
         console.error("Error saving draft:", error);
         // Show error toast
-        const toast = document.createElement("div");
-        toast.className = "toast toast-end";
-        toast.innerHTML = `
-        <div class="alert alert-error">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          <span>Error saving draft. Please try again.</span>
-        </div>
-      `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+        toast.custom(() => showErrorToast('Error saving draft. Please try again.'));
       }
     });
 

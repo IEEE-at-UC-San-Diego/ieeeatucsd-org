@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { toast } from 'react-hot-toast';
+import { Icon } from '@iconify/react';
 
 interface PRSectionProps {
     onDataChange?: (data: any) => void;
@@ -50,6 +52,14 @@ const PRSection: React.FC<PRSectionProps> = ({ onDataChange }) => {
         }
     };
 
+    const handleOtherLogosUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            onDataChange?.({ other_logos: files });
+            toast.success(`${files.length} logo file(s) uploaded`);
+        }
+    };
+
     return (
         <div className="card bg-base-100/95 backdrop-blur-md shadow-lg">
             <div className="card-body">
@@ -76,12 +86,26 @@ const PRSection: React.FC<PRSectionProps> = ({ onDataChange }) => {
                                     <input
                                         type="checkbox"
                                         className="checkbox checkbox-primary"
+                                        name="flyer_type[]"
+                                        value={type.value}
                                         checked={selectedTypes.includes(type.value)}
                                         onChange={() => handleTypeChange(type.value)}
                                     />
                                     <span className="label-text">{type.label}</span>
                                 </label>
                             ))}
+
+                            {selectedTypes.includes('other') && (
+                                <div className="form-control w-full mt-2 ml-10">
+                                    <input
+                                        type="text"
+                                        name="other_flyer_type"
+                                        placeholder="Please specify other flyer type"
+                                        className="input input-bordered w-full"
+                                        onChange={(e) => onDataChange?.({ other_flyer_type: e.target.value })}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </label>
                 </div>
@@ -120,6 +144,8 @@ const PRSection: React.FC<PRSectionProps> = ({ onDataChange }) => {
                                         <input
                                             type="checkbox"
                                             className="checkbox checkbox-primary"
+                                            name="required_logos[]"
+                                            value={logo.value}
                                             checked={selectedLogos.includes(logo.value)}
                                             onChange={() => handleLogoChange(logo.value)}
                                         />
@@ -133,9 +159,7 @@ const PRSection: React.FC<PRSectionProps> = ({ onDataChange }) => {
                             <div className="form-control w-full">
                                 <label className="label">
                                     <span className="label-text font-medium text-lg flex items-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                        </svg>
+                                        <Icon icon="mdi:upload" className="h-5 w-5 text-primary" />
                                         Upload Logo Files
                                     </span>
                                 </label>
@@ -145,7 +169,7 @@ const PRSection: React.FC<PRSectionProps> = ({ onDataChange }) => {
                                     multiple
                                     accept="image/*"
                                     className="file-input file-input-bordered w-full"
-                                    onChange={(e) => onDataChange?.({ other_logos: e.target.files })}
+                                    onChange={handleOtherLogosUpload}
                                 />
                             </div>
                         )}

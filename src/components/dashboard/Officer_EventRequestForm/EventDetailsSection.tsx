@@ -27,7 +27,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ onDataChange 
                         </label>
                         <input
                             type="text"
-                            name="name"
+                            name="event_name"
                             className="input input-bordered w-full"
                             onChange={(e) => onDataChange?.({ name: e.target.value })}
                             required
@@ -44,7 +44,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ onDataChange 
                             </span>
                         </label>
                         <textarea
-                            name="description"
+                            name="event_description"
                             className="textarea textarea-bordered h-32"
                             onChange={(e) => onDataChange?.({ description: e.target.value })}
                             required
