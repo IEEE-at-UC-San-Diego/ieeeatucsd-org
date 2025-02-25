@@ -6,6 +6,38 @@ import { Get } from "../../scripts/pocketbase/Get";
 import { toast, Toaster } from "react-hot-toast";
 import EventRequestFormPreview from "./Officer_EventRequestForm/EventRequestFormPreview";
 import EventRequestForm from "./Officer_EventRequestForm/EventRequestForm";
+import UserEventRequests from "./Officer_EventRequestForm/UserEventRequests";
+
+// Import the EventRequest type from UserEventRequests to ensure consistency
+import type { EventRequest as UserEventRequest } from "./Officer_EventRequestForm/UserEventRequests";
+
+// Use the imported type
+type EventRequest = UserEventRequest;
+
+// Get instances
+const get = Get.getInstance();
+const auth = Authentication.getInstance();
+
+// Initialize variables for user's submissions
+let userEventRequests: EventRequest[] = [];
+let error: string | null = null;
+
+// Fetch user's event request submissions if authenticated
+if (auth.isAuthenticated()) {
+  try {
+    const userId = auth.getUserId();
+    if (userId) {
+      userEventRequests = await get.getAll<EventRequest>(
+        "event_request",
+        `requested_user="${userId}"`,
+        "-created",
+      );
+    }
+  } catch (err) {
+    console.error("Failed to fetch user event requests:", err);
+    error = "Failed to load your event requests. Please try again later.";
+  }
+}
 ---
 
 <div class="w-full max-w-6xl mx-auto py-8 px-4">
@@ -25,69 +57,107 @@ import EventRequestForm from "./Officer_EventRequestForm/EventRequestForm";
         <li>AS Funding (if needed)</li>
       </ul>
       <p class="mt-3">
-        You can switch between the form and preview tabs at any time. Your
-        progress is automatically saved.
+        Your progress is automatically saved as you fill out the form.
       </p>
     </div>
   </div>
 
-  <div class="bg-base-200 rounded-lg shadow-xl overflow-hidden">
-    <div class="tabs tabs-boxed bg-base-300 rounded-t-lg">
-      <button id="form-tab" class="tab tab-active">Submit Request</button>
-      <button id="preview-tab" class="tab">Preview Request</button>
-    </div>
+  <!-- Tabs -->
+  <div class="tabs tabs-boxed mb-6">
+    <a class="tab tab-lg tab-active" id="form-tab">Submit Event Request</a>
+    <a class="tab tab-lg" id="submissions-tab">View Your Submissions</a>
+  </div>
 
-    <div id="form-view" class="p-6">
+  <!-- Form Tab Content -->
+  <div
+    id="form-content"
+    class="bg-base-200 rounded-lg shadow-xl overflow-hidden"
+  >
+    <div class="p-6">
       <EventRequestForm client:load />
     </div>
+  </div>
 
-    <div id="preview-view" class="p-6 hidden">
-      <EventRequestFormPreview client:load />
+  <!-- Submissions Tab Content -->
+  <div id="submissions-content" class="hidden">
+    <div class="bg-base-200 rounded-lg shadow-xl overflow-hidden p-6">
+      <h2 class="text-2xl font-bold text-white mb-4">
+        Your Event Request Submissions
+      </h2>
+
+      {
+        error && (
+          <div class="alert alert-error mb-6">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6 stroke-current shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{error}</span>
+          </div>
+        )
+      }
+
+      {
+        !error && (
+          <UserEventRequests client:load eventRequests={userEventRequests} />
+        )
+      }
     </div>
   </div>
 </div>
 
 <script>
   // Tab switching logic
-  const formTab = document.getElementById("form-tab");
-  const previewTab = document.getElementById("preview-tab");
-  const formView = document.getElementById("form-view");
-  const previewView = document.getElementById("preview-view");
+  document.addEventListener("DOMContentLoaded", () => {
+    const formTab = document.getElementById("form-tab");
+    const submissionsTab = document.getElementById("submissions-tab");
+    const formContent = document.getElementById("form-content");
+    const submissionsContent = document.getElementById("submissions-content");
 
-  // Prevent form submission when clicking tabs
-  document.querySelectorAll(".tab").forEach((tab) => {
-    tab.addEventListener("click", (e) => {
+    // Function to switch tabs
+    const switchTab = (
+      activeTab: HTMLElement,
+      activeContent: HTMLElement,
+      inactiveTab: HTMLElement,
+      inactiveContent: HTMLElement,
+    ) => {
+      // Update tab classes
+      activeTab.classList.add("tab-active");
+      inactiveTab.classList.remove("tab-active");
+
+      // Show/hide content
+      activeContent.classList.remove("hidden");
+      inactiveContent.classList.add("hidden");
+
+      // Dispatch event to refresh submissions when switching to submissions tab
+      if (activeTab.id === "submissions-tab") {
+        const refreshEvent = new CustomEvent("refreshSubmissions");
+        document.dispatchEvent(refreshEvent);
+      }
+    };
+
+    // Add click event listeners to tabs
+    formTab?.addEventListener("click", (e) => {
       e.preventDefault();
-      e.stopPropagation();
-      return false;
+      if (formContent && submissionsContent && submissionsTab) {
+        switchTab(formTab, formContent, submissionsTab, submissionsContent);
+      }
     });
-  });
 
-  formTab?.addEventListener("click", (e) => {
-    // Prevent default behavior to avoid form submission
-    e.preventDefault();
-
-    formTab.classList.add("tab-active");
-    previewTab?.classList.remove("tab-active");
-    formView?.classList.remove("hidden");
-    previewView?.classList.add("hidden");
-
-    // Dispatch event to notify the preview component to update
-    const event = new CustomEvent("updatePreview");
-    document.dispatchEvent(event);
-  });
-
-  previewTab?.addEventListener("click", (e) => {
-    // Prevent default behavior to avoid form submission
-    e.preventDefault();
-
-    previewTab.classList.add("tab-active");
-    formTab?.classList.remove("tab-active");
-    previewView?.classList.remove("hidden");
-    formView?.classList.add("hidden");
-
-    // Dispatch event to notify the preview component to update
-    const event = new CustomEvent("updatePreview");
-    document.dispatchEvent(event);
+    submissionsTab?.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (formContent && submissionsContent && formTab) {
+        switchTab(submissionsTab, submissionsContent, formTab, formContent);
+      }
+    });
   });
 </script>

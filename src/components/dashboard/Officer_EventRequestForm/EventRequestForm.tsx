@@ -228,6 +228,8 @@ const EventRequestForm: React.FC = () => {
                     total: formData.invoiceData.total,
                     vendor: formData.invoiceData.vendor
                 },
+                // Set the initial status to "submitted"
+                status: "submitted",
             };
 
             toast.loading('Creating event request record...', { id: submittingToast });
