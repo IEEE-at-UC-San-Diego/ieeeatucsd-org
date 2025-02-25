@@ -54,7 +54,19 @@ import EventRequestForm from "./Officer_EventRequestForm/EventRequestForm";
   const formView = document.getElementById("form-view");
   const previewView = document.getElementById("preview-view");
 
-  formTab?.addEventListener("click", () => {
+  // Prevent form submission when clicking tabs
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    });
+  });
+
+  formTab?.addEventListener("click", (e) => {
+    // Prevent default behavior to avoid form submission
+    e.preventDefault();
+
     formTab.classList.add("tab-active");
     previewTab?.classList.remove("tab-active");
     formView?.classList.remove("hidden");

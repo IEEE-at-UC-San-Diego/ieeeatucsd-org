@@ -247,16 +247,22 @@ const EventRequestForm: React.FC = () => {
                     await fileManager.uploadFile('event_request', record.id, 'room_booking', formData.room_booking);
                 }
 
-                // Upload the main invoice file (for backward compatibility)
-                if (formData.invoice) {
-                    toast.loading('Uploading invoice file...', { id: submittingToast });
-                    await fileManager.uploadFile('event_request', record.id, 'invoice', formData.invoice);
-                }
-
                 // Upload multiple invoice files
                 if (formData.invoice_files && formData.invoice_files.length > 0) {
                     toast.loading('Uploading invoice files...', { id: submittingToast });
-                    await fileManager.uploadFiles('event_request', record.id, 'invoice_files', formData.invoice_files);
+
+                    // Use appendFiles instead of uploadFiles to ensure we're adding files, not replacing them
+                    await fileManager.appendFiles('event_request', record.id, 'invoice_files', formData.invoice_files);
+
+                    // For backward compatibility, also upload the first file as the main invoice
+                    if (formData.invoice || formData.invoice_files[0]) {
+                        const mainInvoice = formData.invoice || formData.invoice_files[0];
+                        await fileManager.uploadFile('event_request', record.id, 'invoice', mainInvoice);
+                    }
+                } else if (formData.invoice) {
+                    // If there are no invoice_files but there is a main invoice, upload it
+                    toast.loading('Uploading invoice file...', { id: submittingToast });
+                    await fileManager.uploadFile('event_request', record.id, 'invoice', formData.invoice);
                 }
 
                 // Clear form data from localStorage
@@ -754,7 +760,28 @@ const EventRequestForm: React.FC = () => {
 
     return (
         <>
-            <Toaster position="top-right" />
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#333',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: 'green',
+                        },
+                    },
+                    error: {
+                        duration: 5000,
+                        style: {
+                            background: 'red',
+                        },
+                    },
+                }}
+            />
             <motion.div
                 variants={containerVariants}
                 initial="hidden"

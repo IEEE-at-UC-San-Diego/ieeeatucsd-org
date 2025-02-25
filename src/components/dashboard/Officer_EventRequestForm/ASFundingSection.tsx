@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import type { EventRequestFormData } from './EventRequestForm';
 import InvoiceBuilder from './InvoiceBuilder';
 import type { InvoiceData } from './InvoiceBuilder';
@@ -40,32 +41,47 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
     const handleMultipleInvoiceFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const files = Array.from(e.target.files);
-            setInvoiceFiles(prevFiles => [...prevFiles, ...files]);
-            onDataChange({ invoice_files: [...formData.invoice_files, ...files] });
+
+            // Check file sizes
+            const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit per file
+            const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
+
+            if (oversizedFiles.length > 0) {
+                toast.error(`Some files exceed the 10MB size limit: ${oversizedFiles.map(f => f.name).join(', ')}`);
+                return;
+            }
+
+            // Update state with new files
+            const updatedFiles = [...invoiceFiles, ...files];
+            setInvoiceFiles(updatedFiles);
+            onDataChange({ invoice_files: updatedFiles });
 
             // Also set the first file as the main invoice file for backward compatibility
             if (files.length > 0 && !formData.invoice) {
                 setInvoiceFile(files[0]);
                 onDataChange({ invoice: files[0] });
             }
+
+            toast.success(`Added ${files.length} file${files.length > 1 ? 's' : ''} successfully`);
         }
     };
 
     // Remove an invoice file
     const handleRemoveInvoiceFile = (index: number) => {
         const updatedFiles = [...invoiceFiles];
+        const removedFileName = updatedFiles[index].name;
         updatedFiles.splice(index, 1);
         setInvoiceFiles(updatedFiles);
         onDataChange({ invoice_files: updatedFiles });
 
         // Update the main invoice file if needed
-        if (index === 0 && updatedFiles.length > 0) {
-            setInvoiceFile(updatedFiles[0]);
-            onDataChange({ invoice: updatedFiles[0] });
-        } else if (updatedFiles.length === 0) {
-            setInvoiceFile(null);
-            onDataChange({ invoice: null });
+        if (invoiceFile && invoiceFile.name === removedFileName) {
+            const newMainFile = updatedFiles.length > 0 ? updatedFiles[0] : null;
+            setInvoiceFile(newMainFile);
+            onDataChange({ invoice: newMainFile });
         }
+
+        toast.success(`Removed ${removedFileName}`);
     };
 
     // Handle invoice data change

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 // Animation variants
 const itemVariants = {
@@ -128,6 +129,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
 
         if (isDuplicate) {
             setErrors({ description: 'An item with this description already exists' });
+            toast.error('An item with this description already exists');
             return;
         }
 
@@ -149,6 +151,9 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             items: [...invoiceData.items, item]
         });
 
+        // Show success toast
+        toast.success(`Added ${item.description} to invoice`);
+
         // Reset new item form
         setNewItem({
             description: '',
@@ -162,10 +167,15 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
 
     // Remove an item
     const handleRemoveItem = (id: string) => {
+        const itemToRemove = invoiceData.items.find(item => item.id === id);
         onChange({
             ...invoiceData,
             items: invoiceData.items.filter(item => item.id !== id)
         });
+
+        if (itemToRemove) {
+            toast.success(`Removed ${itemToRemove.description} from invoice`);
+        }
     };
 
     // Update tax rate
@@ -192,6 +202,11 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             ...invoiceData,
             vendor: e.target.value
         });
+
+        // Clear vendor error if it exists
+        if (errors.vendor && e.target.value.trim()) {
+            setErrors({ ...errors, vendor: undefined });
+        }
     };
 
     // Format currency
