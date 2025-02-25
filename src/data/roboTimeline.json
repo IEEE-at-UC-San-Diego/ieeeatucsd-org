@@ -1,30 +1,34 @@
 [
   {
-    "week": "Fall W1 - W3",
-    "description": "Submit Applications"
+    "week": "Fall W1",
+    "description": " RoboCup Info Session\nApplication Open"
   },
   {
-    "week": "Fall W4 - W9",
-    "description": "QP groups are formed, QP Kickoff"
+    "week": "Fall W2",
+    "description": "Application Close\nInterview Scheduled"
   },
   {
-    "week": "Week 3",
-    "description": "Mentor Assignments"
+    "week": "Fall W3",
+    "description": "Member Placements Finalized"
   },
   {
-    "week": "Week 4",
-    "description": "Workathon #1"
+    "week": "Winter W6",
+    "description": "Team Qualification Material Submission Deadline"
   },
   {
-    "week": "Week 6",
-    "description": "Workathon #2, Milestone #1"
+    "week": "Winter W-Final",
+    "description": "Preliminary Team Qualification Results"
   },
   {
-    "week": "Week 8",
-    "description": "Workathon #3, Milestone #2"
+    "week": "Spring W3",
+    "description": "Final Team Qualification Results"
   },
   {
-    "week": "Week 9/10",
-    "description": "Final submission, QP Showcase!"
+    "week": "Spring W7",
+    "description": "Robofest Showcase"
+  },
+  {
+    "week": "Mid July",
+    "description": "RoboCup 2025 International Competition"
   }
 ]

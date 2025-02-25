@@ -5,17 +5,17 @@ const {picture, name, description, link} = Astro.props;
 ---
 <div class = "text-white relative my-[3%]" >
     
-    <img src = {picture} alt = "signal" class = "w-full object-cover md:aspect-[1300/526] aspect-[2/1] opacity-25">
+    <img src = {picture} alt = "signal" class = " w-full object-cover md:aspect-[1300/526] aspect-[2/1] opacity-25">
 
     <div class = "w-full flex justify-evenly absolute bottom-[20%] left-[4%]">
-        <div class = "flex items-center md:text-[2.5vw] text-[4vw]">
+        <div data-inview class = "in-view:animate-fade-right flex items-center md:text-[2.5vw] text-[4vw]">
             <LiaDotCircle className=" mr-[1vw] md:text-[2.6vw]"/>
             <p>
                 Competition
             </p>
         </div>
     
-        <div class = "md:text-[1.6vw] text-[2.2vw] tracking-wider">
+        <div data-inview class = "md:text-[1.6vw] text-[2.2vw] tracking-wider in-view:animate-flip-up">
             <p class = "w-[35vw] md:mt-[25vw] mt-[35vw]">
                 {name}
             </p>

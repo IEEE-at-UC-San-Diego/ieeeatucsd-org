@@ -1,0 +1,22 @@
+[
+    {
+        "question": "How are students selected for positions on the team?",
+        "answer": "Students will be interviewed for vacant positions. Possessing basic knowledge and skills outlined in the position description is highly encouraged though not required to join. Prospective members will be selected based on their technical expertise and ability to work in a team."
+    },
+    {
+        "question": "What level of experience is necessary?",
+        "answer": "Our team members have a wide range of skill sets from workshop fabrication to algorithm design. Due to the high volume of applications, prospective members who have completed elementary coursework in their discipline or have exceptional project experience will be preferred for more demanding roles. For entry level roles, passion, commitment to the project, and strong problem solving ability are key to being considered."
+    },
+    {
+        "question": "Will I have to pay for membership dues?",
+        "answer": "All TritonBot members must purchase an IEEE membership following their recruitment. This ensures we will have access to funds from the IEEE Robotics and Automation Society."
+    },
+    {
+        "question": "I’m not an engineering or computer science major, should I still apply?",
+        "answer": "There are no requirements based on major. As stated previously, knowledge and skills in particular roles is prioritized. "
+    },
+    {
+        "question": "Can I apply for multiple positions?",
+        "answer": "Applicants may apply to more than one position without limitations. Following the interview process they are selected for one position. This doesn’t mean cross team collaboration and learning is not encouraged however."
+    }
+]

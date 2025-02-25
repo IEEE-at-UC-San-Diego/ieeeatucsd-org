@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Questions from "../components/core/Questions.astro";
-import faq from "../data/faq.json";
+import roboFaq from "../data/roboFaq.json";
 import About from "../components/core/About.astro";
 import RoboTitle from "../components/robocub/RoboTitle.astro";
 import Link from "next/link";
@@ -29,26 +29,26 @@ import roboTimeline from "../data/roboTimeline.json"
     <RoboTitle />
     <About
         title="What is RoboCup?"
-        text="UC San Diego’s RoboCup team is one of IEEE’s largest projects. Different subteams come together to build 6 autonomous soccer-playing robots to compete in the international RoboCup Small Sized League Competition every year. Learn more link to our website, picture of entire robot"
+        text="UC San Diego’s RoboCup team is one of IEEE’s largest projects. Different subteams come together to build 6 autonomous soccer-playing robots to compete in the international RoboCup Small Sized League Competition every year. TritonBots FC is UCSD’s RoboCup Small-Size League Team. Students develop fully autonomous soccer playing robots. All hardware is custom built and software programmed from the ground up. Position, velocity, and field data is  received in real time through computer vision."
     />
     <div class="w-full flex justify-center">
         <Link
-            href="/"
+            href="https://tdpsearch.com/"
             target="_blank"
-            className="mb-[10%] z-10 cursor-pointer px-[2%] py-[0.5%] md:text-[1.2vw] text-[2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"
+            className="text-center mb-[10%] z-10 cursor-pointer px-[2%] py-[0.5%] md:text-[1.2vw] text-[2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"
         >
-            Past Team Description Paper
+            Past Team Description Paper <br/> (Select ‘SmallSize’)
         </Link>
     </div>
     <Competition
         picture="/robocup.webp"
         name="Preparing for Salvador 2025"
         description="Recently the team went to our first ever competition in Germany!"
-        link="https://www.google.com/"
+        link="https://ssl.robocup.org/"
     />
     <Subteams />
     <Timeline timeline={roboTimeline}/>
     <Join />
-    <Questions faq={faq} />
+    <Questions faq={roboFaq} />
     <Contacts />
 </Layout>
