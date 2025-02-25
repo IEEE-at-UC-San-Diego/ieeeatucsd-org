@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Get } from '../../../scripts/pocketbase/Get';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
@@ -40,6 +40,47 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
     const [selectedRequest, setSelectedRequest] = useState<EventRequest | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+    // Refresh event requests
+    const refreshEventRequests = async () => {
+        setIsRefreshing(true);
+        const refreshToast = toast.loading('Refreshing submissions...');
+
+        try {
+            const get = Get.getInstance();
+            const auth = Authentication.getInstance();
+
+            if (!auth.isAuthenticated()) {
+                toast.error('You must be logged in to refresh submissions', { id: refreshToast });
+                return;
+            }
+
+            const userId = auth.getUserId();
+            if (!userId) {
+                toast.error('User ID not found', { id: refreshToast });
+                return;
+            }
+
+            const updatedRequests = await get.getAll<EventRequest>(
+                'event_request',
+                `requested_user="${userId}"`,
+                '-created'
+            );
+
+            setEventRequests(updatedRequests);
+            toast.success('Submissions refreshed successfully', { id: refreshToast });
+        } catch (err) {
+            console.error('Failed to refresh event requests:', err);
+            toast.error('Failed to refresh submissions. Please try again.', { id: refreshToast });
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    // Auto refresh on component mount
+    useEffect(() => {
+        refreshEventRequests();
+    }, []);
 
     // Format date for display
     const formatDate = (dateString: string) => {
@@ -86,42 +127,6 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
     const closeModal = () => {
         setIsModalOpen(false);
         setSelectedRequest(null);
-    };
-
-    // Refresh event requests
-    const refreshEventRequests = async () => {
-        setIsRefreshing(true);
-        const refreshToast = toast.loading('Refreshing submissions...');
-
-        try {
-            const get = Get.getInstance();
-            const auth = Authentication.getInstance();
-
-            if (!auth.isAuthenticated()) {
-                toast.error('You must be logged in to refresh submissions', { id: refreshToast });
-                return;
-            }
-
-            const userId = auth.getUserId();
-            if (!userId) {
-                toast.error('User ID not found', { id: refreshToast });
-                return;
-            }
-
-            const updatedRequests = await get.getAll<EventRequest>(
-                'event_request',
-                `requested_user="${userId}"`,
-                '-created'
-            );
-
-            setEventRequests(updatedRequests);
-            toast.success('Submissions refreshed successfully', { id: refreshToast });
-        } catch (err) {
-            console.error('Failed to refresh event requests:', err);
-            toast.error('Failed to refresh submissions. Please try again.', { id: refreshToast });
-        } finally {
-            setIsRefreshing(false);
-        }
     };
 
     if (eventRequests.length === 0) {
