@@ -1,254 +1,262 @@
-import React, { useState } from 'react';
-import { toast } from 'react-hot-toast';
-import { Icon } from '@iconify/react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import type { EventRequestFormData } from './EventRequestForm';
+
+// Animation variants
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            type: "spring",
+            stiffness: 300,
+            damping: 24
+        }
+    }
+};
+
+// Flyer type options
+const FLYER_TYPES = [
+    { value: 'digital_with_social', label: 'Digital flyer (with social media advertising: Facebook, Instagram, Discord)' },
+    { value: 'digital_no_social', label: 'Digital flyer (with NO social media advertising)' },
+    { value: 'physical_with_advertising', label: 'Physical flyer (with advertising)' },
+    { value: 'physical_no_advertising', label: 'Physical flyer (with NO advertising)' },
+    { value: 'newsletter', label: 'Newsletter (IEEE, ECE, IDEA)' },
+    { value: 'other', label: 'Other' }
+];
+
+// Logo options
+const LOGO_OPTIONS = [
+    { value: 'IEEE', label: 'IEEE' },
+    { value: 'AS', label: 'AS (required if funded by AS)' },
+    { value: 'HKN', label: 'HKN' },
+    { value: 'TESC', label: 'TESC' },
+    { value: 'PIB', label: 'PIB' },
+    { value: 'TNT', label: 'TNT' },
+    { value: 'SWE', label: 'SWE' },
+    { value: 'OTHER', label: 'OTHER (please upload transparent logo files)' }
+];
+
+// Format options
+const FORMAT_OPTIONS = [
+    { value: 'pdf', label: 'PDF' },
+    { value: 'jpeg', label: 'JPEG' },
+    { value: 'png', label: 'PNG' },
+    { value: 'does_not_matter', label: 'DOES NOT MATTER' }
+];
 
 interface PRSectionProps {
-    onDataChange?: (data: any) => void;
+    formData: EventRequestFormData;
+    onDataChange: (data: Partial<EventRequestFormData>) => void;
 }
 
-const PRSection: React.FC<PRSectionProps> = ({ onDataChange }) => {
-    const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-    const [selectedLogos, setSelectedLogos] = useState<string[]>([]);
+const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
+    const [otherLogoFiles, setOtherLogoFiles] = useState<File[]>(formData.other_logos || []);
 
-    const flyerTypes = [
-        { value: 'digital_with_social', label: 'Digital flyer (with social media advertising: Facebook, Instagram, Discord)' },
-        { value: 'digital_no_social', label: 'Digital flyer (with NO social media advertising)' },
-        { value: 'physical_with_advertising', label: 'Physical flyer (with advertising)' },
-        { value: 'physical_no_advertising', label: 'Physical flyer (with NO advertising)' },
-        { value: 'newsletter', label: 'Newsletter (IEEE, ECE, IDEA)' },
-        { value: 'other', label: 'Other' }
-    ];
+    // Handle checkbox change for flyer types
+    const handleFlyerTypeChange = (type: string) => {
+        const updatedTypes = formData.flyer_type.includes(type)
+            ? formData.flyer_type.filter(t => t !== type)
+            : [...formData.flyer_type, type];
 
-    const logoOptions = [
-        { value: 'IEEE', label: 'IEEE' },
-        { value: 'AS', label: 'AS' },
-        { value: 'HKN', label: 'HKN' },
-        { value: 'TESC', label: 'TESC' },
-        { value: 'PIB', label: 'PIB' },
-        { value: 'TNT', label: 'TNT' },
-        { value: 'SWE', label: 'SWE' },
-        { value: 'OTHER', label: 'OTHER' }
-    ];
-
-    const handleTypeChange = (value: string) => {
-        const newTypes = selectedTypes.includes(value)
-            ? selectedTypes.filter(type => type !== value)
-            : [...selectedTypes, value];
-        setSelectedTypes(newTypes);
-
-        if (onDataChange) {
-            onDataChange({ flyer_type: newTypes });
-        }
+        onDataChange({ flyer_type: updatedTypes });
     };
 
-    const handleLogoChange = (value: string) => {
-        const newLogos = selectedLogos.includes(value)
-            ? selectedLogos.filter(logo => logo !== value)
-            : [...selectedLogos, value];
-        setSelectedLogos(newLogos);
+    // Handle checkbox change for required logos
+    const handleLogoChange = (logo: string) => {
+        const updatedLogos = formData.required_logos.includes(logo)
+            ? formData.required_logos.filter(l => l !== logo)
+            : [...formData.required_logos, logo];
 
-        if (onDataChange) {
-            onDataChange({ required_logos: newLogos });
-        }
+        onDataChange({ required_logos: updatedLogos });
     };
 
-    const handleOtherLogosUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            onDataChange?.({ other_logos: files });
-            toast.success(`${files.length} logo file(s) uploaded`);
+    // Handle file upload for other logos
+    const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const newFiles = Array.from(e.target.files);
+            setOtherLogoFiles(newFiles);
+            onDataChange({ other_logos: newFiles });
         }
     };
 
     return (
-        <div className="card bg-base-100/95 backdrop-blur-md shadow-lg">
-            <div className="card-body">
-                <h2 className="card-title text-xl mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    PR Materials
-                </h2>
+        <div className="space-y-6">
+            <h2 className="text-2xl font-bold mb-4 text-primary">PR Materials</h2>
 
-                <div className="space-y-4 mt-4">
-                    <label className="form-control w-full">
-                        <div className="label">
-                            <span className="label-text font-medium text-lg flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                Type of material needed
-                            </span>
-                        </div>
-                        <div className="space-y-2">
-                            {flyerTypes.map(type => (
-                                <label key={type.value} className="label cursor-pointer justify-start gap-3 hover:bg-base-200/50 p-4 rounded-lg transition-colors duration-300">
-                                    <input
-                                        type="checkbox"
-                                        className="checkbox checkbox-primary"
-                                        name="flyer_type[]"
-                                        value={type.value}
-                                        checked={selectedTypes.includes(type.value)}
-                                        onChange={() => handleTypeChange(type.value)}
-                                    />
-                                    <span className="label-text">{type.label}</span>
-                                </label>
-                            ))}
+            <div className="bg-base-300/50 p-4 rounded-lg mb-6">
+                <p className="text-sm">
+                    If you need PR Materials, please don't forget that this form MUST be submitted at least 6 weeks in advance even if you aren't requesting AS funding or physical flyers. Also, please remember to ping PR in #-events on Slack once you've submitted this form.
+                </p>
+            </div>
 
-                            {selectedTypes.includes('other') && (
-                                <div className="form-control w-full mt-2 ml-10">
-                                    <input
-                                        type="text"
-                                        name="other_flyer_type"
-                                        placeholder="Please specify other flyer type"
-                                        className="input input-bordered w-full"
-                                        onChange={(e) => onDataChange?.({ other_flyer_type: e.target.value })}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    </label>
+            {/* Type of material needed */}
+            <motion.div variants={itemVariants} className="form-control bg-base-200/50 p-4 rounded-lg">
+                <label className="label">
+                    <span className="label-text font-medium text-lg">Type of material needed?</span>
+                    <span className="label-text-alt text-error">*</span>
+                </label>
+                <div className="space-y-2 mt-2">
+                    {FLYER_TYPES.map((type) => (
+                        <label key={type.value} className="flex items-start gap-2 cursor-pointer hover:bg-base-300/30 p-2 rounded-md transition-colors">
+                            <input
+                                type="checkbox"
+                                className="checkbox checkbox-primary mt-1"
+                                checked={formData.flyer_type.includes(type.value)}
+                                onChange={() => handleFlyerTypeChange(type.value)}
+                            />
+                            <span>{type.label}</span>
+                        </label>
+                    ))}
                 </div>
 
-                {selectedTypes.length > 0 && (
-                    <>
-                        <div className="form-control w-full">
-                            <label className="label">
-                                <span className="label-text font-medium text-lg flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    Advertising Start Date
-                                </span>
-                            </label>
-                            <input
-                                type="datetime-local"
-                                name="flyer_advertising_start_date"
-                                className="input input-bordered w-full"
-                                onChange={(e) => onDataChange?.({ flyer_advertising_start_date: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="form-control w-full">
-                            <label className="label">
-                                <span className="label-text font-medium text-lg flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    Logos Required
-                                </span>
-                            </label>
-                            <div className="space-y-2">
-                                {logoOptions.map(logo => (
-                                    <label key={logo.value} className="label cursor-pointer justify-start gap-3 hover:bg-base-200/50 p-4 rounded-lg transition-colors duration-300">
-                                        <input
-                                            type="checkbox"
-                                            className="checkbox checkbox-primary"
-                                            name="required_logos[]"
-                                            value={logo.value}
-                                            checked={selectedLogos.includes(logo.value)}
-                                            onChange={() => handleLogoChange(logo.value)}
-                                        />
-                                        <span className="label-text">{logo.label}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        {selectedLogos.includes('OTHER') && (
-                            <div className="form-control w-full">
-                                <label className="label">
-                                    <span className="label-text font-medium text-lg flex items-center gap-2">
-                                        <Icon icon="mdi:upload" className="h-5 w-5 text-primary" />
-                                        Upload Logo Files
-                                    </span>
-                                </label>
-                                <input
-                                    type="file"
-                                    name="other_logos"
-                                    multiple
-                                    accept="image/*"
-                                    className="file-input file-input-bordered w-full"
-                                    onChange={handleOtherLogosUpload}
-                                />
-                            </div>
-                        )}
-
-                        <div className="form-control w-full">
-                            <label className="label">
-                                <span className="label-text font-medium text-lg flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    Format Needed
-                                </span>
-                            </label>
-                            <select
-                                name="advertising_format"
-                                className="select select-bordered w-full"
-                                onChange={(e) => onDataChange?.({ advertising_format: e.target.value })}
-                            >
-                                <option value="">Select a format...</option>
-                                <option value="pdf">PDF</option>
-                                <option value="png">PNG</option>
-                                <option value="jpeg">JPG</option>
-                                <option value="does_not_matter">DOES NOT MATTER</option>
-                            </select>
-                        </div>
-
-                        <div className="form-control w-full">
-                            <label className="label">
-                                <span className="label-text font-medium text-lg flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    Additional Specifications
-                                </span>
-                            </label>
-                            <textarea
-                                name="flyer_additional_requests"
-                                className="textarea textarea-bordered h-32"
-                                placeholder="Color scheme, overall design, examples to consider..."
-                                onChange={(e) => onDataChange?.({ flyer_additional_requests: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="form-control w-full">
-                            <label className="label">
-                                <span className="label-text font-medium text-lg flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    Photography Needed
-                                </span>
-                            </label>
-                            <div className="flex gap-4">
-                                <label className="label cursor-pointer justify-start gap-3 hover:bg-base-200/50 p-4 rounded-lg transition-colors duration-300">
-                                    <input
-                                        type="radio"
-                                        name="photography_needed"
-                                        value="true"
-                                        className="radio radio-primary"
-                                        onChange={(e) => onDataChange?.({ photography_needed: e.target.value === 'true' })}
-                                    />
-                                    <span className="label-text">Yes</span>
-                                </label>
-                                <label className="label cursor-pointer justify-start gap-3 hover:bg-base-200/50 p-4 rounded-lg transition-colors duration-300">
-                                    <input
-                                        type="radio"
-                                        name="photography_needed"
-                                        value="false"
-                                        className="radio radio-primary"
-                                        onChange={(e) => onDataChange?.({ photography_needed: e.target.value === 'true' })}
-                                    />
-                                    <span className="label-text">No</span>
-                                </label>
-                            </div>
-                        </div>
-                    </>
+                {/* Other flyer type input */}
+                {formData.flyer_type.includes('other') && (
+                    <div className="mt-3 pl-7">
+                        <input
+                            type="text"
+                            className="input input-bordered w-full"
+                            placeholder="Please specify other material needed"
+                            value={formData.other_flyer_type}
+                            onChange={(e) => onDataChange({ other_flyer_type: e.target.value })}
+                            required
+                        />
+                    </div>
                 )}
-            </div>
+            </motion.div>
+
+            {/* Advertising start date */}
+            {formData.flyer_type.some(type =>
+                type === 'digital_with_social' ||
+                type === 'physical_with_advertising' ||
+                type === 'newsletter'
+            ) && (
+                    <motion.div variants={itemVariants} className="form-control">
+                        <label className="label">
+                            <span className="label-text font-medium">When do you need us to start advertising?</span>
+                            <span className="label-text-alt text-error">*</span>
+                        </label>
+                        <input
+                            type="date"
+                            className="input input-bordered focus:input-primary transition-all duration-300"
+                            value={formData.flyer_advertising_start_date}
+                            onChange={(e) => onDataChange({ flyer_advertising_start_date: e.target.value })}
+                            required
+                        />
+                    </motion.div>
+                )}
+
+            {/* Logos Required */}
+            <motion.div variants={itemVariants} className="form-control">
+                <label className="label">
+                    <span className="label-text font-medium">Logos Required</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {LOGO_OPTIONS.map((logo) => (
+                        <label key={logo.value} className="flex items-start gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="checkbox checkbox-primary mt-1"
+                                checked={formData.required_logos.includes(logo.value)}
+                                onChange={() => handleLogoChange(logo.value)}
+                            />
+                            <span>{logo.label}</span>
+                        </label>
+                    ))}
+                </div>
+            </motion.div>
+
+            {/* Logo file upload */}
+            {formData.required_logos.includes('OTHER') && (
+                <motion.div variants={itemVariants} className="form-control">
+                    <label className="label">
+                        <span className="label-text font-medium">Please share your logo files here</span>
+                        <span className="label-text-alt text-error">*</span>
+                    </label>
+                    <input
+                        type="file"
+                        className="file-input file-input-bordered w-full file-input-primary hover:file-input-ghost transition-all duration-300"
+                        onChange={handleLogoFileChange}
+                        accept="image/*"
+                        multiple
+                        required
+                    />
+                    {otherLogoFiles.length > 0 && (
+                        <div className="mt-2">
+                            <p className="text-sm font-medium mb-1">Selected files:</p>
+                            <ul className="list-disc list-inside text-sm">
+                                {otherLogoFiles.map((file, index) => (
+                                    <li key={index}>{file.name}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </motion.div>
+            )}
+
+            {/* Format */}
+            <motion.div variants={itemVariants} className="form-control">
+                <label className="label">
+                    <span className="label-text font-medium">What format do you need it to be in?</span>
+                    <span className="label-text-alt text-error">*</span>
+                </label>
+                <select
+                    className="select select-bordered focus:select-primary transition-all duration-300"
+                    value={formData.advertising_format}
+                    onChange={(e) => onDataChange({ advertising_format: e.target.value })}
+                    required
+                >
+                    <option value="">Select format</option>
+                    {FORMAT_OPTIONS.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                </select>
+            </motion.div>
+
+            {/* Additional specifications */}
+            <motion.div variants={itemVariants} className="form-control">
+                <label className="label">
+                    <span className="label-text font-medium">Any other specifications and requests?</span>
+                </label>
+                <textarea
+                    className="textarea textarea-bordered focus:textarea-primary transition-all duration-300 min-h-[120px]"
+                    value={formData.flyer_additional_requests}
+                    onChange={(e) => onDataChange({ flyer_additional_requests: e.target.value })}
+                    placeholder="Color scheme, overall design, examples to consider, etc."
+                    rows={4}
+                />
+            </motion.div>
+
+            {/* Photography Needed */}
+            <motion.div variants={itemVariants} className="form-control">
+                <label className="label">
+                    <span className="label-text font-medium">Photography Needed?</span>
+                    <span className="label-text-alt text-error">*</span>
+                </label>
+                <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="radio"
+                            className="radio radio-primary"
+                            checked={formData.photography_needed === true}
+                            onChange={() => onDataChange({ photography_needed: true })}
+                            required
+                        />
+                        <span>Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="radio"
+                            className="radio radio-primary"
+                            checked={formData.photography_needed === false}
+                            onChange={() => onDataChange({ photography_needed: false })}
+                            required
+                        />
+                        <span>No</span>
+                    </label>
+                </div>
+            </motion.div>
         </div>
     );
 };

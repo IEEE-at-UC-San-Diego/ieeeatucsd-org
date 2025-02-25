@@ -4,551 +4,78 @@ import { Update } from "../../scripts/pocketbase/Update";
 import { FileManager } from "../../scripts/pocketbase/FileManager";
 import { Get } from "../../scripts/pocketbase/Get";
 import { toast, Toaster } from "react-hot-toast";
-
-
-// Form sections
-import PRSection from "./Officer_EventRequestForm/PRSection";
-import EventDetailsSection from "./Officer_EventRequestForm/EventDetailsSection";
-import TAPSection from "./Officer_EventRequestForm/TAPSection";
-import ASFundingSection from "./Officer_EventRequestForm/ASFundingSection";
-
-interface EventRequest {
-  id: string;
-  created: string;
-  event_name: string;
-  event_description: string;
-  location: string;
-  start_date: string;
-  end_date: string;
-  status: 'draft' | 'pending' | 'approved' | 'rejected';
-  has_food: boolean;
-  [key: string]: any; // For other fields we might need
-}
-
-interface ListResponse<T> {
-  page: number;
-  perPage: number;
-  totalItems: number;
-  totalPages: number;
-  items: T[];
-}
-
-const auth = Authentication.getInstance();
-const update = Update.getInstance();
-const fileManager = FileManager.getInstance();
-const get = Get.getInstance();
-
-// Get user's submitted event requests
-let userEventRequests: ListResponse<EventRequest> = {
-  page: 1,
-  perPage: 50,
-  totalItems: 0,
-  totalPages: 0,
-  items: []
-};
-
-if (auth.isAuthenticated()) {
-  try {
-    userEventRequests = await get.getList<EventRequest>("event_request", 1, 50, `requested_user = "${auth.getUserId()}"`, "-created");
-  } catch (error) {
-    console.error("Failed to fetch event requests:", error);
-  }
-}
+import EventRequestFormPreview from "./Officer_EventRequestForm/EventRequestFormPreview";
+import EventRequestForm from "./Officer_EventRequestForm/EventRequestForm";
 ---
 
-<div class="w-full max-w-4xl mx-auto p-6">
-  <toast client:load />
-  <h1
-    class="text-3xl font-bold mb-8 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
-  >
-    Event Request Form
-  </h1>
+<div class="w-full max-w-6xl mx-auto py-8 px-4">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-white mb-2">Event Request Form</h1>
+    <p class="text-gray-300 mb-4">
+      Submit your event request at least 6 weeks before your event. After
+      submitting, please notify PR and/or Coordinators in the #-events Slack
+      channel.
+    </p>
+    <div class="bg-base-300/50 p-4 rounded-lg text-sm text-gray-300">
+      <p class="font-medium mb-2">This form includes sections for:</p>
+      <ul class="list-disc list-inside space-y-1 ml-2">
+        <li>PR Materials (if needed)</li>
+        <li>Event Details</li>
+        <li>TAP Form Information</li>
+        <li>AS Funding (if needed)</li>
+      </ul>
+      <p class="mt-3">
+        You can switch between the form and preview tabs at any time. Your
+        progress is automatically saved.
+      </p>
+    </div>
+  </div>
 
-  <div class="tabs-container">
-    <!-- Tab Navigation -->
-    <div class="tabs tabs-boxed bg-base-200/50 backdrop-blur-sm p-1 rounded-lg mb-6">
-      <input type="radio" name="form_tabs" id="new-request-tab" class="tab-toggle" checked />
-      <input type="radio" name="form_tabs" id="my-requests-tab" class="tab-toggle" />
-      
-      <div class="w-full flex">
-        <label for="new-request-tab" class="tab flex-1 tab-lg transition-all duration-200">
-          <div class="flex items-center justify-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-            </svg>
-            New Request
-          </div>
-        </label>
-        <label for="my-requests-tab" class="tab flex-1 tab-lg transition-all duration-200">
-          <div class="flex items-center justify-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-              <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
-            </svg>
-            My Requests
-            {userEventRequests.items.length > 0 && (
-              <span class="badge badge-primary badge-sm">{userEventRequests.items.length}</span>
-            )}
-          </div>
-        </label>
-      </div>
+  <div class="bg-base-200 rounded-lg shadow-xl overflow-hidden">
+    <div class="tabs tabs-boxed bg-base-300 rounded-t-lg">
+      <button id="form-tab" class="tab tab-active">Submit Request</button>
+      <button id="preview-tab" class="tab">Preview Request</button>
+    </div>
 
-      <!-- Tab Content -->
-      <div class="tab-panels mt-6">
-        <div class="tab-panel" id="new-request-panel">
-          <form id="eventRequestForm" class="space-y-8">
-            <div class="card bg-base-100/95 backdrop-blur-md shadow-lg">
-              <div class="card-body">
-                <h2 class="card-title text-xl">
-                  Do you need graphics from our design team?
-                </h2>
-                <div class="space-y-4 mt-4">
-                  <label class="label cursor-pointer justify-start gap-3">
-                    <input
-                      type="radio"
-                      name="needsGraphics"
-                      value="yes"
-                      class="radio radio-primary"
-                    />
-                    <span class="label-text">Yes (Continue to PR Section)</span>
-                  </label>
-                  <label class="label cursor-pointer justify-start gap-3">
-                    <input
-                      type="radio"
-                      name="needsGraphics"
-                      value="no"
-                      class="radio radio-primary"
-                    />
-                    <span class="label-text">No (Skip to Event Details)</span>
-                  </label>
-                </div>
-              </div>
-            </div>
+    <div id="form-view" class="p-6">
+      <EventRequestForm client:load />
+    </div>
 
-            <div id="prSection" class="hidden">
-              <PRSection client:load />
-            </div>
-
-            <div id="eventDetailsSection">
-              <EventDetailsSection client:load />
-            </div>
-
-            <div id="tapSection">
-              <TAPSection client:load>
-                <ASFundingSection client:load />
-              </TAPSection>
-            </div>
-
-            <div class="flex justify-end space-x-4 mt-8">
-              <button
-                type="button"
-                id="saveAsDraft"
-                class="btn btn-ghost hover:bg-base-200 gap-2"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"
-                  ></path>
-                </svg>
-                Save as Draft
-              </button>
-              <button
-                type="submit"
-                class="btn btn-primary gap-2 shadow-md hover:shadow-lg transition-all duration-300"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"
-                  ></path>
-                </svg>
-                Submit Request
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <div class="tab-panel hidden" id="my-requests-panel">
-          <div class="space-y-4">
-            {userEventRequests.items.length === 0 ? (
-              <div class="text-center py-8 text-base-content/70">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-12 w-12 mx-auto mb-4 opacity-50"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v7h-2l-1 2H8l-1-2H5V5z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-                <p>No event requests found</p>
-              </div>
-            ) : (
-              <div class="grid gap-4">
-                {userEventRequests.items.map((request) => (
-                  <div class="card bg-base-100/95 backdrop-blur-md shadow-lg">
-                    <div class="card-body">
-                      <h3 class="card-title text-lg">
-                        {request.event_name || "Untitled Event"}
-                        {request.status === "draft" && (
-                          <span class="badge badge-outline">Draft</span>
-                        )}
-                        {request.status === "pending" && (
-                          <span class="badge badge-warning">Pending</span>
-                        )}
-                        {request.status === "approved" && (
-                          <span class="badge badge-success">Approved</span>
-                        )}
-                        {request.status === "rejected" && (
-                          <span class="badge badge-error">Rejected</span>
-                        )}
-                      </h3>
-                      <p class="text-sm opacity-70">
-                        Submitted: {new Date(request.created).toLocaleDateString()}
-                      </p>
-                      <div class="flex gap-2 mt-4">
-                        <button class="btn btn-sm btn-outline" onclick=`editRequest('${request.id}')`>
-                          Edit
-                        </button>
-                        <button class="btn btn-sm btn-ghost" onclick=`viewRequest('${request.id}')`>
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+    <div id="preview-view" class="p-6 hidden">
+      <EventRequestFormPreview client:load />
     </div>
   </div>
 </div>
 
-<style>
-  /* Hide radio inputs but keep them functional */
-  .tab-toggle {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  /* Style tabs */
-  .tab {
-    @apply text-base-content/70 hover:text-base-content;
-  }
-
-  /* Active tab styles */
-  #new-request-tab:checked ~ .w-full label[for="new-request-tab"],
-  #my-requests-tab:checked ~ .w-full label[for="my-requests-tab"] {
-    @apply bg-base-100 text-primary tab-active shadow-sm;
-  }
-
-  /* Show/hide panels based on radio selection */
-  #new-request-tab:checked ~ .tab-panels #new-request-panel {
-    display: block;
-  }
-
-  #my-requests-tab:checked ~ .tab-panels #my-requests-panel {
-    display: block;
-  }
-
-  .tab-panel {
-    display: none;
-  }
-
-  .tab-panels {
-    min-height: 300px;
-  }
-
-  /* Smooth transitions */
-  .tab {
-    transition: all 0.2s ease-in-out;
-  }
-
-  .badge {
-    transition: all 0.2s ease-in-out;
-  }
-</style>
-
 <script>
-  import { Authentication } from "../../scripts/pocketbase/Authentication";
-  import { Update } from "../../scripts/pocketbase/Update";
-  import { FileManager } from "../../scripts/pocketbase/FileManager";
-  import { Get } from "../../scripts/pocketbase/Get";
-  import { toast } from "react-hot-toast";
+  // Tab switching logic
+  const formTab = document.getElementById("form-tab");
+  const previewTab = document.getElementById("preview-tab");
+  const formView = document.getElementById("form-view");
+  const previewView = document.getElementById("preview-view");
 
-  // Add TypeScript interfaces
-  interface EventRequest {
-    id: string;
-    created: string;
-    event_name: string;
-    event_description: string;
-    location: string;
-    start_date: string;
-    end_date: string;
-    status: 'draft' | 'pending' | 'approved' | 'rejected';
-    has_food: boolean;
-    [key: string]: any; // For other fields we might need
-  }
+  formTab?.addEventListener("click", () => {
+    formTab.classList.add("tab-active");
+    previewTab?.classList.remove("tab-active");
+    formView?.classList.remove("hidden");
+    previewView?.classList.add("hidden");
 
-  // Extend Window interface
-  declare global {
-    interface Window {
-      editRequest: (requestId: string) => void;
-      viewRequest: (requestId: string) => void;
-    }
-  }
-
-  // Form visibility logic
-  const form = document.getElementById("eventRequestForm") as HTMLFormElement;
-  const prSection = document.getElementById("prSection");
-  const needsGraphicsRadios = document.getElementsByName("needsGraphics");
-
-  // Show/hide PR section based on radio selection
-  needsGraphicsRadios.forEach((radio) => {
-    radio.addEventListener("change", (e) => {
-      const target = e.target as HTMLInputElement;
-      if (target.value === "yes" && prSection) {
-        prSection.classList.remove("hidden");
-      } else if (prSection) {
-        prSection.classList.add("hidden");
-      }
-    });
+    // Dispatch event to notify the preview component to update
+    const event = new CustomEvent("updatePreview");
+    document.dispatchEvent(event);
   });
 
-  // Form submission handler
-  form?.addEventListener("submit", async (e) => {
+  previewTab?.addEventListener("click", (e) => {
+    // Prevent default behavior to avoid form submission
     e.preventDefault();
 
-    try {
-      const auth = Authentication.getInstance();
-      const update = Update.getInstance();
-      const userId = auth.getUserId();
+    previewTab.classList.add("tab-active");
+    formTab?.classList.remove("tab-active");
+    previewView?.classList.remove("hidden");
+    formView?.classList.add("hidden");
 
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-
-      // Show loading toast
-      const loadingToastId = toast.loading('Submitting event request...');
-
-      // Get graphics need value
-      const needsGraphics = form.querySelector<HTMLInputElement>('input[name="needsGraphics"]:checked')?.value === "yes";
-
-      // Collect data from all sections
-      const eventData = {
-        requested_user: userId,
-        name: form.querySelector<HTMLInputElement>('[name="event_name"]')?.value,
-        description: form.querySelector<HTMLTextAreaElement>('[name="event_description"]')?.value,
-        location: form.querySelector<HTMLInputElement>('[name="location"]')?.value,
-        start_date_time: new Date(form.querySelector<HTMLInputElement>('[name="start_date_time"]')?.value || '').toISOString(),
-        end_date_time: new Date(form.querySelector<HTMLInputElement>('[name="end_date_time"]')?.value || '').toISOString(),
-        flyers_needed: needsGraphics,
-        flyer_type: Array.from(form.querySelectorAll<HTMLInputElement>('input[type="checkbox"][name="flyer_type[]"]:checked')).map(cb => cb.value),
-        other_flyer_type: form.querySelector<HTMLInputElement>('[name="other_flyer_type"]')?.value,
-        flyer_advertising_start_date: form.querySelector<HTMLInputElement>('[name="flyer_advertising_start_date"]')?.value,
-        flyer_additional_requests: form.querySelector<HTMLTextAreaElement>('[name="flyer_additional_requests"]')?.value,
-        photography_needed: form.querySelector<HTMLInputElement>('input[name="photography_needed"]:checked')?.value === 'true',
-        required_logos: Array.from(form.querySelectorAll<HTMLInputElement>('input[type="checkbox"][name="required_logos[]"]:checked')).map(cb => cb.value),
-        advertising_format: form.querySelector<HTMLSelectElement>('[name="advertising_format"]')?.value,
-        will_or_have_room_booking: form.querySelector<HTMLInputElement>('input[name="will_or_have_room_booking"]:checked')?.value === 'true',
-        expected_attendance: parseInt(form.querySelector<HTMLInputElement>('[name="expected_attendance"]')?.value || '0'),
-        as_funding_required: form.querySelector<HTMLInputElement>('input[name="as_funding"]:checked')?.value === 'true',
-        food_drinks_being_served: form.querySelector<HTMLInputElement>('input[name="food_drinks"]:checked')?.value === 'true',
-        status: 'pending',
-        draft: false,
-        // Add itemized items if AS funding is required
-        itemized_items: form.querySelector<HTMLInputElement>('input[name="as_funding"]:checked')?.value === 'true' 
-            ? JSON.parse(form.querySelector<HTMLInputElement>('[name="itemized_items"]')?.value || '[]')
-            : undefined,
-        // Add itemized invoice data
-        itemized_invoice: form.querySelector<HTMLInputElement>('input[name="as_funding"]:checked')?.value === 'true'
-            ? JSON.parse(form.querySelector<HTMLInputElement>('[name="itemized_invoice"]')?.value || '{}')
-            : undefined
-      };
-
-      // Create the record
-      const record = await update.create("event_request", eventData);
-
-      // Handle file uploads
-      const fileManager = FileManager.getInstance();
-      const fileFields = {
-        room_booking: form.querySelector<HTMLInputElement>('input[type="file"][name="room_booking"]')?.files?.[0],
-        itemized_invoice: form.querySelector<HTMLInputElement>('input[type="file"][name="itemized_invoice"]')?.files?.[0],
-        invoice: form.querySelector<HTMLInputElement>('input[type="file"][name="invoice"]')?.files?.[0],
-        other_logos: Array.from(form.querySelector<HTMLInputElement>('input[type="file"][name="other_logos"]')?.files || [])
-      };
-
-      // Upload files one by one
-      for (const [field, files] of Object.entries(fileFields)) {
-        if (!files) continue;
-        
-        if (Array.isArray(files)) {
-          // Handle multiple files (other_logos)
-          const validFiles = files.filter((f): f is File => f instanceof File);
-          if (validFiles.length > 0) {
-            await fileManager.uploadFiles(
-              "event_request",
-              record.id,
-              field,
-              validFiles
-            );
-          }
-        } else {
-          // Handle single file
-          await fileManager.uploadFile(
-            "event_request",
-            record.id,
-            field,
-            files
-          );
-        }
-      }
-
-      // Dismiss loading toast and show success
-      toast.dismiss(loadingToastId);
-      toast.success('Event request submitted successfully!');
-
-      // Reset form
-      form.reset();
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      toast.error('Failed to submit event request. Please try again.');
-    }
+    // Dispatch event to notify the preview component to update
+    const event = new CustomEvent("updatePreview");
+    document.dispatchEvent(event);
   });
-
-  // Save as draft handler
-  document
-    .getElementById("saveAsDraft")
-    ?.addEventListener("click", async () => {
-      try {
-        const formData = new FormData(form);
-        const data: Record<string, any> = {};
-        
-        // Convert FormData to a proper object with correct types
-        formData.forEach((value, key) => {
-          if (value instanceof File) {
-            // Skip file fields as they'll be handled separately
-            return;
-          }
-          data[key] = value;
-        });
-
-        data.status = "draft";
-
-        const auth = Authentication.getInstance();
-        const update = Update.getInstance();
-
-        const userId = auth.getUserId();
-        if (userId) {
-          data.requested_user = userId;
-        }
-
-        await update.updateFields("event_request", data.id || "", data);
-        toast.success('Draft saved successfully!');
-      } catch (error) {
-        console.error("Error saving draft:", error);
-        toast.error('Error saving draft. Please try again.');
-      }
-    });
-
-  // Remove the old tab switching logic and add new event listeners for the radio buttons
-  const tabToggles = document.querySelectorAll('.tab-toggle');
-  const tabPanels = document.querySelectorAll('.tab-panel');
-
-  tabToggles.forEach(toggle => {
-    toggle.addEventListener('change', (e) => {
-      const target = e.target as HTMLInputElement;
-      const panelId = target.id.replace('-tab', '-panel');
-      
-      // Hide all panels
-      tabPanels.forEach(panel => {
-        panel.classList.add('hidden');
-      });
-      
-      // Show selected panel
-      const selectedPanel = document.getElementById(panelId);
-      if (selectedPanel) {
-        selectedPanel.classList.remove('hidden');
-      }
-    });
-  });
-
-  // Edit request handler
-  window.editRequest = (requestId: string) => {
-    // Load the request data into the form
-    const get = Get.getInstance();
-    get.getOne<EventRequest>("event_request", requestId)
-      .then((request: EventRequest) => {
-        // Populate form fields with request data
-        const form = document.getElementById('eventRequestForm');
-        if (form) {
-          for (const [key, value] of Object.entries(request)) {
-            const input = form.querySelector(`[name="${key}"]`) as HTMLInputElement | null;
-            if (input) {
-              input.value = value;
-            }
-          }
-          
-          // Switch to the form tab
-          const newRequestTab = document.querySelector('[data-tab="new-request"]') as HTMLElement;
-          if (newRequestTab) {
-            newRequestTab.click();
-          }
-        }
-      })
-      .catch((error: Error) => {
-        console.error("Failed to load request:", error);
-        toast.error("Failed to load request. Please try again.");
-      });
-  };
-
-  // View request handler
-  window.viewRequest = (requestId: string) => {
-    // Open a modal with request details
-    const get = Get.getInstance();
-    get.getOne<EventRequest>("event_request", requestId)
-      .then((request: EventRequest) => {
-        const modal = document.createElement('dialog');
-        modal.className = 'modal';
-        modal.innerHTML = `
-          <div class="modal-box">
-            <h3 class="font-bold text-lg">${request.event_name || "Untitled Event"}</h3>
-            <div class="py-4 space-y-2">
-              <p><strong>Status:</strong> ${request.status}</p>
-              <p><strong>Description:</strong> ${request.event_description || "No description"}</p>
-              <p><strong>Location:</strong> ${request.location || "No location"}</p>
-              <p><strong>Start Date:</strong> ${new Date(request.start_date).toLocaleString()}</p>
-              <p><strong>End Date:</strong> ${new Date(request.end_date).toLocaleString()}</p>
-              ${request.has_food ? '<p><strong>Food:</strong> Yes</p>' : ''}
-            </div>
-            <div class="modal-action">
-              <form method="dialog">
-                <button class="btn">Close</button>
-              </form>
-            </div>
-          </div>
-        `;
-        document.body.appendChild(modal);
-        modal.showModal();
-      })
-      .catch((error: Error) => {
-        console.error("Failed to load request:", error);
-        toast.error("Failed to load request details. Please try again.");
-      });
-  };
 </script>

@@ -13,7 +13,22 @@ function convertLocalToUTC<T>(data: T): T {
 
   const converted = { ...data };
   for (const [key, value] of Object.entries(converted)) {
-    if (isLocalDateString(value)) {
+    // Special handling for invoice_data to ensure it's a proper JSON object
+    if (key === "invoice_data") {
+      if (typeof value === "string") {
+        try {
+          // If it's a string representation of JSON, parse it
+          const parsedValue = JSON.parse(value);
+          (converted as any)[key] = parsedValue;
+        } catch (e) {
+          // If it's not valid JSON, keep it as is
+          console.warn("Failed to parse invoice_data as JSON:", e);
+        }
+      } else if (typeof value === "object" && value !== null) {
+        // If it's already an object, keep it as is
+        (converted as any)[key] = value;
+      }
+    } else if (isLocalDateString(value)) {
       (converted as any)[key] = new Date(value).toISOString();
     } else if (Array.isArray(value)) {
       (converted as any)[key] = value.map((item) => convertLocalToUTC(item));
@@ -60,7 +75,9 @@ export class Update {
       this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
       const convertedData = convertLocalToUTC(data);
-      const result = await pb.collection(collectionName).create<T>(convertedData);
+      const result = await pb
+        .collection(collectionName)
+        .create<T>(convertedData);
       return result;
     } catch (err) {
       console.error(`Failed to create record in ${collectionName}:`, err);
@@ -125,12 +142,12 @@ export class Update {
       this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
       const convertedUpdates = convertLocalToUTC(updates);
-      
+
       // If recordId is empty, create a new record instead of updating
       if (!recordId) {
         return this.create<T>(collectionName, convertedUpdates);
       }
-      
+
       const result = await pb
         .collection(collectionName)
         .update<T>(recordId, convertedUpdates);

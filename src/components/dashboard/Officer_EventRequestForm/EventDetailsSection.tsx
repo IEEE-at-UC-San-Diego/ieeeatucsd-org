@@ -1,147 +1,144 @@
 import React from 'react';
+import { motion } from 'framer-motion';
+import type { EventRequestFormData } from './EventRequestForm';
+
+// Animation variants
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            type: "spring",
+            stiffness: 300,
+            damping: 24
+        }
+    }
+};
 
 interface EventDetailsSectionProps {
-    onDataChange?: (data: any) => void;
+    formData: EventRequestFormData;
+    onDataChange: (data: Partial<EventRequestFormData>) => void;
 }
 
-const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ onDataChange }) => {
+const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onDataChange }) => {
     return (
-        <div className="card bg-base-100/95 backdrop-blur-md shadow-lg">
-            <div className="card-body">
-                <h2 className="card-title text-xl mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Event Details
-                </h2>
+        <div className="space-y-6">
+            <h2 className="text-2xl font-bold mb-4 text-primary">Event Details</h2>
 
-                <div className="space-y-6 mt-4">
-                    <div className="form-control w-full">
-                        <label className="label">
-                            <span className="label-text font-medium flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Event Name
-                            </span>
-                        </label>
-                        <input
-                            type="text"
-                            name="event_name"
-                            className="input input-bordered w-full"
-                            onChange={(e) => onDataChange?.({ name: e.target.value })}
-                            required
-                        />
-                    </div>
-
-                    <div className="form-control w-full">
-                        <label className="label">
-                            <span className="label-text font-medium flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                Event Description
-                            </span>
-                        </label>
-                        <textarea
-                            name="event_description"
-                            className="textarea textarea-bordered h-32"
-                            onChange={(e) => onDataChange?.({ description: e.target.value })}
-                            required
-                        />
-                    </div>
-
-                    <div className="form-control w-full">
-                        <label className="label">
-                            <span className="label-text font-medium flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                Event Start Date
-                            </span>
-                        </label>
-                        <input
-                            type="datetime-local"
-                            name="start_date_time"
-                            className="input input-bordered w-full"
-                            onChange={(e) => onDataChange?.({ start_date_time: e.target.value })}
-                            required
-                        />
-                    </div>
-
-                    <div className="form-control w-full">
-                        <label className="label">
-                            <span className="label-text font-medium flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                Event End Date
-                            </span>
-                        </label>
-                        <input
-                            type="datetime-local"
-                            name="end_date_time"
-                            className="input input-bordered w-full"
-                            onChange={(e) => onDataChange?.({ end_date_time: e.target.value })}
-                            required
-                        />
-                    </div>
-
-                    <div className="form-control w-full">
-                        <label className="label">
-                            <span className="label-text font-medium flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                Event Location
-                            </span>
-                        </label>
-                        <input
-                            type="text"
-                            name="location"
-                            className="input input-bordered w-full"
-                            onChange={(e) => onDataChange?.({ location: e.target.value })}
-                            required
-                        />
-                    </div>
-
-                    <div className="form-control w-full">
-                        <label className="label">
-                            <span className="label-text font-medium flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                                Room Booking Status
-                            </span>
-                        </label>
-                        <div className="flex gap-4">
-                            <label className="label cursor-pointer justify-start gap-3 hover:bg-base-200/50 p-4 rounded-lg transition-colors duration-300">
-                                <input
-                                    type="radio"
-                                    name="will_or_have_room_booking"
-                                    value="true"
-                                    className="radio radio-primary"
-                                    onChange={(e) => onDataChange?.({ will_or_have_room_booking: e.target.value === 'true' })}
-                                    required
-                                />
-                                <span className="label-text">Yes</span>
-                            </label>
-                            <label className="label cursor-pointer justify-start gap-3 hover:bg-base-200/50 p-4 rounded-lg transition-colors duration-300">
-                                <input
-                                    type="radio"
-                                    name="will_or_have_room_booking"
-                                    value="false"
-                                    className="radio radio-primary"
-                                    onChange={(e) => onDataChange?.({ will_or_have_room_booking: e.target.value === 'true' })}
-                                    required
-                                />
-                                <span className="label-text">No</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
+            <div className="bg-base-300/50 p-4 rounded-lg mb-6">
+                <p className="text-sm">
+                    Please remember to ping @Coordinators in #-events on Slack once you've submitted this form so that they can fill out a TAP form for you.
+                </p>
             </div>
+
+            {/* Event Name */}
+            <motion.div variants={itemVariants} className="form-control bg-base-200/50 p-4 rounded-lg">
+                <label className="label">
+                    <span className="label-text font-medium text-lg">Event Name</span>
+                    <span className="label-text-alt text-error">*</span>
+                </label>
+                <input
+                    type="text"
+                    className="input input-bordered focus:input-primary transition-all duration-300 mt-2"
+                    value={formData.name}
+                    onChange={(e) => onDataChange({ name: e.target.value })}
+                    placeholder="Enter event name"
+                    required
+                />
+            </motion.div>
+
+            {/* Event Description */}
+            <motion.div variants={itemVariants} className="form-control bg-base-200/50 p-4 rounded-lg">
+                <label className="label">
+                    <span className="label-text font-medium text-lg">Event Description</span>
+                    <span className="label-text-alt text-error">*</span>
+                </label>
+                <textarea
+                    className="textarea textarea-bordered focus:textarea-primary transition-all duration-300 min-h-[120px] mt-2"
+                    value={formData.event_description}
+                    onChange={(e) => onDataChange({ event_description: e.target.value })}
+                    placeholder="Provide a detailed description of your event"
+                    rows={4}
+                    required
+                />
+            </motion.div>
+
+            {/* Event Start Date */}
+            <motion.div variants={itemVariants} className="form-control">
+                <label className="label">
+                    <span className="label-text font-medium">Event Start Date & Time</span>
+                    <span className="label-text-alt text-error">*</span>
+                </label>
+                <input
+                    type="datetime-local"
+                    className="input input-bordered focus:input-primary transition-all duration-300"
+                    value={formData.start_date_time}
+                    onChange={(e) => onDataChange({ start_date_time: e.target.value })}
+                    required
+                />
+            </motion.div>
+
+            {/* Event End Date */}
+            <motion.div variants={itemVariants} className="form-control">
+                <label className="label">
+                    <span className="label-text font-medium">Event End Date & Time</span>
+                    <span className="label-text-alt text-error">*</span>
+                </label>
+                <input
+                    type="datetime-local"
+                    className="input input-bordered focus:input-primary transition-all duration-300"
+                    value={formData.end_date_time}
+                    onChange={(e) => onDataChange({ end_date_time: e.target.value })}
+                    required
+                />
+            </motion.div>
+
+            {/* Event Location */}
+            <motion.div variants={itemVariants} className="form-control">
+                <label className="label">
+                    <span className="label-text font-medium">Event Location</span>
+                    <span className="label-text-alt text-error">*</span>
+                </label>
+                <input
+                    type="text"
+                    className="input input-bordered focus:input-primary transition-all duration-300"
+                    value={formData.location}
+                    onChange={(e) => onDataChange({ location: e.target.value })}
+                    placeholder="Enter event location"
+                    required
+                />
+            </motion.div>
+
+            {/* Room Booking */}
+            <motion.div variants={itemVariants} className="form-control">
+                <label className="label">
+                    <span className="label-text font-medium">Do you/will you have a room booking for this event?</span>
+                    <span className="label-text-alt text-error">*</span>
+                </label>
+                <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="radio"
+                            className="radio radio-primary"
+                            checked={formData.will_or_have_room_booking === true}
+                            onChange={() => onDataChange({ will_or_have_room_booking: true })}
+                            required
+                        />
+                        <span>Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="radio"
+                            className="radio radio-primary"
+                            checked={formData.will_or_have_room_booking === false}
+                            onChange={() => onDataChange({ will_or_have_room_booking: false })}
+                            required
+                        />
+                        <span>No</span>
+                    </label>
+                </div>
+            </motion.div>
         </div>
     );
 };
