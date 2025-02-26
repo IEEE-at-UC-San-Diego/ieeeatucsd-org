@@ -12,7 +12,8 @@ import Contacts from "../../components/robocub/Contacts.astro";
 import Subteams from "../../components/robocub/Subteams.astro";
 import Timeline from "../../components/qp/Timeline.astro";
 import Competition from "../../components/signal/Competition.astro";
-import roboTimeline from "../../data/roboTimeline.json"
+import roboTimeline from "../../data/roboTimeline.json";
+import roboLinks from "../../data/roboLinks.json";
 ---
 
 <Layout>
@@ -31,13 +32,18 @@ import roboTimeline from "../../data/roboTimeline.json"
         title="What is RoboCup?"
         text = "TritonBots FC is UCSD’s RoboCup Small-Size League Team. Students develop fully autonomous soccer playing robots to compete in the annual RoboCup International Competition. All hardware is custom built and software programmed from the ground up. Position, velocity, and field data is received in real time through computer vision."    />
     <div class="w-full flex justify-center">
-        <Link
-            href="https://tdpsearch.com/"
-            target="_blank"
-            className="text-center mb-[10%] z-10 cursor-pointer px-[2%] py-[0.5%] md:text-[1.2vw] text-[2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"
-        >
-            Past Team Description Paper <br/> (Select ‘SmallSize’)
-        </Link>
+        <div class="w-3/5 flex justify-between mb-[15%]">
+            {roboLinks.map((roboLink) => (
+                <Link
+                    data-inview
+                    href={roboLink.link}
+                    target="_blank"
+                    className={`in-view:animate-fade-down animate-de animate-delay-${roboLink.delay} w-[30%] text-center z-10 cursor-pointer px-[2%] py-[1%] md:text-[1.2vw] text-[2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:bg-ieee-yellow/80 duration-300 font-light`}
+                >
+                    {roboLink.text}
+                </Link>
+            ))}
+        </div>
     </div>
     <Competition
         picture="/robocup.webp"

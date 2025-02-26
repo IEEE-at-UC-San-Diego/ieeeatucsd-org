@@ -1,0 +1,17 @@
+[
+    {
+        "text":"RoboCup Small-Size League",
+        "link":"https://ssl.robocup.org/",
+        "delay":"100"
+    },
+    {
+        "text":"Current Year’s Team Description Paper",
+        "link":"https://tdpsearch.com/",
+        "delay":"300"
+    },
+    {
+        "text":"Past Team Description Papers (Select ‘SmallSize’)",
+        "link":"https://drive.google.com/file/d/1wx4d79kWA3_dq6UBP-7pE1ECLRKhAOWK/view?usp=drive_link",
+        "delay":"500"
+    }
+]
