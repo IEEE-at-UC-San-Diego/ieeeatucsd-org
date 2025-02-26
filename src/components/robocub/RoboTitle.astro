@@ -2,12 +2,20 @@
 import Title from "../core/Title.astro";
 import { Image } from "astro:assets";
 import model from "../../images/robot.png";
+import roboLogo from "../../images/roboLogo.png";
 ---
 
 <div
     class="flex items-center md:h-[35vw] h-[45vw] relative w-full pl-[10%] md:mt-[3%] mt-[10%] mb-[10%]"
 >
-    <Title title="RoboCup" />
+    <div
+    class="flex items-center md:text-[3vw] text-[4.5vw] ml-[10%] md:pt-[5%] pt-[10%] text-white font-semibold"
+    >
+        <Image src={roboLogo} alt="Triton RoboCup Team Logo" class=" mr-[1vw] w-[5vw] rounded-full border-[0.2vw] border-white" />
+        <p>
+            Robocup
+        </p>
+    </div>
     <Image
         data-inview
         src={model}
