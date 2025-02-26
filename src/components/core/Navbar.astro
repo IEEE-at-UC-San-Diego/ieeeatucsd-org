@@ -33,12 +33,12 @@ import pages from "../../data/pages.json";
                             >
                                 {page.name}
                             </a>
-                            <div class="absolute left-1/2 transform -translate-x-1/2 top-full pt-2 w-64 z-50">
+                            <div class="absolute left-1/2 transform -translate-x-1/2 w-[12vw] top-full z-50">
                                 <div class="rounded-lg bg-ieee-black border border-white shadow-lg hidden group-hover:block animate-fade-down animate-duration-200 animate-ease-in-out">
                                     {page.subpages.map((subpage) => (
                                         <a
                                             href={subpage.path}
-                                            class="block px-6 py-3 text-white hover:bg-gray-700 text-[1vw] first:rounded-t-lg last:rounded-b-lg text-center whitespace-nowrap transition-colors duration-200"
+                                            class="font-light py-[4%] block text-white hover:bg-gray-700 text-[1.3vw] first:rounded-t-lg last:rounded-b-lg text-center whitespace-nowrap transition-colors duration-200"
                                         >
                                             {subpage.name}
                                         </a>

@@ -12,16 +12,20 @@
     "path": "/projects",
     "subpages": [
       {
+        "name": "Quarterly Project",
+        "path": "/projects/quarterly"
+      },
+      {
         "name": "Robocup",
         "path": "/projects/robocup"
       },
       {
-        "name": "Signal Processing",
-        "path": "/projects/signal-processing"
+        "name": "Supercomputing",
+        "path": "https://supercomputing-club.sdsc.edu/"
       },
       {
-        "name": "Supercomputing",
-        "path": "/projects/supercomputing"
+        "name": "Signal Processing",
+        "path": "/projects/signal"
       }
     ]
   },

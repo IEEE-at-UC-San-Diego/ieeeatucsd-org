@@ -2,12 +2,12 @@
   "Robocup": {
     "description": "Participate in the Robocup competition.",
     "image": "/robocup.webp",
-    "url": "/robocup"
+    "url": "/projects/robocup"
   },
   "Signal Processing": {
     "description": "Explore the field of signal processing.",
     "image": "/signal.webp",
-    "url": "/signal"
+    "url": "projects/signal"
   },
   "Supercomputing": {
     "description": "Explore the field of supercomputing.",
