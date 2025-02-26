@@ -1,7 +1,7 @@
 ---
 import { LiaDotCircle } from "react-icons/lia";
 import Link from "next/link";
-const {picture, name, description, link} = Astro.props;
+const {picture, name, description, link, linktext} = Astro.props;
 ---
 <div class = "text-white relative my-[3%]" >
     
@@ -15,7 +15,7 @@ const {picture, name, description, link} = Astro.props;
             </p>
         </div>
     
-        <div data-inview class = "md:text-[1.6vw] text-[2.2vw] tracking-wider in-view:animate-flip-up">
+        <div data-inview class = "md:text-[1.6vw] text-[2.2vw] tracking-wider in-view:animate-flip-up max-w-[60%]">
             <p class = "w-[35vw] md:mt-[25vw] mt-[35vw]">
                 {name}
             </p>
@@ -23,7 +23,7 @@ const {picture, name, description, link} = Astro.props;
                 {description}
             </p>
             <Link href = {link} target="_blank" className="md:text-[1.2vw] text-[2vw] font-light border-white/70 border-[0.1vw] py-[1.5%] px-[9%] rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300">
-                Link
+                {linktext}
             </Link>
         </div>
         

@@ -2,31 +2,38 @@
   {
     "title": "Mechanical",
     "list": [
-      "Design the Mechanisms and Structure of the Robot",
-      "Fabricate and assemble robot design",
-      "Integrate electronics and other hardware"
+      "Design the mechanisms and structure of the robot",
+      "Model using CAD software",
+      "Evaluate materials and components through physical analysis and FEA",
+      "Fabricate parts through 3D-printing, laser cutting, and machining",
+      "Prototype and test subsystem designs"
     ]
   },
   {
     "title": "Electrical",
     "list": [
-      "Design circuits to power and control robot subsystems",
-      "Work with mechanical team to assemble electronics in the robots"
+      "Design and manufacture robust power electronics operating at high voltages",
+      "Program FPGAs for precision motor control",
+      "Analyze and Simulate circuits using SPICE software",
+      "Create models and schematics using PCB software",
+      "Build, prototype, and test circuits in house"
     ]
   },
   {
     "title": "Embedded",
     "list": [
-      "Communicate between software and hardware",
-      "Provide low level software interface and API",
-      "Handle and sample data using math/physics knowledge"
+      "Interface microcontrollers to set up communication between peripherals using timers, interrupts, PWM, and RTOS",
+      "Program APIs for higher level software development",
+      "Establish PID control algorithms for accurate movement of robots",
+      "Collaborate with hardware to design and select electronics"
     ]
   },
   {
     "title": "AI",
     "list": [
       "Design decision making algorithms using behavioral trees",
-      "Conduct testing with simulation"
+      "Conduct testing with simulation",
+      "Use data provided by the RoboCup central vision server and Embedded"
     ]
   }
 ]
