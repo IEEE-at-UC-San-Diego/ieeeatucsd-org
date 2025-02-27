@@ -10,6 +10,7 @@ interface BaseRecord {
 interface RequestOptions {
   fields?: string[];
   disableAutoCancellation?: boolean;
+  expand?: string[];
 }
 
 // Utility function to check if a value is a UTC date string
@@ -222,6 +223,7 @@ export class Get {
         ...(filter && { filter }),
         ...(sort && { sort }),
         ...(options?.fields && { fields: options.fields.join(",") }),
+        ...(options?.expand && { expand: options.expand.join(",") }),
         ...(options?.disableAutoCancellation && { requestKey: null }),
       };
 

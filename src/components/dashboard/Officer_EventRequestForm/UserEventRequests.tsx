@@ -111,7 +111,7 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                 return 'badge-error';
             case 'pending':
                 return 'badge-warning';
-            case 'in progress':
+            case 'submitted':
                 return 'badge-info';
             default:
                 return 'badge-warning';
@@ -255,7 +255,7 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                                     <td>{formatDate(request.created)}</td>
                                     <td>
                                         <span className={`badge ${getStatusBadge(request.status)} badge-sm`}>
-                                            {request.status || 'Pending'}
+                                            {request.status || 'Submitted'}
                                         </span>
                                     </td>
                                     <td>

@@ -1,0 +1,145 @@
+---
+import { Authentication } from "../../scripts/pocketbase/Authentication";
+import { Get } from "../../scripts/pocketbase/Get";
+import { Toaster } from "react-hot-toast";
+import EventRequestManagementTable from "./Officer_EventRequestManagement/EventRequestManagementTable";
+
+// Get instances
+const get = Get.getInstance();
+const auth = Authentication.getInstance();
+
+// Define the EventRequest interface
+interface EventRequest {
+  id: string;
+  name: string;
+  location: string;
+  start_date_time: string;
+  end_date_time: string;
+  event_description: string;
+  flyers_needed: boolean;
+  photography_needed: boolean;
+  as_funding_required: boolean;
+  food_drinks_being_served: boolean;
+  created: string;
+  updated: string;
+  status: string;
+  requested_user: string;
+  requested_user_expand?: {
+    name: string;
+    email: string;
+  };
+  expand?: {
+    requested_user?: {
+      id: string;
+      name: string;
+      email: string;
+      [key: string]: any;
+    };
+    [key: string]: any;
+  };
+  feedback?: string;
+  [key: string]: any; // For other optional properties
+}
+
+// Initialize variables for all event requests
+let allEventRequests: EventRequest[] = [];
+let error = null;
+
+// Fetch all event requests if authenticated
+if (auth.isAuthenticated()) {
+  try {
+    // Expand the requested_user field to get user details
+    allEventRequests = await get.getAll<EventRequest>(
+      "event_request",
+      "",
+      "-created",
+      {
+        fields: ["*"],
+        expand: ["requested_user"],
+      },
+    );
+  } catch (err) {
+    console.error("Failed to fetch event requests:", err);
+    error = "Failed to load event requests. Please try again later.";
+  }
+}
+---
+
+<div class="w-full max-w-7xl mx-auto py-8 px-4">
+  <style>
+    .event-table-container {
+      min-height: 600px;
+      height: auto !important;
+      max-height: none !important;
+    }
+    .event-table-container table {
+      height: auto !important;
+    }
+    .event-table-container .overflow-x-auto {
+      max-height: none !important;
+    }
+  </style>
+
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-white mb-2">Event Request Management</h1>
+    <p class="text-gray-300 mb-4">
+      Review and manage event requests submitted by officers. Update status,
+      provide feedback, and coordinate with the team.
+    </p>
+    <div class="bg-base-300/50 p-4 rounded-lg text-sm text-gray-300">
+      <p class="font-medium mb-2">As an executive officer, you can:</p>
+      <ul class="list-disc list-inside space-y-1 ml-2">
+        <li>View all submitted event requests</li>
+        <li>Update the status of requests (Pending, Completed, Declined)</li>
+        <li>Add comments or feedback for the requesting officer</li>
+        <li>Filter and sort requests by various criteria</li>
+      </ul>
+    </div>
+  </div>
+
+  {
+    error && (
+      <div class="alert alert-error mb-6">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-6 w-6 stroke-current shrink-0"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <span>{error}</span>
+      </div>
+    )
+  }
+
+  {
+    !error && (
+      <div class="bg-base-200 rounded-lg shadow-xl min-h-[600px] event-table-container">
+        <div class="p-4 md:p-6 h-auto">
+          <EventRequestManagementTable
+            client:load
+            eventRequests={allEventRequests}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  <!-- Toast container for notifications -->
+  <Toaster client:load position="bottom-right" />
+</div>
+
+<script>
+  // Refresh the page when the user navigates back to it
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      window.location.reload();
+    }
+  });
+</script>

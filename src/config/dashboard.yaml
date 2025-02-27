@@ -32,8 +32,15 @@ sections:
   reimbursementManagement:
     title: "Reimbursement Management"
     icon: "heroicons:credit-card"
-    role: "general"
+    role: "executive"
     component: "Officer_ReimbursementManagement"
+    class: "text-info hover:text-info-focus"
+
+  eventRequestManagement:
+    title: "Event Request Management"
+    icon: "heroicons:document-text"
+    role: "executive"
+    component: "Officer_EventRequestManagement"
     class: "text-info hover:text-info-focus"
 
   eventRequestForm:
@@ -86,7 +93,7 @@ categories:
 
   executive:
     title: "Executive Menu"
-    sections: ["reimbursementManagement"]
+    sections: ["reimbursementManagement", "eventRequestManagement"]
     role: "executive"
 
   admin:
