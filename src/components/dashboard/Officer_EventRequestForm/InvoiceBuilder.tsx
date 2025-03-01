@@ -50,6 +50,16 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
         unitPrice: 0
     });
 
+    // Use a counter for generating IDs to avoid hydration issues
+    const [idCounter, setIdCounter] = useState(1);
+
+    // Generate a unique ID for new items without using non-deterministic functions
+    const generateId = () => {
+        const id = `item-${idCounter}`;
+        setIdCounter(prev => prev + 1);
+        return id;
+    };
+
     // State for validation errors
     const [errors, setErrors] = useState<{
         description?: string;
@@ -57,11 +67,6 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
         unitPrice?: string;
         vendor?: string;
     }>({});
-
-    // Generate a unique ID for new items
-    const generateId = () => {
-        return Date.now().toString(36) + Math.random().toString(36).substring(2);
-    };
 
     // Calculate totals whenever invoice data changes
     useEffect(() => {
@@ -92,12 +97,13 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
         });
     };
 
-    // Validate new item
+    // Validate new item before adding
     const validateNewItem = () => {
         const newErrors: {
             description?: string;
             quantity?: string;
             unitPrice?: string;
+            vendor?: string;
         } = {};
 
         if (!newItem.description.trim()) {
@@ -112,24 +118,22 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             newErrors.unitPrice = 'Unit price must be 0 or greater';
         }
 
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    // Add a new item
-    const handleAddItem = () => {
-        if (!validateNewItem()) {
-            return;
-        }
-
         // Check for duplicate description
         const isDuplicate = invoiceData.items.some(
             item => item.description.toLowerCase() === newItem.description.toLowerCase()
         );
 
         if (isDuplicate) {
-            setErrors({ description: 'An item with this description already exists' });
-            toast.error('An item with this description already exists');
+            newErrors.description = 'An item with this description already exists';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    // Add a new item to the invoice
+    const handleAddItem = () => {
+        if (!validateNewItem()) {
             return;
         }
 
@@ -320,17 +324,14 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
                         </label>
                         <input
                             type="number"
+                            id="quantity"
                             className={`input input-bordered input-sm ${errors.quantity ? 'input-error' : ''}`}
                             value={newItem.quantity}
                             onChange={(e) => setNewItem({ ...newItem, quantity: parseInt(e.target.value) || 0 })}
                             min="1"
                             step="1"
                         />
-                        {errors.quantity && (
-                            <label className="label">
-                                <span className="label-text-alt text-error">{errors.quantity}</span>
-                            </label>
-                        )}
+                        {errors.quantity && <div className="text-error text-xs mt-1">{errors.quantity}</div>}
                     </div>
                     <div className="form-control">
                         <label className="label">
@@ -338,6 +339,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
                         </label>
                         <input
                             type="number"
+                            id="unitPrice"
                             className={`input input-bordered input-sm ${errors.unitPrice ? 'input-error' : ''}`}
                             value={newItem.unitPrice}
                             onChange={(e) => setNewItem({ ...newItem, unitPrice: parseFloat(e.target.value) || 0 })}

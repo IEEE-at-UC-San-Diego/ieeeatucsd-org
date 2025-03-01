@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { FileManager } from '../../../scripts/pocketbase/FileManager';
@@ -774,28 +774,6 @@ const EventRequestForm: React.FC = () => {
 
     return (
         <>
-            <Toaster
-                position="top-right"
-                toastOptions={{
-                    duration: 4000,
-                    style: {
-                        background: '#333',
-                        color: '#fff',
-                    },
-                    success: {
-                        duration: 3000,
-                        style: {
-                            background: 'green',
-                        },
-                    },
-                    error: {
-                        duration: 5000,
-                        style: {
-                            background: 'red',
-                        },
-                    },
-                }}
-            />
             <motion.div
                 variants={containerVariants}
                 initial="hidden"
