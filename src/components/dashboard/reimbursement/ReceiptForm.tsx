@@ -3,16 +3,11 @@ import { Icon } from '@iconify/react';
 import FilePreview from '../universal/FilePreview';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface ExpenseItem {
-    description: string;
-    amount: number;
-    category: string;
-}
+import type { ItemizedExpense } from '../../../schemas/pocketbase';
 
 interface ReceiptFormData {
     field: File;
-    itemized_expenses: ExpenseItem[];
+    itemized_expenses: ItemizedExpense[];
     tax: number;
     date: string;
     location_name: string;
@@ -62,7 +57,7 @@ const itemVariants = {
 export default function ReceiptForm({ onSubmit, onCancel }: ReceiptFormProps) {
     const [file, setFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string>('');
-    const [itemizedExpenses, setItemizedExpenses] = useState<ExpenseItem[]>([
+    const [itemizedExpenses, setItemizedExpenses] = useState<ItemizedExpense[]>([
         { description: '', amount: 0, category: '' }
     ]);
     const [tax, setTax] = useState<number>(0);
@@ -106,7 +101,7 @@ export default function ReceiptForm({ onSubmit, onCancel }: ReceiptFormProps) {
         setItemizedExpenses(itemizedExpenses.filter((_, i) => i !== index));
     };
 
-    const handleExpenseItemChange = (index: number, field: keyof ExpenseItem, value: string | number) => {
+    const handleExpenseItemChange = (index: number, field: keyof ItemizedExpense, value: string | number) => {
         const newItems = [...itemizedExpenses];
         newItems[index] = {
             ...newItems[index],

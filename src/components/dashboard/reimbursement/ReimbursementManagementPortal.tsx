@@ -6,49 +6,23 @@ import { Update } from '../../../scripts/pocketbase/Update';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { Receipt as SchemaReceipt, User, Reimbursement } from '../../../schemas/pocketbase';
 
-interface Receipt {
-    id: string;
-    field: string;
-    created_by: string;
-    itemized_expenses: string; // JSON string
-    tax: number;
-    date: string;
-    location_name: string;
-    location_address: string;
-    notes: string;
-    audited_by: string[];
+// Extended Receipt interface with additional properties needed for this component
+interface ExtendedReceipt extends Omit<SchemaReceipt, 'audited_by'> {
+    audited_by: string[]; // In schema it's a string, but in this component it's used as string[]
     auditor_names?: string[]; // Names of auditors
-    created: string;
-    updated: string;
 }
 
-interface User {
-    id: string;
-    name: string;
-    email: string;
+// Extended User interface with additional properties needed for this component
+interface ExtendedUser extends User {
     avatar: string;
     zelle_information: string;
-    created: string;
-    updated: string;
 }
 
-interface Reimbursement {
-    id: string;
-    title: string;
-    total_amount: number;
-    date_of_purchase: string;
-    payment_method: string;
-    status: 'submitted' | 'under_review' | 'approved' | 'rejected' | 'in_progress' | 'paid';
-    submitted_by: string;
-    additional_info: string;
-    receipts: string[]; // Array of Receipt IDs
-    department: 'internal' | 'external' | 'projects' | 'events' | 'other';
-    audit_notes: string | null; // JSON string for user-submitted notes
-    audit_logs: string | null; // JSON string for system-generated logs
-    created: string;
-    updated: string;
-    submitter?: User;
+// Extended Reimbursement interface with additional properties needed for this component
+interface ExtendedReimbursement extends Reimbursement {
+    submitter?: ExtendedUser;
 }
 
 interface FilterOptions {
@@ -66,10 +40,10 @@ interface ItemizedExpense {
 }
 
 export default function ReimbursementManagementPortal() {
-    const [reimbursements, setReimbursements] = useState<Reimbursement[]>([]);
-    const [receipts, setReceipts] = useState<Record<string, Receipt>>({});
-    const [selectedReimbursement, setSelectedReimbursement] = useState<Reimbursement | null>(null);
-    const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+    const [reimbursements, setReimbursements] = useState<ExtendedReimbursement[]>([]);
+    const [receipts, setReceipts] = useState<Record<string, ExtendedReceipt>>({});
+    const [selectedReimbursement, setSelectedReimbursement] = useState<ExtendedReimbursement | null>(null);
+    const [selectedReceipt, setSelectedReceipt] = useState<ExtendedReceipt | null>(null);
     const [showReceiptModal, setShowReceiptModal] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -84,7 +58,7 @@ export default function ReimbursementManagementPortal() {
     const [loadingStatus, setLoadingStatus] = useState(false);
     const [expandedReceipts, setExpandedReceipts] = useState<Set<string>>(new Set());
     const [auditingReceipt, setAuditingReceipt] = useState<string | null>(null);
-    const [users, setUsers] = useState<Record<string, User>>({});
+    const [users, setUsers] = useState<Record<string, ExtendedUser>>({});
     const [showUserProfile, setShowUserProfile] = useState<string | null>(null);
     const [auditNotes, setAuditNotes] = useState<string[]>([]);
     const userDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -157,7 +131,7 @@ export default function ReimbursementManagementPortal() {
                 filter = filter ? `${filter} && ${dateFilter}` : dateFilter;
             }
 
-            const records = await get.getAll<Reimbursement>('reimbursement', filter, sort);
+            const records = await get.getAll<ExtendedReimbursement>('reimbursement', filter, sort);
             console.log('Loaded reimbursements:', records);
 
             // Load user data for submitters
@@ -165,7 +139,7 @@ export default function ReimbursementManagementPortal() {
             const userRecords = await Promise.all(
                 Array.from(userIds).map(async id => {
                     try {
-                        return await get.getOne<User>('users', id);
+                        return await get.getOne<ExtendedUser>('users', id);
                     } catch (error) {
                         console.error(`Failed to load user ${id}:`, error);
                         return null;
@@ -173,7 +147,7 @@ export default function ReimbursementManagementPortal() {
                 })
             );
 
-            const validUsers = userRecords.filter((u): u is User => u !== null);
+            const validUsers = userRecords.filter((u): u is ExtendedUser => u !== null);
             const userMap = Object.fromEntries(
                 validUsers.map(user => [user.id, user])
             );
@@ -197,7 +171,7 @@ export default function ReimbursementManagementPortal() {
                     const receiptRecords = await Promise.all(
                         receiptIds.map(async id => {
                             try {
-                                const receipt = await get.getOne<Receipt>('receipts', id);
+                                const receipt = await get.getOne<ExtendedReceipt>('receipts', id);
                                 // Get auditor names from the users collection
                                 if (receipt.audited_by.length > 0) {
                                     const auditorUsers = await Promise.all(
@@ -216,7 +190,7 @@ export default function ReimbursementManagementPortal() {
                         })
                     );
 
-                    const validReceipts = receiptRecords.filter((r): r is Receipt => r !== null);
+                    const validReceipts = receiptRecords.filter((r): r is ExtendedReceipt => r !== null);
                     console.log('Successfully loaded receipt records:', validReceipts);
 
                     const receiptMap = Object.fromEntries(
@@ -295,11 +269,11 @@ export default function ReimbursementManagementPortal() {
     const refreshAuditData = async (reimbursementId: string) => {
         try {
             const get = Get.getInstance();
-            const updatedReimbursement = await get.getOne<Reimbursement>('reimbursement', reimbursementId);
+            const updatedReimbursement = await get.getOne<ExtendedReimbursement>('reimbursement', reimbursementId);
 
             // Get updated user data if needed
             if (!users[updatedReimbursement.submitted_by]) {
-                const user = await get.getOne<User>('users', updatedReimbursement.submitted_by);
+                const user = await get.getOne<ExtendedUser>('users', updatedReimbursement.submitted_by);
                 setUsers(prev => ({
                     ...prev,
                     [user.id]: user
@@ -310,13 +284,13 @@ export default function ReimbursementManagementPortal() {
             const updatedReceipts = await Promise.all(
                 updatedReimbursement.receipts.map(async id => {
                     try {
-                        const receipt = await get.getOne<Receipt>('receipts', id);
+                        const receipt = await get.getOne<ExtendedReceipt>('receipts', id);
                         // Get updated auditor names
                         if (receipt.audited_by.length > 0) {
                             const auditorUsers = await Promise.all(
                                 receipt.audited_by.map(async auditorId => {
                                     try {
-                                        const user = await get.getOne<User>('users', auditorId);
+                                        const user = await get.getOne<ExtendedUser>('users', auditorId);
                                         // Update users state with any new auditors
                                         setUsers(prev => ({
                                             ...prev,
@@ -324,7 +298,7 @@ export default function ReimbursementManagementPortal() {
                                         }));
                                         return user;
                                     } catch {
-                                        return { name: 'Unknown User' } as User;
+                                        return { name: 'Unknown User' } as ExtendedUser;
                                     }
                                 })
                             );
@@ -338,7 +312,7 @@ export default function ReimbursementManagementPortal() {
                 })
             );
 
-            const validReceipts = updatedReceipts.filter((r): r is Receipt => r !== null);
+            const validReceipts = updatedReceipts.filter((r): r is ExtendedReceipt => r !== null);
             const receiptMap = Object.fromEntries(
                 validReceipts.map(receipt => [receipt.id, receipt])
             );
@@ -476,7 +450,7 @@ export default function ReimbursementManagementPortal() {
         }
     };
 
-    const canApproveOrReject = (reimbursement: Reimbursement): boolean => {
+    const canApproveOrReject = (reimbursement: ExtendedReimbursement): boolean => {
         const auth = Authentication.getInstance();
         const userId = auth.getUserId();
 
@@ -489,14 +463,14 @@ export default function ReimbursementManagementPortal() {
         });
     };
 
-    const getReceiptUrl = (receipt: Receipt): string => {
+    const getReceiptUrl = (receipt: ExtendedReceipt): string => {
         const auth = Authentication.getInstance();
         const pb = auth.getPocketBase();
         return pb.files.getURL(receipt, receipt.field);
     };
 
     // Add this function to get the user avatar URL
-    const getUserAvatarUrl = (user: User): string => {
+    const getUserAvatarUrl = (user: ExtendedUser): string => {
         const auth = Authentication.getInstance();
         const pb = auth.getPocketBase();
         return pb.files.getURL(user, user.avatar);

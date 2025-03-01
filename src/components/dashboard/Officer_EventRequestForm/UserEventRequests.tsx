@@ -3,31 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Get } from '../../../scripts/pocketbase/Get';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import toast from 'react-hot-toast';
+import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase';
 
-// Define the event request interface
-interface EventRequest {
-    id: string;
-    name: string;
-    location: string;
-    start_date_time: string;
-    end_date_time: string;
-    event_description: string;
-    flyers_needed: boolean;
-    photography_needed: boolean;
-    as_funding_required: boolean;
-    food_drinks_being_served: boolean;
-    created: string;
-    updated: string;
-    status?: string; // Status might not be in the schema yet
-    flyer_type?: string[];
-    other_flyer_type?: string;
-    flyer_advertising_start_date?: string;
-    flyer_additional_requests?: string;
-    required_logos?: string[];
-    advertising_format?: string;
-    will_or_have_room_booking?: boolean;
-    expected_attendance?: number;
-    itemized_invoice?: string;
+// Extended EventRequest interface with additional properties needed for this component
+export interface EventRequest extends SchemaEventRequest {
     invoice_data?: any;
 }
 

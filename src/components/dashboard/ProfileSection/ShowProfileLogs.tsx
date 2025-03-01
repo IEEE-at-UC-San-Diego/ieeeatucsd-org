@@ -2,14 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import debounce from 'lodash/debounce';
-
-interface Log {
-    id: string;
-    message: string;
-    created: string;
-    user_id?: string;
-    [key: string]: any;
-}
+import type { Log } from "../../../schemas/pocketbase";
 
 interface PaginatedResponse {
     page: number;

@@ -4,26 +4,11 @@ import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { Update } from "../../../scripts/pocketbase/Update";
 import { SendLog } from "../../../scripts/pocketbase/SendLog";
 import { Icon } from "@iconify/react";
+import type { Event, AttendeeEntry } from "../../../schemas/pocketbase";
 
-
-interface Event {
-    id: string;
-    event_name: string;
-    event_code: string;
-    location: string;
-    points_to_reward: number;
-    attendees: AttendeeEntry[];
-    start_date: string;
-    end_date: string;
-    has_food: boolean;
-    description: string;
-    files: string[];
-}
-
-interface AttendeeEntry {
-    user_id: string;
-    time_checked_in: string;
-    food: string;
+// Extended Event interface with additional properties needed for this component
+interface ExtendedEvent extends Event {
+    description?: string; // This component uses 'description' but schema has 'event_description'
 }
 
 // Toast management system
@@ -109,7 +94,8 @@ const EventCheckIn = () => {
 
             const currentUser = auth.getCurrentUser();
             if (!currentUser) {
-                throw new Error("You must be logged in to check in to events");
+                createToast("You must be logged in to check in to events", "error");
+                return;
             }
 
             // Find the event with the given code
@@ -122,7 +108,8 @@ const EventCheckIn = () => {
             }
 
             // Check if user is already checked in
-            if (event.attendees.some((entry) => entry.user_id === currentUser.id)) {
+            const attendees = event.attendees || [];
+            if (attendees.some((entry) => entry.user_id === currentUser.id)) {
                 throw new Error("You have already checked in to this event");
             }
 
@@ -155,6 +142,27 @@ const EventCheckIn = () => {
             const currentUser = auth.getCurrentUser();
             if (!currentUser) {
                 throw new Error("You must be logged in to check in to events");
+            }
+
+            // Check if user is already checked in
+            const userId = auth.getUserId();
+
+            if (!userId) {
+                createToast("You must be logged in to check in to an event", "error");
+                return;
+            }
+
+            // Initialize attendees array if it doesn't exist
+            const attendees = event.attendees || [];
+
+            // Check if user is already checked in
+            const isAlreadyCheckedIn = attendees.some(
+                (attendee) => attendee.user_id === userId
+            );
+
+            if (isAlreadyCheckedIn) {
+                createToast("You are already checked in to this event", "warning");
+                return;
             }
 
             // Create attendee entry with check-in details

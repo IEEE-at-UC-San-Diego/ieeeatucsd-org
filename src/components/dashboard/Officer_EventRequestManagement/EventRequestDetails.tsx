@@ -1,49 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase';
 
-// Define the EventRequest interface
-interface EventRequest {
-    id: string;
-    name: string;
-    location: string;
-    start_date_time: string;
-    end_date_time: string;
-    event_description: string;
-    flyers_needed: boolean;
-    photography_needed: boolean;
-    as_funding_required: boolean;
-    food_drinks_being_served: boolean;
-    created: string;
-    updated: string;
-    status: string;
-    requested_user: string;
+// Extended EventRequest interface with additional properties needed for this component
+interface ExtendedEventRequest extends SchemaEventRequest {
     requested_user_expand?: {
         name: string;
         email: string;
     };
-    flyer_type?: string[];
-    other_flyer_type?: string;
-    flyer_advertising_start_date?: string;
-    flyer_additional_requests?: string;
-    required_logos?: string[];
-    advertising_format?: string;
-    will_or_have_room_booking?: boolean;
-    expected_attendance?: number;
-    itemized_invoice?: string;
     invoice_data?: string | any;
     feedback?: string;
 }
 
 interface EventRequestDetailsProps {
-    request: EventRequest;
+    request: ExtendedEventRequest;
     onClose: () => void;
     onStatusChange: (id: string, status: string) => Promise<void>;
     onFeedbackChange: (id: string, feedback: string) => Promise<boolean>;
 }
 
 // Separate component for AS Funding tab to isolate any issues
-const ASFundingTab: React.FC<{ request: EventRequest }> = ({ request }) => {
+const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) => {
     if (!request.as_funding_required) {
         return (
             <div>

@@ -2,30 +2,16 @@ import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
+import type { Event, AttendeeEntry } from "../../../schemas/pocketbase";
 
-interface Event {
-    id: string;
-    event_name: string;
-    event_code: string;
-    location: string;
-    points_to_reward: number;
-    attendees: AttendeeEntry[];
-    start_date: string;
-    end_date: string;
-    has_food: boolean;
-    description: string;
-    files: string[];
-}
-
-interface AttendeeEntry {
-    user_id: string;
-    time_checked_in: string;
-    food: string;
+// Extended Event interface with additional properties needed for this component
+interface ExtendedEvent extends Event {
+    description?: string; // This component uses 'description' but schema has 'event_description'
 }
 
 declare global {
     interface Window {
-        openDetailsModal: (event: Event) => void;
+        openDetailsModal: (event: ExtendedEvent) => void;
         downloadAllFiles: () => Promise<void>;
         currentEventId: string;
         [key: string]: any;
@@ -118,13 +104,13 @@ const EventLoad = () => {
                         </div>
 
                         <div className="text-xs sm:text-sm text-base-content/70 my-2 line-clamp-2">
-                            {event.description || "No description available"}
+                            {event.event_description || "No description available"}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 mt-auto pt-2">
                             {event.files && event.files.length > 0 && (
                                 <button
-                                    onClick={() => window.openDetailsModal(event)}
+                                    onClick={() => window.openDetailsModal(event as ExtendedEvent)}
                                     className="btn btn-ghost btn-sm text-xs sm:text-sm gap-1 h-8 min-h-0 px-2"
                                 >
                                     <Icon icon="heroicons:document-duplicate" className="h-3 w-3 sm:h-4 sm:w-4" />

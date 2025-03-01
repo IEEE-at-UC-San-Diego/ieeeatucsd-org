@@ -3,6 +3,12 @@ import { Get } from '../../../scripts/pocketbase/Get';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { SendLog } from '../../../scripts/pocketbase/SendLog';
 import { Icon } from "@iconify/react";
+import type { Event, AttendeeEntry, User as SchemaUser } from "../../../schemas/pocketbase";
+
+// Extended User interface with additional properties needed for this component
+interface User extends SchemaUser {
+    member_type: string;
+}
 
 // Cache for storing user data
 const userCache = new Map<string, {
@@ -45,29 +51,6 @@ const HighlightText = ({ text, searchTerms }: { text: string | number | null | u
         return <>{textStr}</>;
     }
 };
-
-interface AttendeeEntry {
-    user_id: string;
-    time_checked_in: string;
-    food: string;
-}
-
-interface User {
-    id: string;
-    name: string;
-    email: string;
-    pid: string;
-    member_id: string;
-    member_type: string;
-    graduation_year: string;
-    major: string;
-}
-
-interface Event {
-    id: string;
-    event_name: string;
-    attendees: AttendeeEntry[];
-}
 
 // Add new interface for selected fields
 interface EventFields {

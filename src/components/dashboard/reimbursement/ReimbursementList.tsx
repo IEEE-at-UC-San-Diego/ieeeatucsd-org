@@ -7,12 +7,7 @@ import FilePreview from '../universal/FilePreview';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import ToastProvider from './ToastProvider';
-
-interface ExpenseItem {
-    description: string;
-    amount: number;
-    category: string;
-}
+import type { ItemizedExpense, Reimbursement, Receipt } from '../../../schemas/pocketbase';
 
 interface AuditNote {
     note: string;
@@ -21,32 +16,14 @@ interface AuditNote {
     is_private: boolean;
 }
 
-interface ReimbursementRequest {
-    id: string;
-    title: string;
-    total_amount: number;
-    date_of_purchase: string;
-    payment_method: string;
-    status: 'submitted' | 'under_review' | 'approved' | 'rejected' | 'paid' | 'in_progress';
-    submitted_by: string;
-    additional_info: string;
-    receipts: string[];
-    department: 'internal' | 'external' | 'projects' | 'events' | 'other';
-    created: string;
-    updated: string;
+// Extended Reimbursement interface with component-specific properties
+interface ReimbursementRequest extends Omit<Reimbursement, 'audit_notes'> {
     audit_notes: AuditNote[] | null;
 }
 
-interface ReceiptDetails {
-    id: string;
-    field: string;
-    created_by: string;
-    itemized_expenses: ExpenseItem[];
-    tax: number;
-    date: string;
-    location_name: string;
-    location_address: string;
-    notes: string;
+// Extended Receipt interface with component-specific properties
+interface ReceiptDetails extends Omit<Receipt, 'itemized_expenses' | 'audited_by'> {
+    itemized_expenses: ItemizedExpense[];
     audited_by: string[];
     created: string;
     updated: string;

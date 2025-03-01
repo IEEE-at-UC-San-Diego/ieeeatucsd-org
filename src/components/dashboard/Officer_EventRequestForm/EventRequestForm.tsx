@@ -5,6 +5,7 @@ import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { FileManager } from '../../../scripts/pocketbase/FileManager';
 import { Get } from '../../../scripts/pocketbase/Get';
+import type { EventRequest } from '../../../schemas/pocketbase';
 
 // Form sections
 import PRSection from './PRSection';
@@ -43,34 +44,42 @@ const itemVariants = {
     }
 };
 
-// Form data interface
+// Form data interface - based on the schema EventRequest but with form-specific fields
 export interface EventRequestFormData {
+    // Fields from EventRequest
     name: string;
     location: string;
     start_date_time: string;
     end_date_time: string;
     event_description: string;
     flyers_needed: boolean;
+    photography_needed: boolean;
+    as_funding_required: boolean;
+    food_drinks_being_served: boolean;
+    itemized_invoice?: string;
+    status?: string;
+    created_by?: string;
+    id?: string;
+    created?: string;
+    updated?: string;
+
+    // Additional form-specific fields
     flyer_type: string[];
     other_flyer_type: string;
     flyer_advertising_start_date: string;
     flyer_additional_requests: string;
-    photography_needed: boolean;
     required_logos: string[];
-    other_logos: File[];
+    other_logos: File[]; // Form uses File objects, schema uses strings
     advertising_format: string;
     will_or_have_room_booking: boolean;
     expected_attendance: number;
     room_booking: File | null;
-    as_funding_required: boolean;
-    food_drinks_being_served: boolean;
-    itemized_invoice: string;
     invoice: File | null;
-    invoice_files: File[]; // Support for multiple invoice files
-    needs_graphics: boolean | null;
-    needs_as_funding: boolean;
+    invoice_files: File[];
     invoiceData: InvoiceData;
-    formReviewed: boolean; // New field to track if the form has been reviewed
+    needs_graphics?: boolean | null;
+    needs_as_funding?: boolean | null;
+    formReviewed?: boolean; // Track if the form has been reviewed
 }
 
 const EventRequestForm: React.FC = () => {

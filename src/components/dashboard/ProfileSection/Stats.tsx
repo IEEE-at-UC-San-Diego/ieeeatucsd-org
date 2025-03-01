@@ -1,25 +1,7 @@
 import { useEffect, useState } from "react";
 import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
-
-interface Event {
-    id: string;
-    event_name: string;
-    attendees: Array<{
-        food: string;
-        time_checked_in: string;
-        user_id: string;
-    }>;
-}
-
-interface Log {
-    id: string;
-    message: string;
-    created: string;
-    type: string;
-    part: string;
-    user_id: string;
-}
+import type { Event, Log } from "../../../schemas/pocketbase";
 
 export function Stats() {
     const [eventsAttended, setEventsAttended] = useState(0);

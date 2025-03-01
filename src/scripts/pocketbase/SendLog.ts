@@ -1,17 +1,19 @@
 import { Authentication } from "./Authentication";
+import { Collections } from "../../schemas/pocketbase";
+import type { Log } from "../../schemas/pocketbase";
 
-// Log interface
+// Log data interface for creating new logs
 interface LogData {
-  user_id: string;
-  type: string;  // Standard types: "error", "update", "delete", "create", "login", "logout"
-  part: string;  // The specific part/section being logged (can be multiple words, e.g., "profile settings", "resume upload")
+  user: string; // Relation to User
+  type: string; // Standard types: "error", "update", "delete", "create", "login", "logout"
+  part: string; // The specific part/section being logged
   message: string;
 }
 
 export class SendLog {
   private auth: Authentication;
   private static instance: SendLog;
-  private readonly COLLECTION_NAME = "logs"; // Make collection name a constant
+  private readonly COLLECTION_NAME = Collections.LOGS;
 
   private constructor() {
     this.auth = Authentication.getInstance();
@@ -49,7 +51,12 @@ export class SendLog {
    * @param overrideUserId Optional user ID to override the current user
    * @returns Promise that resolves when the log is created
    */
-  public async send(type: string, part: string, message: string, overrideUserId?: string): Promise<void> {
+  public async send(
+    type: string,
+    part: string,
+    message: string,
+    overrideUserId?: string,
+  ): Promise<void> {
     try {
       // Check authentication first
       if (!this.auth.isAuthenticated()) {
@@ -61,30 +68,32 @@ export class SendLog {
       const userId = overrideUserId || this.getCurrentUserId();
       if (!userId) {
         console.error("SendLog: No user ID available");
-        throw new Error("No user ID available. User must be authenticated to create logs.");
+        throw new Error(
+          "No user ID available. User must be authenticated to create logs.",
+        );
       }
 
       // Prepare log data
       const logData: LogData = {
-        user_id: userId,
+        user: userId,
         type,
         part,
-        message
+        message,
       };
 
       console.debug("SendLog: Preparing to send log:", {
         collection: this.COLLECTION_NAME,
         data: logData,
         authValid: this.auth.isAuthenticated(),
-        userId
+        userId,
       });
 
       // Get PocketBase instance
       const pb = this.auth.getPocketBase();
-      
+
       // Create the log entry
       await pb.collection(this.COLLECTION_NAME).create(logData);
-      
+
       console.debug("SendLog: Log created successfully");
     } catch (error) {
       // Enhanced error logging
@@ -94,7 +103,7 @@ export class SendLog {
           stack: error.stack,
           type,
           part,
-          message
+          message,
         });
       } else {
         console.error("SendLog: Unknown error:", error);
@@ -110,20 +119,27 @@ export class SendLog {
    * @param part Optional part/section to filter by
    * @returns Array of log entries
    */
-  public async getUserLogs(userId: string, type?: string, part?: string): Promise<LogData[]> {
+  public async getUserLogs(
+    userId: string,
+    type?: string,
+    part?: string,
+  ): Promise<Log[]> {
     if (!this.auth.isAuthenticated()) {
       throw new Error("User must be authenticated to retrieve logs");
     }
 
     try {
-      let filter = `user_id = "${userId}"`;
+      let filter = `user = "${userId}"`;
       if (type) filter += ` && type = "${type}"`;
       if (part) filter += ` && part = "${part}"`;
 
-      const result = await this.auth.getPocketBase().collection(this.COLLECTION_NAME).getFullList<LogData>({
-        filter,
-        sort: "-created"
-      });
+      const result = await this.auth
+        .getPocketBase()
+        .collection(this.COLLECTION_NAME)
+        .getFullList<Log>({
+          filter,
+          sort: "-created",
+        });
 
       return result;
     } catch (error) {
@@ -139,7 +155,11 @@ export class SendLog {
    * @param part Optional part/section to filter by
    * @returns Array of recent log entries
    */
-  public async getRecentLogs(limit: number = 10, type?: string, part?: string): Promise<LogData[]> {
+  public async getRecentLogs(
+    limit: number = 10,
+    type?: string,
+    part?: string,
+  ): Promise<Log[]> {
     if (!this.auth.isAuthenticated()) {
       throw new Error("User must be authenticated to retrieve logs");
     }
@@ -150,14 +170,17 @@ export class SendLog {
         throw new Error("No user ID available");
       }
 
-      let filter = `user_id = "${userId}"`;
+      let filter = `user = "${userId}"`;
       if (type) filter += ` && type = "${type}"`;
       if (part) filter += ` && part = "${part}"`;
 
-      const result = await this.auth.getPocketBase().collection(this.COLLECTION_NAME).getList<LogData>(1, limit, {
-        filter,
-        sort: "-created"
-      });
+      const result = await this.auth
+        .getPocketBase()
+        .collection(this.COLLECTION_NAME)
+        .getList<Log>(1, limit, {
+          filter,
+          sort: "-created",
+        });
 
       return result.items;
     } catch (error) {
@@ -165,4 +188,4 @@ export class SendLog {
       throw error;
     }
   }
-} 
+}

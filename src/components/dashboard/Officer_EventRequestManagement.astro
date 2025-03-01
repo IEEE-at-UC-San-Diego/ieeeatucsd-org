@@ -3,27 +3,14 @@ import { Authentication } from "../../scripts/pocketbase/Authentication";
 import { Get } from "../../scripts/pocketbase/Get";
 import { Toaster } from "react-hot-toast";
 import EventRequestManagementTable from "./Officer_EventRequestManagement/EventRequestManagementTable";
+import type { EventRequest } from "../../schemas/pocketbase";
 
 // Get instances
 const get = Get.getInstance();
 const auth = Authentication.getInstance();
 
-// Define the EventRequest interface
-interface EventRequest {
-  id: string;
-  name: string;
-  location: string;
-  start_date_time: string;
-  end_date_time: string;
-  event_description: string;
-  flyers_needed: boolean;
-  photography_needed: boolean;
-  as_funding_required: boolean;
-  food_drinks_being_served: boolean;
-  created: string;
-  updated: string;
-  status: string;
-  requested_user: string;
+// Extended EventRequest interface with additional properties needed for this component
+interface ExtendedEventRequest extends EventRequest {
   requested_user_expand?: {
     name: string;
     email: string;
@@ -42,26 +29,39 @@ interface EventRequest {
 }
 
 // Initialize variables for all event requests
-let allEventRequests: EventRequest[] = [];
+let allEventRequests: ExtendedEventRequest[] = [];
 let error = null;
 
-// Fetch all event requests if authenticated
-if (auth.isAuthenticated()) {
-  try {
-    // Expand the requested_user field to get user details
-    allEventRequests = await get.getAll<EventRequest>(
-      "event_request",
-      "",
-      "-created",
-      {
-        fields: ["*"],
-        expand: ["requested_user"],
-      },
-    );
-  } catch (err) {
-    console.error("Failed to fetch event requests:", err);
-    error = "Failed to load event requests. Please try again later.";
-  }
+try {
+  // Expand the requested_user field to get user details
+  allEventRequests = await get.getAll<ExtendedEventRequest>(
+    "event_request",
+    "",
+    "-created",
+  );
+
+  // Process the event requests to add the requested_user_expand property
+  allEventRequests = allEventRequests.map((request) => {
+    const requestWithExpand = { ...request };
+
+    // Add the requested_user_expand property if the expand data is available
+    if (
+      request.expand &&
+      request.expand.requested_user &&
+      request.expand.requested_user.name &&
+      request.expand.requested_user.email
+    ) {
+      requestWithExpand.requested_user_expand = {
+        name: request.expand.requested_user.name,
+        email: request.expand.requested_user.email,
+      };
+    }
+
+    return requestWithExpand;
+  });
+} catch (err) {
+  console.error("Error fetching event requests:", err);
+  error = err;
 }
 ---
 

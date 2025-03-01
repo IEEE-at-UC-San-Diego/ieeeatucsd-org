@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import type { EventRequestFormData } from './EventRequestForm';
+import type { EventRequest } from '../../../schemas/pocketbase';
 
 // Animation variants
 const itemVariants = {

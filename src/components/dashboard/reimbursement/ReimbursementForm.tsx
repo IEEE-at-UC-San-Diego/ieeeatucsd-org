@@ -6,16 +6,11 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import FilePreview from '../universal/FilePreview';
 import ToastProvider from './ToastProvider';
-
-interface ExpenseItem {
-    description: string;
-    amount: number;
-    category: string;
-}
+import type { ItemizedExpense, Reimbursement } from '../../../schemas/pocketbase';
 
 interface ReceiptFormData {
     field: File;
-    itemized_expenses: ExpenseItem[];
+    itemized_expenses: ItemizedExpense[];
     tax: number;
     date: string;
     location_name: string;
@@ -23,14 +18,13 @@ interface ReceiptFormData {
     notes: string;
 }
 
-interface ReimbursementRequest {
-    id?: string;
+// Extended Reimbursement interface with form-specific fields
+interface ReimbursementRequest extends Partial<Omit<Reimbursement, 'receipts'>> {
     title: string;
     total_amount: number;
     date_of_purchase: string;
     payment_method: string;
     status: 'submitted' | 'under_review' | 'approved' | 'rejected' | 'paid' | 'in_progress';
-    submitted_by?: string;
     additional_info: string;
     receipts: string[];
     department: 'internal' | 'external' | 'projects' | 'events' | 'other';

@@ -5,23 +5,10 @@ import { Update } from '../../../scripts/pocketbase/Update';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import toast from 'react-hot-toast';
 import EventRequestDetails from './EventRequestDetails';
+import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase';
 
-// Define the EventRequest interface
-interface EventRequest {
-    id: string;
-    name: string;
-    location: string;
-    start_date_time: string;
-    end_date_time: string;
-    event_description: string;
-    flyers_needed: boolean;
-    photography_needed: boolean;
-    as_funding_required: boolean;
-    food_drinks_being_served: boolean;
-    created: string;
-    updated: string;
-    status: string;
-    requested_user: string;
+// Extended EventRequest interface with additional properties needed for this component
+interface ExtendedEventRequest extends SchemaEventRequest {
     requested_user_expand?: {
         name: string;
         email: string;
@@ -35,27 +22,18 @@ interface EventRequest {
         };
         [key: string]: any;
     };
-    flyer_type?: string[];
-    other_flyer_type?: string;
-    flyer_advertising_start_date?: string;
-    flyer_additional_requests?: string;
-    required_logos?: string[];
-    advertising_format?: string;
-    will_or_have_room_booking?: boolean;
-    expected_attendance?: number;
-    itemized_invoice?: string;
     invoice_data?: any;
     feedback?: string;
 }
 
 interface EventRequestManagementTableProps {
-    eventRequests: EventRequest[];
+    eventRequests: ExtendedEventRequest[];
 }
 
-const EventRequestManagementTable: React.FC<EventRequestManagementTableProps> = ({ eventRequests: initialEventRequests }) => {
-    const [eventRequests, setEventRequests] = useState<EventRequest[]>(initialEventRequests);
-    const [filteredRequests, setFilteredRequests] = useState<EventRequest[]>(initialEventRequests);
-    const [selectedRequest, setSelectedRequest] = useState<EventRequest | null>(null);
+const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: EventRequestManagementTableProps) => {
+    const [eventRequests, setEventRequests] = useState<ExtendedEventRequest[]>(initialEventRequests);
+    const [filteredRequests, setFilteredRequests] = useState<ExtendedEventRequest[]>(initialEventRequests);
+    const [selectedRequest, setSelectedRequest] = useState<ExtendedEventRequest | null>(null);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
     const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -77,7 +55,7 @@ const EventRequestManagementTable: React.FC<EventRequestManagementTableProps> = 
                 return;
             }
 
-            const updatedRequests = await get.getAll<EventRequest>(
+            const updatedRequests = await get.getAll<ExtendedEventRequest>(
                 'event_request',
                 '',
                 '-created',
@@ -123,8 +101,8 @@ const EventRequestManagementTable: React.FC<EventRequestManagementTableProps> = 
 
         // Apply sorting
         filtered.sort((a, b) => {
-            let aValue: any = a[sortField as keyof EventRequest];
-            let bValue: any = b[sortField as keyof EventRequest];
+            let aValue: any = a[sortField as keyof ExtendedEventRequest];
+            let bValue: any = b[sortField as keyof ExtendedEventRequest];
 
             // Handle special cases
             if (sortField === 'requested_user') {
@@ -247,7 +225,7 @@ const EventRequestManagementTable: React.FC<EventRequestManagementTableProps> = 
     };
 
     // Open modal with event request details
-    const openDetailModal = (request: EventRequest) => {
+    const openDetailModal = (request: ExtendedEventRequest) => {
         setSelectedRequest(request);
         setIsModalOpen(true);
     };

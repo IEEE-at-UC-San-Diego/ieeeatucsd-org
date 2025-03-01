@@ -6,6 +6,13 @@ import { Update } from "../../../scripts/pocketbase/Update";
 import { FileManager } from "../../../scripts/pocketbase/FileManager";
 import { SendLog } from "../../../scripts/pocketbase/SendLog";
 import FilePreview from "../universal/FilePreview";
+import type { Event as SchemaEvent, AttendeeEntry } from "../../../schemas/pocketbase";
+
+// Extended Event interface with optional created and updated fields
+interface Event extends Omit<SchemaEvent, 'created' | 'updated'> {
+    created?: string;
+    updated?: string;
+}
 
 // Extend Window interface
 declare global {
@@ -15,27 +22,6 @@ declare global {
         lastCacheUpdate?: number;
         fetchEvents?: () => void;
     }
-}
-
-interface Event {
-    id: string;
-    event_name: string;
-    event_description: string;
-    event_code: string;
-    location: string;
-    files: string[];
-    points_to_reward: number;
-    start_date: string;
-    end_date: string;
-    published: boolean;
-    has_food: boolean;
-    attendees: AttendeeEntry[];
-}
-
-interface AttendeeEntry {
-    user_id: string;
-    time_checked_in: string;
-    food: string;
 }
 
 interface EventEditorProps {
