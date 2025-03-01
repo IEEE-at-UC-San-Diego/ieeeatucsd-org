@@ -257,10 +257,9 @@ export class Get {
     sort?: string,
     options?: RequestOptions,
   ): Promise<T[]> {
-    if (!this.auth.isAuthenticated()) {
-      throw new Error("User must be authenticated to retrieve records");
-    }
-
+    // Try to get records even if authentication check fails
+    // This is a workaround for cases where isAuthenticated() returns false
+    // but the token is still valid for API requests
     try {
       const pb = this.auth.getPocketBase();
       const requestOptions = {
@@ -277,6 +276,18 @@ export class Get {
       return result.map((item) => convertUTCToLocal(item));
     } catch (err) {
       console.error(`Failed to get all records from ${collectionName}:`, err);
+      
+      // If the error is authentication-related, check if we're actually authenticated
+      if (
+        err instanceof Error && 
+        (err.message.includes('auth') || err.message.includes('authentication'))
+      ) {
+        if (!this.auth.isAuthenticated()) {
+          console.error("Authentication check failed in getAll");
+          throw new Error("User must be authenticated to retrieve records");
+        }
+      }
+      
       throw err;
     }
   }
