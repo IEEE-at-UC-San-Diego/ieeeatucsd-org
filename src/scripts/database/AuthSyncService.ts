@@ -106,7 +106,7 @@ export class AuthSyncService {
         await this.dataSync.syncCollection(Collections.USERS, `id = "${userId}"`);
         
         // Log the sync operation
-        await this.logger.send('login', 'auth', 'User data synchronized on login');
+        console.log('User data synchronized on login');
       }
       
       // Sync all collections in parallel with conflict resolution

@@ -28,12 +28,25 @@ const EventCheckIn = () => {
             const get = Get.getInstance();
             const auth = Authentication.getInstance();
             const dataSync = DataSyncService.getInstance();
+            const logger = SendLog.getInstance();
 
             const currentUser = auth.getCurrentUser();
             if (!currentUser) {
+                await logger.send(
+                    "error",
+                    "event_check_in",
+                    "Check-in failed: User not logged in"
+                );
                 toast.error("You must be logged in to check in to events");
                 return;
             }
+
+            // Log the check-in attempt
+            await logger.send(
+                "attempt",
+                "event_check_in",
+                `User ${currentUser.id} attempted to check in with code: ${eventCode}`
+            );
 
             // Find the event with the given code using IndexedDB
             // Force sync to ensure we have the latest data
@@ -49,12 +62,22 @@ const EventCheckIn = () => {
             const event = events.length > 0 ? events[0] : null;
 
             if (!event) {
+                await logger.send(
+                    "error",
+                    "event_check_in",
+                    `Check-in failed: Invalid event code "${eventCode}"`
+                );
                 throw new Error("Invalid event code");
             }
 
             // Check if user is already checked in
             const attendees = event.attendees || [];
             if (attendees.some((entry) => entry.user_id === currentUser.id)) {
+                await logger.send(
+                    "error",
+                    "event_check_in",
+                    `Check-in failed: User ${currentUser.id} already checked in to event ${event.event_name} (${event.id})`
+                );
                 throw new Error("You have already checked in to this event");
             }
 
@@ -64,12 +87,29 @@ const EventCheckIn = () => {
             const eventEndDate = new Date(event.end_date); // Now properly converted to local time by Get
 
             if (eventStartDate > currentTime) {
+                await logger.send(
+                    "error",
+                    "event_check_in",
+                    `Check-in failed: Event ${event.event_name} (${event.id}) has not started yet`
+                );
                 throw new Error("This event has not started yet");
             }
 
             if (eventEndDate < currentTime) {
+                await logger.send(
+                    "error",
+                    "event_check_in",
+                    `Check-in failed: Event ${event.event_name} (${event.id}) has already ended`
+                );
                 throw new Error("This event has already ended");
             }
+
+            // Log successful validation before proceeding
+            await logger.send(
+                "info",
+                "event_check_in",
+                `Check-in validation successful for user ${currentUser.id} to event ${event.event_name} (${event.id})`
+            );
 
             // If event has food, show food selection modal
             if (event.has_food) {
