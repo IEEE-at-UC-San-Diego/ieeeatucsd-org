@@ -6,7 +6,6 @@ import { FileManager } from '../../../scripts/pocketbase/FileManager';
 import FilePreview from '../universal/FilePreview';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import ToastProvider from './ToastProvider';
 import type { ItemizedExpense, Reimbursement, Receipt } from '../../../schemas/pocketbase';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
@@ -355,7 +354,6 @@ export default function ReimbursementList() {
 
     return (
         <>
-            <ToastProvider />
             <motion.div
                 variants={containerVariants}
                 initial="hidden"

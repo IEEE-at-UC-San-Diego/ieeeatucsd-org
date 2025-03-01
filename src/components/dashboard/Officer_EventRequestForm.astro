@@ -4,7 +4,10 @@ import { Get } from "../../scripts/pocketbase/Get";
 import EventRequestForm from "./Officer_EventRequestForm/EventRequestForm";
 import UserEventRequests from "./Officer_EventRequestForm/UserEventRequests";
 import { Collections } from "../../schemas/pocketbase/schema";
-import { Toaster } from "react-hot-toast";
+import { Icon } from "astro-icon/components";
+import { Create } from "../../scripts/pocketbase/Create";
+import { Update } from "../../scripts/pocketbase/Update";
+import { toast } from "react-hot-toast";
 
 // Import the EventRequest type from UserEventRequests to ensure consistency
 import type { EventRequest as UserEventRequest } from "./Officer_EventRequestForm/UserEventRequests";
@@ -118,8 +121,9 @@ if (auth.isAuthenticated()) {
     </div>
 </div>
 
-<!-- Toast container for notifications -->
-<Toaster client:load position="bottom-right" />
+<div class="dashboard-section hidden" id="eventRequestFormSection">
+    <!-- ... existing code ... -->
+</div>
 
 <script>
     // Import the DataSyncService for client-side use

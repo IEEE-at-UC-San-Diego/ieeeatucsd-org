@@ -1,10 +1,11 @@
 ---
 import { Authentication } from "../../scripts/pocketbase/Authentication";
 import { Get } from "../../scripts/pocketbase/Get";
-import { Toaster } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import EventRequestManagementTable from "./Officer_EventRequestManagement/EventRequestManagementTable";
 import type { EventRequest } from "../../schemas/pocketbase";
 import { Collections } from "../../schemas/pocketbase/schema";
+import { Icon } from "astro-icon/components";
 
 // Get instances
 const get = Get.getInstance();
@@ -152,9 +153,6 @@ try {
             </div>
         )
     }
-
-    <!-- Toast container for notifications -->
-    <Toaster client:load position="bottom-right" />
 </div>
 
 <script>

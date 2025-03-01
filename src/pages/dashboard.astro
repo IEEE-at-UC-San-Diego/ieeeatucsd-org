@@ -9,6 +9,7 @@ import { SendLog } from "../scripts/pocketbase/SendLog";
 import { hasAccess, type OfficerStatus } from "../utils/roleAccess";
 import { OfficerTypes } from "../schemas/pocketbase/schema";
 import { initAuthSync } from "../scripts/database/initAuthSync";
+import ToastProvider from "../components/dashboard/universal/ToastProvider";
 
 const title = "Dashboard";
 
@@ -365,449 +366,485 @@ console.log("Available components:", Object.keys(components)); // Debug log
                 </div>
             </main>
         </div>
-    </body>
-</html>
 
-<script>
-    import { Authentication } from "../scripts/pocketbase/Authentication";
-    import { Get } from "../scripts/pocketbase/Get";
-    import { SendLog } from "../scripts/pocketbase/SendLog";
-    import { hasAccess, type OfficerStatus } from "../utils/roleAccess";
-    import { OfficerTypes } from "../schemas/pocketbase/schema";
-    import { initAuthSync } from "../scripts/database/initAuthSync";
+        <!-- Centralized Toast Provider -->
+        <ToastProvider client:load />
 
-    const auth = Authentication.getInstance();
-    const get = Get.getInstance();
-    const logger = SendLog.getInstance();
+        <script>
+            import { Authentication } from "../scripts/pocketbase/Authentication";
+            import { Get } from "../scripts/pocketbase/Get";
+            import { SendLog } from "../scripts/pocketbase/SendLog";
+            import { hasAccess, type OfficerStatus } from "../utils/roleAccess";
+            import { OfficerTypes } from "../schemas/pocketbase/schema";
+            import { initAuthSync } from "../scripts/database/initAuthSync";
 
-    // Initialize page state
-    const pageLoadingState = document.getElementById("pageLoadingState");
-    const pageErrorState = document.getElementById("pageErrorState");
-    const notAuthenticatedState = document.getElementById(
-        "notAuthenticatedState"
-    );
-    const mainContent = document.getElementById("mainContent");
-    const sidebar = document.querySelector("aside");
+            const auth = Authentication.getInstance();
+            const get = Get.getInstance();
+            const logger = SendLog.getInstance();
 
-    // User profile elements
-    const userInitials = document.getElementById("userInitials");
-    const userName = document.getElementById("userName");
-    const userRole = document.getElementById("userRole");
+            // Initialize page state
+            const pageLoadingState =
+                document.getElementById("pageLoadingState");
+            const pageErrorState = document.getElementById("pageErrorState");
+            const notAuthenticatedState = document.getElementById(
+                "notAuthenticatedState"
+            );
+            const mainContent = document.getElementById("mainContent");
+            const sidebar = document.querySelector("aside");
 
-    // Function to update section visibility based on role
-    const updateSectionVisibility = (officerStatus: OfficerStatus) => {
-        // Special handling for sponsor role
-        if (officerStatus === "sponsor") {
-            // Hide all sections first
-            document
-                .querySelectorAll("[data-role-required]")
-                .forEach((element) => {
-                    element.classList.add("hidden");
-                });
+            // User profile elements
+            const userInitials = document.getElementById("userInitials");
+            const userName = document.getElementById("userName");
+            const userRole = document.getElementById("userRole");
 
-            // Only show sponsor sections
-            document
-                .querySelectorAll('[data-role-required="sponsor"]')
-                .forEach((element) => {
-                    element.classList.remove("hidden");
-                });
-            return;
-        }
+            // Function to update section visibility based on role
+            const updateSectionVisibility = (officerStatus: OfficerStatus) => {
+                // Special handling for sponsor role
+                if (officerStatus === "sponsor") {
+                    // Hide all sections first
+                    document
+                        .querySelectorAll("[data-role-required]")
+                        .forEach((element) => {
+                            element.classList.add("hidden");
+                        });
 
-        // For non-sponsor roles, handle normally
-        document.querySelectorAll("[data-role-required]").forEach((element) => {
-            const requiredRole = element.getAttribute(
-                "data-role-required"
-            ) as OfficerStatus;
-
-            // Skip elements that don't have a role requirement
-            if (!requiredRole || requiredRole === "none") {
-                element.classList.remove("hidden");
-                return;
-            }
-
-            // Check if user has permission for this role
-            const hasPermission = hasAccess(officerStatus, requiredRole);
-
-            // Only show elements if user has permission
-            element.classList.toggle("hidden", !hasPermission);
-        });
-    };
-
-    // Handle navigation
-    const handleNavigation = () => {
-        const navButtons = document.querySelectorAll(".dashboard-nav-btn");
-        const sections = document.querySelectorAll(".dashboard-section");
-        const mainContentDiv = document.getElementById("mainContent");
-
-        // Ensure mainContent is visible
-        if (mainContentDiv) {
-            mainContentDiv.classList.remove("hidden");
-        }
-
-        navButtons.forEach((button) => {
-            button.addEventListener("click", () => {
-                const sectionKey = button.getAttribute("data-section");
-
-                // Handle logout button
-                if (sectionKey === "logout") {
-                    auth.logout();
-                    window.location.reload();
+                    // Only show sponsor sections
+                    document
+                        .querySelectorAll('[data-role-required="sponsor"]')
+                        .forEach((element) => {
+                            element.classList.remove("hidden");
+                        });
                     return;
                 }
 
-                // Remove active class from all buttons
-                navButtons.forEach((btn) => {
-                    btn.classList.remove("active", "bg-base-200");
-                });
+                // For non-sponsor roles, handle normally
+                document
+                    .querySelectorAll("[data-role-required]")
+                    .forEach((element) => {
+                        const requiredRole = element.getAttribute(
+                            "data-role-required"
+                        ) as OfficerStatus;
 
-                // Add active class to clicked button
-                button.classList.add("active", "bg-base-200");
+                        // Skip elements that don't have a role requirement
+                        if (!requiredRole || requiredRole === "none") {
+                            element.classList.remove("hidden");
+                            return;
+                        }
 
-                // Hide all sections
-                sections.forEach((section) => {
-                    section.classList.add("hidden");
-                });
+                        // Check if user has permission for this role
+                        const hasPermission = hasAccess(
+                            officerStatus,
+                            requiredRole
+                        );
 
-                // Show selected section
-                const sectionId = `${sectionKey}Section`;
-                const targetSection = document.getElementById(sectionId);
-                if (targetSection) {
-                    targetSection.classList.remove("hidden");
-                    console.log(`Showing section: ${sectionId}`); // Debug log
-                }
-
-                // Close mobile sidebar if needed
-                if (window.innerWidth < 1024 && sidebar) {
-                    sidebar.classList.add("-translate-x-full");
-                    document.body.classList.remove("overflow-hidden");
-                    const overlay = document.getElementById("sidebarOverlay");
-                    overlay?.remove();
-                }
-            });
-        });
-    };
-
-    // Display user profile information and handle role-based access
-    const updateUserProfile = async (user: { id: string }) => {
-        if (!user) return;
-
-        try {
-            const extendedUser = await get.getOne("users", user.id, {
-                fields: [
-                    "id",
-                    "name",
-                    "member_type",
-                    "officer_status",
-                    "expand.member_type",
-                ],
-            });
-
-            const displayName = extendedUser.name || "Unknown User";
-            const displayRole = extendedUser.member_type || "Member";
-
-            // Map the officer type from the database to our OfficerStatus type
-            let officerStatus: OfficerStatus = "";
-
-            // Get the officer record for this user if it exists
-            const officerRecords = await get.getList(
-                "officers",
-                1,
-                50,
-                `user="${user.id}"`,
-                "",
-                {
-                    fields: ["id", "type"],
-                }
-            );
-
-            if (officerRecords && officerRecords.items.length > 0) {
-                const officerType = officerRecords.items[0].type;
-
-                // Map the officer type to our OfficerStatus
-                switch (officerType) {
-                    case OfficerTypes.ADMINISTRATOR:
-                        officerStatus = "administrator";
-                        break;
-                    case OfficerTypes.EXECUTIVE:
-                        officerStatus = "executive";
-                        break;
-                    case OfficerTypes.GENERAL:
-                        officerStatus = "general";
-                        break;
-                    case OfficerTypes.HONORARY:
-                        officerStatus = "honorary";
-                        break;
-                    case OfficerTypes.PAST:
-                        officerStatus = "past";
-                        break;
-                    default:
-                        officerStatus = "";
-                }
-            } else if (extendedUser.member_type === "Sponsor") {
-                officerStatus = "sponsor";
-            } else {
-                officerStatus = "none";
-            }
-
-            const initials = (extendedUser.name || "U")
-                .split(" ")
-                .map((n: string) => n[0])
-                .join("")
-                .toUpperCase();
-
-            // Update profile display
-            if (userName) userName.textContent = displayName;
-            if (userRole) userRole.textContent = displayRole;
-            if (userInitials) userInitials.textContent = initials;
-
-            // Update section visibility based on role
-            updateSectionVisibility(officerStatus);
-        } catch (error) {
-            console.error("Error fetching user profile:", error);
-            const fallbackValues = {
-                name: "Unknown User",
-                role: "Member",
-                initials: "?",
+                        // Only show elements if user has permission
+                        element.classList.toggle("hidden", !hasPermission);
+                    });
             };
 
-            if (userName) userName.textContent = fallbackValues.name;
-            if (userRole) userRole.textContent = fallbackValues.role;
-            if (userInitials)
-                userInitials.textContent = fallbackValues.initials;
+            // Handle navigation
+            const handleNavigation = () => {
+                const navButtons =
+                    document.querySelectorAll(".dashboard-nav-btn");
+                const sections =
+                    document.querySelectorAll(".dashboard-section");
+                const mainContentDiv = document.getElementById("mainContent");
 
-            updateSectionVisibility("" as OfficerStatus);
-        }
-    };
+                // Ensure mainContent is visible
+                if (mainContentDiv) {
+                    mainContentDiv.classList.remove("hidden");
+                }
 
-    // Mobile sidebar toggle
-    const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
-    if (mobileSidebarToggle && sidebar) {
-        const toggleSidebar = () => {
-            const isOpen = !sidebar.classList.contains("-translate-x-full");
+                navButtons.forEach((button) => {
+                    button.addEventListener("click", () => {
+                        const sectionKey = button.getAttribute("data-section");
 
-            if (isOpen) {
-                sidebar.classList.add("-translate-x-full");
-                document.body.classList.remove("overflow-hidden");
-                const overlay = document.getElementById("sidebarOverlay");
-                overlay?.remove();
-            } else {
-                sidebar.classList.remove("-translate-x-full");
-                document.body.classList.add("overflow-hidden");
-                const overlay = document.createElement("div");
-                overlay.id = "sidebarOverlay";
-                overlay.className =
-                    "fixed inset-0 bg-black bg-opacity-50 z-40 xl:hidden";
-                overlay.addEventListener("click", toggleSidebar);
-                document.body.appendChild(overlay);
-            }
-        };
+                        // Handle logout button
+                        if (sectionKey === "logout") {
+                            auth.logout();
+                            window.location.reload();
+                            return;
+                        }
 
-        mobileSidebarToggle.addEventListener("click", toggleSidebar);
-    }
+                        // Remove active class from all buttons
+                        navButtons.forEach((btn) => {
+                            btn.classList.remove("active", "bg-base-200");
+                        });
 
-    // Function to initialize the page
-    const initializePage = async () => {
-        try {
-            // Initialize auth sync for IndexedDB
-            await initAuthSync();
+                        // Add active class to clicked button
+                        button.classList.add("active", "bg-base-200");
 
-            // Check if user is authenticated
-            if (!auth.isAuthenticated()) {
-                console.log("User not authenticated");
-                if (pageLoadingState) pageLoadingState.classList.add("hidden");
-                if (notAuthenticatedState)
-                    notAuthenticatedState.classList.remove("hidden");
-                return;
-            }
+                        // Hide all sections
+                        sections.forEach((section) => {
+                            section.classList.add("hidden");
+                        });
 
-            if (pageLoadingState) pageLoadingState.classList.remove("hidden");
-            if (pageErrorState) pageErrorState.classList.add("hidden");
-            if (notAuthenticatedState)
-                notAuthenticatedState.classList.add("hidden");
+                        // Show selected section
+                        const sectionId = `${sectionKey}Section`;
+                        const targetSection =
+                            document.getElementById(sectionId);
+                        if (targetSection) {
+                            targetSection.classList.remove("hidden");
+                            console.log(`Showing section: ${sectionId}`); // Debug log
+                        }
 
-            // Show loading states
-            const userProfileSkeleton = document.getElementById(
-                "userProfileSkeleton"
-            );
-            const userProfileSignedOut = document.getElementById(
-                "userProfileSignedOut"
-            );
-            const userProfileSummary =
-                document.getElementById("userProfileSummary");
-            const menuLoadingSkeleton = document.getElementById(
-                "menuLoadingSkeleton"
-            );
-            const actualMenu = document.getElementById("actualMenu");
-
-            if (userProfileSkeleton)
-                userProfileSkeleton.classList.remove("hidden");
-            if (userProfileSummary) userProfileSummary.classList.add("hidden");
-            if (userProfileSignedOut)
-                userProfileSignedOut.classList.add("hidden");
-            if (menuLoadingSkeleton)
-                menuLoadingSkeleton.classList.remove("hidden");
-            if (actualMenu) actualMenu.classList.add("hidden");
-
-            const user = auth.getCurrentUser();
-            await updateUserProfile(user);
-
-            // Show actual profile and hide skeleton
-            if (userProfileSkeleton)
-                userProfileSkeleton.classList.add("hidden");
-            if (userProfileSummary)
-                userProfileSummary.classList.remove("hidden");
-
-            // Hide all sections first
-            document
-                .querySelectorAll(".dashboard-section")
-                .forEach((section) => {
-                    section.classList.add("hidden");
+                        // Close mobile sidebar if needed
+                        if (window.innerWidth < 1024 && sidebar) {
+                            sidebar.classList.add("-translate-x-full");
+                            document.body.classList.remove("overflow-hidden");
+                            const overlay =
+                                document.getElementById("sidebarOverlay");
+                            overlay?.remove();
+                        }
+                    });
                 });
+            };
 
-            // Show appropriate default section based on role
-            // Get the officer record for this user if it exists
-            let officerStatus: OfficerStatus = "none";
+            // Display user profile information and handle role-based access
+            const updateUserProfile = async (user: { id: string }) => {
+                if (!user) return;
 
-            try {
-                const officerRecords = await get.getList(
-                    "officers",
-                    1,
-                    50,
-                    `user="${user.id}"`,
-                    "",
-                    {
-                        fields: ["id", "type"],
-                    }
-                );
-
-                if (officerRecords && officerRecords.items.length > 0) {
-                    const officerType = officerRecords.items[0].type;
-
-                    // Map the officer type to our OfficerStatus
-                    switch (officerType) {
-                        case OfficerTypes.ADMINISTRATOR:
-                            officerStatus = "administrator";
-                            break;
-                        case OfficerTypes.EXECUTIVE:
-                            officerStatus = "executive";
-                            break;
-                        case OfficerTypes.GENERAL:
-                            officerStatus = "general";
-                            break;
-                        case OfficerTypes.HONORARY:
-                            officerStatus = "honorary";
-                            break;
-                        case OfficerTypes.PAST:
-                            officerStatus = "past";
-                            break;
-                        default:
-                            officerStatus = "none";
-                    }
-                } else {
+                try {
                     const extendedUser = await get.getOne("users", user.id, {
-                        fields: ["member_type"],
+                        fields: [
+                            "id",
+                            "name",
+                            "member_type",
+                            "officer_status",
+                            "expand.member_type",
+                        ],
                     });
 
-                    if (extendedUser.member_type === "Sponsor") {
+                    const displayName = extendedUser.name || "Unknown User";
+                    const displayRole = extendedUser.member_type || "Member";
+
+                    // Map the officer type from the database to our OfficerStatus type
+                    let officerStatus: OfficerStatus = "";
+
+                    // Get the officer record for this user if it exists
+                    const officerRecords = await get.getList(
+                        "officers",
+                        1,
+                        50,
+                        `user="${user.id}"`,
+                        "",
+                        {
+                            fields: ["id", "type"],
+                        }
+                    );
+
+                    if (officerRecords && officerRecords.items.length > 0) {
+                        const officerType = officerRecords.items[0].type;
+
+                        // Map the officer type to our OfficerStatus
+                        switch (officerType) {
+                            case OfficerTypes.ADMINISTRATOR:
+                                officerStatus = "administrator";
+                                break;
+                            case OfficerTypes.EXECUTIVE:
+                                officerStatus = "executive";
+                                break;
+                            case OfficerTypes.GENERAL:
+                                officerStatus = "general";
+                                break;
+                            case OfficerTypes.HONORARY:
+                                officerStatus = "honorary";
+                                break;
+                            case OfficerTypes.PAST:
+                                officerStatus = "past";
+                                break;
+                            default:
+                                officerStatus = "";
+                        }
+                    } else if (extendedUser.member_type === "Sponsor") {
                         officerStatus = "sponsor";
+                    } else {
+                        officerStatus = "none";
                     }
+
+                    const initials = (extendedUser.name || "U")
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")
+                        .toUpperCase();
+
+                    // Update profile display
+                    if (userName) userName.textContent = displayName;
+                    if (userRole) userRole.textContent = displayRole;
+                    if (userInitials) userInitials.textContent = initials;
+
+                    // Update section visibility based on role
+                    updateSectionVisibility(officerStatus);
+                } catch (error) {
+                    console.error("Error fetching user profile:", error);
+                    const fallbackValues = {
+                        name: "Unknown User",
+                        role: "Member",
+                        initials: "?",
+                    };
+
+                    if (userName) userName.textContent = fallbackValues.name;
+                    if (userRole) userRole.textContent = fallbackValues.role;
+                    if (userInitials)
+                        userInitials.textContent = fallbackValues.initials;
+
+                    updateSectionVisibility("" as OfficerStatus);
                 }
-            } catch (error) {
-                console.error("Error determining officer status:", error);
-                officerStatus = "none";
+            };
+
+            // Mobile sidebar toggle
+            const mobileSidebarToggle = document.getElementById(
+                "mobileSidebarToggle"
+            );
+            if (mobileSidebarToggle && sidebar) {
+                const toggleSidebar = () => {
+                    const isOpen =
+                        !sidebar.classList.contains("-translate-x-full");
+
+                    if (isOpen) {
+                        sidebar.classList.add("-translate-x-full");
+                        document.body.classList.remove("overflow-hidden");
+                        const overlay =
+                            document.getElementById("sidebarOverlay");
+                        overlay?.remove();
+                    } else {
+                        sidebar.classList.remove("-translate-x-full");
+                        document.body.classList.add("overflow-hidden");
+                        const overlay = document.createElement("div");
+                        overlay.id = "sidebarOverlay";
+                        overlay.className =
+                            "fixed inset-0 bg-black bg-opacity-50 z-40 xl:hidden";
+                        overlay.addEventListener("click", toggleSidebar);
+                        document.body.appendChild(overlay);
+                    }
+                };
+
+                mobileSidebarToggle.addEventListener("click", toggleSidebar);
             }
 
-            let defaultSection;
-            let defaultButton;
+            // Function to initialize the page
+            const initializePage = async () => {
+                try {
+                    // Initialize auth sync for IndexedDB
+                    await initAuthSync();
 
-            if (officerStatus === "sponsor") {
-                defaultSection = document.getElementById(
-                    "sponsorDashboardSection"
-                );
-                defaultButton = document.querySelector(
-                    '[data-section="sponsorDashboard"]'
-                );
-            } else if (officerStatus === "administrator") {
-                defaultSection = document.getElementById(
-                    "adminDashboardSection"
-                );
-                defaultButton = document.querySelector(
-                    '[data-section="adminDashboard"]'
-                );
-            } else {
-                defaultSection = document.getElementById("profileSection");
-                defaultButton = document.querySelector(
-                    '[data-section="profile"]'
-                );
-            }
+                    // Check if user is authenticated
+                    if (!auth.isAuthenticated()) {
+                        console.log("User not authenticated");
+                        if (pageLoadingState)
+                            pageLoadingState.classList.add("hidden");
+                        if (notAuthenticatedState)
+                            notAuthenticatedState.classList.remove("hidden");
+                        return;
+                    }
 
-            if (defaultSection) {
-                defaultSection.classList.remove("hidden");
-            }
-            if (defaultButton) {
-                defaultButton.classList.add("active", "bg-base-200");
-            }
+                    if (pageLoadingState)
+                        pageLoadingState.classList.remove("hidden");
+                    if (pageErrorState) pageErrorState.classList.add("hidden");
+                    if (notAuthenticatedState)
+                        notAuthenticatedState.classList.add("hidden");
 
-            // Initialize navigation
-            handleNavigation();
+                    // Show loading states
+                    const userProfileSkeleton = document.getElementById(
+                        "userProfileSkeleton"
+                    );
+                    const userProfileSignedOut = document.getElementById(
+                        "userProfileSignedOut"
+                    );
+                    const userProfileSummary =
+                        document.getElementById("userProfileSummary");
+                    const menuLoadingSkeleton = document.getElementById(
+                        "menuLoadingSkeleton"
+                    );
+                    const actualMenu = document.getElementById("actualMenu");
 
-            // Show actual menu and hide skeleton
-            if (menuLoadingSkeleton)
-                menuLoadingSkeleton.classList.add("hidden");
-            if (actualMenu) actualMenu.classList.remove("hidden");
+                    if (userProfileSkeleton)
+                        userProfileSkeleton.classList.remove("hidden");
+                    if (userProfileSummary)
+                        userProfileSummary.classList.add("hidden");
+                    if (userProfileSignedOut)
+                        userProfileSignedOut.classList.add("hidden");
+                    if (menuLoadingSkeleton)
+                        menuLoadingSkeleton.classList.remove("hidden");
+                    if (actualMenu) actualMenu.classList.add("hidden");
 
-            // Show main content and hide loading
-            if (mainContent) mainContent.classList.remove("hidden");
-            if (pageLoadingState) pageLoadingState.classList.add("hidden");
-        } catch (error) {
-            console.error("Error initializing dashboard:", error);
-            if (pageLoadingState) pageLoadingState.classList.add("hidden");
-            if (pageErrorState) pageErrorState.classList.remove("hidden");
-        }
-    };
+                    const user = auth.getCurrentUser();
+                    await updateUserProfile(user);
 
-    // Initialize when DOM is loaded
-    document.addEventListener("DOMContentLoaded", initializePage);
+                    // Show actual profile and hide skeleton
+                    if (userProfileSkeleton)
+                        userProfileSkeleton.classList.add("hidden");
+                    if (userProfileSummary)
+                        userProfileSummary.classList.remove("hidden");
 
-    // Handle login button click
-    document
-        .querySelector(".login-button")
-        ?.addEventListener("click", async () => {
-            try {
-                if (pageLoadingState)
-                    pageLoadingState.classList.remove("hidden");
-                if (notAuthenticatedState)
-                    notAuthenticatedState.classList.add("hidden");
-                await auth.login();
-            } catch (error) {
-                console.error("Login error:", error);
-                if (pageLoadingState) pageLoadingState.classList.add("hidden");
-                if (pageErrorState) pageErrorState.classList.remove("hidden");
-            }
-        });
+                    // Hide all sections first
+                    document
+                        .querySelectorAll(".dashboard-section")
+                        .forEach((section) => {
+                            section.classList.add("hidden");
+                        });
 
-    // Handle logout button click
-    document.getElementById("logoutButton")?.addEventListener("click", () => {
-        auth.logout();
-        window.location.reload();
-    });
+                    // Show appropriate default section based on role
+                    // Get the officer record for this user if it exists
+                    let officerStatus: OfficerStatus = "none";
 
-    // Handle responsive sidebar
-    if (sidebar) {
-        if (window.innerWidth < 1024) {
-            sidebar.classList.add("-translate-x-full");
-        }
+                    try {
+                        const officerRecords = await get.getList(
+                            "officers",
+                            1,
+                            50,
+                            `user="${user.id}"`,
+                            "",
+                            {
+                                fields: ["id", "type"],
+                            }
+                        );
 
-        window.addEventListener("resize", () => {
-            if (window.innerWidth >= 1024) {
-                const overlay = document.getElementById("sidebarOverlay");
-                if (overlay) {
-                    overlay.remove();
-                    document.body.classList.remove("overflow-hidden");
+                        if (officerRecords && officerRecords.items.length > 0) {
+                            const officerType = officerRecords.items[0].type;
+
+                            // Map the officer type to our OfficerStatus
+                            switch (officerType) {
+                                case OfficerTypes.ADMINISTRATOR:
+                                    officerStatus = "administrator";
+                                    break;
+                                case OfficerTypes.EXECUTIVE:
+                                    officerStatus = "executive";
+                                    break;
+                                case OfficerTypes.GENERAL:
+                                    officerStatus = "general";
+                                    break;
+                                case OfficerTypes.HONORARY:
+                                    officerStatus = "honorary";
+                                    break;
+                                case OfficerTypes.PAST:
+                                    officerStatus = "past";
+                                    break;
+                                default:
+                                    officerStatus = "none";
+                            }
+                        } else {
+                            const extendedUser = await get.getOne(
+                                "users",
+                                user.id,
+                                {
+                                    fields: ["member_type"],
+                                }
+                            );
+
+                            if (extendedUser.member_type === "Sponsor") {
+                                officerStatus = "sponsor";
+                            }
+                        }
+                    } catch (error) {
+                        console.error(
+                            "Error determining officer status:",
+                            error
+                        );
+                        officerStatus = "none";
+                    }
+
+                    let defaultSection;
+                    let defaultButton;
+
+                    if (officerStatus === "sponsor") {
+                        defaultSection = document.getElementById(
+                            "sponsorDashboardSection"
+                        );
+                        defaultButton = document.querySelector(
+                            '[data-section="sponsorDashboard"]'
+                        );
+                    } else if (officerStatus === "administrator") {
+                        defaultSection = document.getElementById(
+                            "adminDashboardSection"
+                        );
+                        defaultButton = document.querySelector(
+                            '[data-section="adminDashboard"]'
+                        );
+                    } else {
+                        defaultSection =
+                            document.getElementById("profileSection");
+                        defaultButton = document.querySelector(
+                            '[data-section="profile"]'
+                        );
+                    }
+
+                    if (defaultSection) {
+                        defaultSection.classList.remove("hidden");
+                    }
+                    if (defaultButton) {
+                        defaultButton.classList.add("active", "bg-base-200");
+                    }
+
+                    // Initialize navigation
+                    handleNavigation();
+
+                    // Show actual menu and hide skeleton
+                    if (menuLoadingSkeleton)
+                        menuLoadingSkeleton.classList.add("hidden");
+                    if (actualMenu) actualMenu.classList.remove("hidden");
+
+                    // Show main content and hide loading
+                    if (mainContent) mainContent.classList.remove("hidden");
+                    if (pageLoadingState)
+                        pageLoadingState.classList.add("hidden");
+                } catch (error) {
+                    console.error("Error initializing dashboard:", error);
+                    if (pageLoadingState)
+                        pageLoadingState.classList.add("hidden");
+                    if (pageErrorState)
+                        pageErrorState.classList.remove("hidden");
                 }
-                sidebar.classList.remove("-translate-x-full");
+            };
+
+            // Initialize when DOM is loaded
+            document.addEventListener("DOMContentLoaded", initializePage);
+
+            // Handle login button click
+            document
+                .querySelector(".login-button")
+                ?.addEventListener("click", async () => {
+                    try {
+                        if (pageLoadingState)
+                            pageLoadingState.classList.remove("hidden");
+                        if (notAuthenticatedState)
+                            notAuthenticatedState.classList.add("hidden");
+                        await auth.login();
+                    } catch (error) {
+                        console.error("Login error:", error);
+                        if (pageLoadingState)
+                            pageLoadingState.classList.add("hidden");
+                        if (pageErrorState)
+                            pageErrorState.classList.remove("hidden");
+                    }
+                });
+
+            // Handle logout button click
+            document
+                .getElementById("logoutButton")
+                ?.addEventListener("click", () => {
+                    auth.logout();
+                    window.location.reload();
+                });
+
+            // Handle responsive sidebar
+            if (sidebar) {
+                if (window.innerWidth < 1024) {
+                    sidebar.classList.add("-translate-x-full");
+                }
+
+                window.addEventListener("resize", () => {
+                    if (window.innerWidth >= 1024) {
+                        const overlay =
+                            document.getElementById("sidebarOverlay");
+                        if (overlay) {
+                            overlay.remove();
+                            document.body.classList.remove("overflow-hidden");
+                        }
+                        sidebar.classList.remove("-translate-x-full");
+                    }
+                });
             }
-        });
-    }
-</script>
+        </script>
+    </body>
+</html>

@@ -6,6 +6,7 @@ import { SendLog } from "../../../scripts/pocketbase/SendLog";
 import { DataSyncService } from "../../../scripts/database/DataSyncService";
 import { Collections } from "../../../schemas/pocketbase/schema";
 import { Icon } from "@iconify/react";
+import toast from "react-hot-toast";
 import type { Event, AttendeeEntry } from "../../../schemas/pocketbase";
 
 // Extended Event interface with additional properties needed for this component
@@ -16,77 +17,6 @@ interface ExtendedEvent extends Event {
 // Note: Date conversion is now handled automatically by the Get and Update classes.
 // When fetching events, UTC dates are converted to local time.
 // When saving events, local dates are converted back to UTC.
-
-// Toast management system
-const createToast = (
-    message: string,
-    type: "success" | "error" | "warning" = "success"
-) => {
-    let toastContainer = document.querySelector(".toast-container");
-    if (!toastContainer) {
-        toastContainer = document.createElement("div");
-        toastContainer.className = "toast-container fixed bottom-4 right-4 z-50";
-        document.body.appendChild(toastContainer);
-    }
-
-    const existingToasts = document.querySelectorAll(".toast-container .toast");
-    if (existingToasts.length >= 2) {
-        const oldestToast = existingToasts[0];
-        oldestToast.classList.add("toast-exit");
-        setTimeout(() => oldestToast.remove(), 150);
-    }
-
-    // Update positions of existing toasts
-    existingToasts.forEach((t) => {
-        const toast = t as HTMLElement;
-        const currentIndex = parseInt(toast.getAttribute("data-index") || "0");
-        toast.setAttribute("data-index", (currentIndex + 1).toString());
-    });
-
-    const toast = document.createElement("div");
-    toast.className = "toast translate-x-full";
-    toast.setAttribute("data-index", "0");
-
-    // Update alert styling based on type
-    const alertClass =
-        type === "success"
-            ? "alert-success bg-success text-success-content"
-            : type === "error"
-                ? "alert-error bg-error text-error-content"
-                : "alert-warning bg-warning text-warning-content";
-
-    const iconName = type === "success"
-        ? "heroicons:check-circle"
-        : type === "error"
-            ? "heroicons:x-circle"
-            : "heroicons:exclamation-triangle";
-
-    toast.innerHTML = `
-      <div class="alert ${alertClass} shadow-lg min-w-[300px]">
-        <div class="flex items-center gap-2">
-            <iconify-icon icon="${iconName}" width="20" height="20"></iconify-icon>
-            <span>${message}</span>
-        </div>
-      </div>
-    `;
-
-    toastContainer.appendChild(toast);
-
-    // Force a reflow to ensure the animation triggers
-    toast.offsetHeight;
-
-    // Add the transition class and remove transform
-    toast.classList.add("transition-all", "duration-300", "ease-out");
-    requestAnimationFrame(() => {
-        toast.classList.remove("translate-x-full");
-    });
-
-    // Setup exit animation
-    setTimeout(() => {
-        toast.classList.add("toast-exit");
-        setTimeout(() => toast.remove(), 150);
-    }, 3000);
-};
 
 const EventCheckIn = () => {
     const [currentCheckInEvent, setCurrentCheckInEvent] = useState<Event | null>(null);
@@ -101,7 +31,7 @@ const EventCheckIn = () => {
 
             const currentUser = auth.getCurrentUser();
             if (!currentUser) {
-                createToast("You must be logged in to check in to events", "error");
+                toast.error("You must be logged in to check in to events");
                 return;
             }
 
@@ -151,7 +81,7 @@ const EventCheckIn = () => {
                 await completeCheckIn(event, null);
             }
         } catch (error: any) {
-            createToast(error?.message || "Failed to check in to event", "error");
+            toast.error(error?.message || "Failed to check in to event");
         }
     }
 
@@ -171,7 +101,7 @@ const EventCheckIn = () => {
             const userId = auth.getUserId();
 
             if (!userId) {
-                createToast("You must be logged in to check in to an event", "error");
+                toast.error("You must be logged in to check in to an event");
                 return;
             }
 
@@ -184,7 +114,14 @@ const EventCheckIn = () => {
             );
 
             if (isAlreadyCheckedIn) {
-                createToast("You are already checked in to this event", "warning");
+                toast("You are already checked in to this event", {
+                    icon: '⚠️',
+                    style: {
+                        borderRadius: '10px',
+                        background: '#FFC107',
+                        color: '#000',
+                    },
+                });
                 return;
             }
 
@@ -243,12 +180,11 @@ const EventCheckIn = () => {
             }
 
             // Show success message with points if awarded
-            createToast(
+            toast.success(
                 `Successfully checked in to ${event.event_name}${event.points_to_reward > 0
                     ? ` (+${event.points_to_reward} points!)`
                     : ""
-                }`,
-                "success"
+                }`
             );
 
             // Log the check-in
@@ -265,7 +201,7 @@ const EventCheckIn = () => {
                 setFoodInput("");
             }
         } catch (error: any) {
-            createToast(error?.message || "Failed to check in to event", "error");
+            toast.error(error?.message || "Failed to check in to event");
         }
     }
 
@@ -296,7 +232,14 @@ const EventCheckIn = () => {
                                     input.value = "";
                                 });
                             } else {
-                                createToast("Please enter an event code", "warning");
+                                toast("Please enter an event code", {
+                                    icon: '⚠️',
+                                    style: {
+                                        borderRadius: '10px',
+                                        background: '#FFC107',
+                                        color: '#000',
+                                    },
+                                });
                             }
                         }}>
                             <div className="flex flex-col sm:flex-row gap-2">
