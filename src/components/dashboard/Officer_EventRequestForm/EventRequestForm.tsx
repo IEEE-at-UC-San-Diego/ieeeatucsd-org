@@ -442,12 +442,7 @@ const EventRequestForm: React.FC = () => {
                 return false;
             }
 
-            // Check if there are items in the invoice
-            if (formData.invoiceData.items.length === 0) {
-                toast.error('Please add at least one item to the invoice');
-                return false;
-            }
-
+            // No longer require items in the invoice
             // Check if at least one invoice file is uploaded
             if (!formData.invoice && (!formData.invoice_files || formData.invoice_files.length === 0)) {
                 toast.error('Please upload at least one invoice file');

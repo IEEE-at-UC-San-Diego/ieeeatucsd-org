@@ -5,7 +5,7 @@ import { Update } from '../../../scripts/pocketbase/Update';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import toast from 'react-hot-toast';
 import EventRequestDetails from './EventRequestDetails';
-import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase';
+import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase/schema';
 
 // Extended EventRequest interface with additional properties needed for this component
 interface ExtendedEventRequest extends SchemaEventRequest {
@@ -24,6 +24,7 @@ interface ExtendedEventRequest extends SchemaEventRequest {
     };
     invoice_data?: any;
     feedback?: string;
+    status: "submitted" | "pending" | "completed" | "declined";
 }
 
 interface EventRequestManagementTableProps {
@@ -50,11 +51,10 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
             const get = Get.getInstance();
             const auth = Authentication.getInstance();
 
-            if (!auth.isAuthenticated()) {
-                toast.error('You must be logged in to refresh event requests', { id: refreshToast });
-                return;
-            }
+            // Don't check authentication here - try to fetch anyway
+            // The token might be valid for the API even if isAuthenticated() returns false
 
+            console.log("Fetching event requests...");
             const updatedRequests = await get.getAll<ExtendedEventRequest>(
                 'event_request',
                 '',
@@ -64,13 +64,26 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                     expand: ['requested_user']
                 }
             );
+            console.log(`Fetched ${updatedRequests.length} event requests`);
 
             setEventRequests(updatedRequests);
             applyFilters(updatedRequests);
             toast.success('Event requests refreshed successfully', { id: refreshToast });
         } catch (err) {
             console.error('Failed to refresh event requests:', err);
-            toast.error('Failed to refresh event requests. Please try again.', { id: refreshToast });
+
+            // Check if it's an authentication error
+            if (err instanceof Error &&
+                (err.message.includes('authentication') ||
+                    err.message.includes('auth') ||
+                    err.message.includes('logged in'))) {
+                toast.error('Authentication error. Please log in again.', { id: refreshToast });
+                setTimeout(() => {
+                    window.location.href = "/login";
+                }, 2000);
+            } else {
+                toast.error('Failed to refresh event requests. Please try again.', { id: refreshToast });
+            }
         } finally {
             setIsRefreshing(false);
         }
@@ -129,7 +142,7 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
     };
 
     // Update event request status
-    const updateEventRequestStatus = async (id: string, status: string) => {
+    const updateEventRequestStatus = async (id: string, status: "submitted" | "pending" | "completed" | "declined") => {
         const updateToast = toast.loading(`Updating status to ${status}...`);
 
         try {
@@ -209,16 +222,18 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
     };
 
     // Get status badge class based on status
-    const getStatusBadge = (status?: string) => {
+    const getStatusBadge = (status?: "submitted" | "pending" | "completed" | "declined") => {
         if (!status) return 'badge-warning';
 
-        switch (status.toLowerCase()) {
+        switch (status) {
             case 'completed':
                 return 'badge-success';
             case 'declined':
                 return 'badge-error';
             case 'pending':
                 return 'badge-warning';
+            case 'submitted':
+                return 'badge-info';
             default:
                 return 'badge-warning';
         }
@@ -252,6 +267,36 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
     useEffect(() => {
         applyFilters();
     }, [statusFilter, searchTerm, sortField, sortDirection]);
+
+    // Check authentication and refresh token if needed
+    useEffect(() => {
+        const checkAuth = async () => {
+            const auth = Authentication.getInstance();
+
+            // Check if we're authenticated
+            if (!auth.isAuthenticated()) {
+                console.log("Authentication check failed - attempting to continue anyway");
+
+                // Don't show error or redirect immediately - try to refresh first
+                try {
+                    // Try to refresh event requests anyway - the token might be valid
+                    await refreshEventRequests();
+                } catch (err) {
+                    console.error("Failed to refresh after auth check:", err);
+                    toast.error("Authentication error. Please log in again.");
+
+                    // Only redirect if refresh fails
+                    setTimeout(() => {
+                        window.location.href = "/login";
+                    }, 2000);
+                }
+            } else {
+                console.log("Authentication check passed");
+            }
+        };
+
+        checkAuth();
+    }, []);
 
     // Auto refresh on component mount
     useEffect(() => {
@@ -498,9 +543,9 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                                                 Update
                                             </label>
                                             <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-52">
-                                                <li><a onClick={() => updateEventRequestStatus(request.id, 'Pending')}>Pending</a></li>
-                                                <li><a onClick={() => updateEventRequestStatus(request.id, 'Completed')}>Completed</a></li>
-                                                <li><a onClick={() => updateEventRequestStatus(request.id, 'Declined')}>Declined</a></li>
+                                                <li><a onClick={() => updateEventRequestStatus(request.id, "pending")}>Pending</a></li>
+                                                <li><a onClick={() => updateEventRequestStatus(request.id, "completed")}>Completed</a></li>
+                                                <li><a onClick={() => updateEventRequestStatus(request.id, "declined")}>Declined</a></li>
                                             </ul>
                                         </div>
                                         <button

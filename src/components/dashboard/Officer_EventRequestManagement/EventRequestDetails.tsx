@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase';
+import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase/schema';
 
 // Extended EventRequest interface with additional properties needed for this component
 interface ExtendedEventRequest extends SchemaEventRequest {
@@ -16,7 +16,7 @@ interface ExtendedEventRequest extends SchemaEventRequest {
 interface EventRequestDetailsProps {
     request: ExtendedEventRequest;
     onClose: () => void;
-    onStatusChange: (id: string, status: string) => Promise<void>;
+    onStatusChange: (id: string, status: "submitted" | "pending" | "completed" | "declined") => Promise<void>;
     onFeedbackChange: (id: string, feedback: string) => Promise<boolean>;
 }
 
@@ -220,16 +220,16 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
     }
 };
 
-const EventRequestDetails: React.FC<EventRequestDetailsProps> = ({
+const EventRequestDetails = ({
     request,
     onClose,
     onStatusChange,
     onFeedbackChange
-}) => {
+}: EventRequestDetailsProps): React.ReactNode => {
     const [feedback, setFeedback] = useState<string>(request.feedback || '');
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<'details' | 'pr' | 'funding'>('details');
-    const [status, setStatus] = useState(request.status);
+    const [status, setStatus] = useState<"submitted" | "pending" | "completed" | "declined">(request.status);
     const [isStatusChanging, setIsStatusChanging] = useState(false);
 
     // Format date for display
@@ -250,16 +250,18 @@ const EventRequestDetails: React.FC<EventRequestDetailsProps> = ({
     };
 
     // Get status badge class based on status
-    const getStatusBadge = (status?: string) => {
+    const getStatusBadge = (status?: "submitted" | "pending" | "completed" | "declined") => {
         if (!status) return 'badge-warning';
 
-        switch (status.toLowerCase()) {
+        switch (status) {
             case 'completed':
                 return 'badge-success';
             case 'declined':
                 return 'badge-error';
             case 'pending':
                 return 'badge-warning';
+            case 'submitted':
+                return 'badge-info';
             default:
                 return 'badge-warning';
         }
@@ -282,10 +284,10 @@ const EventRequestDetails: React.FC<EventRequestDetailsProps> = ({
     };
 
     // Handle status change
-    const handleStatusChange = async (status: string) => {
+    const handleStatusChange = async (newStatus: "submitted" | "pending" | "completed" | "declined") => {
         setIsStatusChanging(true);
-        await onStatusChange(request.id, status);
-        setStatus(status);
+        await onStatusChange(request.id, newStatus);
+        setStatus(newStatus);
         setIsStatusChanging(false);
     };
 

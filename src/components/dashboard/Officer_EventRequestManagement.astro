@@ -11,21 +11,21 @@ const auth = Authentication.getInstance();
 
 // Extended EventRequest interface with additional properties needed for this component
 interface ExtendedEventRequest extends EventRequest {
-  requested_user_expand?: {
-    name: string;
-    email: string;
-  };
-  expand?: {
-    requested_user?: {
-      id: string;
-      name: string;
-      email: string;
-      [key: string]: any;
+    requested_user_expand?: {
+        name: string;
+        email: string;
     };
-    [key: string]: any;
-  };
-  feedback?: string;
-  [key: string]: any; // For other optional properties
+    expand?: {
+        requested_user?: {
+            id: string;
+            name: string;
+            email: string;
+            [key: string]: any;
+        };
+        [key: string]: any;
+    };
+    feedback?: string;
+    [key: string]: any; // For other optional properties
 }
 
 // Initialize variables for all event requests
@@ -33,113 +33,160 @@ let allEventRequests: ExtendedEventRequest[] = [];
 let error = null;
 
 try {
-  // Expand the requested_user field to get user details
-  allEventRequests = await get.getAll<ExtendedEventRequest>(
-    "event_request",
-    "",
-    "-created",
-  );
+    // Don't check authentication here - let the client component handle it
+    // The server-side check is causing issues when the token is valid client-side but not server-side
 
-  // Process the event requests to add the requested_user_expand property
-  allEventRequests = allEventRequests.map((request) => {
-    const requestWithExpand = { ...request };
+    console.log("Fetching event requests in Astro component...");
+    // Expand the requested_user field to get user details
+    allEventRequests = await get
+        .getAll<ExtendedEventRequest>("event_request", "", "-created", {
+            expand: ["requested_user"],
+        })
+        .catch((err) => {
+            console.error("Error in get.getAll:", err);
+            // Return empty array instead of throwing
+            return [];
+        });
 
-    // Add the requested_user_expand property if the expand data is available
-    if (
-      request.expand &&
-      request.expand.requested_user &&
-      request.expand.requested_user.name &&
-      request.expand.requested_user.email
-    ) {
-      requestWithExpand.requested_user_expand = {
-        name: request.expand.requested_user.name,
-        email: request.expand.requested_user.email,
-      };
-    }
+    console.log(
+        `Fetched ${allEventRequests.length} event requests in Astro component`
+    );
 
-    return requestWithExpand;
-  });
+    // Process the event requests to add the requested_user_expand property
+    allEventRequests = allEventRequests.map((request) => {
+        const requestWithExpand = { ...request };
+
+        // Add the requested_user_expand property if the expand data is available
+        if (
+            request.expand &&
+            request.expand.requested_user &&
+            request.expand.requested_user.name &&
+            request.expand.requested_user.email
+        ) {
+            requestWithExpand.requested_user_expand = {
+                name: request.expand.requested_user.name,
+                email: request.expand.requested_user.email,
+            };
+        }
+
+        return requestWithExpand;
+    });
 } catch (err) {
-  console.error("Error fetching event requests:", err);
-  error = err;
+    console.error("Error fetching event requests:", err);
+    error = err;
 }
 ---
 
 <div class="w-full max-w-7xl mx-auto py-8 px-4">
-  <style>
-    .event-table-container {
-      min-height: 600px;
-      height: auto !important;
-      max-height: none !important;
-    }
-    .event-table-container table {
-      height: auto !important;
-    }
-    .event-table-container .overflow-x-auto {
-      max-height: none !important;
-    }
-  </style>
+    <style>
+        .event-table-container {
+            min-height: 600px;
+            height: auto !important;
+            max-height: none !important;
+        }
+        .event-table-container table {
+            height: auto !important;
+        }
+        .event-table-container .overflow-x-auto {
+            max-height: none !important;
+        }
+    </style>
 
-  <div class="mb-8">
-    <h1 class="text-3xl font-bold text-white mb-2">Event Request Management</h1>
-    <p class="text-gray-300 mb-4">
-      Review and manage event requests submitted by officers. Update status,
-      provide feedback, and coordinate with the team.
-    </p>
-    <div class="bg-base-300/50 p-4 rounded-lg text-sm text-gray-300">
-      <p class="font-medium mb-2">As an executive officer, you can:</p>
-      <ul class="list-disc list-inside space-y-1 ml-2">
-        <li>View all submitted event requests</li>
-        <li>Update the status of requests (Pending, Completed, Declined)</li>
-        <li>Add comments or feedback for the requesting officer</li>
-        <li>Filter and sort requests by various criteria</li>
-      </ul>
-    </div>
-  </div>
-
-  {
-    error && (
-      <div class="alert alert-error mb-6">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6 stroke-current shrink-0"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <span>{error}</span>
-      </div>
-    )
-  }
-
-  {
-    !error && (
-      <div class="bg-base-200 rounded-lg shadow-xl min-h-[600px] event-table-container">
-        <div class="p-4 md:p-6 h-auto">
-          <EventRequestManagementTable
-            client:load
-            eventRequests={allEventRequests}
-          />
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2">
+            Event Request Management
+        </h1>
+        <p class="text-gray-300 mb-4">
+            Review and manage event requests submitted by officers. Update
+            status, provide feedback, and coordinate with the team.
+        </p>
+        <div class="bg-base-300/50 p-4 rounded-lg text-sm text-gray-300">
+            <p class="font-medium mb-2">As an executive officer, you can:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2">
+                <li>View all submitted event requests</li>
+                <li>
+                    Update the status of requests (Pending, Completed, Declined)
+                </li>
+                <li>Add comments or feedback for the requesting officer</li>
+                <li>Filter and sort requests by various criteria</li>
+            </ul>
         </div>
-      </div>
-    )
-  }
+    </div>
 
-  <!-- Toast container for notifications -->
-  <Toaster client:load position="bottom-right" />
+    {
+        error && (
+            <div class="alert alert-error mb-6">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 stroke-current shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                </svg>
+                <span>{error}</span>
+            </div>
+        )
+    }
+
+    {
+        !error && (
+            <div class="bg-base-200 rounded-lg shadow-xl min-h-[600px] event-table-container">
+                <div class="p-4 md:p-6 h-auto">
+                    <EventRequestManagementTable
+                        client:load
+                        eventRequests={allEventRequests}
+                    />
+                </div>
+            </div>
+        )
+    }
+
+    <!-- Toast container for notifications -->
+    <Toaster client:load position="bottom-right" />
 </div>
 
 <script>
-  // Refresh the page when the user navigates back to it
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      window.location.reload();
-    }
-  });
+    // Refresh the page when the user navigates back to it
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+            window.location.reload();
+        }
+    });
+
+    // Handle authentication errors
+    document.addEventListener("DOMContentLoaded", () => {
+        // Check for error message in the UI
+        const errorElement = document.querySelector(".alert-error span");
+        if (
+            errorElement &&
+            errorElement.textContent?.includes("Authentication error")
+        ) {
+            console.log(
+                "Authentication error detected in UI, redirecting to login..."
+            );
+            // Redirect to login page after a short delay
+            setTimeout(() => {
+                window.location.href = "/login";
+            }, 3000);
+            return;
+        }
+
+        // Also check if we have any event requests
+        const tableContainer = document.querySelector(".event-table-container");
+        if (tableContainer) {
+            console.log(
+                "Event table container found, component should load normally"
+            );
+        } else {
+            console.log(
+                "Event table container not found, might be an issue with rendering"
+            );
+        }
+    });
 </script>

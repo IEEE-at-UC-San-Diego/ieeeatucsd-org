@@ -108,8 +108,8 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             newErrors.quantity = 'Quantity must be greater than 0';
         }
 
-        if (newItem.unitPrice <= 0) {
-            newErrors.unitPrice = 'Unit price must be greater than 0';
+        if (newItem.unitPrice < 0) {
+            newErrors.unitPrice = 'Unit price must be 0 or greater';
         }
 
         setErrors(newErrors);
@@ -183,7 +183,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
         const value = parseFloat(e.target.value);
         onChange({
             ...invoiceData,
-            taxRate: isNaN(value) ? 0 : value
+            taxRate: isNaN(value) ? 0 : Math.max(0, value)
         });
     };
 
@@ -192,7 +192,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
         const value = parseFloat(e.target.value);
         onChange({
             ...invoiceData,
-            tipPercentage: isNaN(value) ? 0 : value
+            tipPercentage: isNaN(value) ? 0 : Math.max(0, value)
         });
     };
 
@@ -341,7 +341,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
                             className={`input input-bordered input-sm ${errors.unitPrice ? 'input-error' : ''}`}
                             value={newItem.unitPrice}
                             onChange={(e) => setNewItem({ ...newItem, unitPrice: parseFloat(e.target.value) || 0 })}
-                            min="0.01"
+                            min="0"
                             step="0.01"
                         />
                         {errors.unitPrice && (
