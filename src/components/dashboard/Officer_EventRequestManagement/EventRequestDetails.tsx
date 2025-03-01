@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { DataSyncService } from '../../../scripts/database/DataSyncService';
+import { Collections } from '../../../schemas/pocketbase/schema';
 import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase/schema';
 
 // Extended EventRequest interface with additional properties needed for this component

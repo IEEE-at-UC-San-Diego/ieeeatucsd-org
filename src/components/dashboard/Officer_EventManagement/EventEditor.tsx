@@ -7,6 +7,8 @@ import { FileManager } from "../../../scripts/pocketbase/FileManager";
 import { SendLog } from "../../../scripts/pocketbase/SendLog";
 import FilePreview from "../universal/FilePreview";
 import type { Event as SchemaEvent, AttendeeEntry } from "../../../schemas/pocketbase";
+import { DataSyncService } from '../../../scripts/database/DataSyncService';
+import { Collections } from '../../../schemas/pocketbase/schema';
 
 // Note: Date conversion is now handled automatically by the Get and Update classes.
 // When fetching events, UTC dates are converted to local time by the Get class.
@@ -714,6 +716,10 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                     await pb.collection("events").update(event.id, {
                         files: remainingFiles
                     });
+
+                    // Sync the events collection to update IndexedDB
+                    const dataSync = DataSyncService.getInstance();
+                    await dataSync.syncCollection(Collections.EVENTS);
                 }
 
                 // Handle file additions
@@ -725,6 +731,10 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
 
                         // Use appendFiles to preserve existing files
                         await services.fileManager.appendFiles("events", event.id, "files", filesToUpload);
+
+                        // Sync the events collection to update IndexedDB
+                        const dataSync = DataSyncService.getInstance();
+                        await dataSync.syncCollection(Collections.EVENTS);
                     } catch (error: any) {
                         if (error.status === 413) {
                             throw new Error("Files are too large. Please try uploading smaller files or fewer files at once.");
@@ -737,6 +747,10 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 console.log('Creating new event');
                 const newEvent = await pb.collection("events").create(eventData);
                 console.log('New event created:', newEvent);
+
+                // Sync the events collection to update IndexedDB
+                const dataSync = DataSyncService.getInstance();
+                await dataSync.syncCollection(Collections.EVENTS);
 
                 // Upload files if any
                 if (selectedFiles.size > 0) {

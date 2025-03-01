@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
+import { DataSyncService } from '../../../scripts/database/DataSyncService';
+import { Collections } from '../../../schemas/pocketbase/schema';
 import ReceiptForm from './ReceiptForm';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import FilePreview from '../universal/FilePreview';
 import ToastProvider from './ToastProvider';
-import type { ItemizedExpense, Reimbursement } from '../../../schemas/pocketbase';
+import type { ItemizedExpense, Reimbursement, Receipt } from '../../../schemas/pocketbase';
 
 interface ReceiptFormData {
     field: File;
@@ -194,6 +196,10 @@ export default function ReimbursementForm() {
 
             const response = await pb.collection('receipts').create(formData);
 
+            // Sync the receipts collection to update IndexedDB
+            const dataSync = DataSyncService.getInstance();
+            await dataSync.syncCollection(Collections.RECEIPTS);
+
             // Add receipt to state
             setReceipts(prev => [...prev, { ...receiptData, id: response.id }]);
 
@@ -262,6 +268,10 @@ export default function ReimbursementForm() {
             formData.append('department', request.department);
 
             await pb.collection('reimbursement').create(formData);
+
+            // Sync the reimbursements collection to update IndexedDB
+            const dataSync = DataSyncService.getInstance();
+            await dataSync.syncCollection(Collections.REIMBURSEMENTS);
 
             // Reset form
             setRequest({

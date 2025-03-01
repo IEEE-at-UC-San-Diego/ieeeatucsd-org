@@ -3,6 +3,8 @@ import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { Update } from "../../../scripts/pocketbase/Update";
 import { SendLog } from "../../../scripts/pocketbase/SendLog";
+import { DataSyncService } from "../../../scripts/database/DataSyncService";
+import { Collections } from "../../../schemas/pocketbase/schema";
 import { Icon } from "@iconify/react";
 import type { Event, AttendeeEntry } from "../../../schemas/pocketbase";
 
@@ -95,6 +97,7 @@ const EventCheckIn = () => {
         try {
             const get = Get.getInstance();
             const auth = Authentication.getInstance();
+            const dataSync = DataSyncService.getInstance();
 
             const currentUser = auth.getCurrentUser();
             if (!currentUser) {
@@ -102,11 +105,19 @@ const EventCheckIn = () => {
                 return;
             }
 
-            // Find the event with the given code
-            const event = await get.getFirst<Event>(
-                "events",
+            // Find the event with the given code using IndexedDB
+            // Force sync to ensure we have the latest data
+            await dataSync.syncCollection(Collections.EVENTS, `event_code = "${eventCode}"`);
+
+            // Get the event from IndexedDB
+            const events = await dataSync.getData<Event>(
+                Collections.EVENTS,
+                false, // Don't force sync again
                 `event_code = "${eventCode}"`
             );
+
+            const event = events.length > 0 ? events[0] : null;
+
             if (!event) {
                 throw new Error("Invalid event code");
             }
@@ -149,6 +160,7 @@ const EventCheckIn = () => {
             const auth = Authentication.getInstance();
             const update = Update.getInstance();
             const logger = SendLog.getInstance();
+            const dataSync = DataSyncService.getInstance();
 
             const currentUser = auth.getCurrentUser();
             if (!currentUser) {
@@ -197,6 +209,9 @@ const EventCheckIn = () => {
             // Update attendees array with the new entry
             await update.updateField("events", event.id, "attendees", updatedAttendees);
 
+            // Force sync the events collection to update IndexedDB
+            await dataSync.syncCollection(Collections.EVENTS);
+
             // If food selection was made, log it
             if (foodSelection) {
                 await logger.send(
@@ -215,6 +230,9 @@ const EventCheckIn = () => {
                     "points",
                     userPoints + event.points_to_reward
                 );
+
+                // Force sync the users collection to update IndexedDB
+                await dataSync.syncCollection(Collections.USERS);
 
                 // Log the points award
                 await logger.send(

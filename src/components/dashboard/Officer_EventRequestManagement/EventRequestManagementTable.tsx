@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Get } from '../../../scripts/pocketbase/Get';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
+import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import toast from 'react-hot-toast';
 import EventRequestDetails from './EventRequestDetails';
 import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase/schema';
+import { Collections } from '../../../schemas/pocketbase/schema';
 
 // Extended EventRequest interface with additional properties needed for this component
 interface ExtendedEventRequest extends SchemaEventRequest {
@@ -41,6 +43,7 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [sortField, setSortField] = useState<string>('created');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const dataSync = DataSyncService.getInstance();
 
     // Refresh event requests
     const refreshEventRequests = async () => {
@@ -48,22 +51,22 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
         const refreshToast = toast.loading('Refreshing event requests...');
 
         try {
-            const get = Get.getInstance();
             const auth = Authentication.getInstance();
 
             // Don't check authentication here - try to fetch anyway
             // The token might be valid for the API even if isAuthenticated() returns false
 
             console.log("Fetching event requests...");
-            const updatedRequests = await get.getAll<ExtendedEventRequest>(
-                'event_request',
-                '',
+
+            // Use DataSyncService to get data from IndexedDB with forced sync
+            const updatedRequests = await dataSync.getData<ExtendedEventRequest>(
+                Collections.EVENT_REQUESTS,
+                true, // Force sync
+                '', // No filter
                 '-created',
-                {
-                    fields: ['*'],
-                    expand: ['requested_user']
-                }
+                'requested_user'
             );
+
             console.log(`Fetched ${updatedRequests.length} event requests`);
 
             setEventRequests(updatedRequests);
@@ -167,6 +170,9 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                 setSelectedRequest({ ...selectedRequest, status });
             }
 
+            // Force sync to update IndexedDB
+            await dataSync.syncCollection<ExtendedEventRequest>(Collections.EVENT_REQUESTS);
+
             toast.success(`Status updated to ${status}`, { id: updateToast });
         } catch (err) {
             console.error('Failed to update event request status:', err);
@@ -194,6 +200,9 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                     request.id === id ? { ...request, feedback } : request
                 )
             );
+
+            // Force sync to update IndexedDB
+            await dataSync.syncCollection<ExtendedEventRequest>(Collections.EVENT_REQUESTS);
 
             toast.success('Feedback saved successfully', { id: feedbackToast });
             return true;

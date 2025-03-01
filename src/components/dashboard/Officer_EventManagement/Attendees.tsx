@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Get } from '../../../scripts/pocketbase/Get';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { SendLog } from '../../../scripts/pocketbase/SendLog';
+import { DataSyncService } from '../../../scripts/database/DataSyncService';
+import { Collections } from '../../../schemas/pocketbase/schema';
 import { Icon } from "@iconify/react";
 import type { Event, AttendeeEntry, User as SchemaUser } from "../../../schemas/pocketbase";
 
@@ -160,10 +162,25 @@ export default function Attendees() {
 
         // Fetch uncached users
         try {
-            const users = await get.getMany<User>('users', uncachedIds, {
-                fields: USER_FIELDS,
-                disableAutoCancellation: false
-            });
+            const dataSync = DataSyncService.getInstance();
+
+            // Sync users collection for the uncached IDs
+            if (uncachedIds.length > 0) {
+                const idFilter = uncachedIds.map(id => `id = "${id}"`).join(' || ');
+                await dataSync.syncCollection(Collections.USERS, idFilter);
+            }
+
+            // Get users from IndexedDB
+            const users = await Promise.all(
+                uncachedIds.map(async id => {
+                    try {
+                        return await dataSync.getItem<User>(Collections.USERS, id);
+                    } catch (error) {
+                        console.error(`Failed to fetch user ${id}:`, error);
+                        return null;
+                    }
+                })
+            );
 
             // Update cache and merge with cached users
             users.forEach(user => {
@@ -177,7 +194,7 @@ export default function Attendees() {
         }
 
         return cachedUsers;
-    }, [get]);
+    }, []);
 
     // Listen for the custom event
     useEffect(() => {
@@ -226,12 +243,22 @@ export default function Attendees() {
                 setLoading(true);
                 setError(null);
 
-                const event = await get.getOne<Event>('events', eventId, {
-                    fields: EVENT_FIELDS,
-                    disableAutoCancellation: false
-                });
+                const dataSync = DataSyncService.getInstance();
+
+                // Sync the event data
+                await dataSync.syncCollection(Collections.EVENTS, `id = "${eventId}"`);
+
+                // Get the event from IndexedDB
+                const event = await dataSync.getItem<Event>(Collections.EVENTS, eventId);
 
                 if (!isMounted) return;
+
+                if (!event) {
+                    setError('Event not found');
+                    setAttendeesList([]);
+                    setUsers(new Map());
+                    return;
+                }
 
                 if (!event.attendees?.length) {
                     setAttendeesList([]);
@@ -263,7 +290,7 @@ export default function Attendees() {
 
         fetchEventData();
         return () => { isMounted = false; };
-    }, [eventId, auth, get, fetchUserData]);
+    }, [eventId, auth, fetchUserData]);
 
     // Reset state when modal is closed
     useEffect(() => {

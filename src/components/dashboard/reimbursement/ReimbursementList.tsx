@@ -8,6 +8,8 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import ToastProvider from './ToastProvider';
 import type { ItemizedExpense, Reimbursement, Receipt } from '../../../schemas/pocketbase';
+import { DataSyncService } from '../../../scripts/database/DataSyncService';
+import { Collections } from '../../../schemas/pocketbase/schema';
 
 interface AuditNote {
     note: string;
@@ -97,12 +99,13 @@ const itemVariants = {
 export default function ReimbursementList() {
     const [requests, setRequests] = useState<ReimbursementRequest[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string>('');
+    const [error, setError] = useState('');
     const [selectedRequest, setSelectedRequest] = useState<ReimbursementRequest | null>(null);
     const [showPreview, setShowPreview] = useState(false);
     const [previewUrl, setPreviewUrl] = useState('');
     const [previewFilename, setPreviewFilename] = useState('');
     const [selectedReceipt, setSelectedReceipt] = useState<ReceiptDetails | null>(null);
+    const [receiptDetailsMap, setReceiptDetailsMap] = useState<Record<string, ReceiptDetails>>({});
 
     const get = Get.getInstance();
     const auth = Authentication.getInstance();
@@ -120,100 +123,122 @@ export default function ReimbursementList() {
     }, [requests]);
 
     const fetchReimbursements = async () => {
+        setLoading(true);
+        setError('');
+
         try {
-            setLoading(true);
             const pb = auth.getPocketBase();
             const userId = pb.authStore.model?.id;
 
-            console.log('Current user ID:', userId);
-            console.log('Auth store state:', {
-                isValid: pb.authStore.isValid,
-                token: pb.authStore.token,
-                model: pb.authStore.model
-            });
-
             if (!userId) {
-                toast.error('User not authenticated');
                 throw new Error('User not authenticated');
             }
 
             const loadingToast = toast.loading('Loading reimbursements...');
 
-            // First try to get all reimbursements to see if the collection is accessible
-            try {
-                const allRecords = await pb.collection('reimbursement').getList(1, 50);
-                console.log('All reimbursements (no filter):', allRecords);
-            } catch (e) {
-                console.error('Error getting all reimbursements:', e);
-            }
+            // Use DataSyncService to get data from IndexedDB with forced sync
+            const dataSync = DataSyncService.getInstance();
 
-            // Now try with the filter
-            console.log('Attempting to fetch with filter:', `submitted_by = "${userId}"`);
+            // Sync reimbursements collection
+            await dataSync.syncCollection(
+                Collections.REIMBURSEMENTS,
+                `submitted_by="${userId}"`,
+                '-created',
+                'audit_notes'
+            );
 
-            try {
-                const records = await pb.collection('reimbursement').getList(1, 50, {
-                    filter: `submitted_by = "${userId}"`,
-                    sort: '-created',
-                    expand: 'audit_notes'
-                });
+            // Get reimbursements from IndexedDB
+            const reimbursementRecords = await dataSync.getData<ReimbursementRequest>(
+                Collections.REIMBURSEMENTS,
+                false, // Don't force sync again
+                `submitted_by="${userId}"`,
+                '-created'
+            );
 
-                console.log('Filtered records response:', records);
-                console.log('Total items:', records.totalItems);
-                console.log('Items:', records.items);
+            console.log('Reimbursement records from IndexedDB:', reimbursementRecords);
 
-                if (records.items.length === 0) {
-                    console.log('No records found for user');
-                    setRequests([]);
-                    toast.dismiss(loadingToast);
-                    setLoading(false);
-                    return;
+            // Process the records
+            const processedRecords = reimbursementRecords.map(record => {
+                // Process audit notes if they exist
+                let auditNotes = null;
+                if (record.audit_notes) {
+                    try {
+                        // If it's a string, parse it
+                        if (typeof record.audit_notes === 'string') {
+                            auditNotes = JSON.parse(record.audit_notes);
+                        } else {
+                            // Otherwise use it directly
+                            auditNotes = record.audit_notes;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing audit notes:', e);
+                    }
                 }
 
-                // Convert PocketBase records to ReimbursementRequest type
-                const reimbursements: ReimbursementRequest[] = records.items.map(record => {
-                    console.log('Processing record:', record);
-                    const processedRequest = {
-                        id: record.id,
-                        title: record.title,
-                        total_amount: record.total_amount,
-                        date_of_purchase: record.date_of_purchase,
-                        payment_method: record.payment_method,
-                        status: record.status,
-                        submitted_by: record.submitted_by,
-                        additional_info: record.additional_info || '',
-                        receipts: record.receipts || [],
-                        department: record.department,
-                        created: record.created,
-                        updated: record.updated,
-                        audit_notes: record.audit_notes || null
-                    };
-                    console.log('Processed request:', processedRequest);
-                    return processedRequest;
-                });
-
-                console.log('All processed reimbursements:', reimbursements);
-                console.log('Setting requests state with:', reimbursements.length, 'items');
-
-                // Update state with the new reimbursements
-                setRequests(reimbursements);
-                console.log('State updated with reimbursements');
-
-                toast.dismiss(loadingToast);
-                toast.success(`Loaded ${reimbursements.length} reimbursement${reimbursements.length === 1 ? '' : 's'}`);
-            } catch (e) {
-                console.error('Error with filtered query:', e);
-                throw e;
-            }
-        } catch (error: any) {
-            console.error('Error fetching reimbursements:', error);
-            console.error('Error details:', {
-                message: error?.message,
-                data: error?.data,
-                url: error?.url,
-                status: error?.status
+                return {
+                    ...record,
+                    audit_notes: auditNotes
+                };
             });
-            toast.error('Failed to load reimbursement requests');
-            setError('Failed to load reimbursement requests. ' + (error?.message || ''));
+
+            setRequests(processedRecords);
+            toast.success('Reimbursements loaded successfully', { id: loadingToast });
+
+            // Fetch receipt details for each reimbursement
+            for (const record of processedRecords) {
+                if (record.receipts && record.receipts.length > 0) {
+                    for (const receiptId of record.receipts) {
+                        try {
+                            // Get receipt from IndexedDB
+                            const receiptRecord = await dataSync.getItem<ReceiptDetails>(
+                                Collections.RECEIPTS,
+                                receiptId
+                            );
+
+                            if (receiptRecord) {
+                                // Process itemized expenses
+                                let itemizedExpenses: ItemizedExpense[] = [];
+                                if (receiptRecord.itemized_expenses) {
+                                    try {
+                                        if (typeof receiptRecord.itemized_expenses === 'string') {
+                                            itemizedExpenses = JSON.parse(receiptRecord.itemized_expenses);
+                                        } else {
+                                            itemizedExpenses = receiptRecord.itemized_expenses as ItemizedExpense[];
+                                        }
+                                    } catch (e) {
+                                        console.error('Error parsing itemized expenses:', e);
+                                    }
+                                }
+
+                                // Add receipt to state
+                                setReceiptDetailsMap(prevMap => ({
+                                    ...prevMap,
+                                    [receiptId]: {
+                                        id: receiptRecord.id,
+                                        field: receiptRecord.field,
+                                        created_by: receiptRecord.created_by,
+                                        date: receiptRecord.date,
+                                        location_name: receiptRecord.location_name,
+                                        location_address: receiptRecord.location_address,
+                                        notes: receiptRecord.notes,
+                                        tax: receiptRecord.tax,
+                                        created: receiptRecord.created,
+                                        updated: receiptRecord.updated,
+                                        itemized_expenses: itemizedExpenses,
+                                        audited_by: receiptRecord.audited_by || []
+                                    }
+                                }));
+                            }
+                        } catch (e) {
+                            console.error(`Error fetching receipt ${receiptId}:`, e);
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching reimbursements:', err);
+            setError('Failed to load reimbursements. Please try again.');
+            toast.error('Failed to load reimbursements');
         } finally {
             setLoading(false);
         }
@@ -224,7 +249,22 @@ export default function ReimbursementList() {
             const loadingToast = toast.loading('Loading receipt...');
             const pb = auth.getPocketBase();
 
-            // Get the receipt record using its ID
+            // Check if we already have the receipt details in our map
+            if (receiptDetailsMap[receiptId]) {
+                // Use the cached receipt details
+                setSelectedReceipt(receiptDetailsMap[receiptId]);
+
+                // Get the file URL using the PocketBase URL and collection info
+                const url = `${pb.baseUrl}/api/files/receipts/${receiptId}/${receiptDetailsMap[receiptId].field}`;
+                setPreviewUrl(url);
+                setPreviewFilename(receiptDetailsMap[receiptId].field);
+                setShowPreview(true);
+                toast.dismiss(loadingToast);
+                toast.success('Receipt loaded successfully');
+                return;
+            }
+
+            // If not in the map, get the receipt record using its ID
             const receiptRecord = await pb.collection('receipts').getOne(receiptId, {
                 $autoCancel: false
             });
@@ -235,7 +275,7 @@ export default function ReimbursementList() {
                     ? JSON.parse(receiptRecord.itemized_expenses)
                     : receiptRecord.itemized_expenses;
 
-                setSelectedReceipt({
+                const receiptDetails: ReceiptDetails = {
                     id: receiptRecord.id,
                     field: receiptRecord.field,
                     created_by: receiptRecord.created_by,
@@ -248,7 +288,15 @@ export default function ReimbursementList() {
                     audited_by: receiptRecord.audited_by || [],
                     created: receiptRecord.created,
                     updated: receiptRecord.updated
-                });
+                };
+
+                // Add to the map for future use
+                setReceiptDetailsMap(prevMap => ({
+                    ...prevMap,
+                    [receiptId]: receiptDetails
+                }));
+
+                setSelectedReceipt(receiptDetails);
 
                 // Get the file URL using the PocketBase URL and collection info
                 const url = `${pb.baseUrl}/api/files/receipts/${receiptRecord.id}/${receiptRecord.field}`;

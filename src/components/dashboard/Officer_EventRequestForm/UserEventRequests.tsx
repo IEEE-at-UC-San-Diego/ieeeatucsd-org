@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Get } from '../../../scripts/pocketbase/Get';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
+import { DataSyncService } from '../../../scripts/database/DataSyncService';
+import { Collections } from '../../../schemas/pocketbase/schema';
 import toast from 'react-hot-toast';
 import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase';
 
@@ -20,6 +22,7 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
     const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+    const dataSync = DataSyncService.getInstance();
 
     // Refresh event requests
     const refreshEventRequests = async () => {
@@ -27,7 +30,6 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
         const refreshToast = toast.loading('Refreshing submissions...');
 
         try {
-            const get = Get.getInstance();
             const auth = Authentication.getInstance();
 
             if (!auth.isAuthenticated()) {
@@ -41,8 +43,10 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                 return;
             }
 
-            const updatedRequests = await get.getAll<EventRequest>(
-                'event_request',
+            // Use DataSyncService to get data from IndexedDB with forced sync
+            const updatedRequests = await dataSync.getData<EventRequest>(
+                Collections.EVENT_REQUESTS,
+                true, // Force sync
                 `requested_user="${userId}"`,
                 '-created'
             );
@@ -60,6 +64,22 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
     // Auto refresh on component mount
     useEffect(() => {
         refreshEventRequests();
+    }, []);
+
+    // Listen for tab visibility changes and refresh data when tab becomes visible
+    useEffect(() => {
+        const handleTabVisible = () => {
+            console.log("Tab became visible, refreshing event requests...");
+            refreshEventRequests();
+        };
+
+        // Add event listener for custom dashboardTabVisible event
+        document.addEventListener("dashboardTabVisible", handleTabVisible);
+
+        // Clean up event listener on component unmount
+        return () => {
+            document.removeEventListener("dashboardTabVisible", handleTabVisible);
+        };
     }, []);
 
     // Format date for display

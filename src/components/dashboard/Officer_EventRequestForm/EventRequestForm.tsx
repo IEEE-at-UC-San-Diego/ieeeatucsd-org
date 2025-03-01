@@ -5,6 +5,8 @@ import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { FileManager } from '../../../scripts/pocketbase/FileManager';
 import { Get } from '../../../scripts/pocketbase/Get';
+import { DataSyncService } from '../../../scripts/database/DataSyncService';
+import { Collections } from '../../../schemas/pocketbase/schema';
 import type { EventRequest } from '../../../schemas/pocketbase';
 import { EventRequestStatus } from '../../../schemas/pocketbase';
 
@@ -191,6 +193,7 @@ const EventRequestForm: React.FC = () => {
             const auth = Authentication.getInstance();
             const update = Update.getInstance();
             const fileManager = FileManager.getInstance();
+            const dataSync = DataSyncService.getInstance();
 
             if (!auth.isAuthenticated()) {
                 toast.error('You must be logged in to submit an event request', { id: submittingToast });
@@ -245,8 +248,12 @@ const EventRequestForm: React.FC = () => {
             toast.loading('Creating event request record...', { id: submittingToast });
 
             try {
-                // Create the record
+                // Create the record using the Update service
+                // This will send the data to the server
                 const record = await update.create('event_request', submissionData);
+
+                // Force sync the event requests collection to update IndexedDB
+                await dataSync.syncCollection(Collections.EVENT_REQUESTS);
 
                 // Upload files if they exist
                 if (formData.other_logos.length > 0) {

@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
-import type { Event, Log } from "../../../schemas/pocketbase";
+import { DataSyncService } from "../../../scripts/database/DataSyncService";
+import { Collections } from "../../../schemas/pocketbase/schema";
+import type { Event, Log, User } from "../../../schemas/pocketbase";
+
+// Extended User interface with points property
+interface ExtendedUser extends User {
+    points?: number;
+}
 
 export function Stats() {
     const [eventsAttended, setEventsAttended] = useState(0);
@@ -17,6 +24,7 @@ export function Stats() {
                 setIsLoading(true);
                 const get = Get.getInstance();
                 const auth = Authentication.getInstance();
+                const dataSync = DataSyncService.getInstance();
                 const userId = auth.getCurrentUser()?.id;
 
                 if (!userId) return;
@@ -43,18 +51,30 @@ export function Stats() {
                     quarterStart = new Date(now.getFullYear(), 6, 1); // Jul 1
                 }
 
-                // Get user's total points
-                const user = await get.getOne("users", userId);
-                const totalPoints = user.points || 0;
+                // Sync user data to ensure we have the latest
+                await dataSync.syncCollection(Collections.USERS, `id = "${userId}"`);
 
-                // Fetch quarterly points from logs
-                const logs = await get.getList<Log>("logs", 1, 50,
+                // Get user from IndexedDB
+                const user = await dataSync.getItem<ExtendedUser>(Collections.USERS, userId);
+                const totalPoints = user?.points || 0;
+
+                // Sync logs for the current quarter
+                await dataSync.syncCollection(
+                    Collections.LOGS,
+                    `user_id = "${userId}" && created >= "${quarterStart.toISOString()}" && type = "update" && part = "event check-in"`,
+                    "-created"
+                );
+
+                // Get logs from IndexedDB
+                const logs = await dataSync.getData<Log>(
+                    Collections.LOGS,
+                    false, // Don't force sync again
                     `user_id = "${userId}" && created >= "${quarterStart.toISOString()}" && type = "update" && part = "event check-in"`,
                     "-created"
                 );
 
                 // Calculate quarterly points
-                const quarterlyPoints = logs.items.reduce((total, log) => {
+                const quarterlyPoints = logs.reduce((total, log) => {
                     const pointsMatch = log.message.match(/Awarded (\d+) points/);
                     if (pointsMatch) {
                         return total + parseInt(pointsMatch[1]);
@@ -62,8 +82,12 @@ export function Stats() {
                     return total;
                 }, 0);
 
-                // Fetch all events for total count
-                const events = await get.getAll<Event>("events");
+                // Sync events collection
+                await dataSync.syncCollection(Collections.EVENTS);
+
+                // Get events from IndexedDB
+                const events = await dataSync.getData<Event>(Collections.EVENTS);
+
                 const attendedEvents = events.filter(event =>
                     event.attendees?.some(attendee => attendee.user_id === userId)
                 );

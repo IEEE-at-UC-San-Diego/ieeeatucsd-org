@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
+import { DataSyncService } from "../../../scripts/database/DataSyncService";
+import { Collections } from "../../../schemas/pocketbase/schema";
 import debounce from 'lodash/debounce';
 import type { Log } from "../../../schemas/pocketbase";
 
@@ -65,29 +67,25 @@ export default function ShowProfileLogs() {
     };
 
     const fetchAllLogs = async (userId: string): Promise<Log[]> => {
-        const get = Get.getInstance();
+        const dataSync = DataSyncService.getInstance();
         let allLogs: Log[] = [];
         let page = 1;
         let hasMore = true;
 
-        while (hasMore) {
-            try {
-                const response = await get.getList<Log>(
-                    "logs",
-                    page,
-                    BATCH_SIZE,
-                    `user_id = "${userId}"`,
-                    "-created"
-                );
+        // First, sync all logs for this user
+        await dataSync.syncCollection(
+            Collections.LOGS,
+            `user_id = "${userId}"`,
+            "-created"
+        );
 
-                allLogs = [...allLogs, ...response.items];
-                hasMore = page * BATCH_SIZE < response.totalItems;
-                page++;
-            } catch (error) {
-                console.error("Failed to fetch logs batch:", error);
-                throw error;
-            }
-        }
+        // Then get all logs from IndexedDB
+        allLogs = await dataSync.getData<Log>(
+            Collections.LOGS,
+            false, // Don't force sync again
+            `user_id = "${userId}"`,
+            "-created"
+        );
 
         return allLogs;
     };

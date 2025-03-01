@@ -63,7 +63,7 @@ export class RedirectHandler {
       console.log("Auth successful:", authData);
       this.contentEl.innerHTML = `
                 <p class="text-3xl font-bold text-green-500 mb-4">Authentication Successful!</p>
-                <p class="text-2xl font-medium">Redirecting to store...</p>
+                <p class="text-2xl font-medium">Initializing your data...</p>
                 <div class="mt-4">
                     <div class="loading loading-spinner loading-lg"></div>
                 </div>
@@ -75,11 +75,14 @@ export class RedirectHandler {
           last_login: new Date().toISOString(),
         });
 
+        // Initialize data sync
+        await this.initializeDataSync();
+
         // Clean up and redirect
         localStorage.removeItem("provider");
         window.location.href = "/dashboard";
       } catch (err) {
-        console.error("Failed to update last login:", err);
+        console.error("Failed to update last login or sync data:", err);
         // Still redirect even if last_login update fails
         localStorage.removeItem("provider");
         window.location.href = "/dashboard";
@@ -87,6 +90,29 @@ export class RedirectHandler {
     } catch (err: any) {
       console.error("Auth error:", err);
       this.showError(`Failed to complete authentication: ${err.message}`);
+    }
+  }
+
+  /**
+   * Initialize data synchronization after successful authentication
+   */
+  private async initializeDataSync(): Promise<void> {
+    try {
+      // Dynamically import the AuthSyncService to avoid circular dependencies
+      const { AuthSyncService } = await import('../database/AuthSyncService');
+      
+      // Get the instance and trigger a full sync
+      const authSync = AuthSyncService.getInstance();
+      const syncResult = await authSync.handleLogin();
+      
+      if (syncResult) {
+        console.log('Initial data sync completed successfully');
+      } else {
+        console.warn('Initial data sync completed with issues');
+      }
+    } catch (error) {
+      console.error('Failed to initialize data sync:', error);
+      // Continue with login process even if sync fails
     }
   }
 }

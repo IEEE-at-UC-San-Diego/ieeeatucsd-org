@@ -4,6 +4,7 @@ import { Get } from "../../scripts/pocketbase/Get";
 import { Toaster } from "react-hot-toast";
 import EventRequestManagementTable from "./Officer_EventRequestManagement/EventRequestManagementTable";
 import type { EventRequest } from "../../schemas/pocketbase";
+import { Collections } from "../../schemas/pocketbase/schema";
 
 // Get instances
 const get = Get.getInstance();
@@ -39,9 +40,14 @@ try {
     console.log("Fetching event requests in Astro component...");
     // Expand the requested_user field to get user details
     allEventRequests = await get
-        .getAll<ExtendedEventRequest>("event_request", "", "-created", {
-            expand: ["requested_user"],
-        })
+        .getAll<ExtendedEventRequest>(
+            Collections.EVENT_REQUESTS,
+            "",
+            "-created",
+            {
+                expand: ["requested_user"],
+            }
+        )
         .catch((err) => {
             console.error("Error in get.getAll:", err);
             // Return empty array instead of throwing
@@ -152,6 +158,10 @@ try {
 </div>
 
 <script>
+    // Import the DataSyncService for client-side use
+    import { DataSyncService } from "../../scripts/database/DataSyncService";
+    import { Collections } from "../../schemas/pocketbase/schema";
+
     // Remove the visibilitychange event listener that causes full page refresh
     // Instead, we'll use a more efficient approach to refresh data only when needed
     document.addEventListener("visibilitychange", () => {
@@ -163,7 +173,23 @@ try {
     });
 
     // Handle authentication errors
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
+        // Initialize DataSyncService for client-side
+        const dataSync = DataSyncService.getInstance();
+
+        // Prefetch data into IndexedDB
+        try {
+            await dataSync.syncCollection(
+                Collections.EVENT_REQUESTS,
+                "",
+                "-created",
+                { expand: "requested_user" }
+            );
+            console.log("Initial data sync complete");
+        } catch (err) {
+            console.error("Error during initial data sync:", err);
+        }
+
         // Check for error message in the UI
         const errorElement = document.querySelector(".alert-error span");
         if (

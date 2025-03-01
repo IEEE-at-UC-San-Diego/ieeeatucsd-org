@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
+import { DataSyncService } from "../../../scripts/database/DataSyncService";
+import { Collections } from "../../../schemas/pocketbase/schema";
 import type { Event, AttendeeEntry } from "../../../schemas/pocketbase";
 
 // Extended Event interface with additional properties needed for this component
@@ -139,14 +141,17 @@ const EventLoad = () => {
     const loadEvents = async () => {
         try {
             const get = Get.getInstance();
-            const allEvents = await get.getAll<Event>(
-                "events",
+            const dataSync = DataSyncService.getInstance();
+
+            // Force sync to ensure we have the latest data
+            await dataSync.syncCollection(Collections.EVENTS, "published = true", "-start_date");
+
+            // Get events from IndexedDB
+            const allEvents = await dataSync.getData<Event>(
+                Collections.EVENTS,
+                false, // Don't force sync again
                 "published = true",
-                "-start_date",
-                {
-                    fields: ["*"],
-                    disableAutoCancellation: true
-                }
+                "-start_date"
             );
 
             // Split events into upcoming, ongoing, and past based on start and end dates

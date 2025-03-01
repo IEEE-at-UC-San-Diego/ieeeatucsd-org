@@ -10,7 +10,7 @@ interface BaseRecord {
 interface RequestOptions {
   fields?: string[];
   disableAutoCancellation?: boolean;
-  expand?: string[];
+  expand?: string[] | string;
 }
 
 // Utility function to check if a value is a UTC date string
@@ -130,21 +130,39 @@ export class Get {
     options?: RequestOptions,
   ): Promise<T> {
     if (!this.auth.isAuthenticated()) {
-      throw new Error("User must be authenticated to retrieve records");
+      console.warn(
+        `User not authenticated, but attempting to get record from ${collectionName} anyway`,
+      );
     }
 
     try {
       const pb = this.auth.getPocketBase();
+      
+      // Handle expand parameter
+      let expandString: string | undefined;
+      if (options?.expand) {
+        if (Array.isArray(options.expand)) {
+          expandString = options.expand.join(",");
+        } else if (typeof options.expand === 'string') {
+          expandString = options.expand;
+        }
+      }
+      
       const requestOptions = {
         ...(options?.fields && { fields: options.fields.join(",") }),
+        ...(expandString && { expand: expandString }),
         ...(options?.disableAutoCancellation && { requestKey: null }),
       };
+
       const result = await pb
         .collection(collectionName)
         .getOne<T>(recordId, requestOptions);
       return convertUTCToLocal(result);
     } catch (err) {
-      console.error(`Failed to get record from ${collectionName}:`, err);
+      console.error(
+        `Failed to get record ${recordId} from ${collectionName}:`,
+        err,
+      );
       throw err;
     }
   }
@@ -162,29 +180,43 @@ export class Get {
     options?: RequestOptions,
   ): Promise<T[]> {
     if (!this.auth.isAuthenticated()) {
-      throw new Error("User must be authenticated to retrieve records");
+      console.warn(
+        `User not authenticated, but attempting to get records from ${collectionName} anyway`,
+      );
     }
 
     try {
+      // Build filter for multiple IDs
+      const filter = recordIds.map((id) => `id="${id}"`).join(" || ");
+
       const pb = this.auth.getPocketBase();
-      const filter = `id ?~ "${recordIds.join("|")}"`;
+      
+      // Handle expand parameter
+      let expandString: string | undefined;
+      if (options?.expand) {
+        if (Array.isArray(options.expand)) {
+          expandString = options.expand.join(",");
+        } else if (typeof options.expand === 'string') {
+          expandString = options.expand;
+        }
+      }
+      
       const requestOptions = {
         filter,
         ...(options?.fields && { fields: options.fields.join(",") }),
+        ...(expandString && { expand: expandString }),
         ...(options?.disableAutoCancellation && { requestKey: null }),
       };
 
       const result = await pb
         .collection(collectionName)
-        .getFullList<T>(requestOptions);
-
-      // Sort results to match the order of requested IDs and convert times
-      const recordMap = new Map(
-        result.map((record) => [record.id, convertUTCToLocal(record)]),
-      );
-      return recordIds.map((id) => recordMap.get(id)).filter(Boolean) as T[];
+        .getList<T>(1, recordIds.length, requestOptions);
+      return result.items.map((item) => convertUTCToLocal(item));
     } catch (err) {
-      console.error(`Failed to get records from ${collectionName}:`, err);
+      console.error(
+        `Failed to get records ${recordIds.join(", ")} from ${collectionName}:`,
+        err,
+      );
       throw err;
     }
   }
@@ -257,16 +289,33 @@ export class Get {
     sort?: string,
     options?: RequestOptions,
   ): Promise<T[]> {
+    if (!this.auth.isAuthenticated()) {
+      console.warn(
+        `User not authenticated, but attempting to get records from ${collectionName} anyway`,
+      );
+    }
+
     // Try to get records even if authentication check fails
     // This is a workaround for cases where isAuthenticated() returns false
     // but the token is still valid for API requests
     try {
       const pb = this.auth.getPocketBase();
+      
+      // Handle expand parameter
+      let expandString: string | undefined;
+      if (options?.expand) {
+        if (Array.isArray(options.expand)) {
+          expandString = options.expand.join(",");
+        } else if (typeof options.expand === 'string') {
+          expandString = options.expand;
+        }
+      }
+      
       const requestOptions = {
         ...(filter && { filter }),
         ...(sort && { sort }),
         ...(options?.fields && { fields: options.fields.join(",") }),
-        ...(options?.expand && { expand: options.expand.join(",") }),
+        ...(expandString && { expand: expandString }),
         ...(options?.disableAutoCancellation && { requestKey: null }),
       };
 
@@ -276,18 +325,6 @@ export class Get {
       return result.map((item) => convertUTCToLocal(item));
     } catch (err) {
       console.error(`Failed to get all records from ${collectionName}:`, err);
-      
-      // If the error is authentication-related, check if we're actually authenticated
-      if (
-        err instanceof Error && 
-        (err.message.includes('auth') || err.message.includes('authentication'))
-      ) {
-        if (!this.auth.isAuthenticated()) {
-          console.error("Authentication check failed in getAll");
-          throw new Error("User must be authenticated to retrieve records");
-        }
-      }
-      
       throw err;
     }
   }

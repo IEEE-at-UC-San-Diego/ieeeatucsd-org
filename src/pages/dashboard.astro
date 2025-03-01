@@ -8,6 +8,7 @@ import { Get } from "../scripts/pocketbase/Get";
 import { SendLog } from "../scripts/pocketbase/SendLog";
 import { hasAccess, type OfficerStatus } from "../utils/roleAccess";
 import { OfficerTypes } from "../schemas/pocketbase/schema";
+import { initAuthSync } from "../scripts/database/initAuthSync";
 
 const title = "Dashboard";
 
@@ -17,17 +18,17 @@ const dashboardConfig = yaml.load(fs.readFileSync(configPath, "utf8")) as any;
 
 // Dynamically import all dashboard components
 const components = Object.fromEntries(
-  await Promise.all(
-    Object.values(dashboardConfig.sections)
-      .filter((section: any) => section.component) // Only process sections with components
-      .map(async (section: any) => {
-        const component = await import(
-          `../components/dashboard/${section.component}.astro`
-        );
-        console.log(`Loaded component: ${section.component}`); // Debug log
-        return [section.component, component.default];
-      }),
-  ),
+    await Promise.all(
+        Object.values(dashboardConfig.sections)
+            .filter((section: any) => section.component) // Only process sections with components
+            .map(async (section: any) => {
+                const component = await import(
+                    `../components/dashboard/${section.component}.astro`
+                );
+                console.log(`Loaded component: ${section.component}`); // Debug log
+                return [section.component, component.default];
+            })
+    )
 );
 
 console.log("Available components:", Object.keys(components)); // Debug log
@@ -35,696 +36,778 @@ console.log("Available components:", Object.keys(components)); // Debug log
 
 <!doctype html>
 <html lang="en" data-theme="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{title} | IEEE UCSD</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <script
-      src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"
-    ></script>
-  </head>
-  <body class="bg-base-200">
-    <div class="flex h-screen">
-      <!-- Sidebar -->
-      <aside
-        class="bg-base-100 w-80 flex flex-col shadow-xl border-r border-base-200 transition-all duration-300 fixed xl:relative h-full z-50 -translate-x-full xl:translate-x-0"
-      >
-        <!-- Logo -->
-        <div class="p-6 border-b border-base-200">
-          <div class="flex items-center justify-center">
-            <span
-              class="text-4xl font-bold text-[#06659d] select-none tracking-wide"
-              >IEEEUCSD</span
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{title} | IEEE UCSD</title>
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+        <script
+            src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"
+        ></script>
+    </head>
+    <body class="bg-base-200">
+        <div class="flex h-screen">
+            <!-- Sidebar -->
+            <aside
+                class="bg-base-100 w-80 flex flex-col shadow-xl border-r border-base-200 transition-all duration-300 fixed xl:relative h-full z-50 -translate-x-full xl:translate-x-0"
             >
-          </div>
-        </div>
-
-        <!-- User Profile -->
-        <div class="p-6 border-b border-base-200">
-          <!-- Loading State -->
-          <div id="userProfileSkeleton" class="flex items-center gap-4">
-            <div class="avatar flex items-center justify-center">
-              <div class="w-12 h-12 rounded-xl bg-base-300 animate-pulse"></div>
-            </div>
-            <div class="flex-1">
-              <div class="h-6 w-32 bg-base-300 animate-pulse rounded mb-2">
-              </div>
-              <div class="h-5 w-20 bg-base-300 animate-pulse rounded"></div>
-            </div>
-          </div>
-
-          <!-- Signed Out State -->
-          <div id="userProfileSignedOut" class="flex items-center gap-4 hidden">
-            <div class="avatar flex items-center justify-center">
-              <div
-                class="w-12 h-12 rounded-xl bg-base-300 text-base-content/30 flex items-center justify-center"
-              >
-                <Icon name="heroicons:user" class="h-6 w-6" />
-              </div>
-            </div>
-            <div>
-              <h3 class="font-medium text-lg text-base-content/70">
-                Signed Out
-              </h3>
-              <div class="badge badge-outline mt-1 opacity-50">Guest</div>
-            </div>
-          </div>
-
-          <!-- Actual Profile -->
-          <div id="userProfileSummary" class="flex items-center gap-4 hidden">
-            <div class="avatar flex items-center justify-center">
-              <div
-                class="w-12 h-12 rounded-xl bg-[#06659d] text-white ring ring-base-200 ring-offset-base-100 ring-offset-2 inline-flex items-center justify-center"
-              >
-                <span
-                  class="text-xl font-semibold select-none inline-flex items-center justify-center w-full h-full"
-                  id="userInitials">?</span
-                >
-              </div>
-            </div>
-            <div>
-              <h3 class="font-medium text-lg" id="userName">Loading...</h3>
-              <div
-                class="badge badge-outline mt-1 border-[#06659d] text-[#06659d]"
-                id="userRole"
-              >
-                Member
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Navigation -->
-        <nav class="flex-1 overflow-y-auto scrollbar-hide py-6">
-          <ul class="menu gap-2 px-4 text-base-content/80">
-            <!-- Loading Skeleton -->
-            <div id="menuLoadingSkeleton">
-              {
-                [1, 2, 3].map((group) => (
-                  <>
-                    <li class="menu-title font-medium opacity-70">
-                      <div class="h-4 w-24 bg-base-300 animate-pulse rounded" />
-                    </li>
-                    {[1, 2, 3].map((item) => (
-                      <li>
-                        <div class="flex items-center gap-4 py-2">
-                          <div class="h-5 w-5 bg-base-300 animate-pulse rounded" />
-                          <div class="h-4 w-32 bg-base-300 animate-pulse rounded" />
-                        </div>
-                      </li>
-                    ))}
-                  </>
-                ))
-              }
-            </div>
-
-            <!-- Actual Menu -->
-            <div id="actualMenu" class="hidden">
-              {
-                Object.entries(dashboardConfig.categories).map(
-                  ([categoryKey, category]: [string, any]) => (
-                    <>
-                      <li
-                        class={`menu-title font-medium opacity-70 ${
-                          category.role && category.role !== "none"
-                            ? "hidden"
-                            : ""
-                        }`}
-                        data-role-required={category.role || "none"}
-                      >
-                        <span>{category.title}</span>
-                      </li>
-                      {category.sections.map((sectionKey: string) => {
-                        const section = dashboardConfig.sections[sectionKey];
-                        return (
-                          <li
-                            class={
-                              section.role && section.role !== "none"
-                                ? "hidden"
-                                : ""
-                            }
-                            data-role-required={section.role}
-                          >
-                            <button
-                              class={`dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 ${section.class || ""}`}
-                              data-section={sectionKey}
-                            >
-                              <Icon name={section.icon} class="h-5 w-5" />
-                              {section.title}
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </>
-                  ),
-                )
-              }
-            </div>
-          </ul>
-        </nav>
-      </aside>
-
-      <!-- Main Content -->
-      <main
-        class="flex-1 overflow-x-hidden overflow-y-auto bg-base-200 w-full xl:w-[calc(100%-20rem)]"
-      >
-        <!-- Mobile Header -->
-        <header class="bg-base-100 p-4 shadow-md xl:hidden sticky top-0 z-40">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <button id="mobileSidebarToggle" class="btn btn-square btn-ghost">
-                <Icon name="heroicons:bars-3" class="h-6 w-6" />
-              </button>
-              <h1 class="text-xl font-bold">IEEE UCSD</h1>
-            </div>
-          </div>
-        </header>
-
-        <!-- Page Content -->
-        <div class="p-4 md:p-6 max-w-[1600px] mx-auto">
-          <!-- Loading State -->
-          <div id="pageLoadingState" class="w-full">
-            <div class="flex flex-col items-center justify-center p-4 sm:p-8">
-              <div class="loading loading-spinner loading-lg"></div>
-              <p class="mt-4 opacity-70">Loading dashboard...</p>
-            </div>
-          </div>
-
-          <!-- Error State -->
-          <div id="pageErrorState" class="hidden w-full">
-            <div class="alert alert-error mx-2 sm:mx-0">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-6 w-6"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                  clip-rule="evenodd"></path>
-              </svg>
-              <span>Failed to load dashboard content</span>
-            </div>
-          </div>
-
-          <!-- Not Authenticated State -->
-          <div id="notAuthenticatedState" class="hidden w-full">
-            <div class="card bg-base-100 shadow-xl mx-2 sm:mx-0">
-              <div class="card-body items-center text-center p-4 sm:p-8">
-                <div class="mb-4 sm:mb-6">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-12 w-12 sm:h-16 sm:w-16 opacity-30"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                      clip-rule="evenodd"></path>
-                  </svg>
-                </div>
-                <h2 class="card-title text-xl sm:text-2xl mb-2">
-                  Sign in to Access Dashboard
-                </h2>
-                <p class="opacity-70 mb-4 sm:mb-6 text-sm sm:text-base">
-                  Please sign in with your IEEE UCSD account to access the
-                  dashboard.
-                </p>
-                <button
-                  class="login-button btn btn-primary btn-lg gap-2 w-full sm:w-auto"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z"
-                      clip-rule="evenodd"></path>
-                  </svg>
-                  <span class="whitespace-nowrap"
-                    >Sign in with IEEEUCSD SSO</span
-                  >
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Main Content -->
-          <div id="mainContent" class="space-y-4 sm:space-y-6">
-            {
-              Object.entries(dashboardConfig.sections).map(
-                ([sectionKey, section]: [string, any]) => {
-                  // Skip if no component is defined
-                  if (!section.component) return null;
-
-                  const Component = components[section.component];
-                  return (
-                    <div
-                      id={`${sectionKey}Section`}
-                      class={`dashboard-section hidden ${
-                        section.role && section.role !== "none"
-                          ? "role-restricted"
-                          : ""
-                      }`}
-                      data-role-required={section.role}
-                    >
-                      <Component />
+                <!-- Logo -->
+                <div class="p-6 border-b border-base-200">
+                    <div class="flex items-center justify-center">
+                        <span
+                            class="text-4xl font-bold text-[#06659d] select-none tracking-wide"
+                            >IEEEUCSD</span
+                        >
                     </div>
-                  );
-                },
-              )
-            }
-          </div>
+                </div>
+
+                <!-- User Profile -->
+                <div class="p-6 border-b border-base-200">
+                    <!-- Loading State -->
+                    <div
+                        id="userProfileSkeleton"
+                        class="flex items-center gap-4"
+                    >
+                        <div class="avatar flex items-center justify-center">
+                            <div
+                                class="w-12 h-12 rounded-xl bg-base-300 animate-pulse"
+                            >
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div
+                                class="h-6 w-32 bg-base-300 animate-pulse rounded mb-2"
+                            >
+                            </div>
+                            <div
+                                class="h-5 w-20 bg-base-300 animate-pulse rounded"
+                            >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Signed Out State -->
+                    <div
+                        id="userProfileSignedOut"
+                        class="flex items-center gap-4 hidden"
+                    >
+                        <div class="avatar flex items-center justify-center">
+                            <div
+                                class="w-12 h-12 rounded-xl bg-base-300 text-base-content/30 flex items-center justify-center"
+                            >
+                                <Icon name="heroicons:user" class="h-6 w-6" />
+                            </div>
+                        </div>
+                        <div>
+                            <h3
+                                class="font-medium text-lg text-base-content/70"
+                            >
+                                Signed Out
+                            </h3>
+                            <div class="badge badge-outline mt-1 opacity-50">
+                                Guest
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actual Profile -->
+                    <div
+                        id="userProfileSummary"
+                        class="flex items-center gap-4 hidden"
+                    >
+                        <div class="avatar flex items-center justify-center">
+                            <div
+                                class="w-12 h-12 rounded-xl bg-[#06659d] text-white ring ring-base-200 ring-offset-base-100 ring-offset-2 inline-flex items-center justify-center"
+                            >
+                                <span
+                                    class="text-xl font-semibold select-none inline-flex items-center justify-center w-full h-full"
+                                    id="userInitials">?</span
+                                >
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-lg" id="userName">
+                                Loading...
+                            </h3>
+                            <div
+                                class="badge badge-outline mt-1 border-[#06659d] text-[#06659d]"
+                                id="userRole"
+                            >
+                                Member
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="flex-1 overflow-y-auto scrollbar-hide py-6">
+                    <ul class="menu gap-2 px-4 text-base-content/80">
+                        <!-- Loading Skeleton -->
+                        <div id="menuLoadingSkeleton">
+                            {
+                                [1, 2, 3].map((group) => (
+                                    <>
+                                        <li class="menu-title font-medium opacity-70">
+                                            <div class="h-4 w-24 bg-base-300 animate-pulse rounded" />
+                                        </li>
+                                        {[1, 2, 3].map((item) => (
+                                            <li>
+                                                <div class="flex items-center gap-4 py-2">
+                                                    <div class="h-5 w-5 bg-base-300 animate-pulse rounded" />
+                                                    <div class="h-4 w-32 bg-base-300 animate-pulse rounded" />
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </>
+                                ))
+                            }
+                        </div>
+
+                        <!-- Actual Menu -->
+                        <div id="actualMenu" class="hidden">
+                            {
+                                Object.entries(dashboardConfig.categories).map(
+                                    ([categoryKey, category]: [
+                                        string,
+                                        any,
+                                    ]) => (
+                                        <>
+                                            <li
+                                                class={`menu-title font-medium opacity-70 ${
+                                                    category.role &&
+                                                    category.role !== "none"
+                                                        ? "hidden"
+                                                        : ""
+                                                }`}
+                                                data-role-required={
+                                                    category.role || "none"
+                                                }
+                                            >
+                                                <span>{category.title}</span>
+                                            </li>
+                                            {category.sections.map(
+                                                (sectionKey: string) => {
+                                                    const section =
+                                                        dashboardConfig
+                                                            .sections[
+                                                            sectionKey
+                                                        ];
+                                                    return (
+                                                        <li
+                                                            class={
+                                                                section.role &&
+                                                                section.role !==
+                                                                    "none"
+                                                                    ? "hidden"
+                                                                    : ""
+                                                            }
+                                                            data-role-required={
+                                                                section.role
+                                                            }
+                                                        >
+                                                            <button
+                                                                class={`dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 ${section.class || ""}`}
+                                                                data-section={
+                                                                    sectionKey
+                                                                }
+                                                            >
+                                                                <Icon
+                                                                    name={
+                                                                        section.icon
+                                                                    }
+                                                                    class="h-5 w-5"
+                                                                />
+                                                                {section.title}
+                                                            </button>
+                                                        </li>
+                                                    );
+                                                }
+                                            )}
+                                        </>
+                                    )
+                                )
+                            }
+                        </div>
+                    </ul>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main
+                class="flex-1 overflow-x-hidden overflow-y-auto bg-base-200 w-full xl:w-[calc(100%-20rem)]"
+            >
+                <!-- Mobile Header -->
+                <header
+                    class="bg-base-100 p-4 shadow-md xl:hidden sticky top-0 z-40"
+                >
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <button
+                                id="mobileSidebarToggle"
+                                class="btn btn-square btn-ghost"
+                            >
+                                <Icon name="heroicons:bars-3" class="h-6 w-6" />
+                            </button>
+                            <h1 class="text-xl font-bold">IEEE UCSD</h1>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Page Content -->
+                <div class="p-4 md:p-6 max-w-[1600px] mx-auto">
+                    <!-- Loading State -->
+                    <div id="pageLoadingState" class="w-full">
+                        <div
+                            class="flex flex-col items-center justify-center p-4 sm:p-8"
+                        >
+                            <div class="loading loading-spinner loading-lg">
+                            </div>
+                            <p class="mt-4 opacity-70">Loading dashboard...</p>
+                        </div>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="pageErrorState" class="hidden w-full">
+                        <div class="alert alert-error mx-2 sm:mx-0">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-6 w-6"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                    clip-rule="evenodd"></path>
+                            </svg>
+                            <span>Failed to load dashboard content</span>
+                        </div>
+                    </div>
+
+                    <!-- Not Authenticated State -->
+                    <div id="notAuthenticatedState" class="hidden w-full">
+                        <div class="card bg-base-100 shadow-xl mx-2 sm:mx-0">
+                            <div
+                                class="card-body items-center text-center p-4 sm:p-8"
+                            >
+                                <div class="mb-4 sm:mb-6">
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-12 w-12 sm:h-16 sm:w-16 opacity-30"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                            clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <h2 class="card-title text-xl sm:text-2xl mb-2">
+                                    Sign in to Access Dashboard
+                                </h2>
+                                <p
+                                    class="opacity-70 mb-4 sm:mb-6 text-sm sm:text-base"
+                                >
+                                    Please sign in with your IEEE UCSD account
+                                    to access the dashboard.
+                                </p>
+                                <button
+                                    class="login-button btn btn-primary btn-lg gap-2 w-full sm:w-auto"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-5 w-5"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z"
+                                            clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span class="whitespace-nowrap"
+                                        >Sign in with IEEEUCSD SSO</span
+                                    >
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Content -->
+                    <div id="mainContent" class="space-y-4 sm:space-y-6">
+                        {
+                            Object.entries(dashboardConfig.sections).map(
+                                ([sectionKey, section]: [string, any]) => {
+                                    // Skip if no component is defined
+                                    if (!section.component) return null;
+
+                                    const Component =
+                                        components[section.component];
+                                    return (
+                                        <div
+                                            id={`${sectionKey}Section`}
+                                            class={`dashboard-section hidden ${
+                                                section.role &&
+                                                section.role !== "none"
+                                                    ? "role-restricted"
+                                                    : ""
+                                            }`}
+                                            data-role-required={section.role}
+                                        >
+                                            <Component />
+                                        </div>
+                                    );
+                                }
+                            )
+                        }
+                    </div>
+                </div>
+            </main>
         </div>
-      </main>
-    </div>
-  </body>
+    </body>
 </html>
 
 <script>
-  import { Authentication } from "../scripts/pocketbase/Authentication";
-  import { Get } from "../scripts/pocketbase/Get";
-  import { SendLog } from "../scripts/pocketbase/SendLog";
-  import { hasAccess, type OfficerStatus } from "../utils/roleAccess";
-  import { OfficerTypes } from "../schemas/pocketbase/schema";
+    import { Authentication } from "../scripts/pocketbase/Authentication";
+    import { Get } from "../scripts/pocketbase/Get";
+    import { SendLog } from "../scripts/pocketbase/SendLog";
+    import { hasAccess, type OfficerStatus } from "../utils/roleAccess";
+    import { OfficerTypes } from "../schemas/pocketbase/schema";
+    import { initAuthSync } from "../scripts/database/initAuthSync";
 
-  const auth = Authentication.getInstance();
-  const get = Get.getInstance();
-  const logger = SendLog.getInstance();
+    const auth = Authentication.getInstance();
+    const get = Get.getInstance();
+    const logger = SendLog.getInstance();
 
-  // Initialize page state
-  const pageLoadingState = document.getElementById("pageLoadingState");
-  const pageErrorState = document.getElementById("pageErrorState");
-  const notAuthenticatedState = document.getElementById(
-    "notAuthenticatedState",
-  );
-  const mainContent = document.getElementById("mainContent");
-  const sidebar = document.querySelector("aside");
+    // Initialize page state
+    const pageLoadingState = document.getElementById("pageLoadingState");
+    const pageErrorState = document.getElementById("pageErrorState");
+    const notAuthenticatedState = document.getElementById(
+        "notAuthenticatedState"
+    );
+    const mainContent = document.getElementById("mainContent");
+    const sidebar = document.querySelector("aside");
 
-  // User profile elements
-  const userInitials = document.getElementById("userInitials");
-  const userName = document.getElementById("userName");
-  const userRole = document.getElementById("userRole");
+    // User profile elements
+    const userInitials = document.getElementById("userInitials");
+    const userName = document.getElementById("userName");
+    const userRole = document.getElementById("userRole");
 
-  // Function to update section visibility based on role
-  const updateSectionVisibility = (officerStatus: OfficerStatus) => {
-    // Special handling for sponsor role
-    if (officerStatus === "sponsor") {
-      // Hide all sections first
-      document.querySelectorAll("[data-role-required]").forEach((element) => {
-        element.classList.add("hidden");
-      });
+    // Function to update section visibility based on role
+    const updateSectionVisibility = (officerStatus: OfficerStatus) => {
+        // Special handling for sponsor role
+        if (officerStatus === "sponsor") {
+            // Hide all sections first
+            document
+                .querySelectorAll("[data-role-required]")
+                .forEach((element) => {
+                    element.classList.add("hidden");
+                });
 
-      // Only show sponsor sections
-      document
-        .querySelectorAll('[data-role-required="sponsor"]')
-        .forEach((element) => {
-          element.classList.remove("hidden");
+            // Only show sponsor sections
+            document
+                .querySelectorAll('[data-role-required="sponsor"]')
+                .forEach((element) => {
+                    element.classList.remove("hidden");
+                });
+            return;
+        }
+
+        // For non-sponsor roles, handle normally
+        document.querySelectorAll("[data-role-required]").forEach((element) => {
+            const requiredRole = element.getAttribute(
+                "data-role-required"
+            ) as OfficerStatus;
+
+            // Skip elements that don't have a role requirement
+            if (!requiredRole || requiredRole === "none") {
+                element.classList.remove("hidden");
+                return;
+            }
+
+            // Check if user has permission for this role
+            const hasPermission = hasAccess(officerStatus, requiredRole);
+
+            // Only show elements if user has permission
+            element.classList.toggle("hidden", !hasPermission);
         });
-      return;
-    }
-
-    // For non-sponsor roles, handle normally
-    document.querySelectorAll("[data-role-required]").forEach((element) => {
-      const requiredRole = element.getAttribute(
-        "data-role-required",
-      ) as OfficerStatus;
-
-      // Skip elements that don't have a role requirement
-      if (!requiredRole || requiredRole === "none") {
-        element.classList.remove("hidden");
-        return;
-      }
-
-      // Check if user has permission for this role
-      const hasPermission = hasAccess(officerStatus, requiredRole);
-
-      // Only show elements if user has permission
-      element.classList.toggle("hidden", !hasPermission);
-    });
-  };
-
-  // Handle navigation
-  const handleNavigation = () => {
-    const navButtons = document.querySelectorAll(".dashboard-nav-btn");
-    const sections = document.querySelectorAll(".dashboard-section");
-    const mainContentDiv = document.getElementById("mainContent");
-
-    // Ensure mainContent is visible
-    if (mainContentDiv) {
-      mainContentDiv.classList.remove("hidden");
-    }
-
-    navButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const sectionKey = button.getAttribute("data-section");
-
-        // Handle logout button
-        if (sectionKey === "logout") {
-          auth.logout();
-          window.location.reload();
-          return;
-        }
-
-        // Remove active class from all buttons
-        navButtons.forEach((btn) => {
-          btn.classList.remove("active", "bg-base-200");
-        });
-
-        // Add active class to clicked button
-        button.classList.add("active", "bg-base-200");
-
-        // Hide all sections
-        sections.forEach((section) => {
-          section.classList.add("hidden");
-        });
-
-        // Show selected section
-        const sectionId = `${sectionKey}Section`;
-        const targetSection = document.getElementById(sectionId);
-        if (targetSection) {
-          targetSection.classList.remove("hidden");
-          console.log(`Showing section: ${sectionId}`); // Debug log
-        }
-
-        // Close mobile sidebar if needed
-        if (window.innerWidth < 1024 && sidebar) {
-          sidebar.classList.add("-translate-x-full");
-          document.body.classList.remove("overflow-hidden");
-          const overlay = document.getElementById("sidebarOverlay");
-          overlay?.remove();
-        }
-      });
-    });
-  };
-
-  // Display user profile information and handle role-based access
-  const updateUserProfile = async (user: { id: string }) => {
-    if (!user) return;
-
-    try {
-      const extendedUser = await get.getOne("users", user.id, {
-        fields: [
-          "id",
-          "name",
-          "member_type",
-          "officer_status",
-          "expand.member_type",
-        ],
-      });
-
-      const displayName = extendedUser.name || "Unknown User";
-      const displayRole = extendedUser.member_type || "Member";
-
-      // Map the officer type from the database to our OfficerStatus type
-      let officerStatus: OfficerStatus = "";
-
-      // Get the officer record for this user if it exists
-      const officerRecords = await get.getList(
-        "officers",
-        1,
-        50,
-        `user="${user.id}"`,
-        "",
-        {
-          fields: ["id", "type"],
-        },
-      );
-
-      if (officerRecords && officerRecords.items.length > 0) {
-        const officerType = officerRecords.items[0].type;
-
-        // Map the officer type to our OfficerStatus
-        switch (officerType) {
-          case OfficerTypes.ADMINISTRATOR:
-            officerStatus = "administrator";
-            break;
-          case OfficerTypes.EXECUTIVE:
-            officerStatus = "executive";
-            break;
-          case OfficerTypes.GENERAL:
-            officerStatus = "general";
-            break;
-          case OfficerTypes.HONORARY:
-            officerStatus = "honorary";
-            break;
-          case OfficerTypes.PAST:
-            officerStatus = "past";
-            break;
-          default:
-            officerStatus = "";
-        }
-      } else if (extendedUser.member_type === "Sponsor") {
-        officerStatus = "sponsor";
-      } else {
-        officerStatus = "none";
-      }
-
-      const initials = (extendedUser.name || "U")
-        .split(" ")
-        .map((n: string) => n[0])
-        .join("")
-        .toUpperCase();
-
-      // Update profile display
-      if (userName) userName.textContent = displayName;
-      if (userRole) userRole.textContent = displayRole;
-      if (userInitials) userInitials.textContent = initials;
-
-      // Update section visibility based on role
-      updateSectionVisibility(officerStatus);
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      const fallbackValues = {
-        name: "Unknown User",
-        role: "Member",
-        initials: "?",
-      };
-
-      if (userName) userName.textContent = fallbackValues.name;
-      if (userRole) userRole.textContent = fallbackValues.role;
-      if (userInitials) userInitials.textContent = fallbackValues.initials;
-
-      updateSectionVisibility("" as OfficerStatus);
-    }
-  };
-
-  // Mobile sidebar toggle
-  const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
-  if (mobileSidebarToggle && sidebar) {
-    const toggleSidebar = () => {
-      const isOpen = !sidebar.classList.contains("-translate-x-full");
-
-      if (isOpen) {
-        sidebar.classList.add("-translate-x-full");
-        document.body.classList.remove("overflow-hidden");
-        const overlay = document.getElementById("sidebarOverlay");
-        overlay?.remove();
-      } else {
-        sidebar.classList.remove("-translate-x-full");
-        document.body.classList.add("overflow-hidden");
-        const overlay = document.createElement("div");
-        overlay.id = "sidebarOverlay";
-        overlay.className =
-          "fixed inset-0 bg-black bg-opacity-50 z-40 xl:hidden";
-        overlay.addEventListener("click", toggleSidebar);
-        document.body.appendChild(overlay);
-      }
     };
 
-    mobileSidebarToggle.addEventListener("click", toggleSidebar);
-  }
+    // Handle navigation
+    const handleNavigation = () => {
+        const navButtons = document.querySelectorAll(".dashboard-nav-btn");
+        const sections = document.querySelectorAll(".dashboard-section");
+        const mainContentDiv = document.getElementById("mainContent");
 
-  // Initialize page
-  const initializePage = async () => {
-    try {
-      if (pageLoadingState) pageLoadingState.classList.remove("hidden");
-      if (pageErrorState) pageErrorState.classList.add("hidden");
-      if (notAuthenticatedState) notAuthenticatedState.classList.add("hidden");
-
-      // Show loading states
-      const userProfileSkeleton = document.getElementById(
-        "userProfileSkeleton",
-      );
-      const userProfileSignedOut = document.getElementById(
-        "userProfileSignedOut",
-      );
-      const userProfileSummary = document.getElementById("userProfileSummary");
-      const menuLoadingSkeleton = document.getElementById(
-        "menuLoadingSkeleton",
-      );
-      const actualMenu = document.getElementById("actualMenu");
-
-      if (userProfileSkeleton) userProfileSkeleton.classList.remove("hidden");
-      if (userProfileSummary) userProfileSummary.classList.add("hidden");
-      if (userProfileSignedOut) userProfileSignedOut.classList.add("hidden");
-      if (menuLoadingSkeleton) menuLoadingSkeleton.classList.remove("hidden");
-      if (actualMenu) actualMenu.classList.add("hidden");
-
-      // Check authentication
-      if (!auth.isAuthenticated()) {
-        if (pageLoadingState) pageLoadingState.classList.add("hidden");
-        if (notAuthenticatedState)
-          notAuthenticatedState.classList.remove("hidden");
-        if (userProfileSkeleton) userProfileSkeleton.classList.add("hidden");
-        if (userProfileSignedOut)
-          userProfileSignedOut.classList.remove("hidden");
-        return;
-      }
-
-      const user = auth.getCurrentUser();
-      await updateUserProfile(user);
-
-      // Show actual profile and hide skeleton
-      if (userProfileSkeleton) userProfileSkeleton.classList.add("hidden");
-      if (userProfileSummary) userProfileSummary.classList.remove("hidden");
-
-      // Hide all sections first
-      document.querySelectorAll(".dashboard-section").forEach((section) => {
-        section.classList.add("hidden");
-      });
-
-      // Show appropriate default section based on role
-      // Get the officer record for this user if it exists
-      let officerStatus: OfficerStatus = "none";
-
-      try {
-        const officerRecords = await get.getList(
-          "officers",
-          1,
-          50,
-          `user="${user.id}"`,
-          "",
-          {
-            fields: ["id", "type"],
-          },
-        );
-
-        if (officerRecords && officerRecords.items.length > 0) {
-          const officerType = officerRecords.items[0].type;
-
-          // Map the officer type to our OfficerStatus
-          switch (officerType) {
-            case OfficerTypes.ADMINISTRATOR:
-              officerStatus = "administrator";
-              break;
-            case OfficerTypes.EXECUTIVE:
-              officerStatus = "executive";
-              break;
-            case OfficerTypes.GENERAL:
-              officerStatus = "general";
-              break;
-            case OfficerTypes.HONORARY:
-              officerStatus = "honorary";
-              break;
-            case OfficerTypes.PAST:
-              officerStatus = "past";
-              break;
-            default:
-              officerStatus = "none";
-          }
-        } else {
-          const extendedUser = await get.getOne("users", user.id, {
-            fields: ["member_type"],
-          });
-
-          if (extendedUser.member_type === "Sponsor") {
-            officerStatus = "sponsor";
-          }
+        // Ensure mainContent is visible
+        if (mainContentDiv) {
+            mainContentDiv.classList.remove("hidden");
         }
-      } catch (error) {
-        console.error("Error determining officer status:", error);
-        officerStatus = "none";
-      }
 
-      let defaultSection;
-      let defaultButton;
+        navButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const sectionKey = button.getAttribute("data-section");
 
-      if (officerStatus === "sponsor") {
-        defaultSection = document.getElementById("sponsorDashboardSection");
-        defaultButton = document.querySelector(
-          '[data-section="sponsorDashboard"]',
-        );
-      } else if (officerStatus === "administrator") {
-        defaultSection = document.getElementById("adminDashboardSection");
-        defaultButton = document.querySelector(
-          '[data-section="adminDashboard"]',
-        );
-      } else {
-        defaultSection = document.getElementById("profileSection");
-        defaultButton = document.querySelector('[data-section="profile"]');
-      }
+                // Handle logout button
+                if (sectionKey === "logout") {
+                    auth.logout();
+                    window.location.reload();
+                    return;
+                }
 
-      if (defaultSection) {
-        defaultSection.classList.remove("hidden");
-      }
-      if (defaultButton) {
-        defaultButton.classList.add("active", "bg-base-200");
-      }
+                // Remove active class from all buttons
+                navButtons.forEach((btn) => {
+                    btn.classList.remove("active", "bg-base-200");
+                });
 
-      // Initialize navigation
-      handleNavigation();
+                // Add active class to clicked button
+                button.classList.add("active", "bg-base-200");
 
-      // Show actual menu and hide skeleton
-      if (menuLoadingSkeleton) menuLoadingSkeleton.classList.add("hidden");
-      if (actualMenu) actualMenu.classList.remove("hidden");
+                // Hide all sections
+                sections.forEach((section) => {
+                    section.classList.add("hidden");
+                });
 
-      // Show main content and hide loading
-      if (mainContent) mainContent.classList.remove("hidden");
-      if (pageLoadingState) pageLoadingState.classList.add("hidden");
-    } catch (error) {
-      console.error("Error initializing dashboard:", error);
-      if (pageLoadingState) pageLoadingState.classList.add("hidden");
-      if (pageErrorState) pageErrorState.classList.remove("hidden");
-    }
-  };
+                // Show selected section
+                const sectionId = `${sectionKey}Section`;
+                const targetSection = document.getElementById(sectionId);
+                if (targetSection) {
+                    targetSection.classList.remove("hidden");
+                    console.log(`Showing section: ${sectionId}`); // Debug log
+                }
 
-  // Initialize when DOM is loaded
-  document.addEventListener("DOMContentLoaded", initializePage);
+                // Close mobile sidebar if needed
+                if (window.innerWidth < 1024 && sidebar) {
+                    sidebar.classList.add("-translate-x-full");
+                    document.body.classList.remove("overflow-hidden");
+                    const overlay = document.getElementById("sidebarOverlay");
+                    overlay?.remove();
+                }
+            });
+        });
+    };
 
-  // Handle login button click
-  document
-    .querySelector(".login-button")
-    ?.addEventListener("click", async () => {
-      try {
-        if (pageLoadingState) pageLoadingState.classList.remove("hidden");
-        if (notAuthenticatedState)
-          notAuthenticatedState.classList.add("hidden");
-        await auth.login();
-      } catch (error) {
-        console.error("Login error:", error);
-        if (pageLoadingState) pageLoadingState.classList.add("hidden");
-        if (pageErrorState) pageErrorState.classList.remove("hidden");
-      }
-    });
+    // Display user profile information and handle role-based access
+    const updateUserProfile = async (user: { id: string }) => {
+        if (!user) return;
 
-  // Handle logout button click
-  document.getElementById("logoutButton")?.addEventListener("click", () => {
-    auth.logout();
-    window.location.reload();
-  });
+        try {
+            const extendedUser = await get.getOne("users", user.id, {
+                fields: [
+                    "id",
+                    "name",
+                    "member_type",
+                    "officer_status",
+                    "expand.member_type",
+                ],
+            });
 
-  // Handle responsive sidebar
-  if (sidebar) {
-    if (window.innerWidth < 1024) {
-      sidebar.classList.add("-translate-x-full");
+            const displayName = extendedUser.name || "Unknown User";
+            const displayRole = extendedUser.member_type || "Member";
+
+            // Map the officer type from the database to our OfficerStatus type
+            let officerStatus: OfficerStatus = "";
+
+            // Get the officer record for this user if it exists
+            const officerRecords = await get.getList(
+                "officers",
+                1,
+                50,
+                `user="${user.id}"`,
+                "",
+                {
+                    fields: ["id", "type"],
+                }
+            );
+
+            if (officerRecords && officerRecords.items.length > 0) {
+                const officerType = officerRecords.items[0].type;
+
+                // Map the officer type to our OfficerStatus
+                switch (officerType) {
+                    case OfficerTypes.ADMINISTRATOR:
+                        officerStatus = "administrator";
+                        break;
+                    case OfficerTypes.EXECUTIVE:
+                        officerStatus = "executive";
+                        break;
+                    case OfficerTypes.GENERAL:
+                        officerStatus = "general";
+                        break;
+                    case OfficerTypes.HONORARY:
+                        officerStatus = "honorary";
+                        break;
+                    case OfficerTypes.PAST:
+                        officerStatus = "past";
+                        break;
+                    default:
+                        officerStatus = "";
+                }
+            } else if (extendedUser.member_type === "Sponsor") {
+                officerStatus = "sponsor";
+            } else {
+                officerStatus = "none";
+            }
+
+            const initials = (extendedUser.name || "U")
+                .split(" ")
+                .map((n: string) => n[0])
+                .join("")
+                .toUpperCase();
+
+            // Update profile display
+            if (userName) userName.textContent = displayName;
+            if (userRole) userRole.textContent = displayRole;
+            if (userInitials) userInitials.textContent = initials;
+
+            // Update section visibility based on role
+            updateSectionVisibility(officerStatus);
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+            const fallbackValues = {
+                name: "Unknown User",
+                role: "Member",
+                initials: "?",
+            };
+
+            if (userName) userName.textContent = fallbackValues.name;
+            if (userRole) userRole.textContent = fallbackValues.role;
+            if (userInitials)
+                userInitials.textContent = fallbackValues.initials;
+
+            updateSectionVisibility("" as OfficerStatus);
+        }
+    };
+
+    // Mobile sidebar toggle
+    const mobileSidebarToggle = document.getElementById("mobileSidebarToggle");
+    if (mobileSidebarToggle && sidebar) {
+        const toggleSidebar = () => {
+            const isOpen = !sidebar.classList.contains("-translate-x-full");
+
+            if (isOpen) {
+                sidebar.classList.add("-translate-x-full");
+                document.body.classList.remove("overflow-hidden");
+                const overlay = document.getElementById("sidebarOverlay");
+                overlay?.remove();
+            } else {
+                sidebar.classList.remove("-translate-x-full");
+                document.body.classList.add("overflow-hidden");
+                const overlay = document.createElement("div");
+                overlay.id = "sidebarOverlay";
+                overlay.className =
+                    "fixed inset-0 bg-black bg-opacity-50 z-40 xl:hidden";
+                overlay.addEventListener("click", toggleSidebar);
+                document.body.appendChild(overlay);
+            }
+        };
+
+        mobileSidebarToggle.addEventListener("click", toggleSidebar);
     }
 
-    window.addEventListener("resize", () => {
-      if (window.innerWidth >= 1024) {
-        const overlay = document.getElementById("sidebarOverlay");
-        if (overlay) {
-          overlay.remove();
-          document.body.classList.remove("overflow-hidden");
+    // Function to initialize the page
+    const initializePage = async () => {
+        try {
+            // Initialize auth sync for IndexedDB
+            await initAuthSync();
+
+            // Check if user is authenticated
+            if (!auth.isAuthenticated()) {
+                console.log("User not authenticated");
+                if (pageLoadingState) pageLoadingState.classList.add("hidden");
+                if (notAuthenticatedState)
+                    notAuthenticatedState.classList.remove("hidden");
+                return;
+            }
+
+            if (pageLoadingState) pageLoadingState.classList.remove("hidden");
+            if (pageErrorState) pageErrorState.classList.add("hidden");
+            if (notAuthenticatedState)
+                notAuthenticatedState.classList.add("hidden");
+
+            // Show loading states
+            const userProfileSkeleton = document.getElementById(
+                "userProfileSkeleton"
+            );
+            const userProfileSignedOut = document.getElementById(
+                "userProfileSignedOut"
+            );
+            const userProfileSummary =
+                document.getElementById("userProfileSummary");
+            const menuLoadingSkeleton = document.getElementById(
+                "menuLoadingSkeleton"
+            );
+            const actualMenu = document.getElementById("actualMenu");
+
+            if (userProfileSkeleton)
+                userProfileSkeleton.classList.remove("hidden");
+            if (userProfileSummary) userProfileSummary.classList.add("hidden");
+            if (userProfileSignedOut)
+                userProfileSignedOut.classList.add("hidden");
+            if (menuLoadingSkeleton)
+                menuLoadingSkeleton.classList.remove("hidden");
+            if (actualMenu) actualMenu.classList.add("hidden");
+
+            const user = auth.getCurrentUser();
+            await updateUserProfile(user);
+
+            // Show actual profile and hide skeleton
+            if (userProfileSkeleton)
+                userProfileSkeleton.classList.add("hidden");
+            if (userProfileSummary)
+                userProfileSummary.classList.remove("hidden");
+
+            // Hide all sections first
+            document
+                .querySelectorAll(".dashboard-section")
+                .forEach((section) => {
+                    section.classList.add("hidden");
+                });
+
+            // Show appropriate default section based on role
+            // Get the officer record for this user if it exists
+            let officerStatus: OfficerStatus = "none";
+
+            try {
+                const officerRecords = await get.getList(
+                    "officers",
+                    1,
+                    50,
+                    `user="${user.id}"`,
+                    "",
+                    {
+                        fields: ["id", "type"],
+                    }
+                );
+
+                if (officerRecords && officerRecords.items.length > 0) {
+                    const officerType = officerRecords.items[0].type;
+
+                    // Map the officer type to our OfficerStatus
+                    switch (officerType) {
+                        case OfficerTypes.ADMINISTRATOR:
+                            officerStatus = "administrator";
+                            break;
+                        case OfficerTypes.EXECUTIVE:
+                            officerStatus = "executive";
+                            break;
+                        case OfficerTypes.GENERAL:
+                            officerStatus = "general";
+                            break;
+                        case OfficerTypes.HONORARY:
+                            officerStatus = "honorary";
+                            break;
+                        case OfficerTypes.PAST:
+                            officerStatus = "past";
+                            break;
+                        default:
+                            officerStatus = "none";
+                    }
+                } else {
+                    const extendedUser = await get.getOne("users", user.id, {
+                        fields: ["member_type"],
+                    });
+
+                    if (extendedUser.member_type === "Sponsor") {
+                        officerStatus = "sponsor";
+                    }
+                }
+            } catch (error) {
+                console.error("Error determining officer status:", error);
+                officerStatus = "none";
+            }
+
+            let defaultSection;
+            let defaultButton;
+
+            if (officerStatus === "sponsor") {
+                defaultSection = document.getElementById(
+                    "sponsorDashboardSection"
+                );
+                defaultButton = document.querySelector(
+                    '[data-section="sponsorDashboard"]'
+                );
+            } else if (officerStatus === "administrator") {
+                defaultSection = document.getElementById(
+                    "adminDashboardSection"
+                );
+                defaultButton = document.querySelector(
+                    '[data-section="adminDashboard"]'
+                );
+            } else {
+                defaultSection = document.getElementById("profileSection");
+                defaultButton = document.querySelector(
+                    '[data-section="profile"]'
+                );
+            }
+
+            if (defaultSection) {
+                defaultSection.classList.remove("hidden");
+            }
+            if (defaultButton) {
+                defaultButton.classList.add("active", "bg-base-200");
+            }
+
+            // Initialize navigation
+            handleNavigation();
+
+            // Show actual menu and hide skeleton
+            if (menuLoadingSkeleton)
+                menuLoadingSkeleton.classList.add("hidden");
+            if (actualMenu) actualMenu.classList.remove("hidden");
+
+            // Show main content and hide loading
+            if (mainContent) mainContent.classList.remove("hidden");
+            if (pageLoadingState) pageLoadingState.classList.add("hidden");
+        } catch (error) {
+            console.error("Error initializing dashboard:", error);
+            if (pageLoadingState) pageLoadingState.classList.add("hidden");
+            if (pageErrorState) pageErrorState.classList.remove("hidden");
         }
-        sidebar.classList.remove("-translate-x-full");
-      }
+    };
+
+    // Initialize when DOM is loaded
+    document.addEventListener("DOMContentLoaded", initializePage);
+
+    // Handle login button click
+    document
+        .querySelector(".login-button")
+        ?.addEventListener("click", async () => {
+            try {
+                if (pageLoadingState)
+                    pageLoadingState.classList.remove("hidden");
+                if (notAuthenticatedState)
+                    notAuthenticatedState.classList.add("hidden");
+                await auth.login();
+            } catch (error) {
+                console.error("Login error:", error);
+                if (pageLoadingState) pageLoadingState.classList.add("hidden");
+                if (pageErrorState) pageErrorState.classList.remove("hidden");
+            }
+        });
+
+    // Handle logout button click
+    document.getElementById("logoutButton")?.addEventListener("click", () => {
+        auth.logout();
+        window.location.reload();
     });
-  }
+
+    // Handle responsive sidebar
+    if (sidebar) {
+        if (window.innerWidth < 1024) {
+            sidebar.classList.add("-translate-x-full");
+        }
+
+        window.addEventListener("resize", () => {
+            if (window.innerWidth >= 1024) {
+                const overlay = document.getElementById("sidebarOverlay");
+                if (overlay) {
+                    overlay.remove();
+                    document.body.classList.remove("overflow-hidden");
+                }
+                sidebar.classList.remove("-translate-x-full");
+            }
+        });
+    }
 </script>
