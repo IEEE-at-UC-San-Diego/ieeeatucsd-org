@@ -4,7 +4,6 @@ import { Get } from '../../../scripts/pocketbase/Get';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { FileManager } from '../../../scripts/pocketbase/FileManager';
 import FilePreview from '../universal/FilePreview';
-import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ItemizedExpense, Reimbursement, Receipt } from '../../../schemas/pocketbase';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
@@ -133,8 +132,6 @@ export default function ReimbursementList() {
                 throw new Error('User not authenticated');
             }
 
-            const loadingToast = toast.loading('Loading reimbursements...');
-
             // Use DataSyncService to get data from IndexedDB with forced sync
             const dataSync = DataSyncService.getInstance();
 
@@ -181,7 +178,6 @@ export default function ReimbursementList() {
             });
 
             setRequests(processedRecords);
-            toast.success('Reimbursements loaded successfully', { id: loadingToast });
 
             // Fetch receipt details for each reimbursement
             for (const record of processedRecords) {
@@ -237,7 +233,6 @@ export default function ReimbursementList() {
         } catch (err) {
             console.error('Error fetching reimbursements:', err);
             setError('Failed to load reimbursements. Please try again.');
-            toast.error('Failed to load reimbursements');
         } finally {
             setLoading(false);
         }
@@ -245,7 +240,6 @@ export default function ReimbursementList() {
 
     const handlePreviewFile = async (request: ReimbursementRequest, receiptId: string) => {
         try {
-            const loadingToast = toast.loading('Loading receipt...');
             const pb = auth.getPocketBase();
 
             // Check if we already have the receipt details in our map
@@ -258,8 +252,6 @@ export default function ReimbursementList() {
                 setPreviewUrl(url);
                 setPreviewFilename(receiptDetailsMap[receiptId].field);
                 setShowPreview(true);
-                toast.dismiss(loadingToast);
-                toast.success('Receipt loaded successfully');
                 return;
             }
 
@@ -302,14 +294,11 @@ export default function ReimbursementList() {
                 setPreviewUrl(url);
                 setPreviewFilename(receiptRecord.field);
                 setShowPreview(true);
-                toast.dismiss(loadingToast);
-                toast.success('Receipt loaded successfully');
             } else {
                 throw new Error('Receipt not found');
             }
         } catch (error) {
             console.error('Error loading receipt:', error);
-            toast.error('Failed to load receipt');
         }
     };
 

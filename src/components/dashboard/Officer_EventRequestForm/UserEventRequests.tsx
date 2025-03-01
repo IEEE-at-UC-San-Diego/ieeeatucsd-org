@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Get } from '../../../scripts/pocketbase/Get';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
-import toast from 'react-hot-toast';
 import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase';
 
 // Extended EventRequest interface with additional properties needed for this component
@@ -27,19 +25,16 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
     // Refresh event requests
     const refreshEventRequests = async () => {
         setIsRefreshing(true);
-        const refreshToast = toast.loading('Refreshing submissions...');
 
         try {
             const auth = Authentication.getInstance();
 
             if (!auth.isAuthenticated()) {
-                toast.error('You must be logged in to refresh submissions', { id: refreshToast });
                 return;
             }
 
             const userId = auth.getUserId();
             if (!userId) {
-                toast.error('User ID not found', { id: refreshToast });
                 return;
             }
 
@@ -52,10 +47,8 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
             );
 
             setEventRequests(updatedRequests);
-            toast.success('Submissions refreshed successfully', { id: refreshToast });
         } catch (err) {
             console.error('Failed to refresh event requests:', err);
-            toast.error('Failed to refresh submissions. Please try again.', { id: refreshToast });
         } finally {
             setIsRefreshing(false);
         }

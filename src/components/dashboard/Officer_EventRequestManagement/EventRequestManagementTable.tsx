@@ -48,8 +48,6 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
     // Refresh event requests
     const refreshEventRequests = async () => {
         setIsRefreshing(true);
-        const refreshToast = toast.loading('Refreshing event requests...');
-
         try {
             const auth = Authentication.getInstance();
 
@@ -71,22 +69,9 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
 
             setEventRequests(updatedRequests);
             applyFilters(updatedRequests);
-            toast.success('Event requests refreshed successfully', { id: refreshToast });
-        } catch (err) {
-            console.error('Failed to refresh event requests:', err);
-
-            // Check if it's an authentication error
-            if (err instanceof Error &&
-                (err.message.includes('authentication') ||
-                    err.message.includes('auth') ||
-                    err.message.includes('logged in'))) {
-                toast.error('Authentication error. Please log in again.', { id: refreshToast });
-                setTimeout(() => {
-                    window.location.href = "/login";
-                }, 2000);
-            } else {
-                toast.error('Failed to refresh event requests. Please try again.', { id: refreshToast });
-            }
+        } catch (error) {
+            console.error('Error refreshing event requests:', error);
+            toast.error('Failed to refresh event requests');
         } finally {
             setIsRefreshing(false);
         }
@@ -146,8 +131,6 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
 
     // Update event request status
     const updateEventRequestStatus = async (id: string, status: "submitted" | "pending" | "completed" | "declined") => {
-        const updateToast = toast.loading(`Updating status to ${status}...`);
-
         try {
             const update = Update.getInstance();
             const result = await update.updateField('event_request', id, 'status', status);
@@ -173,17 +156,15 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
             // Force sync to update IndexedDB
             await dataSync.syncCollection<ExtendedEventRequest>(Collections.EVENT_REQUESTS);
 
-            toast.success(`Status updated to ${status}`, { id: updateToast });
-        } catch (err) {
-            console.error('Failed to update event request status:', err);
-            toast.error('Failed to update status. Please try again.', { id: updateToast });
+            // Remove success toast for updating status
+        } catch (error) {
+            console.error('Error updating status:', error);
+            toast.error('Failed to update status');
         }
     };
 
     // Add feedback to event request
     const addFeedback = async (id: string, feedback: string) => {
-        const feedbackToast = toast.loading('Saving feedback...');
-
         try {
             const update = Update.getInstance();
             const result = await update.updateField('event_request', id, 'feedback', feedback);
@@ -204,11 +185,11 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
             // Force sync to update IndexedDB
             await dataSync.syncCollection<ExtendedEventRequest>(Collections.EVENT_REQUESTS);
 
-            toast.success('Feedback saved successfully', { id: feedbackToast });
+            // Remove success toast for saving feedback
             return true;
-        } catch (err) {
-            console.error('Failed to save feedback:', err);
-            toast.error('Failed to save feedback. Please try again.', { id: feedbackToast });
+        } catch (error) {
+            console.error('Error saving feedback:', error);
+            toast.error('Failed to save feedback');
             return false;
         }
     };

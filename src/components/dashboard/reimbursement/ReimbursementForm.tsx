@@ -180,8 +180,6 @@ export default function ReimbursementForm() {
                 throw new Error('User not authenticated');
             }
 
-            toast.loading('Adding receipt...');
-
             // Create receipt record
             const formData = new FormData();
             formData.append('field', receiptData.field);
@@ -211,11 +209,9 @@ export default function ReimbursementForm() {
             }));
 
             setShowReceiptForm(false);
-            toast.dismiss();
             toast.success('Receipt added successfully');
         } catch (error) {
             console.error('Error creating receipt:', error);
-            toast.dismiss();
             toast.error('Failed to add receipt');
             setError('Failed to add receipt. Please try again.');
         }
@@ -252,8 +248,6 @@ export default function ReimbursementForm() {
                 throw new Error('User not authenticated');
             }
 
-            const loadingToast = toast.loading('Submitting reimbursement request...');
-
             // Create reimbursement record
             const formData = new FormData();
             formData.append('title', request.title);
@@ -286,8 +280,6 @@ export default function ReimbursementForm() {
             setReceipts([]);
             setError('');
 
-            // Dismiss loading toast and show success
-            toast.dismiss(loadingToast);
             toast.success('🎉 Reimbursement request submitted successfully! Check "My Requests" to view it.', {
                 duration: 5000,
                 position: 'top-center',

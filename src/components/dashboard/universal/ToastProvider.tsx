@@ -1,11 +1,10 @@
-import React from 'react';
 import { Toaster } from 'react-hot-toast';
 
 // Centralized toast provider to ensure consistent rendering
 export default function ToastProvider() {
     return (
         <Toaster
-            position="bottom-right"
+            position="top-center"
             toastOptions={{
                 duration: 4000,
                 style: {

@@ -4,10 +4,8 @@ import toast from 'react-hot-toast';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { FileManager } from '../../../scripts/pocketbase/FileManager';
-import { Get } from '../../../scripts/pocketbase/Get';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
-import type { EventRequest } from '../../../schemas/pocketbase';
 import { EventRequestStatus } from '../../../schemas/pocketbase';
 
 // Form sections
@@ -16,7 +14,6 @@ import EventDetailsSection from './EventDetailsSection';
 import TAPFormSection from './TAPFormSection';
 import ASFundingSection from './ASFundingSection';
 import EventRequestFormPreview from './EventRequestFormPreview';
-import InvoiceBuilder from './InvoiceBuilder';
 import type { InvoiceData, InvoiceItem } from './InvoiceBuilder';
 
 // Animation variants
@@ -173,6 +170,50 @@ const EventRequestForm: React.FC = () => {
         }));
     };
 
+    // Add this function before the handleSubmit function
+    const resetForm = () => {
+        setFormData({
+            name: '',
+            location: '',
+            start_date_time: '',
+            end_date_time: '',
+            event_description: '',
+            flyers_needed: false,
+            flyer_type: [],
+            other_flyer_type: '',
+            flyer_advertising_start_date: '',
+            flyer_additional_requests: '',
+            photography_needed: false,
+            required_logos: [],
+            other_logos: [],
+            advertising_format: '',
+            will_or_have_room_booking: false,
+            expected_attendance: 0,
+            room_booking: null,
+            as_funding_required: false,
+            food_drinks_being_served: false,
+            itemized_invoice: '',
+            invoice: null,
+            invoice_files: [], // Reset multiple invoice files
+            needs_graphics: null,
+            needs_as_funding: false,
+            invoiceData: {
+                items: [],
+                subtotal: 0,
+                taxRate: 7.75, // Default tax rate for San Diego
+                taxAmount: 0,
+                tipPercentage: 15, // Default tip percentage
+                tipAmount: 0,
+                total: 0,
+                vendor: ''
+            },
+            formReviewed: false // Reset review status
+        });
+
+        // Reset to first step
+        setCurrentStep(1);
+    };
+
     // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -186,9 +227,6 @@ const EventRequestForm: React.FC = () => {
         setIsSubmitting(true);
         setError(null);
 
-        // Show initial submitting toast
-        const submittingToast = toast.loading('Preparing to submit your event request...');
-
         try {
             const auth = Authentication.getInstance();
             const update = Update.getInstance();
@@ -196,14 +234,14 @@ const EventRequestForm: React.FC = () => {
             const dataSync = DataSyncService.getInstance();
 
             if (!auth.isAuthenticated()) {
-                toast.error('You must be logged in to submit an event request', { id: submittingToast });
+                toast.error('You must be logged in to submit an event request');
                 throw new Error('You must be logged in to submit an event request');
             }
 
             // Create the event request record
             const userId = auth.getUserId();
             if (!userId) {
-                toast.error('User ID not found', { id: submittingToast });
+                toast.error('User ID not found');
                 throw new Error('User ID not found');
             }
 
@@ -245,102 +283,53 @@ const EventRequestForm: React.FC = () => {
                 status: EventRequestStatus.SUBMITTED,
             };
 
-            toast.loading('Creating event request record...', { id: submittingToast });
+            // Create the record using the Update service
+            // This will send the data to the server
+            const record = await update.create('event_request', submissionData);
 
-            try {
-                // Create the record using the Update service
-                // This will send the data to the server
-                const record = await update.create('event_request', submissionData);
+            // Force sync the event requests collection to update IndexedDB
+            await dataSync.syncCollection(Collections.EVENT_REQUESTS);
 
-                // Force sync the event requests collection to update IndexedDB
-                await dataSync.syncCollection(Collections.EVENT_REQUESTS);
-
-                // Upload files if they exist
-                if (formData.other_logos.length > 0) {
-                    toast.loading('Uploading logo files...', { id: submittingToast });
-                    await fileManager.uploadFiles('event_request', record.id, 'other_logos', formData.other_logos);
-                }
-
-                if (formData.room_booking) {
-                    toast.loading('Uploading room booking confirmation...', { id: submittingToast });
-                    await fileManager.uploadFile('event_request', record.id, 'room_booking', formData.room_booking);
-                }
-
-                // Upload multiple invoice files
-                if (formData.invoice_files && formData.invoice_files.length > 0) {
-                    toast.loading('Uploading invoice files...', { id: submittingToast });
-
-                    // Use appendFiles instead of uploadFiles to ensure we're adding files, not replacing them
-                    await fileManager.appendFiles('event_request', record.id, 'invoice_files', formData.invoice_files);
-
-                    // For backward compatibility, also upload the first file as the main invoice
-                    if (formData.invoice || formData.invoice_files[0]) {
-                        const mainInvoice = formData.invoice || formData.invoice_files[0];
-                        await fileManager.uploadFile('event_request', record.id, 'invoice', mainInvoice);
-                    }
-                } else if (formData.invoice) {
-                    // If there are no invoice_files but there is a main invoice, upload it
-                    toast.loading('Uploading invoice file...', { id: submittingToast });
-                    await fileManager.uploadFile('event_request', record.id, 'invoice', formData.invoice);
-                }
-
-                // Clear form data from localStorage
-                localStorage.removeItem('eventRequestFormData');
-
-                // Show success message
-                toast.success('Event request submitted successfully!', { id: submittingToast });
-
-                // Reset form
-                setFormData({
-                    name: '',
-                    location: '',
-                    start_date_time: '',
-                    end_date_time: '',
-                    event_description: '',
-                    flyers_needed: false,
-                    flyer_type: [],
-                    other_flyer_type: '',
-                    flyer_advertising_start_date: '',
-                    flyer_additional_requests: '',
-                    photography_needed: false,
-                    required_logos: [],
-                    other_logos: [],
-                    advertising_format: '',
-                    will_or_have_room_booking: false,
-                    expected_attendance: 0,
-                    room_booking: null,
-                    as_funding_required: false,
-                    food_drinks_being_served: false,
-                    itemized_invoice: '',
-                    invoice: null,
-                    invoice_files: [], // Reset multiple invoice files
-                    needs_graphics: null,
-                    needs_as_funding: false,
-                    invoiceData: {
-                        items: [],
-                        subtotal: 0,
-                        taxRate: 7.75, // Default tax rate for San Diego
-                        taxAmount: 0,
-                        tipPercentage: 15, // Default tip percentage
-                        tipAmount: 0,
-                        total: 0,
-                        vendor: ''
-                    },
-                    formReviewed: false // Reset review status
-                });
-
-                // Reset to first step
-                setCurrentStep(1);
-            } catch (uploadErr: any) {
-                console.error('Error during file upload:', uploadErr);
-                toast.error(`Error during file upload: ${uploadErr.message || 'Unknown error'}`, { id: submittingToast });
-                throw uploadErr;
+            // Upload files if they exist
+            if (formData.other_logos.length > 0) {
+                await fileManager.uploadFiles('event_request', record.id, 'other_logos', formData.other_logos);
             }
 
-        } catch (err: any) {
-            console.error('Error submitting event request:', err);
-            setError(err.message || 'An error occurred while submitting your request');
-            toast.error(err.message || 'An error occurred while submitting your request', { id: submittingToast });
+            if (formData.room_booking) {
+                await fileManager.uploadFile('event_request', record.id, 'room_booking', formData.room_booking);
+            }
+
+            // Upload multiple invoice files
+            if (formData.invoice_files && formData.invoice_files.length > 0) {
+                await fileManager.appendFiles('event_request', record.id, 'invoice_files', formData.invoice_files);
+
+                // For backward compatibility, also upload the first file as the main invoice
+                if (formData.invoice || formData.invoice_files[0]) {
+                    const mainInvoice = formData.invoice || formData.invoice_files[0];
+                    await fileManager.uploadFile('event_request', record.id, 'invoice', mainInvoice);
+                }
+            } else if (formData.invoice) {
+                await fileManager.uploadFile('event_request', record.id, 'invoice', formData.invoice);
+            }
+
+            // Clear form data from localStorage
+            localStorage.removeItem('eventRequestFormData');
+
+            // Keep success toast for form submission since it's a user action
+            toast.success('Event request submitted successfully!');
+
+            // Reset form
+            resetForm();
+
+            // Switch to the submissions tab
+            const submissionsTab = document.getElementById('submissions-tab');
+            if (submissionsTab) {
+                submissionsTab.click();
+            }
+        } catch (error) {
+            console.error('Error submitting event request:', error);
+            toast.error('Failed to submit event request. Please try again.');
+            setError('Failed to submit event request. Please try again.');
         } finally {
             setIsSubmitting(false);
         }

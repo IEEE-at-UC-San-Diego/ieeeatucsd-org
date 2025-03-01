@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { Update } from "../../../scripts/pocketbase/Update";
