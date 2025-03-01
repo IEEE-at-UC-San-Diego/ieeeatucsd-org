@@ -303,6 +303,22 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
         refreshEventRequests();
     }, []);
 
+    // Listen for tab visibility changes and refresh data when tab becomes visible
+    useEffect(() => {
+        const handleTabVisible = () => {
+            console.log("Tab became visible, refreshing event requests...");
+            refreshEventRequests();
+        };
+
+        // Add event listener for custom dashboardTabVisible event
+        document.addEventListener("dashboardTabVisible", handleTabVisible);
+
+        // Clean up event listener on component unmount
+        return () => {
+            document.removeEventListener("dashboardTabVisible", handleTabVisible);
+        };
+    }, []);
+
     if (filteredRequests.length === 0) {
         return (
             <motion.div
