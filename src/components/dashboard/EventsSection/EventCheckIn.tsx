@@ -113,9 +113,16 @@ const EventCheckIn = () => {
                 throw new Error("You have already checked in to this event");
             }
 
-            // Check if the event hasn't ended yet
+            // Check if the event is active (has started and hasn't ended yet)
+            const currentTime = new Date();
+            const eventStartDate = new Date(event.start_date);
             const eventEndDate = new Date(event.end_date);
-            if (eventEndDate < new Date()) {
+
+            if (eventStartDate > currentTime) {
+                throw new Error("This event has not started yet");
+            }
+
+            if (eventEndDate < currentTime) {
                 throw new Error("This event has already ended");
             }
 
