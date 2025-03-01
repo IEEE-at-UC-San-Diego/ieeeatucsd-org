@@ -3,7 +3,9 @@ import { Authentication } from "./Authentication";
 // Utility function to check if a value is a date string
 function isLocalDateString(value: any): boolean {
   if (typeof value !== "string") return false;
-  const isoDateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+  // Match ISO format without the Z suffix (local time)
+  const isoDateRegex =
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:(?:-|\+)\d{2}:\d{2})?$/;
   return isoDateRegex.test(value);
 }
 
@@ -13,8 +15,19 @@ function convertLocalToUTC<T>(data: T): T {
 
   const converted = { ...data };
   for (const [key, value] of Object.entries(converted)) {
+    // Special handling for event date fields to ensure proper UTC conversion
+    if (
+      (key === "start_date" ||
+        key === "end_date" ||
+        key === "time_checked_in") &&
+      typeof value === "string"
+    ) {
+      // Ensure we're converting to UTC
+      const date = new Date(value);
+      (converted as any)[key] = date.toISOString();
+    }
     // Special handling for invoice_data to ensure it's a proper JSON object
-    if (key === "invoice_data") {
+    else if (key === "invoice_data") {
       if (typeof value === "string") {
         try {
           // If it's a string representation of JSON, parse it
@@ -29,7 +42,9 @@ function convertLocalToUTC<T>(data: T): T {
         (converted as any)[key] = value;
       }
     } else if (isLocalDateString(value)) {
-      (converted as any)[key] = new Date(value).toISOString();
+      // Convert local date string to UTC
+      const date = new Date(value);
+      (converted as any)[key] = date.toISOString();
     } else if (Array.isArray(value)) {
       (converted as any)[key] = value.map((item) => convertLocalToUTC(item));
     } else if (typeof value === "object" && value !== null) {
@@ -55,6 +70,15 @@ export class Update {
       Update.instance = new Update();
     }
     return Update.instance;
+  }
+
+  /**
+   * Convert local time to UTC
+   * @param data The data to convert
+   * @returns The converted data
+   */
+  public static convertLocalToUTC<T>(data: T): T {
+    return convertLocalToUTC(data);
   }
 
   /**

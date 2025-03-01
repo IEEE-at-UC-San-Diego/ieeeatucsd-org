@@ -8,6 +8,11 @@ import { SendLog } from "../../../scripts/pocketbase/SendLog";
 import FilePreview from "../universal/FilePreview";
 import type { Event as SchemaEvent, AttendeeEntry } from "../../../schemas/pocketbase";
 
+// Note: Date conversion is now handled automatically by the Get and Update classes.
+// When fetching events, UTC dates are converted to local time by the Get class.
+// When saving events, local dates are converted back to UTC by the Update class.
+// For datetime-local inputs, we format dates without seconds (YYYY-MM-DDThh:mm).
+
 // Extended Event interface with optional created and updated fields
 interface Event extends Omit<SchemaEvent, 'created' | 'updated'> {
     created?: string;
@@ -151,7 +156,7 @@ const EventForm = memo(({
                             type="datetime-local"
                             name="editEventStartDate"
                             className="input input-bordered"
-                            value={event?.start_date ? new Date(event.start_date).toISOString().slice(0, 16) : ""}
+                            value={event?.start_date ? event.start_date.slice(0, 16) : ""}
                             onChange={(e) => handleChange('start_date', e.target.value)}
                             required
                         />
@@ -167,7 +172,7 @@ const EventForm = memo(({
                             type="datetime-local"
                             name="editEventEndDate"
                             className="input input-bordered"
-                            value={event?.end_date ? new Date(event.end_date).toISOString().slice(0, 16) : ""}
+                            value={event?.end_date ? event.end_date.slice(0, 16) : ""}
                             onChange={(e) => handleChange('end_date', e.target.value)}
                             required
                         />
@@ -510,8 +515,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         location: '',
         files: [],
         points_to_reward: 0,
-        start_date: new Date().toISOString(),
-        end_date: new Date().toISOString(),
+        start_date: Get.formatLocalDate(new Date(), false),
+        end_date: Get.formatLocalDate(new Date(), false),
         published: false,
         has_food: false,
         attendees: []
@@ -551,6 +556,20 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         try {
             if (eventId) {
                 const eventData = await services.get.getOne<Event>("events", eventId);
+
+                // Ensure dates are properly formatted for datetime-local input
+                if (eventData.start_date) {
+                    // Convert to Date object first to ensure proper formatting
+                    const startDate = new Date(eventData.start_date);
+                    eventData.start_date = Get.formatLocalDate(startDate, false);
+                }
+
+                if (eventData.end_date) {
+                    // Convert to Date object first to ensure proper formatting
+                    const endDate = new Date(eventData.end_date);
+                    eventData.end_date = Get.formatLocalDate(endDate, false);
+                }
+
                 setEvent(eventData);
             } else {
                 setEvent({
@@ -561,8 +580,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                     location: '',
                     files: [],
                     points_to_reward: 0,
-                    start_date: new Date().toISOString(),
-                    end_date: new Date().toISOString(),
+                    start_date: Get.formatLocalDate(new Date(), false),
+                    end_date: Get.formatLocalDate(new Date(), false),
                     published: false,
                     has_food: false,
                     attendees: []
@@ -623,8 +642,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             location: '',
             files: [],
             points_to_reward: 0,
-            start_date: new Date().toISOString(),
-            end_date: new Date().toISOString(),
+            start_date: Get.formatLocalDate(new Date(), false),
+            end_date: Get.formatLocalDate(new Date(), false),
             published: false,
             has_food: false,
             attendees: []
@@ -664,8 +683,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 event_description: formData.get("editEventDescription"),
                 location: formData.get("editEventLocation"),
                 points_to_reward: Number(formData.get("editEventPoints")),
-                start_date: new Date(formData.get("editEventStartDate") as string).toISOString(),
-                end_date: new Date(formData.get("editEventEndDate") as string).toISOString(),
+                start_date: formData.get("editEventStartDate") as string,
+                end_date: formData.get("editEventEndDate") as string,
                 published: formData.get("editEventPublished") === "on",
                 has_food: formData.get("editEventHasFood") === "on",
                 attendees: event.attendees || []
@@ -758,8 +777,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 location: '',
                 files: [],
                 points_to_reward: 0,
-                start_date: new Date().toISOString(),
-                end_date: new Date().toISOString(),
+                start_date: Get.formatLocalDate(new Date(), false),
+                end_date: Get.formatLocalDate(new Date(), false),
                 published: false,
                 has_food: false,
                 attendees: []

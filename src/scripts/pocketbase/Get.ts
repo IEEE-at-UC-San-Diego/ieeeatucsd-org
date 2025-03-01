@@ -20,14 +20,45 @@ function isUTCDateString(value: any): boolean {
   return isoDateRegex.test(value);
 }
 
+// Utility function to format a date to local ISO-like string
+function formatLocalDate(date: Date, includeSeconds: boolean = true): string {
+  const pad = (num: number) => num.toString().padStart(2, "0");
+
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+
+  // Format for datetime-local input (YYYY-MM-DDThh:mm)
+  if (!includeSeconds) {
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  const seconds = pad(date.getSeconds());
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+}
+
 // Utility function to convert UTC date strings to local time
 function convertUTCToLocal<T>(data: T): T {
   if (!data || typeof data !== "object") return data;
 
   const converted = { ...data };
   for (const [key, value] of Object.entries(converted)) {
-    if (isUTCDateString(value)) {
-      (converted as any)[key] = new Date(value).toISOString();
+    // Special handling for event date fields
+    if (
+      (key === "start_date" ||
+        key === "end_date" ||
+        key === "time_checked_in") &&
+      isUTCDateString(value)
+    ) {
+      // Convert UTC date string to local date string
+      const date = new Date(value);
+      (converted as any)[key] = formatLocalDate(date, false);
+    } else if (isUTCDateString(value)) {
+      // Convert UTC date string to local date string
+      const date = new Date(value);
+      (converted as any)[key] = formatLocalDate(date);
     } else if (Array.isArray(value)) {
       (converted as any)[key] = value.map((item) => convertUTCToLocal(item));
     } else if (typeof value === "object" && value !== null) {
@@ -71,6 +102,19 @@ export class Get {
    */
   public static isUTCDateString(value: any): boolean {
     return isUTCDateString(value);
+  }
+
+  /**
+   * Format a date to local ISO-like string
+   * @param date The date to format
+   * @param includeSeconds Whether to include seconds in the formatted string
+   * @returns The formatted date string
+   */
+  public static formatLocalDate(
+    date: Date,
+    includeSeconds: boolean = true,
+  ): string {
+    return formatLocalDate(date, includeSeconds);
   }
 
   /**

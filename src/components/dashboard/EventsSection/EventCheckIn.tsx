@@ -11,6 +11,10 @@ interface ExtendedEvent extends Event {
     description?: string; // This component uses 'description' but schema has 'event_description'
 }
 
+// Note: Date conversion is now handled automatically by the Get and Update classes.
+// When fetching events, UTC dates are converted to local time.
+// When saving events, local dates are converted back to UTC.
+
 // Toast management system
 const createToast = (
     message: string,
@@ -115,8 +119,8 @@ const EventCheckIn = () => {
 
             // Check if the event is active (has started and hasn't ended yet)
             const currentTime = new Date();
-            const eventStartDate = new Date(event.start_date);
-            const eventEndDate = new Date(event.end_date);
+            const eventStartDate = new Date(event.start_date); // Now properly converted to local time by Get
+            const eventEndDate = new Date(event.end_date); // Now properly converted to local time by Get
 
             if (eventStartDate > currentTime) {
                 throw new Error("This event has not started yet");
@@ -175,7 +179,7 @@ const EventCheckIn = () => {
             // Create attendee entry with check-in details
             const attendeeEntry: AttendeeEntry = {
                 user_id: currentUser.id,
-                time_checked_in: new Date().toISOString(),
+                time_checked_in: new Date().toISOString(), // Will be properly converted to UTC by Update
                 food: foodSelection || "none",
             };
 
@@ -290,7 +294,7 @@ const EventCheckIn = () => {
                                 />
                                 <button
                                     type="submit"
-                                    className={`btn btn-primary h-10 min-h-[2.5rem] text-sm sm:text-base w-full sm:w-auto`}
+                                    className="btn btn-primary h-10 min-h-[2.5rem] text-sm sm:text-base w-full sm:w-auto"
                                     disabled={isLoading}
                                 >
                                     {isLoading ? (
@@ -308,83 +312,6 @@ const EventCheckIn = () => {
                     </div>
                 </div>
             </div>
-
-            <dialog id="foodSelectionModal" className="modal">
-                <div className="modal-box max-w-[90vw] sm:max-w-lg p-4 sm:p-6">
-                    <h3 className="font-bold text-base sm:text-lg mb-3 sm:mb-4">Food Selection</h3>
-                    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-                        <div className="form-control">
-                            <label className="label">
-                                <span className="label-text text-sm sm:text-base">What food would you like?</span>
-                                <span className="label-text-alt text-error">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={foodInput}
-                                onChange={(e) => setFoodInput(e.target.value)}
-                                className="input input-bordered text-sm sm:text-base h-10 min-h-[2.5rem] w-full"
-                                placeholder="Enter your food choice or 'none'"
-                                required
-                            />
-                            <label className="label">
-                                <span className="label-text-alt text-info text-xs sm:text-sm">
-                                    Enter 'none' if you don't want any food
-                                </span>
-                            </label>
-                        </div>
-                        <div className="modal-action flex flex-col sm:flex-row gap-2 sm:gap-3">
-                            <button type="submit" className="btn btn-primary text-sm sm:text-base h-10 min-h-[2.5rem] w-full sm:w-auto">
-                                Submit
-                            </button>
-                            <button
-                                type="button"
-                                className="btn text-sm sm:text-base h-10 min-h-[2.5rem] w-full sm:w-auto"
-                                onClick={() => {
-                                    const modal = document.getElementById("foodSelectionModal") as HTMLDialogElement;
-                                    modal.close();
-                                    setCurrentCheckInEvent(null);
-                                    setFoodInput("");
-                                }}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
-                </div>
-                <form method="dialog" className="modal-backdrop">
-                    <button>close</button>
-                </form>
-            </dialog>
-
-            <style>{`
-                .toast-container {
-                    display: flex;
-                    flex-direction: column;
-                    pointer-events: none;
-                }
-                .toast {
-                    pointer-events: auto;
-                    transform: translateX(0);
-                    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-                    position: relative;
-                }
-                .toast-exit {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                .toast.translate-x-full {
-                    transform: translateX(100%);
-                }
-                .toast-container .toast {
-                    transform: translateY(calc((1 - attr(data-index number)) * -0.25rem));
-                }
-                .toast-container .toast[data-index="0"] {
-                    transform: translateY(0);
-                }
-                .toast-container .toast[data-index="1"] {
-                    transform: translateY(-0.025rem);
-                }
-            `}</style>
         </>
     );
 };
