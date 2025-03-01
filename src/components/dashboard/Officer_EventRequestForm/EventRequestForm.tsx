@@ -6,6 +6,7 @@ import { Update } from '../../../scripts/pocketbase/Update';
 import { FileManager } from '../../../scripts/pocketbase/FileManager';
 import { Get } from '../../../scripts/pocketbase/Get';
 import type { EventRequest } from '../../../schemas/pocketbase';
+import { EventRequestStatus } from '../../../schemas/pocketbase';
 
 // Form sections
 import PRSection from './PRSection';
@@ -238,7 +239,7 @@ const EventRequestForm: React.FC = () => {
                     vendor: formData.invoiceData.vendor
                 },
                 // Set the initial status to "submitted"
-                status: "submitted",
+                status: EventRequestStatus.SUBMITTED,
             };
 
             toast.loading('Creating event request record...', { id: submittingToast });

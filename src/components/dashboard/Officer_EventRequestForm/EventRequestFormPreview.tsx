@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import type { EventRequestFormData } from './EventRequestForm';
 import type { InvoiceItem } from './InvoiceBuilder';
 import type { EventRequest } from '../../../schemas/pocketbase';
+import { FlyerTypes, LogoOptions, EventRequestStatus } from '../../../schemas/pocketbase';
 
 interface EventRequestFormPreviewProps {
     formData?: EventRequestFormData; // Optional prop to directly pass form data

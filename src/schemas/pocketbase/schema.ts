@@ -74,12 +74,12 @@ export interface EventRequest extends BaseRecord {
   end_date_time: string;
   event_description: string;
   flyers_needed: boolean;
-  flyer_type?: string[];
+  flyer_type?: string[]; // digital_with_social, digital_no_social, physical_with_advertising, physical_no_advertising, newsletter, other
   other_flyer_type?: string;
   flyer_advertising_start_date?: string;
   flyer_additional_requests?: string;
   photography_needed: boolean;
-  required_logos?: string[];
+  required_logos?: string[]; // IEEE, AS, HKN, TESC, PIB, TNT, SWE, OTHER
   other_logos?: string[];
   advertising_format?: string;
   will_or_have_room_booking?: boolean;
@@ -89,9 +89,10 @@ export interface EventRequest extends BaseRecord {
   food_drinks_being_served: boolean;
   itemized_invoice?: string; // JSON string
   invoice?: string;
+  invoice_files?: string[]; // Array of invoice file IDs
   needs_graphics?: boolean;
   needs_as_funding?: boolean;
-  status: string;
+  status: "submitted" | "pending" | "completed" | "declined";
   requested_user?: string;
 }
 
@@ -115,7 +116,7 @@ export interface Log extends BaseRecord {
 export interface Officer extends BaseRecord {
   user: string; // Relation to User
   role: string;
-  type: string; // e.g., "administrator"
+  type: "administrator" | "executive" | "general" | "honorary" | "past";
 }
 
 /**
@@ -194,4 +195,55 @@ export const Collections = {
   REIMBURSEMENTS: "reimbursement",
   RECEIPTS: "receipts",
   SPONSORS: "sponsors",
+};
+
+/**
+ * Flyer Type Options
+ * Constants for the flyer type options used in event requests
+ */
+export const FlyerTypes = {
+  DIGITAL_WITH_SOCIAL: "digital_with_social",
+  DIGITAL_NO_SOCIAL: "digital_no_social",
+  PHYSICAL_WITH_ADVERTISING: "physical_with_advertising",
+  PHYSICAL_NO_ADVERTISING: "physical_no_advertising",
+  NEWSLETTER: "newsletter",
+  OTHER: "other",
+};
+
+/**
+ * Logo Options
+ * Constants for the logo options used in event requests
+ */
+export const LogoOptions = {
+  IEEE: "IEEE",
+  AS: "AS",
+  HKN: "HKN",
+  TESC: "TESC",
+  PIB: "PIB",
+  TNT: "TNT",
+  SWE: "SWE",
+  OTHER: "OTHER",
+};
+
+/**
+ * Event Request Status Options
+ * Constants for the status options used in event requests
+ */
+export const EventRequestStatus = {
+  SUBMITTED: "submitted",
+  PENDING: "pending",
+  COMPLETED: "completed",
+  DECLINED: "declined",
+};
+
+/**
+ * Officer Type Options
+ * Constants for the officer type options
+ */
+export const OfficerTypes = {
+  ADMINISTRATOR: "administrator",
+  EXECUTIVE: "executive",
+  GENERAL: "general",
+  HONORARY: "honorary",
+  PAST: "past",
 };

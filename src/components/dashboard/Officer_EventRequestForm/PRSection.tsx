@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { EventRequestFormData } from './EventRequestForm';
 import type { EventRequest } from '../../../schemas/pocketbase';
+import { FlyerTypes, LogoOptions } from '../../../schemas/pocketbase';
 
 // Animation variants
 const itemVariants = {
@@ -19,24 +20,24 @@ const itemVariants = {
 
 // Flyer type options
 const FLYER_TYPES = [
-    { value: 'digital_with_social', label: 'Digital flyer (with social media advertising: Facebook, Instagram, Discord)' },
-    { value: 'digital_no_social', label: 'Digital flyer (with NO social media advertising)' },
-    { value: 'physical_with_advertising', label: 'Physical flyer (with advertising)' },
-    { value: 'physical_no_advertising', label: 'Physical flyer (with NO advertising)' },
-    { value: 'newsletter', label: 'Newsletter (IEEE, ECE, IDEA)' },
-    { value: 'other', label: 'Other' }
+    { value: FlyerTypes.DIGITAL_WITH_SOCIAL, label: 'Digital flyer (with social media advertising: Facebook, Instagram, Discord)' },
+    { value: FlyerTypes.DIGITAL_NO_SOCIAL, label: 'Digital flyer (with NO social media advertising)' },
+    { value: FlyerTypes.PHYSICAL_WITH_ADVERTISING, label: 'Physical flyer (with advertising)' },
+    { value: FlyerTypes.PHYSICAL_NO_ADVERTISING, label: 'Physical flyer (with NO advertising)' },
+    { value: FlyerTypes.NEWSLETTER, label: 'Newsletter (IEEE, ECE, IDEA)' },
+    { value: FlyerTypes.OTHER, label: 'Other' }
 ];
 
 // Logo options
 const LOGO_OPTIONS = [
-    { value: 'IEEE', label: 'IEEE' },
-    { value: 'AS', label: 'AS (required if funded by AS)' },
-    { value: 'HKN', label: 'HKN' },
-    { value: 'TESC', label: 'TESC' },
-    { value: 'PIB', label: 'PIB' },
-    { value: 'TNT', label: 'TNT' },
-    { value: 'SWE', label: 'SWE' },
-    { value: 'OTHER', label: 'OTHER (please upload transparent logo files)' }
+    { value: LogoOptions.IEEE, label: 'IEEE' },
+    { value: LogoOptions.AS, label: 'AS (required if funded by AS)' },
+    { value: LogoOptions.HKN, label: 'HKN' },
+    { value: LogoOptions.TESC, label: 'TESC' },
+    { value: LogoOptions.PIB, label: 'PIB' },
+    { value: LogoOptions.TNT, label: 'TNT' },
+    { value: LogoOptions.SWE, label: 'SWE' },
+    { value: LogoOptions.OTHER, label: 'OTHER (please upload transparent logo files)' }
 ];
 
 // Format options
@@ -76,7 +77,7 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
     // Handle file upload for other logos
     const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const newFiles = Array.from(e.target.files);
+            const newFiles = Array.from(e.target.files) as File[];
             setOtherLogoFiles(newFiles);
             onDataChange({ other_logos: newFiles });
         }
@@ -113,7 +114,7 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
                 </div>
 
                 {/* Other flyer type input */}
-                {formData.flyer_type.includes('other') && (
+                {formData.flyer_type.includes(FlyerTypes.OTHER) && (
                     <div className="mt-3 pl-7">
                         <input
                             type="text"
@@ -129,9 +130,9 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
 
             {/* Advertising start date */}
             {formData.flyer_type.some(type =>
-                type === 'digital_with_social' ||
-                type === 'physical_with_advertising' ||
-                type === 'newsletter'
+                type === FlyerTypes.DIGITAL_WITH_SOCIAL ||
+                type === FlyerTypes.PHYSICAL_WITH_ADVERTISING ||
+                type === FlyerTypes.NEWSLETTER
             ) && (
                     <motion.div variants={itemVariants} className="form-control">
                         <label className="label">
@@ -169,7 +170,7 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
             </motion.div>
 
             {/* Logo file upload */}
-            {formData.required_logos.includes('OTHER') && (
+            {formData.required_logos.includes(LogoOptions.OTHER) && (
                 <motion.div variants={itemVariants} className="form-control">
                     <label className="label">
                         <span className="label-text font-medium">Please share your logo files here</span>

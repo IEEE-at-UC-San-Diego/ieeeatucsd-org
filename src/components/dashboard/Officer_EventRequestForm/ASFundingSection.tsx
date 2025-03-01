@@ -41,7 +41,7 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
     // Handle multiple invoice files upload
     const handleMultipleInvoiceFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const files = Array.from(e.target.files);
+            const files = Array.from(e.target.files) as File[];
 
             // Check file sizes
             const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit per file
