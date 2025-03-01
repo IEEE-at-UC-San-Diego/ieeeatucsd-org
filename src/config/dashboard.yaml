@@ -65,6 +65,14 @@ sections:
     component: "SponsorAnalytics"
     class: "text-warning hover:text-warning-focus"
 
+  # Administrator Menu
+  adminDashboard:
+    title: "Admin Dashboard"
+    icon: "heroicons:shield-check"
+    role: "administrator"
+    component: "AdminDashboard"
+    class: "text-error hover:text-error-focus"
+
   # Settings (accessible to all except sponsors)
   settings:
     title: "Settings"
@@ -98,8 +106,8 @@ categories:
 
   admin:
     title: "Admin Menu"
-    sections: []
-    role: "admin"
+    sections: ["adminDashboard"]
+    role: "administrator"
 
   sponsor:
     title: "Sponsor Portal"

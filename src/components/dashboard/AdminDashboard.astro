@@ -1,0 +1,183 @@
+---
+// Admin Dashboard Component
+import { Authentication } from "../../scripts/pocketbase/Authentication";
+import { Get } from "../../scripts/pocketbase/Get";
+
+const auth = Authentication.getInstance();
+const get = Get.getInstance();
+
+// Fetch some basic stats for the admin dashboard
+let userCount = 0;
+let officerCount = 0;
+let eventCount = 0;
+let reimbursementCount = 0;
+
+try {
+  if (auth.isAuthenticated()) {
+    const userResponse = await get.getList("users", 1, 1);
+    userCount = userResponse.totalItems;
+
+    const officerResponse = await get.getList("officers", 1, 1);
+    officerCount = officerResponse.totalItems;
+
+    const eventResponse = await get.getList("events", 1, 1);
+    eventCount = eventResponse.totalItems;
+
+    const reimbursementResponse = await get.getList("reimbursement", 1, 1);
+    reimbursementCount = reimbursementResponse.totalItems;
+  }
+} catch (error) {
+  console.error("Error fetching admin dashboard data:", error);
+}
+---
+
+<div class="card bg-base-100 shadow-xl">
+  <div class="card-body">
+    <h2 class="card-title text-2xl mb-4">Administrator Dashboard</h2>
+
+    <!-- Stats Overview -->
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <!-- User Stats -->
+      <div class="card bg-base-200">
+        <div class="card-body">
+          <h3 class="card-title text-lg">Users</h3>
+          <p class="text-primary text-3xl font-semibold">{userCount}</p>
+          <p class="text-sm opacity-70">Total registered users</p>
+        </div>
+      </div>
+
+      <!-- Officer Stats -->
+      <div class="card bg-base-200">
+        <div class="card-body">
+          <h3 class="card-title text-lg">Officers</h3>
+          <p class="text-secondary text-3xl font-semibold">{officerCount}</p>
+          <p class="text-sm opacity-70">Active officers</p>
+        </div>
+      </div>
+
+      <!-- Event Stats -->
+      <div class="card bg-base-200">
+        <div class="card-body">
+          <h3 class="card-title text-lg">Events</h3>
+          <p class="text-accent text-3xl font-semibold">{eventCount}</p>
+          <p class="text-sm opacity-70">Total events</p>
+        </div>
+      </div>
+
+      <!-- Reimbursement Stats -->
+      <div class="card bg-base-200">
+        <div class="card-body">
+          <h3 class="card-title text-lg">Reimbursements</h3>
+          <p class="text-info text-3xl font-semibold">{reimbursementCount}</p>
+          <p class="text-sm opacity-70">Total reimbursements</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="mt-6">
+      <h3 class="text-xl font-semibold mb-4">Administrative Actions</h3>
+      <div class="flex flex-wrap gap-3">
+        <button class="btn btn-primary">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+            ></path>
+          </svg>
+          Manage Users
+        </button>
+        <button class="btn btn-secondary">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+              clip-rule="evenodd"></path>
+          </svg>
+          Manage Events
+        </button>
+        <button class="btn btn-accent">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
+              clip-rule="evenodd"></path>
+          </svg>
+          Manage Finances
+        </button>
+        <button class="btn btn-info">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
+            <path
+              fill-rule="evenodd"
+              d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+              clip-rule="evenodd"></path>
+          </svg>
+          System Logs
+        </button>
+      </div>
+    </div>
+
+    <!-- Recent System Activity -->
+    <div class="mt-6">
+      <h3 class="text-xl font-semibold mb-4">Recent System Activity</h3>
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>User</th>
+              <th>Action</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-sm">Just now</td>
+              <td>Admin</td>
+              <td>Login</td>
+              <td>Administrator logged in</td>
+            </tr>
+            <tr>
+              <td class="text-sm">10 min ago</td>
+              <td>System</td>
+              <td>Update</td>
+              <td>Event request status changed</td>
+            </tr>
+            <tr>
+              <td class="text-sm">1 hour ago</td>
+              <td>Jane Doe</td>
+              <td>Create</td>
+              <td>New reimbursement request submitted</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Client-side functionality can be added here if needed
+  // For example, refreshing data or handling button clicks
+</script>
+
