@@ -150,7 +150,7 @@ export interface Reimbursement extends BaseRecord {
  * Collection ID: pbc_1571142587
  */
 export interface Receipt extends BaseRecord {
-  field: string;
+  file: string; // Single file
   created_by: string; // Relation to User
   itemized_expenses: string; // JSON string of ItemizedExpense[]
   tax: number;

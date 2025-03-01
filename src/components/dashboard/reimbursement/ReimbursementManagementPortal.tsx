@@ -464,9 +464,13 @@ export default function ReimbursementManagementPortal() {
     };
 
     const getReceiptUrl = (receipt: ExtendedReceipt): string => {
-        const auth = Authentication.getInstance();
-        const pb = auth.getPocketBase();
-        return pb.files.getURL(receipt, receipt.field);
+        try {
+            const pb = Authentication.getInstance().getPocketBase();
+            return pb.files.getURL(receipt, receipt.file);
+        } catch (error) {
+            console.error('Error getting receipt URL:', error);
+            return '';
+        }
     };
 
     // Add this function to get the user avatar URL

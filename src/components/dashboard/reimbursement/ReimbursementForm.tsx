@@ -10,7 +10,7 @@ import FilePreview from '../universal/FilePreview';
 import type { ItemizedExpense, Reimbursement, Receipt } from '../../../schemas/pocketbase';
 
 interface ReceiptFormData {
-    field: File;
+    file: File;
     itemized_expenses: ItemizedExpense[];
     tax: number;
     date: string;
@@ -182,7 +182,7 @@ export default function ReimbursementForm() {
 
             // Create receipt record
             const formData = new FormData();
-            formData.append('field', receiptData.field);
+            formData.append('file', receiptData.file);
             formData.append('created_by', userId);
             formData.append('itemized_expenses', JSON.stringify(receiptData.itemized_expenses));
             formData.append('tax', receiptData.tax.toString());
@@ -636,8 +636,8 @@ export default function ReimbursementForm() {
                                         </div>
                                         <div className="bg-base-200/50 backdrop-blur-sm rounded-lg p-4 shadow-sm">
                                             <FilePreview
-                                                url={URL.createObjectURL(selectedReceiptDetails.field)}
-                                                filename={selectedReceiptDetails.field.name}
+                                                url={URL.createObjectURL(selectedReceiptDetails.file)}
+                                                filename={selectedReceiptDetails.file.name}
                                                 isModal={false}
                                             />
                                         </div>

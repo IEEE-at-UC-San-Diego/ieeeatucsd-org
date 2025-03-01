@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { ItemizedExpense } from '../../../schemas/pocketbase';
 
 interface ReceiptFormData {
-    field: File;
+    file: File;
     itemized_expenses: ItemizedExpense[];
     tax: number;
     date: string;
@@ -134,7 +134,7 @@ export default function ReceiptForm({ onSubmit, onCancel }: ReceiptFormProps) {
         }
 
         onSubmit({
-            field: file,
+            file: file,
             itemized_expenses: itemizedExpenses,
             tax,
             date,

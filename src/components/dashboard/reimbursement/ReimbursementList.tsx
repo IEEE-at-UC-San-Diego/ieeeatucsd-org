@@ -23,6 +23,7 @@ interface ReimbursementRequest extends Omit<Reimbursement, 'audit_notes'> {
 
 // Extended Receipt interface with component-specific properties
 interface ReceiptDetails extends Omit<Receipt, 'itemized_expenses' | 'audited_by'> {
+    file: string;
     itemized_expenses: ItemizedExpense[];
     audited_by: string[];
     created: string;
@@ -210,7 +211,7 @@ export default function ReimbursementList() {
                                     ...prevMap,
                                     [receiptId]: {
                                         id: receiptRecord.id,
-                                        field: receiptRecord.field,
+                                        file: receiptRecord.file,
                                         created_by: receiptRecord.created_by,
                                         date: receiptRecord.date,
                                         location_name: receiptRecord.location_name,
@@ -248,9 +249,9 @@ export default function ReimbursementList() {
                 setSelectedReceipt(receiptDetailsMap[receiptId]);
 
                 // Get the file URL using the PocketBase URL and collection info
-                const url = `${pb.baseUrl}/api/files/receipts/${receiptId}/${receiptDetailsMap[receiptId].field}`;
+                const url = `${pb.baseUrl}/api/files/receipts/${receiptId}/${receiptDetailsMap[receiptId].file}`;
                 setPreviewUrl(url);
-                setPreviewFilename(receiptDetailsMap[receiptId].field);
+                setPreviewFilename(receiptDetailsMap[receiptId].file);
                 setShowPreview(true);
                 return;
             }
@@ -268,7 +269,7 @@ export default function ReimbursementList() {
 
                 const receiptDetails: ReceiptDetails = {
                     id: receiptRecord.id,
-                    field: receiptRecord.field,
+                    file: receiptRecord.file,
                     created_by: receiptRecord.created_by,
                     itemized_expenses: itemizedExpenses,
                     tax: receiptRecord.tax,
@@ -290,9 +291,9 @@ export default function ReimbursementList() {
                 setSelectedReceipt(receiptDetails);
 
                 // Get the file URL using the PocketBase URL and collection info
-                const url = `${pb.baseUrl}/api/files/receipts/${receiptRecord.id}/${receiptRecord.field}`;
+                const url = `${pb.baseUrl}/api/files/receipts/${receiptRecord.id}/${receiptRecord.file}`;
                 setPreviewUrl(url);
-                setPreviewFilename(receiptRecord.field);
+                setPreviewFilename(receiptRecord.file);
                 setShowPreview(true);
             } else {
                 throw new Error('Receipt not found');
