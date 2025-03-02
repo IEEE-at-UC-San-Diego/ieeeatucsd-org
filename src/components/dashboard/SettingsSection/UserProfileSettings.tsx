@@ -1,0 +1,218 @@
+import { useState, useEffect } from 'react';
+import { Authentication } from '../../../scripts/pocketbase/Authentication';
+import { Update } from '../../../scripts/pocketbase/Update';
+import { Collections, type User } from '../../../schemas/pocketbase/schema';
+
+export default function UserProfileSettings() {
+    const auth = Authentication.getInstance();
+    const update = Update.getInstance();
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        major: '',
+        graduation_year: '',
+        zelle_information: ''
+    });
+    const [successMessage, setSuccessMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+
+    useEffect(() => {
+        const loadUserData = async () => {
+            try {
+                const currentUser = auth.getCurrentUser();
+                if (currentUser) {
+                    setUser(currentUser);
+                    setFormData({
+                        name: currentUser.name || '',
+                        email: currentUser.email || '',
+                        major: currentUser.major || '',
+                        graduation_year: currentUser.graduation_year?.toString() || '',
+                        zelle_information: currentUser.zelle_information || ''
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                setErrorMessage('Failed to load user data. Please try again later.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadUserData();
+    }, []);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+        setSuccessMessage('');
+        setErrorMessage('');
+
+        try {
+            if (!user) throw new Error('User not authenticated');
+
+            const updateData: Partial<User> = {
+                name: formData.name,
+                major: formData.major || undefined,
+                zelle_information: formData.zelle_information || undefined
+            };
+
+            // Only include graduation_year if it's a valid number
+            if (formData.graduation_year && !isNaN(Number(formData.graduation_year))) {
+                updateData.graduation_year = Number(formData.graduation_year);
+            }
+
+            await update.updateFields(Collections.USERS, user.id, updateData);
+
+            // Update local user state
+            setUser(prev => prev ? { ...prev, ...updateData } : null);
+
+            setSuccessMessage('Profile updated successfully!');
+
+            // Clear success message after 3 seconds
+            setTimeout(() => {
+                setSuccessMessage('');
+            }, 3000);
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            setErrorMessage('Failed to update profile. Please try again.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center py-8">
+                <div className="loading loading-spinner loading-lg"></div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className="alert alert-error">
+                <div>
+                    <span>You must be logged in to access this page.</span>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div>
+            {successMessage && (
+                <div className="alert alert-success mb-4">
+                    <div>
+                        <span>{successMessage}</span>
+                    </div>
+                </div>
+            )}
+
+            {errorMessage && (
+                <div className="alert alert-error mb-4">
+                    <div>
+                        <span>{errorMessage}</span>
+                    </div>
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Full Name</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        className="input input-bordered w-full"
+                        required
+                    />
+                </div>
+
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Email Address</span>
+                        <span className="label-text-alt text-info">Cannot be changed</span>
+                    </label>
+                    <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        className="input input-bordered w-full"
+                        disabled
+                    />
+                    <label className="label">
+                        <span className="label-text-alt">Email changes must be processed by an administrator</span>
+                    </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text">Major</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="major"
+                            value={formData.major}
+                            onChange={handleInputChange}
+                            className="input input-bordered w-full"
+                        />
+                    </div>
+
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text">Graduation Year</span>
+                        </label>
+                        <input
+                            type="number"
+                            name="graduation_year"
+                            value={formData.graduation_year}
+                            onChange={handleInputChange}
+                            className="input input-bordered w-full"
+                            min="2000"
+                            max="2100"
+                        />
+                    </div>
+                </div>
+
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Zelle Information (for reimbursements)</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="zelle_information"
+                        value={formData.zelle_information}
+                        onChange={handleInputChange}
+                        className="input input-bordered w-full"
+                        placeholder="Email or phone number associated with your Zelle account"
+                    />
+                </div>
+
+                <div className="form-control mt-6">
+                    <button
+                        type="submit"
+                        className={`btn btn-primary ${saving ? 'loading' : ''}`}
+                        disabled={saving}
+                    >
+                        {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+} 

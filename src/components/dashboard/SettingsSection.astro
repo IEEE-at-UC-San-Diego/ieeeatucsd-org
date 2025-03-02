@@ -1,22 +1,90 @@
 ---
 import { Icon } from "astro-icon/components";
+import UserProfileSettings from "./SettingsSection/UserProfileSettings";
+import AccountSecuritySettings from "./SettingsSection/AccountSecuritySettings";
+import NotificationSettings from "./SettingsSection/NotificationSettings";
+import DisplaySettings from "./SettingsSection/DisplaySettings";
 ---
 
-<div id="" class="">
+<div id="settings-section" class="">
     <div class="mb-6">
         <h2 class="text-2xl font-bold">Settings</h2>
-        <p class="opacity-70">Manage your account settings</p>
+        <p class="opacity-70">Manage your account settings and preferences</p>
     </div>
+
+    <!-- Profile Settings Card -->
+    <div
+        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+    >
+        <div class="card-body">
+            <h3 class="card-title flex items-center gap-3">
+                <div class="badge badge-primary p-3">
+                    <Icon name="heroicons:user" class="h-5 w-5" />
+                </div>
+                Profile Information
+            </h3>
+            <p class="text-sm opacity-70 mb-4">
+                Update your personal information and profile details
+            </p>
+            <div class="divider"></div>
+            <UserProfileSettings client:load />
+        </div>
+    </div>
+
+    <!-- Account Security Settings Card -->
+    <div
+        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+    >
+        <div class="card-body">
+            <h3 class="card-title flex items-center gap-3">
+                <div class="badge badge-primary p-3">
+                    <Icon name="heroicons:lock-closed" class="h-5 w-5" />
+                </div>
+                Account Security
+            </h3>
+            <p class="text-sm opacity-70 mb-4">
+                Manage your account security settings and authentication options
+            </p>
+            <div class="divider"></div>
+            <AccountSecuritySettings client:load />
+        </div>
+    </div>
+
+    <!-- Notification Settings Card -->
+    <div
+        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+    >
+        <div class="card-body">
+            <h3 class="card-title flex items-center gap-3">
+                <div class="badge badge-primary p-3">
+                    <Icon name="heroicons:bell" class="h-5 w-5" />
+                </div>
+                Notification Preferences
+            </h3>
+            <p class="text-sm opacity-70 mb-4">
+                Customize how and when you receive notifications
+            </p>
+            <div class="divider"></div>
+            <NotificationSettings client:load />
+        </div>
+    </div>
+
+    <!-- Display Settings Card -->
     <div
         class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
     >
         <div class="card-body">
-            <h3 class="card-title">Account Settings</h3>
-            <div class="py-4">
-                <p class="text-base-content/70">
-                    Account settings will be available soon.
-                </p>
-            </div>
+            <h3 class="card-title flex items-center gap-3">
+                <div class="badge badge-primary p-3">
+                    <Icon name="heroicons:computer-desktop" class="h-5 w-5" />
+                </div>
+                Display Settings
+            </h3>
+            <p class="text-sm opacity-70 mb-4">
+                Customize your dashboard appearance and display preferences
+            </p>
+            <div class="divider"></div>
+            <DisplaySettings client:load />
         </div>
     </div>
 </div>

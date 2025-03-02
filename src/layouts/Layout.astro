@@ -5,7 +5,7 @@ import InView from "../components/core/InView.astro";
 ---
 
 <!doctype html>
-<html lang="en" class="w-full h-full m-0 bg-ieee-black">
+<html lang="en" data-theme="dark" class="w-full h-full m-0 bg-ieee-black">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width" />
@@ -15,6 +15,17 @@ import InView from "../components/core/InView.astro";
         <script
             src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"
         ></script>
+        <script is:inline>
+            // Set default theme to dark if not already set
+            if (!localStorage.getItem("theme")) {
+                localStorage.setItem("theme", "dark");
+                document.documentElement.setAttribute("data-theme", "dark");
+            } else {
+                // Apply saved theme
+                const savedTheme = localStorage.getItem("theme");
+                document.documentElement.setAttribute("data-theme", savedTheme);
+            }
+        </script>
     </head>
     <InView />
     <body class="w-full h-full m-0 bg-ieee-black">
