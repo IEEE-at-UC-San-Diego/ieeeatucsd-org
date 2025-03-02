@@ -2,16 +2,27 @@ import { useState, useEffect } from 'react';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { Collections } from '../../../schemas/pocketbase/schema';
+import { toast } from 'react-hot-toast';
+
+// Default display preferences
+const DEFAULT_DISPLAY_PREFERENCES = {
+    theme: 'dark',
+    fontSize: 'medium'
+};
+
+// Default accessibility settings
+const DEFAULT_ACCESSIBILITY_SETTINGS = {
+    colorBlindMode: false,
+    reducedMotion: false
+};
 
 export default function DisplaySettings() {
     const auth = Authentication.getInstance();
     const update = Update.getInstance();
-    const [theme, setTheme] = useState('dark');
-    const [fontSize, setFontSize] = useState('medium');
-    const [colorBlindMode, setColorBlindMode] = useState(false);
-    const [reducedMotion, setReducedMotion] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
-    const [errorMessage, setErrorMessage] = useState('');
+    const [theme, setTheme] = useState(DEFAULT_DISPLAY_PREFERENCES.theme);
+    const [fontSize, setFontSize] = useState(DEFAULT_DISPLAY_PREFERENCES.fontSize);
+    const [colorBlindMode, setColorBlindMode] = useState(DEFAULT_ACCESSIBILITY_SETTINGS.colorBlindMode);
+    const [reducedMotion, setReducedMotion] = useState(DEFAULT_ACCESSIBILITY_SETTINGS.reducedMotion);
     const [saving, setSaving] = useState(false);
 
     // Load saved preferences on component mount
@@ -19,18 +30,20 @@ export default function DisplaySettings() {
         const loadPreferences = async () => {
             try {
                 // First check localStorage for immediate UI updates
-                const savedTheme = localStorage.getItem('theme') || 'dark';
-                const savedFontSize = localStorage.getItem('fontSize') || 'medium';
+                const savedTheme = localStorage.getItem('theme') || DEFAULT_DISPLAY_PREFERENCES.theme;
+                // Ensure theme is either light or dark
+                const validTheme = ['light', 'dark'].includes(savedTheme) ? savedTheme : DEFAULT_DISPLAY_PREFERENCES.theme;
+                const savedFontSize = localStorage.getItem('fontSize') || DEFAULT_DISPLAY_PREFERENCES.fontSize;
                 const savedColorBlindMode = localStorage.getItem('colorBlindMode') === 'true';
                 const savedReducedMotion = localStorage.getItem('reducedMotion') === 'true';
 
-                setTheme(savedTheme);
+                setTheme(validTheme);
                 setFontSize(savedFontSize);
                 setColorBlindMode(savedColorBlindMode);
                 setReducedMotion(savedReducedMotion);
 
                 // Apply theme to document
-                document.documentElement.setAttribute('data-theme', savedTheme);
+                document.documentElement.setAttribute('data-theme', validTheme);
 
                 // Apply font size
                 applyFontSize(savedFontSize);
@@ -46,66 +59,115 @@ export default function DisplaySettings() {
 
                 // Then check if user has saved preferences in their profile
                 const user = auth.getCurrentUser();
-                if (user && user.display_preferences) {
-                    try {
-                        const userPrefs = JSON.parse(user.display_preferences);
+                if (user) {
+                    let needsDisplayPrefsUpdate = false;
+                    let needsAccessibilityUpdate = false;
 
-                        // Only update if values exist and are different from localStorage
-                        if (userPrefs.theme && userPrefs.theme !== savedTheme) {
-                            setTheme(userPrefs.theme);
-                            localStorage.setItem('theme', userPrefs.theme);
-                            document.documentElement.setAttribute('data-theme', userPrefs.theme);
-                        }
+                    // Check and handle display preferences
+                    if (user.display_preferences && typeof user.display_preferences === 'string' && user.display_preferences.trim() !== '') {
+                        try {
+                            const userPrefs = JSON.parse(user.display_preferences);
 
-                        if (userPrefs.fontSize && userPrefs.fontSize !== savedFontSize) {
-                            setFontSize(userPrefs.fontSize);
-                            localStorage.setItem('fontSize', userPrefs.fontSize);
-                            applyFontSize(userPrefs.fontSize);
+                            // Only update if values exist and are different from localStorage
+                            if (userPrefs.theme && ['light', 'dark'].includes(userPrefs.theme) && userPrefs.theme !== validTheme) {
+                                setTheme(userPrefs.theme);
+                                localStorage.setItem('theme', userPrefs.theme);
+                                document.documentElement.setAttribute('data-theme', userPrefs.theme);
+                            } else if (!['light', 'dark'].includes(userPrefs.theme)) {
+                                // If theme is not valid, mark for update
+                                needsDisplayPrefsUpdate = true;
+                            }
+
+                            if (userPrefs.fontSize && userPrefs.fontSize !== savedFontSize) {
+                                setFontSize(userPrefs.fontSize);
+                                localStorage.setItem('fontSize', userPrefs.fontSize);
+                                applyFontSize(userPrefs.fontSize);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing display preferences:', e);
+                            needsDisplayPrefsUpdate = true;
                         }
-                    } catch (e) {
-                        console.error('Error parsing display preferences:', e);
+                    } else {
+                        needsDisplayPrefsUpdate = true;
                     }
-                }
 
-                if (user && user.accessibility_settings) {
-                    try {
-                        const accessibilityPrefs = JSON.parse(user.accessibility_settings);
+                    // Check and handle accessibility settings
+                    if (user.accessibility_settings && typeof user.accessibility_settings === 'string' && user.accessibility_settings.trim() !== '') {
+                        try {
+                            const accessibilityPrefs = JSON.parse(user.accessibility_settings);
 
-                        if (typeof accessibilityPrefs.colorBlindMode === 'boolean' &&
-                            accessibilityPrefs.colorBlindMode !== savedColorBlindMode) {
-                            setColorBlindMode(accessibilityPrefs.colorBlindMode);
-                            localStorage.setItem('colorBlindMode', accessibilityPrefs.colorBlindMode.toString());
+                            if (typeof accessibilityPrefs.colorBlindMode === 'boolean' &&
+                                accessibilityPrefs.colorBlindMode !== savedColorBlindMode) {
+                                setColorBlindMode(accessibilityPrefs.colorBlindMode);
+                                localStorage.setItem('colorBlindMode', accessibilityPrefs.colorBlindMode.toString());
 
-                            if (accessibilityPrefs.colorBlindMode) {
-                                document.documentElement.classList.add('color-blind-mode');
-                            } else {
-                                document.documentElement.classList.remove('color-blind-mode');
+                                if (accessibilityPrefs.colorBlindMode) {
+                                    document.documentElement.classList.add('color-blind-mode');
+                                } else {
+                                    document.documentElement.classList.remove('color-blind-mode');
+                                }
                             }
-                        }
 
-                        if (typeof accessibilityPrefs.reducedMotion === 'boolean' &&
-                            accessibilityPrefs.reducedMotion !== savedReducedMotion) {
-                            setReducedMotion(accessibilityPrefs.reducedMotion);
-                            localStorage.setItem('reducedMotion', accessibilityPrefs.reducedMotion.toString());
+                            if (typeof accessibilityPrefs.reducedMotion === 'boolean' &&
+                                accessibilityPrefs.reducedMotion !== savedReducedMotion) {
+                                setReducedMotion(accessibilityPrefs.reducedMotion);
+                                localStorage.setItem('reducedMotion', accessibilityPrefs.reducedMotion.toString());
 
-                            if (accessibilityPrefs.reducedMotion) {
-                                document.documentElement.classList.add('reduced-motion');
-                            } else {
-                                document.documentElement.classList.remove('reduced-motion');
+                                if (accessibilityPrefs.reducedMotion) {
+                                    document.documentElement.classList.add('reduced-motion');
+                                } else {
+                                    document.documentElement.classList.remove('reduced-motion');
+                                }
                             }
+                        } catch (e) {
+                            console.error('Error parsing accessibility settings:', e);
+                            needsAccessibilityUpdate = true;
                         }
-                    } catch (e) {
-                        console.error('Error parsing accessibility settings:', e);
+                    } else {
+                        needsAccessibilityUpdate = true;
+                    }
+
+                    // Initialize default settings if needed
+                    if (needsDisplayPrefsUpdate || needsAccessibilityUpdate) {
+                        await initializeDefaultSettings(user.id, needsDisplayPrefsUpdate, needsAccessibilityUpdate);
                     }
                 }
             } catch (error) {
                 console.error('Error loading preferences:', error);
-                setErrorMessage('Failed to load display preferences');
+                toast.error('Failed to load display preferences');
             }
         };
 
         loadPreferences();
     }, []);
+
+    // Initialize default settings if not set
+    const initializeDefaultSettings = async (userId: string, updateDisplayPrefs: boolean, updateAccessibility: boolean) => {
+        try {
+            const updateData: any = {};
+
+            if (updateDisplayPrefs) {
+                updateData.display_preferences = JSON.stringify({
+                    theme,
+                    fontSize
+                });
+            }
+
+            if (updateAccessibility) {
+                updateData.accessibility_settings = JSON.stringify({
+                    colorBlindMode,
+                    reducedMotion
+                });
+            }
+
+            if (Object.keys(updateData).length > 0) {
+                await update.updateFields(Collections.USERS, userId, updateData);
+                console.log('Initialized default display and accessibility settings');
+            }
+        } catch (error) {
+            console.error('Error initializing default settings:', error);
+        }
+    };
 
     // Apply font size to document
     const applyFontSize = (size: string) => {
@@ -191,8 +253,6 @@ export default function DisplaySettings() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
-        setSuccessMessage('');
-        setErrorMessage('');
 
         try {
             const user = auth.getCurrentUser();
@@ -221,15 +281,10 @@ export default function DisplaySettings() {
             );
 
             // Show success message
-            setSuccessMessage('Display settings saved successfully!');
-
-            // Clear success message after 3 seconds
-            setTimeout(() => {
-                setSuccessMessage('');
-            }, 3000);
+            toast.success('Display settings saved successfully!');
         } catch (error) {
             console.error('Error saving display settings:', error);
-            setErrorMessage('Failed to save display settings to your profile');
+            toast.error('Failed to save display settings to your profile');
         } finally {
             setSaving(false);
         }
@@ -237,114 +292,71 @@ export default function DisplaySettings() {
 
     return (
         <div>
-            {successMessage && (
-                <div className="alert alert-success mb-4">
-                    <div>
-                        <span>{successMessage}</span>
-                    </div>
-                </div>
-            )}
-
-            {errorMessage && (
-                <div className="alert alert-error mb-4">
-                    <div>
-                        <span>{errorMessage}</span>
-                    </div>
-                </div>
-            )}
-
             <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Theme Selection */}
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text font-medium">Theme</span>
-                    </label>
-                    <select
-                        className="select select-bordered w-full"
-                        value={theme}
-                        onChange={handleThemeChange}
-                    >
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
-                        <option value="cupcake">Cupcake</option>
-                        <option value="bumblebee">Bumblebee</option>
-                        <option value="emerald">Emerald</option>
-                        <option value="corporate">Corporate</option>
-                        <option value="synthwave">Synthwave</option>
-                        <option value="retro">Retro</option>
-                        <option value="cyberpunk">Cyberpunk</option>
-                        <option value="valentine">Valentine</option>
-                        <option value="halloween">Halloween</option>
-                        <option value="garden">Garden</option>
-                        <option value="forest">Forest</option>
-                        <option value="aqua">Aqua</option>
-                        <option value="lofi">Lo-Fi</option>
-                        <option value="pastel">Pastel</option>
-                        <option value="fantasy">Fantasy</option>
-                        <option value="wireframe">Wireframe</option>
-                        <option value="black">Black</option>
-                        <option value="luxury">Luxury</option>
-                        <option value="dracula">Dracula</option>
-                        <option value="cmyk">CMYK</option>
-                        <option value="autumn">Autumn</option>
-                        <option value="business">Business</option>
-                        <option value="acid">Acid</option>
-                        <option value="lemonade">Lemonade</option>
-                        <option value="night">Night</option>
-                        <option value="coffee">Coffee</option>
-                        <option value="winter">Winter</option>
-                    </select>
-                    <label className="label">
-                        <span className="label-text-alt">Choose a theme for your dashboard</span>
-                    </label>
+                {/* Theme Settings */}
+                <div>
+                    <h4 className="font-semibold text-lg mb-2">Theme</h4>
+                    <div className="form-control w-full max-w-xs">
+                        <select
+                            value={theme}
+                            onChange={handleThemeChange}
+                            className="select select-bordered"
+                        >
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                        <label className="label">
+                            <span className="label-text-alt">Select your preferred theme</span>
+                        </label>
+                    </div>
                 </div>
 
-                {/* Font Size */}
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text font-medium">Font Size</span>
-                    </label>
-                    <select
-                        className="select select-bordered w-full"
-                        value={fontSize}
-                        onChange={handleFontSizeChange}
-                    >
-                        <option value="small">Small</option>
-                        <option value="medium">Medium</option>
-                        <option value="large">Large</option>
-                        <option value="extra-large">Extra Large</option>
-                    </select>
-                    <label className="label">
-                        <span className="label-text-alt">Adjust the text size for better readability</span>
-                    </label>
+                {/* Font Size Settings */}
+                <div>
+                    <h4 className="font-semibold text-lg mb-2">Font Size</h4>
+                    <div className="form-control w-full max-w-xs">
+                        <select
+                            value={fontSize}
+                            onChange={handleFontSizeChange}
+                            className="select select-bordered"
+                        >
+                            <option value="small">Small</option>
+                            <option value="medium">Medium</option>
+                            <option value="large">Large</option>
+                            <option value="extra-large">Extra Large</option>
+                        </select>
+                        <label className="label">
+                            <span className="label-text-alt">Select your preferred font size</span>
+                        </label>
+                    </div>
                 </div>
 
-                {/* Accessibility Options */}
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text font-medium">Accessibility Options</span>
-                    </label>
+                {/* Accessibility Settings */}
+                <div>
+                    <h4 className="font-semibold text-lg mb-2">Accessibility</h4>
 
-                    <div className="space-y-4 p-4 bg-base-200 rounded-lg">
+                    <div className="form-control">
                         <label className="cursor-pointer label justify-start gap-4">
                             <input
                                 type="checkbox"
-                                className="toggle toggle-primary"
                                 checked={colorBlindMode}
                                 onChange={handleColorBlindModeChange}
+                                className="toggle toggle-primary"
                             />
                             <div>
                                 <span className="label-text font-medium">Color Blind Mode</span>
-                                <p className="text-xs opacity-70">Enhances color contrast for better visibility</p>
+                                <p className="text-xs opacity-70">Enhances color contrast and uses color-blind friendly palettes</p>
                             </div>
                         </label>
+                    </div>
 
+                    <div className="form-control mt-2">
                         <label className="cursor-pointer label justify-start gap-4">
                             <input
                                 type="checkbox"
-                                className="toggle toggle-primary"
                                 checked={reducedMotion}
                                 onChange={handleReducedMotionChange}
+                                className="toggle toggle-primary"
                             />
                             <div>
                                 <span className="label-text font-medium">Reduced Motion</span>
@@ -354,27 +366,11 @@ export default function DisplaySettings() {
                     </div>
                 </div>
 
-                {/* Preview */}
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text font-medium">Preview</span>
-                    </label>
-                    <div className="p-4 bg-base-200 rounded-lg">
-                        <div className="card bg-base-100 shadow-md">
-                            <div className="card-body">
-                                <h3 className="card-title">Theme Preview</h3>
-                                <p>This is how your content will look with the selected settings.</p>
-                                <div className="flex gap-2 mt-2">
-                                    <button className="btn btn-primary">Primary</button>
-                                    <button className="btn btn-secondary">Secondary</button>
-                                    <button className="btn btn-accent">Accent</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <p className="text-sm text-info">
+                    These settings are saved to your browser and your IEEE UCSD account. They will be applied whenever you log in.
+                </p>
 
-                <div className="form-control mt-6">
+                <div className="form-control">
                     <button
                         type="submit"
                         className={`btn btn-primary ${saving ? 'loading' : ''}`}

@@ -3,6 +3,7 @@ import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { Collections, type User } from '../../../schemas/pocketbase/schema';
 import allMajors from '../../../data/allUCSDMajors.txt?raw';
+import { toast } from 'react-hot-toast';
 
 export default function UserProfileSettings() {
     const auth = Authentication.getInstance();
@@ -15,13 +16,16 @@ export default function UserProfileSettings() {
         email: '',
         major: '',
         graduation_year: '',
-        zelle_information: ''
+        zelle_information: '',
+        pid: '',
+        member_id: ''
     });
-    const [successMessage, setSuccessMessage] = useState('');
-    const [errorMessage, setErrorMessage] = useState('');
 
-    // Parse the majors list from the text file
-    const majorsList = allMajors.split('\n').filter(major => major.trim() !== '');
+    // Parse the majors list from the text file and sort alphabetically
+    const majorsList = allMajors
+        .split('\n')
+        .filter(major => major.trim() !== '')
+        .sort((a, b) => a.localeCompare(b));
 
     useEffect(() => {
         const loadUserData = async () => {
@@ -34,12 +38,14 @@ export default function UserProfileSettings() {
                         email: currentUser.email || '',
                         major: currentUser.major || '',
                         graduation_year: currentUser.graduation_year?.toString() || '',
-                        zelle_information: currentUser.zelle_information || ''
+                        zelle_information: currentUser.zelle_information || '',
+                        pid: currentUser.pid || '',
+                        member_id: currentUser.member_id || ''
                     });
                 }
             } catch (error) {
                 console.error('Error loading user data:', error);
-                setErrorMessage('Failed to load user data. Please try again later.');
+                toast.error('Failed to load user data. Please try again later.');
             } finally {
                 setLoading(false);
             }
@@ -59,8 +65,6 @@ export default function UserProfileSettings() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
-        setSuccessMessage('');
-        setErrorMessage('');
 
         try {
             if (!user) throw new Error('User not authenticated');
@@ -68,7 +72,9 @@ export default function UserProfileSettings() {
             const updateData: Partial<User> = {
                 name: formData.name,
                 major: formData.major || undefined,
-                zelle_information: formData.zelle_information || undefined
+                zelle_information: formData.zelle_information || undefined,
+                pid: formData.pid || undefined,
+                member_id: formData.member_id || undefined
             };
 
             // Only include graduation_year if it's a valid number
@@ -81,15 +87,10 @@ export default function UserProfileSettings() {
             // Update local user state
             setUser(prev => prev ? { ...prev, ...updateData } : null);
 
-            setSuccessMessage('Profile updated successfully!');
-
-            // Clear success message after 3 seconds
-            setTimeout(() => {
-                setSuccessMessage('');
-            }, 3000);
+            toast.success('Profile updated successfully!');
         } catch (error) {
             console.error('Error updating profile:', error);
-            setErrorMessage('Failed to update profile. Please try again.');
+            toast.error('Failed to update profile. Please try again.');
         } finally {
             setSaving(false);
         }
@@ -115,22 +116,6 @@ export default function UserProfileSettings() {
 
     return (
         <div>
-            {successMessage && (
-                <div className="alert alert-success mb-4">
-                    <div>
-                        <span>{successMessage}</span>
-                    </div>
-                </div>
-            )}
-
-            {errorMessage && (
-                <div className="alert alert-error mb-4">
-                    <div>
-                        <span>{errorMessage}</span>
-                    </div>
-                </div>
-            )}
-
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="form-control">
                     <label className="label">
@@ -161,6 +146,40 @@ export default function UserProfileSettings() {
                     <label className="label">
                         <span className="label-text-alt">Email changes must be processed by an administrator</span>
                     </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text">PID</span>
+                            <span className="label-text-alt text-info">UCSD Student ID</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="pid"
+                            value={formData.pid}
+                            onChange={handleInputChange}
+                            className="input input-bordered w-full"
+                            placeholder="A12345678"
+                            pattern="[A-Za-z][0-9]{8}"
+                            title="PID format: A12345678"
+                        />
+                    </div>
+
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text">IEEE Member ID</span>
+                            <span className="label-text-alt text-info">Optional</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="member_id"
+                            value={formData.member_id}
+                            onChange={handleInputChange}
+                            className="input input-bordered w-full"
+                            placeholder="IEEE Membership Number"
+                        />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

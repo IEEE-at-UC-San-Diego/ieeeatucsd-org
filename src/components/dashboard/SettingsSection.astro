@@ -4,6 +4,7 @@ import UserProfileSettings from "./SettingsSection/UserProfileSettings";
 import AccountSecuritySettings from "./SettingsSection/AccountSecuritySettings";
 import NotificationSettings from "./SettingsSection/NotificationSettings";
 import DisplaySettings from "./SettingsSection/DisplaySettings";
+import { Toaster } from "react-hot-toast";
 ---
 
 <div id="settings-section" class="">
@@ -11,6 +12,8 @@ import DisplaySettings from "./SettingsSection/DisplaySettings";
         <h2 class="text-2xl font-bold">Settings</h2>
         <p class="opacity-70">Manage your account settings and preferences</p>
     </div>
+
+    <Toaster position="top-right" client:load />
 
     <!-- Profile Settings Card -->
     <div

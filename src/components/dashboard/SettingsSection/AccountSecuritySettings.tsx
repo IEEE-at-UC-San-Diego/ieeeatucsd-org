@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { SendLog } from '../../../scripts/pocketbase/SendLog';
+import { toast } from 'react-hot-toast';
 
 export default function AccountSecuritySettings() {
     const auth = Authentication.getInstance();
@@ -50,6 +51,7 @@ export default function AccountSecuritySettings() {
             window.location.href = '/';
         } catch (error) {
             console.error('Error during logout:', error);
+            toast.error('Failed to log out. Please try again.');
         }
     };
 
@@ -96,10 +98,8 @@ export default function AccountSecuritySettings() {
 
     if (!isAuthenticated) {
         return (
-            <div className="alert alert-error">
-                <div>
-                    <span>You must be logged in to access this page.</span>
-                </div>
+            <div className="p-4 text-error bg-error bg-opacity-10 rounded-lg">
+                <span>You must be logged in to access this page.</span>
             </div>
         );
     }
@@ -134,11 +134,9 @@ export default function AccountSecuritySettings() {
                         Password management is handled through your IEEEUCSD account.
                     </p>
 
-                    <div className="alert alert-info">
-                        <div>
-                            <span>To change your password, please visit the UCSD SSO portal.</span>
-                        </div>
-                    </div>
+                    <p className="text-sm text-info p-3 bg-info bg-opacity-10 rounded-lg">
+                        To change your password, please use the "Forgot Password" option on the login page.
+                    </p>
                 </div>
 
                 {/* Account Actions */}
@@ -153,14 +151,10 @@ export default function AccountSecuritySettings() {
                             Sign Out
                         </button>
 
-                        <div className="alert alert-warning">
-                            <div>
-                                <span>
-                                    If you need to delete your account or have other account-related issues,
-                                    please contact an IEEE UCSD administrator.
-                                </span>
-                            </div>
-                        </div>
+                        <p className="text-sm text-warning p-3 bg-warning bg-opacity-10 rounded-lg">
+                            If you need to delete your account or have other account-related issues,
+                            please contact an IEEE UCSD administrator.
+                        </p>
                     </div>
                 </div>
             </div>

@@ -2,24 +2,26 @@ import { useState, useEffect } from 'react';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { Collections } from '../../../schemas/pocketbase/schema';
+import { toast } from 'react-hot-toast';
+
+// Default notification preferences
+const DEFAULT_NOTIFICATION_PREFERENCES = {
+    emailNotifications: true,
+    eventReminders: true,
+    eventUpdates: true,
+    reimbursementUpdates: true,
+    officerAnnouncements: true,
+    marketingEmails: false
+};
 
 export default function NotificationSettings() {
     const auth = Authentication.getInstance();
     const update = Update.getInstance();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
-    const [errorMessage, setErrorMessage] = useState('');
 
     // Notification preferences
-    const [preferences, setPreferences] = useState({
-        emailNotifications: true,
-        eventReminders: true,
-        eventUpdates: true,
-        reimbursementUpdates: true,
-        officerAnnouncements: true,
-        marketingEmails: false
-    });
+    const [preferences, setPreferences] = useState(DEFAULT_NOTIFICATION_PREFERENCES);
 
     useEffect(() => {
         const loadPreferences = async () => {
@@ -28,7 +30,7 @@ export default function NotificationSettings() {
                 if (user) {
                     // If user has notification_preferences, parse and use them
                     // Otherwise use defaults
-                    if (user.notification_preferences) {
+                    if (user.notification_preferences && typeof user.notification_preferences === 'string' && user.notification_preferences.trim() !== '') {
                         try {
                             const savedPrefs = JSON.parse(user.notification_preferences);
                             setPreferences(prev => ({
@@ -37,12 +39,17 @@ export default function NotificationSettings() {
                             }));
                         } catch (e) {
                             console.error('Error parsing notification preferences:', e);
+                            // Initialize with defaults and save to user profile
+                            await initializeDefaultPreferences(user.id);
                         }
+                    } else {
+                        // Initialize with defaults and save to user profile
+                        await initializeDefaultPreferences(user.id);
                     }
                 }
             } catch (error) {
                 console.error('Error loading notification preferences:', error);
-                setErrorMessage('Failed to load notification preferences');
+                toast.error('Failed to load notification preferences');
             } finally {
                 setLoading(false);
             }
@@ -50,6 +57,21 @@ export default function NotificationSettings() {
 
         loadPreferences();
     }, []);
+
+    // Initialize default preferences if not set
+    const initializeDefaultPreferences = async (userId: string) => {
+        try {
+            await update.updateFields(
+                Collections.USERS,
+                userId,
+                { notification_preferences: JSON.stringify(DEFAULT_NOTIFICATION_PREFERENCES) }
+            );
+            setPreferences(DEFAULT_NOTIFICATION_PREFERENCES);
+            console.log('Initialized default notification preferences');
+        } catch (error) {
+            console.error('Error initializing default notification preferences:', error);
+        }
+    };
 
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, checked } = e.target;
@@ -62,8 +84,6 @@ export default function NotificationSettings() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
-        setSuccessMessage('');
-        setErrorMessage('');
 
         try {
             const user = auth.getCurrentUser();
@@ -76,15 +96,10 @@ export default function NotificationSettings() {
                 { notification_preferences: JSON.stringify(preferences) }
             );
 
-            setSuccessMessage('Notification preferences saved successfully!');
-
-            // Clear success message after 3 seconds
-            setTimeout(() => {
-                setSuccessMessage('');
-            }, 3000);
+            toast.success('Notification preferences saved successfully!');
         } catch (error) {
             console.error('Error saving notification preferences:', error);
-            setErrorMessage('Failed to save notification preferences');
+            toast.error('Failed to save notification preferences');
         } finally {
             setSaving(false);
         }
@@ -100,22 +115,6 @@ export default function NotificationSettings() {
 
     return (
         <div>
-            {successMessage && (
-                <div className="alert alert-success mb-4">
-                    <div>
-                        <span>{successMessage}</span>
-                    </div>
-                </div>
-            )}
-
-            {errorMessage && (
-                <div className="alert alert-error mb-4">
-                    <div>
-                        <span>{errorMessage}</span>
-                    </div>
-                </div>
-            )}
-
             <form onSubmit={handleSubmit}>
                 <div className="space-y-4">
                     <div className="form-control">
@@ -215,13 +214,9 @@ export default function NotificationSettings() {
                     </div>
                 </div>
 
-                <div className="alert alert-info mt-6 mb-6">
-                    <div>
-                        <span>
-                            Note: Some critical notifications about your account cannot be disabled.
-                        </span>
-                    </div>
-                </div>
+                <p className="text-sm text-info mt-6 mb-6">
+                    Note: Some critical notifications about your account cannot be disabled.
+                </p>
 
                 <div className="form-control">
                     <button
