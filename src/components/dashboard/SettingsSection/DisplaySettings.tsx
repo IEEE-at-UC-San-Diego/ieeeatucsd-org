@@ -1,38 +1,110 @@
 import { useState, useEffect } from 'react';
+import { Authentication } from '../../../scripts/pocketbase/Authentication';
+import { Update } from '../../../scripts/pocketbase/Update';
+import { Collections } from '../../../schemas/pocketbase/schema';
 
 export default function DisplaySettings() {
+    const auth = Authentication.getInstance();
+    const update = Update.getInstance();
     const [theme, setTheme] = useState('dark');
     const [fontSize, setFontSize] = useState('medium');
     const [colorBlindMode, setColorBlindMode] = useState(false);
     const [reducedMotion, setReducedMotion] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+    const [saving, setSaving] = useState(false);
 
-    // Load saved preferences from localStorage on component mount
+    // Load saved preferences on component mount
     useEffect(() => {
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        const savedFontSize = localStorage.getItem('fontSize') || 'medium';
-        const savedColorBlindMode = localStorage.getItem('colorBlindMode') === 'true';
-        const savedReducedMotion = localStorage.getItem('reducedMotion') === 'true';
+        const loadPreferences = async () => {
+            try {
+                // First check localStorage for immediate UI updates
+                const savedTheme = localStorage.getItem('theme') || 'dark';
+                const savedFontSize = localStorage.getItem('fontSize') || 'medium';
+                const savedColorBlindMode = localStorage.getItem('colorBlindMode') === 'true';
+                const savedReducedMotion = localStorage.getItem('reducedMotion') === 'true';
 
-        setTheme(savedTheme);
-        setFontSize(savedFontSize);
-        setColorBlindMode(savedColorBlindMode);
-        setReducedMotion(savedReducedMotion);
+                setTheme(savedTheme);
+                setFontSize(savedFontSize);
+                setColorBlindMode(savedColorBlindMode);
+                setReducedMotion(savedReducedMotion);
 
-        // Apply theme to document
-        document.documentElement.setAttribute('data-theme', savedTheme);
+                // Apply theme to document
+                document.documentElement.setAttribute('data-theme', savedTheme);
 
-        // Apply font size
-        applyFontSize(savedFontSize);
+                // Apply font size
+                applyFontSize(savedFontSize);
 
-        // Apply accessibility settings
-        if (savedColorBlindMode) {
-            document.documentElement.classList.add('color-blind-mode');
-        }
+                // Apply accessibility settings
+                if (savedColorBlindMode) {
+                    document.documentElement.classList.add('color-blind-mode');
+                }
 
-        if (savedReducedMotion) {
-            document.documentElement.classList.add('reduced-motion');
-        }
+                if (savedReducedMotion) {
+                    document.documentElement.classList.add('reduced-motion');
+                }
+
+                // Then check if user has saved preferences in their profile
+                const user = auth.getCurrentUser();
+                if (user && user.display_preferences) {
+                    try {
+                        const userPrefs = JSON.parse(user.display_preferences);
+
+                        // Only update if values exist and are different from localStorage
+                        if (userPrefs.theme && userPrefs.theme !== savedTheme) {
+                            setTheme(userPrefs.theme);
+                            localStorage.setItem('theme', userPrefs.theme);
+                            document.documentElement.setAttribute('data-theme', userPrefs.theme);
+                        }
+
+                        if (userPrefs.fontSize && userPrefs.fontSize !== savedFontSize) {
+                            setFontSize(userPrefs.fontSize);
+                            localStorage.setItem('fontSize', userPrefs.fontSize);
+                            applyFontSize(userPrefs.fontSize);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing display preferences:', e);
+                    }
+                }
+
+                if (user && user.accessibility_settings) {
+                    try {
+                        const accessibilityPrefs = JSON.parse(user.accessibility_settings);
+
+                        if (typeof accessibilityPrefs.colorBlindMode === 'boolean' &&
+                            accessibilityPrefs.colorBlindMode !== savedColorBlindMode) {
+                            setColorBlindMode(accessibilityPrefs.colorBlindMode);
+                            localStorage.setItem('colorBlindMode', accessibilityPrefs.colorBlindMode.toString());
+
+                            if (accessibilityPrefs.colorBlindMode) {
+                                document.documentElement.classList.add('color-blind-mode');
+                            } else {
+                                document.documentElement.classList.remove('color-blind-mode');
+                            }
+                        }
+
+                        if (typeof accessibilityPrefs.reducedMotion === 'boolean' &&
+                            accessibilityPrefs.reducedMotion !== savedReducedMotion) {
+                            setReducedMotion(accessibilityPrefs.reducedMotion);
+                            localStorage.setItem('reducedMotion', accessibilityPrefs.reducedMotion.toString());
+
+                            if (accessibilityPrefs.reducedMotion) {
+                                document.documentElement.classList.add('reduced-motion');
+                            } else {
+                                document.documentElement.classList.remove('reduced-motion');
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing accessibility settings:', e);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading preferences:', error);
+                setErrorMessage('Failed to load display preferences');
+            }
+        };
+
+        loadPreferences();
     }, []);
 
     // Apply font size to document
@@ -116,16 +188,51 @@ export default function DisplaySettings() {
     };
 
     // Handle form submission
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setSaving(true);
+        setSuccessMessage('');
+        setErrorMessage('');
 
-        // Show success message
-        setSuccessMessage('Display settings saved successfully!');
+        try {
+            const user = auth.getCurrentUser();
+            if (!user) throw new Error('User not authenticated');
 
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-            setSuccessMessage('');
-        }, 3000);
+            // Save display preferences to user record
+            const displayPreferences = {
+                theme,
+                fontSize
+            };
+
+            // Save accessibility settings to user record
+            const accessibilitySettings = {
+                colorBlindMode,
+                reducedMotion
+            };
+
+            // Update user record
+            await update.updateFields(
+                Collections.USERS,
+                user.id,
+                {
+                    display_preferences: JSON.stringify(displayPreferences),
+                    accessibility_settings: JSON.stringify(accessibilitySettings)
+                }
+            );
+
+            // Show success message
+            setSuccessMessage('Display settings saved successfully!');
+
+            // Clear success message after 3 seconds
+            setTimeout(() => {
+                setSuccessMessage('');
+            }, 3000);
+        } catch (error) {
+            console.error('Error saving display settings:', error);
+            setErrorMessage('Failed to save display settings to your profile');
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
@@ -134,6 +241,14 @@ export default function DisplaySettings() {
                 <div className="alert alert-success mb-4">
                     <div>
                         <span>{successMessage}</span>
+                    </div>
+                </div>
+            )}
+
+            {errorMessage && (
+                <div className="alert alert-error mb-4">
+                    <div>
+                        <span>{errorMessage}</span>
                     </div>
                 </div>
             )}
@@ -260,8 +375,12 @@ export default function DisplaySettings() {
                 </div>
 
                 <div className="form-control mt-6">
-                    <button type="submit" className="btn btn-primary">
-                        Save Settings
+                    <button
+                        type="submit"
+                        className={`btn btn-primary ${saving ? 'loading' : ''}`}
+                        disabled={saving}
+                    >
+                        {saving ? 'Saving...' : 'Save Settings'}
                     </button>
                 </div>
             </form>

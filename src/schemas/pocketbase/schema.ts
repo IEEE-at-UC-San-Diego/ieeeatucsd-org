@@ -30,6 +30,10 @@ export interface User extends BaseRecord {
   graduation_year?: number;
   major?: string;
   zelle_information?: string;
+  last_login?: string;
+  notification_preferences?: string; // JSON string of notification settings
+  display_preferences?: string; // JSON string of display settings (theme, font size, etc.)
+  accessibility_settings?: string; // JSON string of accessibility settings (color blind mode, reduced motion)
 }
 
 /**

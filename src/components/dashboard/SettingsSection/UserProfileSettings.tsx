@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { Collections, type User } from '../../../schemas/pocketbase/schema';
+import allMajors from '../../../data/allUCSDMajors.txt?raw';
 
 export default function UserProfileSettings() {
     const auth = Authentication.getInstance();
@@ -18,6 +19,9 @@ export default function UserProfileSettings() {
     });
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+
+    // Parse the majors list from the text file
+    const majorsList = allMajors.split('\n').filter(major => major.trim() !== '');
 
     useEffect(() => {
         const loadUserData = async () => {
@@ -164,13 +168,19 @@ export default function UserProfileSettings() {
                         <label className="label">
                             <span className="label-text">Major</span>
                         </label>
-                        <input
-                            type="text"
+                        <select
                             name="major"
                             value={formData.major}
                             onChange={handleInputChange}
-                            className="input input-bordered w-full"
-                        />
+                            className="select select-bordered w-full"
+                        >
+                            <option value="">Select a major</option>
+                            {majorsList.map((major, index) => (
+                                <option key={index} value={major}>
+                                    {major}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="form-control">

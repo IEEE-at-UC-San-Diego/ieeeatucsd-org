@@ -130,8 +130,8 @@ export default function AccountSecuritySettings() {
                 <div>
                     <h4 className="font-semibold text-lg mb-2">Authentication Options</h4>
                     <p className="text-sm opacity-70 mb-4">
-                        IEEE UCSD uses Single Sign-On (SSO) through UCSD for authentication.
-                        Password management is handled through your UCSD account.
+                        IEEE UCSD uses Single Sign-On (SSO) for authentication.
+                        Password management is handled through your IEEEUCSD account.
                     </p>
 
                     <div className="alert alert-info">
