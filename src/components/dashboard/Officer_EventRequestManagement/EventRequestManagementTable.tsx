@@ -44,6 +44,9 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
     const [sortField, setSortField] = useState<string>('created');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const dataSync = DataSyncService.getInstance();
+    // Add state for update modal
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
+    const [requestToUpdate, setRequestToUpdate] = useState<ExtendedEventRequest | null>(null);
 
     // Refresh event requests
     const refreshEventRequests = async () => {
@@ -130,10 +133,14 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
     };
 
     // Update event request status
-    const updateEventRequestStatus = async (id: string, status: "submitted" | "pending" | "completed" | "declined") => {
+    const updateEventRequestStatus = async (id: string, status: "submitted" | "pending" | "completed" | "declined"): Promise<void> => {
         try {
             const update = Update.getInstance();
             const result = await update.updateField('event_request', id, 'status', status);
+
+            // Find the event request to get its name
+            const eventRequest = eventRequests.find(req => req.id === id);
+            const eventName = eventRequest?.name || 'Event';
 
             // Update local state
             setEventRequests(prev =>
@@ -156,10 +163,16 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
             // Force sync to update IndexedDB
             await dataSync.syncCollection<ExtendedEventRequest>(Collections.EVENT_REQUESTS);
 
-            // Remove success toast for updating status
+            // Show success toast with event name
+            toast.success(`"${eventName}" status updated to ${status}`);
         } catch (error) {
+            // Find the event request to get its name
+            const eventRequest = eventRequests.find(req => req.id === id);
+            const eventName = eventRequest?.name || 'Event';
+
             console.error('Error updating status:', error);
-            toast.error('Failed to update status');
+            toast.error(`Failed to update status for "${eventName}"`);
+            throw error; // Re-throw the error to be caught by the caller
         }
     };
 
@@ -239,6 +252,33 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
     const closeModal = () => {
         setIsModalOpen(false);
         setSelectedRequest(null);
+    };
+
+    // Open update modal
+    const openUpdateModal = (request: ExtendedEventRequest) => {
+        setRequestToUpdate(request);
+        setIsUpdateModalOpen(true);
+    };
+
+    // Close update modal
+    const closeUpdateModal = () => {
+        setIsUpdateModalOpen(false);
+        setRequestToUpdate(null);
+    };
+
+    // Update status and close modal
+    const handleUpdateStatus = async (status: "submitted" | "pending" | "completed" | "declined") => {
+        if (requestToUpdate) {
+            try {
+                await updateEventRequestStatus(requestToUpdate.id, status);
+                // Toast is now shown in updateEventRequestStatus
+                closeUpdateModal();
+            } catch (error) {
+                console.error('Error in handleUpdateStatus:', error);
+                // Toast is now shown in updateEventRequestStatus
+                // Keep modal open so user can try again
+            }
+        }
     };
 
     // Handle sort change
@@ -368,221 +408,287 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
     }
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-6"
-            style={{ minHeight: "500px" }}
-        >
-            {/* Filters and controls */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
-                    <div className="form-control w-full sm:w-auto">
-                        <div className="input-group">
-                            <input
-                                type="text"
-                                placeholder="Search events..."
-                                className="input input-bordered w-full sm:w-64"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                            <button className="btn btn-square">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <select
-                        className="select select-bordered w-full sm:w-auto"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                    >
-                        <option value="all">All Statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="completed">Completed</option>
-                        <option value="declined">Declined</option>
-                    </select>
-                </div>
-                <div className="flex items-center gap-3 w-full lg:w-auto justify-between sm:justify-end">
-                    <span className="text-sm text-gray-400">
-                        {filteredRequests.length} {filteredRequests.length === 1 ? 'request' : 'requests'} found
-                    </span>
-                    <button
-                        className="btn btn-outline btn-sm gap-2"
-                        onClick={refreshEventRequests}
-                        disabled={isRefreshing}
-                    >
-                        {isRefreshing ? (
-                            <>
-                                <span className="loading loading-spinner loading-xs"></span>
-                                Refreshing...
-                            </>
-                        ) : (
-                            <>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Refresh
-                            </>
-                        )}
-                    </button>
-                </div>
-            </div>
-
-            {/* Event requests table */}
-            <div
-                className="rounded-xl shadow-sm overflow-x-auto"
-                style={{
-                    maxHeight: "unset",
-                    height: "auto"
-                }}
+        <>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-6"
+                style={{ minHeight: "500px" }}
             >
-                <table className="table table-zebra w-full">
-                    <thead className="bg-base-300/50">
-                        <tr>
-                            <th
-                                className="cursor-pointer hover:bg-base-300"
-                                onClick={() => handleSortChange('name')}
-                            >
-                                <div className="flex items-center gap-1">
-                                    Event Name
-                                    {sortField === 'name' && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
-                                        </svg>
-                                    )}
-                                </div>
-                            </th>
-                            <th
-                                className="cursor-pointer hover:bg-base-300 hidden md:table-cell"
-                                onClick={() => handleSortChange('start_date_time')}
-                            >
-                                <div className="flex items-center gap-1">
-                                    Date
-                                    {sortField === 'start_date_time' && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
-                                        </svg>
-                                    )}
-                                </div>
-                            </th>
-                            <th
-                                className="cursor-pointer hover:bg-base-300"
-                                onClick={() => handleSortChange('requested_user')}
-                            >
-                                <div className="flex items-center gap-1">
-                                    Requested By
-                                    {sortField === 'requested_user' && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
-                                        </svg>
-                                    )}
-                                </div>
-                            </th>
-                            <th className="hidden lg:table-cell">PR Materials</th>
-                            <th className="hidden lg:table-cell">AS Funding</th>
-                            <th
-                                className="cursor-pointer hover:bg-base-300 hidden md:table-cell"
-                                onClick={() => handleSortChange('created')}
-                            >
-                                <div className="flex items-center gap-1">
-                                    Submitted
-                                    {sortField === 'created' && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
-                                        </svg>
-                                    )}
-                                </div>
-                            </th>
-                            <th
-                                className="cursor-pointer hover:bg-base-300"
-                                onClick={() => handleSortChange('status')}
-                            >
-                                <div className="flex items-center gap-1">
-                                    Status
-                                    {sortField === 'status' && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
-                                        </svg>
-                                    )}
-                                </div>
-                            </th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredRequests.map((request) => (
-                            <tr key={request.id} className="hover">
-                                <td className="font-medium">{request.name}</td>
-                                <td className="hidden md:table-cell">{formatDate(request.start_date_time)}</td>
-                                <td>
-                                    <div className="flex flex-col">
-                                        <span>{request.expand?.requested_user?.name || 'Unknown'}</span>
-                                        <span className="text-xs text-gray-400">{request.expand?.requested_user?.email}</span>
-                                    </div>
-                                </td>
-                                <td className="hidden lg:table-cell">
-                                    {request.flyers_needed ? (
-                                        <span className="badge badge-success badge-sm">Yes</span>
-                                    ) : (
-                                        <span className="badge badge-ghost badge-sm">No</span>
-                                    )}
-                                </td>
-                                <td className="hidden lg:table-cell">
-                                    {request.as_funding_required ? (
-                                        <span className="badge badge-success badge-sm">Yes</span>
-                                    ) : (
-                                        <span className="badge badge-ghost badge-sm">No</span>
-                                    )}
-                                </td>
-                                <td className="hidden md:table-cell">{formatDate(request.created)}</td>
-                                <td>
-                                    <span className={`badge ${getStatusBadge(request.status)}`}>
-                                        {request.status || 'Pending'}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div className="flex items-center gap-2">
-                                        <div className="dropdown dropdown-end">
-                                            <label tabIndex={0} className="btn btn-sm btn-outline">
-                                                Update
-                                            </label>
-                                            <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-52">
-                                                <li><a onClick={() => updateEventRequestStatus(request.id, "pending")}>Pending</a></li>
-                                                <li><a onClick={() => updateEventRequestStatus(request.id, "completed")}>Completed</a></li>
-                                                <li><a onClick={() => updateEventRequestStatus(request.id, "declined")}>Declined</a></li>
-                                            </ul>
-                                        </div>
-                                        <button
-                                            className="btn btn-sm btn-ghost"
-                                            onClick={() => openDetailModal(request)}
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                {/* Filters and controls */}
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
+                        <div className="form-control w-full sm:w-auto">
+                            <div className="input-group">
+                                <input
+                                    type="text"
+                                    placeholder="Search events..."
+                                    className="input input-bordered w-full sm:w-64"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                                <button className="btn btn-square">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <select
+                            className="select select-bordered w-full sm:w-auto"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                        >
+                            <option value="all">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="declined">Declined</option>
+                        </select>
+                    </div>
+                    <div className="flex items-center gap-3 w-full lg:w-auto justify-between sm:justify-end">
+                        <span className="text-sm text-gray-400">
+                            {filteredRequests.length} {filteredRequests.length === 1 ? 'request' : 'requests'} found
+                        </span>
+                        <button
+                            className="btn btn-outline btn-sm gap-2"
+                            onClick={refreshEventRequests}
+                            disabled={isRefreshing}
+                        >
+                            {isRefreshing ? (
+                                <>
+                                    <span className="loading loading-spinner loading-xs"></span>
+                                    Refreshing...
+                                </>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    Refresh
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
 
-            {/* Event request details modal */}
-            <AnimatePresence>
-                {isModalOpen && selectedRequest && (
+                {/* Event requests table */}
+                <div
+                    className="rounded-xl shadow-sm overflow-x-auto"
+                    style={{
+                        maxHeight: "unset",
+                        height: "auto"
+                    }}
+                >
+                    <table className="table table-zebra w-full">
+                        <thead className="bg-base-300/50">
+                            <tr>
+                                <th
+                                    className="cursor-pointer hover:bg-base-300"
+                                    onClick={() => handleSortChange('name')}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        Event Name
+                                        {sortField === 'name' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                                            </svg>
+                                        )}
+                                    </div>
+                                </th>
+                                <th
+                                    className="cursor-pointer hover:bg-base-300 hidden md:table-cell"
+                                    onClick={() => handleSortChange('start_date_time')}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        Date
+                                        {sortField === 'start_date_time' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                                            </svg>
+                                        )}
+                                    </div>
+                                </th>
+                                <th
+                                    className="cursor-pointer hover:bg-base-300"
+                                    onClick={() => handleSortChange('requested_user')}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        Requested By
+                                        {sortField === 'requested_user' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                                            </svg>
+                                        )}
+                                    </div>
+                                </th>
+                                <th className="hidden lg:table-cell">PR Materials</th>
+                                <th className="hidden lg:table-cell">AS Funding</th>
+                                <th
+                                    className="cursor-pointer hover:bg-base-300 hidden md:table-cell"
+                                    onClick={() => handleSortChange('created')}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        Submitted
+                                        {sortField === 'created' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                                            </svg>
+                                        )}
+                                    </div>
+                                </th>
+                                <th
+                                    className="cursor-pointer hover:bg-base-300"
+                                    onClick={() => handleSortChange('status')}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        Status
+                                        {sortField === 'status' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                                            </svg>
+                                        )}
+                                    </div>
+                                </th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredRequests.map((request) => (
+                                <tr key={request.id} className="hover">
+                                    <td className="font-medium">{request.name}</td>
+                                    <td className="hidden md:table-cell">{formatDate(request.start_date_time)}</td>
+                                    <td>
+                                        <div className="flex flex-col">
+                                            <span>{request.expand?.requested_user?.name || 'Unknown'}</span>
+                                            <span className="text-xs text-gray-400">{request.expand?.requested_user?.email}</span>
+                                        </div>
+                                    </td>
+                                    <td className="hidden lg:table-cell">
+                                        {request.flyers_needed ? (
+                                            <span className="badge badge-success badge-sm">Yes</span>
+                                        ) : (
+                                            <span className="badge badge-ghost badge-sm">No</span>
+                                        )}
+                                    </td>
+                                    <td className="hidden lg:table-cell">
+                                        {request.as_funding_required ? (
+                                            <span className="badge badge-success badge-sm">Yes</span>
+                                        ) : (
+                                            <span className="badge badge-ghost badge-sm">No</span>
+                                        )}
+                                    </td>
+                                    <td className="hidden md:table-cell">{formatDate(request.created)}</td>
+                                    <td>
+                                        <span className={`badge ${getStatusBadge(request.status)}`}>
+                                            {request.status || 'Pending'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                className="btn btn-sm btn-outline"
+                                                onClick={() => openUpdateModal(request)}
+                                            >
+                                                Update
+                                            </button>
+                                            <button
+                                                className="btn btn-sm btn-ghost"
+                                                onClick={() => openDetailModal(request)}
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </motion.div>
+
+            {/* Event request details modal - Now outside the main component div */}
+            {isModalOpen && selectedRequest && (
+                <AnimatePresence>
                     <EventRequestDetails
                         request={selectedRequest}
                         onClose={closeModal}
                         onStatusChange={updateEventRequestStatus}
                         onFeedbackChange={addFeedback}
                     />
-                )}
-            </AnimatePresence>
-        </motion.div>
+                </AnimatePresence>
+            )}
+
+            {/* Update status modal */}
+            {isUpdateModalOpen && requestToUpdate && (
+                <AnimatePresence>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ duration: 0.2 }}
+                            className="bg-base-200 rounded-lg shadow-xl w-full max-w-md overflow-hidden flex flex-col"
+                        >
+                            {/* Header */}
+                            <div className="bg-base-300 p-4 flex justify-between items-center">
+                                <h3 className="text-xl font-bold">Update Status</h3>
+                                <button
+                                    className="btn btn-sm btn-circle"
+                                    onClick={closeUpdateModal}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6">
+                                <p className="mb-4">
+                                    Update status for event: <span className="font-semibold">{requestToUpdate.name}</span>
+                                </p>
+                                <div className="flex flex-col gap-3">
+                                    <button
+                                        className="btn btn-outline w-full justify-start"
+                                        onClick={() => handleUpdateStatus("pending")}
+                                    >
+                                        <span className="badge badge-warning mr-2">Pending</span>
+                                        Mark as Pending
+                                    </button>
+                                    <button
+                                        className="btn btn-outline w-full justify-start"
+                                        onClick={() => handleUpdateStatus("completed")}
+                                    >
+                                        <span className="badge badge-success mr-2">Completed</span>
+                                        Mark as Completed
+                                    </button>
+                                    <button
+                                        className="btn btn-outline w-full justify-start"
+                                        onClick={() => handleUpdateStatus("declined")}
+                                    >
+                                        <span className="badge badge-error mr-2">Declined</span>
+                                        Mark as Declined
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-4 border-t border-base-300 flex justify-end">
+                                <button
+                                    className="btn btn-ghost"
+                                    onClick={closeUpdateModal}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                </AnimatePresence>
+            )}
+        </>
     );
 };
 
