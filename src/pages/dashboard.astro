@@ -505,23 +505,30 @@ console.log("Available components:", Object.keys(components)); // Debug log
                 if (!user) return;
 
                 try {
+                    // Use fields from the User interface in the schema
                     const extendedUser = await get.getOne("users", user.id, {
                         fields: [
                             "id",
                             "name",
-                            "member_type",
-                            "officer_status",
-                            "expand.member_type",
+                            "email",
+                            "verified",
+                            "avatar",
+                            "pid",
+                            "member_id",
+                            "graduation_year",
+                            "major",
                         ],
                     });
 
                     const displayName = extendedUser.name || "Unknown User";
-                    const displayRole = extendedUser.member_type || "Member";
+                    // Default role is Member
+                    let displayRole = "Member";
 
                     // Map the officer type from the database to our OfficerStatus type
                     let officerStatus: OfficerStatus = "";
 
                     // Get the officer record for this user if it exists
+                    // Use fields from the Officer interface in the schema
                     const officerRecords = await get.getList(
                         "officers",
                         1,
@@ -529,12 +536,18 @@ console.log("Available components:", Object.keys(components)); // Debug log
                         `user="${user.id}"`,
                         "",
                         {
-                            fields: ["id", "type"],
+                            fields: ["id", "type", "role"],
                         }
                     );
 
                     if (officerRecords && officerRecords.items.length > 0) {
                         const officerType = officerRecords.items[0].type;
+                        const officerRole = officerRecords.items[0].role;
+
+                        // Use the role field from the officer's collection
+                        if (officerRole) {
+                            displayRole = officerRole;
+                        }
 
                         // Map the officer type to our OfficerStatus
                         switch (officerType) {
@@ -554,12 +567,27 @@ console.log("Available components:", Object.keys(components)); // Debug log
                                 officerStatus = "past";
                                 break;
                             default:
-                                officerStatus = "";
+                                officerStatus = "none";
                         }
-                    } else if (extendedUser.member_type === "Sponsor") {
-                        officerStatus = "sponsor";
                     } else {
-                        officerStatus = "none";
+                        // Check if user is a sponsor by querying the sponsors collection
+                        const sponsorRecords = await get.getList(
+                            "sponsors",
+                            1,
+                            1,
+                            `user="${user.id}"`,
+                            "",
+                            {
+                                fields: ["id", "company"],
+                            }
+                        );
+
+                        if (sponsorRecords && sponsorRecords.items.length > 0) {
+                            officerStatus = "sponsor";
+                            displayRole = "Sponsor";
+                        } else {
+                            officerStatus = "none";
+                        }
                     }
 
                     const initials = (extendedUser.name || "U")
@@ -696,12 +724,14 @@ console.log("Available components:", Object.keys(components)); // Debug log
                             `user="${user.id}"`,
                             "",
                             {
-                                fields: ["id", "type"],
+                                fields: ["id", "type", "role"],
                             }
                         );
 
                         if (officerRecords && officerRecords.items.length > 0) {
                             const officerType = officerRecords.items[0].type;
+                            // We can also get the role here if needed for display elsewhere
+                            const officerRole = officerRecords.items[0].role;
 
                             // Map the officer type to our OfficerStatus
                             switch (officerType) {
@@ -724,16 +754,25 @@ console.log("Available components:", Object.keys(components)); // Debug log
                                     officerStatus = "none";
                             }
                         } else {
-                            const extendedUser = await get.getOne(
-                                "users",
-                                user.id,
+                            // Check if user is a sponsor by querying the sponsors collection
+                            const sponsorRecords = await get.getList(
+                                "sponsors",
+                                1,
+                                1,
+                                `user="${user.id}"`,
+                                "",
                                 {
-                                    fields: ["member_type"],
+                                    fields: ["id", "company"],
                                 }
                             );
 
-                            if (extendedUser.member_type === "Sponsor") {
+                            if (
+                                sponsorRecords &&
+                                sponsorRecords.items.length > 0
+                            ) {
                                 officerStatus = "sponsor";
+                            } else {
+                                officerStatus = "none";
                             }
                         }
                     } catch (error) {
