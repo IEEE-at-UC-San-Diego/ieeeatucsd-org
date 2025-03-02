@@ -1,31 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { DataSyncService } from "../../../scripts/database/DataSyncService";
 import { Collections } from "../../../schemas/pocketbase/schema";
 import debounce from 'lodash/debounce';
 import type { Log } from "../../../schemas/pocketbase";
 
-interface PaginatedResponse {
-    page: number;
-    perPage: number;
-    totalItems: number;
-    totalPages: number;
-    items: Log[];
-}
-
-interface CacheEntry {
-    timestamp: number;
-    data: Log[];
-    totalItems: number;
-    totalPages: number;
-    lastFetched: string; // ISO date string to track when we last fetched all logs
-}
-
 const LOGS_PER_PAGE = 5;
-const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
-const CACHE_KEY_PREFIX = 'logs_cache_';
-const BATCH_SIZE = 100; // Number of logs to fetch per batch
 
 export default function ShowProfileLogs() {
     const [logs, setLogs] = useState<Log[]>([]);
@@ -35,62 +15,10 @@ export default function ShowProfileLogs() {
     const [totalPages, setTotalPages] = useState(1);
     const [totalLogs, setTotalLogs] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
-    const [cachedLogs, setCachedLogs] = useState<Log[]>([]);
+    const [allLogs, setAllLogs] = useState<Log[]>([]);
     const [isFetchingAll, setIsFetchingAll] = useState(false);
 
-    const getCacheKey = (userId: string) => `${CACHE_KEY_PREFIX}${userId}`;
-
-    const saveToCache = (userId: string, data: CacheEntry) => {
-        try {
-            localStorage.setItem(getCacheKey(userId), JSON.stringify(data));
-        } catch (error) {
-            console.warn('Failed to save to cache:', error);
-        }
-    };
-
-    const getFromCache = (userId: string): CacheEntry | null => {
-        try {
-            const cached = localStorage.getItem(getCacheKey(userId));
-            if (!cached) return null;
-
-            const parsedCache = JSON.parse(cached) as CacheEntry;
-            if (Date.now() - parsedCache.timestamp > CACHE_EXPIRY) {
-                localStorage.removeItem(getCacheKey(userId));
-                return null;
-            }
-
-            return parsedCache;
-        } catch (error) {
-            console.warn('Failed to read from cache:', error);
-            return null;
-        }
-    };
-
-    const fetchAllLogs = async (userId: string): Promise<Log[]> => {
-        const dataSync = DataSyncService.getInstance();
-        let allLogs: Log[] = [];
-        let page = 1;
-        let hasMore = true;
-
-        // First, sync all logs for this user
-        await dataSync.syncCollection(
-            Collections.LOGS,
-            `user_id = "${userId}"`,
-            "-created"
-        );
-
-        // Then get all logs from IndexedDB
-        allLogs = await dataSync.getData<Log>(
-            Collections.LOGS,
-            false, // Don't force sync again
-            `user_id = "${userId}"`,
-            "-created"
-        );
-
-        return allLogs;
-    };
-
-    const fetchLogs = async (page: number, skipCache = false) => {
+    const fetchLogs = async (skipCache = false) => {
         setLoading(true);
         setError(null);
 
@@ -105,34 +33,29 @@ export default function ShowProfileLogs() {
         }
 
         try {
-            // Check cache first if not skipping
-            if (!skipCache) {
-                const cached = getFromCache(userId);
-                if (cached) {
-                    setCachedLogs(cached.data);
-                    setTotalPages(Math.ceil(cached.data.length / LOGS_PER_PAGE));
-                    setTotalLogs(cached.data.length);
-                    setLoading(false);
-                    return;
-                }
-            }
-
             setIsFetchingAll(true);
-            const allLogs = await fetchAllLogs(userId);
 
-            // Save to cache
-            saveToCache(userId, {
-                timestamp: Date.now(),
-                data: allLogs,
-                totalItems: allLogs.length,
-                totalPages: Math.ceil(allLogs.length / LOGS_PER_PAGE),
-                lastFetched: new Date().toISOString()
-            });
+            // Use DataSyncService to fetch logs
+            const dataSync = DataSyncService.getInstance();
 
-            setCachedLogs(allLogs);
-            setCurrentPage(page);
-            setTotalPages(Math.ceil(allLogs.length / LOGS_PER_PAGE));
-            setTotalLogs(allLogs.length);
+            // First sync logs for this user
+            await dataSync.syncCollection(
+                Collections.LOGS,
+                `user_id = "${userId}"`,
+                "-created"
+            );
+
+            // Then get all logs from IndexedDB
+            const fetchedLogs = await dataSync.getData<Log>(
+                Collections.LOGS,
+                false, // Don't force sync again
+                `user_id = "${userId}"`,
+                "-created"
+            );
+
+            setAllLogs(fetchedLogs);
+            setTotalPages(Math.ceil(fetchedLogs.length / LOGS_PER_PAGE));
+            setTotalLogs(fetchedLogs.length);
         } catch (error) {
             console.error("Failed to fetch logs:", error);
             setError("Error loading activity");
@@ -148,17 +71,17 @@ export default function ShowProfileLogs() {
             // When not searching, return only the current page of logs
             const startIndex = (currentPage - 1) * LOGS_PER_PAGE;
             const endIndex = startIndex + LOGS_PER_PAGE;
-            return cachedLogs.slice(startIndex, endIndex);
+            return allLogs.slice(startIndex, endIndex);
         }
 
         const query = searchQuery.toLowerCase();
-        return cachedLogs.filter(log => {
+        return allLogs.filter(log => {
             return (
-                log.message.toLowerCase().includes(query) ||
-                new Date(log.created).toLocaleString().toLowerCase().includes(query)
+                log.message?.toLowerCase().includes(query) ||
+                (log.created && new Date(log.created).toLocaleString().toLowerCase().includes(query))
             );
         });
-    }, [searchQuery, cachedLogs, currentPage]);
+    }, [searchQuery, allLogs, currentPage]);
 
     // Update displayed logs whenever filtered results change
     useEffect(() => {
@@ -169,6 +92,10 @@ export default function ShowProfileLogs() {
     const debouncedSearch = useCallback(
         debounce((query: string) => {
             setSearchQuery(query);
+            // Reset to first page when searching
+            if (query.trim()) {
+                setCurrentPage(1);
+            }
         }, 300),
         []
     );
@@ -190,20 +117,20 @@ export default function ShowProfileLogs() {
     };
 
     const handleRefresh = () => {
-        fetchLogs(currentPage, true);
+        fetchLogs(true);
     };
 
     useEffect(() => {
-        fetchLogs(1);
+        fetchLogs();
     }, []);
 
-    if (loading && !cachedLogs.length) {
+    if (loading && !allLogs.length) {
         return (
             <p className="text-base-content/70 flex items-center gap-2">
                 <svg className="h-5 w-5 opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
                 </svg>
-                {isFetchingAll ? 'Fetching all activity...' : 'Loading activity...'}
+                {isFetchingAll ? 'Fetching your activity...' : 'Loading activity...'}
             </p>
         );
     }
@@ -219,7 +146,7 @@ export default function ShowProfileLogs() {
         );
     }
 
-    if (logs.length === 0 && !searchQuery) {
+    if (logs.length === 0 && !searchQuery && !loading) {
         return (
             <p className="text-base-content/70 flex items-center gap-2">
                 <svg className="h-5 w-5 opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -256,7 +183,7 @@ export default function ShowProfileLogs() {
 
             {isFetchingAll && (
                 <div className="mb-4">
-                    <p className="text-sm opacity-70">Fetching all logs, please wait...</p>
+                    <p className="text-sm opacity-70">Fetching all activity, please wait...</p>
                 </div>
             )}
 
@@ -296,11 +223,11 @@ export default function ShowProfileLogs() {
             </div>
 
             {/* Pagination Controls */}
-            {!searchQuery && (
+            {!searchQuery && totalLogs > LOGS_PER_PAGE && (
                 <div className="flex justify-between items-center mt-6 pt-4 border-t border-base-200">
                     <div className="flex items-center gap-2">
                         <span className="text-sm opacity-70">
-                            Showing {(currentPage - 1) * LOGS_PER_PAGE + 1}-{Math.min(currentPage * LOGS_PER_PAGE, totalLogs)} of {totalLogs} results
+                            Showing {totalLogs ? (currentPage - 1) * LOGS_PER_PAGE + 1 : 0}-{Math.min(currentPage * LOGS_PER_PAGE, totalLogs)} of {totalLogs} results
                         </span>
                     </div>
                     <div className="flex gap-2">

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { DataSyncService } from "../../../scripts/database/DataSyncService";
 import { Collections } from "../../../schemas/pocketbase/schema";
@@ -8,32 +7,35 @@ import type { Event, Log, User } from "../../../schemas/pocketbase";
 // Extended User interface with points property
 interface ExtendedUser extends User {
     points?: number;
+    member_type?: string;
 }
 
 export function Stats() {
     const [eventsAttended, setEventsAttended] = useState(0);
     const [loyaltyPoints, setLoyaltyPoints] = useState(0);
-    const [activityLevel, setActivityLevel] = useState("Low");
-    const [activityDesc, setActivityDesc] = useState("New Member");
     const [pointsChange, setPointsChange] = useState("No activity");
+    const [membershipStatus, setMembershipStatus] = useState("Member");
+    const [memberSince, setMemberSince] = useState<string | null>(null);
+    const [upcomingEvents, setUpcomingEvents] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
                 setIsLoading(true);
-                const get = Get.getInstance();
                 const auth = Authentication.getInstance();
                 const dataSync = DataSyncService.getInstance();
                 const userId = auth.getCurrentUser()?.id;
 
                 if (!userId) return;
 
-                // Get current quarter dates
+                // Get current date
                 const now = new Date();
-                const month = now.getMonth(); // 0-11
 
+                // Get current quarter dates for points calculation
+                const month = now.getMonth(); // 0-11
                 let quarterStart = new Date();
+
                 // Fall: Sept-Dec
                 if (month >= 8 && month <= 11) {
                     quarterStart = new Date(now.getFullYear(), 8, 1); // Sept 1
@@ -58,7 +60,17 @@ export function Stats() {
                 const user = await dataSync.getItem<ExtendedUser>(Collections.USERS, userId);
                 const totalPoints = user?.points || 0;
 
-                // Sync logs for the current quarter
+                // Set membership status and date
+                setMembershipStatus(user?.member_type || "Member");
+                if (user?.created) {
+                    const createdDate = new Date(user.created);
+                    setMemberSince(createdDate.toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'long'
+                    }));
+                }
+
+                // Sync logs for the current quarter to calculate points change
                 await dataSync.syncCollection(
                     Collections.LOGS,
                     `user_id = "${userId}" && created >= "${quarterStart.toISOString()}" && type = "update" && part = "event check-in"`,
@@ -75,12 +87,15 @@ export function Stats() {
 
                 // Calculate quarterly points
                 const quarterlyPoints = logs.reduce((total, log) => {
-                    const pointsMatch = log.message.match(/Awarded (\d+) points/);
+                    const pointsMatch = log.message?.match(/Awarded (\d+) points/);
                     if (pointsMatch) {
                         return total + parseInt(pointsMatch[1]);
                     }
                     return total;
                 }, 0);
+
+                // Set points change message
+                setPointsChange(quarterlyPoints > 0 ? `+${quarterlyPoints} this quarter` : "No activity");
 
                 // Sync events collection
                 await dataSync.syncCollection(Collections.EVENTS);
@@ -88,28 +103,22 @@ export function Stats() {
                 // Get events from IndexedDB
                 const events = await dataSync.getData<Event>(Collections.EVENTS);
 
+                // Count attended events
                 const attendedEvents = events.filter(event =>
                     event.attendees?.some(attendee => attendee.user_id === userId)
                 );
+                setEventsAttended(attendedEvents.length);
 
-                const numEventsAttended = attendedEvents.length;
-                setEventsAttended(numEventsAttended);
+                // Count upcoming events (events that haven't ended yet)
+                const upcoming = events.filter(event => {
+                    if (!event.end_date) return false;
+                    const endDate = new Date(event.end_date);
+                    return endDate > now && event.published;
+                });
+                setUpcomingEvents(upcoming.length);
+
+                // Set loyalty points
                 setLoyaltyPoints(totalPoints);
-
-                // Set points change message with quarterly points
-                setPointsChange(quarterlyPoints > 0 ? `+${quarterlyPoints} this quarter` : "No activity");
-
-                // Determine activity level
-                if (numEventsAttended >= 10) {
-                    setActivityLevel("High");
-                    setActivityDesc("Very Active");
-                } else if (numEventsAttended >= 5) {
-                    setActivityLevel("Medium");
-                    setActivityDesc("Active Member");
-                } else if (numEventsAttended >= 1) {
-                    setActivityLevel("Low");
-                    setActivityDesc("Getting Started");
-                }
             } catch (error) {
                 console.error("Error fetching stats:", error);
             } finally {
@@ -160,10 +169,10 @@ export function Stats() {
             </div>
             <div className="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-accent transition-all duration-300 hover:-translate-y-1 transform">
                 <div className="stat">
-                    <div className="stat-title font-medium opacity-80">Activity Level</div>
-                    <div className="stat-value text-accent">{activityLevel}</div>
+                    <div className="stat-title font-medium opacity-80">Upcoming Events</div>
+                    <div className="stat-value text-accent">{upcomingEvents}</div>
                     <div className="stat-desc flex items-center gap-2 mt-1">
-                        <div className="badge badge-accent badge-sm">{activityDesc}</div>
+                        <div className="badge badge-accent badge-sm">Available to attend</div>
                     </div>
                 </div>
             </div>
