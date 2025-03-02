@@ -22,7 +22,7 @@ export default function ToastProvider() {
                     style: {
                         background: 'red',
                     },
-                    duration: 5000,
+                    duration: 2000,
                 },
             }}
         />
