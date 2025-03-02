@@ -139,6 +139,9 @@ export class AuthSyncService {
         }),
       );
 
+      // SECURITY FIX: Purge any event codes that might have been synced
+      await this.dataSync.purgeEventCodes();
+
       // Verify sync was successful
       const syncVerification = await this.verifySyncSuccess();
 

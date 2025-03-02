@@ -180,6 +180,12 @@ export class DataSyncService {
         items.map(async (item) => {
           const existingItem = existingItemsMap.get(item.id);
 
+          // SECURITY FIX: Remove event_code from events before storing in IndexedDB
+          if (collection === Collections.EVENTS && 'event_code' in item) {
+            const { event_code, ...rest } = item as any;
+            item = rest as T;
+          }
+
           if (existingItem) {
             // Check for conflicts (local changes vs server changes)
             const resolvedItem = await this.resolveConflict(
@@ -217,6 +223,12 @@ export class DataSyncService {
     localItem: T,
     serverItem: T,
   ): Promise<T> {
+    // SECURITY FIX: Remove event_code from events before resolving conflicts
+    if (collection === Collections.EVENTS && 'event_code' in serverItem) {
+      const { event_code, ...rest } = serverItem as any;
+      serverItem = rest as T;
+    }
+
     // Check if there are pending offline changes for this item
     const pendingChanges = await this.getPendingChangesForRecord(
       collection,
@@ -457,6 +469,17 @@ export class DataSyncService {
       });
     }
 
+    // SECURITY FIX: Remove event_code from events before returning them
+    if (collection === Collections.EVENTS) {
+      data = data.map((item: any) => {
+        if ('event_code' in item) {
+          const { event_code, ...rest } = item;
+          return rest;
+        }
+        return item;
+      });
+    }
+
     return data as T[];
   }
 
@@ -484,8 +507,15 @@ export class DataSyncService {
       try {
         const pbItem = await this.get.getOne<T>(collection, id);
         if (pbItem) {
-          await table.put(pbItem);
-          item = pbItem;
+          // SECURITY FIX: Remove event_code from events before storing in IndexedDB
+          if (collection === Collections.EVENTS && 'event_code' in pbItem) {
+            const { event_code, ...rest } = pbItem as any;
+            await table.put(rest as T);
+            item = rest as T;
+          } else {
+            await table.put(pbItem);
+            item = pbItem;
+          }
         }
       } catch (error) {
         console.error(`Error fetching ${collection} item ${id}:`, error);
@@ -586,6 +616,44 @@ export class DataSyncService {
       default:
         console.error(`Unknown collection: ${collection}`);
         return null;
+    }
+  }
+
+  /**
+   * Purge event_code fields from events in IndexedDB for security
+   * This should be called on login to ensure no event codes are stored
+   */
+  public async purgeEventCodes(): Promise<void> {
+    if (!isBrowser) return;
+
+    try {
+      const db = this.dexieService.getDB();
+      const table = this.getTableForCollection(Collections.EVENTS);
+      
+      if (!table) {
+        console.error('Events table not found');
+        return;
+      }
+      
+      // Get all events
+      const events = await table.toArray();
+      
+      // Remove event_code from each event
+      const updatedEvents = events.map(event => {
+        if ('event_code' in event) {
+          const { event_code, ...rest } = event;
+          return rest;
+        }
+        return event;
+      });
+      
+      // Clear the table and add the updated events
+      await table.clear();
+      await table.bulkAdd(updatedEvents);
+      
+      console.log('Successfully purged event codes from IndexedDB');
+    } catch (error) {
+      console.error('Error purging event codes:', error);
     }
   }
 }
