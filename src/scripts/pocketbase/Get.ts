@@ -137,17 +137,17 @@ export class Get {
 
     try {
       const pb = this.auth.getPocketBase();
-      
+
       // Handle expand parameter
       let expandString: string | undefined;
       if (options?.expand) {
         if (Array.isArray(options.expand)) {
           expandString = options.expand.join(",");
-        } else if (typeof options.expand === 'string') {
+        } else if (typeof options.expand === "string") {
           expandString = options.expand;
         }
       }
-      
+
       const requestOptions = {
         ...(options?.fields && { fields: options.fields.join(",") }),
         ...(expandString && { expand: expandString }),
@@ -190,17 +190,17 @@ export class Get {
       const filter = recordIds.map((id) => `id="${id}"`).join(" || ");
 
       const pb = this.auth.getPocketBase();
-      
+
       // Handle expand parameter
       let expandString: string | undefined;
       if (options?.expand) {
         if (Array.isArray(options.expand)) {
           expandString = options.expand.join(",");
-        } else if (typeof options.expand === 'string') {
+        } else if (typeof options.expand === "string") {
           expandString = options.expand;
         }
       }
-      
+
       const requestOptions = {
         filter,
         ...(options?.fields && { fields: options.fields.join(",") }),
@@ -300,17 +300,17 @@ export class Get {
     // but the token is still valid for API requests
     try {
       const pb = this.auth.getPocketBase();
-      
+
       // Handle expand parameter
       let expandString: string | undefined;
       if (options?.expand) {
         if (Array.isArray(options.expand)) {
           expandString = options.expand.join(",");
-        } else if (typeof options.expand === 'string') {
+        } else if (typeof options.expand === "string") {
           expandString = options.expand;
         }
       }
-      
+
       const requestOptions = {
         ...(filter && { filter }),
         ...(sort && { sort }),

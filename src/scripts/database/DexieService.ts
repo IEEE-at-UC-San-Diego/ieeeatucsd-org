@@ -1,21 +1,25 @@
-import Dexie from 'dexie';
-import type { 
-  User, 
-  Event, 
-  EventRequest, 
-  Log, 
-  Officer, 
-  Reimbursement, 
-  Receipt, 
-  Sponsor 
-} from '../../schemas/pocketbase/schema';
+import Dexie from "dexie";
+import type {
+  User,
+  Event,
+  EventRequest,
+  Log,
+  Officer,
+  Reimbursement,
+  Receipt,
+  Sponsor,
+} from "../../schemas/pocketbase/schema";
+
+// Check if we're in a browser environment
+const isBrowser =
+  typeof window !== "undefined" && typeof window.indexedDB !== "undefined";
 
 // Interface for tracking offline changes
 interface OfflineChange {
   id: string;
   collection: string;
   recordId: string;
-  operation: 'create' | 'update' | 'delete';
+  operation: "create" | "update" | "delete";
   data?: any;
   timestamp: number;
   synced: boolean;
@@ -32,59 +36,84 @@ export class DashboardDatabase extends Dexie {
   receipts!: Dexie.Table<Receipt, string>;
   sponsors!: Dexie.Table<Sponsor, string>;
   offlineChanges!: Dexie.Table<OfflineChange, string>;
-  
+
   // Store last sync timestamps
-  syncInfo!: Dexie.Table<{id: string, collection: string, lastSync: number}, string>;
+  syncInfo!: Dexie.Table<
+    { id: string; collection: string; lastSync: number },
+    string
+  >;
 
   constructor() {
-    super('IEEEDashboardDB');
-    
+    super("IEEEDashboardDB");
+
     this.version(1).stores({
-      users: 'id, email, name',
-      events: 'id, event_name, event_code, start_date, end_date, published',
-      eventRequests: 'id, name, status, requested_user, created, updated',
-      logs: 'id, user, type, created',
-      officers: 'id, user, role, type',
-      reimbursements: 'id, title, status, submitted_by, created',
-      receipts: 'id, created_by, date',
-      sponsors: 'id, user, company',
-      syncInfo: 'id, collection, lastSync'
+      users: "id, email, name",
+      events: "id, event_name, event_code, start_date, end_date, published",
+      eventRequests: "id, name, status, requested_user, created, updated",
+      logs: "id, user, type, created",
+      officers: "id, user, role, type",
+      reimbursements: "id, title, status, submitted_by, created",
+      receipts: "id, created_by, date",
+      sponsors: "id, user, company",
+      syncInfo: "id, collection, lastSync",
     });
 
     // Add version 2 with offlineChanges table
     this.version(2).stores({
-      offlineChanges: 'id, collection, recordId, operation, timestamp, synced, syncAttempts'
+      offlineChanges:
+        "id, collection, recordId, operation, timestamp, synced, syncAttempts",
     });
   }
 
   // Initialize the database with default values
   async initialize() {
     const collections = [
-      'users', 'events', 'event_request', 'logs', 
-      'officers', 'reimbursement', 'receipts', 'sponsors'
+      "users",
+      "events",
+      "event_request",
+      "logs",
+      "officers",
+      "reimbursement",
+      "receipts",
+      "sponsors",
     ];
-    
+
     for (const collection of collections) {
       const exists = await this.syncInfo.get(collection);
       if (!exists) {
         await this.syncInfo.put({
           id: collection,
           collection,
-          lastSync: 0
+          lastSync: 0,
         });
       }
     }
   }
 }
 
+// Mock database for server-side rendering
+class MockDashboardDatabase {
+  // Implement empty methods that won't fail during SSR
+  async initialize() {
+    // Do nothing
+  }
+}
+
 // Singleton pattern
 export class DexieService {
   private static instance: DexieService;
-  private db: DashboardDatabase;
+  private db: DashboardDatabase | MockDashboardDatabase;
 
   private constructor() {
-    this.db = new DashboardDatabase();
-    this.db.initialize();
+    if (isBrowser) {
+      // Only initialize Dexie in browser environments
+      this.db = new DashboardDatabase();
+      this.db.initialize();
+    } else {
+      // Use a mock database in non-browser environments
+      console.log("Running in Node.js environment, using mock database");
+      this.db = new MockDashboardDatabase() as any;
+    }
   }
 
   public static getInstance(): DexieService {
@@ -96,40 +125,58 @@ export class DexieService {
 
   // Get the database instance
   public getDB(): DashboardDatabase {
-    return this.db;
+    if (!isBrowser) {
+      console.warn(
+        "Attempting to access IndexedDB in a non-browser environment",
+      );
+    }
+    return this.db as DashboardDatabase;
   }
 
   // Update the last sync timestamp for a collection
   public async updateLastSync(collection: string): Promise<void> {
-    await this.db.syncInfo.update(collection, { lastSync: Date.now() });
+    if (!isBrowser) return;
+    await (this.db as DashboardDatabase).syncInfo.update(collection, {
+      lastSync: Date.now(),
+    });
   }
 
   // Get the last sync timestamp for a collection
   public async getLastSync(collection: string): Promise<number> {
-    const info = await this.db.syncInfo.get(collection);
+    if (!isBrowser) return 0;
+    const info = await (this.db as DashboardDatabase).syncInfo.get(collection);
     return info?.lastSync || 0;
   }
 
   // Clear all data (useful for logout)
   public async clearAllData(): Promise<void> {
-    await this.db.users.clear();
-    await this.db.events.clear();
-    await this.db.eventRequests.clear();
-    await this.db.logs.clear();
-    await this.db.officers.clear();
-    await this.db.reimbursements.clear();
-    await this.db.receipts.clear();
-    await this.db.sponsors.clear();
-    await this.db.offlineChanges.clear();
-    
+    if (!isBrowser) return;
+
+    const db = this.db as DashboardDatabase;
+    await db.users.clear();
+    await db.events.clear();
+    await db.eventRequests.clear();
+    await db.logs.clear();
+    await db.officers.clear();
+    await db.reimbursements.clear();
+    await db.receipts.clear();
+    await db.sponsors.clear();
+    await db.offlineChanges.clear();
+
     // Reset sync timestamps
     const collections = [
-      'users', 'events', 'event_request', 'logs', 
-      'officers', 'reimbursement', 'receipts', 'sponsors'
+      "users",
+      "events",
+      "event_request",
+      "logs",
+      "officers",
+      "reimbursement",
+      "receipts",
+      "sponsors",
     ];
-    
+
     for (const collection of collections) {
-      await this.db.syncInfo.update(collection, { lastSync: 0 });
+      await db.syncInfo.update(collection, { lastSync: 0 });
     }
   }
-} 
+}
