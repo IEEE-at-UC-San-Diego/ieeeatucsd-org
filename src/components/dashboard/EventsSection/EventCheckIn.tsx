@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Get } from "../../../scripts/pocketbase/Get";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { Update } from "../../../scripts/pocketbase/Update";
@@ -22,6 +22,14 @@ const EventCheckIn = () => {
     const [currentCheckInEvent, setCurrentCheckInEvent] = useState<Event | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [foodInput, setFoodInput] = useState("");
+
+    // SECURITY FIX: Purge event codes when component mounts
+    useEffect(() => {
+        const dataSync = DataSyncService.getInstance();
+        dataSync.purgeEventCodes().catch(err => {
+            console.error("Error purging event codes:", err);
+        });
+    }, []);
 
     async function handleEventCheckIn(eventCode: string): Promise<void> {
         try {
@@ -48,18 +56,19 @@ const EventCheckIn = () => {
                 `User ${currentUser.id} attempted to check in with code: ${eventCode}`
             );
 
-            // Find the event with the given code using IndexedDB
-            // Force sync to ensure we have the latest data
-            await dataSync.syncCollection(Collections.EVENTS, `event_code = "${eventCode}"`);
+            // SECURITY FIX: Instead of syncing and querying IndexedDB with the event code,
+            // directly query PocketBase for the event with the given code
+            // This prevents the event code from being stored in IndexedDB
+            const pb = auth.getPocketBase();
+            const records = await pb.collection(Collections.EVENTS).getList(1, 1, {
+                filter: `event_code = "${eventCode}"`,
+            });
 
-            // Get the event from IndexedDB
-            const events = await dataSync.getData<Event>(
-                Collections.EVENTS,
-                false, // Don't force sync again
-                `event_code = "${eventCode}"`
-            );
-
-            const event = events.length > 0 ? events[0] : null;
+            // Convert the first result to our Event type
+            let event: Event | null = null;
+            if (records.items.length > 0) {
+                event = Get.convertUTCToLocal(records.items[0] as unknown as Event);
+            }
 
             if (!event) {
                 await logger.send(
@@ -186,8 +195,11 @@ const EventCheckIn = () => {
             // Update attendees array with the new entry
             await update.updateField("events", event.id, "attendees", updatedAttendees);
 
-            // Force sync the events collection to update IndexedDB
-            await dataSync.syncCollection(Collections.EVENTS);
+            // SECURITY FIX: Instead of syncing the entire events collection which would store event codes in IndexedDB,
+            // only sync the user's collection to update their points
+            if (event.points_to_reward > 0) {
+                await dataSync.syncCollection(Collections.USERS);
+            }
 
             // If food selection was made, log it
             if (foodSelection) {
@@ -207,9 +219,6 @@ const EventCheckIn = () => {
                     "points",
                     userPoints + event.points_to_reward
                 );
-
-                // Force sync the users collection to update IndexedDB
-                await dataSync.syncCollection(Collections.USERS);
 
                 // Log the points award
                 await logger.send(
@@ -313,6 +322,37 @@ const EventCheckIn = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Food Selection Modal */}
+            <dialog id="foodSelectionModal" className="modal">
+                <div className="modal-box">
+                    <h3 className="font-bold text-lg mb-4">Food Selection</h3>
+                    <p className="mb-4">This event has food! Please let us know what you'd like to eat:</p>
+                    <form onSubmit={handleSubmit}>
+                        <div className="form-control">
+                            <input
+                                type="text"
+                                placeholder="Enter your food preference"
+                                className="input input-bordered w-full"
+                                value={foodInput}
+                                onChange={(e) => setFoodInput(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="modal-action">
+                            <button type="button" className="btn" onClick={() => {
+                                const modal = document.getElementById("foodSelectionModal") as HTMLDialogElement;
+                                modal.close();
+                                setCurrentCheckInEvent(null);
+                            }}>Cancel</button>
+                            <button type="submit" className="btn btn-primary">Submit</button>
+                        </div>
+                    </form>
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button>close</button>
+                </form>
+            </dialog>
         </>
     );
 };
