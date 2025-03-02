@@ -124,7 +124,6 @@ export default function ReimbursementForm() {
             setHasZelleInfo(!!user.zelle_information);
         } catch (error) {
             console.error('Error checking Zelle information:', error);
-            toast.error('Failed to verify Zelle information');
         } finally {
             setIsLoading(false);
         }
