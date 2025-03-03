@@ -5,6 +5,7 @@ import { Collections } from "../../../schemas/pocketbase/schema";
 import type { Event, Log, User } from "../../../schemas/pocketbase";
 import { Get } from "../../../scripts/pocketbase/Get";
 import type { EventAttendee } from "../../../schemas/pocketbase";
+import { Update } from "../../../scripts/pocketbase/Update";
 
 // Extended User interface with points property
 interface ExtendedUser extends User {
@@ -16,6 +17,7 @@ export function Stats() {
     const [eventsAttended, setEventsAttended] = useState(0);
     const [loyaltyPoints, setLoyaltyPoints] = useState(0);
     const [pointsChange, setPointsChange] = useState("No activity");
+    const [quarterlyPoints, setQuarterlyPoints] = useState(0); // Points earned this quarter
     const [membershipStatus, setMembershipStatus] = useState("Member");
     const [memberSince, setMemberSince] = useState<string | null>(null);
     const [upcomingEvents, setUpcomingEvents] = useState(0);
@@ -24,6 +26,26 @@ export function Stats() {
     const [user, setUser] = useState<ExtendedUser | null>(null);
     const [pointsEarned, setPointsEarned] = useState(0);
     const [attendancePercentage, setAttendancePercentage] = useState(0);
+
+    // Helper function to get the start date of the current quarter
+    const getCurrentQuarterStartDate = (): Date => {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        let quarterStartMonth = 0;
+
+        // Determine the start month of the current quarter
+        if (currentMonth >= 0 && currentMonth <= 2) {
+            quarterStartMonth = 0; // Q1: Jan-Mar
+        } else if (currentMonth >= 3 && currentMonth <= 5) {
+            quarterStartMonth = 3; // Q2: Apr-Jun
+        } else if (currentMonth >= 6 && currentMonth <= 8) {
+            quarterStartMonth = 6; // Q3: Jul-Sep
+        } else {
+            quarterStartMonth = 9; // Q4: Oct-Dec
+        }
+
+        return new Date(now.getFullYear(), quarterStartMonth, 1);
+    };
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -62,13 +84,69 @@ export function Stats() {
 
                 setEventsAttended(attendedEvents.totalItems);
 
-                // Calculate total points earned
+                // Get user points - either from the user record or calculate from attendees
                 let totalPoints = 0;
-                attendedEvents.items.forEach(attendee => {
-                    totalPoints += attendee.points_earned || 0;
-                });
+
+                // Calculate quarterly points
+                const quarterStartDate = getCurrentQuarterStartDate();
+                let pointsThisQuarter = 0;
+
+                // If user has points field, use that for total points
+                if (currentUser && currentUser.points !== undefined) {
+                    totalPoints = currentUser.points;
+
+                    // Still need to calculate quarterly points from attendees
+                    attendedEvents.items.forEach(attendee => {
+                        const checkinDate = new Date(attendee.time_checked_in);
+                        if (checkinDate >= quarterStartDate) {
+                            pointsThisQuarter += attendee.points_earned || 0;
+                        }
+                    });
+                } else {
+                    // Calculate both total and quarterly points from attendees
+                    attendedEvents.items.forEach(attendee => {
+                        const points = attendee.points_earned || 0;
+                        totalPoints += points;
+
+                        const checkinDate = new Date(attendee.time_checked_in);
+                        if (checkinDate >= quarterStartDate) {
+                            pointsThisQuarter += points;
+                        }
+                    });
+
+                    // Update the user record with calculated points if needed
+                    if (currentUser) {
+                        try {
+                            const update = Update.getInstance();
+                            await update.updateFields(Collections.USERS, currentUser.id, {
+                                points: totalPoints
+                            });
+                        } catch (error) {
+                            console.error("Error updating user points:", error);
+                        }
+                    }
+                }
 
                 setPointsEarned(totalPoints);
+                setLoyaltyPoints(totalPoints);
+                setQuarterlyPoints(pointsThisQuarter);
+
+                // Get current quarter name
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                let quarterName = "";
+
+                if (currentMonth >= 0 && currentMonth <= 2) {
+                    quarterName = "Q1";
+                } else if (currentMonth >= 3 && currentMonth <= 5) {
+                    quarterName = "Q2";
+                } else if (currentMonth >= 6 && currentMonth <= 8) {
+                    quarterName = "Q3";
+                } else {
+                    quarterName = "Q4";
+                }
+
+                setPointsChange(`${pointsThisQuarter} pts in ${quarterName}`);
 
                 // Get all events to calculate percentage
                 const allEvents = await get.getList<Event>("events", 1, 1000);
@@ -123,8 +201,11 @@ export function Stats() {
                 <div className="stat">
                     <div className="stat-title font-medium opacity-80">Loyalty Points</div>
                     <div className="stat-value text-secondary">{loyaltyPoints}</div>
-                    <div className="stat-desc flex items-center gap-2 mt-1">
-                        <div className="badge badge-secondary badge-sm">{pointsChange}</div>
+                    <div className="stat-desc flex flex-col items-start gap-1 mt-1">
+                        <div className="flex items-center justify-between w-full">
+                            <div className="badge badge-secondary badge-sm">{quarterlyPoints} pts this quarter</div>
+                            <div className="text-xs opacity-70">Total points</div>
+                        </div>
                     </div>
                 </div>
             </div>

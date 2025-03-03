@@ -201,6 +201,7 @@ const EventCheckIn = () => {
             const update = Update.getInstance();
             const logger = SendLog.getInstance();
             const dataSync = DataSyncService.getInstance();
+            const get = Get.getInstance();
 
             const currentUser = auth.getCurrentUser();
             if (!currentUser) {
@@ -211,7 +212,6 @@ const EventCheckIn = () => {
             const eventId = event.id;
 
             // Check if user is already checked in
-            const get = Get.getInstance();
             const existingAttendees = await get.getList<EventAttendee>(
                 Collections.EVENT_ATTENDEES,
                 1,
@@ -241,6 +241,32 @@ const EventCheckIn = () => {
                 await update.create(Collections.EVENT_ATTENDEES, attendeeData);
 
                 console.log("Successfully created attendance record");
+
+                // Update user's total points
+                // First, get all the user's attendance records to calculate total points
+                const userAttendance = await get.getList<EventAttendee>(
+                    Collections.EVENT_ATTENDEES,
+                    1,
+                    1000,
+                    `user="${userId}"`
+                );
+
+                // Calculate total points
+                let totalPoints = 0;
+                userAttendance.items.forEach(attendee => {
+                    totalPoints += attendee.points_earned || 0;
+                });
+
+                // Log the points update
+                console.log(`Updating user points to: ${totalPoints}`);
+
+                // Update the user record with the new total points
+                await update.updateFields(Collections.USERS, userId, {
+                    points: totalPoints
+                });
+
+                // Sync the updated user data
+                await dataSync.syncCollection(Collections.USERS);
             } catch (createError: any) {
                 console.error("Error creating attendance record:", createError);
 
