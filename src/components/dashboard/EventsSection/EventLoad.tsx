@@ -5,7 +5,7 @@ import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { DataSyncService } from "../../../scripts/database/DataSyncService";
 import { DexieService } from "../../../scripts/database/DexieService";
 import { Collections } from "../../../schemas/pocketbase/schema";
-import type { Event, AttendeeEntry } from "../../../schemas/pocketbase";
+import type { Event, AttendeeEntry, EventAttendee } from "../../../schemas/pocketbase";
 
 // Extended Event interface with additional properties needed for this component
 interface ExtendedEvent extends Event {
@@ -132,76 +132,111 @@ const EventLoad = () => {
     );
 
     const renderEventCard = (event: Event) => {
-        const startDate = new Date(event.start_date);
-        const endDate = new Date(event.end_date);
-        const now = new Date();
-        const isPastEvent = endDate < now;
+        try {
+            // Get authentication instance
+            const auth = Authentication.getInstance();
+            const currentUser = auth.getCurrentUser();
 
-        // Get current user to check attendance
-        const auth = Authentication.getInstance();
-        const currentUser = auth.getCurrentUser();
-        const hasAttended = currentUser && event.attendees?.some(entry => entry.user_id === currentUser.id);
+            // Check if user has attended this event by querying the event_attendees collection
+            let hasAttended = false;
+            if (currentUser) {
+                // We'll check attendance status when displaying the card
+                // This will be done asynchronously after rendering
+                setTimeout(async () => {
+                    try {
+                        const get = Get.getInstance();
+                        const attendees = await get.getList<EventAttendee>(
+                            "event_attendees",
+                            1,
+                            1,
+                            `user="${currentUser.id}" && event="${event.id}"`
+                        );
 
-        // Store event data in window object with unique ID
-        const eventDataId = `event_${event.id}`;
-        window[eventDataId] = event;
+                        const hasAttendedEvent = attendees.totalItems > 0;
 
-        return (
-            <div key={event.id} className="card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden">
-                <div className="card-body p-3 sm:p-4">
-                    <div className="flex flex-col h-full">
-                        <div className="flex flex-col gap-2">
-                            <div className="flex-1">
-                                <h3 className="card-title text-base sm:text-lg font-semibold mb-1 line-clamp-2">{event.event_name}</h3>
-                                <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-base-content/70">
-                                    <div className="badge badge-primary badge-sm">{event.points_to_reward} pts</div>
-                                    <div className="text-xs sm:text-sm opacity-75">
-                                        {startDate.toLocaleDateString("en-US", {
-                                            weekday: "short",
-                                            month: "short",
-                                            day: "numeric",
-                                        })}
-                                        {" • "}
-                                        {startDate.toLocaleTimeString("en-US", {
-                                            hour: "numeric",
-                                            minute: "2-digit",
-                                        })}
+                        // Update the card UI based on attendance status
+                        const cardElement = document.getElementById(`event-card-${event.id}`);
+                        if (cardElement && hasAttendedEvent) {
+                            const attendedBadge = cardElement.querySelector('.attended-badge');
+                            if (attendedBadge) {
+                                (attendedBadge as HTMLElement).style.display = 'flex';
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error checking attendance status:", error);
+                    }
+                }, 0);
+            }
+
+            // Store event data in window object with unique ID
+            const eventDataId = `event_${event.id}`;
+            window[eventDataId] = event;
+
+            const startDate = new Date(event.start_date);
+            const endDate = new Date(event.end_date);
+            const now = new Date();
+            const isPastEvent = endDate < now;
+
+            return (
+                <div key={event.id} className="card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden">
+                    <div className="card-body p-3 sm:p-4">
+                        <div className="flex flex-col h-full">
+                            <div className="flex flex-col gap-2">
+                                <div className="flex-1">
+                                    <h3 className="card-title text-base sm:text-lg font-semibold mb-1 line-clamp-2">{event.event_name}</h3>
+                                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-base-content/70">
+                                        <div className="badge badge-primary badge-sm">{event.points_to_reward} pts</div>
+                                        <div className="text-xs sm:text-sm opacity-75">
+                                            {startDate.toLocaleDateString("en-US", {
+                                                weekday: "short",
+                                                month: "short",
+                                                day: "numeric",
+                                            })}
+                                            {" • "}
+                                            {startDate.toLocaleTimeString("en-US", {
+                                                hour: "numeric",
+                                                minute: "2-digit",
+                                            })}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="text-xs sm:text-sm text-base-content/70 my-2 line-clamp-2">
-                            {event.event_description || "No description available"}
-                        </div>
+                            <div className="text-xs sm:text-sm text-base-content/70 my-2 line-clamp-2">
+                                {event.event_description || "No description available"}
+                            </div>
 
-                        <div className="flex flex-wrap items-center gap-2 mt-auto pt-2">
-                            {event.files && event.files.length > 0 && (
-                                <button
-                                    onClick={() => window.openDetailsModal(event as ExtendedEvent)}
-                                    className="btn btn-ghost btn-sm text-xs sm:text-sm gap-1 h-8 min-h-0 px-2"
-                                >
-                                    <Icon icon="heroicons:document-duplicate" className="h-3 w-3 sm:h-4 sm:w-4" />
-                                    Files ({event.files.length})
-                                </button>
-                            )}
-                            {isPastEvent && (
-                                <div className={`badge ${hasAttended ? 'badge-success' : 'badge-ghost'} text-xs gap-1`}>
-                                    <Icon
-                                        icon={hasAttended ? "heroicons:check-circle" : "heroicons:x-circle"}
-                                        className="h-3 w-3"
-                                    />
-                                    {hasAttended ? 'Attended' : 'Not Attended'}
+                            <div className="flex flex-wrap items-center gap-2 mt-auto pt-2">
+                                {event.files && event.files.length > 0 && (
+                                    <button
+                                        onClick={() => window.openDetailsModal(event as ExtendedEvent)}
+                                        className="btn btn-ghost btn-sm text-xs sm:text-sm gap-1 h-8 min-h-0 px-2"
+                                    >
+                                        <Icon icon="heroicons:document-duplicate" className="h-3 w-3 sm:h-4 sm:w-4" />
+                                        Files ({event.files.length})
+                                    </button>
+                                )}
+                                {isPastEvent && (
+                                    <div className={`badge ${hasAttended ? 'badge-success' : 'badge-ghost'} text-xs gap-1`}>
+                                        <Icon
+                                            icon={hasAttended ? "heroicons:check-circle" : "heroicons:x-circle"}
+                                            className="h-3 w-3"
+                                        />
+                                        {hasAttended ? 'Attended' : 'Not Attended'}
+                                    </div>
+                                )}
+                                <div className="text-xs sm:text-sm opacity-75 ml-auto">
+                                    {event.location}
                                 </div>
-                            )}
-                            <div className="text-xs sm:text-sm opacity-75 ml-auto">
-                                {event.location}
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        );
+            );
+        } catch (error) {
+            console.error("Error rendering event card:", error);
+            return null;
+        }
     };
 
     const loadEvents = async () => {

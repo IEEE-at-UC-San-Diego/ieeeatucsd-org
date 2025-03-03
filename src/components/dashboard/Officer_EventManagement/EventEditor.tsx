@@ -9,6 +9,7 @@ import FilePreview from "../universal/FilePreview";
 import type { Event as SchemaEvent, AttendeeEntry } from "../../../schemas/pocketbase";
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
+import toast from "react-hot-toast";
 
 // Note: Date conversion is now handled automatically by the Get and Update classes.
 // When fetching events, UTC dates are converted to local time by the Get class.
@@ -510,18 +511,19 @@ const ErrorDisplay = memo(({ error, onRetry }: { error: string; onRetry: () => v
 export default function EventEditor({ onEventSaved }: EventEditorProps) {
     // State for form data and UI
     const [event, setEvent] = useState<Event>({
-        id: '',
-        event_name: '',
-        event_description: '',
-        event_code: '',
-        location: '',
+        id: "",
+        created: "",
+        updated: "",
+        event_name: "",
+        event_description: "",
+        event_code: "",
+        location: "",
         files: [],
         points_to_reward: 0,
-        start_date: Get.formatLocalDate(new Date(), false),
-        end_date: Get.formatLocalDate(new Date(), false),
+        start_date: "",
+        end_date: "",
         published: false,
-        has_food: false,
-        attendees: []
+        has_food: false
     });
 
     const [previewUrl, setPreviewUrl] = useState("");
@@ -557,7 +559,16 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
     const initializeEventData = useCallback(async (eventId: string) => {
         try {
             if (eventId) {
-                const eventData = await services.get.getOne<Event>("events", eventId);
+                // Clear cache to ensure fresh data
+                const dataSync = DataSyncService.getInstance();
+                await dataSync.clearCache();
+
+                // Fetch fresh event data
+                const eventData = await services.get.getOne<Event>(Collections.EVENTS, eventId);
+
+                if (!eventData) {
+                    throw new Error("Event not found");
+                }
 
                 // Ensure dates are properly formatted for datetime-local input
                 if (eventData.start_date) {
@@ -573,20 +584,22 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 }
 
                 setEvent(eventData);
+                console.log("Event data loaded successfully:", eventData);
             } else {
                 setEvent({
                     id: '',
+                    created: '',
+                    updated: '',
                     event_name: '',
                     event_description: '',
                     event_code: '',
                     location: '',
                     files: [],
                     points_to_reward: 0,
-                    start_date: Get.formatLocalDate(new Date(), false),
-                    end_date: Get.formatLocalDate(new Date(), false),
+                    start_date: '',
+                    end_date: '',
                     published: false,
-                    has_food: false,
-                    attendees: []
+                    has_food: false
                 });
             }
             setSelectedFiles(new Map());
@@ -595,7 +608,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             setHasUnsavedChanges(false);
         } catch (error) {
             console.error("Failed to initialize event data:", error);
-            alert("Failed to load event data. Please try again.");
+            toast.error("Failed to load event data. Please try again.");
         }
     }, [services.get]);
 
@@ -614,7 +627,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 modal.showModal();
             } catch (error) {
                 console.error("Failed to open edit modal:", error);
-                alert("Failed to open edit modal. Please try again.");
+                toast.error("Failed to open edit modal. Please try again.");
             }
         };
 
@@ -637,23 +650,25 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         }
 
         setEvent({
-            id: '',
-            event_name: '',
-            event_description: '',
-            event_code: '',
-            location: '',
+            id: "",
+            created: "",
+            updated: "",
+            event_name: "",
+            event_description: "",
+            event_code: "",
+            location: "",
             files: [],
             points_to_reward: 0,
-            start_date: Get.formatLocalDate(new Date(), false),
-            end_date: Get.formatLocalDate(new Date(), false),
+            start_date: "",
+            end_date: "",
             published: false,
-            has_food: false,
-            attendees: []
+            has_food: false
         });
         setSelectedFiles(new Map());
         setFilesToDelete(new Set());
         setShowPreview(false);
-        setHasUnsavedChanges(false);
+        setPreviewUrl("");
+        setPreviewFilename("");
 
         const modal = document.getElementById("editEventModal") as HTMLDialogElement;
         if (modal) modal.close();
@@ -663,176 +678,160 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         e.preventDefault();
         if (isSubmitting) return;
 
-        const form = e.target as HTMLFormElement;
-        const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-        const cancelButton = form.querySelector('button[type="button"]') as HTMLButtonElement;
-
-        setIsSubmitting(true);
-        if (submitButton) submitButton.disabled = true;
-        if (cancelButton) cancelButton.disabled = true;
-
         try {
+            setIsSubmitting(true);
             window.showLoading?.();
-            const pb = services.auth.getPocketBase();
 
-            console.log('Form submission started');
-            console.log('Event data:', event);
+            const submitButton = document.getElementById("submitEventButton") as HTMLButtonElement;
+            const cancelButton = document.getElementById("cancelEventButton") as HTMLButtonElement;
 
-            const formData = new FormData(form);
-            const eventData = {
-                event_name: formData.get("editEventName"),
-                event_code: formData.get("editEventCode"),
-                event_description: formData.get("editEventDescription"),
-                location: formData.get("editEventLocation"),
-                points_to_reward: Number(formData.get("editEventPoints")),
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.classList.add("btn-disabled");
+            }
+            if (cancelButton) cancelButton.disabled = true;
+
+            // Get form data
+            const formData = new FormData(e.currentTarget);
+
+            // Create updated event object
+            const updatedEvent: Event = {
+                id: event.id,
+                created: event.created,
+                updated: event.updated,
+                event_name: formData.get("editEventName") as string,
+                event_description: formData.get("editEventDescription") as string,
+                event_code: formData.get("editEventCode") as string,
+                location: formData.get("editEventLocation") as string,
+                files: event.files || [],
+                points_to_reward: parseInt(formData.get("editEventPoints") as string) || 0,
                 start_date: formData.get("editEventStartDate") as string,
                 end_date: formData.get("editEventEndDate") as string,
                 published: formData.get("editEventPublished") === "on",
-                has_food: formData.get("editEventHasFood") === "on",
-                attendees: event.attendees || []
+                has_food: formData.get("editEventHasFood") === "on"
             };
 
+            // Log the update attempt
+            await services.sendLog.send(
+                "update",
+                "event",
+                `Updating event: ${updatedEvent.event_name} (${updatedEvent.id})`
+            );
+
+            // Process file changes
+            const uploadQueue = new UploadQueue();
+            const fileChanges: FileChanges = {
+                added: selectedFiles,
+                deleted: filesToDelete,
+                unchanged: event.files?.filter(file => !filesToDelete.has(file)) || []
+            };
+
+            // Handle file deletions
+            if (fileChanges.deleted.size > 0) {
+                for (const fileId of fileChanges.deleted) {
+                    await services.fileManager.deleteFile("events", event.id, fileId);
+                }
+            }
+
+            // Handle file uploads
+            if (fileChanges.added.size > 0) {
+                for (const [filename, file] of fileChanges.added.entries()) {
+                    await uploadQueue.add(async () => {
+                        const uploadedFile = await services.fileManager.uploadFile(
+                            "events",
+                            event.id,
+                            filename,
+                            file
+                        );
+                        if (uploadedFile) {
+                            fileChanges.unchanged.push(uploadedFile);
+                        }
+                    });
+                }
+            }
+
+            // Update the event with the new file list
+            updatedEvent.files = fileChanges.unchanged;
+
+            // Save the event
+            let savedEvent;
             if (event.id) {
                 // Update existing event
-                console.log('Updating event:', event.id);
-                await services.update.updateFields("events", event.id, eventData);
+                savedEvent = await services.update.updateFields<Event>(
+                    Collections.EVENTS,
+                    event.id,
+                    updatedEvent
+                );
 
-                // Handle file deletions first
-                if (filesToDelete.size > 0) {
-                    console.log('Deleting files:', Array.from(filesToDelete));
-                    // Get current files
-                    const currentRecord = await pb.collection("events").getOne(event.id);
-                    let remainingFiles = [...currentRecord.files];
+                // Clear cache to ensure fresh data
+                const dataSync = DataSyncService.getInstance();
+                await dataSync.clearCache();
 
-                    // Remove files marked for deletion
-                    for (const filename of filesToDelete) {
-                        const fileIndex = remainingFiles.indexOf(filename);
-                        if (fileIndex > -1) {
-                            remainingFiles.splice(fileIndex, 1);
-                        }
-                    }
+                // Log success
+                await services.sendLog.send(
+                    "success",
+                    "event_update",
+                    `Successfully updated event: ${savedEvent.event_name}`
+                );
 
-                    // Update record with remaining files
-                    await pb.collection("events").update(event.id, {
-                        files: remainingFiles
-                    });
-
-                    // Sync the events collection to update IndexedDB
-                    const dataSync = DataSyncService.getInstance();
-                    await dataSync.syncCollection(Collections.EVENTS);
-                }
-
-                // Handle file additions
-                if (selectedFiles.size > 0) {
-                    try {
-                        // Convert Map to array of Files
-                        const filesToUpload = Array.from(selectedFiles.values());
-                        console.log('Uploading files:', filesToUpload.map(f => f.name));
-
-                        // Use appendFiles to preserve existing files
-                        await services.fileManager.appendFiles("events", event.id, "files", filesToUpload);
-
-                        // Sync the events collection to update IndexedDB
-                        const dataSync = DataSyncService.getInstance();
-                        await dataSync.syncCollection(Collections.EVENTS);
-                    } catch (error: any) {
-                        if (error.status === 413) {
-                            throw new Error("Files are too large. Please try uploading smaller files or fewer files at once.");
-                        }
-                        throw error;
-                    }
-                }
+                // Show success toast
+                toast.success(`Event "${savedEvent.event_name}" updated successfully!`);
             } else {
                 // Create new event
-                console.log('Creating new event');
-                const newEvent = await pb.collection("events").create(eventData);
-                console.log('New event created:', newEvent);
+                savedEvent = await services.update.create<Event>(
+                    Collections.EVENTS,
+                    updatedEvent
+                );
 
-                // Sync the events collection to update IndexedDB
-                const dataSync = DataSyncService.getInstance();
-                await dataSync.syncCollection(Collections.EVENTS);
+                // Log success
+                await services.sendLog.send(
+                    "success",
+                    "event_create",
+                    `Successfully created event: ${savedEvent.event_name}`
+                );
 
-                // Upload files if any
-                if (selectedFiles.size > 0) {
-                    try {
-                        const filesToUpload = Array.from(selectedFiles.values());
-                        console.log('Uploading files:', filesToUpload.map(f => f.name));
-
-                        // Use uploadFiles for new event
-                        await services.fileManager.uploadFiles("events", newEvent.id, "files", filesToUpload);
-                    } catch (error: any) {
-                        if (error.status === 413) {
-                            throw new Error("Files are too large. Please try uploading smaller files or fewer files at once.");
-                        }
-                        throw error;
-                    }
-                }
+                // Show success toast
+                toast.success(`Event "${savedEvent.event_name}" created successfully!`);
             }
 
-            // Show success message
-            if (submitButton) {
-                submitButton.classList.remove("btn-disabled");
-                submitButton.classList.add("btn-success");
-                const successIcon = document.createElement('span');
-                successIcon.innerHTML = '<i class="iconify" data-icon="heroicons:check" style="width: 20px; height: 20px;"></i>';
-                submitButton.textContent = '';
-                submitButton.appendChild(successIcon);
-            }
-
-            // Reset all state
-            setHasUnsavedChanges(false);
-            setSelectedFiles(new Map());
-            setFilesToDelete(new Set());
+            // Reset form state
             setEvent({
-                id: '',
-                event_name: '',
-                event_description: '',
-                event_code: '',
-                location: '',
+                id: "",
+                created: "",
+                updated: "",
+                event_name: "",
+                event_description: "",
+                event_code: "",
+                location: "",
                 files: [],
                 points_to_reward: 0,
-                start_date: Get.formatLocalDate(new Date(), false),
-                end_date: Get.formatLocalDate(new Date(), false),
+                start_date: "",
+                end_date: "",
                 published: false,
-                has_food: false,
-                attendees: []
+                has_food: false
             });
+            setSelectedFiles(new Map());
+            setFilesToDelete(new Set());
+            setHasUnsavedChanges(false);
 
-            // Reset cache timestamp to force refresh
-            if (window.lastCacheUpdate) {
-                window.lastCacheUpdate = 0;
-            }
-
-            // Trigger the callback
-            onEventSaved?.();
-
-            // Close modal directly instead of using handleModalClose
+            // Close modal
             const modal = document.getElementById("editEventModal") as HTMLDialogElement;
             if (modal) modal.close();
 
-            // Force refresh of events list
-            if (typeof window.fetchEvents === 'function') {
+            // Refresh events list
+            if (window.fetchEvents) {
                 window.fetchEvents();
             }
-        } catch (error: any) {
-            console.error("Failed to save event:", error);
-            if (submitButton) {
-                submitButton.classList.remove("btn-disabled");
-                submitButton.classList.add("btn-error");
-                const errorIcon = document.createElement('span');
-                errorIcon.innerHTML = '<i class="iconify" data-icon="heroicons:x-circle" style="width: 20px; height: 20px;"></i>';
-                submitButton.textContent = '';
-                submitButton.appendChild(errorIcon);
+
+            // Trigger callback
+            if (onEventSaved) {
+                onEventSaved();
             }
-            alert(error.message || "Failed to save event. Please try again.");
+        } catch (error) {
+            console.error("Failed to save event:", error);
+            toast.error(`Failed to ${event.id ? "update" : "create"} event: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsSubmitting(false);
-            if (submitButton) {
-                submitButton.disabled = false;
-                submitButton.classList.remove("btn-disabled", "btn-success", "btn-error");
-                submitButton.textContent = 'Save Changes';
-            }
-            if (cancelButton) cancelButton.disabled = false;
             window.hideLoading?.();
         }
     }, [event, selectedFiles, filesToDelete, services, onEventSaved, isSubmitting]);

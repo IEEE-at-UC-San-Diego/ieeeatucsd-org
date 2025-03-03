@@ -7,7 +7,7 @@ import { DataSyncService } from "../../../scripts/database/DataSyncService";
 import { Collections } from "../../../schemas/pocketbase/schema";
 import { Icon } from "@iconify/react";
 import toast from "react-hot-toast";
-import type { Event, AttendeeEntry } from "../../../schemas/pocketbase";
+import type { Event, EventAttendee } from "../../../schemas/pocketbase";
 
 // Extended Event interface with additional properties needed for this component
 interface ExtendedEvent extends Event {
@@ -51,91 +51,152 @@ const EventCheckIn = () => {
 
             // Log the check-in attempt
             await logger.send(
-                "attempt",
+                "info",
                 "event_check_in",
-                `User ${currentUser.id} attempted to check in with code: ${eventCode}`
+                `Attempting to check in with code: ${eventCode}`
             );
 
-            // SECURITY FIX: Instead of syncing and querying IndexedDB with the event code,
-            // directly query PocketBase for the event with the given code
-            // This prevents the event code from being stored in IndexedDB
-            const pb = auth.getPocketBase();
-            const records = await pb.collection(Collections.EVENTS).getList(1, 1, {
-                filter: `event_code = "${eventCode}"`,
-            });
-
-            // Convert the first result to our Event type
-            let event: Event | null = null;
-            if (records.items.length > 0) {
-                event = Get.convertUTCToLocal(records.items[0] as unknown as Event);
-            }
-
-            if (!event) {
+            // Validate event code
+            if (!eventCode || eventCode.trim() === "") {
                 await logger.send(
                     "error",
                     "event_check_in",
-                    `Check-in failed: Invalid event code "${eventCode}"`
+                    "Check-in failed: Empty event code"
                 );
-                throw new Error("Invalid event code");
+                toast.error("Please enter an event code");
+                return;
             }
 
-            // Check if user is already checked in
-            const attendees = event.attendees || [];
-            if (attendees.some((entry) => entry.user_id === currentUser.id)) {
+            // Get event by code
+            const events = await get.getList<Event>(
+                Collections.EVENTS,
+                1,
+                1,
+                `event_code="${eventCode}"`
+            );
+
+            if (events.totalItems === 0) {
                 await logger.send(
                     "error",
                     "event_check_in",
-                    `Check-in failed: User ${currentUser.id} already checked in to event ${event.event_name} (${event.id})`
+                    `Check-in failed: Invalid event code: ${eventCode}`
                 );
-                throw new Error("You have already checked in to this event");
+                toast.error("Invalid event code. Please try again.");
+                return;
+            }
+
+            const event = events.items[0];
+
+            // Check if event is published
+            if (!event.published) {
+                await logger.send(
+                    "error",
+                    "event_check_in",
+                    `Check-in failed: Event not published: ${event.event_name}`
+                );
+                toast.error("This event is not currently available for check-in");
+                return;
             }
 
             // Check if the event is active (has started and hasn't ended yet)
             const currentTime = new Date();
-            const eventStartDate = new Date(event.start_date); // Now properly converted to local time by Get
-            const eventEndDate = new Date(event.end_date); // Now properly converted to local time by Get
+            const eventStartDate = new Date(event.start_date);
+            const eventEndDate = new Date(event.end_date);
 
-            if (eventStartDate > currentTime) {
+            if (currentTime < eventStartDate) {
                 await logger.send(
                     "error",
                     "event_check_in",
-                    `Check-in failed: Event ${event.event_name} (${event.id}) has not started yet`
+                    `Check-in failed: Event has not started yet: ${event.event_name}`
                 );
-                throw new Error("This event has not started yet");
+                toast.error(`This event hasn't started yet. It begins on ${eventStartDate.toLocaleDateString()} at ${eventStartDate.toLocaleTimeString()}`);
+                return;
             }
 
-            if (eventEndDate < currentTime) {
+            if (currentTime > eventEndDate) {
                 await logger.send(
                     "error",
                     "event_check_in",
-                    `Check-in failed: Event ${event.event_name} (${event.id}) has already ended`
+                    `Check-in failed: Event has already ended: ${event.event_name}`
                 );
-                throw new Error("This event has already ended");
+                toast.error("This event has already ended");
+                return;
             }
 
-            // Log successful validation before proceeding
+            // Check if user is already checked in
+            const attendees = await get.getList<EventAttendee>(
+                Collections.EVENT_ATTENDEES,
+                1,
+                1,
+                `user="${currentUser.id}" && event="${event.id}"`
+            );
+
+            if (attendees.totalItems > 0) {
+                await logger.send(
+                    "error",
+                    "event_check_in",
+                    `Check-in failed: Already checked in to event: ${event.event_name}`
+                );
+                toast.error("You have already checked in to this event");
+                return;
+            }
+
+            // Set current event for check-in
+            setCurrentCheckInEvent(event);
+
+            // Log successful event lookup
             await logger.send(
                 "info",
                 "event_check_in",
-                `Check-in validation successful for user ${currentUser.id} to event ${event.event_name} (${event.id})`
+                `Found event for check-in: ${event.event_name}`
             );
+
+            // Store event code in local storage for offline check-in
+            await dataSync.storeEventCode(eventCode);
+
+            // Show event details toast only for non-food events
+            // For food events, we'll show the toast after food selection
+            if (!event.has_food) {
+                toast.success(
+                    <div>
+                        <strong>Event found!</strong>
+                        <p className="text-sm mt-1">{event.event_name}</p>
+                        <p className="text-xs mt-1">
+                            {event.points_to_reward > 0 ? `${event.points_to_reward} points` : "No points"}
+                        </p>
+                    </div>,
+                    { duration: 5000 }
+                );
+            }
 
             // If event has food, show food selection modal
             if (event.has_food) {
-                setCurrentCheckInEvent(event);
+                // Show food-specific toast
+                toast.success(
+                    <div>
+                        <strong>Event with food found!</strong>
+                        <p className="text-sm mt-1">{event.event_name}</p>
+                        <p className="text-xs mt-1">Please select your food preference</p>
+                    </div>,
+                    { duration: 5000 }
+                );
+
                 const modal = document.getElementById("foodSelectionModal") as HTMLDialogElement;
-                modal.showModal();
+                if (modal) modal.showModal();
             } else {
-                // If no food, complete check-in directly
-                await completeCheckIn(event, null);
+                // If no food, show confirmation modal
+                const modal = document.getElementById("confirmCheckInModal") as HTMLDialogElement;
+                if (modal) modal.showModal();
             }
         } catch (error: any) {
-            toast.error(error?.message || "Failed to check in to event");
+            console.error("Error checking in:", error);
+            toast.error(error.message || "An error occurred during check-in");
         }
     }
 
     async function completeCheckIn(event: Event, foodSelection: string | null): Promise<void> {
         try {
+            setIsLoading(true);
             const auth = Authentication.getInstance();
             const update = Update.getInstance();
             const logger = SendLog.getInstance();
@@ -146,119 +207,108 @@ const EventCheckIn = () => {
                 throw new Error("You must be logged in to check in to events");
             }
 
-            // Check if user is already checked in
-            const userId = auth.getUserId();
-
-            if (!userId) {
-                toast.error("You must be logged in to check in to an event");
-                return;
-            }
-
-            // Initialize attendees array if it doesn't exist
-            const attendees = event.attendees || [];
+            const userId = currentUser.id;
+            const eventId = event.id;
 
             // Check if user is already checked in
-            const isAlreadyCheckedIn = attendees.some(
-                (attendee) => attendee.user_id === userId
+            const get = Get.getInstance();
+            const existingAttendees = await get.getList<EventAttendee>(
+                Collections.EVENT_ATTENDEES,
+                1,
+                1,
+                `user="${userId}" && event="${eventId}"`
             );
 
+            const isAlreadyCheckedIn = existingAttendees.totalItems > 0;
+
             if (isAlreadyCheckedIn) {
-                toast("You are already checked in to this event", {
-                    icon: '⚠️',
-                    style: {
-                        borderRadius: '10px',
-                        background: '#FFC107',
-                        color: '#000',
-                    },
-                });
-                return;
-            }
-
-            // Create attendee entry with check-in details
-            const attendeeEntry: AttendeeEntry = {
-                user_id: currentUser.id,
-                time_checked_in: new Date().toISOString(), // Will be properly converted to UTC by Update
-                food: foodSelection || "none",
-            };
-
-            // Get existing attendees or initialize empty array
-            const existingAttendees = event.attendees || [];
-
-            // Check if user is already checked in
-            if (existingAttendees.some((entry) => entry.user_id === currentUser.id)) {
                 throw new Error("You have already checked in to this event");
             }
 
-            // Add new attendee entry to the array
-            const updatedAttendees = [...existingAttendees, attendeeEntry];
+            // Create new attendee record
+            const attendeeData = {
+                user: userId,
+                event: eventId,
+                food_ate: foodSelection || "",
+                time_checked_in: new Date().toISOString(),
+                points_earned: event.points_to_reward || 0
+            };
 
-            // Update attendees array with the new entry
-            await update.updateField("events", event.id, "attendees", updatedAttendees);
+            // Create the attendee record using PocketBase's create method
+            // This will properly use the collection rules defined in PocketBase
+            try {
+                // Use the update.create method which calls PocketBase's collection.create method
+                await update.create(Collections.EVENT_ATTENDEES, attendeeData);
 
-            // SECURITY FIX: Instead of syncing the entire events collection which would store event codes in IndexedDB,
-            // only sync the user's collection to update their points
-            if (event.points_to_reward > 0) {
-                await dataSync.syncCollection(Collections.USERS);
+                console.log("Successfully created attendance record");
+            } catch (createError: any) {
+                console.error("Error creating attendance record:", createError);
+
+                // Check if this is a duplicate record error
+                if (createError.status === 400 && createError.data?.data?.user?.code === "validation_not_unique") {
+                    throw new Error("You have already checked in to this event");
+                }
+
+                throw createError;
             }
 
-            // If food selection was made, log it
-            if (foodSelection) {
-                await logger.send(
-                    "update",
-                    "event check-in",
-                    `Food selection for ${event.event_name}: ${foodSelection}`
-                );
-            }
-
-            // Award points to user if available
-            if (event.points_to_reward > 0) {
-                const userPoints = currentUser.points || 0;
-                await update.updateField(
-                    "users",
-                    currentUser.id,
-                    "points",
-                    userPoints + event.points_to_reward
-                );
-
-                // Log the points award
-                await logger.send(
-                    "update",
-                    "event check-in",
-                    `Awarded ${event.points_to_reward} points for checking in to ${event.event_name}`
-                );
-            }
-
-            // Show success message with points if awarded
-            toast.success(
-                `Successfully checked in to ${event.event_name}${event.points_to_reward > 0
-                    ? ` (+${event.points_to_reward} points!)`
-                    : ""
-                }`
-            );
-
-            // Log the check-in
+            // Log successful check-in
             await logger.send(
-                "check_in",
-                "events",
-                `Checked in to event ${event.event_name}`
+                "info",
+                "event_check_in",
+                `Successfully checked in to event: ${event.event_name}`
             );
 
-            // Close the food selection modal if it's open
-            const modal = document.getElementById("foodSelectionModal") as HTMLDialogElement;
-            if (modal) {
-                modal.close();
-                setFoodInput("");
-            }
+            // Clear event code from local storage
+            await dataSync.clearEventCode();
+
+            // Show success message with event name and points
+            const pointsMessage = event.points_to_reward > 0
+                ? ` (+${event.points_to_reward} points!)`
+                : "";
+            toast.success(`Successfully checked in to ${event.event_name}${pointsMessage}`);
+            setCurrentCheckInEvent(null);
+            setFoodInput("");
         } catch (error: any) {
-            toast.error(error?.message || "Failed to check in to event");
+            console.error("Error completing check-in:", error);
+            toast.error(error.message || "An error occurred during check-in");
+        } finally {
+            setIsLoading(false);
         }
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (currentCheckInEvent) {
-            await completeCheckIn(currentCheckInEvent, foodInput.trim());
-            setCurrentCheckInEvent(null);
+        if (!currentCheckInEvent) return;
+
+        try {
+            const auth = Authentication.getInstance();
+            const logger = SendLog.getInstance();
+            const get = Get.getInstance();
+
+            const currentUser = auth.getCurrentUser();
+            if (!currentUser) {
+                throw new Error("You must be logged in to check in to events");
+            }
+
+            // Get existing attendees or initialize empty array
+            const existingAttendees = await get.getList<EventAttendee>(
+                Collections.EVENT_ATTENDEES,
+                1,
+                1,
+                `user="${currentUser.id}" && event="${currentCheckInEvent.id}"`
+            );
+
+            // Check if user is already checked in
+            if (existingAttendees.totalItems > 0) {
+                throw new Error("You have already checked in to this event");
+            }
+
+            // Complete check-in with food selection
+            await completeCheckIn(currentCheckInEvent, foodInput);
+        } catch (error: any) {
+            console.error("Error submitting check-in:", error);
+            toast.error(error.message || "An error occurred during check-in");
         }
     };
 
@@ -326,7 +376,13 @@ const EventCheckIn = () => {
             {/* Food Selection Modal */}
             <dialog id="foodSelectionModal" className="modal">
                 <div className="modal-box">
-                    <h3 className="font-bold text-lg mb-4">Food Selection</h3>
+                    <h3 className="font-bold text-lg mb-2">{currentCheckInEvent?.event_name}</h3>
+                    <div className="text-sm mb-4 opacity-75">
+                        {currentCheckInEvent?.event_description}
+                    </div>
+                    <div className="badge badge-primary mb-4">
+                        {currentCheckInEvent?.points_to_reward} points
+                    </div>
                     <p className="mb-4">This event has food! Please let us know what you'd like to eat:</p>
                     <form onSubmit={handleSubmit}>
                         <div className="form-control">
@@ -345,9 +401,71 @@ const EventCheckIn = () => {
                                 modal.close();
                                 setCurrentCheckInEvent(null);
                             }}>Cancel</button>
-                            <button type="submit" className="btn btn-primary">Submit</button>
+                            <button type="submit" className="btn btn-primary" disabled={isLoading}>
+                                {isLoading ? (
+                                    <Icon
+                                        icon="line-md:loading-twotone-loop"
+                                        className="w-5 h-5"
+                                        inline={true}
+                                    />
+                                ) : (
+                                    "Check In"
+                                )}
+                            </button>
                         </div>
                     </form>
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button>close</button>
+                </form>
+            </dialog>
+
+            {/* Confirmation Modal (for events without food) */}
+            <dialog id="confirmCheckInModal" className="modal">
+                <div className="modal-box">
+                    <h3 className="font-bold text-lg mb-2">{currentCheckInEvent?.event_name}</h3>
+                    <div className="text-sm mb-4 opacity-75">
+                        {currentCheckInEvent?.event_description}
+                    </div>
+                    <div className="badge badge-primary mb-4">
+                        {currentCheckInEvent?.points_to_reward} points
+                    </div>
+                    <p className="mb-4">Are you sure you want to check in to this event?</p>
+                    <div className="modal-action">
+                        <button
+                            type="button"
+                            className="btn"
+                            onClick={() => {
+                                const modal = document.getElementById("confirmCheckInModal") as HTMLDialogElement;
+                                modal.close();
+                                setCurrentCheckInEvent(null);
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            className="btn btn-primary"
+                            disabled={isLoading}
+                            onClick={() => {
+                                if (currentCheckInEvent) {
+                                    completeCheckIn(currentCheckInEvent, null);
+                                    const modal = document.getElementById("confirmCheckInModal") as HTMLDialogElement;
+                                    modal.close();
+                                }
+                            }}
+                        >
+                            {isLoading ? (
+                                <Icon
+                                    icon="line-md:loading-twotone-loop"
+                                    className="w-5 h-5"
+                                    inline={true}
+                                />
+                            ) : (
+                                "Confirm Check In"
+                            )}
+                        </button>
+                    </div>
                 </div>
                 <form method="dialog" className="modal-backdrop">
                     <button>close</button>

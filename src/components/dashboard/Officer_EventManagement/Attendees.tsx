@@ -5,11 +5,20 @@ import { SendLog } from '../../../scripts/pocketbase/SendLog';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
 import { Icon } from "@iconify/react";
-import type { Event, AttendeeEntry, User as SchemaUser } from "../../../schemas/pocketbase";
+import type { Event, User as SchemaUser, EventAttendee } from "../../../schemas/pocketbase";
+import toast from "react-hot-toast";
 
 // Extended User interface with additional properties needed for this component
 interface User extends SchemaUser {
     member_type: string;
+}
+
+// Define AttendeeEntry interface locally
+interface AttendeeEntry {
+    user_id: string;
+    time_checked_in: string;
+    food: string;
+    points_earned?: number;
 }
 
 // Cache for storing user data
@@ -58,7 +67,6 @@ const HighlightText = ({ text, searchTerms }: { text: string | number | null | u
 interface EventFields {
     id: true;
     event_name: true;
-    attendees: true;
 }
 
 interface UserFields {
@@ -73,7 +81,7 @@ interface UserFields {
 }
 
 // Constants for field selection
-const EVENT_FIELDS: (keyof EventFields)[] = ['id', 'event_name', 'attendees'];
+const EVENT_FIELDS: (keyof EventFields)[] = ['id', 'event_name'];
 const USER_FIELDS: (keyof UserFields)[] = ['id', 'name', 'email', 'pid', 'member_id', 'member_type', 'graduation_year', 'major'];
 
 export default function Attendees() {
@@ -86,6 +94,7 @@ export default function Attendees() {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [processedSearchTerms, setProcessedSearchTerms] = useState<string[]>([]);
+    const [refreshKey, setRefreshKey] = useState(0); // Add a refresh key to force re-fetching
 
     const get = Get.getInstance();
     const auth = Authentication.getInstance();
@@ -141,6 +150,8 @@ export default function Attendees() {
 
     // Optimized user data fetching with cache
     const fetchUserData = useCallback(async (userIds: string[]) => {
+        if (!userIds.length) return new Map<string, User>();
+
         const now = Date.now();
         const uncachedIds: string[] = [];
         const cachedUsers = new Map<string, User>();
@@ -160,40 +171,77 @@ export default function Attendees() {
             return cachedUsers;
         }
 
-        // Fetch uncached users
         try {
-            const dataSync = DataSyncService.getInstance();
+            // Create a filter to get all uncached users in one request
+            const userFilter = uncachedIds.map(id => `id="${id}"`).join(" || ");
 
-            // Sync users collection for the uncached IDs
-            if (uncachedIds.length > 0) {
-                const idFilter = uncachedIds.map(id => `id = "${id}"`).join(' || ');
-                await dataSync.syncCollection(Collections.USERS, idFilter);
-            }
-
-            // Get users from IndexedDB
-            const users = await Promise.all(
-                uncachedIds.map(async id => {
-                    try {
-                        return await dataSync.getItem<User>(Collections.USERS, id);
-                    } catch (error) {
-                        console.error(`Failed to fetch user ${id}:`, error);
-                        return null;
-                    }
-                })
+            // Fetch all uncached users in one request
+            const usersResponse = await get.getAll<User>(
+                Collections.USERS,
+                userFilter
             );
 
-            // Update cache and merge with cached users
-            users.forEach(user => {
-                if (user) {
-                    userCache.set(user.id, { data: user, timestamp: now });
-                    cachedUsers.set(user.id, user);
+            // Process the fetched users
+            usersResponse.forEach(user => {
+                // Add member_type if it doesn't exist
+                const userWithMemberType = {
+                    ...user,
+                    member_type: user.member_type || "N/A"
+                };
+                cachedUsers.set(user.id, userWithMemberType);
+
+                // Update cache
+                userCache.set(user.id, {
+                    data: userWithMemberType,
+                    timestamp: now
+                });
+            });
+
+            // Create placeholders for any users that weren't found
+            const fetchedIds = new Set(usersResponse.map(user => user.id));
+            uncachedIds.forEach(id => {
+                if (!fetchedIds.has(id) && !cachedUsers.has(id)) {
+                    // Create a placeholder user
+                    const placeholderUser: User = {
+                        id,
+                        name: `User ${id}`,
+                        email: "N/A",
+                        emailVisibility: false,
+                        verified: false,
+                        created: "",
+                        updated: "",
+                        member_type: "N/A"
+                    };
+                    cachedUsers.set(id, placeholderUser);
                 }
             });
         } catch (error) {
-            console.error('Failed to fetch uncached users:', error);
+            console.error('Failed to fetch users:', error);
+
+            // Create placeholders for all uncached users that failed to fetch
+            uncachedIds.forEach(id => {
+                if (!cachedUsers.has(id)) {
+                    const placeholderUser: User = {
+                        id,
+                        name: `User ${id}`,
+                        email: "N/A",
+                        emailVisibility: false,
+                        verified: false,
+                        created: "",
+                        updated: "",
+                        member_type: "N/A"
+                    };
+                    cachedUsers.set(id, placeholderUser);
+                }
+            });
         }
 
         return cachedUsers;
+    }, []);
+
+    // Function to refresh attendees data
+    const refreshAttendees = useCallback(() => {
+        setRefreshKey(prev => prev + 1);
     }, []);
 
     // Listen for the custom event
@@ -202,6 +250,7 @@ export default function Attendees() {
             setEventId(e.detail.eventId);
             setEventName(e.detail.eventName);
             setCurrentPage(1); // Reset pagination on new event
+            setSearchTerm(''); // Clear search on new event
 
             // Log the attendees view action
             try {
@@ -217,17 +266,22 @@ export default function Attendees() {
         };
 
         window.addEventListener('updateAttendees', handleUpdateAttendees as unknown as EventListener);
+
+        // Expose refresh function to window
+        (window as any).refreshAttendees = refreshAttendees;
+
         return () => {
             window.removeEventListener('updateAttendees', handleUpdateAttendees as unknown as EventListener);
+            delete (window as any).refreshAttendees;
         };
-    }, []);
+    }, [refreshAttendees]);
 
     // Update search terms when search input changes
     useEffect(() => {
         updateProcessedSearchTerms(searchTerm);
     }, [searchTerm, updateProcessedSearchTerms]);
 
-    // Fetch event data when eventId changes
+    // Fetch event data when eventId changes or refreshKey changes
     useEffect(() => {
         let isMounted = true;
         const fetchEventData = async () => {
@@ -243,44 +297,118 @@ export default function Attendees() {
                 setLoading(true);
                 setError(null);
 
+                if (!eventId) {
+                    setAttendeesList([]);
+                    setUsers(new Map());
+                    return;
+                }
+
+                // Clear cache to ensure fresh data
                 const dataSync = DataSyncService.getInstance();
+                await dataSync.clearCache();
+                await dataSync.syncCollection(Collections.EVENTS, `id="${eventId}"`);
 
-                // Sync the event data
-                await dataSync.syncCollection(Collections.EVENTS, `id = "${eventId}"`);
-
-                // Get the event from IndexedDB
-                const event = await dataSync.getItem<Event>(Collections.EVENTS, eventId);
-
-                if (!isMounted) return;
+                const event = await get.getOne<Event>(Collections.EVENTS, eventId);
 
                 if (!event) {
-                    setError('Event not found');
+                    setError("Event not found");
                     setAttendeesList([]);
                     setUsers(new Map());
                     return;
                 }
 
-                if (!event.attendees?.length) {
-                    setAttendeesList([]);
-                    setUsers(new Map());
+                // Fetch attendees from event_attendees collection with a higher limit
+                const attendeesList = await get.getList<EventAttendee>(
+                    Collections.EVENT_ATTENDEES,
+                    1,
+                    2000, // Increased limit to handle more attendees
+                    `event="${eventId}"`
+                );
+
+                if (!attendeesList.items.length) {
+                    if (isMounted) {
+                        setAttendeesList([]);
+                        setUsers(new Map());
+                    }
                     return;
                 }
 
-                setAttendeesList(event.attendees);
-
-                // Fetch user details with cache
-                const userIds = [...new Set(event.attendees.map(a => a.user_id))];
-                const userMap = await fetchUserData(userIds);
+                // Transform EventAttendee records to match the expected format
+                const transformedAttendees = attendeesList.items.map(attendee => ({
+                    user_id: attendee.user, // This is the user ID (relation)
+                    time_checked_in: attendee.time_checked_in,
+                    food: attendee.food_ate,
+                    points_earned: attendee.points_earned
+                }));
 
                 if (isMounted) {
-                    setUsers(userMap);
+                    setAttendeesList(transformedAttendees);
                 }
+
+                // Fetch all users at once to improve performance
+                const userIds = transformedAttendees.map(a => a.user_id);
+
+                // Create a filter to get all users in one request
+                const userFilter = userIds.map(id => `id="${id}"`).join(" || ");
+
+                try {
+                    // Fetch all users directly from PocketBase in one request
+                    const usersResponse = await get.getAll<User>(
+                        Collections.USERS,
+                        userFilter
+                    );
+
+                    // Create a map of users
+                    const userMap = new Map<string, User>();
+                    usersResponse.forEach(user => {
+                        // Add member_type if it doesn't exist
+                        const userWithMemberType = {
+                            ...user,
+                            member_type: user.member_type || "N/A"
+                        };
+                        userMap.set(user.id, userWithMemberType);
+
+                        // Update cache
+                        userCache.set(user.id, {
+                            data: userWithMemberType,
+                            timestamp: Date.now()
+                        });
+                    });
+
+                    // For any missing users, create placeholders
+                    userIds.forEach(id => {
+                        if (!userMap.has(id)) {
+                            const placeholderUser: User = {
+                                id,
+                                name: `User ${id}`,
+                                email: "N/A",
+                                emailVisibility: false,
+                                verified: false,
+                                created: "",
+                                updated: "",
+                                member_type: "N/A"
+                            };
+                            userMap.set(id, placeholderUser);
+                        }
+                    });
+
+                    if (isMounted) {
+                        setUsers(userMap);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch users:", error);
+
+                    // Fallback to individual user fetching
+                    const userMap = await fetchUserData(userIds);
+                    if (isMounted) {
+                        setUsers(userMap);
+                    }
+                }
+
+                toast.success(`Loaded ${attendeesList.items.length} attendees for ${event.event_name}`);
             } catch (error) {
-                if (isMounted) {
-                    console.error('Failed to fetch event data:', error);
-                    setError('Failed to load event data');
-                    setAttendeesList([]);
-                }
+                console.error("Error fetching event data:", error);
+                setError("Failed to load event data. Please try refreshing.");
             } finally {
                 if (isMounted) {
                     setLoading(false);
@@ -290,15 +418,18 @@ export default function Attendees() {
 
         fetchEventData();
         return () => { isMounted = false; };
-    }, [eventId, auth, fetchUserData]);
+    }, [eventId, auth, fetchUserData, refreshKey]);
 
     // Reset state when modal is closed
     useEffect(() => {
         const handleModalClose = () => {
             setEventId('');
+            setEventName('');
             setAttendeesList([]);
             setUsers(new Map());
             setError(null);
+            setSearchTerm('');
+            setCurrentPage(1);
         };
 
         const modal = document.getElementById('attendeesModal');
@@ -332,15 +463,22 @@ export default function Attendees() {
             'Graduation Year',
             'Major',
             'Check-in Time',
-            'Food Choice'
+            'Food Choice',
+            'Points Earned'
         ].map(escapeCSV);
 
         // Create CSV rows
         const rows = attendeesList.map(attendee => {
             const user = users.get(attendee.user_id);
-            const checkInTime = new Date(attendee.time_checked_in).toLocaleString();
+            let checkInTime = '';
+            try {
+                checkInTime = new Date(attendee.time_checked_in).toLocaleString();
+            } catch (e) {
+                checkInTime = attendee.time_checked_in || 'N/A';
+            }
+
             return [
-                user?.name || 'Unknown User',
+                user?.name || `User ${attendee.user_id}`,
                 user?.email || 'N/A',
                 user?.pid || 'N/A',
                 user?.member_id || 'N/A',
@@ -348,7 +486,8 @@ export default function Attendees() {
                 user?.graduation_year || 'N/A',
                 user?.major || 'N/A',
                 checkInTime,
-                attendee.food || 'N/A'
+                attendee.food || 'N/A',
+                attendee.points_earned || 'N/A'
             ].map(escapeCSV);
         });
 
@@ -375,6 +514,8 @@ export default function Attendees() {
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url); // Clean up the URL object
+
+        toast.success(`Downloaded ${rows.length} attendee records`);
     };
 
     if (loading) {
@@ -390,6 +531,13 @@ export default function Attendees() {
             <div className="alert alert-error">
                 <Icon icon="heroicons:exclamation-circle" className="h-6 w-6" />
                 <span>{error}</span>
+                <button
+                    className="btn btn-sm btn-outline"
+                    onClick={refreshAttendees}
+                >
+                    <Icon icon="heroicons:arrow-path" className="h-4 w-4 mr-1" />
+                    Retry
+                </button>
             </div>
         );
     }
@@ -403,6 +551,13 @@ export default function Attendees() {
             <div className="text-center py-8 text-base-content/70">
                 <Icon icon="heroicons:user-group" className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No attendees yet</p>
+                <button
+                    className="btn btn-sm btn-outline mt-4"
+                    onClick={refreshAttendees}
+                >
+                    <Icon icon="heroicons:arrow-path" className="h-4 w-4 mr-1" />
+                    Refresh
+                </button>
             </div>
         );
     }
@@ -426,13 +581,22 @@ export default function Attendees() {
                             />
                         </div>
                     </div>
-                    <button
-                        className="btn btn-primary btn-sm gap-2"
-                        onClick={downloadAttendeesCSV}
-                    >
-                        <Icon icon="heroicons:arrow-down-tray" className="h-4 w-4" />
-                        Download CSV
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            className="btn btn-outline btn-sm gap-2"
+                            onClick={refreshAttendees}
+                        >
+                            <Icon icon="heroicons:arrow-path" className="h-4 w-4" />
+                            Refresh
+                        </button>
+                        <button
+                            className="btn btn-primary btn-sm gap-2"
+                            onClick={downloadAttendeesCSV}
+                        >
+                            <Icon icon="heroicons:arrow-down-tray" className="h-4 w-4" />
+                            Download CSV
+                        </button>
+                    </div>
                 </div>
 
                 {/* Stats Row */}
@@ -462,16 +626,22 @@ export default function Attendees() {
                             <th className="bg-base-100">Major</th>
                             <th className="bg-base-100">Check-in Time</th>
                             <th className="bg-base-100">Food Choice</th>
+                            <th className="bg-base-100">Points</th>
                         </tr>
                     </thead>
                     <tbody>
                         {paginatedAttendees.map((attendee, index) => {
                             const user = users.get(attendee.user_id);
-                            const checkInTime = new Date(attendee.time_checked_in).toLocaleString();
+                            let checkInTime = '';
+                            try {
+                                checkInTime = new Date(attendee.time_checked_in).toLocaleString();
+                            } catch (e) {
+                                checkInTime = attendee.time_checked_in || 'N/A';
+                            }
 
                             return (
                                 <tr key={`${attendee.user_id}-${index}`}>
-                                    <td><HighlightText text={user?.name || 'Unknown User'} searchTerms={processedSearchTerms} /></td>
+                                    <td><HighlightText text={user?.name || `User ${attendee.user_id}`} searchTerms={processedSearchTerms} /></td>
                                     <td><HighlightText text={user?.email || 'N/A'} searchTerms={processedSearchTerms} /></td>
                                     <td><HighlightText text={user?.pid || 'N/A'} searchTerms={processedSearchTerms} /></td>
                                     <td><HighlightText text={user?.member_id || 'N/A'} searchTerms={processedSearchTerms} /></td>
@@ -480,6 +650,7 @@ export default function Attendees() {
                                     <td><HighlightText text={user?.major || 'N/A'} searchTerms={processedSearchTerms} /></td>
                                     <td><HighlightText text={checkInTime} searchTerms={processedSearchTerms} /></td>
                                     <td><HighlightText text={attendee.food || 'N/A'} searchTerms={processedSearchTerms} /></td>
+                                    <td><HighlightText text={attendee.points_earned || 'N/A'} searchTerms={processedSearchTerms} /></td>
                                 </tr>
                             );
                         })}

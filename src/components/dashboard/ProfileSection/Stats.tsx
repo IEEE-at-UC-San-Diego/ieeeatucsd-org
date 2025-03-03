@@ -3,6 +3,8 @@ import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { DataSyncService } from "../../../scripts/database/DataSyncService";
 import { Collections } from "../../../schemas/pocketbase/schema";
 import type { Event, Log, User } from "../../../schemas/pocketbase";
+import { Get } from "../../../scripts/pocketbase/Get";
+import type { EventAttendee } from "../../../schemas/pocketbase";
 
 // Extended User interface with points property
 interface ExtendedUser extends User {
@@ -18,109 +20,68 @@ export function Stats() {
     const [memberSince, setMemberSince] = useState<string | null>(null);
     const [upcomingEvents, setUpcomingEvents] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [user, setUser] = useState<ExtendedUser | null>(null);
+    const [pointsEarned, setPointsEarned] = useState(0);
+    const [attendancePercentage, setAttendancePercentage] = useState(0);
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
                 setIsLoading(true);
+                setError(null);
+
                 const auth = Authentication.getInstance();
-                const dataSync = DataSyncService.getInstance();
-                const userId = auth.getCurrentUser()?.id;
+                const get = Get.getInstance();
+                const currentUser = auth.getCurrentUser();
 
-                if (!userId) return;
-
-                // Get current date
-                const now = new Date();
-
-                // Get current quarter dates for points calculation
-                const month = now.getMonth(); // 0-11
-                let quarterStart = new Date();
-
-                // Fall: Sept-Dec
-                if (month >= 8 && month <= 11) {
-                    quarterStart = new Date(now.getFullYear(), 8, 1); // Sept 1
-                }
-                // Winter: Jan-Mar
-                else if (month >= 0 && month <= 2) {
-                    quarterStart = new Date(now.getFullYear(), 0, 1); // Jan 1
-                }
-                // Spring: Apr-Jun
-                else if (month >= 3 && month <= 5) {
-                    quarterStart = new Date(now.getFullYear(), 3, 1); // Apr 1
-                }
-                // Summer: Jul-Aug
-                else {
-                    quarterStart = new Date(now.getFullYear(), 6, 1); // Jul 1
+                if (!currentUser) {
+                    setError("User not logged in");
+                    return;
                 }
 
-                // Sync user data to ensure we have the latest
-                await dataSync.syncCollection(Collections.USERS, `id = "${userId}"`);
+                const userId = currentUser.id;
 
-                // Get user from IndexedDB
-                const user = await dataSync.getItem<ExtendedUser>(Collections.USERS, userId);
-                const totalPoints = user?.points || 0;
-
-                // Set membership status and date
-                setMembershipStatus(user?.member_type || "Member");
-                if (user?.created) {
-                    const createdDate = new Date(user.created);
-                    setMemberSince(createdDate.toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'long'
-                    }));
+                // Get user data
+                const userData = await get.getOne<ExtendedUser>("users", userId);
+                if (!userData) {
+                    setError("Failed to load user data");
+                    return;
                 }
 
-                // Sync logs for the current quarter to calculate points change
-                await dataSync.syncCollection(
-                    Collections.LOGS,
-                    `user_id = "${userId}" && created >= "${quarterStart.toISOString()}" && type = "update" && part = "event check-in"`,
-                    "-created"
+                // Set user data
+                setUser(userData);
+
+                // Get events attended by the user
+                const attendedEvents = await get.getList<EventAttendee>(
+                    "event_attendees",
+                    1,
+                    1000,
+                    `user="${userId}"`
                 );
 
-                // Get logs from IndexedDB
-                const logs = await dataSync.getData<Log>(
-                    Collections.LOGS,
-                    false, // Don't force sync again
-                    `user_id = "${userId}" && created >= "${quarterStart.toISOString()}" && type = "update" && part = "event check-in"`,
-                    "-created"
-                );
+                setEventsAttended(attendedEvents.totalItems);
 
-                // Calculate quarterly points
-                const quarterlyPoints = logs.reduce((total, log) => {
-                    const pointsMatch = log.message?.match(/Awarded (\d+) points/);
-                    if (pointsMatch) {
-                        return total + parseInt(pointsMatch[1]);
-                    }
-                    return total;
-                }, 0);
-
-                // Set points change message
-                setPointsChange(quarterlyPoints > 0 ? `+${quarterlyPoints} this quarter` : "No activity");
-
-                // Sync events collection
-                await dataSync.syncCollection(Collections.EVENTS);
-
-                // Get events from IndexedDB
-                const events = await dataSync.getData<Event>(Collections.EVENTS);
-
-                // Count attended events
-                const attendedEvents = events.filter(event =>
-                    event.attendees?.some(attendee => attendee.user_id === userId)
-                );
-                setEventsAttended(attendedEvents.length);
-
-                // Count upcoming events (events that haven't ended yet)
-                const upcoming = events.filter(event => {
-                    if (!event.end_date) return false;
-                    const endDate = new Date(event.end_date);
-                    return endDate > now && event.published;
+                // Calculate total points earned
+                let totalPoints = 0;
+                attendedEvents.items.forEach(attendee => {
+                    totalPoints += attendee.points_earned || 0;
                 });
-                setUpcomingEvents(upcoming.length);
 
-                // Set loyalty points
-                setLoyaltyPoints(totalPoints);
+                setPointsEarned(totalPoints);
+
+                // Get all events to calculate percentage
+                const allEvents = await get.getList<Event>("events", 1, 1000);
+                if (allEvents.totalItems > 0) {
+                    const percentage = (attendedEvents.totalItems / allEvents.totalItems) * 100;
+                    setAttendancePercentage(Math.round(percentage));
+                } else {
+                    setAttendancePercentage(0);
+                }
+
             } catch (error) {
                 console.error("Error fetching stats:", error);
+                setError("Failed to load stats");
             } finally {
                 setIsLoading(false);
             }

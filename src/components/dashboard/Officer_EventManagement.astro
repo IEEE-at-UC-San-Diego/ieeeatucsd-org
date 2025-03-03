@@ -6,37 +6,45 @@ import EventEditor from "./Officer_EventManagement/EventEditor";
 import FilePreview from "./universal/FilePreview";
 import Attendees from "./Officer_EventManagement/Attendees";
 import type { Event, AttendeeEntry } from "../../schemas/pocketbase";
+import { DataSyncService } from "../../scripts/database/DataSyncService";
+import toast from "react-hot-toast";
 
 // Get instances
 const get = Get.getInstance();
 const auth = Authentication.getInstance();
 
 interface ListResponse<T> {
-  page: number;
-  perPage: number;
-  totalItems: number;
-  totalPages: number;
-  items: T[];
+    page: number;
+    perPage: number;
+    totalItems: number;
+    totalPages: number;
+    items: T[];
 }
 
 // Initialize variables
 let eventResponse: ListResponse<Event> = {
-  page: 1,
-  perPage: 5,
-  totalItems: 0,
-  totalPages: 0,
-  items: [],
+    page: 1,
+    perPage: 5,
+    totalItems: 0,
+    totalPages: 0,
+    items: [],
 };
 let upcomingEvents: Event[] = [];
 
 // Fetch events
 try {
-  if (auth.isAuthenticated()) {
-    eventResponse = await get.getList<Event>("events", 1, 5, "", "-start_date");
-    upcomingEvents = eventResponse.items;
-  }
+    if (auth.isAuthenticated()) {
+        eventResponse = await get.getList<Event>(
+            "events",
+            1,
+            5,
+            "",
+            "-start_date"
+        );
+        upcomingEvents = eventResponse.items;
+    }
 } catch (error) {
-  console.error("Failed to fetch events:", error);
+    console.error("Failed to fetch events:", error);
 }
 
 const totalEvents = eventResponse.totalItems;
@@ -45,999 +53,1066 @@ const currentPage = eventResponse.page;
 ---
 
 <div>
-  <div
-    class="mb-4 md:mb-6 flex flex-col md:flex-row md:justify-between md:items-center gap-2"
-  >
-    <div>
-      <h2 class="text-xl md:text-2xl font-bold">Event Management</h2>
-      <p class="text-sm md:text-base opacity-70">
-        Manage and create IEEE UCSD events
-      </p>
-    </div>
-  </div>
-
-  <!-- Stats Cards -->
-  <div
-    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8"
-  >
     <div
-      class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
+        class="mb-4 md:mb-6 flex flex-col md:flex-row md:justify-between md:items-center gap-2"
     >
-      <div class="stat p-4 md:p-6">
-        <div class="stat-title text-sm md:text-base font-medium opacity-80">
-          Total Events
+        <div>
+            <h2 class="text-xl md:text-2xl font-bold">Event Management</h2>
+            <p class="text-sm md:text-base opacity-70">
+                Manage and create IEEE UCSD events
+            </p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div
+        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8"
+    >
+        <div
+            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
+        >
+            <div class="stat p-4 md:p-6">
+                <div
+                    class="stat-title text-sm md:text-base font-medium opacity-80"
+                >
+                    Total Events
+                </div>
+                <div
+                    class="stat-value text-primary text-2xl md:text-3xl"
+                    id="totalEvents"
+                >
+                    -
+                </div>
+                <div class="stat-desc flex items-center gap-2 mt-1">
+                    <div class="badge badge-primary badge-sm" id="quarterLabel">
+                        Current Academic Term
+                    </div>
+                </div>
+            </div>
         </div>
         <div
-          class="stat-value text-primary text-2xl md:text-3xl"
-          id="totalEvents"
+            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-secondary transition-all duration-300 hover:-translate-y-1 transform"
         >
-          -
-        </div>
-        <div class="stat-desc flex items-center gap-2 mt-1">
-          <div class="badge badge-primary badge-sm" id="quarterLabel">
-            Current Academic Term
-          </div>
-        </div>
-      </div>
-    </div>
-    <div
-      class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-secondary transition-all duration-300 hover:-translate-y-1 transform"
-    >
-      <div class="stat p-4 md:p-6">
-        <div class="stat-title text-sm md:text-base font-medium opacity-80">
-          Unique Attendees
+            <div class="stat p-4 md:p-6">
+                <div
+                    class="stat-title text-sm md:text-base font-medium opacity-80"
+                >
+                    Unique Attendees
+                </div>
+                <div
+                    class="stat-value text-secondary text-2xl md:text-3xl"
+                    id="uniqueAttendees"
+                >
+                    -
+                </div>
+                <div class="stat-desc flex items-center gap-2 mt-1">
+                    <div class="badge badge-secondary badge-sm">
+                        Current Academic Term
+                    </div>
+                </div>
+            </div>
         </div>
         <div
-          class="stat-value text-secondary text-2xl md:text-3xl"
-          id="uniqueAttendees"
+            class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-accent transition-all duration-300 hover:-translate-y-1 transform sm:col-span-2 md:col-span-1"
         >
-          -
+            <div class="stat p-4 md:p-6">
+                <div
+                    class="stat-title text-sm md:text-base font-medium opacity-80"
+                >
+                    Recurring Attendees
+                </div>
+                <div
+                    class="stat-value text-accent text-2xl md:text-3xl"
+                    id="recurringAttendees"
+                >
+                    -
+                </div>
+                <div class="stat-desc flex items-center gap-2 mt-1">
+                    <div class="badge badge-accent badge-sm">
+                        Current Quarter (<span id="quarterName">-</span>)
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="stat-desc flex items-center gap-2 mt-1">
-          <div class="badge badge-secondary badge-sm">
-            Current Academic Term
-          </div>
-        </div>
-      </div>
     </div>
+
+    <!-- Events List -->
     <div
-      class="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-accent transition-all duration-300 hover:-translate-y-1 transform sm:col-span-2 md:col-span-1"
+        class="card bg-base-100 shadow-lg border border-base-200 hover:border-primary transition-all duration-300"
     >
-      <div class="stat p-4 md:p-6">
-        <div class="stat-title text-sm md:text-base font-medium opacity-80">
-          Recurring Attendees
-        </div>
-        <div
-          class="stat-value text-accent text-2xl md:text-3xl"
-          id="recurringAttendees"
-        >
-          -
-        </div>
-        <div class="stat-desc flex items-center gap-2 mt-1">
-          <div class="badge badge-accent badge-sm">
-            Current Quarter (<span id="quarterName">-</span>)
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+        <div class="card-body p-4 md:p-6">
+            <h3
+                class="card-title text-lg md:text-xl font-bold flex flex-col md:flex-row md:items-center gap-3"
+            >
+                <div class="flex items-center gap-2">
+                    <div class="badge badge-primary p-3">
+                        <Icon name="heroicons:calendar" class="h-5 w-5" />
+                    </div>
+                    Events List
+                </div>
+                <div class="flex-1 flex flex-wrap gap-2 md:justify-end">
+                    <button
+                        class="btn btn-ghost btn-sm md:btn-md gap-2"
+                        onclick="window.refreshEvents()"
+                    >
+                        <Icon
+                            name="heroicons:arrow-path"
+                            class="h-4 w-4 md:h-5 md:w-5"
+                        />
+                        Refresh
+                    </button>
+                    <button
+                        class="btn btn-primary btn-sm md:btn-md gap-2"
+                        onclick="window.openEditModal()"
+                    >
+                        <Icon
+                            name="heroicons:plus"
+                            class="h-4 w-4 md:h-5 md:w-5"
+                        />
+                        Add New Event
+                    </button>
+                </div>
+            </h3>
 
-  <!-- Events List -->
-  <div
-    class="card bg-base-100 shadow-lg border border-base-200 hover:border-primary transition-all duration-300"
-  >
-    <div class="card-body p-4 md:p-6">
-      <h3
-        class="card-title text-lg md:text-xl font-bold flex flex-col md:flex-row md:items-center gap-3"
-      >
-        <div class="flex items-center gap-2">
-          <div class="badge badge-primary p-3">
-            <Icon name="heroicons:calendar" class="h-5 w-5" />
-          </div>
-          Events List
-        </div>
-        <div class="flex-1 flex flex-wrap gap-2 md:justify-end">
-          <button
-            class="btn btn-ghost btn-sm md:btn-md gap-2"
-            onclick="window.refreshEvents()"
-          >
-            <Icon name="heroicons:arrow-path" class="h-4 w-4 md:h-5 md:w-5" />
-            Refresh
-          </button>
-          <button
-            class="btn btn-primary btn-sm md:btn-md gap-2"
-            onclick="window.openEditModal()"
-          >
-            <Icon name="heroicons:plus" class="h-4 w-4 md:h-5 md:w-5" />
-            Add New Event
-          </button>
-        </div>
-      </h3>
+            <div class="divider my-2 md:my-4"></div>
 
-      <div class="divider my-2 md:my-4"></div>
+            <!-- Filter Controls -->
+            <div class="mb-4">
+                <!-- All Filters -->
+                <div class="flex flex-wrap gap-4">
+                    <div class="form-control w-full sm:w-auto">
+                        <label class="label">
+                            <span
+                                class="label-text text-sm md:text-base font-medium"
+                                >Time Filter</span
+                            >
+                        </label>
+                        <div class="join m-1">
+                            <input
+                                type="radio"
+                                name="timeFilter"
+                                value="all"
+                                class="join-item btn btn-xs md:btn-sm"
+                                checked
+                                aria-label="All Events"
+                            />
+                            <input
+                                type="radio"
+                                name="timeFilter"
+                                value="ongoing"
+                                class="join-item btn btn-xs md:btn-sm"
+                                aria-label="Ongoing"
+                            />
+                            <input
+                                type="radio"
+                                name="timeFilter"
+                                value="upcoming"
+                                class="join-item btn btn-xs md:btn-sm"
+                                aria-label="Upcoming"
+                            />
+                            <input
+                                type="radio"
+                                name="timeFilter"
+                                value="past"
+                                class="join-item btn btn-xs md:btn-sm"
+                                aria-label="Past"
+                            />
+                        </div>
+                    </div>
 
-      <!-- Filter Controls -->
-      <div class="mb-4">
-        <!-- All Filters -->
-        <div class="flex flex-wrap gap-4">
-          <div class="form-control w-full sm:w-auto">
-            <label class="label">
-              <span class="label-text text-sm md:text-base font-medium"
-                >Time Filter</span
-              >
-            </label>
-            <div class="join m-1">
-              <input
-                type="radio"
-                name="timeFilter"
-                value="all"
-                class="join-item btn btn-xs md:btn-sm"
-                checked
-                aria-label="All Events"
-              />
-              <input
-                type="radio"
-                name="timeFilter"
-                value="ongoing"
-                class="join-item btn btn-xs md:btn-sm"
-                aria-label="Ongoing"
-              />
-              <input
-                type="radio"
-                name="timeFilter"
-                value="upcoming"
-                class="join-item btn btn-xs md:btn-sm"
-                aria-label="Upcoming"
-              />
-              <input
-                type="radio"
-                name="timeFilter"
-                value="past"
-                class="join-item btn btn-xs md:btn-sm"
-                aria-label="Past"
-              />
+                    <!-- Other filters with similar responsive adjustments -->
+                    <div class="form-control w-full sm:w-auto">
+                        <label class="label">
+                            <span
+                                class="label-text text-sm md:text-base font-medium"
+                                >Year</span
+                            >
+                        </label>
+                        <div class="dropdown">
+                            <label
+                                tabindex="0"
+                                class="btn btn-sm m-1 w-[180px] justify-between items-center"
+                            >
+                                <div class="flex-1 text-left truncate">
+                                    <span id="yearFilterLabel">All Years</span>
+                                </div>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4 flex-shrink-0 ml-2"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </label>
+                            <div
+                                tabindex="0"
+                                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+                            >
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">All Years</span
+                                        >
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="all"
+                                            checked
+                                        />
+                                    </label>
+                                </div>
+                                <div id="yearCheckboxes" class="space-y-1">
+                                    <!-- Year checkboxes will be populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-control w-full sm:w-auto">
+                        <label class="label">
+                            <span
+                                class="label-text text-sm md:text-base font-medium"
+                                >Quarter</span
+                            >
+                        </label>
+                        <div class="dropdown">
+                            <label
+                                tabindex="0"
+                                class="btn btn-sm m-1 w-[180px] justify-between items-center"
+                            >
+                                <div class="flex-1 text-left truncate">
+                                    <span id="quarterFilterLabel"
+                                        >All Quarters</span
+                                    >
+                                </div>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4 flex-shrink-0 ml-2"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </label>
+                            <div
+                                id="quarterDropdownContent"
+                                tabindex="0"
+                                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+                            >
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text"
+                                            >All Quarters</span
+                                        >
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="all"
+                                            checked
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Fall</span>
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="fall"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Winter</span>
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="winter"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Spring</span>
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="spring"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Summer</span>
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox"
+                                            value="summer"
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-control w-full sm:w-auto">
+                        <label class="label">
+                            <span
+                                class="label-text text-sm md:text-base font-medium"
+                                >Published</span
+                            >
+                        </label>
+                        <div class="dropdown">
+                            <label
+                                tabindex="0"
+                                class="btn btn-sm m-1 w-[140px] justify-between"
+                            >
+                                <span id="publishedFilterLabel">All</span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </label>
+                            <div
+                                tabindex="0"
+                                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+                            >
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">All</span>
+                                        <input
+                                            type="radio"
+                                            name="publishedFilter"
+                                            class="radio"
+                                            value="all"
+                                            checked
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Yes</span>
+                                        <input
+                                            type="radio"
+                                            name="publishedFilter"
+                                            class="radio"
+                                            value="yes"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">No</span>
+                                        <input
+                                            type="radio"
+                                            name="publishedFilter"
+                                            class="radio"
+                                            value="no"
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-control w-full sm:w-auto">
+                        <label class="label">
+                            <span
+                                class="label-text text-sm md:text-base font-medium"
+                                >Has Files</span
+                            >
+                        </label>
+                        <div class="dropdown">
+                            <label
+                                tabindex="0"
+                                class="btn btn-sm m-1 w-[140px] justify-between"
+                            >
+                                <span id="hasFilesFilterLabel">All</span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </label>
+                            <div
+                                tabindex="0"
+                                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+                            >
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">All</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFilesFilter"
+                                            class="radio"
+                                            value="all"
+                                            checked
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Yes</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFilesFilter"
+                                            class="radio"
+                                            value="yes"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">No</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFilesFilter"
+                                            class="radio"
+                                            value="no"
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-control w-full sm:w-auto">
+                        <label class="label">
+                            <span
+                                class="label-text text-sm md:text-base font-medium"
+                                >Has Food</span
+                            >
+                        </label>
+                        <div class="dropdown">
+                            <label
+                                tabindex="0"
+                                class="btn btn-sm m-1 w-[140px] justify-between"
+                            >
+                                <span id="hasFoodFilterLabel">All</span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                            </label>
+                            <div
+                                tabindex="0"
+                                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+                            >
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">All</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFoodFilter"
+                                            class="radio"
+                                            value="all"
+                                            checked
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">Yes</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFoodFilter"
+                                            class="radio"
+                                            value="yes"
+                                        />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label cursor-pointer">
+                                        <span class="label-text">No</span>
+                                        <input
+                                            type="radio"
+                                            name="hasFoodFilter"
+                                            class="radio"
+                                            value="no"
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
 
-          <!-- Other filters with similar responsive adjustments -->
-          <div class="form-control w-full sm:w-auto">
-            <label class="label">
-              <span class="label-text text-sm md:text-base font-medium"
-                >Year</span
-              >
-            </label>
-            <div class="dropdown">
-              <label
-                tabindex="0"
-                class="btn btn-sm m-1 w-[180px] justify-between items-center"
-              >
-                <div class="flex-1 text-left truncate">
-                  <span id="yearFilterLabel">All Years</span>
+            <!-- Search and Per Page Controls -->
+            <div class="flex flex-col sm:flex-row gap-4 mb-4">
+                <div class="form-control flex-1">
+                    <div class="join w-full">
+                        <div
+                            class="join-item bg-base-200 flex items-center px-3"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-4 w-4 md:h-5 md:w-5 opacity-70"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                    clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Search events..."
+                            class="input input-bordered join-item w-full text-sm md:text-base"
+                        />
+                    </div>
                 </div>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4 flex-shrink-0 ml-2"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clip-rule="evenodd"></path>
-                </svg>
-              </label>
-              <div
-                tabindex="0"
-                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
-              >
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">All Years</span>
-                    <input
-                      type="checkbox"
-                      class="checkbox"
-                      value="all"
-                      checked
-                    />
-                  </label>
+                <div class="form-control w-full sm:w-auto">
+                    <div class="join">
+                        <div
+                            class="join-item bg-base-200 flex items-center px-3 text-sm md:text-base"
+                        >
+                            Per Page
+                        </div>
+                        <select
+                            id="perPageSelect"
+                            class="select select-bordered join-item text-sm md:text-base"
+                        >
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
                 </div>
-                <div id="yearCheckboxes" class="space-y-1">
-                  <!-- Year checkboxes will be populated dynamically -->
-                </div>
-              </div>
             </div>
-          </div>
 
-          <div class="form-control w-full sm:w-auto">
-            <label class="label">
-              <span class="label-text text-sm md:text-base font-medium"
-                >Quarter</span
-              >
-            </label>
-            <div class="dropdown">
-              <label
-                tabindex="0"
-                class="btn btn-sm m-1 w-[180px] justify-between items-center"
-              >
-                <div class="flex-1 text-left truncate">
-                  <span id="quarterFilterLabel">All Quarters</span>
-                </div>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4 flex-shrink-0 ml-2"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clip-rule="evenodd"></path>
-                </svg>
-              </label>
-              <div
-                id="quarterDropdownContent"
-                tabindex="0"
-                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
-              >
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">All Quarters</span>
-                    <input
-                      type="checkbox"
-                      class="checkbox"
-                      value="all"
-                      checked
-                    />
-                  </label>
-                </div>
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">Fall</span>
-                    <input type="checkbox" class="checkbox" value="fall" />
-                  </label>
-                </div>
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">Winter</span>
-                    <input type="checkbox" class="checkbox" value="winter" />
-                  </label>
-                </div>
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">Spring</span>
-                    <input type="checkbox" class="checkbox" value="spring" />
-                  </label>
-                </div>
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">Summer</span>
-                    <input type="checkbox" class="checkbox" value="summer" />
-                  </label>
-                </div>
-              </div>
+            <!-- Event Items -->
+            <div class="space-y-3 md:space-y-4" id="eventsList">
+                <!-- Event items will be populated here with responsive classes -->
             </div>
-          </div>
 
-          <div class="form-control w-full sm:w-auto">
-            <label class="label">
-              <span class="label-text text-sm md:text-base font-medium"
-                >Published</span
-              >
-            </label>
-            <div class="dropdown">
-              <label
-                tabindex="0"
-                class="btn btn-sm m-1 w-[140px] justify-between"
-              >
-                <span id="publishedFilterLabel">All</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clip-rule="evenodd"></path>
-                </svg>
-              </label>
-              <div
-                tabindex="0"
-                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
-              >
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">All</span>
-                    <input
-                      type="radio"
-                      name="publishedFilter"
-                      class="radio"
-                      value="all"
-                      checked
-                    />
-                  </label>
-                </div>
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">Yes</span>
-                    <input
-                      type="radio"
-                      name="publishedFilter"
-                      class="radio"
-                      value="yes"
-                    />
-                  </label>
-                </div>
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">No</span>
-                    <input
-                      type="radio"
-                      name="publishedFilter"
-                      class="radio"
-                      value="no"
-                    />
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-control w-full sm:w-auto">
-            <label class="label">
-              <span class="label-text text-sm md:text-base font-medium"
-                >Has Files</span
-              >
-            </label>
-            <div class="dropdown">
-              <label
-                tabindex="0"
-                class="btn btn-sm m-1 w-[140px] justify-between"
-              >
-                <span id="hasFilesFilterLabel">All</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clip-rule="evenodd"></path>
-                </svg>
-              </label>
-              <div
-                tabindex="0"
-                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
-              >
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">All</span>
-                    <input
-                      type="radio"
-                      name="hasFilesFilter"
-                      class="radio"
-                      value="all"
-                      checked
-                    />
-                  </label>
-                </div>
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">Yes</span>
-                    <input
-                      type="radio"
-                      name="hasFilesFilter"
-                      class="radio"
-                      value="yes"
-                    />
-                  </label>
-                </div>
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">No</span>
-                    <input
-                      type="radio"
-                      name="hasFilesFilter"
-                      class="radio"
-                      value="no"
-                    />
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-control w-full sm:w-auto">
-            <label class="label">
-              <span class="label-text text-sm md:text-base font-medium"
-                >Has Food</span
-              >
-            </label>
-            <div class="dropdown">
-              <label
-                tabindex="0"
-                class="btn btn-sm m-1 w-[140px] justify-between"
-              >
-                <span id="hasFoodFilterLabel">All</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clip-rule="evenodd"></path>
-                </svg>
-              </label>
-              <div
-                tabindex="0"
-                class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
-              >
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">All</span>
-                    <input
-                      type="radio"
-                      name="hasFoodFilter"
-                      class="radio"
-                      value="all"
-                      checked
-                    />
-                  </label>
-                </div>
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">Yes</span>
-                    <input
-                      type="radio"
-                      name="hasFoodFilter"
-                      class="radio"
-                      value="yes"
-                    />
-                  </label>
-                </div>
-                <div class="form-control">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">No</span>
-                    <input
-                      type="radio"
-                      name="hasFoodFilter"
-                      class="radio"
-                      value="no"
-                    />
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Search and Per Page Controls -->
-      <div class="flex flex-col sm:flex-row gap-4 mb-4">
-        <div class="form-control flex-1">
-          <div class="join w-full">
-            <div class="join-item bg-base-200 flex items-center px-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4 md:h-5 md:w-5 opacity-70"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                  clip-rule="evenodd"></path>
-              </svg>
-            </div>
-            <input
-              type="text"
-              id="searchInput"
-              placeholder="Search events..."
-              class="input input-bordered join-item w-full text-sm md:text-base"
-            />
-          </div>
-        </div>
-        <div class="form-control w-full sm:w-auto">
-          <div class="join">
+            <!-- Pagination -->
             <div
-              class="join-item bg-base-200 flex items-center px-3 text-sm md:text-base"
+                class="flex justify-center mt-4 md:mt-6"
+                id="paginationContainer"
             >
-              Per Page
+                <div class="join">
+                    <button
+                        class="join-item btn btn-xs md:btn-sm"
+                        id="firstPageBtn">«</button
+                    >
+                    <button
+                        class="join-item btn btn-xs md:btn-sm"
+                        id="prevPageBtn">‹</button
+                    >
+                    <button class="join-item btn btn-xs md:btn-sm"
+                        >Page <span id="currentPageNumber">1</span></button
+                    >
+                    <button
+                        class="join-item btn btn-xs md:btn-sm"
+                        id="nextPageBtn">›</button
+                    >
+                    <button
+                        class="join-item btn btn-xs md:btn-sm"
+                        id="lastPageBtn">»</button
+                    >
+                </div>
             </div>
-            <select
-              id="perPageSelect"
-              class="select select-bordered join-item text-sm md:text-base"
-            >
-              <option value="5">5</option>
-              <option value="10">10</option>
-              <option value="25">25</option>
-              <option value="50">50</option>
-            </select>
-          </div>
         </div>
-      </div>
-
-      <!-- Event Items -->
-      <div class="space-y-3 md:space-y-4" id="eventsList">
-        <!-- Event items will be populated here with responsive classes -->
-      </div>
-
-      <!-- Pagination -->
-      <div class="flex justify-center mt-4 md:mt-6" id="paginationContainer">
-        <div class="join">
-          <button class="join-item btn btn-xs md:btn-sm" id="firstPageBtn"
-            >«</button
-          >
-          <button class="join-item btn btn-xs md:btn-sm" id="prevPageBtn"
-            >‹</button
-          >
-          <button class="join-item btn btn-xs md:btn-sm"
-            >Page <span id="currentPageNumber">1</span></button
-          >
-          <button class="join-item btn btn-xs md:btn-sm" id="nextPageBtn"
-            >›</button
-          >
-          <button class="join-item btn btn-xs md:btn-sm" id="lastPageBtn"
-            >»</button
-          >
-        </div>
-      </div>
     </div>
-  </div>
 </div>
 
 <EventEditor
-  client:load
-  onEventSaved={() => {
-    // Reset cache timestamp to force refresh
-    window.lastCacheUpdate = 0;
-    // Refresh events list
-    window.fetchEvents?.();
-  }}
+    client:load
+    onEventSaved={() => {
+        // Reset cache timestamp to force refresh
+        window.lastCacheUpdate = 0;
+        // Refresh events list
+        window.fetchEvents?.();
+    }}
 />
 
 <!-- Event Details Modal -->
 <dialog id="eventDetailsModal" class="modal">
-  <div class="modal-box max-w-4xl">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="font-bold text-lg">Event Details</h3>
-      <button
-        class="btn btn-circle btn-ghost"
-        onclick="eventDetailsModal.close()"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
-    </div>
+    <div class="modal-box max-w-4xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg">Event Details</h3>
+            <button
+                class="btn btn-circle btn-ghost"
+                onclick="eventDetailsModal.close()"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
 
-    <div class="tabs tabs-boxed mb-4">
-      <button class="tab tab-active" data-tab="files">Files</button>
-      <button class="tab" data-tab="attendees">Attendees</button>
-    </div>
+        <div class="tabs tabs-boxed mb-4">
+            <button class="tab tab-active" data-tab="files">Files</button>
+            <button class="tab" data-tab="attendees">Attendees</button>
+        </div>
 
-    <div id="filesContent" class="space-y-4">
-      <!-- Files list will be populated here -->
-    </div>
+        <div id="filesContent" class="space-y-4">
+            <!-- Files list will be populated here -->
+        </div>
 
-    <div id="attendeesContent" class="space-y-4 hidden">
-      <Attendees client:load />
+        <div id="attendeesContent" class="space-y-4 hidden">
+            <Attendees client:load />
+        </div>
     </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button onclick="window.closeEventDetailsModal()">close</button>
-  </form>
+    <form method="dialog" class="modal-backdrop">
+        <button onclick="window.closeEventDetailsModal()">close</button>
+    </form>
 </dialog>
 
 <!-- Universal File Preview Modal -->
 <dialog id="filePreviewModal" class="modal">
-  <div class="modal-box max-w-4xl">
-    <div class="flex justify-end mb-4">
-      <button
-        class="btn btn-ghost btn-sm"
-        onclick="window.closeFilePreviewOfficer()"
-        type="button"
-      >
-        Close
-      </button>
+    <div class="modal-box max-w-4xl">
+        <div class="flex justify-end mb-4">
+            <button
+                class="btn btn-ghost btn-sm"
+                onclick="window.closeFilePreviewOfficer()"
+                type="button"
+            >
+                Close
+            </button>
+        </div>
+        <div class="relative" id="previewContainer">
+            <div
+                id="previewLoadingSpinner"
+                class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
+            >
+                <span class="loading loading-spinner loading-lg"></span>
+            </div>
+            <div id="previewContent" class="w-full">
+                <FilePreview client:load />
+            </div>
+        </div>
     </div>
-    <div class="relative" id="previewContainer">
-      <div
-        id="previewLoadingSpinner"
-        class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
-      >
-        <span class="loading loading-spinner loading-lg"></span>
-      </div>
-      <div id="previewContent" class="w-full">
-        <FilePreview client:load />
-      </div>
-    </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button type="button">close</button>
-  </form>
+    <form method="dialog" class="modal-backdrop">
+        <button type="button">close</button>
+    </form>
 </dialog>
 
 <!-- Add a separate Attendees Modal -->
 <dialog id="attendeesModal" class="modal">
-  <div class="modal-box max-w-4xl">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="font-bold text-lg" id="attendeesModalTitle"></h3>
-      <button class="btn btn-circle btn-ghost" onclick="attendeesModal.close()">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
+    <div class="modal-box max-w-4xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg" id="attendeesModalTitle"></h3>
+            <button
+                class="btn btn-circle btn-ghost"
+                onclick="attendeesModal.close()"
+            >
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="attendeesModalContent">
+            <Attendees client:load />
+        </div>
     </div>
-    <div id="attendeesModalContent">
-      <Attendees client:load />
-    </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button>close</button>
-  </form>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
 </dialog>
 <script>
-  import { Get } from "../../scripts/pocketbase/Get";
-  import { Authentication } from "../../scripts/pocketbase/Authentication";
-  import { Update } from "../../scripts/pocketbase/Update";
-  import { FileManager } from "../../scripts/pocketbase/FileManager";
-  import { SendLog } from "../../scripts/pocketbase/SendLog";
-  import FilePreview from "./universal/FilePreview";
+    import { Get } from "../../scripts/pocketbase/Get";
+    import { Authentication } from "../../scripts/pocketbase/Authentication";
+    import { Update } from "../../scripts/pocketbase/Update";
+    import { FileManager } from "../../scripts/pocketbase/FileManager";
+    import { SendLog } from "../../scripts/pocketbase/SendLog";
+    import { DataSyncService } from "../../scripts/database/DataSyncService";
+    import FilePreview from "./universal/FilePreview";
+    import toast from "react-hot-toast";
 
-  // Add file storage
-  const selectedFileStorage = new Map<string, File>();
-  const filesToDelete = new Set<string>(); // Add storage for files to delete
+    // Add file storage
+    const selectedFileStorage = new Map<string, File>();
+    const filesToDelete = new Set<string>(); // Add storage for files to delete
 
-  interface AttendeeEntry {
-    user_id: string;
-    time_checked_in: string;
-    food: string;
-  }
+    interface AttendeeEntry {
+        user_id: string;
+        time_checked_in: string;
+        food: string;
+    }
 
-  interface Event {
-    id: string;
-    event_name: string;
-    event_description: string;
-    event_code: string;
-    location: string;
-    files: string[];
-    points_to_reward: number;
-    start_date: string;
-    end_date: string;
-    published: boolean;
-    has_food: boolean;
-    attendees: AttendeeEntry[];
-  }
+    interface Event {
+        id: string;
+        event_name: string;
+        event_description: string;
+        event_code: string;
+        location: string;
+        files: string[];
+        points_to_reward: number;
+        start_date: string;
+        end_date: string;
+        published: boolean;
+        has_food: boolean;
+        attendees: AttendeeEntry[];
+    }
 
-  const get = Get.getInstance();
-  const auth = Authentication.getInstance();
-  const update = Update.getInstance();
-  const fileManager = FileManager.getInstance();
-  const sendLog = SendLog.getInstance();
+    const get = Get.getInstance();
+    const auth = Authentication.getInstance();
+    const update = Update.getInstance();
+    const fileManager = FileManager.getInstance();
+    const sendLog = SendLog.getInstance();
 
-  let currentPage = 1;
-  let totalPages = 0;
-  let searchQuery = "";
-  let perPage = 5;
-  let quarterlyStats = {
-    totalEvents: 0,
-    uniqueAttendees: 0,
-    recurringAttendees: 0,
-  };
+    let currentPage = 1;
+    let totalPages = 0;
+    let searchQuery = "";
+    let perPage = 5;
+    let quarterlyStats = {
+        totalEvents: 0,
+        uniqueAttendees: 0,
+        recurringAttendees: 0,
+    };
 
-  // Add filter state
-  let filterState = {
-    time: "all",
-    year: ["all"],
-    quarter: ["all"],
-    published: "all",
-    hasFiles: "all",
-    hasFood: "all",
-  };
+    // Add filter state
+    let filterState = {
+        time: "all",
+        year: ["all"],
+        quarter: ["all"],
+        published: "all",
+        hasFiles: "all",
+        hasFood: "all",
+    };
 
-  // Add cache for events
-  let cachedEvents: Event[] = [];
-  let lastCacheUpdate = 0; // Will force a refresh on page load
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+    // Add cache for events
+    let cachedEvents: Event[] = [];
+    let lastCacheUpdate = 0; // Will force a refresh on page load
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-  // Function to refresh cache
-  async function refreshCache() {
-    try {
-      const now = Date.now();
+    // Function to refresh cache
+    async function refreshCache() {
+        try {
+            const now = Date.now();
 
-      if (
-        lastCacheUpdate === 0 ||
-        now - lastCacheUpdate >= CACHE_DURATION ||
-        cachedEvents.length === 0
-      ) {
-        auth.setUpdating(true);
-        const response = await get.getAll<Event>("events");
-        cachedEvents = response.map((event) => Get.convertUTCToLocal(event));
-        lastCacheUpdate = now;
+            if (
+                lastCacheUpdate === 0 ||
+                now - lastCacheUpdate >= CACHE_DURATION ||
+                cachedEvents.length === 0
+            ) {
+                auth.setUpdating(true);
+                const response = await get.getAll<Event>("events");
+                cachedEvents = response.map((event) =>
+                    Get.convertUTCToLocal(event)
+                );
+                lastCacheUpdate = now;
 
-        // Initialize year filter options from cache
-        const years = new Set<number>();
-        cachedEvents.forEach((event) => {
-          const year = new Date(event.start_date).getFullYear();
-          years.add(year);
-        });
+                // Initialize year filter options from cache
+                const years = new Set<number>();
+                cachedEvents.forEach((event) => {
+                    const year = new Date(event.start_date).getFullYear();
+                    years.add(year);
+                });
 
-        const yearCheckboxes = document.getElementById("yearCheckboxes");
-        if (yearCheckboxes) {
-          const sortedYears = Array.from(years).sort((a, b) => b - a);
-          yearCheckboxes.innerHTML = sortedYears
-            .map(
-              (year) => `
+                const yearCheckboxes =
+                    document.getElementById("yearCheckboxes");
+                if (yearCheckboxes) {
+                    const sortedYears = Array.from(years).sort((a, b) => b - a);
+                    yearCheckboxes.innerHTML = sortedYears
+                        .map(
+                            (year) => `
                             <label class="label cursor-pointer">
                                 <span class="label-text">${year}</span>
                                 <input type="checkbox" class="checkbox" value="${year}" />
                             </label>
-                        `,
+                        `
+                        )
+                        .join("");
+
+                    // Add event listeners to checkboxes
+                    const allYearsCheckbox = document.querySelector(
+                        'input[type="checkbox"][value="all"]'
+                    ) as HTMLInputElement;
+                    const yearInputs = Array.from(
+                        yearCheckboxes.querySelectorAll(
+                            'input[type="checkbox"]'
+                        )
+                    ) as HTMLInputElement[];
+
+                    if (allYearsCheckbox) {
+                        allYearsCheckbox.addEventListener("change", (e) => {
+                            const target = e.target as HTMLInputElement;
+                            if (target.checked) {
+                                yearInputs.forEach((input) => {
+                                    input.checked = false;
+                                });
+                                filterState.year = ["all"];
+                                document.getElementById(
+                                    "yearFilterLabel"
+                                )!.textContent = "All Years";
+                            }
+                            currentPage = 1;
+                            fetchEvents();
+                        });
+                    }
+
+                    yearInputs.forEach((input) => {
+                        input.addEventListener("change", () => {
+                            const checkedYears = yearInputs
+                                .filter((inp) => inp.checked)
+                                .map((inp) => inp.value);
+
+                            if (checkedYears.length === 0) {
+                                allYearsCheckbox.checked = true;
+                                filterState.year = ["all"];
+                                document.getElementById(
+                                    "yearFilterLabel"
+                                )!.textContent = "All Years";
+                            } else {
+                                allYearsCheckbox.checked = false;
+                                filterState.year = checkedYears;
+                                document.getElementById(
+                                    "yearFilterLabel"
+                                )!.textContent =
+                                    checkedYears.length === 1
+                                        ? checkedYears[0]
+                                        : `${checkedYears.length} Years Selected`;
+                            }
+                            currentPage = 1;
+                            fetchEvents();
+                        });
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Failed to refresh cache:", error);
+            throw error;
+        } finally {
+            auth.setUpdating(false);
+        }
+    }
+
+    // Helper function to determine current academic term
+    function getCurrentTerm(): { start: Date; end: Date } {
+        const now = new Date();
+        const year = now.getFullYear();
+        let start: Date, end: Date;
+
+        // If we're before September, term started last year
+        if (now.getMonth() < 8) {
+            // Before September
+            start = new Date(year - 1, 8, 1); // Sept 1 of last year
+            end = new Date(year, 8, 0); // Aug 31 of current year
+        } else {
+            start = new Date(year, 8, 1); // Sept 1 of current year
+            end = new Date(year + 1, 8, 0); // Aug 31 of next year
+        }
+
+        return { start, end };
+    }
+
+    // Helper function to determine current quarter
+    function getCurrentQuarter(): { start: Date; end: Date } {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        let start: Date, end: Date;
+
+        // Determine quarter (0-based months: 0-11)
+        // Q1: Sept-Dec (8-11)
+        // Q2: Jan-Mar (0-2)
+        // Q3: Mar-Jun (2-5)
+        // Q4: Jun-Sept (5-8)
+
+        if (month >= 8) {
+            // Q1: Sept-Dec
+            start = new Date(year, 8, 1);
+            end = new Date(year, 11, 31);
+        } else if (month < 2) {
+            // Q2: Jan-Mar
+            start = new Date(year, 0, 1);
+            end = new Date(year, 2, 31);
+        } else if (month < 5) {
+            // Q3: Mar-Jun
+            start = new Date(year, 2, 1);
+            end = new Date(year, 5, 30);
+        } else {
+            // Q4: Jun-Sept
+            start = new Date(year, 5, 1);
+            end = new Date(year, 8, 0); // End on Aug 31
+        }
+
+        return { start, end };
+    }
+
+    // Helper function to get quarter name
+    function getQuarterName(): string {
+        const month = new Date().getMonth();
+
+        if (month >= 8) {
+            // Sept-Dec
+            return "Fall";
+        } else if (month < 2) {
+            // Jan-Mar
+            return "Winter";
+        } else if (month < 5) {
+            // Mar-Jun
+            return "Spring";
+        } else {
+            // Jun-Sept
+            return "Summer";
+        }
+    }
+
+    // Function to apply filters to cached data
+    function filterEvents(events: Event[]): Event[] {
+        return events.filter((event) => {
+            const now = new Date().toISOString();
+            const eventStart = new Date(event.start_date).toISOString();
+            const eventEnd = new Date(event.end_date).toISOString();
+
+            // Time filter
+            if (filterState.time === "upcoming" && eventStart <= now)
+                return false;
+            if (filterState.time === "past" && eventEnd >= now) return false;
+            if (
+                filterState.time === "ongoing" &&
+                (eventStart > now || eventEnd < now)
             )
-            .join("");
+                return false;
 
-          // Add event listeners to checkboxes
-          const allYearsCheckbox = document.querySelector(
-            'input[type="checkbox"][value="all"]',
-          ) as HTMLInputElement;
-          const yearInputs = Array.from(
-            yearCheckboxes.querySelectorAll('input[type="checkbox"]'),
-          ) as HTMLInputElement[];
+            // Year filter
+            if (!filterState.year.includes("all")) {
+                const eventStartDate = new Date(event.start_date);
+                const eventEndDate = new Date(event.end_date);
+                const eventStartYear = eventStartDate.getFullYear().toString();
+                const eventEndYear = eventEndDate.getFullYear().toString();
 
-          if (allYearsCheckbox) {
-            allYearsCheckbox.addEventListener("change", (e) => {
-              const target = e.target as HTMLInputElement;
-              if (target.checked) {
-                yearInputs.forEach((input) => {
-                  input.checked = false;
-                });
-                filterState.year = ["all"];
-                document.getElementById("yearFilterLabel")!.textContent =
-                  "All Years";
-              }
-              currentPage = 1;
-              fetchEvents();
-            });
-          }
+                // Check if either the start year or end year matches any selected year
+                const yearMatches = filterState.year.some(
+                    (year) => year === eventStartYear || year === eventEndYear
+                );
+                if (!yearMatches) return false;
+            }
 
-          yearInputs.forEach((input) => {
-            input.addEventListener("change", () => {
-              const checkedYears = yearInputs
-                .filter((inp) => inp.checked)
-                .map((inp) => inp.value);
+            // Quarter filter
+            if (!filterState.quarter.includes("all")) {
+                const eventDate = new Date(event.start_date);
+                const month = eventDate.getMonth();
+                let isInSelectedQuarter = false;
 
-              if (checkedYears.length === 0) {
-                allYearsCheckbox.checked = true;
-                filterState.year = ["all"];
-                document.getElementById("yearFilterLabel")!.textContent =
-                  "All Years";
-              } else {
-                allYearsCheckbox.checked = false;
-                filterState.year = checkedYears;
-                document.getElementById("yearFilterLabel")!.textContent =
-                  checkedYears.length === 1
-                    ? checkedYears[0]
-                    : `${checkedYears.length} Years Selected`;
-              }
-              currentPage = 1;
-              fetchEvents();
-            });
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Failed to refresh cache:", error);
-      throw error;
-    } finally {
-      auth.setUpdating(false);
-    }
-  }
+                for (const quarter of filterState.quarter) {
+                    let isInQuarter = false;
+                    switch (quarter) {
+                        case "fall":
+                            isInQuarter = month >= 8 && month <= 11; // Sept-Dec
+                            break;
+                        case "winter":
+                            isInQuarter = month >= 0 && month <= 2; // Jan-Mar
+                            break;
+                        case "spring":
+                            isInQuarter = month >= 2 && month <= 5; // Mar-Jun
+                            break;
+                        case "summer":
+                            isInQuarter = month >= 5 && month <= 8; // Jun-Sept
+                            break;
+                    }
+                    if (isInQuarter) {
+                        isInSelectedQuarter = true;
+                        break;
+                    }
+                }
+                if (!isInSelectedQuarter) return false;
+            }
 
-  // Helper function to determine current academic term
-  function getCurrentTerm(): { start: Date; end: Date } {
-    const now = new Date();
-    const year = now.getFullYear();
-    let start: Date, end: Date;
+            // Published filter
+            if (filterState.published !== "all") {
+                if ((filterState.published === "yes") !== event.published)
+                    return false;
+            }
 
-    // If we're before September, term started last year
-    if (now.getMonth() < 8) {
-      // Before September
-      start = new Date(year - 1, 8, 1); // Sept 1 of last year
-      end = new Date(year, 8, 0); // Aug 31 of current year
-    } else {
-      start = new Date(year, 8, 1); // Sept 1 of current year
-      end = new Date(year + 1, 8, 0); // Aug 31 of next year
-    }
+            // Has Files filter
+            if (filterState.hasFiles !== "all") {
+                const hasFiles = event.files && event.files.length > 0;
+                if ((filterState.hasFiles === "yes") !== hasFiles) return false;
+            }
 
-    return { start, end };
-  }
+            // Has Food filter
+            if (filterState.hasFood !== "all") {
+                if ((filterState.hasFood === "yes") !== event.has_food)
+                    return false;
+            }
 
-  // Helper function to determine current quarter
-  function getCurrentQuarter(): { start: Date; end: Date } {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    let start: Date, end: Date;
+            // Search query
+            if (searchQuery) {
+                const searchLower = searchQuery.toLowerCase();
+                const searchTerms = searchLower.split(/\s+/).filter(Boolean);
 
-    // Determine quarter (0-based months: 0-11)
-    // Q1: Sept-Dec (8-11)
-    // Q2: Jan-Mar (0-2)
-    // Q3: Mar-Jun (2-5)
-    // Q4: Jun-Sept (5-8)
+                return (
+                    searchTerms.length === 0 || // If no search terms, return true
+                    searchTerms.every(
+                        (term) =>
+                            event.event_name.toLowerCase().includes(term) ||
+                            event.event_code.toLowerCase().includes(term) ||
+                            event.location.toLowerCase().includes(term) ||
+                            event.event_description.toLowerCase().includes(term)
+                    )
+                );
+            }
 
-    if (month >= 8) {
-      // Q1: Sept-Dec
-      start = new Date(year, 8, 1);
-      end = new Date(year, 11, 31);
-    } else if (month < 2) {
-      // Q2: Jan-Mar
-      start = new Date(year, 0, 1);
-      end = new Date(year, 2, 31);
-    } else if (month < 5) {
-      // Q3: Mar-Jun
-      start = new Date(year, 2, 1);
-      end = new Date(year, 5, 30);
-    } else {
-      // Q4: Jun-Sept
-      start = new Date(year, 5, 1);
-      end = new Date(year, 8, 0); // End on Aug 31
+            return true;
+        });
     }
 
-    return { start, end };
-  }
-
-  // Helper function to get quarter name
-  function getQuarterName(): string {
-    const month = new Date().getMonth();
-
-    if (month >= 8) {
-      // Sept-Dec
-      return "Fall";
-    } else if (month < 2) {
-      // Jan-Mar
-      return "Winter";
-    } else if (month < 5) {
-      // Mar-Jun
-      return "Spring";
-    } else {
-      // Jun-Sept
-      return "Summer";
-    }
-  }
-
-  // Function to apply filters to cached data
-  function filterEvents(events: Event[]): Event[] {
-    return events.filter((event) => {
-      const now = new Date().toISOString();
-      const eventStart = new Date(event.start_date).toISOString();
-      const eventEnd = new Date(event.end_date).toISOString();
-
-      // Time filter
-      if (filterState.time === "upcoming" && eventStart <= now) return false;
-      if (filterState.time === "past" && eventEnd >= now) return false;
-      if (
-        filterState.time === "ongoing" &&
-        (eventStart > now || eventEnd < now)
-      )
-        return false;
-
-      // Year filter
-      if (!filterState.year.includes("all")) {
-        const eventStartDate = new Date(event.start_date);
-        const eventEndDate = new Date(event.end_date);
-        const eventStartYear = eventStartDate.getFullYear().toString();
-        const eventEndYear = eventEndDate.getFullYear().toString();
-
-        // Check if either the start year or end year matches any selected year
-        const yearMatches = filterState.year.some(
-          (year) => year === eventStartYear || year === eventEndYear,
+    // Fetch and display events using cached data
+    async function fetchEvents() {
+        const eventsList = document.getElementById("eventsList");
+        const paginationContainer = document.getElementById(
+            "paginationContainer"
         );
-        if (!yearMatches) return false;
-      }
+        if (!eventsList || !paginationContainer) return;
 
-      // Quarter filter
-      if (!filterState.quarter.includes("all")) {
-        const eventDate = new Date(event.start_date);
-        const month = eventDate.getMonth();
-        let isInSelectedQuarter = false;
-
-        for (const quarter of filterState.quarter) {
-          let isInQuarter = false;
-          switch (quarter) {
-            case "fall":
-              isInQuarter = month >= 8 && month <= 11; // Sept-Dec
-              break;
-            case "winter":
-              isInQuarter = month >= 0 && month <= 2; // Jan-Mar
-              break;
-            case "spring":
-              isInQuarter = month >= 2 && month <= 5; // Mar-Jun
-              break;
-            case "summer":
-              isInQuarter = month >= 5 && month <= 8; // Jun-Sept
-              break;
-          }
-          if (isInQuarter) {
-            isInSelectedQuarter = true;
-            break;
-          }
-        }
-        if (!isInSelectedQuarter) return false;
-      }
-
-      // Published filter
-      if (filterState.published !== "all") {
-        if ((filterState.published === "yes") !== event.published) return false;
-      }
-
-      // Has Files filter
-      if (filterState.hasFiles !== "all") {
-        const hasFiles = event.files && event.files.length > 0;
-        if ((filterState.hasFiles === "yes") !== hasFiles) return false;
-      }
-
-      // Has Food filter
-      if (filterState.hasFood !== "all") {
-        if ((filterState.hasFood === "yes") !== event.has_food) return false;
-      }
-
-      // Search query
-      if (searchQuery) {
-        const searchLower = searchQuery.toLowerCase();
-        const searchTerms = searchLower.split(/\s+/).filter(Boolean);
-
-        return (
-          searchTerms.length === 0 || // If no search terms, return true
-          searchTerms.every(
-            (term) =>
-              event.event_name.toLowerCase().includes(term) ||
-              event.event_code.toLowerCase().includes(term) ||
-              event.location.toLowerCase().includes(term) ||
-              event.event_description.toLowerCase().includes(term),
-          )
-        );
-      }
-
-      return true;
-    });
-  }
-
-  // Fetch and display events using cached data
-  async function fetchEvents() {
-    const eventsList = document.getElementById("eventsList");
-    const paginationContainer = document.getElementById("paginationContainer");
-    if (!eventsList || !paginationContainer) return;
-
-    try {
-      if (!auth.isAuthenticated()) {
-        eventsList.innerHTML = `
+        try {
+            if (!auth.isAuthenticated()) {
+                eventsList.innerHTML = `
           <div class="text-center py-8 text-base-content/70">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
@@ -1045,61 +1120,63 @@ const currentPage = eventResponse.page;
             <p>Please log in to view events</p>
           </div>
         `;
-        paginationContainer.classList.add("hidden");
-        return;
-      }
+                paginationContainer.classList.add("hidden");
+                return;
+            }
 
-      // Refresh cache if needed
-      await refreshCache();
+            // Refresh cache if needed
+            await refreshCache();
 
-      // Apply filters to cached data
-      const filteredEvents = filterEvents(cachedEvents);
+            // Apply filters to cached data
+            const filteredEvents = filterEvents(cachedEvents);
 
-      // Sort events by start date (newest first)
-      filteredEvents.sort(
-        (a, b) =>
-          new Date(b.start_date).getTime() - new Date(a.start_date).getTime(),
-      );
+            // Sort events by start date (newest first)
+            filteredEvents.sort(
+                (a, b) =>
+                    new Date(b.start_date).getTime() -
+                    new Date(a.start_date).getTime()
+            );
 
-      // Calculate pagination
-      const totalItems = filteredEvents.length;
-      totalPages = Math.ceil(totalItems / perPage);
-      const startIndex = (currentPage - 1) * perPage;
-      const endIndex = startIndex + perPage;
-      const paginatedEvents = filteredEvents.slice(startIndex, endIndex);
+            // Calculate pagination
+            const totalItems = filteredEvents.length;
+            totalPages = Math.ceil(totalItems / perPage);
+            const startIndex = (currentPage - 1) * perPage;
+            const endIndex = startIndex + perPage;
+            const paginatedEvents = filteredEvents.slice(startIndex, endIndex);
 
-      // Update pagination UI
-      const firstPageBtn = document.getElementById(
-        "firstPageBtn",
-      ) as HTMLButtonElement;
-      const prevPageBtn = document.getElementById(
-        "prevPageBtn",
-      ) as HTMLButtonElement;
-      const nextPageBtn = document.getElementById(
-        "nextPageBtn",
-      ) as HTMLButtonElement;
-      const lastPageBtn = document.getElementById(
-        "lastPageBtn",
-      ) as HTMLButtonElement;
-      const currentPageNumber = document.getElementById("currentPageNumber");
+            // Update pagination UI
+            const firstPageBtn = document.getElementById(
+                "firstPageBtn"
+            ) as HTMLButtonElement;
+            const prevPageBtn = document.getElementById(
+                "prevPageBtn"
+            ) as HTMLButtonElement;
+            const nextPageBtn = document.getElementById(
+                "nextPageBtn"
+            ) as HTMLButtonElement;
+            const lastPageBtn = document.getElementById(
+                "lastPageBtn"
+            ) as HTMLButtonElement;
+            const currentPageNumber =
+                document.getElementById("currentPageNumber");
 
-      if (firstPageBtn) firstPageBtn.disabled = currentPage <= 1;
-      if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
-      if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
-      if (lastPageBtn) lastPageBtn.disabled = currentPage >= totalPages;
-      if (currentPageNumber)
-        currentPageNumber.textContent = currentPage.toString();
+            if (firstPageBtn) firstPageBtn.disabled = currentPage <= 1;
+            if (prevPageBtn) prevPageBtn.disabled = currentPage <= 1;
+            if (nextPageBtn) nextPageBtn.disabled = currentPage >= totalPages;
+            if (lastPageBtn) lastPageBtn.disabled = currentPage >= totalPages;
+            if (currentPageNumber)
+                currentPageNumber.textContent = currentPage.toString();
 
-      // Show/hide pagination based on total pages
-      if (totalPages <= 1) {
-        paginationContainer.classList.add("hidden");
-      } else {
-        paginationContainer.classList.remove("hidden");
-      }
+            // Show/hide pagination based on total pages
+            if (totalPages <= 1) {
+                paginationContainer.classList.add("hidden");
+            } else {
+                paginationContainer.classList.remove("hidden");
+            }
 
-      // Update events list
-      if (paginatedEvents.length === 0) {
-        eventsList.innerHTML = `
+            // Update events list
+            if (paginatedEvents.length === 0) {
+                eventsList.innerHTML = `
             <div class="text-center py-8 text-base-content/70">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 opacity-50" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
@@ -1107,39 +1184,43 @@ const currentPage = eventResponse.page;
               <p>No events found</p>
             </div>
           `;
-        return;
-      }
-
-      eventsList.innerHTML = paginatedEvents
-        .map((event) => {
-          // Safely parse and format the date
-          let dateStr = "Invalid date";
-          try {
-            const date = new Date(event.start_date);
-            if (!isNaN(date.getTime())) {
-              dateStr = date.toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              });
+                return;
             }
-          } catch (e) {
-            console.error("Error formatting date:", e);
-          }
 
-          const locationStr = event.location ? `${event.location}` : "";
-          const codeStr = event.event_code ? `${event.event_code}` : "";
-          const detailsStr = [locationStr, codeStr]
-            .filter(Boolean)
-            .join(" | code: ");
+            eventsList.innerHTML = paginatedEvents
+                .map((event) => {
+                    // Safely parse and format the date
+                    let dateStr = "Invalid date";
+                    try {
+                        const date = new Date(event.start_date);
+                        if (!isNaN(date.getTime())) {
+                            dateStr = date.toLocaleDateString("en-US", {
+                                month: "long",
+                                day: "numeric",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Error formatting date:", e);
+                    }
 
-          // Store event data in a global map using the event ID as key
-          const eventDataId = `event_${event.id}`;
-          window[eventDataId] = event;
+                    const locationStr = event.location
+                        ? `${event.location}`
+                        : "";
+                    const codeStr = event.event_code
+                        ? `${event.event_code}`
+                        : "";
+                    const detailsStr = [locationStr, codeStr]
+                        .filter(Boolean)
+                        .join(" | code: ");
 
-          return `
+                    // Store event data in a global map using the event ID as key
+                    const eventDataId = `event_${event.id}`;
+                    window[eventDataId] = event;
+
+                    return `
               <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 md:p-4 bg-base-200 rounded-xl hover:bg-base-300 transition-all duration-300 gap-3">
                 <div class="flex items-start sm:items-center gap-3 md:gap-4">
                     <div class="badge badge-lg p-3 badge-primary">
@@ -1172,14 +1253,14 @@ const currentPage = eventResponse.page;
                 </div>
             </div>
         `;
-        })
-        .join("");
+                })
+                .join("");
 
-      // Calculate and update stats using cached data
-      await calculateQuarterlyStats();
-    } catch (error) {
-      console.error("Failed to fetch events:", error);
-      eventsList.innerHTML = `
+            // Calculate and update stats using cached data
+            await calculateQuarterlyStats();
+        } catch (error) {
+            console.error("Failed to fetch events:", error);
+            eventsList.innerHTML = `
         <div class="alert alert-error">
           <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1187,655 +1268,691 @@ const currentPage = eventResponse.page;
           <span>Failed to load events. Please try refreshing the page.</span>
         </div>
       `;
-      paginationContainer.classList.add("hidden");
-    }
-  }
-
-  // Calculate quarterly stats using cached data
-  async function calculateQuarterlyStats() {
-    try {
-      const { start: termStart, end: termEnd } = getCurrentTerm();
-      const { start: quarterStart, end: quarterEnd } = getCurrentQuarter();
-
-      // Update quarter name in UI
-      const quarterNameEl = document.getElementById("quarterName");
-      if (quarterNameEl) {
-        quarterNameEl.textContent = getQuarterName();
-      }
-
-      // Filter events for current term and quarter
-      const termEvents = cachedEvents.filter((event) => {
-        const eventDate = new Date(event.start_date);
-        return eventDate >= termStart && eventDate <= termEnd;
-      });
-
-      const quarterEvents = cachedEvents.filter((event) => {
-        const eventDate = new Date(event.start_date);
-        return eventDate >= quarterStart && eventDate <= quarterEnd;
-      });
-
-      // Calculate stats
-      quarterlyStats.totalEvents = termEvents.length;
-
-      const termAttendees = new Map<string, number>();
-      termEvents.forEach((event) => {
-        event.attendees?.forEach((attendee) => {
-          const count = termAttendees.get(attendee.user_id) || 0;
-          termAttendees.set(attendee.user_id, count + 1);
-        });
-      });
-
-      quarterlyStats.uniqueAttendees = termAttendees.size;
-
-      const quarterAttendees = new Map<string, number>();
-      quarterEvents.forEach((event) => {
-        event.attendees?.forEach((attendee) => {
-          const count = quarterAttendees.get(attendee.user_id) || 0;
-          quarterAttendees.set(attendee.user_id, count + 1);
-        });
-      });
-
-      quarterlyStats.recurringAttendees = Array.from(
-        quarterAttendees.values(),
-      ).filter((count) => count > 1).length;
-
-      // Update the UI
-      const totalEventsEl = document.getElementById("totalEvents");
-      const uniqueAttendeesEl = document.getElementById("uniqueAttendees");
-      const recurringAttendeesEl =
-        document.getElementById("recurringAttendees");
-
-      if (totalEventsEl)
-        totalEventsEl.textContent = quarterlyStats.totalEvents.toString();
-      if (uniqueAttendeesEl)
-        uniqueAttendeesEl.textContent =
-          quarterlyStats.uniqueAttendees.toString();
-      if (recurringAttendeesEl)
-        recurringAttendeesEl.textContent =
-          quarterlyStats.recurringAttendees.toString();
-    } catch (error) {
-      console.error("Failed to calculate quarterly stats:", error);
-    }
-  }
-
-  // Add pagination event listeners
-  document.getElementById("firstPageBtn")?.addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage = 1;
-      fetchEvents();
-    }
-  });
-
-  document.getElementById("prevPageBtn")?.addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage--;
-      fetchEvents();
-    }
-  });
-
-  document.getElementById("nextPageBtn")?.addEventListener("click", () => {
-    if (currentPage < totalPages) {
-      currentPage++;
-      fetchEvents();
-    }
-  });
-
-  document.getElementById("lastPageBtn")?.addEventListener("click", () => {
-    if (currentPage < totalPages) {
-      currentPage = totalPages;
-      fetchEvents();
-    }
-  });
-
-  // Add filter event listeners
-  // Time filter
-  document.querySelectorAll('input[name="timeFilter"]').forEach((radio) => {
-    radio.addEventListener("change", (e) => {
-      const target = e.target as HTMLInputElement;
-      filterState.time = target.value;
-      currentPage = 1;
-      fetchEvents();
-    });
-  });
-
-  // Year filter
-  document.getElementById("yearCheckboxes")?.addEventListener("change", (e) => {
-    const target = e.target as HTMLInputElement;
-    if (!target.matches('input[type="checkbox"]')) return;
-
-    const allYearsCheckbox = target
-      .closest(".dropdown-content")
-      ?.querySelector(
-        'input[type="checkbox"][value="all"]',
-      ) as HTMLInputElement;
-
-    const yearInputs = Array.from(
-      target
-        .closest(".dropdown-content")
-        ?.querySelectorAll('#yearCheckboxes input[type="checkbox"]') || [],
-    ) as HTMLInputElement[];
-
-    if (target.value === "all" && target.checked) {
-      yearInputs.forEach((input) => {
-        input.checked = false;
-      });
-      filterState.year = ["all"];
-      document.getElementById("yearFilterLabel")!.textContent = "All Years";
-    } else {
-      const checkedYears = yearInputs
-        .filter((inp) => inp.checked)
-        .map((inp) => inp.value);
-
-      if (checkedYears.length === 0) {
-        allYearsCheckbox.checked = true;
-        filterState.year = ["all"];
-        document.getElementById("yearFilterLabel")!.textContent = "All Years";
-      } else {
-        allYearsCheckbox.checked = false;
-        filterState.year = checkedYears;
-        document.getElementById("yearFilterLabel")!.textContent =
-          checkedYears.length === 1
-            ? checkedYears[0]
-            : `${checkedYears.length} Years Selected`;
-      }
-    }
-    currentPage = 1;
-    fetchEvents();
-  });
-
-  // Add event listener for "All Years" checkbox
-  document
-    .querySelector('input[type="checkbox"][value="all"]')
-    ?.addEventListener("change", (e) => {
-      const target = e.target as HTMLInputElement;
-      const yearInputs = Array.from(
-        document.querySelectorAll('#yearCheckboxes input[type="checkbox"]'),
-      ) as HTMLInputElement[];
-
-      if (target.checked) {
-        yearInputs.forEach((input) => {
-          input.checked = false;
-        });
-        filterState.year = ["all"];
-        document.getElementById("yearFilterLabel")!.textContent = "All Years";
-        currentPage = 1;
-        fetchEvents();
-      }
-    });
-
-  // Quarter filter
-  document
-    .getElementById("quarterDropdownContent")
-    ?.addEventListener("change", (e) => {
-      const target = e.target as HTMLInputElement;
-      if (!target.matches('input[type="checkbox"]')) return;
-
-      const allQuartersCheckbox = target
-        .closest("#quarterDropdownContent")
-        ?.querySelector(
-          'input[type="checkbox"][value="all"]',
-        ) as HTMLInputElement;
-
-      const quarterInputs = Array.from(
-        target
-          .closest("#quarterDropdownContent")
-          ?.querySelectorAll('input[type="checkbox"]') || [],
-      ).filter(
-        (inp) => (inp as HTMLInputElement).value !== "all",
-      ) as HTMLInputElement[];
-
-      if (target.value === "all" && target.checked) {
-        quarterInputs.forEach((input) => {
-          input.checked = false;
-        });
-        filterState.quarter = ["all"];
-        document.getElementById("quarterFilterLabel")!.textContent =
-          "All Quarters";
-      } else {
-        const checkedQuarters = quarterInputs
-          .filter((inp) => inp.checked)
-          .map((inp) => inp.value);
-
-        if (checkedQuarters.length === 0) {
-          allQuartersCheckbox.checked = true;
-          filterState.quarter = ["all"];
-          document.getElementById("quarterFilterLabel")!.textContent =
-            "All Quarters";
-        } else {
-          allQuartersCheckbox.checked = false;
-          filterState.quarter = checkedQuarters;
-          document.getElementById("quarterFilterLabel")!.textContent =
-            checkedQuarters.length === 1
-              ? checkedQuarters[0].charAt(0).toUpperCase() +
-                checkedQuarters[0].slice(1)
-              : `${checkedQuarters.length} Quarters Selected`;
+            paginationContainer.classList.add("hidden");
         }
-      }
-      currentPage = 1;
-      fetchEvents();
-    });
+    }
 
-  // Published filter
-  document
-    .querySelectorAll('input[name="publishedFilter"]')
-    .forEach((radio: Element) => {
-      (radio as HTMLInputElement).addEventListener("change", (e) => {
-        const target = e.target as HTMLInputElement;
-        filterState.published = target.value;
-        document.getElementById("publishedFilterLabel")!.textContent =
-          target.parentElement?.querySelector(".label-text")?.textContent ||
-          "All";
-        currentPage = 1;
-        fetchEvents();
-      });
-    });
+    // Calculate quarterly stats using cached data
+    async function calculateQuarterlyStats() {
+        try {
+            const { start: termStart, end: termEnd } = getCurrentTerm();
+            const { start: quarterStart, end: quarterEnd } =
+                getCurrentQuarter();
 
-  // Has Files filter
-  document
-    .querySelectorAll('input[name="hasFilesFilter"]')
-    .forEach((radio: Element) => {
-      (radio as HTMLInputElement).addEventListener("change", (e) => {
-        const target = e.target as HTMLInputElement;
-        filterState.hasFiles = target.value;
-        document.getElementById("hasFilesFilterLabel")!.textContent =
-          target.parentElement?.querySelector(".label-text")?.textContent ||
-          "All";
-        currentPage = 1;
-        fetchEvents();
-      });
-    });
+            // Update quarter name in UI
+            const quarterNameEl = document.getElementById("quarterName");
+            if (quarterNameEl) {
+                quarterNameEl.textContent = getQuarterName();
+            }
 
-  // Has Food filter
-  document
-    .querySelectorAll('input[name="hasFoodFilter"]')
-    .forEach((radio: Element) => {
-      (radio as HTMLInputElement).addEventListener("change", (e) => {
-        const target = e.target as HTMLInputElement;
-        filterState.hasFood = target.value;
-        document.getElementById("hasFoodFilterLabel")!.textContent =
-          target.parentElement?.querySelector(".label-text")?.textContent ||
-          "All";
-        currentPage = 1;
-        fetchEvents();
-      });
-    });
+            // Filter events for current term and quarter
+            const termEvents = cachedEvents.filter((event) => {
+                const eventDate = new Date(event.start_date);
+                return eventDate >= termStart && eventDate <= termEnd;
+            });
 
-  // Search input with instant search (no debounce needed for cached data)
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) {
-    // Add input event for instant search
-    searchInput.addEventListener("input", (e) => {
-      const target = e.target as HTMLInputElement;
-      searchQuery = target.value.trim();
-      currentPage = 1;
-      fetchEvents();
-    });
+            const quarterEvents = cachedEvents.filter((event) => {
+                const eventDate = new Date(event.start_date);
+                return eventDate >= quarterStart && eventDate <= quarterEnd;
+            });
 
-    // Clear search on Escape key
-    searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        (e.target as HTMLInputElement).value = "";
-        searchQuery = "";
-        currentPage = 1;
-        fetchEvents();
-      }
-    });
-  }
+            // Calculate stats
+            quarterlyStats.totalEvents = termEvents.length;
 
-  // Per page select
-  document.getElementById("perPageSelect")?.addEventListener("change", (e) => {
-    const target = e.target as HTMLSelectElement;
-    perPage = parseInt(target.value);
-    currentPage = 1;
-    fetchEvents();
-  });
+            const termAttendees = new Map<string, number>();
+            termEvents.forEach((event) => {
+                event.attendees?.forEach((attendee) => {
+                    const count = termAttendees.get(attendee.user_id) || 0;
+                    termAttendees.set(attendee.user_id, count + 1);
+                });
+            });
 
-  // Initial setup
-  if (typeof window !== "undefined") {
-    window.addEventListener("DOMContentLoaded", () => {
-      // Reset all filters to defaults
-      const timeFilterAll = document.querySelector(
-        'input[name="timeFilter"][value="all"]',
-      ) as HTMLInputElement;
-      if (timeFilterAll) {
-        // Ensure the radio button is properly checked
-        timeFilterAll.checked = true;
-        filterState.time = "all";
-      }
+            quarterlyStats.uniqueAttendees = termAttendees.size;
 
-      // Reset year filter
-      const yearAllCheckbox = document.querySelector(
-        'input[type="checkbox"][value="all"]',
-      ) as HTMLInputElement;
-      const yearCheckboxes = document.querySelectorAll(
-        '#yearCheckboxes input[type="checkbox"]',
-      );
-      if (yearAllCheckbox && yearCheckboxes) {
-        yearAllCheckbox.checked = true;
-        yearCheckboxes.forEach((checkbox: Element) => {
-          (checkbox as HTMLInputElement).checked = false;
-        });
-        filterState.year = ["all"];
-        document.getElementById("yearFilterLabel")!.textContent = "All Years";
-      }
+            const quarterAttendees = new Map<string, number>();
+            quarterEvents.forEach((event) => {
+                event.attendees?.forEach((attendee) => {
+                    const count = quarterAttendees.get(attendee.user_id) || 0;
+                    quarterAttendees.set(attendee.user_id, count + 1);
+                });
+            });
 
-      // Reset quarter filter
-      const quarterAllCheckbox = document.querySelector(
-        '#quarterDropdownContent input[type="checkbox"][value="all"]',
-      ) as HTMLInputElement;
-      const quarterCheckboxes = document.querySelectorAll(
-        '#quarterDropdownContent input[type="checkbox"]:not([value="all"])',
-      );
-      if (quarterAllCheckbox && quarterCheckboxes) {
-        quarterAllCheckbox.checked = true;
-        quarterCheckboxes.forEach((checkbox: Element) => {
-          (checkbox as HTMLInputElement).checked = false;
-        });
-        filterState.quarter = ["all"];
-        document.getElementById("quarterFilterLabel")!.textContent =
-          "All Quarters";
-      }
+            quarterlyStats.recurringAttendees = Array.from(
+                quarterAttendees.values()
+            ).filter((count) => count > 1).length;
 
-      const publishedFilter = document.getElementById(
-        "publishedFilter",
-      ) as HTMLSelectElement;
-      if (publishedFilter) publishedFilter.value = "all";
+            // Update the UI
+            const totalEventsEl = document.getElementById("totalEvents");
+            const uniqueAttendeesEl =
+                document.getElementById("uniqueAttendees");
+            const recurringAttendeesEl =
+                document.getElementById("recurringAttendees");
 
-      const hasFilesFilter = document.getElementById(
-        "hasFilesFilter",
-      ) as HTMLSelectElement;
-      if (hasFilesFilter) hasFilesFilter.value = "all";
-
-      const hasFoodFilter = document.getElementById(
-        "hasFoodFilter",
-      ) as HTMLSelectElement;
-      if (hasFoodFilter) hasFoodFilter.value = "all";
-
-      const searchInput = document.getElementById(
-        "searchInput",
-      ) as HTMLInputElement;
-      if (searchInput) searchInput.value = "";
-
-      const perPageSelect = document.getElementById(
-        "perPageSelect",
-      ) as HTMLSelectElement;
-      if (perPageSelect) perPageSelect.value = "5";
-
-      // Reset variables
-      searchQuery = "";
-      perPage = 5;
-      currentPage = 1;
-
-      // Reset filter state
-      filterState = {
-        time: "all",
-        year: ["all"],
-        quarter: ["all"],
-        published: "all",
-        hasFiles: "all",
-        hasFood: "all",
-      };
-
-      // Fetch events with reset filters
-      fetchEvents();
-    });
-  }
-
-  // Initial fetch
-  fetchEvents();
-
-  // Add openEditModal function
-  window.openEditModal = async function (event?: any) {
-    const modal = document.getElementById(
-      "editEventModal",
-    ) as HTMLDialogElement;
-    const form = document.getElementById("editEventForm") as HTMLFormElement;
-    const modalTitle = document.getElementById("editModalTitle");
-    const currentFiles = document.getElementById("currentFiles");
-    const newFiles = document.getElementById("newFiles");
-
-    if (!modal || !form) return;
-
-    try {
-      // Clear previous form data
-      form.reset();
-      if (currentFiles) currentFiles.innerHTML = "";
-      if (newFiles) newFiles.innerHTML = "";
-
-      // Set modal title based on whether we're editing or creating
-      if (modalTitle) {
-        modalTitle.textContent = event ? "Edit Event" : "Add New Event";
-      }
-
-      if (event) {
-        // Fetch fresh data from PocketBase for the event
-        const freshEventData = await get.getOne<Event>("events", event.id);
-
-        // Populate form with fresh data
-        const idInput = document.getElementById(
-          "editEventId",
-        ) as HTMLInputElement;
-        const nameInput = document.getElementById(
-          "editEventName",
-        ) as HTMLInputElement;
-        const codeInput = document.getElementById(
-          "editEventCode",
-        ) as HTMLInputElement;
-        const locationInput = document.getElementById(
-          "editEventLocation",
-        ) as HTMLInputElement;
-        const pointsInput = document.getElementById(
-          "editEventPoints",
-        ) as HTMLInputElement;
-        const startDateInput = document.getElementById(
-          "editEventStartDate",
-        ) as HTMLInputElement;
-        const endDateInput = document.getElementById(
-          "editEventEndDate",
-        ) as HTMLInputElement;
-        const descriptionInput = document.getElementById(
-          "editEventDescription",
-        ) as HTMLTextAreaElement;
-        const publishedInput = document.getElementById(
-          "editEventPublished",
-        ) as HTMLInputElement;
-        const hasFoodInput = document.getElementById(
-          "editEventHasFood",
-        ) as HTMLInputElement;
-
-        if (idInput) idInput.value = freshEventData.id;
-        if (nameInput) nameInput.value = freshEventData.event_name;
-        if (codeInput) codeInput.value = freshEventData.event_code;
-        if (locationInput) locationInput.value = freshEventData.location;
-        if (pointsInput)
-          pointsInput.value = freshEventData.points_to_reward.toString();
-        if (startDateInput)
-          startDateInput.value = new Date(freshEventData.start_date)
-            .toISOString()
-            .slice(0, 16);
-        if (endDateInput)
-          endDateInput.value = new Date(freshEventData.end_date)
-            .toISOString()
-            .slice(0, 16);
-        if (descriptionInput)
-          descriptionInput.value = freshEventData.event_description;
-        if (publishedInput) publishedInput.checked = freshEventData.published;
-        if (hasFoodInput) hasFoodInput.checked = freshEventData.has_food;
-
-        // Display current files if any
-        if (
-          currentFiles &&
-          freshEventData.files &&
-          freshEventData.files.length > 0
-        ) {
-          currentFiles.innerHTML = updateFilePreviewButtons(
-            freshEventData.files,
-            freshEventData.id,
-          );
+            if (totalEventsEl)
+                totalEventsEl.textContent =
+                    quarterlyStats.totalEvents.toString();
+            if (uniqueAttendeesEl)
+                uniqueAttendeesEl.textContent =
+                    quarterlyStats.uniqueAttendees.toString();
+            if (recurringAttendeesEl)
+                recurringAttendeesEl.textContent =
+                    quarterlyStats.recurringAttendees.toString();
+        } catch (error) {
+            console.error("Failed to calculate quarterly stats:", error);
         }
-      }
-
-      // Show the modal
-      modal.showModal();
-    } catch (error) {
-      console.error("Failed to open edit modal:", error);
-      // Show error toast or alert
     }
-  };
 
-  // Update the previewFileInEditModal function
-  window.previewFileInEditModal = async function (
-    url: string,
-    filename: string,
-  ) {
-    const editFormSection = document.getElementById("editFormSection");
-    const previewSection = document.getElementById("editModalPreviewSection");
-    const editFilePreview = document.getElementById("editFilePreview");
-    const previewFileName = document.getElementById("editPreviewFileName");
-    const loadingSpinner = document.getElementById("editLoadingSpinner");
+    // Add pagination event listeners
+    document.getElementById("firstPageBtn")?.addEventListener("click", () => {
+        if (currentPage > 1) {
+            currentPage = 1;
+            fetchEvents();
+        }
+    });
 
-    if (
-      !editFormSection ||
-      !previewSection ||
-      !editFilePreview ||
-      !previewFileName ||
-      !loadingSpinner
-    )
-      return;
+    document.getElementById("prevPageBtn")?.addEventListener("click", () => {
+        if (currentPage > 1) {
+            currentPage--;
+            fetchEvents();
+        }
+    });
 
-    // Hide form and show preview section
-    editFormSection.classList.add("hidden");
-    previewSection.classList.remove("hidden");
-    previewFileName.textContent = filename;
+    document.getElementById("nextPageBtn")?.addEventListener("click", () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            fetchEvents();
+        }
+    });
 
-    // Show loading spinner
-    loadingSpinner.classList.remove("hidden");
+    document.getElementById("lastPageBtn")?.addEventListener("click", () => {
+        if (currentPage < totalPages) {
+            currentPage = totalPages;
+            fetchEvents();
+        }
+    });
 
-    try {
-      // Dispatch a custom event to update the FilePreview
-      const event = new CustomEvent("updateFilePreview", {
-        detail: { url, filename },
-      });
-      editFilePreview.dispatchEvent(event);
-    } finally {
-      // Hide loading spinner
-      loadingSpinner.classList.add("hidden");
+    // Add filter event listeners
+    // Time filter
+    document.querySelectorAll('input[name="timeFilter"]').forEach((radio) => {
+        radio.addEventListener("change", (e) => {
+            const target = e.target as HTMLInputElement;
+            filterState.time = target.value;
+            currentPage = 1;
+            fetchEvents();
+        });
+    });
+
+    // Year filter
+    document
+        .getElementById("yearCheckboxes")
+        ?.addEventListener("change", (e) => {
+            const target = e.target as HTMLInputElement;
+            if (!target.matches('input[type="checkbox"]')) return;
+
+            const allYearsCheckbox = target
+                .closest(".dropdown-content")
+                ?.querySelector(
+                    'input[type="checkbox"][value="all"]'
+                ) as HTMLInputElement;
+
+            const yearInputs = Array.from(
+                target
+                    .closest(".dropdown-content")
+                    ?.querySelectorAll(
+                        '#yearCheckboxes input[type="checkbox"]'
+                    ) || []
+            ) as HTMLInputElement[];
+
+            if (target.value === "all" && target.checked) {
+                yearInputs.forEach((input) => {
+                    input.checked = false;
+                });
+                filterState.year = ["all"];
+                document.getElementById("yearFilterLabel")!.textContent =
+                    "All Years";
+            } else {
+                const checkedYears = yearInputs
+                    .filter((inp) => inp.checked)
+                    .map((inp) => inp.value);
+
+                if (checkedYears.length === 0) {
+                    allYearsCheckbox.checked = true;
+                    filterState.year = ["all"];
+                    document.getElementById("yearFilterLabel")!.textContent =
+                        "All Years";
+                } else {
+                    allYearsCheckbox.checked = false;
+                    filterState.year = checkedYears;
+                    document.getElementById("yearFilterLabel")!.textContent =
+                        checkedYears.length === 1
+                            ? checkedYears[0]
+                            : `${checkedYears.length} Years Selected`;
+                }
+            }
+            currentPage = 1;
+            fetchEvents();
+        });
+
+    // Add event listener for "All Years" checkbox
+    document
+        .querySelector('input[type="checkbox"][value="all"]')
+        ?.addEventListener("change", (e) => {
+            const target = e.target as HTMLInputElement;
+            const yearInputs = Array.from(
+                document.querySelectorAll(
+                    '#yearCheckboxes input[type="checkbox"]'
+                )
+            ) as HTMLInputElement[];
+
+            if (target.checked) {
+                yearInputs.forEach((input) => {
+                    input.checked = false;
+                });
+                filterState.year = ["all"];
+                document.getElementById("yearFilterLabel")!.textContent =
+                    "All Years";
+                currentPage = 1;
+                fetchEvents();
+            }
+        });
+
+    // Quarter filter
+    document
+        .getElementById("quarterDropdownContent")
+        ?.addEventListener("change", (e) => {
+            const target = e.target as HTMLInputElement;
+            if (!target.matches('input[type="checkbox"]')) return;
+
+            const allQuartersCheckbox = target
+                .closest("#quarterDropdownContent")
+                ?.querySelector(
+                    'input[type="checkbox"][value="all"]'
+                ) as HTMLInputElement;
+
+            const quarterInputs = Array.from(
+                target
+                    .closest("#quarterDropdownContent")
+                    ?.querySelectorAll('input[type="checkbox"]') || []
+            ).filter(
+                (inp) => (inp as HTMLInputElement).value !== "all"
+            ) as HTMLInputElement[];
+
+            if (target.value === "all" && target.checked) {
+                quarterInputs.forEach((input) => {
+                    input.checked = false;
+                });
+                filterState.quarter = ["all"];
+                document.getElementById("quarterFilterLabel")!.textContent =
+                    "All Quarters";
+            } else {
+                const checkedQuarters = quarterInputs
+                    .filter((inp) => inp.checked)
+                    .map((inp) => inp.value);
+
+                if (checkedQuarters.length === 0) {
+                    allQuartersCheckbox.checked = true;
+                    filterState.quarter = ["all"];
+                    document.getElementById("quarterFilterLabel")!.textContent =
+                        "All Quarters";
+                } else {
+                    allQuartersCheckbox.checked = false;
+                    filterState.quarter = checkedQuarters;
+                    document.getElementById("quarterFilterLabel")!.textContent =
+                        checkedQuarters.length === 1
+                            ? checkedQuarters[0].charAt(0).toUpperCase() +
+                              checkedQuarters[0].slice(1)
+                            : `${checkedQuarters.length} Quarters Selected`;
+                }
+            }
+            currentPage = 1;
+            fetchEvents();
+        });
+
+    // Published filter
+    document
+        .querySelectorAll('input[name="publishedFilter"]')
+        .forEach((radio: Element) => {
+            (radio as HTMLInputElement).addEventListener("change", (e) => {
+                const target = e.target as HTMLInputElement;
+                filterState.published = target.value;
+                document.getElementById("publishedFilterLabel")!.textContent =
+                    target.parentElement?.querySelector(".label-text")
+                        ?.textContent || "All";
+                currentPage = 1;
+                fetchEvents();
+            });
+        });
+
+    // Has Files filter
+    document
+        .querySelectorAll('input[name="hasFilesFilter"]')
+        .forEach((radio: Element) => {
+            (radio as HTMLInputElement).addEventListener("change", (e) => {
+                const target = e.target as HTMLInputElement;
+                filterState.hasFiles = target.value;
+                document.getElementById("hasFilesFilterLabel")!.textContent =
+                    target.parentElement?.querySelector(".label-text")
+                        ?.textContent || "All";
+                currentPage = 1;
+                fetchEvents();
+            });
+        });
+
+    // Has Food filter
+    document
+        .querySelectorAll('input[name="hasFoodFilter"]')
+        .forEach((radio: Element) => {
+            (radio as HTMLInputElement).addEventListener("change", (e) => {
+                const target = e.target as HTMLInputElement;
+                filterState.hasFood = target.value;
+                document.getElementById("hasFoodFilterLabel")!.textContent =
+                    target.parentElement?.querySelector(".label-text")
+                        ?.textContent || "All";
+                currentPage = 1;
+                fetchEvents();
+            });
+        });
+
+    // Search input with instant search (no debounce needed for cached data)
+    const searchInput = document.getElementById("searchInput");
+    if (searchInput) {
+        // Add input event for instant search
+        searchInput.addEventListener("input", (e) => {
+            const target = e.target as HTMLInputElement;
+            searchQuery = target.value.trim();
+            currentPage = 1;
+            fetchEvents();
+        });
+
+        // Clear search on Escape key
+        searchInput.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                (e.target as HTMLInputElement).value = "";
+                searchQuery = "";
+                currentPage = 1;
+                fetchEvents();
+            }
+        });
     }
-  };
 
-  // Update the showFilePreview function
-  window.showFilePreview = function (file: { url: string; name: string }) {
-    console.log("showFilePreview called with:", file);
-    window.previewFile(file.url, file.name);
-  };
+    // Per page select
+    document
+        .getElementById("perPageSelect")
+        ?.addEventListener("change", (e) => {
+            const target = e.target as HTMLSelectElement;
+            perPage = parseInt(target.value);
+            currentPage = 1;
+            fetchEvents();
+        });
 
-  // Add backToEditForm function
-  window.backToEditForm = function () {
-    const editFormSection = document.getElementById("editFormSection");
-    const previewSection = document.getElementById("editModalPreviewSection");
-    const editFilePreview = document.getElementById("editFilePreview");
-    const previewFileName = document.getElementById("editPreviewFileName");
+    // Initial setup
+    if (typeof window !== "undefined") {
+        window.addEventListener("DOMContentLoaded", () => {
+            // Reset all filters to defaults
+            const timeFilterAll = document.querySelector(
+                'input[name="timeFilter"][value="all"]'
+            ) as HTMLInputElement;
+            if (timeFilterAll) {
+                // Ensure the radio button is properly checked
+                timeFilterAll.checked = true;
+                filterState.time = "all";
+            }
 
-    if (
-      editFormSection &&
-      previewSection &&
-      editFilePreview &&
-      previewFileName
+            // Reset year filter
+            const yearAllCheckbox = document.querySelector(
+                'input[type="checkbox"][value="all"]'
+            ) as HTMLInputElement;
+            const yearCheckboxes = document.querySelectorAll(
+                '#yearCheckboxes input[type="checkbox"]'
+            );
+            if (yearAllCheckbox && yearCheckboxes) {
+                yearAllCheckbox.checked = true;
+                yearCheckboxes.forEach((checkbox: Element) => {
+                    (checkbox as HTMLInputElement).checked = false;
+                });
+                filterState.year = ["all"];
+                document.getElementById("yearFilterLabel")!.textContent =
+                    "All Years";
+            }
+
+            // Reset quarter filter
+            const quarterAllCheckbox = document.querySelector(
+                '#quarterDropdownContent input[type="checkbox"][value="all"]'
+            ) as HTMLInputElement;
+            const quarterCheckboxes = document.querySelectorAll(
+                '#quarterDropdownContent input[type="checkbox"]:not([value="all"])'
+            );
+            if (quarterAllCheckbox && quarterCheckboxes) {
+                quarterAllCheckbox.checked = true;
+                quarterCheckboxes.forEach((checkbox: Element) => {
+                    (checkbox as HTMLInputElement).checked = false;
+                });
+                filterState.quarter = ["all"];
+                document.getElementById("quarterFilterLabel")!.textContent =
+                    "All Quarters";
+            }
+
+            const publishedFilter = document.getElementById(
+                "publishedFilter"
+            ) as HTMLSelectElement;
+            if (publishedFilter) publishedFilter.value = "all";
+
+            const hasFilesFilter = document.getElementById(
+                "hasFilesFilter"
+            ) as HTMLSelectElement;
+            if (hasFilesFilter) hasFilesFilter.value = "all";
+
+            const hasFoodFilter = document.getElementById(
+                "hasFoodFilter"
+            ) as HTMLSelectElement;
+            if (hasFoodFilter) hasFoodFilter.value = "all";
+
+            const searchInput = document.getElementById(
+                "searchInput"
+            ) as HTMLInputElement;
+            if (searchInput) searchInput.value = "";
+
+            const perPageSelect = document.getElementById(
+                "perPageSelect"
+            ) as HTMLSelectElement;
+            if (perPageSelect) perPageSelect.value = "5";
+
+            // Reset variables
+            searchQuery = "";
+            perPage = 5;
+            currentPage = 1;
+
+            // Reset filter state
+            filterState = {
+                time: "all",
+                year: ["all"],
+                quarter: ["all"],
+                published: "all",
+                hasFiles: "all",
+                hasFood: "all",
+            };
+
+            // Fetch events with reset filters
+            fetchEvents();
+        });
+    }
+
+    // Initial fetch
+    fetchEvents();
+
+    // Add openEditModal function
+    window.openEditModal = async function (event?: any) {
+        const modal = document.getElementById(
+            "editEventModal"
+        ) as HTMLDialogElement;
+        const form = document.getElementById(
+            "editEventForm"
+        ) as HTMLFormElement;
+        const modalTitle = document.getElementById("editModalTitle");
+        const currentFiles = document.getElementById("currentFiles");
+        const newFiles = document.getElementById("newFiles");
+
+        if (!modal || !form) return;
+
+        try {
+            // Clear previous form data
+            form.reset();
+            if (currentFiles) currentFiles.innerHTML = "";
+            if (newFiles) newFiles.innerHTML = "";
+
+            // Set modal title based on whether we're editing or creating
+            if (modalTitle) {
+                modalTitle.textContent = event ? "Edit Event" : "Add New Event";
+            }
+
+            if (event) {
+                // Fetch fresh data from PocketBase for the event
+                const freshEventData = await get.getOne<Event>(
+                    "events",
+                    event.id
+                );
+
+                // Populate form with fresh data
+                const idInput = document.getElementById(
+                    "editEventId"
+                ) as HTMLInputElement;
+                const nameInput = document.getElementById(
+                    "editEventName"
+                ) as HTMLInputElement;
+                const codeInput = document.getElementById(
+                    "editEventCode"
+                ) as HTMLInputElement;
+                const locationInput = document.getElementById(
+                    "editEventLocation"
+                ) as HTMLInputElement;
+                const pointsInput = document.getElementById(
+                    "editEventPoints"
+                ) as HTMLInputElement;
+                const startDateInput = document.getElementById(
+                    "editEventStartDate"
+                ) as HTMLInputElement;
+                const endDateInput = document.getElementById(
+                    "editEventEndDate"
+                ) as HTMLInputElement;
+                const descriptionInput = document.getElementById(
+                    "editEventDescription"
+                ) as HTMLTextAreaElement;
+                const publishedInput = document.getElementById(
+                    "editEventPublished"
+                ) as HTMLInputElement;
+                const hasFoodInput = document.getElementById(
+                    "editEventHasFood"
+                ) as HTMLInputElement;
+
+                if (idInput) idInput.value = freshEventData.id;
+                if (nameInput) nameInput.value = freshEventData.event_name;
+                if (codeInput) codeInput.value = freshEventData.event_code;
+                if (locationInput)
+                    locationInput.value = freshEventData.location;
+                if (pointsInput)
+                    pointsInput.value =
+                        freshEventData.points_to_reward.toString();
+                if (startDateInput)
+                    startDateInput.value = new Date(freshEventData.start_date)
+                        .toISOString()
+                        .slice(0, 16);
+                if (endDateInput)
+                    endDateInput.value = new Date(freshEventData.end_date)
+                        .toISOString()
+                        .slice(0, 16);
+                if (descriptionInput)
+                    descriptionInput.value = freshEventData.event_description;
+                if (publishedInput)
+                    publishedInput.checked = freshEventData.published;
+                if (hasFoodInput)
+                    hasFoodInput.checked = freshEventData.has_food;
+
+                // Display current files if any
+                if (
+                    currentFiles &&
+                    freshEventData.files &&
+                    freshEventData.files.length > 0
+                ) {
+                    currentFiles.innerHTML = updateFilePreviewButtons(
+                        freshEventData.files,
+                        freshEventData.id
+                    );
+                }
+            }
+
+            // Show the modal
+            modal.showModal();
+        } catch (error) {
+            console.error("Failed to open edit modal:", error);
+            // Show error toast or alert
+        }
+    };
+
+    // Update the previewFileInEditModal function
+    window.previewFileInEditModal = async function (
+        url: string,
+        filename: string
     ) {
-      editFormSection.classList.remove("hidden");
-      previewSection.classList.add("hidden");
-      // Reset the preview
-      const event = new CustomEvent("updateFilePreview", {
-        detail: { url: "", filename: "" },
-      });
-      editFilePreview.dispatchEvent(event);
-      previewFileName.textContent = "";
-    }
-  };
+        const editFormSection = document.getElementById("editFormSection");
+        const previewSection = document.getElementById(
+            "editModalPreviewSection"
+        );
+        const editFilePreview = document.getElementById("editFilePreview");
+        const previewFileName = document.getElementById("editPreviewFileName");
+        const loadingSpinner = document.getElementById("editLoadingSpinner");
 
-  // Universal file preview function
-  window.previewFile = function (url: string, filename: string) {
-    console.log("previewFile called with:", { url, filename });
-    const modal = document.getElementById(
-      "filePreviewModal",
-    ) as HTMLDialogElement;
-    const filePreview = document.getElementById("officerFilePreview") as any;
-    const previewFileName = document.getElementById("previewFileName");
+        if (
+            !editFormSection ||
+            !previewSection ||
+            !editFilePreview ||
+            !previewFileName ||
+            !loadingSpinner
+        )
+            return;
 
-    if (filePreview && modal && previewFileName) {
-      console.log("Found all required elements");
-      // Update the filename display
-      previewFileName.textContent = filename;
+        // Hide form and show preview section
+        editFormSection.classList.add("hidden");
+        previewSection.classList.remove("hidden");
+        previewFileName.textContent = filename;
 
-      // Show the modal
-      modal.showModal();
+        // Show loading spinner
+        loadingSpinner.classList.remove("hidden");
 
-      // Update the preview component
-      console.log("Dispatching updateFilePreview event");
-      const event = new CustomEvent("updateFilePreview", {
-        detail: { url, filename },
-      });
-      filePreview.dispatchEvent(event);
-    } else {
-      console.error("Missing required elements:", {
-        modal: !!modal,
-        filePreview: !!filePreview,
-        previewFileName: !!previewFileName,
-      });
-    }
-  };
+        try {
+            // Dispatch a custom event to update the FilePreview
+            const event = new CustomEvent("updateFilePreview", {
+                detail: { url, filename },
+            });
+            editFilePreview.dispatchEvent(event);
+        } finally {
+            // Hide loading spinner
+            loadingSpinner.classList.add("hidden");
+        }
+    };
 
-  // Close file preview
-  window.closeFilePreview = function () {
-    console.log("closeFilePreview called");
-    const modal = document.getElementById(
-      "filePreviewModal",
-    ) as HTMLDialogElement;
-    const filePreview = document.getElementById("officerFilePreview") as any;
-    const previewFileName = document.getElementById("previewFileName");
+    // Update the showFilePreview function
+    window.showFilePreview = function (file: { url: string; name: string }) {
+        console.log("showFilePreview called with:", file);
+        window.previewFile(file.url, file.name);
+    };
 
-    if (modal && filePreview && previewFileName) {
-      console.log("Resetting preview and closing modal");
-      // Reset the preview
-      const event = new CustomEvent("updateFilePreview", {
-        detail: { url: "", filename: "" },
-      });
-      filePreview.dispatchEvent(event);
-      previewFileName.textContent = "";
-      modal.close();
-    }
-  };
+    // Add backToEditForm function
+    window.backToEditForm = function () {
+        const editFormSection = document.getElementById("editFormSection");
+        const previewSection = document.getElementById(
+            "editModalPreviewSection"
+        );
+        const editFilePreview = document.getElementById("editFilePreview");
+        const previewFileName = document.getElementById("editPreviewFileName");
 
-  // Close event details modal
-  window.closeEventDetailsModal = function () {
-    const modal = document.getElementById(
-      "eventDetailsModal",
-    ) as HTMLDialogElement;
-    const filesContent = document.getElementById("filesContent");
-    const attendeesContent = document.getElementById("attendeesContent");
+        if (
+            editFormSection &&
+            previewSection &&
+            editFilePreview &&
+            previewFileName
+        ) {
+            editFormSection.classList.remove("hidden");
+            previewSection.classList.add("hidden");
+            // Reset the preview
+            const event = new CustomEvent("updateFilePreview", {
+                detail: { url: "", filename: "" },
+            });
+            editFilePreview.dispatchEvent(event);
+            previewFileName.textContent = "";
+        }
+    };
 
-    if (modal) {
-      // Reset tab states
-      if (filesContent && attendeesContent) {
-        filesContent.classList.remove("hidden");
-        attendeesContent.classList.add("hidden");
-      }
+    // Universal file preview function
+    window.previewFile = function (url: string, filename: string) {
+        console.log("previewFile called with:", { url, filename });
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        const filePreview = document.getElementById(
+            "officerFilePreview"
+        ) as any;
+        const previewFileName = document.getElementById("previewFileName");
 
-      // Close the modal
-      modal.close();
-    }
-  };
+        if (filePreview && modal && previewFileName) {
+            console.log("Found all required elements");
+            // Update the filename display
+            previewFileName.textContent = filename;
 
-  // Update all file preview buttons to use the universal preview
-  function updateFilePreviewButtons(files: string[], eventId: string) {
-    return files
-      .map((filename) => {
-        const fileUrl = fileManager.getFileUrl("events", eventId, filename);
-        const previewData = JSON.stringify({
-          url: fileUrl,
-          name: filename,
-        }).replace(/'/g, "\\'");
-        return `
+            // Show the modal
+            modal.showModal();
+
+            // Update the preview component
+            console.log("Dispatching updateFilePreview event");
+            const event = new CustomEvent("updateFilePreview", {
+                detail: { url, filename },
+            });
+            filePreview.dispatchEvent(event);
+        } else {
+            console.error("Missing required elements:", {
+                modal: !!modal,
+                filePreview: !!filePreview,
+                previewFileName: !!previewFileName,
+            });
+        }
+    };
+
+    // Close file preview
+    window.closeFilePreview = function () {
+        console.log("closeFilePreview called");
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        const filePreview = document.getElementById(
+            "officerFilePreview"
+        ) as any;
+        const previewFileName = document.getElementById("previewFileName");
+
+        if (modal && filePreview && previewFileName) {
+            console.log("Resetting preview and closing modal");
+            // Reset the preview
+            const event = new CustomEvent("updateFilePreview", {
+                detail: { url: "", filename: "" },
+            });
+            filePreview.dispatchEvent(event);
+            previewFileName.textContent = "";
+            modal.close();
+        }
+    };
+
+    // Close event details modal
+    window.closeEventDetailsModal = function () {
+        const modal = document.getElementById(
+            "eventDetailsModal"
+        ) as HTMLDialogElement;
+        const filesContent = document.getElementById("filesContent");
+        const attendeesContent = document.getElementById("attendeesContent");
+
+        if (modal) {
+            // Reset tab states
+            if (filesContent && attendeesContent) {
+                filesContent.classList.remove("hidden");
+                attendeesContent.classList.add("hidden");
+            }
+
+            // Close the modal
+            modal.close();
+        }
+    };
+
+    // Update all file preview buttons to use the universal preview
+    function updateFilePreviewButtons(files: string[], eventId: string) {
+        return files
+            .map((filename) => {
+                const fileUrl = fileManager.getFileUrl(
+                    "events",
+                    eventId,
+                    filename
+                );
+                const previewData = JSON.stringify({
+                    url: fileUrl,
+                    name: filename,
+                }).replace(/'/g, "\\'");
+                return `
                         <div class="flex items-center justify-between p-2 bg-base-200 rounded-lg${filesToDelete.has(filename) ? " opacity-50" : ""}" data-filename="${filename}">
                             <div class="flex items-center gap-2 flex-1 min-w-0">
                                 <span class="truncate">${filename}</span>
@@ -1849,9 +1966,9 @@ const currentPage = eventResponse.page;
                                 </button>
                                 <div class="text-error">
                                     ${
-                                      filesToDelete.has(filename)
-                                        ? `<button type="button" class="btn btn-ghost btn-xs" onclick="window.undoDeleteFile('${eventId}', '${filename}')">Undo</button>`
-                                        : `<button type="button" class="btn btn-ghost btn-xs text-error" onclick="window.deleteFile('${eventId}', '${filename}')">
+                                        filesToDelete.has(filename)
+                                            ? `<button type="button" class="btn btn-ghost btn-xs" onclick="window.undoDeleteFile('${eventId}', '${filename}')">Undo</button>`
+                                            : `<button type="button" class="btn btn-ghost btn-xs text-error" onclick="window.deleteFile('${eventId}', '${filename}')">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
                                             </svg>
@@ -1861,34 +1978,36 @@ const currentPage = eventResponse.page;
                             </div>
                         </div>
                     `;
-      })
-      .join("");
-  }
+            })
+            .join("");
+    }
 
-  // Add file input change handler to show selected files
-  document
-    .getElementById("editEventFiles")
-    ?.addEventListener("change", function (e) {
-      const fileInput = e.target as HTMLInputElement;
-      const newFiles = document.getElementById("newFiles");
+    // Add file input change handler to show selected files
+    document
+        .getElementById("editEventFiles")
+        ?.addEventListener("change", function (e) {
+            const fileInput = e.target as HTMLInputElement;
+            const newFiles = document.getElementById("newFiles");
 
-      if (newFiles && fileInput.files) {
-        // Get existing files if any
-        const existingFiles = newFiles.querySelectorAll(".file-item");
-        const existingFilesArray = Array.from(existingFiles).map((item) => {
-          const nameSpan = item.querySelector(".file-name");
-          return nameSpan ? nameSpan.textContent : "";
-        });
+            if (newFiles && fileInput.files) {
+                // Get existing files if any
+                const existingFiles = newFiles.querySelectorAll(".file-item");
+                const existingFilesArray = Array.from(existingFiles).map(
+                    (item) => {
+                        const nameSpan = item.querySelector(".file-name");
+                        return nameSpan ? nameSpan.textContent : "";
+                    }
+                );
 
-        // Store new files in the storage and update UI
-        Array.from(fileInput.files)
-          .filter((file) => !existingFilesArray.includes(file.name))
-          .forEach((file) => {
-            selectedFileStorage.set(file.name, file);
-            const fileDiv = document.createElement("div");
-            fileDiv.className =
-              "flex items-center justify-between p-2 bg-base-200 rounded-lg file-item";
-            fileDiv.innerHTML = `
+                // Store new files in the storage and update UI
+                Array.from(fileInput.files)
+                    .filter((file) => !existingFilesArray.includes(file.name))
+                    .forEach((file) => {
+                        selectedFileStorage.set(file.name, file);
+                        const fileDiv = document.createElement("div");
+                        fileDiv.className =
+                            "flex items-center justify-between p-2 bg-base-200 rounded-lg file-item";
+                        fileDiv.innerHTML = `
                             <span class="truncate file-name">${file.name}</span>
                             <div class="flex gap-2">
                                 <div class="badge badge-primary">New</div>
@@ -1899,268 +2018,287 @@ const currentPage = eventResponse.page;
                                 </button>
                             </div>
                         `;
-            newFiles.appendChild(fileDiv);
-          });
-      }
+                        newFiles.appendChild(fileDiv);
+                    });
+            }
 
-      // Clear the file input
-      fileInput.value = "";
+            // Clear the file input
+            fileInput.value = "";
+        });
+
+    // Clear both storages when modal is closed
+    document.getElementById("editEventModal")?.addEventListener("close", () => {
+        selectedFileStorage.clear();
+        filesToDelete.clear();
     });
 
-  // Clear both storages when modal is closed
-  document.getElementById("editEventModal")?.addEventListener("close", () => {
-    selectedFileStorage.clear();
-    filesToDelete.clear();
-  });
+    // Add delete file handler
+    window.deleteFile = async function (eventId: string, filename: string) {
+        if (!confirm("Are you sure you want to remove this file?")) return;
 
-  // Add delete file handler
-  window.deleteFile = async function (eventId: string, filename: string) {
-    if (!confirm("Are you sure you want to remove this file?")) return;
+        try {
+            // Add file to deletion set
+            filesToDelete.add(filename);
 
-    try {
-      // Add file to deletion set
-      filesToDelete.add(filename);
-
-      // Update the UI to show file as pending deletion
-      const currentFiles = document.getElementById("currentFiles");
-      if (currentFiles) {
-        const fileElement = currentFiles.querySelector(
-          `[data-filename="${filename}"]`,
-        );
-        if (fileElement) {
-          fileElement.classList.add("opacity-50");
-          const deleteButton = fileElement.querySelector(".text-error");
-          if (deleteButton) {
-            deleteButton.innerHTML = `
+            // Update the UI to show file as pending deletion
+            const currentFiles = document.getElementById("currentFiles");
+            if (currentFiles) {
+                const fileElement = currentFiles.querySelector(
+                    `[data-filename="${filename}"]`
+                );
+                if (fileElement) {
+                    fileElement.classList.add("opacity-50");
+                    const deleteButton =
+                        fileElement.querySelector(".text-error");
+                    if (deleteButton) {
+                        deleteButton.innerHTML = `
                             <button type="button" class="btn btn-ghost btn-xs" onclick="window.undoDeleteFile('${eventId}', '${filename}')">
                                 Undo
                             </button>
                         `;
-          }
+                    }
+                }
+            }
+
+            // Show success toast
+            toast.success(
+                `File "${filename}" marked for deletion. Save changes to confirm.`,
+                {
+                    icon: "🗑️",
+                }
+            );
+        } catch (error) {
+            console.error("Failed to stage file deletion:", error);
+            toast.error("Failed to stage file deletion. Please try again.");
         }
-      }
-    } catch (error) {
-      console.error("Failed to stage file deletion:", error);
-      alert("Failed to stage file deletion. Please try again.");
-    }
-  };
+    };
 
-  // Add undo delete function
-  window.undoDeleteFile = function (eventId: string, filename: string) {
-    filesToDelete.delete(filename);
+    // Add undo delete function
+    window.undoDeleteFile = function (eventId: string, filename: string) {
+        filesToDelete.delete(filename);
 
-    // Update the UI to show file as restored
-    const currentFiles = document.getElementById("currentFiles");
-    if (currentFiles) {
-      const fileElement = currentFiles.querySelector(
-        `[data-filename="${filename}"]`,
-      );
-      if (fileElement) {
-        fileElement.classList.remove("opacity-50");
-        const undoButton = fileElement.querySelector(".text-error");
-        if (undoButton) {
-          undoButton.innerHTML = `
+        // Update the UI to show file as restored
+        const currentFiles = document.getElementById("currentFiles");
+        if (currentFiles) {
+            const fileElement = currentFiles.querySelector(
+                `[data-filename="${filename}"]`
+            );
+            if (fileElement) {
+                fileElement.classList.remove("opacity-50");
+                const undoButton = fileElement.querySelector(".text-error");
+                if (undoButton) {
+                    undoButton.innerHTML = `
                         <button type="button" class="btn btn-ghost btn-xs text-error" onclick="window.deleteFile('${eventId}', '${filename}')">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
                             </svg>
                         </button>
                     `;
+                }
+            }
         }
-      }
-    }
-  };
 
-  // Create a custom event for file preview state management
-  const FILE_PREVIEW_STATE_CHANGE = "filePreviewStateChange";
-
-  // Universal file preview function for officer section
-  window.previewFileOfficer = function (url: string, filename: string) {
-    const modal = document.getElementById(
-      "filePreviewModal",
-    ) as HTMLDialogElement;
-
-    if (!modal) {
-      console.error("Modal element not found");
-      return;
-    }
-
-    // Dispatch state change event before showing modal
-    window.dispatchEvent(
-      new CustomEvent(FILE_PREVIEW_STATE_CHANGE, {
-        detail: { url, filename },
-      }),
-    );
-
-    // Show modal after event dispatch
-    requestAnimationFrame(() => {
-      modal.showModal();
-    });
-  };
-
-  // Close file preview for officer section
-  window.closeFilePreviewOfficer = function () {
-    const modal = document.getElementById(
-      "filePreviewModal",
-    ) as HTMLDialogElement;
-    const previewContent = document.getElementById("previewContent");
-
-    if (!modal || !previewContent) {
-      console.error("Required elements not found");
-      return;
-    }
-
-    // Reset the preview content
-    const filePreview = previewContent.querySelector("astro-island");
-    if (filePreview) {
-      const component = filePreview.querySelector("[data-astro-cid]");
-      if (component) {
-        component.setAttribute("url", "");
-        component.setAttribute("filename", "");
-      }
-    }
-
-    // Dispatch cleanup event
-    window.dispatchEvent(
-      new CustomEvent(FILE_PREVIEW_STATE_CHANGE, {
-        detail: { url: "", filename: "" },
-      }),
-    );
-
-    // Close modal after cleanup
-    requestAnimationFrame(() => {
-      modal.close();
-    });
-  };
-
-  // Update the showFilePreview function for officer section
-  window.showFilePreviewOfficer = async function (file: {
-    url: string;
-    name: string;
-  }) {
-    if (!file || !file.url || !file.name) {
-      console.error("Invalid file data provided");
-      return;
-    }
-
-    try {
-      // Extract event ID from the URL
-      const urlParts = file.url.split("/");
-      const eventId = urlParts[urlParts.length - 2]; // Event ID is second to last in the URL
-
-      // Fetch fresh event data to ensure we have the latest file information
-      const freshEvent = await get.getOne<Event>("events", eventId);
-
-      // Verify the file still exists in the event
-      if (!freshEvent.files.includes(file.name)) {
-        throw new Error("File no longer exists in the event");
-      }
-
-      // Get fresh URL from FileManager to ensure we have the latest
-      const freshUrl = fileManager.getFileUrl("events", eventId, file.name);
-
-      // Show the preview with fresh URL
-      window.previewFileOfficer(freshUrl, file.name);
-    } catch (error) {
-      console.error("Failed to fetch fresh file data:", error);
-      alert(
-        "Failed to load file preview. The file may have been deleted or modified.",
-      );
-    }
-  };
-
-  // Make helper functions available globally
-  window.updateFilePreviewButtons = updateFilePreviewButtons;
-
-  // Add openAttendeesModal function
-  window.openAttendeesModal = function (event: Event) {
-    console.log("Opening attendees modal for event:", event.id);
-
-    const modal = document.getElementById(
-      "attendeesModal",
-    ) as HTMLDialogElement;
-    const modalTitle = document.getElementById("attendeesModalTitle");
-
-    if (!modal || !modalTitle) {
-      console.error("Missing required elements");
-      return;
-    }
-
-    // Set modal title
-    modalTitle.textContent = `Attendees - ${event.event_name}`;
-
-    // Dispatch custom event with event data
-    window.dispatchEvent(
-      new CustomEvent("updateAttendees", {
-        detail: {
-          eventId: event.id,
-          eventName: event.event_name,
-        },
-      }),
-    );
-
-    // Show modal
-    modal.showModal();
-  };
-
-  // Add event listeners when the document loads
-  document.addEventListener("DOMContentLoaded", () => {
-    const modal = document.getElementById(
-      "filePreviewModal",
-    ) as HTMLDialogElement;
-    if (modal) {
-      // Handle modal close via backdrop
-      modal.addEventListener("click", (e) => {
-        const modalDimensions = modal.getBoundingClientRect();
-        if (
-          e.clientX < modalDimensions.left ||
-          e.clientX > modalDimensions.right ||
-          e.clientY < modalDimensions.top ||
-          e.clientY > modalDimensions.bottom
-        ) {
-          window.closeFilePreviewOfficer();
-        }
-      });
-
-      // Prevent modal content clicks from closing
-      const modalContent = modal.querySelector(".modal-box");
-      if (modalContent) {
-        modalContent.addEventListener("click", (e) => {
-          e.stopPropagation();
+        // Show success toast
+        toast.success(`Restored file "${filename}"`, {
+            icon: "↩️",
         });
-      }
+    };
 
-      // Handle escape key
-      modal.addEventListener("cancel", (e) => {
-        e.preventDefault();
-        window.closeFilePreviewOfficer();
-      });
-    }
-  });
+    // Create a custom event for file preview state management
+    const FILE_PREVIEW_STATE_CHANGE = "filePreviewStateChange";
 
-  // Make refreshEvents available globally
-  window.refreshEvents = async function () {
-    try {
-      // Reset cache timestamp to force refresh
-      lastCacheUpdate = 0;
-      // Show loading state
-      const eventsList = document.getElementById("eventsList");
-      if (eventsList) {
-        eventsList.innerHTML = `
+    // Universal file preview function for officer section
+    window.previewFileOfficer = function (url: string, filename: string) {
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+
+        if (!modal) {
+            console.error("Modal element not found");
+            return;
+        }
+
+        // Dispatch state change event before showing modal
+        window.dispatchEvent(
+            new CustomEvent(FILE_PREVIEW_STATE_CHANGE, {
+                detail: { url, filename },
+            })
+        );
+
+        // Show modal after event dispatch
+        requestAnimationFrame(() => {
+            modal.showModal();
+        });
+    };
+
+    // Close file preview for officer section
+    window.closeFilePreviewOfficer = function () {
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        const previewContent = document.getElementById("previewContent");
+
+        if (!modal || !previewContent) {
+            console.error("Required elements not found");
+            return;
+        }
+
+        // Reset the preview content
+        const filePreview = previewContent.querySelector("astro-island");
+        if (filePreview) {
+            const component = filePreview.querySelector("[data-astro-cid]");
+            if (component) {
+                component.setAttribute("url", "");
+                component.setAttribute("filename", "");
+            }
+        }
+
+        // Dispatch cleanup event
+        window.dispatchEvent(
+            new CustomEvent(FILE_PREVIEW_STATE_CHANGE, {
+                detail: { url: "", filename: "" },
+            })
+        );
+
+        // Close modal after cleanup
+        requestAnimationFrame(() => {
+            modal.close();
+        });
+    };
+
+    // Update the showFilePreview function for officer section
+    window.showFilePreviewOfficer = async function (file: {
+        url: string;
+        name: string;
+    }) {
+        if (!file || !file.url || !file.name) {
+            console.error("Invalid file data provided");
+            toast.error("Invalid file data provided");
+            return;
+        }
+
+        try {
+            // Extract event ID from the URL
+            const urlParts = file.url.split("/");
+            const eventId = urlParts[urlParts.length - 2]; // Event ID is second to last in the URL
+
+            // Fetch fresh event data to ensure we have the latest file information
+            const freshEvent = await get.getOne<Event>("events", eventId);
+
+            // Verify the file still exists in the event
+            if (!freshEvent.files.includes(file.name)) {
+                throw new Error("File no longer exists in the event");
+            }
+
+            // Get fresh URL from FileManager to ensure we have the latest
+            const freshUrl = fileManager.getFileUrl(
+                "events",
+                eventId,
+                file.name
+            );
+
+            // Show the preview with fresh URL
+            window.previewFileOfficer(freshUrl, file.name);
+        } catch (error) {
+            console.error("Failed to fetch fresh file data:", error);
+            toast.error(
+                "Failed to load file preview. The file may have been deleted or modified."
+            );
+        }
+    };
+
+    // Make helper functions available globally
+    window.updateFilePreviewButtons = updateFilePreviewButtons;
+
+    // Add openAttendeesModal function
+    window.openAttendeesModal = function (event: Event) {
+        console.log("Opening attendees modal for event:", event.id);
+
+        const modal = document.getElementById(
+            "attendeesModal"
+        ) as HTMLDialogElement;
+        const modalTitle = document.getElementById("attendeesModalTitle");
+
+        if (!modal || !modalTitle) {
+            console.error("Missing required elements");
+            return;
+        }
+
+        // Set modal title
+        modalTitle.textContent = `Attendees - ${event.event_name}`;
+
+        // Dispatch custom event with event data
+        window.dispatchEvent(
+            new CustomEvent("updateAttendees", {
+                detail: {
+                    eventId: event.id,
+                    eventName: event.event_name,
+                },
+            })
+        );
+
+        // Show modal
+        modal.showModal();
+    };
+
+    // Add event listeners when the document loads
+    document.addEventListener("DOMContentLoaded", () => {
+        const modal = document.getElementById(
+            "filePreviewModal"
+        ) as HTMLDialogElement;
+        if (modal) {
+            // Handle modal close via backdrop
+            modal.addEventListener("click", (e) => {
+                const modalDimensions = modal.getBoundingClientRect();
+                if (
+                    e.clientX < modalDimensions.left ||
+                    e.clientX > modalDimensions.right ||
+                    e.clientY < modalDimensions.top ||
+                    e.clientY > modalDimensions.bottom
+                ) {
+                    window.closeFilePreviewOfficer();
+                }
+            });
+
+            // Prevent modal content clicks from closing
+            const modalContent = modal.querySelector(".modal-box");
+            if (modalContent) {
+                modalContent.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                });
+            }
+
+            // Handle escape key
+            modal.addEventListener("cancel", (e) => {
+                e.preventDefault();
+                window.closeFilePreviewOfficer();
+            });
+        }
+    });
+
+    // Make refreshEvents available globally
+    window.refreshEvents = async function () {
+        try {
+            // Reset cache timestamp to force refresh
+            lastCacheUpdate = 0;
+            // Show loading state
+            const eventsList = document.getElementById("eventsList");
+            if (eventsList) {
+                eventsList.innerHTML = `
                     <div class="text-center py-8 text-base-content/70">
                         <Icon name="heroicons:arrow-path" class="h-12 w-12 mx-auto mb-4 opacity-50 animate-spin" />
                         <p>Refreshing events...</p>
                     </div>
                 `;
-      }
-      // Fetch events with reset cache
-      await fetchEvents();
-    } catch (error) {
-      console.error("Failed to refresh events:", error);
-      // Show error message
-      const eventsList = document.getElementById("eventsList");
-      if (eventsList) {
-        eventsList.innerHTML = `
+            }
+            // Fetch events with reset cache
+            await fetchEvents();
+        } catch (error) {
+            console.error("Failed to refresh events:", error);
+            // Show error message
+            const eventsList = document.getElementById("eventsList");
+            if (eventsList) {
+                eventsList.innerHTML = `
                     <div class="alert alert-error">
                         <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2168,7 +2306,7 @@ const currentPage = eventResponse.page;
                         <span>Failed to refresh events. Please try again.</span>
                     </div>
                 `;
-      }
-    }
-  };
+            }
+        }
+    };
 </script>
