@@ -8,6 +8,7 @@ import type {
   Reimbursement,
   Receipt,
   Sponsor,
+  EventAttendee,
 } from "../../schemas/pocketbase/schema";
 
 // Check if we're in a browser environment
@@ -29,6 +30,7 @@ interface OfflineChange {
 export class DashboardDatabase extends Dexie {
   users!: Dexie.Table<User, string>;
   events!: Dexie.Table<Event, string>;
+  eventAttendees!: Dexie.Table<EventAttendee, string>;
   eventRequests!: Dexie.Table<EventRequest, string>;
   logs!: Dexie.Table<Log, string>;
   officers!: Dexie.Table<Officer, string>;
@@ -63,6 +65,12 @@ export class DashboardDatabase extends Dexie {
       offlineChanges:
         "id, collection, recordId, operation, timestamp, synced, syncAttempts",
     });
+    
+    // Add version 3 with eventAttendees table and updated events table (no attendees field)
+    this.version(3).stores({
+      events: "id, event_name, event_code, start_date, end_date, published",
+      eventAttendees: "id, user, event, time_checked_in",
+    });
   }
 
   // Initialize the database with default values
@@ -70,6 +78,7 @@ export class DashboardDatabase extends Dexie {
     const collections = [
       "users",
       "events",
+      "event_attendees",
       "event_request",
       "logs",
       "officers",
@@ -155,6 +164,7 @@ export class DexieService {
     const db = this.db as DashboardDatabase;
     await db.users.clear();
     await db.events.clear();
+    await db.eventAttendees.clear();
     await db.eventRequests.clear();
     await db.logs.clear();
     await db.officers.clear();
@@ -167,6 +177,7 @@ export class DexieService {
     const collections = [
       "users",
       "events",
+      "event_attendees",
       "event_request",
       "logs",
       "officers",

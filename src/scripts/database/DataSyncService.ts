@@ -601,6 +601,8 @@ export class DataSyncService {
         return db.users;
       case Collections.EVENTS:
         return db.events;
+      case Collections.EVENT_ATTENDEES:
+        return db.eventAttendees;
       case Collections.EVENT_REQUESTS:
         return db.eventRequests;
       case Collections.LOGS:
@@ -616,6 +618,62 @@ export class DataSyncService {
       default:
         console.error(`Unknown collection: ${collection}`);
         return null;
+    }
+  }
+
+  /**
+   * Store an event code in local storage for offline check-in
+   * This is used when a user scans a QR code but is offline
+   * @param eventCode The event code to store
+   */
+  public async storeEventCode(eventCode: string): Promise<void> {
+    if (!isBrowser) return;
+
+    try {
+      // Store in localStorage instead of IndexedDB for security
+      localStorage.setItem('pending_event_code', eventCode);
+      localStorage.setItem('pending_event_code_timestamp', Date.now().toString());
+      console.log('Event code stored for offline check-in');
+    } catch (error) {
+      console.error('Error storing event code:', error);
+    }
+  }
+
+  /**
+   * Clear the stored event code from local storage
+   */
+  public async clearEventCode(): Promise<void> {
+    if (!isBrowser) return;
+
+    try {
+      localStorage.removeItem('pending_event_code');
+      localStorage.removeItem('pending_event_code_timestamp');
+      console.log('Event code cleared');
+    } catch (error) {
+      console.error('Error clearing event code:', error);
+    }
+  }
+
+  /**
+   * Get the stored event code from local storage
+   * @returns The stored event code, or null if none exists
+   */
+  public async getStoredEventCode(): Promise<{ code: string; timestamp: number } | null> {
+    if (!isBrowser) return null;
+
+    try {
+      const code = localStorage.getItem('pending_event_code');
+      const timestamp = localStorage.getItem('pending_event_code_timestamp');
+      
+      if (!code || !timestamp) return null;
+      
+      return {
+        code,
+        timestamp: parseInt(timestamp)
+      };
+    } catch (error) {
+      console.error('Error getting stored event code:', error);
+      return null;
     }
   }
 
