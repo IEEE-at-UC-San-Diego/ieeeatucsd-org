@@ -52,7 +52,6 @@ export interface Event extends BaseRecord {
   end_date: string;
   published: boolean;
   has_food: boolean;
-  attendees?: AttendeeEntry[];
 }
 
 /**
@@ -64,6 +63,19 @@ export interface AttendeeEntry {
   user_id: string;
   time_checked_in: string;
   food: string;
+}
+
+/**
+ * Event Attendees Collection
+ * Represents attendees for events
+ * Collection ID: pbc_537966730
+ */
+export interface EventAttendee extends BaseRecord {
+  user: string; // Relation to User
+  event: string; // Relation to Event
+  food_ate: string;
+  time_checked_in: string;
+  points_earned: number;
 }
 
 /**
@@ -194,6 +206,7 @@ export const Collections = {
   USERS: "users",
   EVENTS: "events",
   EVENT_REQUESTS: "event_request",
+  EVENT_ATTENDEES: "event_attendees",
   LOGS: "logs",
   OFFICERS: "officers",
   REIMBURSEMENTS: "reimbursement",
