@@ -4,6 +4,7 @@ import FilePreview from '../universal/FilePreview';
 import { Get } from '../../../scripts/pocketbase/Get';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
+import { FileManager } from '../../../scripts/pocketbase/FileManager';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Receipt as SchemaReceipt, User, Reimbursement } from '../../../schemas/pocketbase';
@@ -70,6 +71,7 @@ export default function ReimbursementManagementPortal() {
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
     const [rejectingId, setRejectingId] = useState<string | null>(null);
+    const [receiptUrl, setReceiptUrl] = useState<string>('');
 
     useEffect(() => {
         const auth = Authentication.getInstance();
@@ -379,16 +381,34 @@ export default function ReimbursementManagementPortal() {
         }
     };
 
-    const toggleReceipt = (receiptId: string) => {
-        setExpandedReceipts(prev => {
-            const next = new Set(prev);
-            if (next.has(receiptId)) {
-                next.delete(receiptId);
-            } else {
-                next.add(receiptId);
+    const toggleReceipt = async (receiptId: string) => {
+        if (expandedReceipts.has(receiptId)) {
+            // If already expanded, collapse it
+            const newSet = new Set(expandedReceipts);
+            newSet.delete(receiptId);
+            setExpandedReceipts(newSet);
+            setSelectedReceipt(null);
+        } else {
+            // If not expanded, expand it
+            const newSet = new Set(expandedReceipts);
+            newSet.add(receiptId);
+            setExpandedReceipts(newSet);
+
+            // Set the selected receipt
+            const receipt = receipts[receiptId];
+            if (receipt) {
+                setSelectedReceipt(receipt);
+
+                // Get the receipt URL and update the state
+                try {
+                    const url = await getReceiptUrl(receipt);
+                    setReceiptUrl(url);
+                } catch (error) {
+                    console.error('Error getting receipt URL:', error);
+                    setReceiptUrl('');
+                }
             }
-            return next;
-        });
+        }
     };
 
     // Update the auditReceipt function
@@ -403,6 +423,15 @@ export default function ReimbursementManagementPortal() {
 
             const receipt = receipts[receiptId];
             if (!receipt) throw new Error('Receipt not found');
+
+            // Get the receipt URL and update the state
+            try {
+                const url = await getReceiptUrl(receipt);
+                setReceiptUrl(url);
+            } catch (error) {
+                console.error('Error getting receipt URL:', error);
+                setReceiptUrl('');
+            }
 
             const updatedAuditors = [...new Set([...receipt.audited_by, userId])];
 
@@ -441,6 +470,8 @@ export default function ReimbursementManagementPortal() {
                 }
             }));
 
+            setSelectedReceipt(receipt);
+            setShowReceiptModal(true);
             toast.success('Receipt audited successfully');
         } catch (error) {
             console.error('Error auditing receipt:', error);
@@ -463,10 +494,15 @@ export default function ReimbursementManagementPortal() {
         });
     };
 
-    const getReceiptUrl = (receipt: ExtendedReceipt): string => {
+    const getReceiptUrl = async (receipt: ExtendedReceipt): Promise<string> => {
         try {
-            const pb = Authentication.getInstance().getPocketBase();
-            return pb.files.getURL(receipt, receipt.file);
+            const fileManager = FileManager.getInstance();
+            return await fileManager.getFileUrlWithToken(
+                'receipts',
+                receipt.id,
+                receipt.file,
+                true // Use token for protected files
+            );
         } catch (error) {
             console.error('Error getting receipt URL:', error);
             return '';
@@ -1648,7 +1684,7 @@ export default function ReimbursementManagementPortal() {
                         </div>
                         <div className="px-4 py-0">
                             <FilePreview
-                                url={getReceiptUrl(selectedReceipt)}
+                                url={receiptUrl}
                                 filename={`Receipt from ${selectedReceipt.location_name}`}
                             />
                         </div>

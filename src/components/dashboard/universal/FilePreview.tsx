@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Icon } from "@iconify/react";
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
+import { Authentication } from '../../../scripts/pocketbase/Authentication';
 
 // Cache for file content
 const contentCache = new Map<string, { content: string | 'image' | 'video' | 'pdf', fileType: string, timestamp: number }>();
@@ -36,6 +37,19 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
         return `${truncatedName}...${extension ? `.${extension}` : ''}`;
     }, [filename]);
 
+    // Update URL and filename when props change
+    useEffect(() => {
+        console.log('FilePreview props changed:', { initialUrl, initialFilename });
+        if (initialUrl !== url) {
+            console.log('URL changed from props:', initialUrl);
+            setUrl(initialUrl);
+        }
+        if (initialFilename !== filename) {
+            console.log('Filename changed from props:', initialFilename);
+            setFilename(initialFilename);
+        }
+    }, [initialUrl, initialFilename, url, filename]);
+
     // Intersection Observer callback
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -55,7 +69,20 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
     }, []);
 
     const loadContent = useCallback(async () => {
-        if (!url || !filename) return;
+        if (!url) {
+            // Don't log a warning if URL is empty during initial component mount
+            // This is a normal state before the URL is set
+            setError('No file URL provided');
+            setLoading(false);
+            return;
+        }
+
+        if (!filename) {
+            console.warn('Cannot load content: Filename is empty');
+            setError('No filename provided');
+            setLoading(false);
+            return;
+        }
 
         console.log('Loading content for:', { url, filename });
         setLoading(true);
@@ -72,9 +99,61 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
             return;
         }
 
+        // Check if it's likely an image based on filename extension
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+        const fileExtension = filename.split('.').pop()?.toLowerCase() || '';
+        const isProbablyImage = imageExtensions.includes(fileExtension);
+
+        if (isProbablyImage) {
+            // Try loading as an image first to bypass CORS issues
+            try {
+                console.log('Trying to load as image:', url);
+                const img = new Image();
+                img.crossOrigin = 'anonymous'; // Try anonymous mode first
+
+                // Create a promise to handle image loading
+                const imageLoaded = new Promise((resolve, reject) => {
+                    img.onload = () => resolve('image');
+                    img.onerror = (e) => reject(new Error('Failed to load image'));
+                });
+
+                img.src = url;
+
+                // Wait for image to load
+                await imageLoaded;
+
+                // If we get here, image loaded successfully
+                setContent('image');
+                setFileType('image/' + fileExtension);
+
+                // Cache the content
+                contentCache.set(cacheKey, {
+                    content: 'image',
+                    fileType: 'image/' + fileExtension,
+                    timestamp: Date.now()
+                });
+
+                setLoading(false);
+                return;
+            } catch (imgError) {
+                console.warn('Failed to load as image, falling back to fetch:', imgError);
+                // Continue to fetch method
+            }
+        }
+
         try {
-            console.log('Fetching file...');
-            const response = await fetch(url);
+            console.log('Fetching file from URL:', url);
+            const response = await fetch(url, {
+                headers: {
+                    'Cache-Control': 'no-cache', // Bypass cache
+                }
+            });
+
+            if (!response.ok) {
+                console.error('File fetch failed with status:', response.status, response.statusText);
+                throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+            }
+
             const contentType = response.headers.get('content-type');
             console.log('Received content type:', contentType);
             setFileType(contentType);
@@ -112,13 +191,15 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
     }, [url, filename]);
 
     useEffect(() => {
-        if (isVisible || !isModal) { // Load content immediately if not in modal
+        // Only attempt to load content if URL is not empty
+        if ((isVisible || !isModal) && url) {
             loadContent();
         }
-    }, [isVisible, loadContent, isModal]);
+    }, [isVisible, loadContent, isModal, url]);
 
     useEffect(() => {
-        console.log('FilePreview component mounted');
+        console.log('FilePreview component mounted or updated with URL:', url);
+        console.log('Filename:', filename);
 
         if (isModal) {
             const handleStateChange = (event: CustomEvent<{ url: string; filename: string }>) => {
@@ -144,6 +225,14 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
             setFilename(initialFilename);
         }
     }, [isModal, initialUrl, initialFilename]);
+
+    // Add a new effect to handle URL changes
+    useEffect(() => {
+        if (url && isVisible) {
+            console.log('URL changed, loading content:', url);
+            loadContent();
+        }
+    }, [url, isVisible, loadContent]);
 
     const handleDownload = async () => {
         try {
@@ -250,44 +339,26 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
         }
 
         try {
-            return hljs.highlight(code, { language }).value;
+            // Use highlight.js to highlight the code
+            const highlighted = hljs.highlight(code, { language }).value;
+            return highlighted;
         } catch (error) {
-            console.warn(`Failed to highlight code for language ${language}:`, error);
-            return code;
+            console.warn(`Failed to highlight code as ${language}, falling back to plaintext`);
+            return hljs.highlight(code, { language: 'plaintext' }).value;
         }
     }, []);
 
     const formatCodeWithLineNumbers = useCallback((code: string, language: string) => {
-        // Special handling for CSV files
-        if (language === 'csv') {
-            return renderCSVTable(code);
-        }
+        const highlighted = highlightCode(code, language);
+        const lines = highlighted.split('\n').slice(0, visibleLines);
 
-        const lines = code.split('\n');
-        const totalLines = lines.length;
-        const linesToShow = Math.min(visibleLines, totalLines);
-
-        let formattedCode = lines
-            .slice(0, linesToShow)
-            .map((line, index) => {
-                const lineNumber = index + 1;
-                const highlightedLine = highlightCode(line, language);
-                return `<div class="table-row ">
-                    <div class="table-cell text-right  pr-4 select-none text-base-content/50 text-sm border-r border-base-content/10">${lineNumber}</div>
-                    <div class="table-cell pl-4 whitespace-pre">${highlightedLine || ' '}</div>
-                </div>`;
-            })
-            .join('');
-
-        if (linesToShow < totalLines) {
-            formattedCode += `<div class="table-row ">
-                <div class="table-cell"></div>
-                <div class="table-cell pl-4 pt-2 text-base-content/70">... ${totalLines - linesToShow} more lines</div>
-            </div>`;
-        }
-
-        return formattedCode;
-    }, [highlightCode, visibleLines, renderCSVTable]);
+        return lines.map((line, i) =>
+            `<div class="table-row">
+                <div class="table-cell text-right pr-4 select-none opacity-50 w-12">${i + 1}</div>
+                <div class="table-cell">${line || ' '}</div>
+            </div>`
+        ).join('');
+    }, [visibleLines, highlightCode]);
 
     const handleShowMore = useCallback(() => {
         setVisibleLines(prev => Math.min(prev + CHUNK_SIZE, content?.split('\n').length || 0));
@@ -297,84 +368,104 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
         setVisibleLines(INITIAL_LINES_TO_SHOW);
     }, []);
 
+    // If URL is empty, show a message
+    if (!url) {
+        return (
+            <div className="file-preview-container bg-base-100 rounded-lg shadow-md overflow-hidden">
+                <div className="p-6 flex flex-col items-center justify-center text-center">
+                    <Icon icon="heroicons:exclamation-triangle" className="h-12 w-12 text-warning mb-3" />
+                    <h3 className="text-lg font-semibold mb-2">No File URL Provided</h3>
+                    <p className="text-base-content/70">Please check if the file exists or if you have the necessary permissions.</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="file-preview-container space-y-4">
-            {!loading && !error && content === 'image' && (
-                <div>
-                    <div className="flex justify-between items-center bg-base-200 p-3 rounded-t-lg">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="truncate font-medium" title={filename}>{truncatedFilename}</span>
-                            {fileType && (
-                                <span className="badge badge-sm whitespace-nowrap">{fileType.split('/')[1]}</span>
-                            )}
+            <div className="flex justify-between items-center bg-base-200 p-3 rounded-t-lg">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="truncate font-medium" title={filename}>{truncatedFilename}</span>
+                    {fileType && (
+                        <span className="badge badge-sm whitespace-nowrap">{fileType.split('/')[1]}</span>
+                    )}
+                </div>
+                <button
+                    onClick={handleDownload}
+                    className="btn btn-sm btn-ghost gap-2 whitespace-nowrap"
+                >
+                    <Icon icon="mdi:download" className="h-4 w-4" />
+                    Download
+                </button>
+            </div>
+
+            <div className="preview-content overflow-auto border border-base-300 rounded-lg bg-base-200/50 relative">
+                {loading && (
+                    <div className="flex justify-center items-center p-8">
+                        <span className="loading loading-spinner loading-lg"></span>
+                    </div>
+                )}
+
+                {error && (
+                    <div className="flex flex-col items-center justify-center p-8 bg-base-200 rounded-lg text-center space-y-4">
+                        <div className="bg-warning/20 p-4 rounded-full">
+                            <Icon icon="mdi:alert" className="h-12 w-12 text-warning" />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-lg font-semibold">Preview Unavailable</h3>
+                            <p className="text-base-content/70 max-w-md">{error}</p>
                         </div>
                         <button
                             onClick={handleDownload}
-                            className="btn btn-sm btn-ghost gap-2 whitespace-nowrap"
+                            className="btn btn-warning btn-sm gap-2 mt-4"
                         >
                             <Icon icon="mdi:download" className="h-4 w-4" />
-                            Download
+                            Download File Instead
+                        </button>
+                        <button
+                            className="btn btn-sm btn-outline btn-error mt-4"
+                            onClick={loadContent}
+                        >
+                            Try Again
                         </button>
                     </div>
+                )}
+
+                {!loading && !error && content === 'image' && (
                     <div className="flex justify-center bg-base-200 p-4 rounded-b-lg">
                         <img
                             src={url}
                             alt={filename}
                             className="max-w-full h-auto rounded-lg"
                             loading="lazy"
+                            onError={(e) => {
+                                console.error('Image failed to load:', e);
+                                setError('Failed to load image. This might be due to permission issues or the file may not exist.');
+
+                                // Log additional details
+                                console.log('Image URL that failed:', url);
+                                console.log('Current auth status:',
+                                    Authentication.getInstance().isAuthenticated() ? 'Authenticated' : 'Not authenticated'
+                                );
+                            }}
                         />
                     </div>
-                </div>
-            )}
+                )}
 
-            {!loading && !error && content === 'video' && (
-                <div>
-                    <div className="flex justify-between items-center bg-base-200 p-3 rounded-t-lg">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="truncate font-medium" title={filename}>{truncatedFilename}</span>
-                            {fileType && (
-                                <span className="badge badge-sm whitespace-nowrap">{fileType.split('/')[1]}</span>
-                            )}
-                        </div>
-                        <button
-                            onClick={handleDownload}
-                            className="btn btn-sm btn-ghost gap-2 whitespace-nowrap"
-                        >
-                            <Icon icon="mdi:download" className="h-4 w-4" />
-                            Download
-                        </button>
-                    </div>
+                {!loading && !error && content === 'video' && (
                     <div className="flex justify-center bg-base-200 p-4 rounded-b-lg">
                         <video
                             controls
-                            className="max-w-full rounded-lg"
-                            style={{ maxHeight: '600px' }}
+                            className="max-w-full h-auto rounded-lg"
                             preload="metadata"
                         >
-                            <source src={url} type="video/mp4" />
+                            <source src={url} type={fileType || 'video/mp4'} />
                             Your browser does not support the video tag.
                         </video>
                     </div>
-                </div>
-            )}
+                )}
 
-            {!loading && !error && content === 'pdf' && (
-                <div>
-                    <div className="flex justify-between items-center bg-base-200 p-3 rounded-t-lg">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="truncate font-medium" title={filename}>{truncatedFilename}</span>
-                            {fileType && (
-                                <span className="badge badge-sm whitespace-nowrap">{fileType.split('/')[1]}</span>
-                            )}
-                        </div>
-                        <button
-                            onClick={handleDownload}
-                            className="btn btn-sm btn-ghost gap-2 whitespace-nowrap"
-                        >
-                            <Icon icon="mdi:download" className="h-4 w-4" />
-                            Download
-                        </button>
-                    </div>
+                {!loading && !error && content === 'pdf' && (
                     <div className="w-full h-[600px] bg-base-200 p-4 rounded-b-lg">
                         <iframe
                             src={url}
@@ -383,81 +474,30 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                             loading="lazy"
                         ></iframe>
                     </div>
-                </div>
-            )}
+                )}
 
-            {!loading && !error && content && !['image', 'video', 'pdf'].includes(content) && (
-                <div>
-                    <div className="flex justify-between items-center bg-base-200 p-3 rounded-t-lg">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="truncate font-medium" title={filename}>{truncatedFilename}</span>
-                            {fileType && (
-                                <span className="badge badge-sm whitespace-nowrap">{fileType.split('/')[1]}</span>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {content && content.split('\n').length > visibleLines && (
-                                <button
-                                    onClick={handleShowMore}
-                                    className="btn btn-sm btn-ghost"
-                                >
-                                    Show More
-                                </button>
-                            )}
-                            {visibleLines > INITIAL_LINES_TO_SHOW && (
-                                <button
-                                    onClick={handleShowLess}
-                                    className="btn btn-sm btn-ghost"
-                                >
-                                    Show Less
-                                </button>
-                            )}
-                            <button
-                                onClick={handleDownload}
-                                className="btn btn-sm btn-ghost gap-2 whitespace-nowrap"
-                            >
-                                <Icon icon="mdi:download" className="h-4 w-4" />
-                                Download
-                            </button>
-                        </div>
-                    </div>
+                {!loading && !error && content && !['image', 'video', 'pdf'].includes(content) && (
                     <div className="overflow-x-auto max-h-[600px] bg-base-200">
                         <div className={`p-1 ${filename.toLowerCase().endsWith('.csv') ? 'p-4' : ''}`}>
-                            <div
-                                className={filename.toLowerCase().endsWith('.csv') ? '' : 'hljs table w-full font-mono text-sm rounded-lg py-4 px-2'}
-                                dangerouslySetInnerHTML={{
-                                    __html: formatCodeWithLineNumbers(content, getLanguageFromFilename(filename))
-                                }}
-                            />
+                            {filename.toLowerCase().endsWith('.csv') ? (
+                                <div dangerouslySetInnerHTML={{ __html: renderCSVTable(content) }} />
+                            ) : (
+                                <pre className="text-sm">
+                                    <code
+                                        className={`language-${getLanguageFromFilename(filename)}`}
+                                        dangerouslySetInnerHTML={{
+                                            __html: formatCodeWithLineNumbers(
+                                                content.split('\n').slice(0, visibleLines).join('\n'),
+                                                getLanguageFromFilename(filename)
+                                            )
+                                        }}
+                                    />
+                                </pre>
+                            )}
                         </div>
                     </div>
-                </div>
-            )}
-
-            {loading && (
-                <div className="flex justify-center items-center p-8">
-                    <span className="loading loading-spinner loading-lg"></span>
-                </div>
-            )}
-
-            {error && (
-                <div className="flex flex-col items-center justify-center p-8 bg-base-200 rounded-lg text-center space-y-4">
-                    <div className="bg-warning/20 p-4 rounded-full">
-                        <Icon icon="mdi:alert" className="h-12 w-12 text-warning" />
-                    </div>
-                    <div className="space-y-2">
-                        <h3 className="text-lg font-semibold">Preview Unavailable</h3>
-                        <p className="text-base-content/70 max-w-md">{error}</p>
-                    </div>
-                    <button
-                        onClick={handleDownload}
-                        className="btn btn-warning btn-sm gap-2 mt-4"
-                    >
-                        <Icon icon="mdi:download" className="h-4 w-4" />
-                        Download File Instead
-                    </button>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 } 

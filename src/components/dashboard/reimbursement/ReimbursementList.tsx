@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { ItemizedExpense, Reimbursement, Receipt } from '../../../schemas/pocketbase';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
+import { toast } from 'react-hot-toast';
 
 interface AuditNote {
     note: string;
@@ -120,6 +121,20 @@ export default function ReimbursementList() {
         console.log('Requests state updated:', requests);
         console.log('Number of requests:', requests.length);
     }, [requests]);
+
+    // Add a useEffect to log preview URL and filename changes
+    useEffect(() => {
+        console.log('Preview URL changed:', previewUrl);
+        console.log('Preview filename changed:', previewFilename);
+    }, [previewUrl, previewFilename]);
+
+    // Add a useEffect to log when the preview modal is shown/hidden
+    useEffect(() => {
+        console.log('Show preview changed:', showPreview);
+        if (showPreview) {
+            console.log('Selected receipt:', selectedReceipt);
+        }
+    }, [showPreview, selectedReceipt]);
 
     const fetchReimbursements = async () => {
         setLoading(true);
@@ -241,27 +256,88 @@ export default function ReimbursementList() {
 
     const handlePreviewFile = async (request: ReimbursementRequest, receiptId: string) => {
         try {
+            console.log('Previewing file for receipt ID:', receiptId);
             const pb = auth.getPocketBase();
+            const fileManager = FileManager.getInstance();
+
+            // Set the selected request
+            setSelectedRequest(request);
 
             // Check if we already have the receipt details in our map
             if (receiptDetailsMap[receiptId]) {
+                console.log('Using cached receipt details');
                 // Use the cached receipt details
                 setSelectedReceipt(receiptDetailsMap[receiptId]);
 
-                // Get the file URL using the PocketBase URL and collection info
-                const url = `${pb.baseUrl}/api/files/receipts/${receiptId}/${receiptDetailsMap[receiptId].file}`;
+                // Check if the receipt has a file
+                if (!receiptDetailsMap[receiptId].file) {
+                    console.error('Receipt has no file attached');
+                    toast.error('This receipt has no file attached');
+                    setPreviewUrl('');
+                    setPreviewFilename('');
+                    setShowPreview(true);
+                    return;
+                }
+
+                // Get the file URL with token for protected files
+                console.log('Getting file URL with token');
+                const url = await fileManager.getFileUrlWithToken(
+                    'receipts',
+                    receiptId,
+                    receiptDetailsMap[receiptId].file,
+                    true // Use token for protected files
+                );
+
+                // Check if the URL is empty
+                if (!url) {
+                    console.error('Failed to get file URL: Empty URL returned');
+                    toast.error('Failed to load receipt: Could not generate file URL');
+                    // Still show the preview modal but with empty URL to display the error message
+                    setPreviewUrl('');
+                    setPreviewFilename(receiptDetailsMap[receiptId].file || '');
+                    setShowPreview(true);
+                    return;
+                }
+
+                console.log('Got URL:', url.substring(0, 50) + '...');
+
+                // Set the preview URL and filename
                 setPreviewUrl(url);
                 setPreviewFilename(receiptDetailsMap[receiptId].file);
+
+                // Show the preview modal
                 setShowPreview(true);
+
+                // Log the current state
+                console.log('Current state after setting:', {
+                    previewUrl: url,
+                    previewFilename: receiptDetailsMap[receiptId].file,
+                    showPreview: true
+                });
+
                 return;
             }
 
             // If not in the map, get the receipt record using its ID
+            console.log('Fetching receipt details from server');
             const receiptRecord = await pb.collection('receipts').getOne(receiptId, {
                 $autoCancel: false
             });
 
             if (receiptRecord) {
+                console.log('Receipt record found:', receiptRecord.id);
+                console.log('Receipt file:', receiptRecord.file);
+
+                // Check if the receipt has a file
+                if (!receiptRecord.file) {
+                    console.error('Receipt has no file attached');
+                    toast.error('This receipt has no file attached');
+                    setPreviewUrl('');
+                    setPreviewFilename('');
+                    setShowPreview(true);
+                    return;
+                }
+
                 // Parse the itemized expenses if it's a string
                 const itemizedExpenses = typeof receiptRecord.itemized_expenses === 'string'
                     ? JSON.parse(receiptRecord.itemized_expenses)
@@ -290,16 +366,51 @@ export default function ReimbursementList() {
 
                 setSelectedReceipt(receiptDetails);
 
-                // Get the file URL using the PocketBase URL and collection info
-                const url = `${pb.baseUrl}/api/files/receipts/${receiptRecord.id}/${receiptRecord.file}`;
+                // Get the file URL with token for protected files
+                console.log('Getting file URL with token for new receipt');
+                const url = await fileManager.getFileUrlWithToken(
+                    'receipts',
+                    receiptRecord.id,
+                    receiptRecord.file,
+                    true // Use token for protected files
+                );
+
+                // Check if the URL is empty
+                if (!url) {
+                    console.error('Failed to get file URL: Empty URL returned');
+                    toast.error('Failed to load receipt: Could not generate file URL');
+                    // Still show the preview modal but with empty URL to display the error message
+                    setPreviewUrl('');
+                    setPreviewFilename(receiptRecord.file || '');
+                    setShowPreview(true);
+                    return;
+                }
+
+                console.log('Got URL:', url.substring(0, 50) + '...');
+
+                // Set the preview URL and filename
                 setPreviewUrl(url);
                 setPreviewFilename(receiptRecord.file);
+
+                // Show the preview modal
                 setShowPreview(true);
+
+                // Log the current state
+                console.log('Current state after setting:', {
+                    previewUrl: url,
+                    previewFilename: receiptRecord.file,
+                    showPreview: true
+                });
             } else {
                 throw new Error('Receipt not found');
             }
         } catch (error) {
             console.error('Error loading receipt:', error);
+            toast.error('Failed to load receipt. Please try again.');
+            // Show the preview modal with empty URL to display the error message
+            setPreviewUrl('');
+            setPreviewFilename('');
+            setShowPreview(true);
         }
     };
 
@@ -705,11 +816,25 @@ export default function ReimbursementList() {
                                             </motion.a>
                                         </div>
                                         <div className="bg-base-200/50 backdrop-blur-sm rounded-lg p-4 shadow-sm">
-                                            <FilePreview
-                                                url={previewUrl}
-                                                filename={previewFilename}
-                                                isModal={false}
-                                            />
+                                            {previewUrl ? (
+                                                <FilePreview
+                                                    url={previewUrl}
+                                                    filename={previewFilename}
+                                                    isModal={false}
+                                                />
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+                                                    <div className="bg-warning/20 p-4 rounded-full">
+                                                        <Icon icon="heroicons:exclamation-triangle" className="h-12 w-12 text-warning" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <h3 className="text-lg font-semibold">Receipt Image Not Available</h3>
+                                                        <p className="text-base-content/70 max-w-md">
+                                                            The receipt image could not be loaded. This might be due to permission issues or the file may not exist.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
