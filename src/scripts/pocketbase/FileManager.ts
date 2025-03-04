@@ -3,6 +3,7 @@ import { Authentication } from "./Authentication";
 export class FileManager {
   private auth: Authentication;
   private static instance: FileManager;
+  private static UNSUPPORTED_EXTENSIONS = ['afdesign', 'psd', 'ai', 'sketch'];
 
   private constructor() {
     this.auth = Authentication.getInstance();
@@ -16,6 +17,24 @@ export class FileManager {
       FileManager.instance = new FileManager();
     }
     return FileManager.instance;
+  }
+
+  /**
+   * Validates if a file type is supported
+   * @param file The file to validate
+   * @returns Object with validation result and reason if invalid
+   */
+  public validateFileType(file: File): { valid: boolean; reason?: string } {
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (fileExtension && FileManager.UNSUPPORTED_EXTENSIONS.includes(fileExtension)) {
+      return { 
+        valid: false, 
+        reason: `File type .${fileExtension} is not supported. Please convert to PDF or image format.` 
+      };
+    }
+    
+    return { valid: true };
   }
 
   /**
@@ -39,16 +58,142 @@ export class FileManager {
     try {
       this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
-      const formData = new FormData();
-      formData.append(field, file);
+      
+      // Validate file size
+      const maxSize = 200 * 1024 * 1024; // 200MB
+      if (file.size > maxSize) {
+        throw new Error(`File size ${(file.size / 1024 / 1024).toFixed(2)}MB exceeds 200MB limit`);
+      }
 
-      const result = await pb
-        .collection(collectionName)
-        .update<T>(recordId, formData);
-      return result;
+      // Check for potentially problematic file types
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      
+      // Validate file type
+      const validation = this.validateFileType(file);
+      if (!validation.valid) {
+        throw new Error(validation.reason);
+      }
+
+      // Log upload attempt
+      console.log('Attempting file upload:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        extension: fileExtension,
+        collection: collectionName,
+        recordId: recordId,
+        field: field
+      });
+
+      // Get existing record to preserve existing files
+      let existingRecord: any = null;
+      let existingFiles: string[] = [];
+      
+      try {
+        if (recordId) {
+          existingRecord = await pb.collection(collectionName).getOne(recordId);
+          existingFiles = existingRecord[field] || [];
+        }
+      } catch (error) {
+        console.warn('Could not fetch existing record:', error);
+      }
+      
+      // Check if the file already exists in the record
+      let fileToUpload = file;
+      if (recordId && existingFiles.includes(file.name)) {
+        const timestamp = new Date().getTime();
+        const nameParts = file.name.split('.');
+        const extension = nameParts.pop();
+        const baseName = nameParts.join('.');
+        const newFileName = `${baseName}_${timestamp}.${extension}`;
+        
+        // Create a new file with the modified name
+        fileToUpload = new File([file], newFileName, { type: file.type });
+        
+        console.log(`Renamed duplicate file from ${file.name} to ${newFileName}`);
+      }
+      
+      // Create FormData and append file
+      const formData = new FormData();
+      
+      // For events collection, use the 'files' field from the schema
+      if (collectionName === 'events') {
+        // Only append the new file, don't re-upload existing files
+        formData.append('files', fileToUpload);
+        
+        // If this is an update operation and we have existing files, we need to tell PocketBase to keep them
+        if (recordId && existingFiles.length > 0) {
+          formData.append('files@', ''); // This tells PocketBase to keep existing files
+        }
+      } else {
+        // For other collections, use the provided field name
+        formData.append(field, fileToUpload);
+        
+        // If this is an update operation and we have existing files, we need to tell PocketBase to keep them
+        if (recordId && existingFiles.length > 0) {
+          formData.append(`${field}@`, ''); // This tells PocketBase to keep existing files
+        }
+      }
+
+      try {
+        const result = await pb.collection(collectionName).update<T>(recordId, formData);
+        console.log('Upload successful:', {
+          result,
+          fileInfo: {
+            name: fileToUpload.name,
+            size: fileToUpload.size,
+            type: fileToUpload.type
+          },
+          collection: collectionName,
+          recordId: recordId
+        });
+        
+        // Verify the file was actually added to the record
+        try {
+          const updatedRecord = await pb.collection(collectionName).getOne(recordId);
+          console.log('Updated record files:', {
+            files: updatedRecord.files,
+            recordId: recordId
+          });
+        } catch (verifyError) {
+          console.warn('Could not verify file upload:', verifyError);
+        }
+        
+        return result;
+      } catch (pbError: any) {
+        // Log detailed PocketBase error
+        console.error('PocketBase upload error:', {
+          status: pbError?.status,
+          response: pbError?.response,
+          data: pbError?.data,
+          message: pbError?.message
+        });
+        
+        // More specific error message based on file type
+        if (fileExtension && FileManager.UNSUPPORTED_EXTENSIONS.includes(fileExtension)) {
+          throw new Error(`Upload failed: File type .${fileExtension} is not supported. Please convert to PDF or image format.`);
+        }
+        
+        throw new Error(`Upload failed: ${pbError?.message || 'Unknown PocketBase error'}`);
+      }
     } catch (err) {
-      console.error(`Failed to upload file to ${collectionName}:`, err);
-      throw err;
+      console.error(`Failed to upload file to ${collectionName}:`, {
+        error: err,
+        fileInfo: {
+          name: file.name,
+          size: file.size,
+          type: file.type
+        },
+        auth: {
+          isAuthenticated: this.auth.isAuthenticated(),
+          userId: this.auth.getUserId()
+        }
+      });
+      
+      if (err instanceof Error) {
+        throw err;
+      }
+      throw new Error(`Upload failed: ${err}`);
     } finally {
       this.auth.setUpdating(false);
     }
@@ -79,12 +224,19 @@ export class FileManager {
       const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB per file limit
       const MAX_BATCH_SIZE = 25 * 1024 * 1024; // 25MB per batch
 
-      // Validate file sizes first
+      // Validate file types and sizes first
       for (const file of files) {
+        // Validate file size
         if (file.size > MAX_FILE_SIZE) {
           throw new Error(
             `File ${file.name} is too large. Maximum size is 50MB.`,
           );
+        }
+        
+        // Validate file type
+        const validation = this.validateFileType(file);
+        if (!validation.valid) {
+          throw new Error(`File ${file.name}: ${validation.reason}`);
         }
       }
 
@@ -174,9 +326,39 @@ export class FileManager {
     const pb = this.auth.getPocketBase();
     const formData = new FormData();
 
-    // Add new files
+    // Get existing files to check for duplicates
+    let existingFiles: string[] = [];
+    try {
+      const record = await pb.collection(collectionName).getOne(recordId);
+      existingFiles = record[field] || [];
+    } catch (error) {
+      console.warn("Failed to fetch existing record for duplicate check:", error);
+    }
+
+    // Add new files, renaming duplicates if needed
     for (const file of files) {
-      formData.append(field, file);
+      let fileToUpload = file;
+      
+      // Check if filename already exists
+      if (Array.isArray(existingFiles) && existingFiles.includes(file.name)) {
+        const timestamp = new Date().getTime();
+        const nameParts = file.name.split('.');
+        const extension = nameParts.pop();
+        const baseName = nameParts.join('.');
+        const newFileName = `${baseName}_${timestamp}.${extension}`;
+        
+        // Create a new file with the modified name
+        fileToUpload = new File([file], newFileName, { type: file.type });
+        
+        console.log(`Renamed duplicate file from ${file.name} to ${newFileName}`);
+      }
+      
+      formData.append(field, fileToUpload);
+    }
+    
+    // Tell PocketBase to keep existing files
+    if (existingFiles.length > 0) {
+      formData.append(`${field}@`, ''); // This tells PocketBase to keep existing files
     }
 
     try {
@@ -216,30 +398,36 @@ export class FileManager {
       // First, get the current record to check existing files
       const record = await pb.collection(collectionName).getOne<T>(recordId);
 
-      // Create FormData with existing files
-      const formData = new FormData();
-
       // Get existing files from the record
       const existingFiles = (record as any)[field] || [];
+      const existingFilenames = new Set(existingFiles);
 
-      // For each existing file, we need to fetch it and add it to the FormData
-      for (const existingFile of existingFiles) {
-        try {
-          const response = await fetch(
-            this.getFileUrl(collectionName, recordId, existingFile),
-          );
-          const blob = await response.blob();
-          const file = new File([blob], existingFile, { type: blob.type });
-          formData.append(field, file);
-        } catch (error) {
-          console.warn(`Failed to fetch existing file ${existingFile}:`, error);
+      // Create FormData for the new files only
+      const formData = new FormData();
+      
+      // Tell PocketBase to keep existing files
+      formData.append(`${field}@`, '');
+
+      // Append new files, renaming if needed to avoid duplicates
+      for (const file of files) {
+        let fileToUpload = file;
+        
+        // Check if filename already exists
+        if (existingFilenames.has(file.name)) {
+          const timestamp = new Date().getTime();
+          const nameParts = file.name.split('.');
+          const extension = nameParts.pop();
+          const baseName = nameParts.join('.');
+          const newFileName = `${baseName}_${timestamp}.${extension}`;
+          
+          // Create a new file with the modified name
+          fileToUpload = new File([file], newFileName, { type: file.type });
+          
+          console.log(`Renamed duplicate file from ${file.name} to ${newFileName}`);
         }
+        
+        formData.append(field, fileToUpload);
       }
-
-      // Append new files
-      files.forEach((file) => {
-        formData.append(field, file);
-      });
 
       const result = await pb
         .collection(collectionName)

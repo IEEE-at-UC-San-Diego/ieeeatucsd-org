@@ -71,6 +71,11 @@ export class DashboardDatabase extends Dexie {
       events: "id, event_name, event_code, start_date, end_date, published",
       eventAttendees: "id, user, event, time_checked_in",
     });
+    
+    // Add version 4 with files field in events table
+    this.version(4).stores({
+      events: "id, event_name, event_code, start_date, end_date, published, files",
+    });
   }
 
   // Initialize the database with default values

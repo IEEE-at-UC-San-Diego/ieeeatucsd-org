@@ -209,9 +209,40 @@ const EventForm = memo(({
                         onChange={(e) => {
                             if (e.target.files) {
                                 const newFiles = new Map(selectedFiles);
+                                const rejectedFiles: { name: string, reason: string }[] = [];
+                                const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200MB
+
                                 Array.from(e.target.files).forEach(file => {
+                                    // Validate file size
+                                    if (file.size > MAX_FILE_SIZE) {
+                                        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                        rejectedFiles.push({
+                                            name: file.name,
+                                            reason: `exceeds size limit (${fileSizeMB}MB > 200MB)`
+                                        });
+                                        return;
+                                    }
+
+                                    // Validate file type
+                                    const validation = fileManager.validateFileType(file);
+                                    if (!validation.valid) {
+                                        rejectedFiles.push({
+                                            name: file.name,
+                                            reason: validation.reason || 'unsupported file type'
+                                        });
+                                        return;
+                                    }
+
+                                    // Only add valid files
                                     newFiles.set(file.name, file);
                                 });
+
+                                // Show error for rejected files
+                                if (rejectedFiles.length > 0) {
+                                    const errorMessage = `The following files were not added:\n${rejectedFiles.map(f => `${f.name}: ${f.reason}`).join('\n')}`;
+                                    toast.error(errorMessage);
+                                }
+
                                 setSelectedFiles(newFiles);
                             }
                         }}
@@ -620,7 +651,26 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
 
             try {
                 if (event?.id) {
-                    await initializeEventData(event.id);
+                    // If we have a complete event object, use it directly
+                    if (event.event_name && event.event_description) {
+                        console.log("Using provided event data:", event);
+
+                        // Format dates for datetime-local input
+                        if (event.start_date) {
+                            const startDate = new Date(event.start_date);
+                            event.start_date = Get.formatLocalDate(startDate, false);
+                        }
+
+                        if (event.end_date) {
+                            const endDate = new Date(event.end_date);
+                            event.end_date = Get.formatLocalDate(endDate, false);
+                        }
+
+                        setEvent(event);
+                    } else {
+                        // Otherwise fetch it from the server
+                        await initializeEventData(event.id);
+                    }
                 } else {
                     await initializeEventData('');
                 }
@@ -733,20 +783,81 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 }
             }
 
-            // Handle file uploads
+            // Handle file uploads - only upload new files
             if (fileChanges.added.size > 0) {
+                const uploadErrors: string[] = [];
+                const fileManager = services.fileManager;
+
+                // Check for unsupported file types first
+                const invalidFiles = Array.from(fileChanges.added.entries())
+                    .map(([filename, file]) => {
+                        const validation = fileManager.validateFileType(file);
+                        return { filename, file, validation };
+                    })
+                    .filter(item => !item.validation.valid);
+
+                if (invalidFiles.length > 0) {
+                    const errorMessage = `The following files cannot be uploaded:\n${invalidFiles.map(item => `${item.filename}: ${item.validation.reason}`).join('\n')}`;
+                    toast.error(errorMessage);
+                    throw new Error(errorMessage);
+                }
+
                 for (const [filename, file] of fileChanges.added.entries()) {
                     await uploadQueue.add(async () => {
-                        const uploadedFile = await services.fileManager.uploadFile(
-                            "events",
-                            event.id,
-                            filename,
-                            file
-                        );
-                        if (uploadedFile) {
-                            fileChanges.unchanged.push(uploadedFile);
+                        try {
+                            // Validate file size before compression
+                            const maxSize = 200 * 1024 * 1024; // 200MB
+                            if (file.size > maxSize) {
+                                throw new Error(`File ${filename} exceeds 200MB limit`);
+                            }
+
+                            // Compress image if it's an image file
+                            const compressedFile = file.type.startsWith('image/')
+                                ? await services.fileManager.compressImageIfNeeded(file, 10) // 10MB limit for images
+                                : file;
+
+                            console.log(`Uploading file ${filename}:`, {
+                                originalSize: file.size,
+                                compressedSize: compressedFile.size,
+                                type: file.type
+                            });
+
+                            // Upload the file to PocketBase
+                            const uploadedFile = await services.fileManager.uploadFile(
+                                "events",
+                                event.id,
+                                "files", // Use the correct field name from the schema
+                                compressedFile
+                            );
+
+                            if (uploadedFile && uploadedFile.files) {
+                                // Get the filename from the uploaded file
+                                const uploadedFilename = uploadedFile.files[uploadedFile.files.length - 1];
+                                fileChanges.unchanged.push(uploadedFilename);
+                                console.log(`Successfully uploaded ${filename} as ${uploadedFilename}`);
+                            } else {
+                                console.warn(`File uploaded but no filename returned:`, uploadedFile);
+                            }
+                        } catch (error) {
+                            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+                            console.error('File upload failed:', {
+                                filename,
+                                error: errorMsg,
+                                fileInfo: {
+                                    size: file.size,
+                                    type: file.type
+                                }
+                            });
+                            uploadErrors.push(`${filename}: ${errorMsg}`);
                         }
                     });
+                }
+
+                // If any uploads failed, show error and stop
+                if (uploadErrors.length > 0) {
+                    const errorMessage = `Failed to upload files:\n${uploadErrors.join('\n')}`;
+                    toast.error(errorMessage);
+                    throw new Error(errorMessage);
                 }
             }
 
@@ -755,81 +866,81 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
 
             // Save the event
             let savedEvent;
-            if (event.id) {
-                // Update existing event
-                savedEvent = await services.update.updateFields<Event>(
-                    Collections.EVENTS,
-                    event.id,
-                    updatedEvent
-                );
+            try {
+                if (event.id) {
+                    // Update existing event
+                    savedEvent = await services.update.updateFields<Event>(
+                        Collections.EVENTS,
+                        event.id,
+                        updatedEvent
+                    );
 
-                // Clear cache to ensure fresh data
-                const dataSync = DataSyncService.getInstance();
-                await dataSync.clearCache();
+                    // Clear cache to ensure fresh data
+                    const dataSync = DataSyncService.getInstance();
+                    await dataSync.clearCache();
 
-                // Log success
-                await services.sendLog.send(
-                    "success",
-                    "event_update",
-                    `Successfully updated event: ${savedEvent.event_name}`
-                );
+                    // Update the window object with the latest event data
+                    const eventDataId = `event_${event.id}`;
+                    if ((window as any)[eventDataId]) {
+                        (window as any)[eventDataId] = savedEvent;
+                    }
 
-                // Show success toast
-                toast.success(`Event "${savedEvent.event_name}" updated successfully!`);
-            } else {
-                // Create new event
-                savedEvent = await services.update.create<Event>(
-                    Collections.EVENTS,
-                    updatedEvent
-                );
+                    toast.success("Event updated successfully!");
+                } else {
+                    // Create new event
+                    savedEvent = await services.update.create<Event>(
+                        Collections.EVENTS,
+                        updatedEvent
+                    );
 
-                // Log success
-                await services.sendLog.send(
-                    "success",
-                    "event_create",
-                    `Successfully created event: ${savedEvent.event_name}`
-                );
+                    // Log success
+                    await services.sendLog.send(
+                        "success",
+                        "event_create",
+                        `Successfully created event: ${savedEvent.event_name}`
+                    );
 
-                // Show success toast
-                toast.success(`Event "${savedEvent.event_name}" created successfully!`);
+                    // Show success toast
+                    toast.success(`Event "${savedEvent.event_name}" created successfully!`);
+                }
+
+                // Reset form state
+                setEvent({
+                    id: "",
+                    created: "",
+                    updated: "",
+                    event_name: "",
+                    event_description: "",
+                    event_code: "",
+                    location: "",
+                    files: [],
+                    points_to_reward: 0,
+                    start_date: "",
+                    end_date: "",
+                    published: false,
+                    has_food: false
+                });
+                setSelectedFiles(new Map());
+                setFilesToDelete(new Set());
+                setHasUnsavedChanges(false);
+
+                // Close modal
+                const modal = document.getElementById("editEventModal") as HTMLDialogElement;
+                if (modal) modal.close();
+
+                // Refresh events list
+                if (window.fetchEvents) {
+                    window.fetchEvents();
+                }
+
+                // Trigger callback
+                if (onEventSaved) {
+                    onEventSaved();
+                }
+            } catch (error) {
+                console.error("Failed to save event:", error);
+                toast.error(`Failed to ${event.id ? "update" : "create"} event: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
-
-            // Reset form state
-            setEvent({
-                id: "",
-                created: "",
-                updated: "",
-                event_name: "",
-                event_description: "",
-                event_code: "",
-                location: "",
-                files: [],
-                points_to_reward: 0,
-                start_date: "",
-                end_date: "",
-                published: false,
-                has_food: false
-            });
-            setSelectedFiles(new Map());
-            setFilesToDelete(new Set());
-            setHasUnsavedChanges(false);
-
-            // Close modal
-            const modal = document.getElementById("editEventModal") as HTMLDialogElement;
-            if (modal) modal.close();
-
-            // Refresh events list
-            if (window.fetchEvents) {
-                window.fetchEvents();
-            }
-
-            // Trigger callback
-            if (onEventSaved) {
-                onEventSaved();
-            }
-        } catch (error) {
-            console.error("Failed to save event:", error);
-            toast.error(`Failed to ${event.id ? "update" : "create"} event: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsSubmitting(false);
             window.hideLoading?.();

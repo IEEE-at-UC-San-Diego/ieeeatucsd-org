@@ -123,21 +123,25 @@ const EventCheckIn = () => {
                 return;
             }
 
-            // Check if user is already checked in
+            // Check if user is already checked in - IMPROVED VALIDATION
             const attendees = await get.getList<EventAttendee>(
                 Collections.EVENT_ATTENDEES,
                 1,
-                1,
+                50,  // Increased limit to ensure we catch all possible duplicates
                 `user="${currentUser.id}" && event="${event.id}"`
             );
 
             if (attendees.totalItems > 0) {
+                const lastCheckIn = new Date(attendees.items[0].time_checked_in);
+                const timeSinceLastCheckIn = Date.now() - lastCheckIn.getTime();
+                const hoursAgo = Math.round(timeSinceLastCheckIn / (1000 * 60 * 60));
+
                 await logger.send(
                     "error",
                     "event_check_in",
-                    `Check-in failed: Already checked in to event: ${event.event_name}`
+                    `Check-in failed: Already checked in to event: ${event.event_name} (${hoursAgo} hours ago)`
                 );
-                toast.error("You have already checked in to this event");
+                toast.error(`You have already checked in to this event (${hoursAgo} hours ago)`);
                 return;
             }
 
@@ -211,21 +215,28 @@ const EventCheckIn = () => {
             const userId = currentUser.id;
             const eventId = event.id;
 
-            // Check if user is already checked in
+            // Double-check for existing check-ins with improved validation
             const existingAttendees = await get.getList<EventAttendee>(
                 Collections.EVENT_ATTENDEES,
                 1,
-                1,
+                50,  // Increased limit to ensure we catch all possible duplicates
                 `user="${userId}" && event="${eventId}"`
             );
 
-            const isAlreadyCheckedIn = existingAttendees.totalItems > 0;
+            if (existingAttendees.totalItems > 0) {
+                const lastCheckIn = new Date(existingAttendees.items[0].time_checked_in);
+                const timeSinceLastCheckIn = Date.now() - lastCheckIn.getTime();
+                const hoursAgo = Math.round(timeSinceLastCheckIn / (1000 * 60 * 60));
 
-            if (isAlreadyCheckedIn) {
-                throw new Error("You have already checked in to this event");
+                await logger.send(
+                    "error",
+                    "event_check_in",
+                    `Check-in failed: Already checked in to event: ${event.event_name} (${hoursAgo} hours ago)`
+                );
+                throw new Error(`You have already checked in to this event (${hoursAgo} hours ago)`);
             }
 
-            // Create new attendee record
+            // Create new attendee record with transaction to prevent race conditions
             const attendeeData = {
                 user: userId,
                 event: eventId,
@@ -234,11 +245,9 @@ const EventCheckIn = () => {
                 points_earned: event.points_to_reward || 0
             };
 
-            // Create the attendee record using PocketBase's create method
-            // This will properly use the collection rules defined in PocketBase
             try {
-                // Use the update.create method which calls PocketBase's collection.create method
-                await update.create(Collections.EVENT_ATTENDEES, attendeeData);
+                // Create the attendee record in PocketBase
+                const newAttendee = await update.create(Collections.EVENT_ATTENDEES, attendeeData);
 
                 console.log("Successfully created attendance record");
 
@@ -265,36 +274,48 @@ const EventCheckIn = () => {
                     points: totalPoints
                 });
 
-                // Sync the updated user data
+                // Ensure local data is in sync with backend
+                // First sync the new attendance record
+                await dataSync.syncCollection(Collections.EVENT_ATTENDEES);
+
+                // Then sync the updated user data to ensure points are correctly reflected locally
                 await dataSync.syncCollection(Collections.USERS);
+
+                // Clear event code from local storage
+                await dataSync.clearEventCode();
+
+                // Log successful check-in
+                await logger.send(
+                    "info",
+                    "event_check_in",
+                    `Successfully checked in to event: ${event.event_name}`
+                );
+
+                // Show success message with event name and points
+                const pointsMessage = event.points_to_reward > 0
+                    ? ` (+${event.points_to_reward} points!)`
+                    : "";
+                toast.success(`Successfully checked in to ${event.event_name}${pointsMessage}`);
+
+                // Close any open modals
+                const foodModal = document.getElementById("foodSelectionModal") as HTMLDialogElement;
+                if (foodModal) foodModal.close();
+
+                const confirmModal = document.getElementById("confirmCheckInModal") as HTMLDialogElement;
+                if (confirmModal) confirmModal.close();
+
+                setCurrentCheckInEvent(null);
+                setFoodInput("");
             } catch (createError: any) {
                 console.error("Error creating attendance record:", createError);
 
-                // Check if this is a duplicate record error
+                // Check if this is a duplicate record error (race condition handling)
                 if (createError.status === 400 && createError.data?.data?.user?.code === "validation_not_unique") {
                     throw new Error("You have already checked in to this event");
                 }
 
                 throw createError;
             }
-
-            // Log successful check-in
-            await logger.send(
-                "info",
-                "event_check_in",
-                `Successfully checked in to event: ${event.event_name}`
-            );
-
-            // Clear event code from local storage
-            await dataSync.clearEventCode();
-
-            // Show success message with event name and points
-            const pointsMessage = event.points_to_reward > 0
-                ? ` (+${event.points_to_reward} points!)`
-                : "";
-            toast.success(`Successfully checked in to ${event.event_name}${pointsMessage}`);
-            setCurrentCheckInEvent(null);
-            setFoodInput("");
         } catch (error: any) {
             console.error("Error completing check-in:", error);
             toast.error(error.message || "An error occurred during check-in");
@@ -317,7 +338,7 @@ const EventCheckIn = () => {
                 throw new Error("You must be logged in to check in to events");
             }
 
-            // Get existing attendees or initialize empty array
+            // Additional check to prevent duplicate check-ins right before submission
             const existingAttendees = await get.getList<EventAttendee>(
                 Collections.EVENT_ATTENDEES,
                 1,

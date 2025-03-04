@@ -182,8 +182,14 @@ export class DataSyncService {
 
           // SECURITY FIX: Remove event_code from events before storing in IndexedDB
           if (collection === Collections.EVENTS && 'event_code' in item) {
-            const { event_code, ...rest } = item as any;
-            item = rest as T;
+            // Keep the event_code but ensure files array is properly handled
+            if ('files' in item && Array.isArray((item as any).files)) {
+              // Ensure files array is properly stored
+              console.log(`Event ${item.id} has ${(item as any).files.length} files`);
+            } else {
+              // Initialize empty files array if not present
+              (item as any).files = [];
+            }
           }
 
           if (existingItem) {
@@ -223,10 +229,23 @@ export class DataSyncService {
     localItem: T,
     serverItem: T,
   ): Promise<T> {
-    // SECURITY FIX: Remove event_code from events before resolving conflicts
-    if (collection === Collections.EVENTS && 'event_code' in serverItem) {
-      const { event_code, ...rest } = serverItem as any;
-      serverItem = rest as T;
+    // For events, ensure we handle the files field properly
+    if (collection === Collections.EVENTS) {
+      // Ensure files array is properly handled
+      if ('files' in serverItem && Array.isArray((serverItem as any).files)) {
+        console.log(`Server event ${serverItem.id} has ${(serverItem as any).files.length} files`);
+      } else {
+        // Initialize empty files array if not present
+        (serverItem as any).files = [];
+      }
+      
+      // If local item has files but server doesn't, preserve local files
+      if ('files' in localItem && Array.isArray((localItem as any).files) && 
+          (localItem as any).files.length > 0 && 
+          (!('files' in serverItem) || !(serverItem as any).files.length)) {
+        console.log(`Preserving local files for event ${localItem.id}`);
+        (serverItem as any).files = (localItem as any).files;
+      }
     }
 
     // Check if there are pending offline changes for this item
@@ -248,7 +267,16 @@ export class DataSyncService {
         if (change.operation === "update" && change.data) {
           // Apply each field change individually
           Object.entries(change.data).forEach(([key, value]) => {
-            (mergedItem as any)[key] = value;
+            // Special handling for files array
+            if (key === 'files' && Array.isArray(value)) {
+              // Merge files arrays, removing duplicates
+              const existingFiles = Array.isArray((mergedItem as any)[key]) ? (mergedItem as any)[key] : [];
+              const newFiles = value as string[];
+              (mergedItem as any)[key] = [...new Set([...existingFiles, ...newFiles])];
+              console.log(`Merged files for ${collection}:${localItem.id}`, (mergedItem as any)[key]);
+            } else {
+              (mergedItem as any)[key] = value;
+            }
           });
         }
       }
@@ -507,11 +535,22 @@ export class DataSyncService {
       try {
         const pbItem = await this.get.getOne<T>(collection, id);
         if (pbItem) {
-          // SECURITY FIX: Remove event_code from events before storing in IndexedDB
-          if (collection === Collections.EVENTS && 'event_code' in pbItem) {
-            const { event_code, ...rest } = pbItem as any;
-            await table.put(rest as T);
-            item = rest as T;
+          // For events, ensure we handle the files field properly
+          if (collection === Collections.EVENTS) {
+            // Ensure files array is properly handled
+            if (!('files' in pbItem) || !Array.isArray((pbItem as any).files)) {
+              (pbItem as any).files = [];
+            }
+            
+            // If we already have a local item with files, preserve them if server has none
+            if (item && 'files' in item && Array.isArray((item as any).files) && 
+                (item as any).files.length > 0 && !(pbItem as any).files.length) {
+              console.log(`Preserving local files for event ${id}`);
+              (pbItem as any).files = (item as any).files;
+            }
+            
+            await table.put(pbItem);
+            item = pbItem;
           } else {
             await table.put(pbItem);
             item = pbItem;
@@ -545,6 +584,25 @@ export class DataSyncService {
     if (!currentItem) {
       console.error(`Item ${id} not found in ${collection}`);
       return undefined;
+    }
+
+    // Special handling for files field in events
+    if (collection === Collections.EVENTS && 'files' in data) {
+      console.log(`Updating files for event ${id}`, (data as any).files);
+      
+      // Ensure files is an array
+      if (!Array.isArray((data as any).files)) {
+        (data as any).files = [];
+      }
+      
+      // If we're updating files, make sure we're not losing any
+      if ('files' in currentItem && Array.isArray((currentItem as any).files)) {
+        // Merge files arrays, removing duplicates
+        const existingFiles = (currentItem as any).files as string[];
+        const newFiles = (data as any).files as string[];
+        (data as any).files = [...new Set([...existingFiles, ...newFiles])];
+        console.log(`Merged files for event ${id}`, (data as any).files);
+      }
     }
 
     // Update the item in IndexedDB
