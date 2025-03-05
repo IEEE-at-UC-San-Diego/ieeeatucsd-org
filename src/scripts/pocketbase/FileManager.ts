@@ -43,6 +43,7 @@ export class FileManager {
    * @param recordId The ID of the record to attach the file to
    * @param field The field name for the file
    * @param file The file to upload
+   * @param append Whether to append the file to existing files (default: false)
    * @returns The updated record
    */
   public async uploadFile<T = any>(
@@ -50,6 +51,7 @@ export class FileManager {
     recordId: string,
     field: string,
     file: File,
+    append: boolean = false
   ): Promise<T> {
     if (!this.auth.isAuthenticated()) {
       throw new Error("User must be authenticated to upload files");
@@ -82,9 +84,16 @@ export class FileManager {
         extension: fileExtension,
         collection: collectionName,
         recordId: recordId,
-        field: field
+        field: field,
+        append: append
       });
 
+      // Create FormData for the upload
+      const formData = new FormData();
+      
+      // Use the + prefix for the field name if append is true
+      const fieldName = append ? `${field}+` : field;
+      
       // Get existing record to preserve existing files
       let existingRecord: any = null;
       let existingFiles: string[] = [];
@@ -98,9 +107,13 @@ export class FileManager {
         console.warn('Could not fetch existing record:', error);
       }
       
-      // Check if the file already exists in the record
-      let fileToUpload = file;
-      if (recordId && existingFiles.includes(file.name)) {
+      // Check if the file already exists
+      const fileExists = existingFiles.some(existingFile => 
+        existingFile.toLowerCase() === file.name.toLowerCase()
+      );
+      
+      if (fileExists) {
+        console.warn(`File with name ${file.name} already exists. Renaming to avoid conflicts.`);
         const timestamp = new Date().getTime();
         const nameParts = file.name.split('.');
         const extension = nameParts.pop();
@@ -108,31 +121,10 @@ export class FileManager {
         const newFileName = `${baseName}_${timestamp}.${extension}`;
         
         // Create a new file with the modified name
-        fileToUpload = new File([file], newFileName, { type: file.type });
-        
-        console.log(`Renamed duplicate file from ${file.name} to ${newFileName}`);
-      }
-      
-      // Create FormData and append file
-      const formData = new FormData();
-      
-      // For events collection, use the 'files' field from the schema
-      if (collectionName === 'events') {
-        // Only append the new file, don't re-upload existing files
-        formData.append('files', fileToUpload);
-        
-        // If this is an update operation and we have existing files, we need to tell PocketBase to keep them
-        if (recordId && existingFiles.length > 0) {
-          formData.append('files@', ''); // This tells PocketBase to keep existing files
-        }
+        const newFile = new File([file], newFileName, { type: file.type });
+        formData.append(fieldName, newFile);
       } else {
-        // For other collections, use the provided field name
-        formData.append(field, fileToUpload);
-        
-        // If this is an update operation and we have existing files, we need to tell PocketBase to keep them
-        if (recordId && existingFiles.length > 0) {
-          formData.append(`${field}@`, ''); // This tells PocketBase to keep existing files
-        }
+        formData.append(fieldName, file);
       }
 
       try {
@@ -140,9 +132,9 @@ export class FileManager {
         console.log('Upload successful:', {
           result,
           fileInfo: {
-            name: fileToUpload.name,
-            size: fileToUpload.size,
-            type: fileToUpload.type
+            name: file.name,
+            size: file.size,
+            type: file.type
           },
           collection: collectionName,
           recordId: recordId

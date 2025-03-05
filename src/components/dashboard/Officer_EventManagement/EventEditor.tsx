@@ -744,10 +744,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             const formData = new FormData(e.currentTarget);
 
             // Create updated event object
-            const updatedEvent: Event = {
+            const updatedEvent: Omit<Event, 'created' | 'updated'> = {
                 id: event.id,
-                created: event.created,
-                updated: event.updated,
                 event_name: formData.get("editEventName") as string,
                 event_description: formData.get("editEventDescription") as string,
                 event_code: formData.get("editEventCode") as string,
@@ -764,187 +762,135 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             await services.sendLog.send(
                 "update",
                 "event",
-                `Updating event: ${updatedEvent.event_name} (${updatedEvent.id})`
+                `${event.id ? "Updating" : "Creating"} event: ${updatedEvent.event_name} (${event.id || "new"})`
             );
 
-            // Process file changes
-            const uploadQueue = new UploadQueue();
-            const fileChanges: FileChanges = {
-                added: selectedFiles,
-                deleted: filesToDelete,
-                unchanged: event.files?.filter(file => !filesToDelete.has(file)) || []
-            };
+            if (event.id) {
+                // We're updating an existing event
 
-            // Handle file deletions
-            if (fileChanges.deleted.size > 0) {
-                for (const fileId of fileChanges.deleted) {
-                    await services.fileManager.deleteFile("events", event.id, fileId);
-                }
-            }
+                // First, update the event data without touching files
+                const { files, ...cleanPayload } = updatedEvent;
+                await services.update.updateFields<Event>(
+                    Collections.EVENTS,
+                    event.id,
+                    cleanPayload
+                );
 
-            // Handle file uploads - only upload new files
-            if (fileChanges.added.size > 0) {
-                const uploadErrors: string[] = [];
-                const fileManager = services.fileManager;
+                // Handle file operations
+                if (filesToDelete.size > 0 || selectedFiles.size > 0) {
+                    // Get the current event with its files
+                    const currentEvent = await services.get.getOne<Event>(Collections.EVENTS, event.id);
+                    let currentFiles = currentEvent?.files || [];
 
-                // Check for unsupported file types first
-                const invalidFiles = Array.from(fileChanges.added.entries())
-                    .map(([filename, file]) => {
-                        const validation = fileManager.validateFileType(file);
-                        return { filename, file, validation };
-                    })
-                    .filter(item => !item.validation.valid);
+                    // 1. Remove files marked for deletion
+                    if (filesToDelete.size > 0) {
+                        console.log(`Removing ${filesToDelete.size} files from event ${event.id}`);
+                        currentFiles = currentFiles.filter(file => !filesToDelete.has(file));
 
-                if (invalidFiles.length > 0) {
-                    const errorMessage = `The following files cannot be uploaded:\n${invalidFiles.map(item => `${item.filename}: ${item.validation.reason}`).join('\n')}`;
-                    toast.error(errorMessage);
-                    throw new Error(errorMessage);
-                }
-
-                for (const [filename, file] of fileChanges.added.entries()) {
-                    await uploadQueue.add(async () => {
-                        try {
-                            // Validate file size before compression
-                            const maxSize = 200 * 1024 * 1024; // 200MB
-                            if (file.size > maxSize) {
-                                throw new Error(`File ${filename} exceeds 200MB limit`);
-                            }
-
-                            // Compress image if it's an image file
-                            const compressedFile = file.type.startsWith('image/')
-                                ? await services.fileManager.compressImageIfNeeded(file, 10) // 10MB limit for images
-                                : file;
-
-                            console.log(`Uploading file ${filename}:`, {
-                                originalSize: file.size,
-                                compressedSize: compressedFile.size,
-                                type: file.type
-                            });
-
-                            // Upload the file to PocketBase
-                            const uploadedFile = await services.fileManager.uploadFile(
-                                "events",
-                                event.id,
-                                "files", // Use the correct field name from the schema
-                                compressedFile
-                            );
-
-                            if (uploadedFile && uploadedFile.files) {
-                                // Get the filename from the uploaded file
-                                const uploadedFilename = uploadedFile.files[uploadedFile.files.length - 1];
-                                fileChanges.unchanged.push(uploadedFilename);
-                                console.log(`Successfully uploaded ${filename} as ${uploadedFilename}`);
-                            } else {
-                                console.warn(`File uploaded but no filename returned:`, uploadedFile);
-                            }
-                        } catch (error) {
-                            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-                            console.error('File upload failed:', {
-                                filename,
-                                error: errorMsg,
-                                fileInfo: {
-                                    size: file.size,
-                                    type: file.type
-                                }
-                            });
-                            uploadErrors.push(`${filename}: ${errorMsg}`);
-                        }
-                    });
-                }
-
-                // If any uploads failed, show error and stop
-                if (uploadErrors.length > 0) {
-                    const errorMessage = `Failed to upload files:\n${uploadErrors.join('\n')}`;
-                    toast.error(errorMessage);
-                    throw new Error(errorMessage);
-                }
-            }
-
-            // Update the event with the new file list
-            updatedEvent.files = fileChanges.unchanged;
-
-            // Save the event
-            let savedEvent;
-            try {
-                if (event.id) {
-                    // Update existing event
-                    savedEvent = await services.update.updateFields<Event>(
-                        Collections.EVENTS,
-                        event.id,
-                        updatedEvent
-                    );
-
-                    // Clear cache to ensure fresh data
-                    const dataSync = DataSyncService.getInstance();
-                    await dataSync.clearCache();
-
-                    // Update the window object with the latest event data
-                    const eventDataId = `event_${event.id}`;
-                    if ((window as any)[eventDataId]) {
-                        (window as any)[eventDataId] = savedEvent;
+                        // Update the files field first to remove deleted files
+                        await services.update.updateFields<Event>(
+                            Collections.EVENTS,
+                            event.id,
+                            { files: currentFiles }
+                        );
                     }
 
-                    toast.success("Event updated successfully!");
-                } else {
-                    // Create new event
-                    savedEvent = await services.update.create<Event>(
-                        Collections.EVENTS,
-                        updatedEvent
-                    );
+                    // 2. Add new files one by one to preserve existing ones
+                    if (selectedFiles.size > 0) {
+                        console.log(`Adding ${selectedFiles.size} new files to event ${event.id}`);
 
-                    // Log success
-                    await services.sendLog.send(
-                        "success",
-                        "event_create",
-                        `Successfully created event: ${savedEvent.event_name}`
-                    );
+                        // Convert Map to array of File objects
+                        const newFiles = Array.from(selectedFiles.values());
 
-                    // Show success toast
-                    toast.success(`Event "${savedEvent.event_name}" created successfully!`);
+                        // Use FileManager to upload each file individually
+                        for (const file of newFiles) {
+                            // Use the FileManager to upload this file
+                            await services.fileManager.uploadFile(
+                                Collections.EVENTS,
+                                event.id,
+                                'files',
+                                file,
+                                true  // Set append mode to true to preserve existing files
+                            );
+                        }
+                    }
                 }
 
-                // Reset form state
-                setEvent({
-                    id: "",
-                    created: "",
-                    updated: "",
-                    event_name: "",
-                    event_description: "",
-                    event_code: "",
-                    location: "",
-                    files: [],
-                    points_to_reward: 0,
-                    start_date: "",
-                    end_date: "",
-                    published: false,
-                    has_food: false
-                });
-                setSelectedFiles(new Map());
-                setFilesToDelete(new Set());
-                setHasUnsavedChanges(false);
+                // Get the final updated event with all changes
+                const savedEvent = await services.get.getOne<Event>(Collections.EVENTS, event.id);
 
-                // Close modal
-                const modal = document.getElementById("editEventModal") as HTMLDialogElement;
-                if (modal) modal.close();
+                // Clear cache to ensure fresh data
+                const dataSync = DataSyncService.getInstance();
+                await dataSync.clearCache();
 
-                // Refresh events list
-                if (window.fetchEvents) {
-                    window.fetchEvents();
+                // Update the window object with the latest event data
+                const eventDataId = `event_${event.id}`;
+                if ((window as any)[eventDataId]) {
+                    (window as any)[eventDataId] = savedEvent;
                 }
 
-                // Trigger callback
-                if (onEventSaved) {
-                    onEventSaved();
+                toast.success("Event updated successfully!");
+
+                // Call the onEventSaved callback if provided
+                if (onEventSaved) onEventSaved();
+
+                // Close the modal
+                handleModalClose();
+
+            } else {
+                // We're creating a new event
+
+                // Create the event first without files
+                const { files, ...cleanPayload } = updatedEvent;
+                const newEvent = await services.update.create<Event>(
+                    Collections.EVENTS,
+                    cleanPayload
+                );
+
+                // Then upload files if any
+                if (selectedFiles.size > 0 && newEvent?.id) {
+                    console.log(`Adding ${selectedFiles.size} files to new event ${newEvent.id}`);
+
+                    // Convert Map to array of File objects
+                    const newFiles = Array.from(selectedFiles.values());
+
+                    // Upload files to the new event
+                    for (const file of newFiles) {
+                        await services.fileManager.uploadFile(
+                            Collections.EVENTS,
+                            newEvent.id,
+                            'files',
+                            file,
+                            true  // Set append mode to true
+                        );
+                    }
                 }
-            } catch (error) {
-                console.error("Failed to save event:", error);
-                toast.error(`Failed to ${event.id ? "update" : "create"} event: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+                // Clear cache to ensure fresh data
+                const dataSync = DataSyncService.getInstance();
+                await dataSync.clearCache();
+
+                toast.success("Event created successfully!");
+
+                // Call the onEventSaved callback if provided
+                if (onEventSaved) onEventSaved();
+
+                // Close the modal
+                handleModalClose();
             }
+
+            // Refresh events list if available
+            if (window.fetchEvents) window.fetchEvents();
+
+        } catch (error) {
+            console.error("Failed to save event:", error);
+            toast.error(`Failed to save event: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsSubmitting(false);
             window.hideLoading?.();
         }
-    }, [event, selectedFiles, filesToDelete, services, onEventSaved, isSubmitting]);
+    }, [event, selectedFiles, filesToDelete, services, onEventSaved, isSubmitting, handleModalClose]);
+
 
     return (
         <dialog id="editEventModal" className="modal">

@@ -256,4 +256,61 @@ export class Update {
       this.auth.setUpdating(false);
     }
   }
+
+  /**
+   * Update a record with file appends
+   * This method properly handles appending files to existing records
+   * @param collectionName The name of the collection
+   * @param recordId The ID of the record to update
+   * @param data Regular fields to update
+   * @param files Object mapping field names to arrays of files to append
+   * @returns The updated record
+   */
+  public async updateWithFileAppends<T = any>(
+    collectionName: string,
+    recordId: string,
+    data: Record<string, any> = {},
+    files: Record<string, File[]> = {}
+  ): Promise<T> {
+    if (!this.auth.isAuthenticated()) {
+      throw new Error("User must be authenticated to update records");
+    }
+
+    try {
+      this.auth.setUpdating(true);
+      const pb = this.auth.getPocketBase();
+      
+      // Convert regular data fields
+      const convertedData = convertLocalToUTC(data);
+      
+      // Create FormData for the update
+      const formData = new FormData();
+      
+      // Add regular fields
+      Object.entries(convertedData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          formData.append(key, value.toString());
+        }
+      });
+      
+      // Add files with the + prefix to append them
+      Object.entries(files).forEach(([fieldName, fieldFiles]) => {
+        fieldFiles.forEach(file => {
+          formData.append(`${fieldName}+`, file);
+        });
+      });
+      
+      // Perform the update
+      const result = await pb
+        .collection(collectionName)
+        .update<T>(recordId, formData);
+        
+      return result;
+    } catch (err) {
+      console.error(`Failed to update with file appends in ${collectionName}:`, err);
+      throw err;
+    } finally {
+      this.auth.setUpdating(false);
+    }
+  }
 }
