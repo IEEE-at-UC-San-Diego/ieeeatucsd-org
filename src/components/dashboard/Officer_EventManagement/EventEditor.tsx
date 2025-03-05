@@ -159,7 +159,7 @@ const EventForm = memo(({
                             type="datetime-local"
                             name="editEventStartDate"
                             className="input input-bordered"
-                            value={event?.start_date ? event.start_date.slice(0, 16) : ""}
+                            value={event?.start_date || ""}
                             onChange={(e) => handleChange('start_date', e.target.value)}
                             required
                         />
@@ -175,7 +175,7 @@ const EventForm = memo(({
                             type="datetime-local"
                             name="editEventEndDate"
                             className="input input-bordered"
-                            value={event?.end_date ? event.end_date.slice(0, 16) : ""}
+                            value={event?.end_date || ""}
                             onChange={(e) => handleChange('end_date', e.target.value)}
                             required
                         />
@@ -614,7 +614,23 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                     eventData.end_date = Get.formatLocalDate(endDate, false);
                 }
 
-                setEvent(eventData);
+                // Ensure all fields are properly set
+                setEvent({
+                    id: eventData.id || '',
+                    created: eventData.created || '',
+                    updated: eventData.updated || '',
+                    event_name: eventData.event_name || '',
+                    event_description: eventData.event_description || '',
+                    event_code: eventData.event_code || '',
+                    location: eventData.location || '',
+                    files: eventData.files || [],
+                    points_to_reward: eventData.points_to_reward || 0,
+                    start_date: eventData.start_date || '',
+                    end_date: eventData.end_date || '',
+                    published: eventData.published || false,
+                    has_food: eventData.has_food || false
+                });
+
                 console.log("Event data loaded successfully:", eventData);
             } else {
                 setEvent({
@@ -651,27 +667,10 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
 
             try {
                 if (event?.id) {
-                    // If we have a complete event object, use it directly
-                    if (event.event_name && event.event_description) {
-                        console.log("Using provided event data:", event);
-
-                        // Format dates for datetime-local input
-                        if (event.start_date) {
-                            const startDate = new Date(event.start_date);
-                            event.start_date = Get.formatLocalDate(startDate, false);
-                        }
-
-                        if (event.end_date) {
-                            const endDate = new Date(event.end_date);
-                            event.end_date = Get.formatLocalDate(endDate, false);
-                        }
-
-                        setEvent(event);
-                    } else {
-                        // Otherwise fetch it from the server
-                        await initializeEventData(event.id);
-                    }
+                    // Always fetch fresh data from PocketBase for the event
+                    await initializeEventData(event.id);
                 } else {
+                    // Reset form for new event
                     await initializeEventData('');
                 }
                 modal.showModal();
