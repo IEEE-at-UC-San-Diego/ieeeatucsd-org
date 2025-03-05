@@ -175,14 +175,23 @@ export default function ReimbursementManagementPortal() {
                             try {
                                 const receipt = await get.getOne<ExtendedReceipt>('receipts', id);
                                 // Get auditor names from the users collection
-                                if (receipt.audited_by.length > 0) {
-                                    const auditorUsers = await Promise.all(
-                                        receipt.audited_by.map(auditorId =>
-                                            get.getOne('users', auditorId)
-                                                .catch(() => ({ name: 'Unknown User' }))
-                                        )
-                                    );
-                                    receipt.auditor_names = auditorUsers.map(user => user.name);
+                                if (receipt.audited_by) {
+                                    // Convert audited_by to array if it's a string
+                                    const auditorIds = Array.isArray(receipt.audited_by)
+                                        ? receipt.audited_by
+                                        : receipt.audited_by ? [receipt.audited_by] : [];
+
+                                    if (auditorIds.length > 0) {
+                                        const auditorUsers = await Promise.all(
+                                            auditorIds.map(auditorId =>
+                                                get.getOne('users', auditorId)
+                                                    .catch(() => ({ name: 'Unknown User' }))
+                                            )
+                                        );
+                                        receipt.auditor_names = auditorUsers.map(user => user.name);
+                                        // Ensure audited_by is always an array for consistency
+                                        receipt.audited_by = auditorIds;
+                                    }
                                 }
                                 return receipt;
                             } catch (error) {
@@ -288,23 +297,32 @@ export default function ReimbursementManagementPortal() {
                     try {
                         const receipt = await get.getOne<ExtendedReceipt>('receipts', id);
                         // Get updated auditor names
-                        if (receipt.audited_by.length > 0) {
-                            const auditorUsers = await Promise.all(
-                                receipt.audited_by.map(async auditorId => {
-                                    try {
-                                        const user = await get.getOne<ExtendedUser>('users', auditorId);
-                                        // Update users state with any new auditors
-                                        setUsers(prev => ({
-                                            ...prev,
-                                            [user.id]: user
-                                        }));
-                                        return user;
-                                    } catch {
-                                        return { name: 'Unknown User' } as ExtendedUser;
-                                    }
-                                })
-                            );
-                            receipt.auditor_names = auditorUsers.map(user => user.name);
+                        if (receipt.audited_by) {
+                            // Convert audited_by to array if it's a string
+                            const auditorIds = Array.isArray(receipt.audited_by)
+                                ? receipt.audited_by
+                                : receipt.audited_by ? [receipt.audited_by] : [];
+
+                            if (auditorIds.length > 0) {
+                                const auditorUsers = await Promise.all(
+                                    auditorIds.map(async auditorId => {
+                                        try {
+                                            const user = await get.getOne<ExtendedUser>('users', auditorId);
+                                            // Update users state with any new auditors
+                                            setUsers(prev => ({
+                                                ...prev,
+                                                [user.id]: user
+                                            }));
+                                            return user;
+                                        } catch {
+                                            return { name: 'Unknown User' } as ExtendedUser;
+                                        }
+                                    })
+                                );
+                                receipt.auditor_names = auditorUsers.map(user => user.name);
+                                // Ensure audited_by is always an array for consistency
+                                receipt.audited_by = auditorIds;
+                            }
                         }
                         return receipt;
                     } catch (error) {
@@ -1685,7 +1703,7 @@ export default function ReimbursementManagementPortal() {
                         <div className="px-4 py-0">
                             <FilePreview
                                 url={receiptUrl}
-                                filename={`Receipt from ${selectedReceipt.location_name}`}
+                                filename={`Receipt_${selectedReceipt.location_name.replace(/\s+/g, '_')}.txt`}
                             />
                         </div>
                         <div className="sticky bottom-0 flex justify-end gap-2 p-4 bg-base-100 border-t border-base-300">
