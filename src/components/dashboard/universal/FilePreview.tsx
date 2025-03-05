@@ -276,8 +276,11 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                 return 'yaml';
             case 'csv':
                 return 'csv';
+            case 'txt':
+                return 'plaintext';
             default:
-                return extension || 'plaintext';
+                // If no extension or unrecognized extension, default to plaintext
+                return 'plaintext';
         }
     };
 
@@ -332,33 +335,40 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
         `;
     }, [visibleLines]);
 
+    const formatCodeWithLineNumbers = useCallback((code: string, language: string) => {
+        try {
+            // Use highlight.js to highlight the code
+            const highlighted = hljs.highlight(code, { language }).value;
+            const lines = highlighted.split('\n');
+
+            return lines.map((line, i) =>
+                `<div class="code-line">
+                    <span class="line-number">${i + 1}</span>
+                    <span class="line-content">${line || ' '}</span>
+                </div>`
+            ).join('');
+        } catch (error) {
+            console.warn(`Failed to highlight code as ${language}, falling back to plaintext`);
+            const plaintext = hljs.highlight(code, { language: 'plaintext' }).value;
+            const lines = plaintext.split('\n');
+
+            return lines.map((line, i) =>
+                `<div class="code-line">
+                    <span class="line-number">${i + 1}</span>
+                    <span class="line-content">${line || ' '}</span>
+                </div>`
+            ).join('');
+        }
+    }, []);
+
     const highlightCode = useCallback((code: string, language: string) => {
         // Skip highlighting for CSV
         if (language === 'csv') {
             return code;
         }
 
-        try {
-            // Use highlight.js to highlight the code
-            const highlighted = hljs.highlight(code, { language }).value;
-            return highlighted;
-        } catch (error) {
-            console.warn(`Failed to highlight code as ${language}, falling back to plaintext`);
-            return hljs.highlight(code, { language: 'plaintext' }).value;
-        }
+        return code; // Just return the code, formatting is handled in formatCodeWithLineNumbers
     }, []);
-
-    const formatCodeWithLineNumbers = useCallback((code: string, language: string) => {
-        const highlighted = highlightCode(code, language);
-        const lines = highlighted.split('\n').slice(0, visibleLines);
-
-        return lines.map((line, i) =>
-            `<div class="table-row">
-                <div class="table-cell text-right pr-4 select-none opacity-50 w-12">${i + 1}</div>
-                <div class="table-cell">${line || ' '}</div>
-            </div>`
-        ).join('');
-    }, [visibleLines, highlightCode]);
 
     const handleShowMore = useCallback(() => {
         setVisibleLines(prev => Math.min(prev + CHUNK_SIZE, content?.split('\n').length || 0));
@@ -482,17 +492,64 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                             {filename.toLowerCase().endsWith('.csv') ? (
                                 <div dangerouslySetInnerHTML={{ __html: renderCSVTable(content) }} />
                             ) : (
-                                <pre className="text-sm">
-                                    <code
-                                        className={`language-${getLanguageFromFilename(filename)}`}
-                                        dangerouslySetInnerHTML={{
-                                            __html: formatCodeWithLineNumbers(
-                                                content.split('\n').slice(0, visibleLines).join('\n'),
-                                                getLanguageFromFilename(filename)
-                                            )
-                                        }}
-                                    />
-                                </pre>
+                                <>
+                                    <div className="file-preview-code-container text-sm">
+                                        <style>
+                                            {`
+                                            .file-preview-code-container {
+                                                font-family: monospace;
+                                            }
+                                            .file-preview-code-container .code-line {
+                                                display: flex;
+                                                white-space: pre;
+                                            }
+                                            .file-preview-code-container .line-number {
+                                                user-select: none;
+                                                text-align: right;
+                                                color: rgba(115, 115, 115, 0.6);
+                                                min-width: 40px;
+                                                padding-right: 12px;
+                                                display: inline-block;
+                                            }
+                                            .file-preview-code-container .line-content {
+                                                flex: 1;
+                                                white-space: pre-wrap;
+                                                word-break: break-word;
+                                            }
+                                            `}
+                                        </style>
+                                        <div
+                                            dangerouslySetInnerHTML={{
+                                                __html: formatCodeWithLineNumbers(
+                                                    content.split('\n').slice(0, visibleLines).join('\n'),
+                                                    getLanguageFromFilename(filename)
+                                                )
+                                            }}
+                                        />
+                                    </div>
+                                    {content.split('\n').length > visibleLines && (
+                                        <div className="flex justify-center p-2 border-t border-base-300 bg-base-200/50">
+                                            {visibleLines < content.split('\n').length && (
+                                                <button
+                                                    className="btn btn-sm btn-ghost gap-1"
+                                                    onClick={handleShowMore}
+                                                >
+                                                    <Icon icon="mdi:chevron-down" className="h-4 w-4" />
+                                                    Show {Math.min(CHUNK_SIZE, content.split('\n').length - visibleLines)} more lines
+                                                </button>
+                                            )}
+                                            {visibleLines > INITIAL_LINES_TO_SHOW && (
+                                                <button
+                                                    className="btn btn-sm btn-ghost gap-1 ml-2"
+                                                    onClick={handleShowLess}
+                                                >
+                                                    <Icon icon="mdi:chevron-up" className="h-4 w-4" />
+                                                    Show less
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
