@@ -2,7 +2,6 @@
 // Admin Dashboard Component
 import { Authentication } from "../../scripts/pocketbase/Authentication";
 import { Get } from "../../scripts/pocketbase/Get";
-import { SendLog } from "../../scripts/pocketbase/SendLog";
 import {
     Collections,
     type User,
@@ -138,6 +137,13 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
             <Icon name="heroicons:shield-check" class="h-6 w-6 text-primary" />
             Administrator Dashboard
             <div class="badge badge-primary badge-sm">Real-time</div>
+            <button
+                id="refreshDashboardBtn"
+                class="btn btn-sm btn-ghost ml-auto"
+            >
+                <Icon name="heroicons:arrow-path" class="h-5 w-5" />
+                Refresh
+            </button>
         </h2>
 
         <!-- Stats Overview -->
@@ -309,19 +315,19 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                 Administrative Actions
             </h3>
             <div class="tabs tabs-boxed">
-                <button class="tab tab-active" data-tab="users">
+                <button class="tab tab-active" data-tab="user">
                     <Icon name="heroicons:users" class="h-5 w-5 mr-2" />
                     Manage Users
                 </button>
-                <button class="tab" data-tab="events">
+                <button class="tab" data-tab="event">
                     <Icon name="heroicons:calendar" class="h-5 w-5 mr-2" />
                     Manage Events
                 </button>
-                <button class="tab" data-tab="finances">
+                <button class="tab" data-tab="finance">
                     <Icon name="heroicons:banknotes" class="h-5 w-5 mr-2" />
                     Manage Finances
                 </button>
-                <button class="tab" data-tab="logs">
+                <button class="tab" data-tab="log">
                     <Icon name="heroicons:document-text" class="h-5 w-5 mr-2" />
                     System Logs
                 </button>
@@ -449,6 +455,20 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                                                     >
                                                         Delete
                                                     </button>
+                                                    <button
+                                                        class={`btn btn-xs ${event.published ? "btn-warning" : "btn-success"}`}
+                                                        data-event-id={event.id}
+                                                        data-action="toggle-publish"
+                                                        data-current-state={
+                                                            event.published
+                                                                ? "published"
+                                                                : "draft"
+                                                        }
+                                                    >
+                                                        {event.published
+                                                            ? "Unpublish"
+                                                            : "Publish"}
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -539,7 +559,7 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
             </div>
 
             <!-- System Logs Section -->
-            <div id="logsSection" class="tab-content hidden">
+            <div id="logSection" class="tab-content hidden">
                 <div class="card bg-base-200 p-4">
                     <h3
                         class="text-xl font-semibold mb-4 flex items-center gap-2"
@@ -550,7 +570,9 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                         />
                         System Logs
                     </h3>
-                    <AdminSystemActivity client:load limit={20} />
+                    <div id="adminSystemActivityLogs">
+                        <AdminSystemActivity client:load limit={20} />
+                    </div>
                 </div>
             </div>
         </div>
@@ -565,11 +587,13 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                 </div>
             </h3>
             <div class="card bg-base-200 p-4">
-                <AdminSystemActivity
-                    client:load
-                    limit={5}
-                    refreshInterval={60000}
-                />
+                <div id="adminSystemActivityRecent">
+                    <AdminSystemActivity
+                        client:load
+                        limit={5}
+                        refreshInterval={60000}
+                    />
+                </div>
             </div>
         </div>
     </div>
@@ -577,7 +601,48 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
 
 <script>
     // Client-side functionality for the admin dashboard
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
+        // Check authentication status
+        try {
+            const { Authentication } = await import(
+                "../../scripts/pocketbase/Authentication"
+            );
+            const auth = Authentication.getInstance();
+
+            if (!auth.isAuthenticated()) {
+                // Show authentication error
+                const adminDashboard = document.querySelector(".card-body");
+                if (adminDashboard) {
+                    const authError = document.createElement("div");
+                    authError.className = "alert alert-error shadow-lg mb-4";
+                    authError.innerHTML = `
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div>
+                                <h3 class="font-bold">Authentication Error</h3>
+                                <div class="text-xs">You are not authenticated. Please log in to access the admin dashboard.</div>
+                                <button class="btn btn-sm btn-primary mt-2" onclick="window.location.href='/login'">Log In</button>
+                            </div>
+                        </div>
+                    `;
+                    adminDashboard.prepend(authError);
+                }
+
+                console.error(
+                    "Authentication error: User is not authenticated"
+                );
+                return;
+            }
+
+            // Debug: Log authentication status
+            console.log("Authentication status: Authenticated");
+            console.log("Current user:", auth.getCurrentUser());
+        } catch (error) {
+            console.error("Error checking authentication:", error);
+        }
+
         const tabs = document.querySelectorAll(".tab");
         const tabContents = document.querySelectorAll(".tab-content");
 
@@ -613,13 +678,620 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
         // Handle "View all" button clicks
         document
             .getElementById("viewOfficersBtn")
-            ?.addEventListener("click", () => switchTab("users"));
+            ?.addEventListener("click", () => switchTab("user"));
         document
             .getElementById("viewEventsBtn")
-            ?.addEventListener("click", () => switchTab("events"));
+            ?.addEventListener("click", () => switchTab("event"));
         document
             .getElementById("viewReimbursementsBtn")
-            ?.addEventListener("click", () => switchTab("finances"));
+            ?.addEventListener("click", () => switchTab("finance"));
+
+        // Handle user actions (edit, delete, review)
+        const setupActionHandlers = () => {
+            // User edit buttons
+            document.querySelectorAll("[data-user-id]").forEach((button) => {
+                button.addEventListener("click", async (e) => {
+                    const target = e.currentTarget as HTMLElement;
+                    const userId = target.getAttribute("data-user-id");
+                    const isDelete = target.classList.contains("btn-error");
+
+                    if (!userId) return;
+
+                    if (isDelete) {
+                        if (
+                            confirm(
+                                "Are you sure you want to delete this user? This action cannot be undone."
+                            )
+                        ) {
+                            try {
+                                const { Authentication } = await import(
+                                    "../../scripts/pocketbase/Authentication"
+                                );
+                                const auth = Authentication.getInstance();
+                                const pb = auth.getPocketBase();
+
+                                // Delete the user
+                                await pb.collection("users").delete(userId);
+
+                                // Log the action
+                                await logAdminAction(
+                                    "delete",
+                                    "users",
+                                    `Deleted user with ID: ${userId}`
+                                );
+
+                                // Remove the row from the table
+                                const row = target.closest("tr");
+                                if (row) row.remove();
+
+                                // Show success toast
+                                showToast(
+                                    "User deleted successfully",
+                                    "success"
+                                );
+
+                                // Refresh stats
+                                refreshData();
+                            } catch (error) {
+                                console.error("Error deleting user:", error);
+                                showToast("Failed to delete user", "error");
+                            }
+                        }
+                    } else {
+                        // Redirect to user edit page
+                        window.location.href = `/admin/users/edit/${userId}`;
+                    }
+                });
+            });
+
+            // Event edit/delete/publish buttons
+            document.querySelectorAll("[data-event-id]").forEach((button) => {
+                button.addEventListener("click", async (e) => {
+                    const target = e.currentTarget as HTMLElement;
+                    const eventId = target.getAttribute("data-event-id");
+                    const isDelete = target.classList.contains("btn-error");
+                    const isTogglePublish =
+                        target.getAttribute("data-action") === "toggle-publish";
+
+                    if (!eventId) return;
+
+                    if (isTogglePublish) {
+                        try {
+                            const currentState =
+                                target.getAttribute("data-current-state");
+                            const newPublishedState =
+                                currentState !== "published";
+
+                            const { Authentication } = await import(
+                                "../../scripts/pocketbase/Authentication"
+                            );
+                            const { Update } = await import(
+                                "../../scripts/pocketbase/Update"
+                            );
+                            const { Collections } = await import(
+                                "../../schemas/pocketbase"
+                            );
+
+                            const auth = Authentication.getInstance();
+                            const update = Update.getInstance();
+
+                            // Update the event's published state
+                            await update.updateFields(
+                                Collections.EVENTS,
+                                eventId,
+                                { published: newPublishedState }
+                            );
+
+                            // Log the action
+                            await logAdminAction(
+                                "update",
+                                "events",
+                                `${newPublishedState ? "Published" : "Unpublished"} event with ID: ${eventId}`
+                            );
+
+                            // Update the button and badge
+                            const row = target.closest("tr");
+                            if (row) {
+                                // Update badge
+                                const badge = row.querySelector(".badge");
+                                if (badge) {
+                                    badge.className = `badge ${newPublishedState ? "badge-success" : "badge-warning"}`;
+                                    badge.textContent = newPublishedState
+                                        ? "Published"
+                                        : "Draft";
+                                }
+
+                                // Update button
+                                target.className = `btn btn-xs ${newPublishedState ? "btn-warning" : "btn-success"}`;
+                                target.textContent = newPublishedState
+                                    ? "Unpublish"
+                                    : "Publish";
+                                target.setAttribute(
+                                    "data-current-state",
+                                    newPublishedState ? "published" : "draft"
+                                );
+                            }
+
+                            // Show success toast
+                            showToast(
+                                `Event ${newPublishedState ? "published" : "unpublished"} successfully`,
+                                "success"
+                            );
+
+                            // Refresh stats
+                            refreshData();
+                        } catch (error) {
+                            console.error("Error updating event:", error);
+                            showToast("Failed to update event", "error");
+                        }
+                        return;
+                    }
+
+                    if (isDelete) {
+                        if (
+                            confirm(
+                                "Are you sure you want to delete this event? This action cannot be undone."
+                            )
+                        ) {
+                            try {
+                                const { Authentication } = await import(
+                                    "../../scripts/pocketbase/Authentication"
+                                );
+                                const { Collections } = await import(
+                                    "../../schemas/pocketbase"
+                                );
+
+                                const auth = Authentication.getInstance();
+                                const pb = auth.getPocketBase();
+
+                                // Delete the event
+                                await pb
+                                    .collection(Collections.EVENTS)
+                                    .delete(eventId);
+
+                                // Log the action
+                                await logAdminAction(
+                                    "delete",
+                                    "events",
+                                    `Deleted event with ID: ${eventId}`
+                                );
+
+                                // Remove the row from the table
+                                const row = target.closest("tr");
+                                if (row) row.remove();
+
+                                // Show success toast
+                                showToast(
+                                    "Event deleted successfully",
+                                    "success"
+                                );
+
+                                // Refresh stats
+                                refreshData();
+                            } catch (error) {
+                                console.error("Error deleting event:", error);
+                                showToast("Failed to delete event", "error");
+                            }
+                        }
+                    } else if (!isTogglePublish) {
+                        // Redirect to event edit page
+                        window.location.href = `/admin/events/edit/${eventId}`;
+                    }
+                });
+            });
+
+            // Reimbursement review buttons
+            document
+                .querySelectorAll("[data-reimbursement-id]")
+                .forEach((button) => {
+                    button.addEventListener("click", async (e) => {
+                        const target = e.currentTarget as HTMLElement;
+                        const reimbursementId = target.getAttribute(
+                            "data-reimbursement-id"
+                        );
+
+                        if (!reimbursementId) return;
+
+                        try {
+                            // Fetch reimbursement details
+                            const { Authentication } = await import(
+                                "../../scripts/pocketbase/Authentication"
+                            );
+                            const { Get } = await import(
+                                "../../scripts/pocketbase/Get"
+                            );
+                            const { Collections } = await import(
+                                "../../schemas/pocketbase"
+                            );
+
+                            const auth = Authentication.getInstance();
+                            const get = Get.getInstance();
+
+                            // Show loading state
+                            showToast(
+                                "Loading reimbursement details...",
+                                "info"
+                            );
+
+                            // Get reimbursement with user expansion
+                            const reimbursement = await get.getOne(
+                                Collections.REIMBURSEMENTS,
+                                reimbursementId,
+                                { expand: "submitted_by" }
+                            );
+
+                            // Open modal with reimbursement details
+                            openReimbursementModal(reimbursement);
+                        } catch (error) {
+                            console.error(
+                                "Error fetching reimbursement:",
+                                error
+                            );
+                            showToast(
+                                "Failed to load reimbursement details",
+                                "error"
+                            );
+                        }
+                    });
+                });
+
+            // Function to open reimbursement modal
+            const openReimbursementModal = (reimbursement: any) => {
+                // Create modal if it doesn't exist
+                let modal = document.getElementById("reimbursement-modal");
+                if (!modal) {
+                    modal = document.createElement("div");
+                    modal.id = "reimbursement-modal";
+                    modal.className = "modal";
+                    document.body.appendChild(modal);
+                }
+
+                // Format date
+                const purchaseDate = new Date(reimbursement.date_of_purchase);
+                const formattedDate = purchaseDate.toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                });
+
+                // Get user name
+                const userName =
+                    reimbursement.expand?.submitted_by?.name || "Unknown User";
+
+                // Set modal content
+                modal.innerHTML = `
+                    <div class="modal-box">
+                        <h3 class="font-bold text-lg">Review Reimbursement</h3>
+                        <div class="py-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm opacity-70">Title</p>
+                                    <p class="font-semibold">${reimbursement.title}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm opacity-70">Amount</p>
+                                    <p class="font-semibold">$${reimbursement.total_amount.toFixed(2)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm opacity-70">Submitted By</p>
+                                    <p class="font-semibold">${userName}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm opacity-70">Date of Purchase</p>
+                                    <p class="font-semibold">${formattedDate}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm opacity-70">Payment Method</p>
+                                    <p class="font-semibold">${reimbursement.payment_method}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm opacity-70">Department</p>
+                                    <p class="font-semibold">${reimbursement.department}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <p class="text-sm opacity-70">Additional Information</p>
+                                <p>${reimbursement.additional_info || "None provided"}</p>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <p class="text-sm opacity-70">Current Status</p>
+                                <div class="badge ${
+                                    reimbursement.status === "approved"
+                                        ? "badge-success"
+                                        : reimbursement.status === "rejected"
+                                          ? "badge-error"
+                                          : reimbursement.status === "paid"
+                                            ? "badge-info"
+                                            : "badge-warning"
+                                }">${reimbursement.status}</div>
+                            </div>
+                            
+                            <div class="divider"></div>
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Update Status</span>
+                                </label>
+                                <select id="status-select" class="select select-bordered w-full">
+                                    <option value="submitted" ${reimbursement.status === "submitted" ? "selected" : ""}>Submitted</option>
+                                    <option value="under_review" ${reimbursement.status === "under_review" ? "selected" : ""}>Under Review</option>
+                                    <option value="approved" ${reimbursement.status === "approved" ? "selected" : ""}>Approved</option>
+                                    <option value="rejected" ${reimbursement.status === "rejected" ? "selected" : ""}>Rejected</option>
+                                    <option value="in_progress" ${reimbursement.status === "in_progress" ? "selected" : ""}>In Progress</option>
+                                    <option value="paid" ${reimbursement.status === "paid" ? "selected" : ""}>Paid</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-control mt-4">
+                                <label class="label">
+                                    <span class="label-text">Audit Notes</span>
+                                </label>
+                                <textarea id="audit-notes" class="textarea textarea-bordered h-24" placeholder="Add notes about this reimbursement">${reimbursement.audit_notes || ""}</textarea>
+                            </div>
+                        </div>
+                        <div class="modal-action">
+                            <button class="btn" onclick="document.getElementById('reimbursement-modal').classList.remove('modal-open')">Cancel</button>
+                            <button id="save-reimbursement" class="btn btn-primary" data-id="${reimbursement.id}">Save Changes</button>
+                        </div>
+                    </div>
+                `;
+
+                // Show modal
+                modal.classList.add("modal-open");
+
+                // Add event listener to save button
+                document
+                    .getElementById("save-reimbursement")
+                    ?.addEventListener("click", async () => {
+                        const statusSelect = document.getElementById(
+                            "status-select"
+                        ) as HTMLSelectElement;
+                        const auditNotes = document.getElementById(
+                            "audit-notes"
+                        ) as HTMLTextAreaElement;
+                        const reimbursementId = (
+                            document.getElementById(
+                                "save-reimbursement"
+                            ) as HTMLElement
+                        ).getAttribute("data-id");
+
+                        if (!statusSelect || !auditNotes || !reimbursementId)
+                            return;
+
+                        const newStatus = statusSelect.value;
+                        const notes = auditNotes.value;
+
+                        try {
+                            const { Authentication } = await import(
+                                "../../scripts/pocketbase/Authentication"
+                            );
+                            const { Update } = await import(
+                                "../../scripts/pocketbase/Update"
+                            );
+                            const { Collections } = await import(
+                                "../../schemas/pocketbase"
+                            );
+
+                            const auth = Authentication.getInstance();
+                            const update = Update.getInstance();
+
+                            // Create audit log entry
+                            const currentUser = auth.getCurrentUser();
+                            const currentTime = new Date().toISOString();
+
+                            // Parse existing audit logs or create new array
+                            let auditLogs = [];
+                            if (reimbursement.audit_logs) {
+                                try {
+                                    auditLogs = JSON.parse(
+                                        reimbursement.audit_logs
+                                    );
+                                } catch (e) {
+                                    console.warn(
+                                        "Failed to parse existing audit logs:",
+                                        e
+                                    );
+                                }
+                            }
+
+                            // Add new log entry
+                            auditLogs.push({
+                                timestamp: currentTime,
+                                user_id: currentUser.id,
+                                user_name: currentUser.name,
+                                action: `Status changed from "${reimbursement.status}" to "${newStatus}"`,
+                                notes: notes,
+                            });
+
+                            // Update reimbursement
+                            await update.updateFields(
+                                Collections.REIMBURSEMENTS,
+                                reimbursementId,
+                                {
+                                    status: newStatus,
+                                    audit_notes: notes,
+                                    audit_logs: JSON.stringify(auditLogs),
+                                }
+                            );
+
+                            // Log the action
+                            await logAdminAction(
+                                "update",
+                                "reimbursements",
+                                `Updated reimbursement ${reimbursementId} status to "${newStatus}"`
+                            );
+
+                            // Close modal
+                            modal?.classList.remove("modal-open");
+
+                            // Show success toast
+                            showToast(
+                                "Reimbursement updated successfully",
+                                "success"
+                            );
+
+                            // Mark page for refresh
+                            const refreshMarker = document.createElement("div");
+                            refreshMarker.setAttribute(
+                                "data-refresh-needed",
+                                "true"
+                            );
+                            refreshMarker.style.display = "none";
+                            document.body.appendChild(refreshMarker);
+
+                            // Refresh data
+                            refreshData();
+                        } catch (error) {
+                            console.error(
+                                "Error updating reimbursement:",
+                                error
+                            );
+                            showToast(
+                                "Failed to update reimbursement",
+                                "error"
+                            );
+                        }
+                    });
+            };
+        };
+
+        // Setup action handlers when the page loads
+        setupActionHandlers();
+
+        // Function to log admin actions to system logs
+        const logAdminAction = async (
+            type: string,
+            part: string,
+            message: string
+        ) => {
+            try {
+                const { Authentication } = await import(
+                    "../../scripts/pocketbase/Authentication"
+                );
+                const { Update } = await import(
+                    "../../scripts/pocketbase/Update"
+                );
+                const { Collections } = await import(
+                    "../../schemas/pocketbase"
+                );
+
+                const auth = Authentication.getInstance();
+                const update = Update.getInstance();
+
+                if (!auth.isAuthenticated()) return;
+
+                const userId = auth.getUserId();
+                if (!userId) return;
+
+                // Create log entry
+                await update.create(Collections.LOGS, {
+                    user: userId,
+                    type: type,
+                    part: part,
+                    message: message,
+                });
+            } catch (error) {
+                console.error("Error logging admin action:", error);
+            }
+        };
+
+        // Function to show toast notifications
+        const showToast = (
+            message: string,
+            type: "success" | "error" | "info" = "info"
+        ) => {
+            // Create toast container if it doesn't exist
+            let toastContainer = document.getElementById("toast-container");
+            if (!toastContainer) {
+                toastContainer = document.createElement("div");
+                toastContainer.id = "toast-container";
+                toastContainer.className = "toast toast-top toast-end z-50";
+                document.body.appendChild(toastContainer);
+            }
+
+            // Create toast element
+            const toast = document.createElement("div");
+            toast.className = `alert ${type === "success" ? "alert-success" : type === "error" ? "alert-error" : "alert-info"} shadow-lg`;
+
+            // Set toast content
+            toast.innerHTML = `
+                <div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${type === "success" ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : type === "error" ? "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" : "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"}" />
+                    </svg>
+                    <span>${message}</span>
+                </div>
+            `;
+
+            // Add toast to container
+            toastContainer.appendChild(toast);
+
+            // Remove toast after 3 seconds
+            setTimeout(() => {
+                toast.classList.add("fade-out");
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        };
+
+        // Debug function to check stats elements
+        const debugStatsElements = () => {
+            const statElements = [
+                { selector: ".text-primary.text-3xl", label: "Users" },
+                { selector: ".text-secondary.text-3xl", label: "Officers" },
+                { selector: ".text-accent.text-3xl", label: "Events" },
+                {
+                    selector: ".text-success.text-3xl",
+                    label: "Upcoming Events",
+                },
+                { selector: ".text-info.text-3xl", label: "Reimbursements" },
+                {
+                    selector: ".text-warning.text-3xl",
+                    label: "Pending Reimbursements",
+                },
+            ];
+
+            console.log("Checking stat elements:");
+            statElements.forEach((item) => {
+                const element = document.querySelector(item.selector);
+                console.log(
+                    `${item.label} (${item.selector}): ${element ? "Found" : "Not found"}`
+                );
+            });
+        };
+
+        // Call debug function after DOM is loaded
+        debugStatsElements();
+
+        // Add event listener to refresh button
+        document
+            .getElementById("refreshDashboardBtn")
+            ?.addEventListener("click", async () => {
+                console.log("Manual refresh triggered");
+                const button = document.getElementById(
+                    "refreshDashboardBtn"
+                ) as HTMLButtonElement;
+                if (button) {
+                    button.classList.add("loading");
+                    button.disabled = true;
+                }
+
+                try {
+                    await refreshData();
+                    showToast("Dashboard refreshed successfully", "success");
+                } catch (error) {
+                    console.error("Error refreshing dashboard:", error);
+                    showToast("Failed to refresh dashboard", "error");
+                } finally {
+                    if (button) {
+                        button.classList.remove("loading");
+                        button.disabled = false;
+                    }
+                }
+            });
 
         // Refresh data periodically
         const refreshData = async () => {
@@ -635,7 +1307,14 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                 const auth = Authentication.getInstance();
                 const get = Get.getInstance();
 
-                if (!auth.isAuthenticated()) return;
+                if (!auth.isAuthenticated()) {
+                    console.error(
+                        "Cannot refresh data: User is not authenticated"
+                    );
+                    return;
+                }
+
+                console.log("Refreshing dashboard data...");
 
                 // Update stats
                 const stats = await Promise.all([
@@ -657,24 +1336,71 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                     ),
                 ]);
 
+                console.log(
+                    "Stats data received:",
+                    stats.map((s) => s.totalItems)
+                );
+
                 // Update UI with new stats
-                document.querySelector(".text-primary.text-3xl")!.textContent =
-                    stats[0].totalItems.toString();
-                document.querySelector(
+                const userCountElement = document.querySelector(
+                    ".text-primary.text-3xl"
+                );
+                if (userCountElement)
+                    userCountElement.textContent =
+                        stats[0].totalItems.toString();
+
+                const officerCountElement = document.querySelector(
                     ".text-secondary.text-3xl"
-                )!.textContent = stats[1].totalItems.toString();
-                document.querySelector(".text-accent.text-3xl")!.textContent =
-                    stats[2].totalItems.toString();
-                document.querySelector(".text-success.text-3xl")!.textContent =
-                    stats[3].totalItems.toString();
-                document.querySelector(".text-info.text-3xl")!.textContent =
-                    stats[4].totalItems.toString();
-                document.querySelector(".text-warning.text-3xl")!.textContent =
-                    stats[5].totalItems.toString();
+                );
+                if (officerCountElement)
+                    officerCountElement.textContent =
+                        stats[1].totalItems.toString();
+
+                const eventCountElement = document.querySelector(
+                    ".text-accent.text-3xl"
+                );
+                if (eventCountElement)
+                    eventCountElement.textContent =
+                        stats[2].totalItems.toString();
+
+                const upcomingEventsElement = document.querySelector(
+                    ".text-success.text-3xl"
+                );
+                if (upcomingEventsElement)
+                    upcomingEventsElement.textContent =
+                        stats[3].totalItems.toString();
+
+                const reimbursementCountElement = document.querySelector(
+                    ".text-info.text-3xl"
+                );
+                if (reimbursementCountElement)
+                    reimbursementCountElement.textContent =
+                        stats[4].totalItems.toString();
+
+                const pendingReimbursementsElement = document.querySelector(
+                    ".text-warning.text-3xl"
+                );
+                if (pendingReimbursementsElement)
+                    pendingReimbursementsElement.textContent =
+                        stats[5].totalItems.toString();
+
+                // Check if we need to refresh the tables
+                const shouldRefreshTables = document.querySelector(
+                    '[data-refresh-needed="true"]'
+                );
+                if (shouldRefreshTables) {
+                    location.reload();
+                }
             } catch (error) {
                 console.error("Error refreshing dashboard data:", error);
+                throw error; // Re-throw to allow proper error handling by callers
             }
         };
+
+        // Initial data refresh
+        refreshData().catch((error: unknown) => {
+            console.error("Error during initial data refresh:", error);
+        });
 
         // Refresh every 5 minutes
         setInterval(refreshData, 5 * 60 * 1000);
@@ -687,5 +1413,17 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
     }
     .tab-content.hidden {
         display: none;
+    }
+
+    .fade-out {
+        opacity: 0;
+        transition: opacity 0.3s ease-out;
+    }
+
+    #toast-container {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 9999;
     }
 </style>
