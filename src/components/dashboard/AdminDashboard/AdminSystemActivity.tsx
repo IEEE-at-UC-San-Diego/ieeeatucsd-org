@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { Get } from "../../../scripts/pocketbase/Get";
 import { Collections } from "../../../schemas/pocketbase";
-import { Icon } from "astro-icon/components";
 import type { Log } from "../../../schemas/pocketbase";
+import { Icon } from "@iconify/react";
 
 // Extend the Log type to include expand property
 interface ExtendedLog extends Log {
@@ -155,7 +155,7 @@ export default function AdminSystemActivity({
     if (error) {
         return (
             <div className="alert alert-error">
-                <Icon name="heroicons:exclamation-circle" class="h-5 w-5" />
+                <Icon icon="heroicons:exclamation-circle" className="h-5 w-5" />
                 <span>{error}</span>
             </div>
         );
@@ -164,7 +164,7 @@ export default function AdminSystemActivity({
     if (logs.length === 0) {
         return (
             <div className="alert alert-info">
-                <Icon name="heroicons:information-circle" class="h-5 w-5" />
+                <Icon icon="heroicons:information-circle" className="h-5 w-5" />
                 <span>No system logs found</span>
             </div>
         );
@@ -193,8 +193,8 @@ export default function AdminSystemActivity({
                             <td>
                                 <div className="flex items-center gap-1">
                                     <Icon
-                                        name={getLogTypeIcon(log.type)}
-                                        class={`h-4 w-4 ${getLogTypeColor(log.type)}`}
+                                        icon={getLogTypeIcon(log.type)}
+                                        className={`h-4 w-4 ${getLogTypeColor(log.type)}`}
                                     />
                                     <span className="capitalize">{log.type}</span>
                                 </div>
