@@ -2,182 +2,690 @@
 // Admin Dashboard Component
 import { Authentication } from "../../scripts/pocketbase/Authentication";
 import { Get } from "../../scripts/pocketbase/Get";
+import { SendLog } from "../../scripts/pocketbase/SendLog";
+import {
+    Collections,
+    type User,
+    type Event,
+    type Officer,
+    type Reimbursement,
+} from "../../schemas/pocketbase";
+import { Icon } from "astro-icon/components";
+import AdminSystemActivity from "./AdminDashboard/AdminSystemActivity";
 
 const auth = Authentication.getInstance();
 const get = Get.getInstance();
 
-// Fetch some basic stats for the admin dashboard
+// Fetch initial data for the dashboard
+let users: User[] = [];
+let officers: Officer[] = [];
+let events: Event[] = [];
+let reimbursements: Reimbursement[] = [];
 let userCount = 0;
 let officerCount = 0;
 let eventCount = 0;
 let reimbursementCount = 0;
+let pendingReimbursements = 0;
+let upcomingEvents = 0;
+
+// Interface for expanded reimbursement data
+interface ExpandedReimbursement extends Reimbursement {
+    expand?: {
+        submitted_by?: User;
+    };
+}
 
 try {
-  if (auth.isAuthenticated()) {
-    const userResponse = await get.getList("users", 1, 1);
-    userCount = userResponse.totalItems;
+    if (auth.isAuthenticated()) {
+        // Get users with pagination
+        const userResponse = await get.getList<User>(
+            Collections.USERS,
+            1,
+            50,
+            "",
+            "-created"
+        );
+        users = userResponse.items;
+        userCount = userResponse.totalItems;
 
-    const officerResponse = await get.getList("officers", 1, 1);
-    officerCount = officerResponse.totalItems;
+        // Get officers with user expansion
+        const officerResponse = await get.getList<Officer>(
+            Collections.OFFICERS,
+            1,
+            50,
+            "",
+            "-created",
+            { expand: "user" }
+        );
+        officers = officerResponse.items;
+        officerCount = officerResponse.totalItems;
 
-    const eventResponse = await get.getList("events", 1, 1);
-    eventCount = eventResponse.totalItems;
+        // Get events
+        const eventResponse = await get.getList<Event>(
+            Collections.EVENTS,
+            1,
+            50,
+            "",
+            "-start_date"
+        );
+        events = eventResponse.items;
+        eventCount = eventResponse.totalItems;
 
-    const reimbursementResponse = await get.getList("reimbursement", 1, 1);
-    reimbursementCount = reimbursementResponse.totalItems;
-  }
+        // Get upcoming events
+        const now = new Date().toISOString();
+        const upcomingEventsResponse = await get.getList<Event>(
+            Collections.EVENTS,
+            1,
+            1,
+            `start_date > "${now}" && published = true`,
+            "start_date"
+        );
+        upcomingEvents = upcomingEventsResponse.totalItems;
+
+        // Get reimbursements with user expansion
+        const reimbursementResponse = await get.getList<ExpandedReimbursement>(
+            Collections.REIMBURSEMENTS,
+            1,
+            50,
+            "",
+            "-created",
+            { expand: "submitted_by" }
+        );
+        reimbursements = reimbursementResponse.items;
+        reimbursementCount = reimbursementResponse.totalItems;
+
+        // Get pending reimbursements
+        const pendingReimbursementsResponse = await get.getList(
+            Collections.REIMBURSEMENTS,
+            1,
+            1,
+            `status = "submitted" || status = "under_review"`,
+            "-created"
+        );
+        pendingReimbursements = pendingReimbursementsResponse.totalItems;
+    }
 } catch (error) {
-  console.error("Error fetching admin dashboard data:", error);
+    console.error("Error fetching admin dashboard data:", error);
 }
+
+// Format date for display
+const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
+// Get user name from reimbursement
+const getUserName = (reimbursement: ExpandedReimbursement) => {
+    if (reimbursement.expand?.submitted_by?.name) {
+        return reimbursement.expand.submitted_by.name;
+    }
+
+    // Try to find user by ID if expansion failed
+    const user = users.find((u) => u.id === reimbursement.submitted_by);
+    return user?.name || "Unknown User";
+};
 ---
 
 <div class="card bg-base-100 shadow-xl">
-  <div class="card-body">
-    <h2 class="card-title text-2xl mb-4">Administrator Dashboard</h2>
+    <div class="card-body">
+        <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
+            <Icon name="heroicons:shield-check" class="h-6 w-6 text-primary" />
+            Administrator Dashboard
+            <div class="badge badge-primary badge-sm">Real-time</div>
+        </h2>
 
-    <!-- Stats Overview -->
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <!-- User Stats -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title text-lg">Users</h3>
-          <p class="text-primary text-3xl font-semibold">{userCount}</p>
-          <p class="text-sm opacity-70">Total registered users</p>
-        </div>
-      </div>
+        <!-- Stats Overview -->
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <!-- User Stats -->
+            <div
+                class="card bg-base-200 hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+            >
+                <div class="card-body p-4">
+                    <div class="flex justify-between items-start">
+                        <h3 class="card-title text-lg">Users</h3>
+                        <div class="p-2 bg-primary/10 rounded-full">
+                            <Icon
+                                name="heroicons:users"
+                                class="h-5 w-5 text-primary"
+                            />
+                        </div>
+                    </div>
+                    <p class="text-primary text-3xl font-semibold">
+                        {userCount}
+                    </p>
+                    <div class="flex justify-between items-center">
+                        <p class="text-sm opacity-70">Total registered</p>
+                        <div class="badge badge-primary badge-sm">Active</div>
+                    </div>
+                </div>
+            </div>
 
-      <!-- Officer Stats -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title text-lg">Officers</h3>
-          <p class="text-secondary text-3xl font-semibold">{officerCount}</p>
-          <p class="text-sm opacity-70">Active officers</p>
-        </div>
-      </div>
+            <!-- Officer Stats -->
+            <div
+                class="card bg-base-200 hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+            >
+                <div class="card-body p-4">
+                    <div class="flex justify-between items-start">
+                        <h3 class="card-title text-lg">Officers</h3>
+                        <div class="p-2 bg-secondary/10 rounded-full">
+                            <Icon
+                                name="heroicons:user-group"
+                                class="h-5 w-5 text-secondary"
+                            />
+                        </div>
+                    </div>
+                    <p class="text-secondary text-3xl font-semibold">
+                        {officerCount}
+                    </p>
+                    <div class="flex justify-between items-center">
+                        <p class="text-sm opacity-70">Active officers</p>
+                        <button
+                            class="text-xs text-secondary hover:underline"
+                            id="viewOfficersBtn">View all</button
+                        >
+                    </div>
+                </div>
+            </div>
 
-      <!-- Event Stats -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title text-lg">Events</h3>
-          <p class="text-accent text-3xl font-semibold">{eventCount}</p>
-          <p class="text-sm opacity-70">Total events</p>
-        </div>
-      </div>
+            <!-- Event Stats -->
+            <div
+                class="card bg-base-200 hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+            >
+                <div class="card-body p-4">
+                    <div class="flex justify-between items-start">
+                        <h3 class="card-title text-lg">Events</h3>
+                        <div class="p-2 bg-accent/10 rounded-full">
+                            <Icon
+                                name="heroicons:calendar"
+                                class="h-5 w-5 text-accent"
+                            />
+                        </div>
+                    </div>
+                    <p class="text-accent text-3xl font-semibold">
+                        {eventCount}
+                    </p>
+                    <div class="flex justify-between items-center">
+                        <p class="text-sm opacity-70">Total events</p>
+                        <button
+                            class="text-xs text-accent hover:underline"
+                            id="viewEventsBtn">View all</button
+                        >
+                    </div>
+                </div>
+            </div>
 
-      <!-- Reimbursement Stats -->
-      <div class="card bg-base-200">
-        <div class="card-body">
-          <h3 class="card-title text-lg">Reimbursements</h3>
-          <p class="text-info text-3xl font-semibold">{reimbursementCount}</p>
-          <p class="text-sm opacity-70">Total reimbursements</p>
+            <!-- Upcoming Events -->
+            <div
+                class="card bg-base-200 hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+            >
+                <div class="card-body p-4">
+                    <div class="flex justify-between items-start">
+                        <h3 class="card-title text-lg">Upcoming</h3>
+                        <div class="p-2 bg-success/10 rounded-full">
+                            <Icon
+                                name="heroicons:calendar-days"
+                                class="h-5 w-5 text-success"
+                            />
+                        </div>
+                    </div>
+                    <p class="text-success text-3xl font-semibold">
+                        {upcomingEvents}
+                    </p>
+                    <div class="flex justify-between items-center">
+                        <p class="text-sm opacity-70">Future events</p>
+                        <div class="badge badge-success badge-sm">Active</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reimbursement Stats -->
+            <div
+                class="card bg-base-200 hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+            >
+                <div class="card-body p-4">
+                    <div class="flex justify-between items-start">
+                        <h3 class="card-title text-lg">Reimbursements</h3>
+                        <div class="p-2 bg-info/10 rounded-full">
+                            <Icon
+                                name="heroicons:banknotes"
+                                class="h-5 w-5 text-info"
+                            />
+                        </div>
+                    </div>
+                    <p class="text-info text-3xl font-semibold">
+                        {reimbursementCount}
+                    </p>
+                    <div class="flex justify-between items-center">
+                        <p class="text-sm opacity-70">Total requests</p>
+                        <button
+                            class="text-xs text-info hover:underline"
+                            id="viewReimbursementsBtn">View all</button
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Reimbursements -->
+            <div
+                class="card bg-base-200 hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+            >
+                <div class="card-body p-4">
+                    <div class="flex justify-between items-start">
+                        <h3 class="card-title text-lg">Pending</h3>
+                        <div class="p-2 bg-warning/10 rounded-full">
+                            <Icon
+                                name="heroicons:clock"
+                                class="h-5 w-5 text-warning"
+                            />
+                        </div>
+                    </div>
+                    <p class="text-warning text-3xl font-semibold">
+                        {pendingReimbursements}
+                    </p>
+                    <div class="flex justify-between items-center">
+                        <p class="text-sm opacity-70">Awaiting review</p>
+                        {
+                            pendingReimbursements > 0 && (
+                                <div class="badge badge-warning badge-sm">
+                                    Action needed
+                                </div>
+                            )
+                        }
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
+
+        <!-- Quick Actions -->
+        <div class="mt-6">
+            <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Icon name="heroicons:bolt" class="h-5 w-5 text-warning" />
+                Administrative Actions
+            </h3>
+            <div class="tabs tabs-boxed">
+                <button class="tab tab-active" data-tab="users">
+                    <Icon name="heroicons:users" class="h-5 w-5 mr-2" />
+                    Manage Users
+                </button>
+                <button class="tab" data-tab="events">
+                    <Icon name="heroicons:calendar" class="h-5 w-5 mr-2" />
+                    Manage Events
+                </button>
+                <button class="tab" data-tab="finances">
+                    <Icon name="heroicons:banknotes" class="h-5 w-5 mr-2" />
+                    Manage Finances
+                </button>
+                <button class="tab" data-tab="logs">
+                    <Icon name="heroicons:document-text" class="h-5 w-5 mr-2" />
+                    System Logs
+                </button>
+            </div>
+        </div>
+
+        <!-- Management Sections -->
+        <div id="adminSections" class="mt-6">
+            <!-- User Management Section -->
+            <div id="userSection" class="tab-content active">
+                <div class="card bg-base-200 p-4">
+                    <h3
+                        class="text-xl font-semibold mb-4 flex items-center gap-2"
+                    >
+                        <Icon
+                            name="heroicons:users"
+                            class="h-5 w-5 text-primary"
+                        />
+                        User Management
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra w-full">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {
+                                    users.map((user) => (
+                                        <tr>
+                                            <td>{user.name}</td>
+                                            <td>{user.email}</td>
+                                            <td>
+                                                {user.member_id || "Member"}
+                                            </td>
+                                            <td>
+                                                {user.last_login
+                                                    ? formatDate(
+                                                          user.last_login
+                                                      )
+                                                    : "Never"}
+                                            </td>
+                                            <td>
+                                                <div class="flex gap-2">
+                                                    <button
+                                                        class="btn btn-xs btn-primary"
+                                                        data-user-id={user.id}
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        class="btn btn-xs btn-error"
+                                                        data-user-id={user.id}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Event Management Section -->
+            <div id="eventSection" class="tab-content hidden">
+                <div class="card bg-base-200 p-4">
+                    <h3
+                        class="text-xl font-semibold mb-4 flex items-center gap-2"
+                    >
+                        <Icon
+                            name="heroicons:calendar"
+                            class="h-5 w-5 text-secondary"
+                        />
+                        Event Management
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra w-full">
+                            <thead>
+                                <tr>
+                                    <th>Event Name</th>
+                                    <th>Date</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {
+                                    events.map((event) => (
+                                        <tr>
+                                            <td>{event.event_name}</td>
+                                            <td>
+                                                {formatDate(event.start_date)}
+                                            </td>
+                                            <td>{event.location}</td>
+                                            <td>
+                                                <div
+                                                    class={`badge ${event.published ? "badge-success" : "badge-warning"}`}
+                                                >
+                                                    {event.published
+                                                        ? "Published"
+                                                        : "Draft"}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="flex gap-2">
+                                                    <button
+                                                        class="btn btn-xs btn-primary"
+                                                        data-event-id={event.id}
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        class="btn btn-xs btn-error"
+                                                        data-event-id={event.id}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Finance Management Section -->
+            <div id="financeSection" class="tab-content hidden">
+                <div class="card bg-base-200 p-4">
+                    <h3
+                        class="text-xl font-semibold mb-4 flex items-center gap-2"
+                    >
+                        <Icon
+                            name="heroicons:banknotes"
+                            class="h-5 w-5 text-accent"
+                        />
+                        Finance Management
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra w-full">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Amount</th>
+                                    <th>Submitted By</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {
+                                    reimbursements.map((reimbursement) => (
+                                        <tr>
+                                            <td>{reimbursement.title}</td>
+                                            <td>
+                                                $
+                                                {reimbursement.total_amount.toFixed(
+                                                    2
+                                                )}
+                                            </td>
+                                            <td>
+                                                {getUserName(
+                                                    reimbursement as ExpandedReimbursement
+                                                )}
+                                            </td>
+                                            <td>
+                                                <div
+                                                    class={`badge ${
+                                                        reimbursement.status ===
+                                                        "approved"
+                                                            ? "badge-success"
+                                                            : reimbursement.status ===
+                                                                "rejected"
+                                                              ? "badge-error"
+                                                              : reimbursement.status ===
+                                                                  "paid"
+                                                                ? "badge-info"
+                                                                : "badge-warning"
+                                                    }`}
+                                                >
+                                                    {reimbursement.status}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="flex gap-2">
+                                                    <button
+                                                        class="btn btn-xs btn-primary"
+                                                        data-reimbursement-id={
+                                                            reimbursement.id
+                                                        }
+                                                    >
+                                                        Review
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Logs Section -->
+            <div id="logsSection" class="tab-content hidden">
+                <div class="card bg-base-200 p-4">
+                    <h3
+                        class="text-xl font-semibold mb-4 flex items-center gap-2"
+                    >
+                        <Icon
+                            name="heroicons:document-text"
+                            class="h-5 w-5 text-info"
+                        />
+                        System Logs
+                    </h3>
+                    <AdminSystemActivity client:load limit={20} />
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent System Activity -->
+        <div class="mt-6">
+            <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Icon name="heroicons:chart-bar" class="h-5 w-5 text-info" />
+                Recent System Activity
+                <div class="badge badge-ghost text-xs font-normal">
+                    Live updates
+                </div>
+            </h3>
+            <div class="card bg-base-200 p-4">
+                <AdminSystemActivity
+                    client:load
+                    limit={5}
+                    refreshInterval={60000}
+                />
+            </div>
+        </div>
     </div>
-
-    <!-- Quick Actions -->
-    <div class="mt-6">
-      <h3 class="text-xl font-semibold mb-4">Administrative Actions</h3>
-      <div class="flex flex-wrap gap-3">
-        <button class="btn btn-primary">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5 mr-2"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
-            ></path>
-          </svg>
-          Manage Users
-        </button>
-        <button class="btn btn-secondary">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5 mr-2"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-              clip-rule="evenodd"></path>
-          </svg>
-          Manage Events
-        </button>
-        <button class="btn btn-accent">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5 mr-2"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
-              clip-rule="evenodd"></path>
-          </svg>
-          Manage Finances
-        </button>
-        <button class="btn btn-info">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5 mr-2"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
-            <path
-              fill-rule="evenodd"
-              d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
-              clip-rule="evenodd"></path>
-          </svg>
-          System Logs
-        </button>
-      </div>
-    </div>
-
-    <!-- Recent System Activity -->
-    <div class="mt-6">
-      <h3 class="text-xl font-semibold mb-4">Recent System Activity</h3>
-      <div class="overflow-x-auto">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>User</th>
-              <th>Action</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="text-sm">Just now</td>
-              <td>Admin</td>
-              <td>Login</td>
-              <td>Administrator logged in</td>
-            </tr>
-            <tr>
-              <td class="text-sm">10 min ago</td>
-              <td>System</td>
-              <td>Update</td>
-              <td>Event request status changed</td>
-            </tr>
-            <tr>
-              <td class="text-sm">1 hour ago</td>
-              <td>Jane Doe</td>
-              <td>Create</td>
-              <td>New reimbursement request submitted</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
-  // Client-side functionality can be added here if needed
-  // For example, refreshing data or handling button clicks
+    // Client-side functionality for the admin dashboard
+    document.addEventListener("DOMContentLoaded", () => {
+        const tabs = document.querySelectorAll(".tab");
+        const tabContents = document.querySelectorAll(".tab-content");
+
+        // Function to switch tabs
+        const switchTab = (tabId: string) => {
+            // Update tab buttons
+            tabs.forEach((tab) => {
+                if (tab.getAttribute("data-tab") === tabId) {
+                    tab.classList.add("tab-active");
+                } else {
+                    tab.classList.remove("tab-active");
+                }
+            });
+
+            // Update content sections
+            tabContents.forEach((content) => {
+                if (content.id === `${tabId}Section`) {
+                    content.classList.remove("hidden");
+                } else {
+                    content.classList.add("hidden");
+                }
+            });
+        };
+
+        // Add click handlers to tabs
+        tabs.forEach((tab) => {
+            tab.addEventListener("click", () => {
+                const tabId = tab.getAttribute("data-tab");
+                if (tabId) switchTab(tabId);
+            });
+        });
+
+        // Handle "View all" button clicks
+        document
+            .getElementById("viewOfficersBtn")
+            ?.addEventListener("click", () => switchTab("users"));
+        document
+            .getElementById("viewEventsBtn")
+            ?.addEventListener("click", () => switchTab("events"));
+        document
+            .getElementById("viewReimbursementsBtn")
+            ?.addEventListener("click", () => switchTab("finances"));
+
+        // Refresh data periodically
+        const refreshData = async () => {
+            try {
+                const { Authentication } = await import(
+                    "../../scripts/pocketbase/Authentication"
+                );
+                const { Get } = await import("../../scripts/pocketbase/Get");
+                const { Collections } = await import(
+                    "../../schemas/pocketbase"
+                );
+
+                const auth = Authentication.getInstance();
+                const get = Get.getInstance();
+
+                if (!auth.isAuthenticated()) return;
+
+                // Update stats
+                const stats = await Promise.all([
+                    get.getList(Collections.USERS, 1, 1),
+                    get.getList(Collections.OFFICERS, 1, 1),
+                    get.getList(Collections.EVENTS, 1, 1),
+                    get.getList(
+                        Collections.EVENTS,
+                        1,
+                        1,
+                        `start_date > "${new Date().toISOString()}" && published = true`
+                    ),
+                    get.getList(Collections.REIMBURSEMENTS, 1, 1),
+                    get.getList(
+                        Collections.REIMBURSEMENTS,
+                        1,
+                        1,
+                        `status = "submitted" || status = "under_review"`
+                    ),
+                ]);
+
+                // Update UI with new stats
+                document.querySelector(".text-primary.text-3xl")!.textContent =
+                    stats[0].totalItems.toString();
+                document.querySelector(
+                    ".text-secondary.text-3xl"
+                )!.textContent = stats[1].totalItems.toString();
+                document.querySelector(".text-accent.text-3xl")!.textContent =
+                    stats[2].totalItems.toString();
+                document.querySelector(".text-success.text-3xl")!.textContent =
+                    stats[3].totalItems.toString();
+                document.querySelector(".text-info.text-3xl")!.textContent =
+                    stats[4].totalItems.toString();
+                document.querySelector(".text-warning.text-3xl")!.textContent =
+                    stats[5].totalItems.toString();
+            } catch (error) {
+                console.error("Error refreshing dashboard data:", error);
+            }
+        };
+
+        // Refresh every 5 minutes
+        setInterval(refreshData, 5 * 60 * 1000);
+    });
 </script>
 
+<style>
+    .tab-content {
+        transition: all 0.3s ease-in-out;
+    }
+    .tab-content.hidden {
+        display: none;
+    }
+</style>
