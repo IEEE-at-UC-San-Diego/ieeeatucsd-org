@@ -6,37 +6,80 @@ import InView from "../components/core/InView.astro";
 
 <!doctype html>
 <html lang="en" data-theme="dark" class="w-full h-full m-0 bg-ieee-black">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <meta name="generator" content={Astro.generator} />
-        <title>IEEEUCSD</title>
-        <script
-            src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"
-        ></script>
-        <script is:inline>
-            // Set default theme to dark if not already set
-            if (!localStorage.getItem("theme")) {
-                localStorage.setItem("theme", "dark");
-                document.documentElement.setAttribute("data-theme", "dark");
-            } else {
-                // Apply saved theme
-                const savedTheme = localStorage.getItem("theme");
-                document.documentElement.setAttribute("data-theme", savedTheme);
-            }
-        </script>
-    </head>
-    <InView />
-    <body class="w-full h-full m-0 bg-ieee-black">
-        <div class="text-white min-h-screen">
-            <header class="sticky top-0 w-full z-[999]">
-                <Navbar />
-            </header>
-            <main class="w-[95%] mx-auto">
-                <slot />
-            </main>
-            <Footer />
-        </div>
-    </body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>IEEEUCSD</title>
+    <script
+      src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"
+    ></script>
+    <script is:inline>
+      // Set default theme to dark if not already set
+      if (!localStorage.getItem("theme")) {
+        localStorage.setItem("theme", "dark");
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        // Apply saved theme
+        const savedTheme = localStorage.getItem("theme");
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      }
+    </script>
+    <style is:global>
+      /* Global iOS-specific fixes for icon alignment */
+      @supports (-webkit-touch-callout: none) {
+        /* Apply to all icons in iOS */
+        svg {
+          position: relative;
+          top: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          transform: translateY(0);
+        }
+
+        /* Add iOS-specific class for additional styling */
+        .ios-device svg {
+          vertical-align: middle;
+        }
+      }
+    </style>
+  </head>
+  <InView />
+  <body class="w-full h-full m-0 bg-ieee-black">
+    <div class="text-white min-h-screen">
+      <header class="sticky top-0 w-full z-[999]">
+        <Navbar />
+      </header>
+      <main class="w-[95%] mx-auto">
+        <slot />
+      </main>
+      <Footer />
+    </div>
+    <script is:inline>
+      // iOS detection
+      document.addEventListener("DOMContentLoaded", () => {
+        // Check if the device is iOS
+        const isIOS =
+          /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        if (isIOS) {
+          // Add iOS-specific class to the body for additional styling
+          document.body.classList.add("ios-device");
+
+          // Apply additional fixes for specific iOS versions if needed
+          const iOSVersion = parseInt(
+            (navigator.userAgent.match(/OS (\d+)_/) || [])[1],
+            10,
+          );
+
+          if (iOSVersion && iOSVersion < 15) {
+            // Additional fixes for older iOS versions
+            document.body.classList.add("ios-legacy");
+          }
+        }
+      });
+    </script>
+  </body>
 </html>
