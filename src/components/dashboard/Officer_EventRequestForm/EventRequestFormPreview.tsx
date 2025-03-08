@@ -199,7 +199,7 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                         <h3 className="text-xl font-semibold mb-4 border-b border-base-content/20 pb-2">
                             Event Details
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
                                 <p className="text-sm text-gray-400">Event Name</p>
                                 <p className="font-medium">{formData.name || 'Not specified'}</p>
@@ -208,7 +208,7 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                                 <p className="text-sm text-gray-400">Location</p>
                                 <p className="font-medium">{formData.location || 'Not specified'}</p>
                             </div>
-                            <div className="md:col-span-2">
+                            <div className="md:col-span-2 lg:col-span-3">
                                 <p className="text-sm text-gray-400">Event Description</p>
                                 <p className="font-medium whitespace-pre-line">{formData.event_description || 'Not specified'}</p>
                             </div>
@@ -237,7 +237,7 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                             <h3 className="text-xl font-semibold mb-4 border-b border-base-content/20 pb-2">
                                 PR Materials
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div>
                                     <p className="text-sm text-gray-400">Flyer Types</p>
                                     <ul className="list-disc list-inside">
@@ -257,7 +257,7 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                                     <p className="text-sm text-gray-400">Advertising Start Date</p>
                                     <p className="font-medium">{formData.flyer_advertising_start_date || 'Not specified'}</p>
                                 </div>
-                                <div className="md:col-span-2">
+                                <div className="md:col-span-2 lg:col-span-3">
                                     <p className="text-sm text-gray-400">Required Logos</p>
                                     <div className="flex flex-wrap gap-2 mt-1">
                                         {formData.required_logos.map((logo, index) => (
@@ -281,7 +281,7 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                                     <p className="font-medium">{formData.photography_needed ? 'Yes' : 'No'}</p>
                                 </div>
                                 {formData.flyer_additional_requests && (
-                                    <div className="md:col-span-2">
+                                    <div className="md:col-span-2 lg:col-span-3">
                                         <p className="text-sm text-gray-400">Additional Requests</p>
                                         <p className="font-medium whitespace-pre-line">{formData.flyer_additional_requests}</p>
                                     </div>
@@ -295,7 +295,7 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                         <h3 className="text-xl font-semibold mb-4 border-b border-base-content/20 pb-2">
                             TAP Form Details
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
                                 <p className="text-sm text-gray-400">Expected Attendance</p>
                                 <p className="font-medium">{formData.expected_attendance || 'Not specified'}</p>
@@ -462,7 +462,7 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.95, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                        className="bg-base-100 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto m-4"
+                        className="bg-base-100 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto m-4"
                         onClick={(e) => e.stopPropagation()}
                         style={{
                             position: 'relative',
