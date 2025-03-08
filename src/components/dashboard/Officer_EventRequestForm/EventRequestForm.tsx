@@ -720,7 +720,7 @@ const EventRequestForm: React.FC = () => {
                     </div>
 
                     <div className="bg-base-200/50 p-6 rounded-lg">
-                        <EventRequestFormPreview formData={formData} />
+                        <EventRequestFormPreview formData={formData} isModal={false} />
 
                         <div className="divider my-6">Ready to Submit?</div>
 

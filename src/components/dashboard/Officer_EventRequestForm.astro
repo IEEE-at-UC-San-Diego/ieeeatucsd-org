@@ -4,6 +4,8 @@ import { Get } from "../../scripts/pocketbase/Get";
 import EventRequestForm from "./Officer_EventRequestForm/EventRequestForm";
 import UserEventRequests from "./Officer_EventRequestForm/UserEventRequests";
 import { Collections } from "../../schemas/pocketbase/schema";
+import { DataSyncService } from "../../scripts/database/DataSyncService";
+import { EventRequestFormPreviewModal } from "./Officer_EventRequestForm/EventRequestFormPreview";
 
 // Import the EventRequest type from UserEventRequests to ensure consistency
 import type { EventRequest as UserEventRequest } from "./Officer_EventRequestForm/UserEventRequests";
@@ -23,196 +25,267 @@ let error: string | null = null;
 // This provides initial data for server-side rendering
 // Client-side will use IndexedDB for data management
 if (auth.isAuthenticated()) {
-    try {
-        const userId = auth.getUserId();
-        if (userId) {
-            userEventRequests = await get.getAll<EventRequest>(
-                Collections.EVENT_REQUESTS,
-                `requested_user="${userId}"`,
-                "-created"
-            );
-        }
-    } catch (err) {
-        console.error("Failed to fetch user event requests:", err);
-        error = "Failed to load your event requests. Please try again later.";
+  try {
+    const userId = auth.getUserId();
+    if (userId) {
+      userEventRequests = await get.getAll<EventRequest>(
+        Collections.EVENT_REQUESTS,
+        `requested_user="${userId}"`,
+        "-created",
+      );
     }
+  } catch (err) {
+    console.error("Failed to fetch user event requests:", err);
+    error = "Failed to load your event requests. Please try again later.";
+  }
 }
 ---
 
 <div class="w-full max-w-6xl mx-auto py-8 px-4">
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-white mb-2">Event Request Form</h1>
-        <p class="text-gray-300 mb-4">
-            Submit your event request at least 6 weeks before your event. After
-            submitting, please notify PR and/or Coordinators in the #-events
-            Slack channel.
-        </p>
-        <div class="bg-base-300/50 p-4 rounded-lg text-sm text-gray-300">
-            <p class="font-medium mb-2">This form includes sections for:</p>
-            <ul class="list-disc list-inside space-y-1 ml-2">
-                <li>PR Materials (if needed)</li>
-                <li>Event Details</li>
-                <li>TAP Form Information</li>
-                <li>AS Funding (if needed)</li>
-            </ul>
-            <p class="mt-3">
-                Your progress is automatically saved as you fill out the form.
-            </p>
-        </div>
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-white mb-2">Event Request Form</h1>
+    <p class="text-gray-300 mb-4">
+      Submit your event request at least 6 weeks before your event. After
+      submitting, please notify PR and/or Coordinators in the #-events Slack
+      channel.
+    </p>
+    <div class="bg-base-300/50 p-4 rounded-lg text-sm text-gray-300">
+      <p class="font-medium mb-2">This form includes sections for:</p>
+      <ul class="list-disc list-inside space-y-1 ml-2">
+        <li>PR Materials (if needed)</li>
+        <li>Event Details</li>
+        <li>TAP Form Information</li>
+        <li>AS Funding (if needed)</li>
+      </ul>
+      <p class="mt-3">
+        Your progress is automatically saved as you fill out the form.
+      </p>
     </div>
+  </div>
 
-    <!-- Tabs -->
-    <div class="tabs tabs-boxed mb-6">
-        <a class="tab tab-lg tab-active" id="form-tab">Submit Event Request</a>
-        <a class="tab tab-lg" id="submissions-tab">View Your Submissions</a>
+  <!-- Tabs -->
+  <div class="tabs tabs-boxed mb-6">
+    <a class="tab tab-lg tab-active" id="form-tab">Submit Event Request</a>
+    <a class="tab tab-lg" id="submissions-tab">View Your Submissions</a>
+  </div>
+
+  <!-- Form Tab Content -->
+  <div
+    id="form-content"
+    class="bg-base-200 rounded-lg shadow-xl overflow-hidden"
+  >
+    <div class="p-6">
+      <EventRequestForm client:load />
     </div>
+  </div>
 
-    <!-- Form Tab Content -->
-    <div
-        id="form-content"
-        class="bg-base-200 rounded-lg shadow-xl overflow-hidden"
-    >
-        <div class="p-6">
-            <EventRequestForm client:load />
-        </div>
+  <!-- Submissions Tab Content -->
+  <div id="submissions-content" class="hidden">
+    <div class="bg-base-200 rounded-lg shadow-xl overflow-hidden p-6">
+      <h2 class="text-2xl font-bold text-white mb-4">
+        Your Event Request Submissions
+      </h2>
+
+      {
+        error && (
+          <div class="alert alert-error mb-6">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6 stroke-current shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{error}</span>
+          </div>
+        )
+      }
+
+      {
+        !error && (
+          <UserEventRequests client:load eventRequests={userEventRequests} />
+        )
+      }
     </div>
-
-    <!-- Submissions Tab Content -->
-    <div id="submissions-content" class="hidden">
-        <div class="bg-base-200 rounded-lg shadow-xl overflow-hidden p-6">
-            <h2 class="text-2xl font-bold text-white mb-4">
-                Your Event Request Submissions
-            </h2>
-
-            {
-                error && (
-                    <div class="alert alert-error mb-6">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-6 w-6 stroke-current shrink-0"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                        </svg>
-                        <span>{error}</span>
-                    </div>
-                )
-            }
-
-            {
-                !error && (
-                    <UserEventRequests
-                        client:load
-                        eventRequests={userEventRequests}
-                    />
-                )
-            }
-        </div>
-    </div>
+  </div>
 </div>
+
+<style is:global>
+  /* Ensure the modal container is always visible */
+  #event-request-preview-modal-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 99999 !important;
+  }
+
+  /* Style for the modal backdrop */
+  #event-request-preview-modal-container > div > div:first-child {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 99999 !important;
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+
+  /* Style for the modal content */
+  #event-request-preview-modal-container > div > div > div {
+    z-index: 100000 !important;
+    position: relative !important;
+  }
+</style>
+
+<!-- Add the modal component -->
+<EventRequestFormPreviewModal client:load />
 
 <div class="dashboard-section hidden" id="eventRequestFormSection">
-    <!-- ... existing code ... -->
+  <!-- ... existing code ... -->
 </div>
 
-<script>
-    // Import the DataSyncService for client-side use
-    import { DataSyncService } from "../../scripts/database/DataSyncService";
-    import { Collections } from "../../schemas/pocketbase/schema";
-    import { Authentication } from "../../scripts/pocketbase/Authentication";
+<script is:inline>
+  // Define the global function immediately to ensure it's available
+  window.showEventRequestFormPreview = function (formData) {
+    console.log(
+      "Global showEventRequestFormPreview called with data",
+      formData,
+    );
 
-    // Tab switching logic
-    document.addEventListener("DOMContentLoaded", async () => {
-        // Initialize DataSyncService for client-side
-        const dataSync = DataSyncService.getInstance();
-        const auth = Authentication.getInstance();
-
-        // Prefetch data into IndexedDB if authenticated
-        if (auth.isAuthenticated()) {
-            try {
-                const userId = auth.getUserId();
-                if (userId) {
-                    // Force sync to ensure we have the latest data
-                    await dataSync.syncCollection(
-                        Collections.EVENT_REQUESTS,
-                        `requested_user="${userId}"`,
-                        "-created"
-                    );
-                    console.log(
-                        "Initial data sync complete for user event requests"
-                    );
-                }
-            } catch (err) {
-                console.error("Error during initial data sync:", err);
-            }
+    // Remove any elements that might be obstructing the view
+    const removeObstructions = () => {
+      // Find any elements with high z-index that might be obstructing
+      document.querySelectorAll('[style*="z-index"]').forEach((el) => {
+        if (
+          el.id !== "event-request-preview-modal-container" &&
+          !el.closest("#event-request-preview-modal-container")
+        ) {
+          // Store original z-index to restore later
+          if (!el.dataset.originalZIndex) {
+            el.dataset.originalZIndex = el.style.zIndex;
+          }
+          // Temporarily lower z-index
+          el.style.zIndex = "0";
         }
+      });
+    };
 
-        const formTab = document.getElementById("form-tab");
-        const submissionsTab = document.getElementById("submissions-tab");
-        const formContent = document.getElementById("form-content");
-        const submissionsContent = document.getElementById(
-            "submissions-content"
-        );
-
-        // Function to switch tabs
-        const switchTab = (
-            activeTab: HTMLElement,
-            activeContent: HTMLElement,
-            inactiveTab: HTMLElement,
-            inactiveContent: HTMLElement
-        ) => {
-            // Update tab classes
-            activeTab.classList.add("tab-active");
-            inactiveTab.classList.remove("tab-active");
-
-            // Show/hide content
-            activeContent.classList.remove("hidden");
-            inactiveContent.classList.add("hidden");
-
-            // Dispatch event to refresh submissions when switching to submissions tab
-            if (activeTab.id === "submissions-tab") {
-                // Dispatch a custom event that the UserEventRequests component listens for
-                document.dispatchEvent(new CustomEvent("dashboardTabVisible"));
-            }
-        };
-
-        // Add click event listeners to tabs
-        formTab?.addEventListener("click", (e) => {
-            e.preventDefault();
-            if (formContent && submissionsContent && submissionsTab) {
-                switchTab(
-                    formTab,
-                    formContent,
-                    submissionsTab,
-                    submissionsContent
-                );
-            }
-        });
-
-        submissionsTab?.addEventListener("click", (e) => {
-            e.preventDefault();
-            if (formContent && submissionsContent && formTab) {
-                switchTab(
-                    submissionsTab,
-                    submissionsContent,
-                    formTab,
-                    formContent
-                );
-            }
-        });
-
-        // Listen for visibility changes
-        document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === "visible") {
-                // Dispatch custom event that components can listen for
-                document.dispatchEvent(new CustomEvent("dashboardTabVisible"));
-            }
-        });
+    // Create a custom event to trigger the preview
+    const event = new CustomEvent("showEventRequestPreviewModal", {
+      detail: { formData },
     });
+
+    // Remove obstructions before showing modal
+    removeObstructions();
+
+    // Dispatch event to show modal
+    document.dispatchEvent(event);
+    console.log("showEventRequestPreviewModal event dispatched");
+
+    // Ensure modal container is visible
+    setTimeout(() => {
+      const modalContainer = document.getElementById(
+        "event-request-preview-modal-container",
+      );
+      if (modalContainer) {
+        modalContainer.style.zIndex = "99999";
+        modalContainer.style.position = "fixed";
+        modalContainer.style.top = "0";
+        modalContainer.style.left = "0";
+        modalContainer.style.width = "100%";
+        modalContainer.style.height = "100%";
+      }
+    }, 100);
+  };
+</script>
+
+<script>
+  // Import the DataSyncService for client-side use
+  import { DataSyncService } from "../../scripts/database/DataSyncService";
+  import { Collections } from "../../schemas/pocketbase/schema";
+  import { Authentication } from "../../scripts/pocketbase/Authentication";
+
+  // Tab switching logic
+  document.addEventListener("DOMContentLoaded", async () => {
+    // Initialize DataSyncService for client-side
+    const dataSync = DataSyncService.getInstance();
+    const auth = Authentication.getInstance();
+
+    // Prefetch data into IndexedDB if authenticated
+    if (auth.isAuthenticated()) {
+      try {
+        const userId = auth.getUserId();
+        if (userId) {
+          // Force sync to ensure we have the latest data
+          await dataSync.syncCollection(
+            Collections.EVENT_REQUESTS,
+            `requested_user="${userId}"`,
+            "-created",
+          );
+          console.log("Initial data sync complete for user event requests");
+        }
+      } catch (err) {
+        console.error("Error during initial data sync:", err);
+      }
+    }
+
+    const formTab = document.getElementById("form-tab");
+    const submissionsTab = document.getElementById("submissions-tab");
+    const formContent = document.getElementById("form-content");
+    const submissionsContent = document.getElementById("submissions-content");
+
+    // Function to switch tabs
+    const switchTab = (
+      activeTab: HTMLElement,
+      activeContent: HTMLElement,
+      inactiveTab: HTMLElement,
+      inactiveContent: HTMLElement,
+    ) => {
+      // Update tab classes
+      activeTab.classList.add("tab-active");
+      inactiveTab.classList.remove("tab-active");
+
+      // Show/hide content
+      activeContent.classList.remove("hidden");
+      inactiveContent.classList.add("hidden");
+
+      // Dispatch event to refresh submissions when switching to submissions tab
+      if (activeTab.id === "submissions-tab") {
+        // Dispatch a custom event that the UserEventRequests component listens for
+        document.dispatchEvent(new CustomEvent("dashboardTabVisible"));
+      }
+    };
+
+    // Add click event listeners to tabs
+    formTab?.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (formContent && submissionsContent && submissionsTab) {
+        switchTab(formTab, formContent, submissionsTab, submissionsContent);
+      }
+    });
+
+    submissionsTab?.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (formContent && submissionsContent && formTab) {
+        switchTab(submissionsTab, submissionsContent, formTab, formContent);
+      }
+    });
+
+    // Listen for visibility changes
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        // Dispatch custom event that components can listen for
+        document.dispatchEvent(new CustomEvent("dashboardTabVisible"));
+      }
+    });
+  });
 </script>

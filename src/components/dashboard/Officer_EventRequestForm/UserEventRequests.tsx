@@ -5,6 +5,13 @@ import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
 import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase';
 
+// Declare the global window interface to include our custom function
+declare global {
+    interface Window {
+        showEventRequestFormPreview?: (formData: any) => void;
+    }
+}
+
 // Extended EventRequest interface with additional properties needed for this component
 export interface EventRequest extends SchemaEventRequest {
     invoice_data?: any;
@@ -98,15 +105,37 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
 
         switch (status.toLowerCase()) {
             case 'approved':
-                return 'badge-success';
+            case 'completed':
+                return 'badge-success text-white';
             case 'rejected':
-                return 'badge-error';
+            case 'declined':
+                return 'badge-error text-white';
             case 'pending':
-                return 'badge-warning';
+                return 'badge-warning text-black';
             case 'submitted':
-                return 'badge-info';
+                return 'badge-info text-white';
             default:
-                return 'badge-warning';
+                return 'badge-warning text-black';
+        }
+    };
+
+    // Get card border class based on status
+    const getCardBorderClass = (status?: string) => {
+        if (!status) return 'border-l-warning';
+
+        switch (status.toLowerCase()) {
+            case 'approved':
+            case 'completed':
+                return 'border-l-success';
+            case 'rejected':
+            case 'declined':
+                return 'border-l-error';
+            case 'pending':
+                return 'border-l-warning';
+            case 'submitted':
+                return 'border-l-info';
+            default:
+                return 'border-l-warning';
         }
     };
 
@@ -226,7 +255,7 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                         </thead>
                         <tbody>
                             {eventRequests.map((request) => (
-                                <tr key={request.id} className="hover">
+                                <tr key={request.id} className={`hover border-l-4 ${getCardBorderClass(request.status)}`}>
                                     <td className="font-medium">{request.name}</td>
                                     <td>{formatDate(request.start_date_time)}</td>
                                     <td>{request.location}</td>
@@ -274,7 +303,7 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3 }}
-                            className="card bg-base-200 shadow-sm hover:shadow-md transition-shadow"
+                            className={`card bg-base-200 shadow-sm hover:shadow-md transition-shadow border-l-4 ${getCardBorderClass(request.status)}`}
                         >
                             <div className="card-body p-5">
                                 <div className="flex justify-between items-start">
@@ -371,13 +400,45 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="sticky top-0 z-10 bg-base-100 px-6 py-4 border-b border-base-300 flex justify-between items-center">
-                                <h2 className="text-xl font-bold">{selectedRequest.name}</h2>
-                                <button
-                                    className="btn btn-sm btn-circle btn-ghost"
-                                    onClick={closeModal}
-                                >
-                                    ✕
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-xl font-bold">{selectedRequest.name}</h2>
+                                    <span className={`badge ${getStatusBadge(selectedRequest.status)}`}>
+                                        {selectedRequest.status || 'Pending'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        className="btn btn-sm btn-primary"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            console.log('Full Preview button clicked', selectedRequest);
+                                            try {
+                                                // Direct call to the global function
+                                                if (typeof window.showEventRequestFormPreview === 'function') {
+                                                    window.showEventRequestFormPreview(selectedRequest);
+                                                } else {
+                                                    console.error('showEventRequestFormPreview is not a function', window.showEventRequestFormPreview);
+                                                    // Fallback to event dispatch if function is not available
+                                                    const event = new CustomEvent("showEventRequestPreviewModal", {
+                                                        detail: { formData: selectedRequest }
+                                                    });
+                                                    document.dispatchEvent(event);
+                                                    console.log('Fallback: showEventRequestPreviewModal event dispatched');
+                                                }
+                                            } catch (error) {
+                                                console.error('Error showing full preview:', error);
+                                            }
+                                        }}
+                                    >
+                                        Full Preview
+                                    </button>
+                                    <button
+                                        className="btn btn-sm btn-circle btn-ghost"
+                                        onClick={closeModal}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="p-6">
