@@ -83,6 +83,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
 
     // Consolidate state management with useRef for latest values
     const latestPropsRef = useRef({ url: initialUrl, filename: initialFilename });
+    const loadingRef = useRef(false); // Add a ref to track loading state
     const [state, setState] = useState({
         url: initialUrl,
         filename: initialFilename,
@@ -108,6 +109,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
     // Update ref when props change
     useEffect(() => {
         latestPropsRef.current = { url: initialUrl, filename: initialFilename };
+        loadingRef.current = false; // Reset loading ref
         // Clear state when URL changes
         setState(prev => ({
             ...prev,
@@ -156,6 +158,12 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
             return;
         }
 
+        // Prevent duplicate loading
+        if (loadingRef.current) {
+            return;
+        }
+
+        loadingRef.current = true;
         setState(prev => ({ ...prev, loading: true, error: null }));
 
         try {
@@ -167,6 +175,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                     fileType: 'application/pdf',
                     loading: false
                 }));
+                loadingRef.current = false;
                 return;
             }
 
@@ -179,6 +188,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                 error: err instanceof Error ? err.message : 'Failed to load file',
                 loading: false
             }));
+            loadingRef.current = false;
         }
     }, [state.url]);
 
@@ -351,6 +361,12 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
         setState(prev => ({ ...prev, visibleLines: INITIAL_LINES_TO_SHOW }));
     }, []);
 
+    // Update the Try Again button handler
+    const handleTryAgain = useCallback(() => {
+        loadingRef.current = false; // Reset loading ref
+        loadContent();
+    }, [loadContent]);
+
     // If URL is empty, show a message
     if (!state.url) {
         return (
@@ -383,6 +399,12 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
             </div>
 
             <div className="preview-content overflow-auto border border-base-300 rounded-lg bg-base-200/50 relative">
+                {!state.loading && !state.error && state.content === null && (
+                    <div className="flex justify-center items-center p-8">
+                        <span className="loading loading-spinner loading-lg"></span>
+                    </div>
+                )}
+
                 {state.loading && (
                     <div className="flex justify-center items-center p-8">
                         <span className="loading loading-spinner loading-lg"></span>
@@ -407,7 +429,7 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                         </button>
                         <button
                             className="btn btn-sm btn-outline btn-error mt-4"
-                            onClick={loadContent}
+                            onClick={handleTryAgain}
                         >
                             Try Again
                         </button>
