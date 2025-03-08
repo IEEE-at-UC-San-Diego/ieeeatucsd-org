@@ -50,7 +50,9 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
 
     if (image) {
       image.onload = () => {
-        skeleton.style.display = "none";
+        if (skeleton) {
+          skeleton.style.display = "none";
+        }
       };
     }
   });
