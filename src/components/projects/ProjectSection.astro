@@ -6,7 +6,9 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
 import { Image } from "astro:assets";
 ---
 
-<div class="md:flex md:gap-[1.5vw] md:h-[30vw] md:w-auto w-[70vw] mt-[20%] md:mt-0 ml-[5%] md:ml-0">
+<div
+    class="md:flex md:gap-[1.5vw] md:h-[30vw] md:w-auto w-[70vw] mt-[20%] md:mt-0 ml-[5%] md:ml-0"
+>
     {
         Object.entries(annualProjects).map(([title, project], index) => (
             <a
@@ -15,6 +17,7 @@ import { Image } from "astro:assets";
                 data-project={index + 1}
                 target={title === "Supercomputing" ? "_blank" : "_self"}
             >
+                <div class="skeleton absolute inset-0 rounded-[1.5vw] z-0" />
                 <Image
                     src={project.image}
                     alt={`${title} Project`}
@@ -41,7 +44,10 @@ import { Image } from "astro:assets";
                 </div>
 
                 <div class="bg-white w-fit rounded-full aspect-square p-[0.5vw] text-ieee-black md:text-[2vw] text-[3vw] absolute top-[3%] right-[5%]">
-                    <FaGear data-inview className="in-view:rotate-[500deg] duration-[3000ms] group-hover:rotate-[750deg]" />
+                    <FaGear
+                        data-inview
+                        className="in-view:rotate-[500deg] duration-[3000ms] group-hover:rotate-[750deg]"
+                    />
                 </div>
             </a>
         ))
@@ -120,4 +126,33 @@ import { Image } from "astro:assets";
     initializeProjectCards();
 
     document.addEventListener("astro:page-load", initializeProjectCards);
+
+    // Image loading handler
+    function handleImageLoading() {
+        const projectImages = document.querySelectorAll(".project-card img");
+
+        projectImages.forEach((image, index) => {
+            // Ensure the image is fully loaded, even if it's already in cache
+            if (image.complete) {
+                image.style.opacity = "1";
+                const skeleton = image.previousElementSibling;
+                if (skeleton && skeleton.classList.contains("skeleton")) {
+                    skeleton.style.display = "none";
+                }
+            } else {
+                image.addEventListener("load", () => {
+                    image.style.opacity = "1";
+                    const skeleton = image.previousElementSibling;
+                    if (skeleton && skeleton.classList.contains("skeleton")) {
+                        skeleton.style.display = "none";
+                    }
+                });
+            }
+        });
+    }
+
+    // Ensure images are loaded after a short delay
+    setTimeout(handleImageLoading, 100);
+    handleImageLoading();
+    document.addEventListener("astro:page-load", handleImageLoading);
 </script>

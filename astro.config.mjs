@@ -15,9 +15,9 @@ import icon from "astro-icon";
 
 // https://astro.build/config
 export default defineConfig({
-    integrations: [tailwind(), expressiveCode(), react(), icon(), mdx()],
+  integrations: [tailwind(), expressiveCode(), react(), icon(), mdx()],
 
-    adapter: node({
-        mode: "standalone",
-    }),
+  adapter: node({
+    mode: "standalone",
+  }),
 });

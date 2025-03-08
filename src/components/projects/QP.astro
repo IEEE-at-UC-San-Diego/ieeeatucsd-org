@@ -11,12 +11,19 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
         <LiaDotCircle className=" mr-[1vw] pt-[0.5%]" />
         <p>Quarterly Project</p>
     </div>
-    <Image
-        src={qp}
-        alt="qp showcase photo"
-        class="md:opacity-0 md:w-[70vw] w-[85vw] md:aspect-[2.5/1] aspect-[2.5/1.2] rounded-full relative in-view:animate-fade-down"
-        data-inview
-    />
+    <div class="w-[70vw] aspect-[2.5/1] relative">
+        <div
+            id="qp-skeleton"
+            class="skeleton absolute inset-0 rounded-full z-0"
+        >
+            <Image
+                src={qp}
+                alt="qp showcase photo"
+                class="md:opacity-0 md:w-[70vw] w-[85vw] md:aspect-[2.5/1] aspect-[2.5/1.2] rounded-full relative in-view:animate-fade-down"
+                data-inview
+            />
+        </div>
+    </div>
     <Link
         data-inview
         href="/projects/quarterly"
@@ -28,7 +35,8 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
         />
     </Link>
     <div
-        data-inview class="in-view:animate-fade-right md:w-[45%] w-[70%] text-[1.8vw] md:text-[1vw] font-semibold bg-white/50 backdrop-blur text-black absolute md:-bottom-[6%] -bottom-[15%] md:left-[15%] left-[5%] px-[1.5%] py-[1%] rounded-[1.5vw]"
+        data-inview
+        class="in-view:animate-fade-right md:w-[45%] w-[70%] text-[1.8vw] md:text-[1vw] font-semibold bg-white/50 backdrop-blur text-black absolute md:-bottom-[6%] -bottom-[15%] md:left-[15%] left-[5%] px-[1.5%] py-[1%] rounded-[1.5vw]"
     >
         <p class="md:text-[1.4vw] text-[2.2vw] mb-[2%]">Quarterly Project</p>
         <p>
@@ -39,3 +47,16 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
         </p>
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const image = document.getElementById("qp-image");
+        const skeleton = document.getElementById("qp-skeleton");
+
+        if (image) {
+            image.onload = () => {
+                skeleton.style.display = "none";
+            };
+        }
+    });
+</script>

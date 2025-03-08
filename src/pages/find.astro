@@ -9,24 +9,23 @@ import contactbroder from "../images/contactbroder.webp";
 ---
 
 <Layout>
-    <Image
-        src={contactbroder}
-        alt="JOIN US"
-        class="absolute left-[1vw] md:w-[4vw] w-[5vw] md:top-[60vh] top-[70vw] -z-10"
-    />
-    <Image
-        src={contactbroder}
-        alt="JOIN US"
-        class="absolute right-[1vw] md:w-[4vw] w-[5vw] md:top-[60vh] top-[70vw] -z-10"
-    />
-    <FindTitle />
-    <div class="w-full flex justify-center">
-        <Image
-            src={event}
-            alt="board group photos"
-            class="w-[90%] md:w-3/4 rounded-full"
-        />
+  <Image
+    src={contactbroder}
+    alt="JOIN US"
+    class="absolute left-[1vw] md:w-[4vw] w-[5vw] md:top-[60vh] top-[70vw] -z-10"
+  />
+  <Image
+    src={contactbroder}
+    alt="JOIN US"
+    class="absolute right-[1vw] md:w-[4vw] w-[5vw] md:top-[60vh] top-[70vw] -z-10"
+  />
+  <FindTitle />
+  <div class="w-full flex justify-center">
+    <div class="skeleton w-3/4 rounded-full">
+      <Image src={event} alt="board group photos" class="w-full rounded-full" />
     </div>
-    <Findus />
-    <Social />
+  </div>
+
+  <Findus />
+  <Social />
 </Layout>

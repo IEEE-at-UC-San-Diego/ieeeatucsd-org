@@ -38,7 +38,7 @@
     "path": "/find"
   },
   {
-    "name": "Online Store",
-    "path": "/online-store"
+    "name": "Dashboard",
+    "path": "/dashboard"
   }
 ]

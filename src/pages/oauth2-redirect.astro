@@ -1,0 +1,17 @@
+---
+import Layout from "../layouts/Layout.astro";
+const title = "Authenticating...";
+---
+
+<main class="min-h-screen flex items-center justify-center">
+    <div id="content" class="text-center">
+        <p class="text-2xl font-medium">Redirecting to dashboard...</p>
+        <div class="mt-4">
+            <div class="loading loading-spinner loading-lg"></div>
+        </div>
+    </div>
+</main>
+<script>
+    import { RedirectHandler } from "../scripts/auth/RedirectHandler";
+    new RedirectHandler();
+</script>
