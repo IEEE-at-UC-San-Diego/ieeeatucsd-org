@@ -27,7 +27,7 @@ const { title, text, link, number, delay } = Astro.props;
   >
     more details
     <IoIosArrowDroprightCircle
-      className="ml-[0.5vw] text-[2vw] md:text-[1.4vw] icon-fix"
+      className="ml-[0.5vw] text-[2vw] md:text-[1.4vw]"
     />
   </Link>
   <p
@@ -36,18 +36,3 @@ const { title, text, link, number, delay } = Astro.props;
     {number}
   </p>
 </div>
-
-<style>
-  /* iOS-specific fixes for icon alignment */
-  @supports (-webkit-touch-callout: none) {
-    .icon-fix {
-      /* Fix vertical alignment on iOS */
-      position: relative;
-      top: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transform: translateY(0);
-    }
-  }
-</style>

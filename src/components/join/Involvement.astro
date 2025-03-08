@@ -23,15 +23,15 @@ const { image, text, link, delay } = Astro.props;
   >
     <div class="w-full flex justify-end md:pr-[5%] pr-[2vw]">
       <div
-        class="bg-white w-fit rounded-full aspect-square p-[0.5vw] text-ieee-black text-[4.5vw] md:text-[2vw] flex items-center justify-center"
+        class="bg-white w-fit rounded-full aspect-square p-[0.5vw] text-ieee-black text-[4.5vw] md:text-[2vw]"
       >
         {
           text === "PROJECTS" ? (
-            <RiRobot2Fill className="icon-fix" />
+            <RiRobot2Fill />
           ) : text === "EVENTS" ? (
-            <IoMdCalendar className="icon-fix" />
+            <IoMdCalendar />
           ) : (
-            <FaGear className="icon-fix" />
+            <FaGear />
           )
         }
       </div>
@@ -49,14 +49,14 @@ const { image, text, link, delay } = Astro.props;
           {text}
         </p>
         <GoArrowDownRight
-          className="text-[5vw] md:text-[3vw] leading-none group-hover:text-ieee-yellow icon-fix"
+          className="text-[5vw] md:text-[3vw] leading-none group-hover:text-ieee-yellow"
         />
       </div>
 
       {
         text === "H.A.R.D. HACK" && (
           <p class="text-[1.8vw] md:text-[1vw] text-center pt-[10%] group-hover:text-ieee-yellow duration-300">
-            UC San Diego's largest hardware focused hackathon hold by IEEE UCSD,
+            UC San Diego’s largest hardware focused hackathon hold by IEEE UCSD,
             HKN, and TNT
           </p>
         )
@@ -64,18 +64,3 @@ const { image, text, link, delay } = Astro.props;
     </div>
   </Link>
 </div>
-
-<style>
-  /* iOS-specific fixes for icon alignment */
-  @supports (-webkit-touch-callout: none) {
-    .icon-fix {
-      /* Fix vertical alignment on iOS */
-      position: relative;
-      top: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transform: translateY(0);
-    }
-  }
-</style>

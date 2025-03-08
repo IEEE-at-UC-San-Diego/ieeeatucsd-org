@@ -5,7 +5,7 @@ import ProjectSection from "./ProjectSection.astro";
 
 <div class="text-white md:mt-[15%] mt-[25%] mb-[30%] mx-[10%] relative">
   <div class="flex items-center md:text-[2.7vw] text-[4.5vw] mb-[7%]">
-    <LiaDotCircle className="mr-[1vw] pt-[0.5%] icon-fix" />
+    <LiaDotCircle className=" mr-[1vw] pt-[0.5%]" />
     <p>Annual Projects</p>
   </div>
 
@@ -21,10 +21,10 @@ import ProjectSection from "./ProjectSection.astro";
   <div
     class="flex items-center md:text-[1.2vw] text-[2vw] font-light mb-[7%] justify-between md:ml-[10%]"
   >
-    <LiaDotCircle className="md:text-[2vw] text-[3vw] pt-[0.5%] icon-fix" />
+    <LiaDotCircle className="md:text-[2vw] text-[3vw] pt-[0.5%]" />
     <p class="md:text-[2vw] text-[3vw] mr-[2vw]">Skills & Requirements</p>
     <p class="w-3/5">
-      IEEE @ UCSD's annual projects are intended for students with intermediate
+      IEEE @ UCSD’s annual projects are intended for students with intermediate
       experience with hardware or software. Participation on teams assemble an
       array of skills and talents of soft and hard skills.
     </p>
@@ -32,18 +32,3 @@ import ProjectSection from "./ProjectSection.astro";
 
   <ProjectSection />
 </div>
-
-<style>
-  /* iOS-specific fixes for icon alignment */
-  @supports (-webkit-touch-callout: none) {
-    .icon-fix {
-      /* Fix vertical alignment on iOS */
-      position: relative;
-      top: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transform: translateY(0);
-    }
-  }
-</style>

@@ -27,23 +27,8 @@ import Link from "next/link";
         {title}
       </p>
       <GoArrowDownRight
-        className="text-[3vw] leading-none group-hover:text-ieee-yellow duration-300 icon-fix"
+        className="text-[3vw] leading-none group-hover:text-ieee-yellow duration-300 "
       />
     </div>
   </div>
 </Link>
-
-<style>
-  /* iOS-specific fixes for icon alignment */
-  @supports (-webkit-touch-callout: none) {
-    .icon-fix {
-      /* Fix vertical alignment on iOS */
-      position: relative;
-      top: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transform: translateY(0);
-    }
-  }
-</style>

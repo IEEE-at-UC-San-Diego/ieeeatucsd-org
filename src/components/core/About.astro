@@ -5,7 +5,7 @@ const { title, text } = Astro.props;
 
 <div class="flex flex-col items-center text-white my-[10%]">
   <div class="flex items-center text-[4.5vw] md:text-[2.5vw] mb-[3%]">
-    <LiaDotCircle className="mr-[1vw] pt-[0.5%] icon-fix" />
+    <LiaDotCircle className=" mr-[1vw] pt-[0.5%]" />
     <p
       class="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ieee-black"
     >
@@ -17,18 +17,3 @@ const { title, text } = Astro.props;
     {text}
   </p>
 </div>
-
-<style>
-  /* iOS-specific fixes for icon alignment */
-  @supports (-webkit-touch-callout: none) {
-    .icon-fix {
-      /* Fix vertical alignment on iOS */
-      position: relative;
-      top: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transform: translateY(0);
-    }
-  }
-</style>

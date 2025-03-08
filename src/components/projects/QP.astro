@@ -8,7 +8,7 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
 
 <div class="text-white flex flex-col items-center md:my-[7%] my-[12%] relative">
   <div class="flex items-center md:text-[2.7vw] text-[4.5vw] mb-[4%]">
-    <LiaDotCircle className="mr-[1vw] pt-[0.5%] icon-fix" />
+    <LiaDotCircle className=" mr-[1vw] pt-[0.5%]" />
     <p>Quarterly Project</p>
   </div>
   <div class="w-[70vw] aspect-[2.5/1] relative">
@@ -27,7 +27,7 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
     className="in-view:animate-fade-left absolute top-[25%] md:right-[15%] right-[10%] w-fit px-[1%] py-[0.4%] bg-white rounded-full text-black flex items-center md:text-[1.3vw] text-[2vw] hover:bg-ieee-yellow duration-300 shadow-md"
   >
     more details
-    <IoIosArrowDroprightCircle className="ml-[0.5vw] text-[1.7vw] icon-fix" />
+    <IoIosArrowDroprightCircle className="ml-[0.5vw] text-[1.7vw] mt-[1%]" />
   </Link>
   <div
     data-inview
@@ -43,21 +43,6 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
   </div>
 </div>
 
-<style>
-  /* iOS-specific fixes for icon alignment */
-  @supports (-webkit-touch-callout: none) {
-    .icon-fix {
-      /* Fix vertical alignment on iOS */
-      position: relative;
-      top: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transform: translateY(0);
-    }
-  }
-</style>
-
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const image = document.getElementById("qp-image");
@@ -65,9 +50,7 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
 
     if (image) {
       image.onload = () => {
-        if (skeleton) {
-          (skeleton as HTMLElement).style.display = "none";
-        }
+        skeleton.style.display = "none";
       };
     }
   });

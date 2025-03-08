@@ -36,17 +36,17 @@ import { Image } from "astro:assets";
             <div class="w-full flex justify-end md:invisible visible md:[.expanded_&]:visible h-0 md:[.expanded_&]:h-auto">
               <div class="flex items-center md:text-[1.3vw] text-[2vw] md:[.expanded_&]:mt-[5%]">
                 more details
-                <IoIosArrowDroprightCircle className="ml-[0.5vw] text-[1.4vw] icon-fix" />
+                <IoIosArrowDroprightCircle className="ml-[0.5vw] text-[1.4vw]" />
               </div>
             </div>
           </div>
-          <GoArrowDownRight className="text-[3.2vw] [.expanded_&]:text-[0px] pt-[2%] icon-fix" />
+          <GoArrowDownRight className="text-[3.2vw] [.expanded_&]:text-[0px] pt-[2%]" />
         </div>
 
-        <div class="bg-white w-fit rounded-full aspect-square p-[0.5vw] text-ieee-black md:text-[2vw] text-[3vw] absolute top-[3%] right-[5%] flex items-center justify-center">
+        <div class="bg-white w-fit rounded-full aspect-square p-[0.5vw] text-ieee-black md:text-[2vw] text-[3vw] absolute top-[3%] right-[5%]">
           <FaGear
             data-inview
-            className="in-view:rotate-[500deg] duration-[3000ms] group-hover:rotate-[750deg] icon-fix"
+            className="in-view:rotate-[500deg] duration-[3000ms] group-hover:rotate-[750deg]"
           />
         </div>
       </a>
@@ -75,36 +75,6 @@ import { Image } from "astro:assets";
 
     .project-card.expanded p {
       opacity: 1;
-    }
-  }
-
-  /* iOS-specific fixes for icon alignment */
-  @supports (-webkit-touch-callout: none) {
-    .icon-fix {
-      /* Fix vertical alignment on iOS */
-      position: relative;
-      top: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      transform: translateY(0);
-    }
-
-    /* Specific fixes for project card icons */
-    .project-card .bg-white {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Fix for the arrow icon at the bottom */
-    .project-card .GoArrowDownRight {
-      margin-bottom: 0.1vw;
-    }
-
-    /* Fix for the more details icon */
-    .project-card .IoIosArrowDroprightCircle {
-      vertical-align: middle;
     }
   }
 </style>
@@ -159,20 +129,20 @@ import { Image } from "astro:assets";
   function handleImageLoading() {
     const projectImages = document.querySelectorAll(".project-card img");
 
-    projectImages.forEach((image) => {
+    projectImages.forEach((image, index) => {
       // Ensure the image is fully loaded, even if it's already in cache
-      if ((image as HTMLImageElement).complete) {
-        (image as HTMLElement).style.opacity = "1";
+      if (image.complete) {
+        image.style.opacity = "1";
         const skeleton = image.previousElementSibling;
         if (skeleton && skeleton.classList.contains("skeleton")) {
-          (skeleton as HTMLElement).style.display = "none";
+          skeleton.style.display = "none";
         }
       } else {
         image.addEventListener("load", () => {
-          (image as HTMLElement).style.opacity = "1";
+          image.style.opacity = "1";
           const skeleton = image.previousElementSibling;
           if (skeleton && skeleton.classList.contains("skeleton")) {
-            (skeleton as HTMLElement).style.display = "none";
+            skeleton.style.display = "none";
           }
         });
       }
@@ -183,27 +153,4 @@ import { Image } from "astro:assets";
   setTimeout(handleImageLoading, 100);
   handleImageLoading();
   document.addEventListener("astro:page-load", handleImageLoading);
-
-  // iOS detection and class addition
-  document.addEventListener("DOMContentLoaded", () => {
-    // Check if the device is iOS
-    const isIOS =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-    if (isIOS) {
-      // Add iOS-specific class to the body for additional styling if needed
-      document.body.classList.add("ios-device");
-
-      // Apply additional fixes for specific iOS versions if needed
-      const iOSVersion = parseInt(
-        (navigator.userAgent.match(/OS (\d+)_/) || [])[1],
-        10,
-      );
-
-      if (iOSVersion && iOSVersion < 15) {
-        // Additional fixes for older iOS versions
-        document.body.classList.add("ios-legacy");
-      }
-    }
-  });
 </script>
