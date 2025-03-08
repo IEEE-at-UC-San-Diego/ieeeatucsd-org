@@ -360,6 +360,44 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                                 </tr>
                             </thead>
                             <tbody>
+                                <tr class="loading-skeleton hidden">
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-24 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-32 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-16 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-28 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td>
+                                        <div class="flex gap-2">
+                                            <div
+                                                class="h-6 bg-base-300 rounded w-12 animate-pulse"
+                                            >
+                                            </div>
+                                            <div
+                                                class="h-6 bg-base-300 rounded w-12 animate-pulse"
+                                            >
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
                                 {
                                     users.map((user) => (
                                         <tr>
@@ -424,6 +462,48 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                                 </tr>
                             </thead>
                             <tbody>
+                                <tr class="loading-skeleton hidden">
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-32 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-28 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-24 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-16 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td>
+                                        <div class="flex gap-2">
+                                            <div
+                                                class="h-6 bg-base-300 rounded w-12 animate-pulse"
+                                            >
+                                            </div>
+                                            <div
+                                                class="h-6 bg-base-300 rounded w-12 animate-pulse"
+                                            >
+                                            </div>
+                                            <div
+                                                class="h-6 bg-base-300 rounded w-16 animate-pulse"
+                                            >
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
                                 {
                                     events.map((event) => (
                                         <tr>
@@ -504,6 +584,40 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                                 </tr>
                             </thead>
                             <tbody>
+                                <tr class="loading-skeleton hidden">
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-32 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-20 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-28 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td
+                                        ><div
+                                            class="h-4 bg-base-300 rounded w-16 animate-pulse"
+                                        >
+                                        </div></td
+                                    >
+                                    <td>
+                                        <div class="flex gap-2">
+                                            <div
+                                                class="h-6 bg-base-300 rounded w-16 animate-pulse"
+                                            >
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
                                 {
                                     reimbursements.map((reimbursement) => (
                                         <tr>
@@ -576,32 +690,85 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                 </div>
             </div>
         </div>
-
-        <!-- Recent System Activity -->
-        <div class="mt-6">
-            <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Icon name="heroicons:chart-bar" class="h-5 w-5 text-info" />
-                Recent System Activity
-                <div class="badge badge-ghost text-xs font-normal">
-                    Live updates
-                </div>
-            </h3>
-            <div class="card bg-base-200 p-4">
-                <div id="adminSystemActivityRecent">
-                    <AdminSystemActivity
-                        client:load
-                        limit={5}
-                        refreshInterval={60000}
-                    />
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
 <script>
     // Client-side functionality for the admin dashboard
     document.addEventListener("DOMContentLoaded", async () => {
+        // Fix for tab display issue - run this first
+        const fixTabs = () => {
+            console.log("Fixing tabs on page load");
+
+            // Make sure all tab content sections exist in the DOM
+            const tabSections = [
+                "userSection",
+                "eventSection",
+                "financeSection",
+                "logSection",
+            ];
+            let allSectionsExist = true;
+
+            tabSections.forEach((id) => {
+                const section = document.getElementById(id);
+                if (!section) {
+                    console.error(`Tab section ${id} not found in DOM`);
+                    allSectionsExist = false;
+                }
+            });
+
+            if (!allSectionsExist) {
+                console.error("Not all tab sections exist, cannot fix tabs");
+                return;
+            }
+
+            // Set initial tab state - show user section, hide others
+            document.getElementById("userSection")?.classList.remove("hidden");
+            document.getElementById("eventSection")?.classList.add("hidden");
+            document.getElementById("financeSection")?.classList.add("hidden");
+            document.getElementById("logSection")?.classList.add("hidden");
+
+            // Set active tab
+            document.querySelectorAll(".tab").forEach((tab) => {
+                if (tab.getAttribute("data-tab") === "user") {
+                    tab.classList.add("tab-active");
+                } else {
+                    tab.classList.remove("tab-active");
+                }
+            });
+
+            console.log("Tab display fixed");
+        };
+
+        // Run the fix immediately
+        fixTabs();
+
+        // Debug: Check if tab content sections exist
+        console.log("Checking tab content sections:");
+        ["userSection", "eventSection", "financeSection", "logSection"].forEach(
+            (id) => {
+                const section = document.getElementById(id);
+                console.log(`${id}: ${section ? "Found" : "Not found"}`);
+
+                if (section) {
+                    // Check if the section is visible
+                    const isHidden = section.classList.contains("hidden");
+                    const parentElement = section.parentElement;
+                    console.log(
+                        `${id} is ${isHidden ? "hidden" : "visible"}, parent: ${parentElement ? parentElement.id || "unnamed" : "none"}`
+                    );
+                }
+            }
+        );
+
+        // Debug: Check if tab buttons exist
+        const tabButtons = document.querySelectorAll(".tab");
+        console.log(`Found ${tabButtons.length} tab buttons:`);
+        tabButtons.forEach((button) => {
+            const tabId = button.getAttribute("data-tab");
+            console.log(`Tab button with data-tab="${tabId}": Found`);
+        });
+
         // Check authentication status
         try {
             const { Authentication } = await import(
@@ -648,8 +815,33 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
 
         // Function to switch tabs
         const switchTab = (tabId: string) => {
-            // Update tab buttons
-            tabs.forEach((tab) => {
+            console.log(`Switching to tab: ${tabId}`);
+
+            // Get the target section
+            const targetSection = document.getElementById(`${tabId}Section`);
+            if (!targetSection) {
+                console.error(`Target section ${tabId}Section not found`);
+                return;
+            }
+
+            // Hide all sections first
+            [
+                "userSection",
+                "eventSection",
+                "financeSection",
+                "logSection",
+            ].forEach((id) => {
+                const section = document.getElementById(id);
+                if (section) {
+                    section.classList.add("hidden");
+                }
+            });
+
+            // Show the target section
+            targetSection.classList.remove("hidden");
+
+            // Update active tab
+            document.querySelectorAll(".tab").forEach((tab) => {
                 if (tab.getAttribute("data-tab") === tabId) {
                     tab.classList.add("tab-active");
                 } else {
@@ -657,14 +849,18 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                 }
             });
 
-            // Update content sections
-            tabContents.forEach((content) => {
-                if (content.id === `${tabId}Section`) {
-                    content.classList.remove("hidden");
-                } else {
-                    content.classList.add("hidden");
+            // Special handling for log tab
+            if (tabId === "log") {
+                console.log("Refreshing AdminSystemActivity component");
+                if (
+                    typeof window !== "undefined" &&
+                    (window as any).refreshAdminSystemActivity
+                ) {
+                    setTimeout(() => {
+                        (window as any).refreshAdminSystemActivity();
+                    }, 100);
                 }
-            });
+            }
         };
 
         // Add click handlers to tabs
@@ -674,6 +870,29 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                 if (tabId) switchTab(tabId);
             });
         });
+
+        // Add a specific handler for the log tab
+        const logTab = document.querySelector('[data-tab="log"]');
+        if (logTab) {
+            logTab.addEventListener("click", function () {
+                console.log("Log tab clicked directly");
+
+                // Manual tab switching for log tab
+                document.querySelectorAll(".tab").forEach(function (t) {
+                    t.classList.remove("tab-active");
+                });
+                logTab.classList.add("tab-active");
+
+                document.querySelectorAll(".tab-content").forEach(function (c) {
+                    c.classList.add("hidden");
+                });
+
+                const logSection = document.getElementById("logSection");
+                if (logSection) {
+                    logSection.classList.remove("hidden");
+                }
+            });
+        }
 
         // Handle "View all" button clicks
         document
@@ -738,11 +957,266 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                             }
                         }
                     } else {
-                        // Redirect to user edit page
-                        window.location.href = `/admin/users/edit/${userId}`;
+                        // Show edit modal instead of redirecting
+                        try {
+                            const { Authentication } = await import(
+                                "../../scripts/pocketbase/Authentication"
+                            );
+                            const { Get } = await import(
+                                "../../scripts/pocketbase/Get"
+                            );
+                            const { Collections } = await import(
+                                "../../schemas/pocketbase"
+                            );
+
+                            const auth = Authentication.getInstance();
+                            const get = Get.getInstance();
+
+                            // Show loading state
+                            showToast("Loading user details...", "info");
+
+                            // Get user details
+                            const user = await get.getOne(
+                                Collections.USERS,
+                                userId
+                            );
+                            openUserEditModal(user);
+                        } catch (error) {
+                            console.error("Error fetching user:", error);
+                            showToast("Failed to load user details", "error");
+                        }
                     }
                 });
             });
+
+            // Function to open user edit modal
+            const openUserEditModal = (user: any) => {
+                let modal = document.getElementById("user-edit-modal");
+                if (!modal) {
+                    modal = document.createElement("div");
+                    modal.id = "user-edit-modal";
+                    modal.className = "modal";
+                    document.body.appendChild(modal);
+                }
+
+                modal.innerHTML = `
+                    <div class="modal-box max-w-2xl">
+                        <h3 class="font-bold text-lg">Edit User</h3>
+                        <div class="py-4 grid grid-cols-2 gap-4">
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Name</span>
+                                </label>
+                                <input type="text" id="user-name" class="input input-bordered" value="${user.name || ""}" />
+                            </div>
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Email</span>
+                                </label>
+                                <input type="email" id="user-email" class="input input-bordered" value="${user.email || ""}" />
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Email Visibility</span>
+                                </label>
+                                <input type="checkbox" id="user-email-visibility" class="toggle" ${user.emailVisibility ? "checked" : ""} />
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">PID</span>
+                                </label>
+                                <input type="text" id="user-pid" class="input input-bordered" value="${user.pid || ""}" />
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Member ID</span>
+                                </label>
+                                <input type="text" id="user-member-id" class="input input-bordered" value="${user.member_id || ""}" />
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Graduation Year</span>
+                                </label>
+                                <input type="number" id="user-graduation-year" class="input input-bordered" value="${user.graduation_year || ""}" />
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Major</span>
+                                </label>
+                                <input type="text" id="user-major" class="input input-bordered" value="${user.major || ""}" />
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Zelle Information</span>
+                                </label>
+                                <input type="text" id="user-zelle" class="input input-bordered" value="${user.zelle_information || ""}" />
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Points</span>
+                                </label>
+                                <input type="number" id="user-points" class="input input-bordered" value="${user.points || 0}" />
+                            </div>
+
+                            <div class="form-control col-span-2">
+                                <label class="label">
+                                    <span class="label-text">Notification Preferences</span>
+                                </label>
+                                <textarea id="user-notification-prefs" class="textarea textarea-bordered h-20">${user.notification_preferences || ""}</textarea>
+                            </div>
+
+                            <div class="form-control col-span-2">
+                                <label class="label">
+                                    <span class="label-text">Display Preferences</span>
+                                </label>
+                                <textarea id="user-display-prefs" class="textarea textarea-bordered h-20">${user.display_preferences || ""}</textarea>
+                            </div>
+
+                            <div class="form-control col-span-2">
+                                <label class="label">
+                                    <span class="label-text">Accessibility Settings</span>
+                                </label>
+                                <textarea id="user-accessibility" class="textarea textarea-bordered h-20">${user.accessibility_settings || ""}</textarea>
+                            </div>
+                        </div>
+                        <div class="modal-action">
+                            <button class="btn" onclick="document.getElementById('user-edit-modal').classList.remove('modal-open')">Cancel</button>
+                            <button id="save-user" class="btn btn-primary" data-id="${user.id}">Save Changes</button>
+                        </div>
+                    </div>
+                `;
+
+                modal.classList.add("modal-open");
+
+                // Add event listener to save button
+                document
+                    .getElementById("save-user")
+                    ?.addEventListener("click", async () => {
+                        const userId = document
+                            .getElementById("save-user")
+                            ?.getAttribute("data-id");
+                        if (!userId) return;
+
+                        try {
+                            const { Authentication } = await import(
+                                "../../scripts/pocketbase/Authentication"
+                            );
+                            const { Update } = await import(
+                                "../../scripts/pocketbase/Update"
+                            );
+                            const { Collections } = await import(
+                                "../../schemas/pocketbase"
+                            );
+
+                            const auth = Authentication.getInstance();
+                            const update = Update.getInstance();
+
+                            // Gather all field values
+                            const updateData = {
+                                name: (
+                                    document.getElementById(
+                                        "user-name"
+                                    ) as HTMLInputElement
+                                )?.value,
+                                email: (
+                                    document.getElementById(
+                                        "user-email"
+                                    ) as HTMLInputElement
+                                )?.value,
+                                emailVisibility: (
+                                    document.getElementById(
+                                        "user-email-visibility"
+                                    ) as HTMLInputElement
+                                )?.checked,
+                                pid: (
+                                    document.getElementById(
+                                        "user-pid"
+                                    ) as HTMLInputElement
+                                )?.value,
+                                member_id: (
+                                    document.getElementById(
+                                        "user-member-id"
+                                    ) as HTMLInputElement
+                                )?.value,
+                                graduation_year:
+                                    parseInt(
+                                        (
+                                            document.getElementById(
+                                                "user-graduation-year"
+                                            ) as HTMLInputElement
+                                        )?.value
+                                    ) || null,
+                                major: (
+                                    document.getElementById(
+                                        "user-major"
+                                    ) as HTMLInputElement
+                                )?.value,
+                                zelle_information: (
+                                    document.getElementById(
+                                        "user-zelle"
+                                    ) as HTMLInputElement
+                                )?.value,
+                                points:
+                                    parseInt(
+                                        (
+                                            document.getElementById(
+                                                "user-points"
+                                            ) as HTMLInputElement
+                                        )?.value
+                                    ) || 0,
+                                notification_preferences: (
+                                    document.getElementById(
+                                        "user-notification-prefs"
+                                    ) as HTMLTextAreaElement
+                                )?.value,
+                                display_preferences: (
+                                    document.getElementById(
+                                        "user-display-prefs"
+                                    ) as HTMLTextAreaElement
+                                )?.value,
+                                accessibility_settings: (
+                                    document.getElementById(
+                                        "user-accessibility"
+                                    ) as HTMLTextAreaElement
+                                )?.value,
+                            };
+
+                            // Update user
+                            await update.updateFields(
+                                Collections.USERS,
+                                userId,
+                                updateData
+                            );
+
+                            // Log the action
+                            await logAdminAction(
+                                "update",
+                                "users",
+                                `Updated user ${userId}`
+                            );
+
+                            // Close modal
+                            modal?.classList.remove("modal-open");
+
+                            // Show success toast
+                            showToast("User updated successfully", "success");
+
+                            // Refresh data
+                            refreshData();
+                        } catch (error) {
+                            console.error("Error updating user:", error);
+                            showToast("Failed to update user", "error");
+                        }
+                    });
+            };
 
             // Event edit/delete/publish buttons
             document.querySelectorAll("[data-event-id]").forEach((button) => {
@@ -779,7 +1253,9 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                             await update.updateFields(
                                 Collections.EVENTS,
                                 eventId,
-                                { published: newPublishedState }
+                                {
+                                    published: newPublishedState,
+                                }
                             );
 
                             // Log the action
@@ -874,11 +1350,253 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                             }
                         }
                     } else if (!isTogglePublish) {
-                        // Redirect to event edit page
-                        window.location.href = `/admin/events/edit/${eventId}`;
+                        // Show edit modal instead of redirecting
+                        try {
+                            const { Authentication } = await import(
+                                "../../scripts/pocketbase/Authentication"
+                            );
+                            const { Get } = await import(
+                                "../../scripts/pocketbase/Get"
+                            );
+                            const { Collections } = await import(
+                                "../../schemas/pocketbase"
+                            );
+
+                            const auth = Authentication.getInstance();
+                            const get = Get.getInstance();
+
+                            // Show loading state
+                            showToast("Loading event details...", "info");
+
+                            // Get event details
+                            const event = await get.getOne(
+                                Collections.EVENTS,
+                                eventId
+                            );
+                            openEventEditModal(event);
+                        } catch (error) {
+                            console.error("Error fetching event:", error);
+                            showToast("Failed to load event details", "error");
+                        }
                     }
                 });
             });
+
+            // Function to open event edit modal
+            const openEventEditModal = (event: any) => {
+                let modal = document.getElementById("event-edit-modal");
+                if (!modal) {
+                    modal = document.createElement("div");
+                    modal.id = "event-edit-modal";
+                    modal.className = "modal";
+                    document.body.appendChild(modal);
+                }
+
+                const startDate = new Date(event.start_date);
+                const endDate = new Date(event.end_date);
+
+                modal.innerHTML = `
+                    <div class="modal-box max-w-2xl">
+                        <h3 class="font-bold text-lg">Edit Event</h3>
+                        <div class="py-4 grid grid-cols-2 gap-4">
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Event Name</span>
+                                </label>
+                                <input type="text" id="event-name" class="input input-bordered" value="${event.event_name || ""}" />
+                            </div>
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Event Code</span>
+                                </label>
+                                <input type="text" id="event-code" class="input input-bordered" value="${event.event_code || ""}" />
+                            </div>
+
+                            <div class="form-control col-span-2">
+                                <label class="label">
+                                    <span class="label-text">Description</span>
+                                </label>
+                                <textarea id="event-description" class="textarea textarea-bordered h-24">${event.event_description || ""}</textarea>
+                            </div>
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Location</span>
+                                </label>
+                                <input type="text" id="event-location" class="input input-bordered" value="${event.location || ""}" />
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Points to Reward</span>
+                                </label>
+                                <input type="number" id="event-points" class="input input-bordered" value="${event.points_to_reward || 0}" />
+                            </div>
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Start Date</span>
+                                </label>
+                                <input type="datetime-local" id="event-start-date" class="input input-bordered" 
+                                    value="${startDate.toISOString().slice(0, 16)}" />
+                            </div>
+                            
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">End Date</span>
+                                </label>
+                                <input type="datetime-local" id="event-end-date" class="input input-bordered" 
+                                    value="${endDate.toISOString().slice(0, 16)}" />
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Published</span>
+                                </label>
+                                <input type="checkbox" id="event-published" class="toggle" ${event.published ? "checked" : ""} />
+                            </div>
+
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Has Food</span>
+                                </label>
+                                <input type="checkbox" id="event-has-food" class="toggle" ${event.has_food ? "checked" : ""} />
+                            </div>
+
+                            <div class="form-control col-span-2">
+                                <label class="label">
+                                    <span class="label-text">Files</span>
+                                    <span class="label-text-alt">Current files: ${event.files?.length || 0}</span>
+                                </label>
+                                <input type="file" id="event-files" class="file-input file-input-bordered w-full" multiple />
+                            </div>
+                        </div>
+                        <div class="modal-action">
+                            <button class="btn" onclick="document.getElementById('event-edit-modal').classList.remove('modal-open')">Cancel</button>
+                            <button id="save-event" class="btn btn-primary" data-id="${event.id}">Save Changes</button>
+                        </div>
+                    </div>
+                `;
+
+                modal.classList.add("modal-open");
+
+                // Add event listener to save button
+                document
+                    .getElementById("save-event")
+                    ?.addEventListener("click", async () => {
+                        const eventId = document
+                            .getElementById("save-event")
+                            ?.getAttribute("data-id");
+                        if (!eventId) return;
+
+                        try {
+                            const { Authentication } = await import(
+                                "../../scripts/pocketbase/Authentication"
+                            );
+                            const { Update } = await import(
+                                "../../scripts/pocketbase/Update"
+                            );
+                            const { Collections } = await import(
+                                "../../schemas/pocketbase"
+                            );
+
+                            const auth = Authentication.getInstance();
+                            const update = Update.getInstance();
+
+                            // Gather all field values
+                            const updateData = {
+                                event_name: (
+                                    document.getElementById(
+                                        "event-name"
+                                    ) as HTMLInputElement
+                                )?.value,
+                                event_code: (
+                                    document.getElementById(
+                                        "event-code"
+                                    ) as HTMLInputElement
+                                )?.value,
+                                event_description: (
+                                    document.getElementById(
+                                        "event-description"
+                                    ) as HTMLTextAreaElement
+                                )?.value,
+                                location: (
+                                    document.getElementById(
+                                        "event-location"
+                                    ) as HTMLInputElement
+                                )?.value,
+                                points_to_reward:
+                                    parseInt(
+                                        (
+                                            document.getElementById(
+                                                "event-points"
+                                            ) as HTMLInputElement
+                                        )?.value
+                                    ) || 0,
+                                start_date: (
+                                    document.getElementById(
+                                        "event-start-date"
+                                    ) as HTMLInputElement
+                                )?.value,
+                                end_date: (
+                                    document.getElementById(
+                                        "event-end-date"
+                                    ) as HTMLInputElement
+                                )?.value,
+                                published: (
+                                    document.getElementById(
+                                        "event-published"
+                                    ) as HTMLInputElement
+                                )?.checked,
+                                has_food: (
+                                    document.getElementById(
+                                        "event-has-food"
+                                    ) as HTMLInputElement
+                                )?.checked,
+                            };
+
+                            // Handle file uploads if any
+                            const fileInput = document.getElementById(
+                                "event-files"
+                            ) as HTMLInputElement;
+                            if (fileInput?.files?.length) {
+                                const formData = new FormData();
+                                for (const file of fileInput.files) {
+                                    formData.append("files", file);
+                                }
+                                // Note: You'll need to implement file upload handling here
+                                // This might require a separate API endpoint or PocketBase method
+                            }
+
+                            // Update event
+                            await update.updateFields(
+                                Collections.EVENTS,
+                                eventId,
+                                updateData
+                            );
+
+                            // Log the action
+                            await logAdminAction(
+                                "update",
+                                "events",
+                                `Updated event ${eventId}`
+                            );
+
+                            // Close modal
+                            modal?.classList.remove("modal-open");
+
+                            // Show success toast
+                            showToast("Event updated successfully", "success");
+
+                            // Refresh data
+                            refreshData();
+                        } catch (error) {
+                            console.error("Error updating event:", error);
+                            showToast("Failed to update event", "error");
+                        }
+                    });
+            };
 
             // Reimbursement review buttons
             document
@@ -893,7 +1611,6 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                         if (!reimbursementId) return;
 
                         try {
-                            // Fetch reimbursement details
                             const { Authentication } = await import(
                                 "../../scripts/pocketbase/Authentication"
                             );
@@ -919,8 +1636,6 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                                 reimbursementId,
                                 { expand: "submitted_by" }
                             );
-
-                            // Open modal with reimbursement details
                             openReimbursementModal(reimbursement);
                         } catch (error) {
                             console.error(
@@ -937,7 +1652,6 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
 
             // Function to open reimbursement modal
             const openReimbursementModal = (reimbursement: any) => {
-                // Create modal if it doesn't exist
                 let modal = document.getElementById("reimbursement-modal");
                 if (!modal) {
                     modal = document.createElement("div");
@@ -946,7 +1660,6 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                     document.body.appendChild(modal);
                 }
 
-                // Format date
                 const purchaseDate = new Date(reimbursement.date_of_purchase);
                 const formattedDate = purchaseDate.toLocaleDateString("en-US", {
                     year: "numeric",
@@ -954,11 +1667,9 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                     day: "numeric",
                 });
 
-                // Get user name
                 const userName =
                     reimbursement.expand?.submitted_by?.name || "Unknown User";
 
-                // Set modal content
                 modal.innerHTML = `
                     <div class="modal-box">
                         <h3 class="font-bold text-lg">Review Reimbursement</h3>
@@ -1038,26 +1749,23 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                     </div>
                 `;
 
-                // Show modal
                 modal.classList.add("modal-open");
 
                 // Add event listener to save button
                 document
                     .getElementById("save-reimbursement")
                     ?.addEventListener("click", async () => {
+                        const reimbursementId = document
+                            .getElementById("save-reimbursement")
+                            ?.getAttribute("data-id");
                         const statusSelect = document.getElementById(
                             "status-select"
                         ) as HTMLSelectElement;
                         const auditNotes = document.getElementById(
                             "audit-notes"
                         ) as HTMLTextAreaElement;
-                        const reimbursementId = (
-                            document.getElementById(
-                                "save-reimbursement"
-                            ) as HTMLElement
-                        ).getAttribute("data-id");
 
-                        if (!statusSelect || !auditNotes || !reimbursementId)
+                        if (!reimbursementId || !statusSelect || !auditNotes)
                             return;
 
                         const newStatus = statusSelect.value;
@@ -1132,15 +1840,6 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                                 "success"
                             );
 
-                            // Mark page for refresh
-                            const refreshMarker = document.createElement("div");
-                            refreshMarker.setAttribute(
-                                "data-refresh-needed",
-                                "true"
-                            );
-                            refreshMarker.style.display = "none";
-                            document.body.appendChild(refreshMarker);
-
                             // Refresh data
                             refreshData();
                         } catch (error) {
@@ -1198,44 +1897,55 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
         };
 
         // Function to show toast notifications
-        const showToast = (
-            message: string,
-            type: "success" | "error" | "info" = "info"
-        ) => {
-            // Create toast container if it doesn't exist
-            let toastContainer = document.getElementById("toast-container");
-            if (!toastContainer) {
-                toastContainer = document.createElement("div");
-                toastContainer.id = "toast-container";
-                toastContainer.className = "toast toast-top toast-end z-50";
-                document.body.appendChild(toastContainer);
-            }
+        const showToast = (() => {
+            let currentToast: HTMLDivElement | null = null;
+            let timeoutId: number | null = null;
 
-            // Create toast element
-            const toast = document.createElement("div");
-            toast.className = `alert ${type === "success" ? "alert-success" : type === "error" ? "alert-error" : "alert-info"} shadow-lg`;
+            return (
+                message: string,
+                type: "success" | "error" | "info" = "info"
+            ) => {
+                // Clear existing toast if present
+                if (currentToast) {
+                    currentToast.remove();
+                    if (timeoutId) clearTimeout(timeoutId);
+                }
 
-            // Set toast content
-            toast.innerHTML = `
-                <div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${type === "success" ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : type === "error" ? "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" : "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"}" />
-                    </svg>
-                    <span>${message}</span>
-                </div>
-            `;
+                // Create toast container if it doesn't exist
+                let toastContainer = document.getElementById("toast-container");
+                if (!toastContainer) {
+                    toastContainer = document.createElement("div");
+                    toastContainer.id = "toast-container";
+                    toastContainer.className = "toast toast-top toast-end z-50";
+                    document.body.appendChild(toastContainer);
+                }
 
-            // Add toast to container
-            toastContainer.appendChild(toast);
+                // Create new toast
+                const toast = document.createElement("div");
+                toast.className = `alert ${type === "success" ? "alert-success" : type === "error" ? "alert-error" : "alert-info"} shadow-lg`;
+                toast.innerHTML = `
+                    <div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${type === "success" ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : type === "error" ? "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" : "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"}" />
+                        </svg>
+                        <span>${message}</span>
+                    </div>
+                `;
 
-            // Remove toast after 3 seconds
-            setTimeout(() => {
-                toast.classList.add("fade-out");
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
-            }, 3000);
-        };
+                // Add toast to container
+                toastContainer.appendChild(toast);
+                currentToast = toast;
+
+                // Remove toast after 3 seconds
+                timeoutId = window.setTimeout(() => {
+                    toast.classList.add("fade-out");
+                    setTimeout(() => {
+                        toast.remove();
+                        currentToast = null;
+                    }, 300);
+                }, 3000);
+            };
+        })();
 
         // Debug function to check stats elements
         const debugStatsElements = () => {
@@ -1293,9 +2003,43 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                 }
             });
 
-        // Refresh data periodically
+        // Add loading state management functions
+        const showLoading = (tableId: string) => {
+            const tableBody = document.querySelector(`#${tableId} table tbody`);
+            if (!tableBody) return;
+
+            const skeletons = tableBody.querySelectorAll(".loading-skeleton");
+            skeletons.forEach((skeleton) =>
+                skeleton.classList.remove("hidden")
+            );
+
+            // Hide actual data rows while loading
+            const dataRows = tableBody.querySelectorAll(
+                "tr:not(.loading-skeleton)"
+            );
+            dataRows.forEach((row) => row.classList.add("hidden"));
+        };
+
+        const hideLoading = (tableId: string) => {
+            const tableBody = document.querySelector(`#${tableId} table tbody`);
+            if (!tableBody) return;
+
+            // Hide skeletons
+            const skeletons = tableBody.querySelectorAll(".loading-skeleton");
+            skeletons.forEach((skeleton) => skeleton.classList.add("hidden"));
+
+            // Show actual data rows
+            const dataRows = tableBody.querySelectorAll(
+                "tr:not(.loading-skeleton)"
+            );
+            dataRows.forEach((row) => row.classList.remove("hidden"));
+        };
+
+        // Modify refreshData to use loading states
         const refreshData = async () => {
             try {
+                console.log("Refreshing dashboard data...");
+
                 const { Authentication } = await import(
                     "../../scripts/pocketbase/Authentication"
                 );
@@ -1314,86 +2058,404 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
                     return;
                 }
 
-                console.log("Refreshing dashboard data...");
+                // Show loading state for all sections
+                showLoading("userSection");
+                showLoading("eventSection");
+                showLoading("financeSection");
 
                 // Update stats
-                const stats = await Promise.all([
-                    get.getList(Collections.USERS, 1, 1),
-                    get.getList(Collections.OFFICERS, 1, 1),
-                    get.getList(Collections.EVENTS, 1, 1),
-                    get.getList(
-                        Collections.EVENTS,
-                        1,
-                        1,
-                        `start_date > "${new Date().toISOString()}" && published = true`
-                    ),
-                    get.getList(Collections.REIMBURSEMENTS, 1, 1),
-                    get.getList(
-                        Collections.REIMBURSEMENTS,
-                        1,
-                        1,
-                        `status = "submitted" || status = "under_review"`
-                    ),
-                ]);
+                console.log("Fetching updated stats...");
 
-                console.log(
-                    "Stats data received:",
-                    stats.map((s) => s.totalItems)
+                // Fetch users count
+                console.log("Fetching users count...");
+                const usersResponse = await get.getList(
+                    Collections.USERS,
+                    1,
+                    1
                 );
+                console.log(`Users count: ${usersResponse.totalItems}`);
+
+                // Fetch officers count
+                console.log("Fetching officers count...");
+                const officersResponse = await get.getList(
+                    Collections.OFFICERS,
+                    1,
+                    1
+                );
+                console.log(`Officers count: ${officersResponse.totalItems}`);
+
+                // Fetch events count
+                console.log("Fetching events count...");
+                const eventsResponse = await get.getList(
+                    Collections.EVENTS,
+                    1,
+                    1
+                );
+                console.log(`Events count: ${eventsResponse.totalItems}`);
+
+                // Fetch upcoming events count
+                console.log("Fetching upcoming events count...");
+                const upcomingEventsResponse = await get.getList(
+                    Collections.EVENTS,
+                    1,
+                    1,
+                    `start_date > "${new Date().toISOString()}" && published = true`
+                );
+                console.log(
+                    `Upcoming events count: ${upcomingEventsResponse.totalItems}`
+                );
+
+                // Fetch reimbursements count
+                console.log("Fetching reimbursements count...");
+                const reimbursementsResponse = await get.getList(
+                    Collections.REIMBURSEMENTS,
+                    1,
+                    1
+                );
+                console.log(
+                    `Reimbursements count: ${reimbursementsResponse.totalItems}`
+                );
+
+                // Fetch pending reimbursements count
+                console.log("Fetching pending reimbursements count...");
+                const pendingReimbursementsResponse = await get.getList(
+                    Collections.REIMBURSEMENTS,
+                    1,
+                    1,
+                    `status = "submitted" || status = "under_review"`
+                );
+                console.log(
+                    `Pending reimbursements count: ${pendingReimbursementsResponse.totalItems}`
+                );
+
+                const stats = [
+                    usersResponse,
+                    officersResponse,
+                    eventsResponse,
+                    upcomingEventsResponse,
+                    reimbursementsResponse,
+                    pendingReimbursementsResponse,
+                ];
 
                 // Update UI with new stats
                 const userCountElement = document.querySelector(
                     ".text-primary.text-3xl"
                 );
-                if (userCountElement)
+                if (userCountElement) {
                     userCountElement.textContent =
                         stats[0].totalItems.toString();
+                    console.log(
+                        `Updated user count display: ${stats[0].totalItems}`
+                    );
+                }
 
                 const officerCountElement = document.querySelector(
                     ".text-secondary.text-3xl"
                 );
-                if (officerCountElement)
+                if (officerCountElement) {
                     officerCountElement.textContent =
                         stats[1].totalItems.toString();
+                    console.log(
+                        `Updated officer count display: ${stats[1].totalItems}`
+                    );
+                }
 
                 const eventCountElement = document.querySelector(
                     ".text-accent.text-3xl"
                 );
-                if (eventCountElement)
+                if (eventCountElement) {
                     eventCountElement.textContent =
                         stats[2].totalItems.toString();
+                    console.log(
+                        `Updated event count display: ${stats[2].totalItems}`
+                    );
+                }
 
                 const upcomingEventsElement = document.querySelector(
                     ".text-success.text-3xl"
                 );
-                if (upcomingEventsElement)
+                if (upcomingEventsElement) {
                     upcomingEventsElement.textContent =
                         stats[3].totalItems.toString();
+                    console.log(
+                        `Updated upcoming events display: ${stats[3].totalItems}`
+                    );
+                }
 
                 const reimbursementCountElement = document.querySelector(
                     ".text-info.text-3xl"
                 );
-                if (reimbursementCountElement)
+                if (reimbursementCountElement) {
                     reimbursementCountElement.textContent =
                         stats[4].totalItems.toString();
+                    console.log(
+                        `Updated reimbursement count display: ${stats[4].totalItems}`
+                    );
+                }
 
                 const pendingReimbursementsElement = document.querySelector(
                     ".text-warning.text-3xl"
                 );
-                if (pendingReimbursementsElement)
+                if (pendingReimbursementsElement) {
                     pendingReimbursementsElement.textContent =
                         stats[5].totalItems.toString();
-
-                // Check if we need to refresh the tables
-                const shouldRefreshTables = document.querySelector(
-                    '[data-refresh-needed="true"]'
-                );
-                if (shouldRefreshTables) {
-                    location.reload();
+                    console.log(
+                        `Updated pending reimbursements display: ${stats[5].totalItems}`
+                    );
                 }
+
+                // Now fetch the actual data for tables
+                console.log("Fetching data for tables...");
+
+                // Fetch and update users table
+                console.log("Fetching users for table...");
+                const usersTableResponse = await get.getList(
+                    Collections.USERS,
+                    1,
+                    50,
+                    "",
+                    "-created"
+                );
+                console.log(
+                    `Fetched ${usersTableResponse.items.length} users for table`
+                );
+                updateUsersTable(usersTableResponse.items);
+                hideLoading("userSection");
+
+                // Fetch and update events table
+                console.log("Fetching events for table...");
+                const eventsTableResponse = await get.getList(
+                    Collections.EVENTS,
+                    1,
+                    50,
+                    "",
+                    "-start_date"
+                );
+                console.log(
+                    `Fetched ${eventsTableResponse.items.length} events for table`
+                );
+                updateEventsTable(eventsTableResponse.items);
+                hideLoading("eventSection");
+
+                // Fetch and update reimbursements table
+                console.log("Fetching reimbursements for table...");
+                const reimbursementsTableResponse = await get.getList(
+                    Collections.REIMBURSEMENTS,
+                    1,
+                    50,
+                    "",
+                    "-created",
+                    { expand: "submitted_by" }
+                );
+                console.log(
+                    `Fetched ${reimbursementsTableResponse.items.length} reimbursements for table`
+                );
+                updateReimbursementsTable(reimbursementsTableResponse.items);
+                hideLoading("financeSection");
+
+                console.log("Dashboard data refresh complete");
             } catch (error) {
                 console.error("Error refreshing dashboard data:", error);
-                throw error; // Re-throw to allow proper error handling by callers
+                // Hide loading states on error
+                hideLoading("userSection");
+                hideLoading("eventSection");
+                hideLoading("financeSection");
+                throw error;
+            }
+        };
+
+        // Function to update users table
+        const updateUsersTable = (users: any[]) => {
+            try {
+                // Local formatDate function
+                const formatLocalDate = (dateString: string) => {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                    });
+                };
+
+                const userTableBody = document.querySelector(
+                    "#userSection table tbody"
+                );
+                if (!userTableBody) {
+                    console.error("User table body not found");
+                    return;
+                }
+
+                // Clear existing rows
+                userTableBody.innerHTML = "";
+
+                if (users.length === 0) {
+                    const emptyRow = document.createElement("tr");
+                    emptyRow.innerHTML = `<td colspan="5" class="text-center">No users found</td>`;
+                    userTableBody.appendChild(emptyRow);
+                    return;
+                }
+
+                // Add new rows
+                users.forEach((user) => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${user.name || "N/A"}</td>
+                        <td>${user.email || "N/A"}</td>
+                        <td>${user.member_id || "Member"}</td>
+                        <td>${user.last_login ? formatLocalDate(user.last_login) : "Never"}</td>
+                        <td>
+                            <div class="flex gap-2">
+                                <button class="btn btn-xs btn-primary" data-user-id="${user.id}">Edit</button>
+                                <button class="btn btn-xs btn-error" data-user-id="${user.id}">Delete</button>
+                            </div>
+                        </td>
+                    `;
+                    userTableBody.appendChild(row);
+                });
+
+                console.log(`Updated users table with ${users.length} rows`);
+
+                // Re-attach event handlers
+                setupActionHandlers();
+            } catch (error) {
+                console.error("Error updating users table:", error);
+            }
+        };
+
+        // Function to update events table
+        const updateEventsTable = (events: any[]) => {
+            try {
+                // Local formatDate function
+                const formatLocalDate = (dateString: string) => {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                    });
+                };
+
+                const eventTableBody = document.querySelector(
+                    "#eventSection table tbody"
+                );
+                if (!eventTableBody) {
+                    console.error("Event table body not found");
+                    return;
+                }
+
+                // Clear existing rows
+                eventTableBody.innerHTML = "";
+
+                if (events.length === 0) {
+                    const emptyRow = document.createElement("tr");
+                    emptyRow.innerHTML = `<td colspan="5" class="text-center">No events found</td>`;
+                    eventTableBody.appendChild(emptyRow);
+                    return;
+                }
+
+                // Add new rows
+                events.forEach((event) => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${event.event_name || "N/A"}</td>
+                        <td>${formatLocalDate(event.start_date)}</td>
+                        <td>${event.location || "N/A"}</td>
+                        <td>
+                            <div class="badge ${event.published ? "badge-success" : "badge-warning"}">
+                                ${event.published ? "Published" : "Draft"}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex gap-2">
+                                <button class="btn btn-xs btn-primary" data-event-id="${event.id}">Edit</button>
+                                <button class="btn btn-xs btn-error" data-event-id="${event.id}">Delete</button>
+                                <button class="btn btn-xs ${event.published ? "btn-warning" : "btn-success"}" 
+                                    data-event-id="${event.id}" 
+                                    data-action="toggle-publish" 
+                                    data-current-state="${event.published ? "published" : "draft"}">
+                                    ${event.published ? "Unpublish" : "Publish"}
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    eventTableBody.appendChild(row);
+                });
+
+                console.log(`Updated events table with ${events.length} rows`);
+
+                // Re-attach event handlers
+                setupActionHandlers();
+            } catch (error) {
+                console.error("Error updating events table:", error);
+            }
+        };
+
+        // Function to update reimbursements table
+        const updateReimbursementsTable = (reimbursements: any[]) => {
+            try {
+                const reimbursementTableBody = document.querySelector(
+                    "#financeSection table tbody"
+                );
+                if (!reimbursementTableBody) {
+                    console.error("Reimbursement table body not found");
+                    return;
+                }
+
+                // Clear existing rows
+                reimbursementTableBody.innerHTML = "";
+
+                if (reimbursements.length === 0) {
+                    const emptyRow = document.createElement("tr");
+                    emptyRow.innerHTML = `<td colspan="5" class="text-center">No reimbursements found</td>`;
+                    reimbursementTableBody.appendChild(emptyRow);
+                    return;
+                }
+
+                // Add new rows
+                reimbursements.forEach((reimbursement) => {
+                    const userName =
+                        reimbursement.expand?.submitted_by?.name ||
+                        "Unknown User";
+
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${reimbursement.title || "N/A"}</td>
+                        <td>$${reimbursement.total_amount.toFixed(2)}</td>
+                        <td>${userName}</td>
+                        <td>
+                            <div class="badge ${
+                                reimbursement.status === "approved"
+                                    ? "badge-success"
+                                    : reimbursement.status === "rejected"
+                                      ? "badge-error"
+                                      : reimbursement.status === "paid"
+                                        ? "badge-info"
+                                        : "badge-warning"
+                            }">
+                                ${reimbursement.status}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex gap-2">
+                                <button class="btn btn-xs btn-primary" data-reimbursement-id="${reimbursement.id}">Review</button>
+                            </div>
+                        </td>
+                    `;
+                    reimbursementTableBody.appendChild(row);
+                });
+
+                console.log(
+                    `Updated reimbursements table with ${reimbursements.length} rows`
+                );
+
+                // Re-attach event handlers
+                setupActionHandlers();
+            } catch (error) {
+                console.error("Error updating reimbursements table:", error);
             }
         };
 
@@ -1402,17 +2464,39 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
             console.error("Error during initial data refresh:", error);
         });
 
+        // Setup action handlers when the page loads
+        setupActionHandlers();
+
         // Refresh every 5 minutes
         setInterval(refreshData, 5 * 60 * 1000);
+
+        // Debug: Check if tab content sections exist
+        console.log("Checking tab content sections:");
+        ["userSection", "eventSection", "financeSection", "logSection"].forEach(
+            (id) => {
+                const section = document.getElementById(id);
+                console.log(`${id}: ${section ? "Found" : "Not found"}`);
+
+                if (section) {
+                    // Check if the section is visible
+                    const isHidden = section.classList.contains("hidden");
+                    const parentElement = section.parentElement;
+                    console.log(
+                        `${id} is ${isHidden ? "hidden" : "visible"}, parent: ${parentElement ? parentElement.id || "unnamed" : "none"}`
+                    );
+                }
+            }
+        );
     });
 </script>
 
 <style>
     .tab-content {
         transition: all 0.3s ease-in-out;
+        display: block;
     }
     .tab-content.hidden {
-        display: none;
+        display: none !important;
     }
 
     .fade-out {
@@ -1425,5 +2509,25 @@ const getUserName = (reimbursement: ExpandedReimbursement) => {
         top: 1rem;
         right: 1rem;
         z-index: 9999;
+    }
+
+    .loading-skeleton {
+        opacity: 0.7;
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 0.6;
+        }
+        50% {
+            opacity: 0.8;
+        }
+        100% {
+            opacity: 0.6;
+        }
+    }
+
+    .animate-pulse {
+        animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 </style>

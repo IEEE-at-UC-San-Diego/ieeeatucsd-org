@@ -2,17 +2,13 @@ import { useEffect, useState } from "react";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { Get } from "../../../scripts/pocketbase/Get";
 import { Collections } from "../../../schemas/pocketbase";
-import type { Log } from "../../../schemas/pocketbase";
+import type { Log, User } from "../../../schemas/pocketbase";
 import { Icon } from "@iconify/react";
 
 // Extend the Log type to include expand property
 interface ExtendedLog extends Log {
     expand?: {
-        user?: {
-            name: string;
-            email: string;
-            id: string;
-        };
+        user?: User;
     };
 }
 
@@ -43,6 +39,8 @@ export default function AdminSystemActivity({
                 return;
             }
 
+            console.log(`Fetching logs from collection: ${Collections.LOGS} with limit: ${limit}`);
+
             // Fetch logs with user expansion
             const logsResponse = await get.getList<ExtendedLog>(
                 Collections.LOGS,
@@ -53,18 +51,40 @@ export default function AdminSystemActivity({
                 { expand: "user" }
             );
 
+            console.log(`Logs fetched: ${logsResponse.items.length} of ${logsResponse.totalItems} total`);
+
+            if (logsResponse.items.length === 0) {
+                console.log("No logs found in the response");
+            } else {
+                console.log("First log:", JSON.stringify(logsResponse.items[0], null, 2));
+            }
+
             setLogs(logsResponse.items);
             setError(null);
         } catch (err) {
             console.error("Error fetching logs:", err);
-            setError("Failed to load system logs");
+            setError(`Failed to load system logs: ${err instanceof Error ? err.message : String(err)}`);
         } finally {
             setLoading(false);
         }
     };
 
+    // Expose the refresh function to the window object
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            (window as any).refreshAdminSystemActivity = fetchLogs;
+        }
+
+        return () => {
+            if (typeof window !== 'undefined') {
+                delete (window as any).refreshAdminSystemActivity;
+            }
+        };
+    }, []);
+
     useEffect(() => {
         // Initial fetch
+        console.log("AdminSystemActivity mounted, fetching logs...");
         fetchLogs();
 
         // Set up auto-refresh if enabled
@@ -165,7 +185,14 @@ export default function AdminSystemActivity({
         return (
             <div className="alert alert-info">
                 <Icon icon="heroicons:information-circle" className="h-5 w-5" />
-                <span>No system logs found</span>
+                <span>No system logs found. This could be because no logs have been created yet or because you don't have permission to view logs.</span>
+                <button
+                    className="btn btn-sm btn-ghost ml-2"
+                    onClick={fetchLogs}
+                >
+                    <Icon icon="heroicons:arrow-path" className="h-4 w-4 mr-1" />
+                    Retry
+                </button>
             </div>
         );
     }
@@ -211,6 +238,17 @@ export default function AdminSystemActivity({
                     <span className="ml-2">Refreshing...</span>
                 </div>
             )}
+
+            <div className="flex justify-end mt-4">
+                <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={fetchLogs}
+                    disabled={loading}
+                >
+                    <Icon icon="heroicons:arrow-path" className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+                    Refresh
+                </button>
+            </div>
         </div>
     );
 } 
