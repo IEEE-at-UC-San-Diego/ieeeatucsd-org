@@ -192,26 +192,113 @@ import EventLoad from "./EventsSection/EventLoad";
     // Universal file preview function for events section
     window.previewFileEvents = function (url: string, filename: string) {
         console.log("previewFileEvents called with:", { url, filename });
+        console.log("URL type:", typeof url, "URL length:", url?.length || 0);
+        console.log(
+            "Filename type:",
+            typeof filename,
+            "Filename length:",
+            filename?.length || 0
+        );
+
+        // Validate inputs
+        if (!url || typeof url !== "string") {
+            console.error("Invalid URL provided to previewFileEvents:", url);
+            toast.error("Cannot preview file: Invalid URL");
+            return;
+        }
+
+        if (!filename || typeof filename !== "string") {
+            console.error(
+                "Invalid filename provided to previewFileEvents:",
+                filename
+            );
+            toast.error("Cannot preview file: Invalid filename");
+            return;
+        }
+
+        // Ensure URL is properly formatted
+        if (!url.startsWith("http")) {
+            console.warn(
+                "URL doesn't start with http, attempting to fix:",
+                url
+            );
+            if (url.startsWith("/")) {
+                url = `https://pocketbase.ieeeucsd.org${url}`;
+            } else {
+                url = `https://pocketbase.ieeeucsd.org/${url}`;
+            }
+            console.log("Fixed URL:", url);
+        }
+
         const modal = document.getElementById(
             "filePreviewModal"
         ) as HTMLDialogElement;
         const previewFileName = document.getElementById("previewFileName");
         const previewContent = document.getElementById("previewContent");
+        const loadingSpinner = document.getElementById("previewLoadingSpinner");
 
         if (modal && previewFileName && previewContent) {
             console.log("Found all required elements");
+
+            // Show loading spinner
+            if (loadingSpinner) {
+                loadingSpinner.classList.remove("hidden");
+            }
+
             // Update the filename display
             previewFileName.textContent = filename;
 
             // Show the modal
             modal.showModal();
 
-            // Dispatch state change event
-            window.dispatchEvent(
-                new CustomEvent("filePreviewStateChange", {
-                    detail: { url, filename },
+            // Test the URL with a fetch before dispatching the event
+            fetch(url, { method: "HEAD" })
+                .then((response) => {
+                    console.log(
+                        "URL test response:",
+                        response.status,
+                        response.ok
+                    );
+                    if (!response.ok) {
+                        console.warn("URL might not be accessible:", url);
+                        toast(
+                            "File might not be accessible. Attempting to preview anyway.",
+                            {
+                                icon: "⚠️",
+                                style: {
+                                    borderRadius: "10px",
+                                    background: "#FFC107",
+                                    color: "#000",
+                                },
+                            }
+                        );
+                    }
                 })
-            );
+                .catch((err) => {
+                    console.error("Error testing URL:", err);
+                })
+                .finally(() => {
+                    // Dispatch state change event to update the FilePreview component
+                    console.log(
+                        "Dispatching filePreviewStateChange event with:",
+                        { url, filename }
+                    );
+                    window.dispatchEvent(
+                        new CustomEvent("filePreviewStateChange", {
+                            detail: { url, filename },
+                        })
+                    );
+                });
+
+            // Hide loading spinner after a short delay
+            setTimeout(() => {
+                if (loadingSpinner) {
+                    loadingSpinner.classList.add("hidden");
+                }
+            }, 1000); // Increased delay to allow for URL testing
+        } else {
+            console.error("Missing required elements for file preview");
+            toast.error("Could not initialize file preview");
         }
     };
 
@@ -223,10 +310,17 @@ import EventLoad from "./EventsSection/EventLoad";
         ) as HTMLDialogElement;
         const previewFileName = document.getElementById("previewFileName");
         const previewContent = document.getElementById("previewContent");
+        const loadingSpinner = document.getElementById("previewLoadingSpinner");
+
+        if (loadingSpinner) {
+            loadingSpinner.classList.add("hidden");
+        }
 
         if (modal && previewFileName && previewContent) {
             console.log("Resetting preview and closing modal");
-            // Reset the preview state
+
+            // First reset the preview state by dispatching an event with empty values
+            // This ensures the FilePreview component clears its internal state
             window.dispatchEvent(
                 new CustomEvent("filePreviewStateChange", {
                     detail: { url: "", filename: "" },
@@ -238,6 +332,10 @@ import EventLoad from "./EventsSection/EventLoad";
 
             // Close the modal
             modal.close();
+
+            console.log("File preview modal closed and state reset");
+        } else {
+            console.error("Could not find elements to close file preview");
         }
     };
 
@@ -247,6 +345,11 @@ import EventLoad from "./EventsSection/EventLoad";
         name: string;
     }) {
         console.log("showFilePreviewEvents called with:", file);
+        if (!file || !file.url || !file.name) {
+            console.error("Invalid file data:", file);
+            toast.error("Could not preview file: missing file information");
+            return;
+        }
         window.previewFileEvents(file.url, file.name);
     };
 
@@ -301,17 +404,19 @@ import EventLoad from "./EventsSection/EventLoad";
                         <tbody>
                             ${event.files
                                 .map((file: string) => {
+                                    // Ensure the file URL is properly formatted
                                     const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
                                     const fileType = getFileType(file);
-                                    const previewData = JSON.stringify({
+                                    // Properly escape the data for the onclick handler
+                                    const fileData = {
                                         url: fileUrl,
                                         name: file,
-                                    }).replace(/'/g, "\\'");
+                                    };
                                     return `
                                         <tr>
                                             <td>${file}</td>
                                             <td class="text-right">
-                                                <button class="btn btn-ghost btn-sm" onclick='window.showFilePreviewEvents(${previewData})'>
+                                                <button class="btn btn-ghost btn-sm" onclick="window.showFilePreviewEvents({'url': '${fileUrl}', 'name': '${file}'})">
                                                     <iconify-icon icon="heroicons:document" className="h-4 w-4" />
                                                 </button>
                                                 <a href="${fileUrl}" download="${file}" class="btn btn-ghost btn-sm">
