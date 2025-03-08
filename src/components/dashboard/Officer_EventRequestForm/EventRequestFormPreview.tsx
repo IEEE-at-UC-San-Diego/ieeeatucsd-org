@@ -70,10 +70,13 @@ export const EventRequestFormPreviewModal: React.FC = () => {
                 position: 'fixed',
                 top: 0,
                 left: 0,
-                width: '100%',
-                height: '100%',
+                width: '100vw',
+                height: '100vh',
                 zIndex: 99999,
-                pointerEvents: isOpen ? 'auto' : 'none'
+                pointerEvents: isOpen ? 'auto' : 'none',
+                overflow: 'auto',
+                margin: 0,
+                padding: 0
             }}
         >
             <EventRequestFormPreview
@@ -454,7 +457,8 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                         width: '100vw',
                         height: '100vh',
                         margin: 0,
-                        padding: 0
+                        padding: 0,
+                        overflow: 'auto'
                     }}
                 >
                     <motion.div
@@ -466,7 +470,9 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                         onClick={(e) => e.stopPropagation()}
                         style={{
                             position: 'relative',
-                            zIndex: 100000
+                            zIndex: 100000,
+                            maxWidth: '90vw',
+                            width: '100%'
                         }}
                     >
                         <div className="sticky top-0 z-10 bg-base-100 px-6 py-4 border-b border-base-300 flex justify-between items-center">
