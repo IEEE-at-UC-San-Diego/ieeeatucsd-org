@@ -4,6 +4,7 @@ import UserProfileSettings from "./SettingsSection/UserProfileSettings";
 import AccountSecuritySettings from "./SettingsSection/AccountSecuritySettings";
 import NotificationSettings from "./SettingsSection/NotificationSettings";
 import DisplaySettings from "./SettingsSection/DisplaySettings";
+import ResumeSettings from "./SettingsSection/ResumeSettings";
 ---
 
 <div id="settings-section" class="">
@@ -28,6 +29,27 @@ import DisplaySettings from "./SettingsSection/DisplaySettings";
             </p>
             <div class="divider"></div>
             <UserProfileSettings client:load />
+        </div>
+    </div>
+
+    <!-- Resume Settings Card -->
+    <div
+        id="resume-management-section"
+        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+    >
+        <div class="card-body">
+            <h3 class="card-title flex items-center gap-3">
+                <div class="badge badge-primary p-3">
+                    <Icon name="heroicons:document-text" class="h-5 w-5" />
+                </div>
+                Resume Management
+            </h3>
+            <p class="text-sm opacity-70 mb-4">
+                Upload and manage your resume for recruiters and career
+                opportunities
+            </p>
+            <div class="divider"></div>
+            <ResumeSettings client:load />
         </div>
     </div>
 

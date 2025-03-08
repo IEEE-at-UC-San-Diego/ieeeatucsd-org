@@ -786,25 +786,27 @@ console.log("Available components:", Object.keys(components)); // Debug log
                     let defaultSection;
                     let defaultButton;
 
+                    // Set default section based on role
+                    // Only sponsors get a different default view
                     if (officerStatus === "sponsor") {
+                        // For sponsors, show the sponsor dashboard
                         defaultSection = document.getElementById(
                             "sponsorDashboardSection"
                         );
                         defaultButton = document.querySelector(
                             '[data-section="sponsorDashboard"]'
                         );
-                    } else if (officerStatus === "administrator") {
-                        defaultSection = document.getElementById(
-                            "adminDashboardSection"
-                        );
-                        defaultButton = document.querySelector(
-                            '[data-section="adminDashboard"]'
-                        );
                     } else {
+                        // For all other users (including administrators), show the profile section
                         defaultSection =
                             document.getElementById("profileSection");
                         defaultButton = document.querySelector(
                             '[data-section="profile"]'
+                        );
+
+                        // Log the default section for debugging
+                        console.log(
+                            `Setting default section to profile for user with role: ${officerStatus}`
                         );
                     }
 

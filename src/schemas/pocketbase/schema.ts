@@ -35,6 +35,7 @@ export interface User extends BaseRecord {
   notification_preferences?: string; // JSON string of notification settings
   display_preferences?: string; // JSON string of display settings (theme, font size, etc.)
   accessibility_settings?: string; // JSON string of accessibility settings (color blind mode, reduced motion)
+  resume?: string; 
 }
 
 /**
