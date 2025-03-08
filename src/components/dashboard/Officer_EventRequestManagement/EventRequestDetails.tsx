@@ -12,14 +12,12 @@ interface ExtendedEventRequest extends SchemaEventRequest {
         email: string;
     };
     invoice_data?: string | any;
-    feedback?: string;
 }
 
 interface EventRequestDetailsProps {
     request: ExtendedEventRequest;
     onClose: () => void;
     onStatusChange: (id: string, status: "submitted" | "pending" | "completed" | "declined") => Promise<void>;
-    onFeedbackChange: (id: string, feedback: string) => Promise<boolean>;
 }
 
 // Separate component for AS Funding tab to isolate any issues
@@ -225,11 +223,8 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
 const EventRequestDetails = ({
     request,
     onClose,
-    onStatusChange,
-    onFeedbackChange
+    onStatusChange
 }: EventRequestDetailsProps): React.ReactNode => {
-    const [feedback, setFeedback] = useState<string>(request.feedback || '');
-    const [isSaving, setIsSaving] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<'details' | 'pr' | 'funding'>('details');
     const [status, setStatus] = useState<"submitted" | "pending" | "completed" | "declined">(request.status);
     const [isStatusChanging, setIsStatusChanging] = useState(false);
@@ -266,22 +261,6 @@ const EventRequestDetails = ({
                 return 'badge-info';
             default:
                 return 'badge-warning';
-        }
-    };
-
-    // Handle saving feedback
-    const handleSaveFeedback = async () => {
-        if (feedback === request.feedback) {
-            toast('No changes to save', { icon: 'ℹ️' });
-            return;
-        }
-
-        setIsSaving(true);
-        const success = await onFeedbackChange(request.id, feedback);
-        setIsSaving(false);
-
-        if (success) {
-            toast.success('Feedback saved successfully');
         }
     };
 
@@ -478,36 +457,6 @@ const EventRequestDetails = ({
                     {activeTab === 'funding' && (
                         <ASFundingTab request={request} />
                     )}
-                </div>
-
-                {/* Feedback section */}
-                <div className="p-4 border-t border-base-300">
-                    <h4 className="text-sm font-medium text-gray-400 mb-2">Feedback for Requester</h4>
-                    <div className="flex flex-col gap-3">
-                        <textarea
-                            className="textarea textarea-bordered w-full"
-                            placeholder="Add feedback or notes for the event requester..."
-                            rows={3}
-                            value={feedback}
-                            onChange={(e) => setFeedback(e.target.value)}
-                        ></textarea>
-                        <div className="flex justify-end">
-                            <button
-                                className="btn btn-primary btn-sm"
-                                onClick={handleSaveFeedback}
-                                disabled={isSaving || feedback === request.feedback}
-                            >
-                                {isSaving ? (
-                                    <>
-                                        <span className="loading loading-spinner loading-xs"></span>
-                                        Saving...
-                                    </>
-                                ) : (
-                                    'Save Feedback'
-                                )}
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </motion.div>
         </div>

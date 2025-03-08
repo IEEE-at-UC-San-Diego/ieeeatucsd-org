@@ -25,7 +25,6 @@ interface ExtendedEventRequest extends SchemaEventRequest {
         [key: string]: any;
     };
     invoice_data?: any;
-    feedback?: string;
     status: "submitted" | "pending" | "completed" | "declined";
 }
 
@@ -173,37 +172,6 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
             console.error('Error updating status:', error);
             toast.error(`Failed to update status for "${eventName}"`);
             throw error; // Re-throw the error to be caught by the caller
-        }
-    };
-
-    // Add feedback to event request
-    const addFeedback = async (id: string, feedback: string) => {
-        try {
-            const update = Update.getInstance();
-            const result = await update.updateField('event_request', id, 'feedback', feedback);
-
-            // Update local state
-            setEventRequests(prev =>
-                prev.map(request =>
-                    request.id === id ? { ...request, feedback } : request
-                )
-            );
-
-            setFilteredRequests(prev =>
-                prev.map(request =>
-                    request.id === id ? { ...request, feedback } : request
-                )
-            );
-
-            // Force sync to update IndexedDB
-            await dataSync.syncCollection<ExtendedEventRequest>(Collections.EVENT_REQUESTS);
-
-            // Remove success toast for saving feedback
-            return true;
-        } catch (error) {
-            console.error('Error saving feedback:', error);
-            toast.error('Failed to save feedback');
-            return false;
         }
     };
 
@@ -616,7 +584,6 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                         request={selectedRequest}
                         onClose={closeModal}
                         onStatusChange={updateEventRequestStatus}
-                        onFeedbackChange={addFeedback}
                     />
                 </AnimatePresence>
             )}
