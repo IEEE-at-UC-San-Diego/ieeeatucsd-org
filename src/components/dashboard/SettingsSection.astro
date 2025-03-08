@@ -52,8 +52,20 @@ import DisplaySettings from "./SettingsSection/DisplaySettings";
 
     <!-- Notification Settings Card -->
     <div
-        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6 relative group"
     >
+        <!-- Coming Soon Overlay -->
+        <div
+            class="absolute inset-0 bg-base-300 bg-opacity-90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 rounded-xl"
+        >
+            <div class="text-center">
+                <h4 class="text-xl font-bold">Coming Soon</h4>
+                <p class="text-sm opacity-70">
+                    Notification settings will be available in a future update
+                </p>
+            </div>
+        </div>
+
         <div class="card-body">
             <h3 class="card-title flex items-center gap-3">
                 <div class="badge badge-primary p-3">
