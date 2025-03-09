@@ -2,8 +2,23 @@ import { useState, useEffect } from 'react';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { SendLog } from '../../../scripts/pocketbase/SendLog';
 import { toast } from 'react-hot-toast';
+import PasswordChangeSettings from './PasswordChangeSettings';
 
-export default function AccountSecuritySettings() {
+interface AccountSecuritySettingsProps {
+    logtoAppId: string;
+    logtoAppSecret: string;
+    logtoEndpoint: string;
+    logtoTokenEndpoint: string;
+    logtoApiEndpoint: string;
+}
+
+export default function AccountSecuritySettings({
+    logtoAppId,
+    logtoAppSecret,
+    logtoEndpoint,
+    logtoTokenEndpoint,
+    logtoApiEndpoint
+}: AccountSecuritySettingsProps) {
     const auth = Authentication.getInstance();
     const logger = SendLog.getInstance();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -126,16 +141,27 @@ export default function AccountSecuritySettings() {
                     </div>
                 </div>
 
+                {/* Password Change Section */}
+                <div>
+                    <h4 className="font-semibold text-lg mb-2">Change Password</h4>
+                    <p className="text-sm opacity-70 mb-4">
+                        Update your account password. For security reasons, you'll need to provide your current password.
+                    </p>
+                    <PasswordChangeSettings
+                        logtoAppId={logtoAppId}
+                        logtoAppSecret={logtoAppSecret}
+                        logtoEndpoint={logtoEndpoint}
+                        logtoTokenEndpoint={logtoTokenEndpoint}
+                        logtoApiEndpoint={logtoApiEndpoint}
+                    />
+                </div>
+
                 {/* Authentication Options */}
                 <div>
                     <h4 className="font-semibold text-lg mb-2">Authentication Options</h4>
                     <p className="text-sm opacity-70 mb-4">
                         IEEE UCSD uses Single Sign-On (SSO) for authentication.
                         Password management is handled through your IEEEUCSD account.
-                    </p>
-
-                    <p className="text-sm text-info p-3 bg-info bg-opacity-10 rounded-lg">
-                        To change your password, please use the "Forgot Password" option on the login page.
                     </p>
                 </div>
 

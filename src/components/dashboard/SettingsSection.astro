@@ -5,120 +5,201 @@ import AccountSecuritySettings from "./SettingsSection/AccountSecuritySettings";
 import NotificationSettings from "./SettingsSection/NotificationSettings";
 import DisplaySettings from "./SettingsSection/DisplaySettings";
 import ResumeSettings from "./SettingsSection/ResumeSettings";
+
+// Import environment variables
+const logtoAppId = import.meta.env.LOGTO_APP_ID;
+const logtoAppSecret = import.meta.env.LOGTO_APP_SECRET;
+const logtoEndpoint = import.meta.env.LOGTO_ENDPOINT;
+const logtoTokenEndpoint = import.meta.env.LOGTO_TOKEN_ENDPOINT;
+const logtoApiEndpoint = import.meta.env.LOGTO_API_ENDPOINT;
+
+// Log environment variables for debugging
+console.log("Environment variables in Astro file:");
+console.log("LOGTO_APP_ID:", logtoAppId);
+console.log("LOGTO_APP_SECRET:", logtoAppSecret);
+console.log("LOGTO_ENDPOINT:", logtoEndpoint);
+console.log("LOGTO_TOKEN_ENDPOINT:", logtoTokenEndpoint);
+console.log("LOGTO_API_ENDPOINT:", logtoApiEndpoint);
+
+// Define fallback values if environment variables are not set
+const safeLogtoAppId = logtoAppId || "missing_app_id";
+const safeLogtoAppSecret = logtoAppSecret || "missing_app_secret";
+const safeLogtoEndpoint = logtoEndpoint || "https://auth.ieeeucsd.org";
+const safeLogtoTokenEndpoint =
+  logtoTokenEndpoint || "https://auth.ieeeucsd.org/oidc/token";
+const safeLogtoApiEndpoint = logtoApiEndpoint || "https://auth.ieeeucsd.org";
 ---
 
 <div id="settings-section" class="">
-    <div class="mb-6">
-        <h2 class="text-2xl font-bold">Settings</h2>
-        <p class="opacity-70">Manage your account settings and preferences</p>
-    </div>
+  <div class="mb-6">
+    <h2 class="text-2xl font-bold">Settings</h2>
+    <p class="opacity-70">Manage your account settings and preferences</p>
+  </div>
 
-    <!-- Profile Settings Card -->
+  <!-- Debug Environment Variables (Only visible in development) -->
+  {
+    import.meta.env.DEV && (
+      <div class="card bg-base-100 shadow-xl border border-warning mb-6 p-4">
+        <h3 class="text-lg font-bold text-warning">
+          Debug Environment Variables
+        </h3>
+        <p class="text-sm mb-2">
+          This section is only visible in development mode
+        </p>
+        <div class="overflow-x-auto">
+          <table class="table table-xs">
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Value</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>LOGTO_APP_ID</td>
+                <td>{logtoAppId ? "********" : "Not set"}</td>
+                <td>{logtoAppId ? "✅" : "❌"}</td>
+              </tr>
+              <tr>
+                <td>LOGTO_APP_SECRET</td>
+                <td>{logtoAppSecret ? "********" : "Not set"}</td>
+                <td>{logtoAppSecret ? "✅" : "❌"}</td>
+              </tr>
+              <tr>
+                <td>LOGTO_ENDPOINT</td>
+                <td>{logtoEndpoint || "Not set"}</td>
+                <td>{logtoEndpoint ? "✅" : "❌"}</td>
+              </tr>
+              <tr>
+                <td>LOGTO_TOKEN_ENDPOINT</td>
+                <td>{logtoTokenEndpoint || "Not set"}</td>
+                <td>{logtoTokenEndpoint ? "✅" : "❌"}</td>
+              </tr>
+              <tr>
+                <td>LOGTO_API_ENDPOINT</td>
+                <td>{logtoApiEndpoint || "Not set"}</td>
+                <td>{logtoApiEndpoint ? "✅" : "❌"}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
+  <!-- Profile Settings Card -->
+  <div
+    class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+  >
+    <div class="card-body">
+      <h3 class="card-title flex items-center gap-3">
+        <div class="badge badge-primary p-3">
+          <Icon name="heroicons:user" class="h-5 w-5" />
+        </div>
+        Profile Information
+      </h3>
+      <p class="text-sm opacity-70 mb-4">
+        Update your personal information and profile details
+      </p>
+      <div class="divider"></div>
+      <UserProfileSettings client:load />
+    </div>
+  </div>
+
+  <!-- Resume Settings Card -->
+  <div
+    id="resume-management-section"
+    class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+  >
+    <div class="card-body">
+      <h3 class="card-title flex items-center gap-3">
+        <div class="badge badge-primary p-3">
+          <Icon name="heroicons:document-text" class="h-5 w-5" />
+        </div>
+        Resume Management
+      </h3>
+      <p class="text-sm opacity-70 mb-4">
+        Upload and manage your resume for recruiters and career opportunities
+      </p>
+      <div class="divider"></div>
+      <ResumeSettings client:load />
+    </div>
+  </div>
+
+  <!-- Account Security Settings Card -->
+  <div
+    class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+  >
+    <div class="card-body">
+      <h3 class="card-title flex items-center gap-3">
+        <div class="badge badge-primary p-3">
+          <Icon name="heroicons:lock-closed" class="h-5 w-5" />
+        </div>
+        Account Security
+      </h3>
+      <p class="text-sm opacity-70 mb-4">
+        Manage your account security settings and authentication options
+      </p>
+      <div class="divider"></div>
+      <AccountSecuritySettings
+        client:load
+        logtoAppId={safeLogtoAppId}
+        logtoAppSecret={safeLogtoAppSecret}
+        logtoEndpoint={safeLogtoEndpoint}
+        logtoTokenEndpoint={safeLogtoTokenEndpoint}
+        logtoApiEndpoint={safeLogtoApiEndpoint}
+      />
+    </div>
+  </div>
+
+  <!-- Notification Settings Card -->
+  <div
+    class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6 relative group"
+  >
+    <!-- Coming Soon Overlay -->
     <div
-        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+      class="absolute inset-0 bg-base-300 bg-opacity-90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 rounded-xl"
     >
-        <div class="card-body">
-            <h3 class="card-title flex items-center gap-3">
-                <div class="badge badge-primary p-3">
-                    <Icon name="heroicons:user" class="h-5 w-5" />
-                </div>
-                Profile Information
-            </h3>
-            <p class="text-sm opacity-70 mb-4">
-                Update your personal information and profile details
-            </p>
-            <div class="divider"></div>
-            <UserProfileSettings client:load />
-        </div>
+      <div class="text-center">
+        <h4 class="text-xl font-bold">Coming Soon</h4>
+        <p class="text-sm opacity-70">
+          Notification settings will be available in a future update
+        </p>
+      </div>
     </div>
 
-    <!-- Resume Settings Card -->
-    <div
-        id="resume-management-section"
-        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
-    >
-        <div class="card-body">
-            <h3 class="card-title flex items-center gap-3">
-                <div class="badge badge-primary p-3">
-                    <Icon name="heroicons:document-text" class="h-5 w-5" />
-                </div>
-                Resume Management
-            </h3>
-            <p class="text-sm opacity-70 mb-4">
-                Upload and manage your resume for recruiters and career
-                opportunities
-            </p>
-            <div class="divider"></div>
-            <ResumeSettings client:load />
+    <div class="card-body">
+      <h3 class="card-title flex items-center gap-3">
+        <div class="badge badge-primary p-3">
+          <Icon name="heroicons:bell" class="h-5 w-5" />
         </div>
+        Notification Preferences
+      </h3>
+      <p class="text-sm opacity-70 mb-4">
+        Customize how and when you receive notifications
+      </p>
+      <div class="divider"></div>
+      <NotificationSettings client:load />
     </div>
+  </div>
 
-    <!-- Account Security Settings Card -->
-    <div
-        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
-    >
-        <div class="card-body">
-            <h3 class="card-title flex items-center gap-3">
-                <div class="badge badge-primary p-3">
-                    <Icon name="heroicons:lock-closed" class="h-5 w-5" />
-                </div>
-                Account Security
-            </h3>
-            <p class="text-sm opacity-70 mb-4">
-                Manage your account security settings and authentication options
-            </p>
-            <div class="divider"></div>
-            <AccountSecuritySettings client:load />
+  <!-- Display Settings Card -->
+  <div
+    class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
+  >
+    <div class="card-body">
+      <h3 class="card-title flex items-center gap-3">
+        <div class="badge badge-primary p-3">
+          <Icon name="heroicons:computer-desktop" class="h-5 w-5" />
         </div>
+        Display Settings
+      </h3>
+      <p class="text-sm opacity-70 mb-4">
+        Customize your dashboard appearance and display preferences
+      </p>
+      <div class="divider"></div>
+      <DisplaySettings client:load />
     </div>
-
-    <!-- Notification Settings Card -->
-    <div
-        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6 relative group"
-    >
-        <!-- Coming Soon Overlay -->
-        <div
-            class="absolute inset-0 bg-base-300 bg-opacity-90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 rounded-xl"
-        >
-            <div class="text-center">
-                <h4 class="text-xl font-bold">Coming Soon</h4>
-                <p class="text-sm opacity-70">
-                    Notification settings will be available in a future update
-                </p>
-            </div>
-        </div>
-
-        <div class="card-body">
-            <h3 class="card-title flex items-center gap-3">
-                <div class="badge badge-primary p-3">
-                    <Icon name="heroicons:bell" class="h-5 w-5" />
-                </div>
-                Notification Preferences
-            </h3>
-            <p class="text-sm opacity-70 mb-4">
-                Customize how and when you receive notifications
-            </p>
-            <div class="divider"></div>
-            <NotificationSettings client:load />
-        </div>
-    </div>
-
-    <!-- Display Settings Card -->
-    <div
-        class="card bg-base-100 shadow-xl border border-base-200 hover:border-primary transition-all duration-300 hover:-translate-y-1 transform"
-    >
-        <div class="card-body">
-            <h3 class="card-title flex items-center gap-3">
-                <div class="badge badge-primary p-3">
-                    <Icon name="heroicons:computer-desktop" class="h-5 w-5" />
-                </div>
-                Display Settings
-            </h3>
-            <p class="text-sm opacity-70 mb-4">
-                Customize your dashboard appearance and display preferences
-            </p>
-            <div class="divider"></div>
-            <DisplaySettings client:load />
-        </div>
-    </div>
+  </div>
 </div>
