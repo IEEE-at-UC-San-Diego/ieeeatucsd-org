@@ -128,6 +128,13 @@ export class Authentication {
   }
 
   /**
+   * Get the current auth token
+   */
+  public getAuthToken(): string | null {
+    return this.pb.authStore.token;
+  }
+
+  /**
    * Subscribe to auth state changes
    * @param callback Function to call when auth state changes
    */

@@ -19,7 +19,7 @@ const safeLogtoAppSecret = logtoAppSecret || "missing_app_secret";
 const safeLogtoEndpoint = logtoEndpoint || "https://auth.ieeeucsd.org";
 const safeLogtoTokenEndpoint =
   logtoTokenEndpoint || "https://auth.ieeeucsd.org/oidc/token";
-const safeLogtoApiEndpoint = logtoApiEndpoint || "https://auth.ieeeucsd.org";
+const safeLogtoApiEndpoint = logtoApiEndpoint || "";
 ---
 
 <div id="settings-section" class="">
@@ -95,7 +95,7 @@ const safeLogtoApiEndpoint = logtoApiEndpoint || "https://auth.ieeeucsd.org";
         Update your personal information and profile details
       </p>
       <div class="divider"></div>
-      <UserProfileSettings client:load />
+      <UserProfileSettings client:load logtoApiEndpoint={logtoApiEndpoint} />
     </div>
   </div>
 

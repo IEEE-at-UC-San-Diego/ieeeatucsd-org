@@ -5,21 +5,35 @@ import { Collections, type User } from '../../../schemas/pocketbase/schema';
 import allMajors from '../../../data/allUCSDMajors.txt?raw';
 import { toast } from 'react-hot-toast';
 
-export default function UserProfileSettings() {
+interface UserProfileSettingsProps {
+    logtoApiEndpoint?: string;
+}
+
+export default function UserProfileSettings({
+    logtoApiEndpoint: propLogtoApiEndpoint
+}: UserProfileSettingsProps) {
     const auth = Authentication.getInstance();
     const update = Update.getInstance();
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [logtoUserId, setLogtoUserId] = useState('');
     const [formData, setFormData] = useState({
         name: '',
         email: '',
+        username: '',
         major: '',
         graduation_year: '',
         zelle_information: '',
         pid: '',
         member_id: ''
     });
+
+    // Access environment variables directly
+    const envLogtoApiEndpoint = import.meta.env.LOGTO_API_ENDPOINT;
+
+    // Use environment variables or props (fallback)
+    const logtoApiEndpoint = envLogtoApiEndpoint || propLogtoApiEndpoint;
 
     // Parse the majors list from the text file and sort alphabetically
     const majorsList = allMajors
@@ -31,17 +45,64 @@ export default function UserProfileSettings() {
         const loadUserData = async () => {
             try {
                 const currentUser = auth.getCurrentUser();
-                if (currentUser) {
+                if (!currentUser) {
+                    throw new Error('User not authenticated');
+                }
+
+                // Get the Logto user ID from PocketBase's external auth collection
+                const pb = auth.getPocketBase();
+                try {
+                    const externalAuthRecord = await pb.collection('_externalAuths').getFirstListItem(`recordRef="${currentUser.id}" && provider="oidc"`);
+                    const logtoId = externalAuthRecord.providerId;
+                    if (!logtoId) {
+                        throw new Error('No Logto ID found in external auth record');
+                    }
+                    setLogtoUserId(logtoId);
+
+                    // Fetch user data from Logto through our server-side API
+                    const logtoResponse = await fetch('/api/get-logto-user', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            userId: logtoId,
+                            logtoApiEndpoint: logtoApiEndpoint
+                        })
+                    });
+
+                    if (!logtoResponse.ok) {
+                        throw new Error('Failed to fetch Logto user data');
+                    }
+
+                    const logtoUser = await logtoResponse.json();
+                    // Extract username from Logto data or email if not set
+                    const defaultUsername = logtoUser.data?.username || currentUser.email?.split('@')[0] || '';
+
                     setUser(currentUser);
                     setFormData({
                         name: currentUser.name || '',
                         email: currentUser.email || '',
+                        username: defaultUsername,
                         major: currentUser.major || '',
                         graduation_year: currentUser.graduation_year?.toString() || '',
                         zelle_information: currentUser.zelle_information || '',
                         pid: currentUser.pid || '',
                         member_id: currentUser.member_id || ''
                     });
+
+                    // If username is blank in Logto, update it
+                    if (!logtoUser.data?.username && currentUser.email) {
+                        try {
+                            const emailUsername = currentUser.email.split('@')[0];
+                            await updateLogtoUser(logtoId, emailUsername);
+                        } catch (error) {
+                            console.error('Error setting default username:', error);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching external auth record:', error);
+                    toast.error('Could not determine your user ID. Please try again later or contact support.');
                 }
             } catch (error) {
                 console.error('Error loading user data:', error);
@@ -52,7 +113,54 @@ export default function UserProfileSettings() {
         };
 
         loadUserData();
-    }, []);
+    }, [logtoApiEndpoint]);
+
+    const updateLogtoUser = async (userId: string, username: string) => {
+        try {
+            // First get the current user data from Logto through our server-side API
+            const getCurrentResponse = await fetch('/api/get-logto-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId,
+                    logtoApiEndpoint
+                })
+            });
+
+            if (!getCurrentResponse.ok) {
+                throw new Error('Failed to fetch current Logto user data');
+            }
+
+            const currentLogtoUser = await getCurrentResponse.json();
+
+            // Now update the user with new username through our server-side API
+            const response = await fetch('/api/update-logto-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId,
+                    username,
+                    logtoApiEndpoint,
+                    profile: {
+                        ...currentLogtoUser.data?.profile,
+                        preferredUsername: username
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to update Logto username');
+            }
+        } catch (error) {
+            console.error('Error updating Logto username:', error);
+            throw error;
+        }
+    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -68,6 +176,12 @@ export default function UserProfileSettings() {
 
         try {
             if (!user) throw new Error('User not authenticated');
+            if (!logtoUserId) throw new Error('Could not determine your user ID');
+
+            // Update username in Logto if changed
+            if (formData.username !== user.username) {
+                await updateLogtoUser(logtoUserId, formData.username);
+            }
 
             const updateData: Partial<User> = {
                 name: formData.name,
@@ -127,6 +241,22 @@ export default function UserProfileSettings() {
                         value={formData.name}
                         onChange={handleInputChange}
                         className="input input-bordered w-full"
+                        required
+                    />
+                </div>
+
+                <div className="form-control">
+                    <label className="label">
+                        <span className="label-text">Username</span>
+                    </label>
+                    <input
+                        type="text"
+                        name="username"
+                        value={formData.username}
+                        onChange={handleInputChange}
+                        className="input input-bordered w-full"
+                        pattern="^[A-Z_a-z]\w*$"
+                        title="Username must start with a letter or underscore and can contain only letters, numbers, and underscores"
                         required
                     />
                 </div>
