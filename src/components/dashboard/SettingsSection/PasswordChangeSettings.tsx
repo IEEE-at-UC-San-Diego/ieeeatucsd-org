@@ -32,11 +32,11 @@ export default function PasswordChangeSettings({
     const [debugInfo, setDebugInfo] = useState<any>(null);
 
     // Access environment variables directly
-    const envLogtoAppId = import.meta.env.PUBLIC_LOGTO_APP_ID;
-    const envLogtoAppSecret = import.meta.env.PUBLIC_LOGTO_APP_SECRET;
-    const envLogtoEndpoint = import.meta.env.PUBLIC_LOGTO_ENDPOINT;
-    const envLogtoTokenEndpoint = import.meta.env.PUBLIC_LOGTO_TOKEN_ENDPOINT;
-    const envLogtoApiEndpoint = import.meta.env.PUBLIC_LOGTO_API_ENDPOINT;
+    const envLogtoAppId = import.meta.env.LOGTO_APP_ID;
+    const envLogtoAppSecret = import.meta.env.LOGTO_APP_SECRET;
+    const envLogtoEndpoint = import.meta.env.LOGTO_ENDPOINT;
+    const envLogtoTokenEndpoint = import.meta.env.LOGTO_TOKEN_ENDPOINT;
+    const envLogtoApiEndpoint = import.meta.env.LOGTO_API_ENDPOINT;
 
     // Use environment variables or props (fallback)
     const logtoAppId = envLogtoAppId || propLogtoAppId;
@@ -53,11 +53,11 @@ export default function PasswordChangeSettings({
         console.log("Props - logtoEndpoint:", propLogtoEndpoint);
         console.log("Props - logtoTokenEndpoint:", propLogtoTokenEndpoint);
         console.log("Props - logtoApiEndpoint:", propLogtoApiEndpoint);
-        console.log("Env - PUBLIC_LOGTO_APP_ID:", envLogtoAppId);
-        console.log("Env - PUBLIC_LOGTO_APP_SECRET:", envLogtoAppSecret);
-        console.log("Env - PUBLIC_LOGTO_ENDPOINT:", envLogtoEndpoint);
-        console.log("Env - PUBLIC_LOGTO_TOKEN_ENDPOINT:", envLogtoTokenEndpoint);
-        console.log("Env - PUBLIC_LOGTO_API_ENDPOINT:", envLogtoApiEndpoint);
+        console.log("Env - LOGTO_APP_ID:", envLogtoAppId);
+        console.log("Env - LOGTO_APP_SECRET:", envLogtoAppSecret);
+        console.log("Env - LOGTO_ENDPOINT:", envLogtoEndpoint);
+        console.log("Env - LOGTO_TOKEN_ENDPOINT:", envLogtoTokenEndpoint);
+        console.log("Env - LOGTO_API_ENDPOINT:", envLogtoApiEndpoint);
         console.log("Using - logtoAppId:", logtoAppId);
         console.log("Using - logtoAppSecret:", logtoAppSecret);
         console.log("Using - logtoEndpoint:", logtoEndpoint);
@@ -328,6 +328,7 @@ export default function PasswordChangeSettings({
                 // Prepare request data with explicit values (not relying on variable references that might be undefined)
                 const requestData = {
                     userId: logtoUserId,
+                    currentPassword: formData.currentPassword,
                     newPassword: formData.newPassword,
                     logtoAppId: logtoAppId || "",
                     logtoAppSecret: logtoAppSecret || "",
@@ -337,6 +338,7 @@ export default function PasswordChangeSettings({
 
                 console.log("Request data:", {
                     ...requestData,
+                    currentPassword: "[REDACTED]",
                     newPassword: "[REDACTED]",
                     logtoAppSecret: "[REDACTED]"
                 });
@@ -471,10 +473,10 @@ export default function PasswordChangeSettings({
                                 console.log("Debug Info:");
                                 console.log("- logtoUserId:", logtoUserId);
                                 console.log("- Environment Variables:");
-                                console.log("  - PUBLIC_LOGTO_APP_ID:", import.meta.env.PUBLIC_LOGTO_APP_ID);
-                                console.log("  - PUBLIC_LOGTO_ENDPOINT:", import.meta.env.PUBLIC_LOGTO_ENDPOINT);
-                                console.log("  - PUBLIC_LOGTO_TOKEN_ENDPOINT:", import.meta.env.PUBLIC_LOGTO_TOKEN_ENDPOINT);
-                                console.log("  - PUBLIC_LOGTO_API_ENDPOINT:", import.meta.env.PUBLIC_LOGTO_API_ENDPOINT);
+                                console.log("  - LOGTO_APP_ID:", import.meta.env.LOGTO_APP_ID);
+                                console.log("  - LOGTO_ENDPOINT:", import.meta.env.LOGTO_ENDPOINT);
+                                console.log("  - LOGTO_TOKEN_ENDPOINT:", import.meta.env.LOGTO_TOKEN_ENDPOINT);
+                                console.log("  - LOGTO_API_ENDPOINT:", import.meta.env.LOGTO_API_ENDPOINT);
 
                                 toast.success("Debug info logged to console");
                             }}

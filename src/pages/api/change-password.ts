@@ -51,6 +51,54 @@ async function getLogtoAccessToken(
   }
 }
 
+// Helper function to verify user's current password
+async function verifyUserPassword(
+  logtoApiEndpoint: string,
+  userId: string,
+  currentPassword: string,
+  accessToken: string,
+): Promise<boolean> {
+  try {
+    console.log("Verifying current password");
+
+    const response = await fetch(
+      `${logtoApiEndpoint}/api/users/${userId}/password/verify`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ password: currentPassword }),
+      },
+    );
+
+    // 204 means password matches, 422 means it doesn't match
+    if (response.status === 204) {
+      console.log("Current password verified successfully");
+      return true;
+    }
+
+    if (response.status === 422) {
+      console.error(
+        "Current password verification failed: Password does not match",
+      );
+      return false;
+    }
+
+    const errorText = await response.text();
+    console.error("Password verification error:", {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText,
+    });
+    return false;
+  } catch (error) {
+    console.error("Error verifying password:", error);
+    return false;
+  }
+}
+
 export const POST: APIRoute = async ({ request }) => {
   try {
     console.log("Received change password request");
@@ -81,6 +129,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Extract required parameters
     const {
       userId,
+      currentPassword,
       newPassword,
       logtoAppId,
       logtoAppSecret,
@@ -91,6 +140,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Validate required parameters
     const missingParams = [];
     if (!userId) missingParams.push("userId");
+    if (!currentPassword) missingParams.push("currentPassword");
     if (!newPassword) missingParams.push("newPassword");
     if (!logtoAppId) missingParams.push("logtoAppId");
     if (!logtoAppSecret) missingParams.push("logtoAppSecret");
@@ -125,6 +175,27 @@ export const POST: APIRoute = async ({ request }) => {
         }),
         {
           status: 500,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Verify current password before proceeding
+    const isPasswordValid = await verifyUserPassword(
+      logtoApiEndpoint,
+      userId,
+      currentPassword,
+      accessToken,
+    );
+
+    if (!isPasswordValid) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Current password is incorrect",
+        }),
+        {
+          status: 400,
           headers: { "Content-Type": "application/json" },
         },
       );
