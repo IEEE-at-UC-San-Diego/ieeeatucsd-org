@@ -693,7 +693,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
     }, []);
 
     const handleModalClose = useCallback(() => {
-        if (hasUnsavedChanges) {
+        if (hasUnsavedChanges && !isSubmitting) {
             const confirmed = window.confirm('You have unsaved changes. Are you sure you want to close?');
             if (!confirmed) return;
         }
@@ -721,7 +721,34 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
 
         const modal = document.getElementById("editEventModal") as HTMLDialogElement;
         if (modal) modal.close();
-    }, [hasUnsavedChanges]);
+    }, [hasUnsavedChanges, isSubmitting]);
+
+    // Function to close modal after saving (without confirmation)
+    const closeModalAfterSave = useCallback(() => {
+        setEvent({
+            id: "",
+            created: "",
+            updated: "",
+            event_name: "",
+            event_description: "",
+            event_code: "",
+            location: "",
+            files: [],
+            points_to_reward: 0,
+            start_date: "",
+            end_date: "",
+            published: false,
+            has_food: false
+        });
+        setSelectedFiles(new Map());
+        setFilesToDelete(new Set());
+        setShowPreview(false);
+        setPreviewUrl("");
+        setPreviewFilename("");
+
+        const modal = document.getElementById("editEventModal") as HTMLDialogElement;
+        if (modal) modal.close();
+    }, []);
 
     const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -834,8 +861,11 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 // Call the onEventSaved callback if provided
                 if (onEventSaved) onEventSaved();
 
+                // Reset unsaved changes flag before closing
+                setHasUnsavedChanges(false);
+
                 // Close the modal
-                handleModalClose();
+                closeModalAfterSave();
 
             } else {
                 // We're creating a new event
@@ -875,8 +905,11 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 // Call the onEventSaved callback if provided
                 if (onEventSaved) onEventSaved();
 
+                // Reset unsaved changes flag before closing
+                setHasUnsavedChanges(false);
+
                 // Close the modal
-                handleModalClose();
+                closeModalAfterSave();
             }
 
             // Refresh events list if available
@@ -889,7 +922,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             setIsSubmitting(false);
             window.hideLoading?.();
         }
-    }, [event, selectedFiles, filesToDelete, services, onEventSaved, isSubmitting, handleModalClose]);
+    }, [event, selectedFiles, filesToDelete, services, onEventSaved, isSubmitting, closeModalAfterSave]);
 
 
     return (
