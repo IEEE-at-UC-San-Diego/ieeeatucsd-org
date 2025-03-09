@@ -2,9 +2,23 @@ import type { APIRoute } from "astro";
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const { userId, name, email } = await request.json();
+    console.log("Email creation request received");
+
+    const requestBody = await request.json();
+    console.log(
+      "Request body:",
+      JSON.stringify({
+        userId: requestBody.userId,
+        name: requestBody.name,
+        email: requestBody.email,
+        passwordProvided: !!requestBody.password,
+      }),
+    );
+
+    const { userId, name, email, password } = requestBody;
 
     if (!userId || !name || !email) {
+      console.log("Missing required parameters");
       return new Response(
         JSON.stringify({
           success: false,
@@ -21,12 +35,15 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Extract username from email (everything before the @ symbol)
     const emailUsername = email.split("@")[0].toLowerCase();
+    console.log(`Email username extracted: ${emailUsername}`);
 
     // Remove any special characters that might cause issues
     const cleanUsername = emailUsername.replace(/[^a-z0-9]/g, "");
+    console.log(`Cleaned username: ${cleanUsername}`);
 
-    // Generate a secure random password
-    const password = generateSecurePassword();
+    // Use provided password or generate a secure random one if not provided
+    const newPassword = password || generateSecurePassword();
+    console.log(`Using ${password ? "user-provided" : "generated"} password`);
 
     // MXRoute DirectAdmin API credentials from environment variables
     const loginKey = import.meta.env.MXROUTE_LOGIN_KEY;
@@ -36,12 +53,20 @@ export const POST: APIRoute = async ({ request }) => {
     const emailOutboundLimit = import.meta.env.MXROUTE_EMAIL_OUTBOUND_LIMIT;
     const emailDomain = import.meta.env.MXROUTE_EMAIL_DOMAIN;
 
+    console.log(`Environment variables: 
+      loginKey: ${loginKey ? "Set" : "Not set"}
+      serverLogin: ${serverLogin ? "Set" : "Not set"}
+      serverUrl: ${serverUrl ? "Set" : "Not set"}
+      emailQuota: ${emailQuota || "Not set"}
+      emailOutboundLimit: ${emailOutboundLimit || "Not set"}
+      emailDomain: ${emailDomain || "Not set"}
+    `);
+
     if (!loginKey || !serverLogin || !serverUrl || !emailDomain) {
       throw new Error("Missing MXRoute configuration");
     }
 
     // DirectAdmin API endpoint for creating email accounts
-    // According to the documentation: https://docs.directadmin.com/developer/api/legacy-api.html
     let baseUrl = serverUrl;
 
     // If the URL contains a specific command, extract just the base URL
@@ -65,17 +90,22 @@ export const POST: APIRoute = async ({ request }) => {
     formData.append("action", "create");
     formData.append("domain", emailDomain);
     formData.append("user", cleanUsername); // DirectAdmin uses 'user' for POP accounts
-    formData.append("passwd", password);
-    formData.append("passwd2", password);
+    formData.append("passwd", newPassword);
+    formData.append("passwd2", newPassword);
     formData.append("quota", emailQuota || "200");
     formData.append("limit", emailOutboundLimit || "9600");
 
-    // Log the form data being sent
+    // Log the form data being sent (without showing the actual password)
     console.log("Form data:");
-    formData.forEach((value, key) => {
-      console.log(`  ${key}: ${value}`);
-    });
+    console.log(`  action: create`);
+    console.log(`  domain: ${emailDomain}`);
+    console.log(`  user: ${cleanUsername}`);
+    console.log(`  passwd: ********`);
+    console.log(`  passwd2: ********`);
+    console.log(`  quota: ${emailQuota || "200"}`);
+    console.log(`  limit: ${emailOutboundLimit || "9600"}`);
 
+    console.log("Sending request to DirectAdmin API...");
     const response = await fetch(emailApiUrl, {
       method: "POST",
       headers: {
@@ -86,6 +116,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     const responseText = await response.text();
+    console.log(`DirectAdmin response status: ${response.status}`);
     console.log(`DirectAdmin response: ${responseText}`);
 
     // DirectAdmin API returns "error=1" in the response text for errors
@@ -126,14 +157,19 @@ export const POST: APIRoute = async ({ request }) => {
       throw new Error(errorMessage);
     }
 
-    // Send notification email to the user with their new email credentials
-    await sendCredentialsEmail(
-      email,
-      `${cleanUsername}@${emailDomain}`,
-      password,
-    );
+    console.log("Email account created successfully");
 
-    // Send notification to webmaster
+    // Only send notification email if we generated a random password
+    if (!password) {
+      console.log("Sending credentials email to user");
+      await sendCredentialsEmail(
+        email,
+        `${cleanUsername}@${emailDomain}`,
+        newPassword,
+      );
+    }
+
+    console.log("Sending notification to webmaster");
     await sendWebmasterNotification(
       userId,
       name,
@@ -146,8 +182,9 @@ export const POST: APIRoute = async ({ request }) => {
         success: true,
         data: {
           ieeeEmail: `${cleanUsername}@${emailDomain}`,
-          message:
-            "Email account created successfully. Check your email for login details.",
+          message: password
+            ? "Email account created successfully with your chosen password."
+            : "Email account created successfully. Check your email for login details.",
         },
       }),
       {
@@ -222,6 +259,36 @@ async function sendCredentialsEmail(
     You can access your email through:
     - Webmail: https://heracles.mxrouting.net:2096/
     - IMAP/SMTP settings can be found at: https://mxroute.com/setup/
+    
+    ===== Setting Up Your IEEE Email in Gmail =====
+    
+    --- First Step: Set Up Sending From Your IEEE Email ---
+    1. Go to settings (gear icon) → Accounts and Import
+    2. In the section that says "Send mail as:", select "Reply from the same address the message was sent to"
+    3. In that same section, select "Add another email address"
+    4. For the Name, put your actual name or department name (e.g. IEEEUCSD Webmaster)
+    5. For the Email address, put ${ieeeEmail}
+    6. Make sure the "Treat as an alias" button is selected. Go to the next step
+    7. For the SMTP Server, put mail.ieeeucsd.org
+    8. For the username, put in your FULL ieeeucsd email address (${ieeeEmail})
+    9. For the password, put in the email's password (provided above)
+    10. For the port, put in 587
+    11. Make sure you select "Secured connection with TLS"
+    12. Go back to mail.ieeeucsd.org and verify the email that Google has sent you
+    
+    --- Second Step: Set Up Receiving Your IEEE Email ---
+    1. Go to settings (gear icon) → Accounts and Import
+    2. In the section that says "Check mail from other accounts:", select "Add a mail account"
+    3. Put in ${ieeeEmail} and hit next
+    4. Make sure "Import emails from my other account (POP3)" is selected, then hit next
+    5. For the username, put in ${ieeeEmail}
+    6. For the password, put in your password (provided above)
+    7. For the POP Server, put in mail.ieeeucsd.org
+    8. For the Port, put in 995
+    9. Select "Leave a copy of retrieved message on the server"
+    10. Select "Always use a secure connection (SSL) when retrieving mail"
+    11. Select "Label incoming messages"
+    12. Then hit "Add Account"
     
     Please change your password after your first login.
     
