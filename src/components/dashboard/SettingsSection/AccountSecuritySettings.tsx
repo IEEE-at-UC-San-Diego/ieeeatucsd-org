@@ -147,6 +147,15 @@ export default function AccountSecuritySettings({
                     <p className="text-sm opacity-70 mb-4">
                         Update your account password. For security reasons, you'll need to provide your current password.
                     </p>
+                    <div className="rounded-md bg-yellow-600 p-4 mb-4">
+                        <div className="flex">
+                            <div className="ml-3">
+                                <p className="text-sm text-white">
+                                    Please note: This will only update your password for the IEEE UCSD SSO. This will not update the password for your @ieeeucsd.org mail account.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                     <PasswordChangeSettings
                         logtoAppId={logtoAppId}
                         logtoAppSecret={logtoAppSecret}
