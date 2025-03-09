@@ -76,26 +76,26 @@ const Calendar = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
 
     const loadGapiAndListEvents = async () => {
       try {
-        console.log("Starting to load events...");
+        // console.log("Starting to load events...");
 
         if (typeof window.gapi === "undefined") {
-          console.log("Loading GAPI script...");
+          // console.log("Loading GAPI script...");
           await new Promise((resolve, reject) => {
             const script = document.createElement("script");
             script.src = "https://apis.google.com/js/api.js";
             document.body.appendChild(script);
             script.onload = () => {
-              console.log("GAPI script loaded");
+              // console.log("GAPI script loaded");
               window.gapi.load("client", resolve);
             };
             script.onerror = () => {
-              console.error("Failed to load GAPI script");
+              // console.error("Failed to load GAPI script");
               reject(new Error("Failed to load the Google API script."));
             };
           });
         }
 
-        console.log("Initializing GAPI client...");
+        // console.log("Initializing GAPI client...");
         await window.gapi.client.init({
           apiKey: CALENDAR_API_KEY,
           discoveryDocs: [
@@ -115,7 +115,7 @@ const Calendar = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
           0,
         );
 
-        console.log("Fetching events...");
+        // console.log("Fetching events...");
         const response = await window.gapi.client.calendar.events.list({
           calendarId: calendarId,
           timeZone: userTimeZone,
@@ -125,13 +125,13 @@ const Calendar = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
           orderBy: "startTime",
         });
 
-        console.log("Response received:", response);
+        // console.log("Response received:", response);
 
         if (response.result.items) {
           setEvents(response.result.items);
         }
       } catch (error) {
-        console.error("Detailed Error: ", error);
+        // console.error("Detailed Error: ", error);
         setError(error.message || "Failed to load events");
       } finally {
         setLoading(false);

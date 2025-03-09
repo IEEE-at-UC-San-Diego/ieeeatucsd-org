@@ -287,7 +287,7 @@ export default function Attendees() {
         const fetchEventData = async () => {
             if (!eventId || !auth.isAuthenticated()) {
                 if (!auth.isAuthenticated()) {
-                    console.log('User not authenticated');
+                    // console.log('User not authenticated');
                     setError('Authentication required');
                 }
                 return;

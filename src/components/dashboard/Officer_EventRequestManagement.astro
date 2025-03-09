@@ -37,7 +37,7 @@ try {
   // Don't check authentication here - let the client component handle it
   // The server-side check is causing issues when the token is valid client-side but not server-side
 
-  console.log("Fetching event requests in Astro component...");
+  // console.log("Fetching event requests in Astro component...");
   // Expand the requested_user field to get user details
   allEventRequests = await get
     .getAll<ExtendedEventRequest>(Collections.EVENT_REQUESTS, "", "-created", {
@@ -49,9 +49,9 @@ try {
       return [];
     });
 
-  console.log(
-    `Fetched ${allEventRequests.length} event requests in Astro component`,
-  );
+  // console.log(
+  //   `Fetched ${allEventRequests.length} event requests in Astro component`,
+  // );
 
   // Process the event requests to add the requested_user_expand property
   allEventRequests = allEventRequests.map((request) => {
@@ -172,9 +172,9 @@ try {
         "-created",
         { expand: "requested_user" },
       );
-      console.log("Initial data sync complete");
+      // console.log("Initial data sync complete");
     } catch (err) {
-      console.error("Error during initial data sync:", err);
+      // console.error("Error during initial data sync:", err);
     }
 
     // Check for error message in the UI
@@ -183,9 +183,9 @@ try {
       errorElement &&
       errorElement.textContent?.includes("Authentication error")
     ) {
-      console.log(
-        "Authentication error detected in UI, redirecting to login...",
-      );
+      // console.log(
+      //   "Authentication error detected in UI, redirecting to login...",
+      // );
       // Redirect to login page after a short delay
       setTimeout(() => {
         window.location.href = "/login";
@@ -196,13 +196,13 @@ try {
     // Also check if we have any event requests
     const tableContainer = document.querySelector(".event-table-container");
     if (tableContainer) {
-      console.log(
-        "Event table container found, component should load normally",
-      );
+      // console.log(
+      //   "Event table container found, component should load normally",
+      // );
     } else {
-      console.log(
-        "Event table container not found, might be an issue with rendering",
-      );
+      // console.log(
+      //   "Event table container not found, might be an issue with rendering",
+      // );
     }
   });
 </script>

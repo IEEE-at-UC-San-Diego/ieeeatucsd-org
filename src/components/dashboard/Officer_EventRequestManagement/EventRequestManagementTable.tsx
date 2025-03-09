@@ -56,7 +56,7 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
             // Don't check authentication here - try to fetch anyway
             // The token might be valid for the API even if isAuthenticated() returns false
 
-            console.log("Fetching event requests...");
+            // console.log("Fetching event requests...");
 
             // Use DataSyncService to get data from IndexedDB with forced sync
             const updatedRequests = await dataSync.getData<ExtendedEventRequest>(
@@ -67,12 +67,12 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                 'requested_user'
             );
 
-            console.log(`Fetched ${updatedRequests.length} event requests`);
+            // console.log(`Fetched ${updatedRequests.length} event requests`);
 
             setEventRequests(updatedRequests);
             applyFilters(updatedRequests);
         } catch (error) {
-            console.error('Error refreshing event requests:', error);
+            // console.error('Error refreshing event requests:', error);
             toast.error('Failed to refresh event requests');
         } finally {
             setIsRefreshing(false);
@@ -169,7 +169,7 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
             const eventRequest = eventRequests.find(req => req.id === id);
             const eventName = eventRequest?.name || 'Event';
 
-            console.error('Error updating status:', error);
+            // console.error('Error updating status:', error);
             toast.error(`Failed to update status for "${eventName}"`);
             throw error; // Re-throw the error to be caught by the caller
         }
@@ -242,7 +242,7 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                 // Toast is now shown in updateEventRequestStatus
                 closeUpdateModal();
             } catch (error) {
-                console.error('Error in handleUpdateStatus:', error);
+                // console.error('Error in handleUpdateStatus:', error);
                 // Toast is now shown in updateEventRequestStatus
                 // Keep modal open so user can try again
             }
@@ -273,14 +273,14 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
 
             // Check if we're authenticated
             if (!auth.isAuthenticated()) {
-                console.log("Authentication check failed - attempting to continue anyway");
+                // console.log("Authentication check failed - attempting to continue anyway");
 
                 // Don't show error or redirect immediately - try to refresh first
                 try {
                     // Try to refresh event requests anyway - the token might be valid
                     await refreshEventRequests();
                 } catch (err) {
-                    console.error("Failed to refresh after auth check:", err);
+                    // console.error("Failed to refresh after auth check:", err);
                     toast.error("Authentication error. Please log in again.");
 
                     // Only redirect if refresh fails
@@ -289,7 +289,7 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                     }, 2000);
                 }
             } else {
-                console.log("Authentication check passed");
+                // console.log("Authentication check passed");
             }
         };
 
@@ -304,7 +304,7 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
     // Listen for tab visibility changes and refresh data when tab becomes visible
     useEffect(() => {
         const handleTabVisible = () => {
-            console.log("Tab became visible, refreshing event requests...");
+            // console.log("Tab became visible, refreshing event requests...");
             refreshEventRequests();
         };
 

@@ -11,8 +11,6 @@ async function getLogtoAccessToken(
   scope: string = "all",
 ): Promise<string | null> {
   try {
-    console.log("Attempting to get access token from Logto");
-
     // Create Basic auth string
     const authString = Buffer.from(`${clientId}:${clientSecret}`).toString(
       "base64",
@@ -59,8 +57,6 @@ async function verifyUserPassword(
   accessToken: string,
 ): Promise<boolean> {
   try {
-    console.log("Verifying current password");
-
     const response = await fetch(
       `${logtoApiEndpoint}/api/users/${userId}/password/verify`,
       {
@@ -75,7 +71,6 @@ async function verifyUserPassword(
 
     // 204 means password matches, 422 means it doesn't match
     if (response.status === 204) {
-      console.log("Current password verified successfully");
       return true;
     }
 
@@ -101,8 +96,6 @@ async function verifyUserPassword(
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log("Received change password request");
-
     // Parse request body
     const contentType = request.headers.get("content-type");
     const rawBody = await request.text();
@@ -161,6 +154,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Get access token
+    // console.log("Attempting to get access token from Logto");
     const accessToken = await getLogtoAccessToken(
       logtoTokenEndpoint,
       logtoAppId,
@@ -181,6 +175,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Verify current password before proceeding
+    // console.log("Verifying current password");
     const isPasswordValid = await verifyUserPassword(
       logtoApiEndpoint,
       userId,
@@ -202,6 +197,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Change password using Logto Management API
+    // console.log("Current password verified successfully");
     const changePasswordResponse = await fetch(
       `${logtoApiEndpoint}/api/users/${userId}/password`,
       {

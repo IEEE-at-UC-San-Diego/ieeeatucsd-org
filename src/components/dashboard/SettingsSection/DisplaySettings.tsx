@@ -162,7 +162,7 @@ export default function DisplaySettings() {
 
             if (Object.keys(updateData).length > 0) {
                 await update.updateFields(Collections.USERS, userId, updateData);
-                console.log('Initialized default display and accessibility settings');
+                // console.log('Initialized default display and accessibility settings');
             }
         } catch (error) {
             console.error('Error initializing default settings:', error);

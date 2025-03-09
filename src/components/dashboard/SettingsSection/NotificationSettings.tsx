@@ -67,7 +67,7 @@ export default function NotificationSettings() {
                 { notification_preferences: JSON.stringify(DEFAULT_NOTIFICATION_PREFERENCES) }
             );
             setPreferences(DEFAULT_NOTIFICATION_PREFERENCES);
-            console.log('Initialized default notification preferences');
+            // console.log('Initialized default notification preferences');
         } catch (error) {
             console.error('Error initializing default notification preferences:', error);
         }

@@ -12,7 +12,7 @@ export const EventRequestFormPreviewModal: React.FC = () => {
 
     // Function to handle showing the modal
     const showModal = (data: any) => {
-        console.log('showModal called with data', data);
+        // console.log('showModal called with data', data);
         setFormData(data);
         setIsOpen(true);
     };
@@ -24,23 +24,23 @@ export const EventRequestFormPreviewModal: React.FC = () => {
 
         // Define the global function
         window.showEventRequestFormPreview = (data: any) => {
-            console.log('Global showEventRequestFormPreview called with data', data);
+            // console.log('Global showEventRequestFormPreview called with data', data);
             showModal(data);
         };
 
         // Listen for the custom event as a fallback
         const handleShowModal = (event: CustomEvent) => {
-            console.log('Received showEventRequestPreviewModal event', event.detail);
+            // console.log('Received showEventRequestPreviewModal event', event.detail);
             if (event.detail && event.detail.formData) {
                 showModal(event.detail.formData);
             } else {
-                console.error('Event detail or formData is missing', event.detail);
+                // console.error('Event detail or formData is missing', event.detail);
             }
         };
 
         // Add event listener
         document.addEventListener('showEventRequestPreviewModal', handleShowModal as EventListener);
-        console.log('Event listener for showEventRequestPreviewModal added');
+        // console.log('Event listener for showEventRequestPreviewModal added');
 
         // Clean up
         return () => {
@@ -53,12 +53,12 @@ export const EventRequestFormPreviewModal: React.FC = () => {
             }
 
             document.removeEventListener('showEventRequestPreviewModal', handleShowModal as EventListener);
-            console.log('Event listener for showEventRequestPreviewModal removed');
+            // console.log('Event listener for showEventRequestPreviewModal removed');
         };
     }, []); // Empty dependency array - only run once on mount
 
     const handleClose = () => {
-        console.log('Modal closed');
+        // console.log('Modal closed');
         setIsOpen(false);
     };
 
@@ -122,7 +122,7 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                     const parsedData = JSON.parse(savedData);
                     setFormData(parsedData);
                 } catch (e) {
-                    console.error('Error parsing saved form data:', e);
+                    // console.error('Error parsing saved form data:', e);
                 }
             }
             setLoading(false);

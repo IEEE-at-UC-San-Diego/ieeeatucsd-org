@@ -5,151 +5,144 @@ import EventLoad from "./EventsSection/EventLoad";
 ---
 
 <div id="" class="">
-    <div class="mb-4 sm:mb-6 px-4 sm:px-6">
-        <h2 class="text-xl sm:text-2xl font-bold">Events</h2>
-        <p class="opacity-70 text-sm sm:text-base">
-            View and manage your IEEE UCSD events
-        </p>
+  <div class="mb-4 sm:mb-6 px-4 sm:px-6">
+    <h2 class="text-xl sm:text-2xl font-bold">Events</h2>
+    <p class="opacity-70 text-sm sm:text-base">
+      View and manage your IEEE UCSD events
+    </p>
+  </div>
+
+  <div
+    class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6 px-4 sm:px-6"
+  >
+    <!-- Event Check-in Card -->
+    <div class="w-full">
+      <EventCheckIn client:load />
     </div>
 
-    <div
-        class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6 px-4 sm:px-6"
-    >
-        <!-- Event Check-in Card -->
-        <div class="w-full">
-            <EventCheckIn client:load />
+    <!-- Event Registration Card -->
+    <div class="w-full">
+      <div
+        class="card bg-base-100 shadow-xl border border-base-200 opacity-50 cursor-not-allowed relative group h-full"
+      >
+        <div
+          class="absolute inset-0 bg-base-100 opacity-0 group-hover:opacity-90 transition-opacity duration-300 flex items-center justify-center z-10"
+        >
+          <span class="text-base-content font-medium text-sm sm:text-base"
+            >Coming Soon</span
+          >
         </div>
-
-        <!-- Event Registration Card -->
-        <div class="w-full">
-            <div
-                class="card bg-base-100 shadow-xl border border-base-200 opacity-50 cursor-not-allowed relative group h-full"
-            >
-                <div
-                    class="absolute inset-0 bg-base-100 opacity-0 group-hover:opacity-90 transition-opacity duration-300 flex items-center justify-center z-10"
-                >
-                    <span
-                        class="text-base-content font-medium text-sm sm:text-base"
-                        >Coming Soon</span
-                    >
-                </div>
-                <div class="card-body p-4 sm:p-6">
-                    <h3 class="card-title text-base sm:text-lg mb-3 sm:mb-4">
-                        Event Registration
-                    </h3>
-                    <div class="form-control w-full">
-                        <label class="label">
-                            <span class="label-text text-sm sm:text-base"
-                                >Select an event to register</span
-                            >
-                        </label>
-                        <div class="flex flex-col sm:flex-row gap-2">
-                            <select
-                                class="select select-bordered flex-1 text-sm sm:text-base h-10 min-h-[2.5rem] w-full"
-                                disabled
-                            >
-                                <option disabled selected>Pick an event</option>
-                                <option
-                                    >Technical Workshop - Web Development</option
-                                >
-                                <option
-                                    >Professional Development Workshop</option
-                                >
-                                <option>Social Event - Game Night</option>
-                            </select>
-                            <button
-                                class="btn btn-primary text-sm sm:text-base h-10 min-h-[2.5rem] w-full sm:w-[100px]"
-                                disabled>Register</button
-                            >
-                        </div>
-                    </div>
-                </div>
+        <div class="card-body p-4 sm:p-6">
+          <h3 class="card-title text-base sm:text-lg mb-3 sm:mb-4">
+            Event Registration
+          </h3>
+          <div class="form-control w-full">
+            <label class="label">
+              <span class="label-text text-sm sm:text-base"
+                >Select an event to register</span
+              >
+            </label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <select
+                class="select select-bordered flex-1 text-sm sm:text-base h-10 min-h-[2.5rem] w-full"
+                disabled
+              >
+                <option disabled selected>Pick an event</option>
+                <option>Technical Workshop - Web Development</option>
+                <option>Professional Development Workshop</option>
+                <option>Social Event - Game Night</option>
+              </select>
+              <button
+                class="btn btn-primary text-sm sm:text-base h-10 min-h-[2.5rem] w-full sm:w-[100px]"
+                disabled>Register</button
+              >
             </div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 
-    <EventLoad client:load />
+  <EventLoad client:load />
 </div>
 
 <!-- Event Details Modal -->
 <dialog id="eventDetailsModal" class="modal">
-    <div class="modal-box max-w-[90vw] sm:max-w-4xl p-4 sm:p-6">
-        <div class="flex justify-between items-center mb-3 sm:mb-4">
-            <div class="flex items-center gap-2 sm:gap-3">
-                <h3 class="font-bold text-base sm:text-lg" id="modalTitle">
-                    Event Files
-                </h3>
-                <button
-                    id="downloadAllBtn"
-                    class="btn btn-primary btn-sm gap-1 text-xs sm:text-sm"
-                    onclick="window.downloadAllFiles()"
-                >
-                    <iconify-icon
-                        icon="heroicons:arrow-down-tray-20-solid"
-                        className="h-3 w-3 sm:h-4 sm:w-4"></iconify-icon>
-                    Download All
-                </button>
-            </div>
-            <button
-                class="btn btn-circle btn-ghost btn-sm sm:btn-md"
-                onclick="window.closeEventDetailsModal()"
-            >
-                <iconify-icon
-                    icon="heroicons:x-mark"
-                    className="h-4 w-4 sm:h-6 sm:w-6"></iconify-icon>
-            </button>
-        </div>
-
-        <div id="filesContent" class="space-y-3 sm:space-y-4">
-            <!-- Files list will be populated here -->
-        </div>
+  <div class="modal-box max-w-[90vw] sm:max-w-4xl p-4 sm:p-6">
+    <div class="flex justify-between items-center mb-3 sm:mb-4">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <h3 class="font-bold text-base sm:text-lg" id="modalTitle">
+          Event Files
+        </h3>
+        <button
+          id="downloadAllBtn"
+          class="btn btn-primary btn-sm gap-1 text-xs sm:text-sm"
+          onclick="window.downloadAllFiles()"
+        >
+          <iconify-icon
+            icon="heroicons:arrow-down-tray-20-solid"
+            className="h-3 w-3 sm:h-4 sm:w-4"></iconify-icon>
+          Download All
+        </button>
+      </div>
+      <button
+        class="btn btn-circle btn-ghost btn-sm sm:btn-md"
+        onclick="window.closeEventDetailsModal()"
+      >
+        <iconify-icon icon="heroicons:x-mark" className="h-4 w-4 sm:h-6 sm:w-6"
+        ></iconify-icon>
+      </button>
     </div>
-    <form method="dialog" class="modal-backdrop">
-        <button onclick="window.closeEventDetailsModal()">close</button>
-    </form>
+
+    <div id="filesContent" class="space-y-3 sm:space-y-4">
+      <!-- Files list will be populated here -->
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button onclick="window.closeEventDetailsModal()">close</button>
+  </form>
 </dialog>
 
 <!-- Universal File Preview Modal -->
 <dialog id="filePreviewModal" class="modal">
-    <div class="modal-box max-w-[90vw] sm:max-w-4xl p-4 sm:p-6">
-        <div class="flex justify-between items-center mb-3 sm:mb-4">
-            <div class="flex items-center gap-2 sm:gap-3">
-                <button
-                    class="btn btn-ghost btn-sm text-xs sm:text-sm"
-                    onclick="window.closeFilePreviewEvents()">Close</button
-                >
-                <h3
-                    class="font-bold text-base sm:text-lg truncate"
-                    id="previewFileName"
-                >
-                </h3>
-            </div>
-        </div>
-        <div class="relative" id="previewContainer">
-            <div
-                id="previewLoadingSpinner"
-                class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
-            >
-                <span class="loading loading-spinner loading-md sm:loading-lg"
-                ></span>
-            </div>
-            <div id="previewContent" class="w-full">
-                <FilePreview client:load isModal={true} />
-            </div>
-        </div>
+  <div class="modal-box max-w-[90vw] sm:max-w-4xl p-4 sm:p-6">
+    <div class="flex justify-between items-center mb-3 sm:mb-4">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button
+          class="btn btn-ghost btn-sm text-xs sm:text-sm"
+          onclick="window.closeFilePreviewEvents()">Close</button
+        >
+        <h3
+          class="font-bold text-base sm:text-lg truncate"
+          id="previewFileName"
+        >
+        </h3>
+      </div>
     </div>
-    <form method="dialog" class="modal-backdrop">
-        <button onclick="window.closeFilePreviewEvents()">close</button>
-    </form>
+    <div class="relative" id="previewContainer">
+      <div
+        id="previewLoadingSpinner"
+        class="absolute inset-0 flex items-center justify-center bg-base-200 bg-opacity-50 hidden"
+      >
+        <span class="loading loading-spinner loading-md sm:loading-lg"></span>
+      </div>
+      <div id="previewContent" class="w-full">
+        <FilePreview client:load isModal={true} />
+      </div>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button onclick="window.closeFilePreviewEvents()">close</button>
+  </form>
 </dialog>
 
 <script>
-    import { toast } from "react-hot-toast";
-    import JSZip from "jszip";
+  import { toast } from "react-hot-toast";
+  import JSZip from "jszip";
 
-    // Add styles to the document
-    const style = document.createElement("style");
-    style.textContent = `
+  // Add styles to the document
+  const style = document.createElement("style");
+  style.textContent = `
     /* Custom styles for the event details modal */
     .event-details-grid {
       display: grid;
@@ -165,234 +158,227 @@ import EventLoad from "./EventsSection/EventLoad";
     
     /* Remove custom toast styles since we're using react-hot-toast */
   `;
-    document.head.appendChild(style);
+  document.head.appendChild(style);
 
-    // Add helper functions for file preview
-    function getFileType(filename: string): string {
-        const extension = filename.split(".").pop()?.toLowerCase();
-        const mimeTypes: { [key: string]: string } = {
-            pdf: "application/pdf",
-            jpg: "image/jpeg",
-            jpeg: "image/jpeg",
-            png: "image/png",
-            gif: "image/gif",
-            mp4: "video/mp4",
-            mp3: "audio/mpeg",
-            txt: "text/plain",
-            doc: "application/msword",
-            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            xls: "application/vnd.ms-excel",
-            xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            json: "application/json",
-        };
+  // Add helper functions for file preview
+  function getFileType(filename: string): string {
+    const extension = filename.split(".").pop()?.toLowerCase();
+    const mimeTypes: { [key: string]: string } = {
+      pdf: "application/pdf",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      mp4: "video/mp4",
+      mp3: "audio/mpeg",
+      txt: "text/plain",
+      doc: "application/msword",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.ms-excel",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      json: "application/json",
+    };
 
-        return mimeTypes[extension || ""] || "application/octet-stream";
+    return mimeTypes[extension || ""] || "application/octet-stream";
+  }
+
+  // Universal file preview function for events section
+  window.previewFileEvents = function (url: string, filename: string) {
+    // console.log("previewFileEvents called with:", { url, filename });
+    // console.log("URL type:", typeof url, "URL length:", url?.length || 0);
+    // console.log(
+    //     "Filename type:",
+    //     typeof filename,
+    //     "Filename length:",
+    //     filename?.length || 0
+    // );
+
+    // Validate inputs
+    if (!url || typeof url !== "string") {
+      console.error("Invalid URL provided to previewFileEvents:", url);
+      toast.error("Cannot preview file: Invalid URL");
+      return;
     }
 
-    // Universal file preview function for events section
-    window.previewFileEvents = function (url: string, filename: string) {
-        console.log("previewFileEvents called with:", { url, filename });
-        console.log("URL type:", typeof url, "URL length:", url?.length || 0);
-        console.log(
-            "Filename type:",
-            typeof filename,
-            "Filename length:",
-            filename?.length || 0
-        );
+    if (!filename || typeof filename !== "string") {
+      console.error(
+        "Invalid filename provided to previewFileEvents:",
+        filename,
+      );
+      toast.error("Cannot preview file: Invalid filename");
+      return;
+    }
 
-        // Validate inputs
-        if (!url || typeof url !== "string") {
-            console.error("Invalid URL provided to previewFileEvents:", url);
-            toast.error("Cannot preview file: Invalid URL");
-            return;
-        }
+    // Ensure URL is properly formatted
+    if (!url.startsWith("http")) {
+      console.warn("URL doesn't start with http, attempting to fix:", url);
+      if (url.startsWith("/")) {
+        url = `https://pocketbase.ieeeucsd.org${url}`;
+      } else {
+        url = `https://pocketbase.ieeeucsd.org/${url}`;
+      }
+      // console.log("Fixed URL:", url);
+    }
 
-        if (!filename || typeof filename !== "string") {
-            console.error(
-                "Invalid filename provided to previewFileEvents:",
-                filename
-            );
-            toast.error("Cannot preview file: Invalid filename");
-            return;
-        }
+    const modal = document.getElementById(
+      "filePreviewModal",
+    ) as HTMLDialogElement;
+    const previewFileName = document.getElementById("previewFileName");
+    const previewContent = document.getElementById("previewContent");
+    const loadingSpinner = document.getElementById("previewLoadingSpinner");
 
-        // Ensure URL is properly formatted
-        if (!url.startsWith("http")) {
-            console.warn(
-                "URL doesn't start with http, attempting to fix:",
-                url
-            );
-            if (url.startsWith("/")) {
-                url = `https://pocketbase.ieeeucsd.org${url}`;
-            } else {
-                url = `https://pocketbase.ieeeucsd.org/${url}`;
-            }
-            console.log("Fixed URL:", url);
-        }
+    if (modal && previewFileName && previewContent) {
+      // console.log("Found all required elements");
 
-        const modal = document.getElementById(
-            "filePreviewModal"
-        ) as HTMLDialogElement;
-        const previewFileName = document.getElementById("previewFileName");
-        const previewContent = document.getElementById("previewContent");
-        const loadingSpinner = document.getElementById("previewLoadingSpinner");
+      // Show loading spinner
+      if (loadingSpinner) {
+        loadingSpinner.classList.remove("hidden");
+      }
 
-        if (modal && previewFileName && previewContent) {
-            console.log("Found all required elements");
+      // Update the filename display
+      previewFileName.textContent = filename;
 
-            // Show loading spinner
-            if (loadingSpinner) {
-                loadingSpinner.classList.remove("hidden");
-            }
+      // Show the modal
+      modal.showModal();
 
-            // Update the filename display
-            previewFileName.textContent = filename;
-
-            // Show the modal
-            modal.showModal();
-
-            // Test the URL with a fetch before dispatching the event
-            fetch(url, { method: "HEAD" })
-                .then((response) => {
-                    console.log(
-                        "URL test response:",
-                        response.status,
-                        response.ok
-                    );
-                    if (!response.ok) {
-                        console.warn("URL might not be accessible:", url);
-                        toast(
-                            "File might not be accessible. Attempting to preview anyway.",
-                            {
-                                icon: "⚠️",
-                                style: {
-                                    borderRadius: "10px",
-                                    background: "#FFC107",
-                                    color: "#000",
-                                },
-                            }
-                        );
-                    }
-                })
-                .catch((err) => {
-                    console.error("Error testing URL:", err);
-                })
-                .finally(() => {
-                    // Dispatch state change event to update the FilePreview component
-                    console.log(
-                        "Dispatching filePreviewStateChange event with:",
-                        { url, filename }
-                    );
-                    window.dispatchEvent(
-                        new CustomEvent("filePreviewStateChange", {
-                            detail: { url, filename },
-                        })
-                    );
-                });
-
-            // Hide loading spinner after a short delay
-            setTimeout(() => {
-                if (loadingSpinner) {
-                    loadingSpinner.classList.add("hidden");
-                }
-            }, 1000); // Increased delay to allow for URL testing
-        } else {
-            console.error("Missing required elements for file preview");
-            toast.error("Could not initialize file preview");
-        }
-    };
-
-    // Close file preview for events section
-    window.closeFilePreviewEvents = function () {
-        console.log("closeFilePreviewEvents called");
-        const modal = document.getElementById(
-            "filePreviewModal"
-        ) as HTMLDialogElement;
-        const previewFileName = document.getElementById("previewFileName");
-        const previewContent = document.getElementById("previewContent");
-        const loadingSpinner = document.getElementById("previewLoadingSpinner");
-
-        if (loadingSpinner) {
-            loadingSpinner.classList.add("hidden");
-        }
-
-        if (modal && previewFileName && previewContent) {
-            console.log("Resetting preview and closing modal");
-
-            // First reset the preview state by dispatching an event with empty values
-            // This ensures the FilePreview component clears its internal state
-            window.dispatchEvent(
-                new CustomEvent("filePreviewStateChange", {
-                    detail: { url: "", filename: "" },
-                })
-            );
-
-            // Reset the UI
-            previewFileName.textContent = "";
-
-            // Close the modal
-            modal.close();
-
-            console.log("File preview modal closed and state reset");
-        } else {
-            console.error("Could not find elements to close file preview");
-        }
-    };
-
-    // Update the showFilePreview function for events section
-    window.showFilePreviewEvents = function (file: {
-        url: string;
-        name: string;
-    }) {
-        console.log("showFilePreviewEvents called with:", file);
-        if (!file || !file.url || !file.name) {
-            console.error("Invalid file data:", file);
-            toast.error("Could not preview file: missing file information");
-            return;
-        }
-        window.previewFileEvents(file.url, file.name);
-    };
-
-    // Update the openDetailsModal function to use the events-specific preview
-    window.openDetailsModal = function (event: any) {
-        const modal = document.getElementById(
-            "eventDetailsModal"
-        ) as HTMLDialogElement;
-        const filesContent = document.getElementById(
-            "filesContent"
-        ) as HTMLDivElement;
-
-        // Check if event has ended
-        const eventEndDate = new Date(event.end_date);
-        const now = new Date();
-
-        if (eventEndDate > now) {
-            toast("Files are only available after the event has ended.", {
+      // Test the URL with a fetch before dispatching the event
+      fetch(url, { method: "HEAD" })
+        .then((response) => {
+          // console.log(
+          //     "URL test response:",
+          //     response.status,
+          //     response.ok
+          // );
+          if (!response.ok) {
+            console.warn("URL might not be accessible:", url);
+            toast(
+              "File might not be accessible. Attempting to preview anyway.",
+              {
                 icon: "⚠️",
                 style: {
-                    borderRadius: "10px",
-                    background: "#FFC107",
-                    color: "#000",
+                  borderRadius: "10px",
+                  background: "#FFC107",
+                  color: "#000",
                 },
-            });
-            return;
+              },
+            );
+          }
+        })
+        .catch((err) => {
+          console.error("Error testing URL:", err);
+        })
+        .finally(() => {
+          // Dispatch state change event to update the FilePreview component
+          // console.log(
+          //     "Dispatching filePreviewStateChange event with:",
+          //     { url, filename }
+          // );
+          window.dispatchEvent(
+            new CustomEvent("filePreviewStateChange", {
+              detail: { url, filename },
+            }),
+          );
+        });
+
+      // Hide loading spinner after a short delay
+      setTimeout(() => {
+        if (loadingSpinner) {
+          loadingSpinner.classList.add("hidden");
         }
+      }, 1000); // Increased delay to allow for URL testing
+    } else {
+      console.error("Missing required elements for file preview");
+      toast.error("Could not initialize file preview");
+    }
+  };
 
-        // Reset state
-        window.currentEventId = event.id;
-        if (filesContent) filesContent.classList.remove("hidden");
+  // Close file preview for events section
+  window.closeFilePreviewEvents = function () {
+    // console.log("closeFilePreviewEvents called");
+    const modal = document.getElementById(
+      "filePreviewModal",
+    ) as HTMLDialogElement;
+    const previewFileName = document.getElementById("previewFileName");
+    const previewContent = document.getElementById("previewContent");
+    const loadingSpinner = document.getElementById("previewLoadingSpinner");
 
-        // Populate files content
-        if (
-            event.files &&
-            Array.isArray(event.files) &&
-            event.files.length > 0
-        ) {
-            const baseUrl = "https://pocketbase.ieeeucsd.org";
-            const collectionId = "events";
-            const recordId = event.id;
+    if (loadingSpinner) {
+      loadingSpinner.classList.add("hidden");
+    }
 
-            filesContent.innerHTML = `
+    if (modal && previewFileName && previewContent) {
+      //   console.log("Resetting preview and closing modal");
+
+      // First reset the preview state by dispatching an event with empty values
+      // This ensures the FilePreview component clears its internal state
+      window.dispatchEvent(
+        new CustomEvent("filePreviewStateChange", {
+          detail: { url: "", filename: "" },
+        }),
+      );
+
+      // Reset the UI
+      previewFileName.textContent = "";
+
+      // Close the modal
+      modal.close();
+
+      //   console.log("File preview modal closed and state reset");
+    } else {
+      console.error("Could not find elements to close file preview");
+    }
+  };
+
+  // Update the showFilePreview function for events section
+  window.showFilePreviewEvents = function (file: {
+    url: string;
+    name: string;
+  }) {
+    // console.log("showFilePreviewEvents called with:", file);
+    if (!file || !file.url || !file.name) {
+      console.error("Invalid file data:", file);
+      toast.error("Could not preview file: missing file information");
+      return;
+    }
+    window.previewFileEvents(file.url, file.name);
+  };
+
+  // Update the openDetailsModal function to use the events-specific preview
+  window.openDetailsModal = function (event: any) {
+    const modal = document.getElementById(
+      "eventDetailsModal",
+    ) as HTMLDialogElement;
+    const filesContent = document.getElementById(
+      "filesContent",
+    ) as HTMLDivElement;
+
+    // Check if event has ended
+    const eventEndDate = new Date(event.end_date);
+    const now = new Date();
+
+    if (eventEndDate > now) {
+      toast("Files are only available after the event has ended.", {
+        icon: "⚠️",
+        style: {
+          borderRadius: "10px",
+          background: "#FFC107",
+          color: "#000",
+        },
+      });
+      return;
+    }
+
+    // Reset state
+    window.currentEventId = event.id;
+    if (filesContent) filesContent.classList.remove("hidden");
+
+    // Populate files content
+    if (event.files && Array.isArray(event.files) && event.files.length > 0) {
+      const baseUrl = "https://pocketbase.ieeeucsd.org";
+      const collectionId = "events";
+      const recordId = event.id;
+
+      filesContent.innerHTML = `
                 <div class="overflow-x-auto">
                     <table class="table table-zebra w-full">
                         <thead>
@@ -403,16 +389,16 @@ import EventLoad from "./EventsSection/EventLoad";
                         </thead>
                         <tbody>
                             ${event.files
-                                .map((file: string) => {
-                                    // Ensure the file URL is properly formatted
-                                    const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
-                                    const fileType = getFileType(file);
-                                    // Properly escape the data for the onclick handler
-                                    const fileData = {
-                                        url: fileUrl,
-                                        name: file,
-                                    };
-                                    return `
+                              .map((file: string) => {
+                                // Ensure the file URL is properly formatted
+                                const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${file}`;
+                                const fileType = getFileType(file);
+                                // Properly escape the data for the onclick handler
+                                const fileData = {
+                                  url: fileUrl,
+                                  name: file,
+                                };
+                                return `
                                         <tr>
                                             <td>${file}</td>
                                             <td class="text-right">
@@ -425,123 +411,123 @@ import EventLoad from "./EventsSection/EventLoad";
                                             </td>
                                         </tr>
                                     `;
-                                })
-                                .join("")}
+                              })
+                              .join("")}
                         </tbody>
                     </table>
                 </div>
             `;
-        } else {
-            filesContent.innerHTML = `
+    } else {
+      filesContent.innerHTML = `
                 <div class="text-center py-8 text-base-content/70">
                     <iconify-icon icon="heroicons:document-duplicate" className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No files attached to this event</p>
                 </div>
             `;
+    }
+
+    modal.showModal();
+  };
+
+  // Add downloadAllFiles function
+  window.downloadAllFiles = async function () {
+    const downloadBtn = document.getElementById(
+      "downloadAllBtn",
+    ) as HTMLButtonElement;
+    if (!downloadBtn) return;
+    const originalBtnContent = downloadBtn.innerHTML;
+
+    try {
+      // Show loading state
+      downloadBtn.innerHTML =
+        '<span class="loading loading-spinner loading-xs"></span> Preparing...';
+      downloadBtn.disabled = true;
+
+      const zip = new JSZip();
+
+      // Get current event files
+      const baseUrl = "https://pocketbase.ieeeucsd.org";
+      const collectionId = "events";
+      const recordId = window.currentEventId;
+
+      // Get the current event from the window object
+      const eventDataId = `event_${window.currentEventId}`;
+      const event = window[eventDataId];
+
+      if (!event || !event.files || event.files.length === 0) {
+        throw new Error("No files available to download");
+      }
+
+      // Download each file and add to zip
+      const filePromises = event.files.map(async (filename: string) => {
+        const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${filename}`;
+        const response = await fetch(fileUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to download ${filename}`);
         }
+        const blob = await response.blob();
+        zip.file(filename, blob);
+      });
 
-        modal.showModal();
-    };
+      await Promise.all(filePromises);
 
-    // Add downloadAllFiles function
-    window.downloadAllFiles = async function () {
-        const downloadBtn = document.getElementById(
-            "downloadAllBtn"
-        ) as HTMLButtonElement;
-        if (!downloadBtn) return;
-        const originalBtnContent = downloadBtn.innerHTML;
+      // Generate and download zip
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const downloadUrl = URL.createObjectURL(zipBlob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `${event.event_name}_files.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
 
-        try {
-            // Show loading state
-            downloadBtn.innerHTML =
-                '<span class="loading loading-spinner loading-xs"></span> Preparing...';
-            downloadBtn.disabled = true;
+      // Show success message
+      toast.success("Files downloaded successfully!");
+    } catch (error: any) {
+      console.error("Failed to download files:", error);
+      toast.error(
+        error?.message || "Failed to download files. Please try again.",
+      );
+    } finally {
+      // Reset button state
+      downloadBtn.innerHTML = originalBtnContent;
+      downloadBtn.disabled = false;
+    }
+  };
 
-            const zip = new JSZip();
+  // Close event details modal
+  window.closeEventDetailsModal = function () {
+    const modal = document.getElementById(
+      "eventDetailsModal",
+    ) as HTMLDialogElement;
+    const filesContent = document.getElementById("filesContent");
 
-            // Get current event files
-            const baseUrl = "https://pocketbase.ieeeucsd.org";
-            const collectionId = "events";
-            const recordId = window.currentEventId;
+    if (modal) {
+      // Reset the files content
+      if (filesContent) {
+        filesContent.innerHTML = "";
+      }
 
-            // Get the current event from the window object
-            const eventDataId = `event_${window.currentEventId}`;
-            const event = window[eventDataId];
+      // Reset any other state if needed
+      window.currentEventId = "";
 
-            if (!event || !event.files || event.files.length === 0) {
-                throw new Error("No files available to download");
-            }
+      // Close the modal
+      modal.close();
+    }
+  };
 
-            // Download each file and add to zip
-            const filePromises = event.files.map(async (filename: string) => {
-                const fileUrl = `${baseUrl}/api/files/${collectionId}/${recordId}/${filename}`;
-                const response = await fetch(fileUrl);
-                if (!response.ok) {
-                    throw new Error(`Failed to download ${filename}`);
-                }
-                const blob = await response.blob();
-                zip.file(filename, blob);
-            });
-
-            await Promise.all(filePromises);
-
-            // Generate and download zip
-            const zipBlob = await zip.generateAsync({ type: "blob" });
-            const downloadUrl = URL.createObjectURL(zipBlob);
-            const link = document.createElement("a");
-            link.href = downloadUrl;
-            link.download = `${event.event_name}_files.zip`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(downloadUrl);
-
-            // Show success message
-            toast.success("Files downloaded successfully!");
-        } catch (error: any) {
-            console.error("Failed to download files:", error);
-            toast.error(
-                error?.message || "Failed to download files. Please try again."
-            );
-        } finally {
-            // Reset button state
-            downloadBtn.innerHTML = originalBtnContent;
-            downloadBtn.disabled = false;
-        }
-    };
-
-    // Close event details modal
-    window.closeEventDetailsModal = function () {
-        const modal = document.getElementById(
-            "eventDetailsModal"
-        ) as HTMLDialogElement;
-        const filesContent = document.getElementById("filesContent");
-
-        if (modal) {
-            // Reset the files content
-            if (filesContent) {
-                filesContent.innerHTML = "";
-            }
-
-            // Reset any other state if needed
-            window.currentEventId = "";
-
-            // Close the modal
-            modal.close();
-        }
-    };
-
-    // Make helper functions available globally
-    window.showFilePreview = window.showFilePreviewEvents;
-    window.handlePreviewError = function () {
-        const previewContent = document.getElementById("previewContent");
-        if (previewContent) {
-            previewContent.innerHTML = `
+  // Make helper functions available globally
+  window.showFilePreview = window.showFilePreviewEvents;
+  window.handlePreviewError = function () {
+    const previewContent = document.getElementById("previewContent");
+    if (previewContent) {
+      previewContent.innerHTML = `
                 <div class="alert alert-error">
                     <Icon icon="heroicons:x-circle" className="h-6 w-6" />
                     <span>Failed to load file preview</span>
                 </div>
             `;
-        }
-    };
+    }
+  };
 </script>

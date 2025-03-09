@@ -13,14 +13,6 @@ const logtoEndpoint = import.meta.env.LOGTO_ENDPOINT;
 const logtoTokenEndpoint = import.meta.env.LOGTO_TOKEN_ENDPOINT;
 const logtoApiEndpoint = import.meta.env.LOGTO_API_ENDPOINT;
 
-// Log environment variables for debugging
-console.log("Environment variables in Astro file:");
-console.log("LOGTO_APP_ID:", logtoAppId);
-console.log("LOGTO_APP_SECRET:", logtoAppSecret);
-console.log("LOGTO_ENDPOINT:", logtoEndpoint);
-console.log("LOGTO_TOKEN_ENDPOINT:", logtoTokenEndpoint);
-console.log("LOGTO_API_ENDPOINT:", logtoApiEndpoint);
-
 // Define fallback values if environment variables are not set
 const safeLogtoAppId = logtoAppId || "missing_app_id";
 const safeLogtoAppSecret = logtoAppSecret || "missing_app_secret";

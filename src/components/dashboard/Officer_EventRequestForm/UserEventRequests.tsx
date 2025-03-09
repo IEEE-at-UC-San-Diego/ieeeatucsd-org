@@ -69,7 +69,7 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
     // Listen for tab visibility changes and refresh data when tab becomes visible
     useEffect(() => {
         const handleTabVisible = () => {
-            console.log("Tab became visible, refreshing event requests...");
+            // console.log("Tab became visible, refreshing event requests...");
             refreshEventRequests();
         };
 
@@ -411,19 +411,19 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                                         className="btn btn-sm btn-primary"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            console.log('Full Preview button clicked', selectedRequest);
+                                            // console.log('Full Preview button clicked', selectedRequest);
                                             try {
                                                 // Direct call to the global function
                                                 if (typeof window.showEventRequestFormPreview === 'function') {
                                                     window.showEventRequestFormPreview(selectedRequest);
                                                 } else {
-                                                    console.error('showEventRequestFormPreview is not a function', window.showEventRequestFormPreview);
+                                                    // console.log('Fallback: showEventRequestPreviewModal event dispatched');
                                                     // Fallback to event dispatch if function is not available
                                                     const event = new CustomEvent("showEventRequestPreviewModal", {
                                                         detail: { formData: selectedRequest }
                                                     });
                                                     document.dispatchEvent(event);
-                                                    console.log('Fallback: showEventRequestPreviewModal event dispatched');
+                                                    // console.log('Fallback: showEventRequestPreviewModal event dispatched');
                                                 }
                                             } catch (error) {
                                                 console.error('Error showing full preview:', error);

@@ -65,16 +65,17 @@ export class DashboardDatabase extends Dexie {
       offlineChanges:
         "id, collection, recordId, operation, timestamp, synced, syncAttempts",
     });
-    
+
     // Add version 3 with eventAttendees table and updated events table (no attendees field)
     this.version(3).stores({
       events: "id, event_name, event_code, start_date, end_date, published",
       eventAttendees: "id, user, event, time_checked_in",
     });
-    
+
     // Add version 4 with files field in events table
     this.version(4).stores({
-      events: "id, event_name, event_code, start_date, end_date, published, files",
+      events:
+        "id, event_name, event_code, start_date, end_date, published, files",
     });
   }
 
@@ -125,7 +126,7 @@ export class DexieService {
       this.db.initialize();
     } else {
       // Use a mock database in non-browser environments
-      console.log("Running in Node.js environment, using mock database");
+      // console.log("Running in Node.js environment, using mock database");
       this.db = new MockDashboardDatabase() as any;
     }
   }

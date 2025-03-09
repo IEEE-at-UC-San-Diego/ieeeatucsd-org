@@ -29,7 +29,7 @@ const ImageWithFallback = ({ url, filename, onError }: ImageWithFallbackProps) =
 
         try {
             // Try to fetch the image as a blob and create an object URL
-            console.log('Trying to fetch image as blob:', url);
+            // console.log('Trying to fetch image as blob:', url);
             const response = await fetch(url, { mode: 'cors' });
 
             if (!response.ok) {
@@ -38,7 +38,7 @@ const ImageWithFallback = ({ url, filename, onError }: ImageWithFallbackProps) =
 
             const blob = await response.blob();
             const objectUrl = URL.createObjectURL(blob);
-            console.log('Created object URL:', objectUrl);
+            // console.log('Created object URL:', objectUrl);
 
             // Update the image source with the object URL
             setImgSrc(objectUrl);
@@ -48,10 +48,10 @@ const ImageWithFallback = ({ url, filename, onError }: ImageWithFallbackProps) =
             onError('Failed to load image. This might be due to permission issues or the file may not exist.');
 
             // Log additional details
-            console.log('Image URL that failed:', url);
-            console.log('Current auth status:',
-                Authentication.getInstance().isAuthenticated() ? 'Authenticated' : 'Not authenticated'
-            );
+            // console.log('Image URL that failed:', url);
+            // console.log('Current auth status:',
+            //     Authentication.getInstance().isAuthenticated() ? 'Authenticated' : 'Not authenticated'
+            // );
         }
     };
 

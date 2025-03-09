@@ -631,7 +631,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                     has_food: eventData.has_food || false
                 });
 
-                console.log("Event data loaded successfully:", eventData);
+                // console.log("Event data loaded successfully:", eventData);
             } else {
                 setEvent({
                     id: '',
@@ -784,7 +784,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
 
                     // 1. Remove files marked for deletion
                     if (filesToDelete.size > 0) {
-                        console.log(`Removing ${filesToDelete.size} files from event ${event.id}`);
+                        // console.log(`Removing ${filesToDelete.size} files from event ${event.id}`);
                         currentFiles = currentFiles.filter(file => !filesToDelete.has(file));
 
                         // Update the files field first to remove deleted files
@@ -797,7 +797,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
 
                     // 2. Add new files one by one to preserve existing ones
                     if (selectedFiles.size > 0) {
-                        console.log(`Adding ${selectedFiles.size} new files to event ${event.id}`);
+                        // console.log(`Adding ${selectedFiles.size} new files to event ${event.id}`);
 
                         // Convert Map to array of File objects
                         const newFiles = Array.from(selectedFiles.values());
@@ -849,7 +849,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
 
                 // Then upload files if any
                 if (selectedFiles.size > 0 && newEvent?.id) {
-                    console.log(`Adding ${selectedFiles.size} files to new event ${newEvent.id}`);
+                    // console.log(`Adding ${selectedFiles.size} files to new event ${newEvent.id}`);
 
                     // Convert Map to array of File objects
                     const newFiles = Array.from(selectedFiles.values());

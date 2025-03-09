@@ -3,7 +3,7 @@ import { Authentication } from "./Authentication";
 export class FileManager {
   private auth: Authentication;
   private static instance: FileManager;
-  private static UNSUPPORTED_EXTENSIONS = ['afdesign', 'psd', 'ai', 'sketch'];
+  private static UNSUPPORTED_EXTENSIONS = ["afdesign", "psd", "ai", "sketch"];
 
   private constructor() {
     this.auth = Authentication.getInstance();
@@ -25,15 +25,18 @@ export class FileManager {
    * @returns Object with validation result and reason if invalid
    */
   public validateFileType(file: File): { valid: boolean; reason?: string } {
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    
-    if (fileExtension && FileManager.UNSUPPORTED_EXTENSIONS.includes(fileExtension)) {
-      return { 
-        valid: false, 
-        reason: `File type .${fileExtension} is not supported. Please convert to PDF or image format.` 
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+    if (
+      fileExtension &&
+      FileManager.UNSUPPORTED_EXTENSIONS.includes(fileExtension)
+    ) {
+      return {
+        valid: false,
+        reason: `File type .${fileExtension} is not supported. Please convert to PDF or image format.`,
       };
     }
-    
+
     return { valid: true };
   }
 
@@ -51,7 +54,7 @@ export class FileManager {
     recordId: string,
     field: string,
     file: File,
-    append: boolean = false
+    append: boolean = false,
   ): Promise<T> {
     if (!this.auth.isAuthenticated()) {
       throw new Error("User must be authenticated to upload files");
@@ -60,16 +63,18 @@ export class FileManager {
     try {
       this.auth.setUpdating(true);
       const pb = this.auth.getPocketBase();
-      
+
       // Validate file size
       const maxSize = 200 * 1024 * 1024; // 200MB
       if (file.size > maxSize) {
-        throw new Error(`File size ${(file.size / 1024 / 1024).toFixed(2)}MB exceeds 200MB limit`);
+        throw new Error(
+          `File size ${(file.size / 1024 / 1024).toFixed(2)}MB exceeds 200MB limit`,
+        );
       }
 
       // Check for potentially problematic file types
-      const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      
+      const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
       // Validate file type
       const validation = this.validateFileType(file);
       if (!validation.valid) {
@@ -77,49 +82,50 @@ export class FileManager {
       }
 
       // Log upload attempt
-      console.log('Attempting file upload:', {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        extension: fileExtension,
-        collection: collectionName,
-        recordId: recordId,
-        field: field,
-        append: append
-      });
+      // console.log('Attempting file upload:', {
+      //   name: file.name,
+      //   size: file.size,
+      //   type: file.type,
+      //   extension: fileExtension,
+      //   collection: collectionName,
+      //   recordId: recordId,
+      //   field: field,
+      //   append: append
+      // });
 
       // Create FormData for the upload
       const formData = new FormData();
-      
+
       // Use the + prefix for the field name if append is true
       const fieldName = append ? `${field}+` : field;
-      
+
       // Get existing record to preserve existing files
       let existingRecord: any = null;
       let existingFiles: string[] = [];
-      
+
       try {
         if (recordId) {
           existingRecord = await pb.collection(collectionName).getOne(recordId);
           existingFiles = existingRecord[field] || [];
         }
       } catch (error) {
-        console.warn('Could not fetch existing record:', error);
+        // console.warn('Could not fetch existing record:', error);
       }
-      
+
       // Check if the file already exists
-      const fileExists = existingFiles.some(existingFile => 
-        existingFile.toLowerCase() === file.name.toLowerCase()
+      const fileExists = existingFiles.some(
+        (existingFile) =>
+          existingFile.toLowerCase() === file.name.toLowerCase(),
       );
-      
+
       if (fileExists) {
-        console.warn(`File with name ${file.name} already exists. Renaming to avoid conflicts.`);
+        // console.warn(`File with name ${file.name} already exists. Renaming to avoid conflicts.`);
         const timestamp = new Date().getTime();
-        const nameParts = file.name.split('.');
+        const nameParts = file.name.split(".");
         const extension = nameParts.pop();
-        const baseName = nameParts.join('.');
+        const baseName = nameParts.join(".");
         const newFileName = `${baseName}_${timestamp}.${extension}`;
-        
+
         // Create a new file with the modified name
         const newFile = new File([file], newFileName, { type: file.type });
         formData.append(fieldName, newFile);
@@ -128,60 +134,71 @@ export class FileManager {
       }
 
       try {
-        const result = await pb.collection(collectionName).update<T>(recordId, formData);
-        console.log('Upload successful:', {
-          result,
-          fileInfo: {
-            name: file.name,
-            size: file.size,
-            type: file.type
-          },
-          collection: collectionName,
-          recordId: recordId
-        });
-        
+        const result = await pb
+          .collection(collectionName)
+          .update<T>(recordId, formData);
+        // console.log('Upload successful:', {
+        //   result,
+        //   fileInfo: {
+        //     name: file.name,
+        //     size: file.size,
+        //     type: file.type
+        //   },
+        //   collection: collectionName,
+        //   recordId: recordId
+        // });
+
         // Verify the file was actually added to the record
         try {
-          const updatedRecord = await pb.collection(collectionName).getOne(recordId);
-          console.log('Updated record files:', {
-            files: updatedRecord.files,
-            recordId: recordId
-          });
+          const updatedRecord = await pb
+            .collection(collectionName)
+            .getOne(recordId);
+          // console.log('Updated record files:', {
+          //   files: updatedRecord.files,
+          //   recordId: recordId
+          // });
         } catch (verifyError) {
-          console.warn('Could not verify file upload:', verifyError);
+          // console.warn('Could not verify file upload:', verifyError);
         }
-        
+
         return result;
       } catch (pbError: any) {
         // Log detailed PocketBase error
-        console.error('PocketBase upload error:', {
-          status: pbError?.status,
-          response: pbError?.response,
-          data: pbError?.data,
-          message: pbError?.message
-        });
-        
+        // console.error('PocketBase upload error:', {
+        //   status: pbError?.status,
+        //   response: pbError?.response,
+        //   data: pbError?.data,
+        //   message: pbError?.message
+        // });
+
         // More specific error message based on file type
-        if (fileExtension && FileManager.UNSUPPORTED_EXTENSIONS.includes(fileExtension)) {
-          throw new Error(`Upload failed: File type .${fileExtension} is not supported. Please convert to PDF or image format.`);
+        if (
+          fileExtension &&
+          FileManager.UNSUPPORTED_EXTENSIONS.includes(fileExtension)
+        ) {
+          throw new Error(
+            `Upload failed: File type .${fileExtension} is not supported. Please convert to PDF or image format.`,
+          );
         }
-        
-        throw new Error(`Upload failed: ${pbError?.message || 'Unknown PocketBase error'}`);
+
+        throw new Error(
+          `Upload failed: ${pbError?.message || "Unknown PocketBase error"}`,
+        );
       }
     } catch (err) {
-      console.error(`Failed to upload file to ${collectionName}:`, {
-        error: err,
-        fileInfo: {
-          name: file.name,
-          size: file.size,
-          type: file.type
-        },
-        auth: {
-          isAuthenticated: this.auth.isAuthenticated(),
-          userId: this.auth.getUserId()
-        }
-      });
-      
+      // console.error(`Failed to upload file to ${collectionName}:`, {
+      //   error: err,
+      //   fileInfo: {
+      //     name: file.name,
+      //     size: file.size,
+      //     type: file.type
+      //   },
+      //   auth: {
+      //     isAuthenticated: this.auth.isAuthenticated(),
+      //     userId: this.auth.getUserId()
+      //   }
+      // });
+
       if (err instanceof Error) {
         throw err;
       }
@@ -224,7 +241,7 @@ export class FileManager {
             `File ${file.name} is too large. Maximum size is 50MB.`,
           );
         }
-        
+
         // Validate file type
         const validation = this.validateFileType(file);
         if (!validation.valid) {
@@ -241,7 +258,7 @@ export class FileManager {
             .getOne<T>(recordId);
           existingFiles = (record as any)[field] || [];
         } catch (error) {
-          console.warn("Failed to fetch existing record:", error);
+          // console.warn("Failed to fetch existing record:", error);
         }
       }
 
@@ -260,7 +277,7 @@ export class FileManager {
             processedFile = await this.compressImageIfNeeded(file, 50); // 50MB max size
           }
         } catch (error) {
-          console.warn(`Failed to process file ${file.name}:`, error);
+          // console.warn(`Failed to process file ${file.name}:`, error);
           processedFile = file; // Use original file if processing fails
         }
 
@@ -298,7 +315,7 @@ export class FileManager {
         .getOne<T>(recordId);
       return finalRecord;
     } catch (err) {
-      console.error(`Failed to upload files to ${collectionName}:`, err);
+      // console.error(`Failed to upload files to ${collectionName}:`, err);
       throw err;
     } finally {
       this.auth.setUpdating(false);
@@ -324,33 +341,33 @@ export class FileManager {
       const record = await pb.collection(collectionName).getOne(recordId);
       existingFiles = record[field] || [];
     } catch (error) {
-      console.warn("Failed to fetch existing record for duplicate check:", error);
+      // console.warn("Failed to fetch existing record for duplicate check:", error);
     }
 
     // Add new files, renaming duplicates if needed
     for (const file of files) {
       let fileToUpload = file;
-      
+
       // Check if filename already exists
       if (Array.isArray(existingFiles) && existingFiles.includes(file.name)) {
         const timestamp = new Date().getTime();
-        const nameParts = file.name.split('.');
+        const nameParts = file.name.split(".");
         const extension = nameParts.pop();
-        const baseName = nameParts.join('.');
+        const baseName = nameParts.join(".");
         const newFileName = `${baseName}_${timestamp}.${extension}`;
-        
+
         // Create a new file with the modified name
         fileToUpload = new File([file], newFileName, { type: file.type });
-        
-        console.log(`Renamed duplicate file from ${file.name} to ${newFileName}`);
+
+        // console.log(`Renamed duplicate file from ${file.name} to ${newFileName}`);
       }
-      
+
       formData.append(field, fileToUpload);
     }
-    
+
     // Tell PocketBase to keep existing files
     if (existingFiles.length > 0) {
-      formData.append(`${field}@`, ''); // This tells PocketBase to keep existing files
+      formData.append(`${field}@`, ""); // This tells PocketBase to keep existing files
     }
 
     try {
@@ -396,28 +413,28 @@ export class FileManager {
 
       // Create FormData for the new files only
       const formData = new FormData();
-      
+
       // Tell PocketBase to keep existing files
-      formData.append(`${field}@`, '');
+      formData.append(`${field}@`, "");
 
       // Append new files, renaming if needed to avoid duplicates
       for (const file of files) {
         let fileToUpload = file;
-        
+
         // Check if filename already exists
         if (existingFilenames.has(file.name)) {
           const timestamp = new Date().getTime();
-          const nameParts = file.name.split('.');
+          const nameParts = file.name.split(".");
           const extension = nameParts.pop();
-          const baseName = nameParts.join('.');
+          const baseName = nameParts.join(".");
           const newFileName = `${baseName}_${timestamp}.${extension}`;
-          
+
           // Create a new file with the modified name
           fileToUpload = new File([file], newFileName, { type: file.type });
-          
-          console.log(`Renamed duplicate file from ${file.name} to ${newFileName}`);
+
+          // console.log(`Renamed duplicate file from ${file.name} to ${newFileName}`);
         }
-        
+
         formData.append(field, fileToUpload);
       }
 
@@ -426,7 +443,7 @@ export class FileManager {
         .update<T>(recordId, formData);
       return result;
     } catch (err) {
-      console.error(`Failed to append files to ${collectionName}:`, err);
+      // console.error(`Failed to append files to ${collectionName}:`, err);
       throw err;
     } finally {
       this.auth.setUpdating(false);
@@ -477,7 +494,7 @@ export class FileManager {
         .update<T>(recordId, data);
       return result;
     } catch (err) {
-      console.error(`Failed to delete file from ${collectionName}:`, err);
+      // console.error(`Failed to delete file from ${collectionName}:`, err);
       throw err;
     } finally {
       this.auth.setUpdating(false);
@@ -512,7 +529,7 @@ export class FileManager {
       const result = await response.blob();
       return result;
     } catch (err) {
-      console.error(`Failed to download file from ${collectionName}:`, err);
+      // console.error(`Failed to download file from ${collectionName}:`, err);
       throw err;
     } finally {
       this.auth.setUpdating(false);
@@ -552,7 +569,7 @@ export class FileManager {
 
       return fileUrls;
     } catch (err) {
-      console.error(`Failed to get files from ${collectionName}:`, err);
+      // console.error(`Failed to get files from ${collectionName}:`, err);
       throw err;
     } finally {
       this.auth.setUpdating(false);
@@ -643,22 +660,22 @@ export class FileManager {
   public async getFileToken(): Promise<string> {
     // Check authentication status
     if (!this.auth.isAuthenticated()) {
-      console.warn("User is not authenticated when trying to get file token");
+      // console.warn("User is not authenticated when trying to get file token");
 
       // Try to refresh the auth if possible
       try {
         const pb = this.auth.getPocketBase();
         if (pb.authStore.isValid) {
-          console.log(
-            "Auth store is valid, but auth check failed. Trying to refresh token.",
-          );
+          // console.log(
+          //   "Auth store is valid, but auth check failed. Trying to refresh token.",
+          // );
           await pb.collection("users").authRefresh();
-          console.log("Auth refreshed successfully");
+          // console.log("Auth refreshed successfully");
         } else {
           throw new Error("User must be authenticated to get a file token");
         }
       } catch (refreshError) {
-        console.error("Failed to refresh authentication:", refreshError);
+        // console.error("Failed to refresh authentication:", refreshError);
         throw new Error("User must be authenticated to get a file token");
       }
     }
@@ -668,19 +685,19 @@ export class FileManager {
       const pb = this.auth.getPocketBase();
 
       // Log auth status
-      console.log("Auth status before getting token:", {
-        isValid: pb.authStore.isValid,
-        token: pb.authStore.token
-          ? pb.authStore.token.substring(0, 10) + "..."
-          : "none",
-        model: pb.authStore.model ? pb.authStore.model.id : "none",
-      });
+      // console.log("Auth status before getting token:", {
+      //   isValid: pb.authStore.isValid,
+      //   token: pb.authStore.token
+      //     ? pb.authStore.token.substring(0, 10) + "..."
+      //     : "none",
+      //   model: pb.authStore.model ? pb.authStore.model.id : "none",
+      // });
 
       const result = await pb.files.getToken();
-      console.log("Got file token:", result.substring(0, 10) + "...");
+      // console.log("Got file token:", result.substring(0, 10) + "...");
       return result;
     } catch (err) {
-      console.error("Failed to get file token:", err);
+      // console.error("Failed to get file token:", err);
       throw err;
     } finally {
       this.auth.setUpdating(false);
@@ -705,25 +722,25 @@ export class FileManager {
 
     // Check if filename is empty
     if (!filename) {
-      console.error(
-        `Empty filename provided for ${collectionName}/${recordId}`,
-      );
+      // console.error(
+      //   `Empty filename provided for ${collectionName}/${recordId}`,
+      // );
       return "";
     }
 
     // Check if user is authenticated
     if (!this.auth.isAuthenticated()) {
-      console.warn("User is not authenticated when trying to get file URL");
+      // console.warn("User is not authenticated when trying to get file URL");
     }
 
     // Always try to use token for protected files
     if (useToken) {
       try {
-        console.log(
-          `Getting file token for ${collectionName}/${recordId}/${filename}`,
-        );
+        // console.log(
+        //   `Getting file token for ${collectionName}/${recordId}/${filename}`,
+        // );
         const token = await this.getFileToken();
-        console.log(`Got token: ${token.substring(0, 10)}...`);
+        // console.log(`Got token: ${token.substring(0, 10)}...`);
 
         // Make sure to pass the token as a query parameter
         const url = pb.files.getURL(
@@ -731,16 +748,16 @@ export class FileManager {
           filename,
           { token },
         );
-        console.log(`Generated URL with token: ${url.substring(0, 50)}...`);
+        // console.log(`Generated URL with token: ${url.substring(0, 50)}...`);
         return url;
       } catch (error) {
-        console.error("Error getting file token:", error);
+        // console.error("Error getting file token:", error);
         // Fall back to URL without token
         const url = pb.files.getURL(
           { id: recordId, collectionId: collectionName },
           filename,
         );
-        console.log(`Fallback URL without token: ${url.substring(0, 50)}...`);
+        // console.log(`Fallback URL without token: ${url.substring(0, 50)}...`);
         return url;
       }
     }
@@ -750,7 +767,7 @@ export class FileManager {
       { id: recordId, collectionId: collectionName },
       filename,
     );
-    console.log(`Generated URL without token: ${url.substring(0, 50)}...`);
+    // console.log(`Generated URL without token: ${url.substring(0, 50)}...`);
     return url;
   }
 }

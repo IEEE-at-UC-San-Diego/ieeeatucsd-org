@@ -104,17 +104,17 @@ export default function ResumeSettings() {
             const loadingToast = toast.loading('Uploading resume...');
 
             // Log the file being uploaded for debugging
-            console.log('Uploading file:', {
-                name: resumeFile.name,
-                size: resumeFile.size,
-                type: resumeFile.type
-            });
+            // console.log('Uploading file:', {
+            //     name: resumeFile.name,
+            //     size: resumeFile.size,
+            //     type: resumeFile.type
+            // });
 
             let updatedUserData: User;
 
             try {
                 // Use the FileManager to upload the file directly
-                console.log('Using FileManager to upload resume file');
+                // console.log('Using FileManager to upload resume file');
 
                 // Upload the file using the FileManager's uploadFile method
                 const result = await fileManager.uploadFile<User>(
@@ -130,18 +130,18 @@ export default function ResumeSettings() {
                     throw new Error('Resume was not properly saved to the user record');
                 }
 
-                console.log('Resume upload successful:', result.resume);
+                // console.log('Resume upload successful:', result.resume);
 
                 // Store the updated user data
                 updatedUserData = result;
 
                 // Fetch the updated user record to ensure we have the latest data
                 const refreshedUser = await get.getOne<User>(Collections.USERS, user.id);
-                console.log('Refreshed user data:', refreshedUser);
+                // console.log('Refreshed user data:', refreshedUser);
 
                 // Double check that the resume field is populated
                 if (!refreshedUser.resume) {
-                    console.warn('Resume field is missing in the refreshed user data');
+                    // console.warn('Resume field is missing in the refreshed user data');
                 }
             } catch (uploadError) {
                 console.error('Error in file upload process:', uploadError);
@@ -173,7 +173,7 @@ export default function ResumeSettings() {
             toast.success('Resume uploaded successfully');
 
             // Log the successful upload
-            console.log('Resume uploaded successfully:', updatedUserData.resume);
+            // console.log('Resume uploaded successfully:', updatedUserData.resume);
 
             // Dispatch a custom event to notify the dashboard about the resume upload
             const event = new CustomEvent('resumeUploaded', {
@@ -223,14 +223,14 @@ export default function ResumeSettings() {
             const loadingToast = toast.loading('Deleting resume...');
 
             // Log the deletion attempt
-            console.log('Attempting to delete resume for user:', user.id);
+            // console.log('Attempting to delete resume for user:', user.id);
 
             // Create a FormData with empty resume field to remove the file
             const formData = new FormData();
             formData.append('resume', '');
 
             try {
-                console.log('Using FileManager to delete resume file');
+                // console.log('Using FileManager to delete resume file');
 
                 // Use the FileManager's deleteFile method to remove the file
                 const result = await fileManager.deleteFile<User>(
@@ -241,22 +241,22 @@ export default function ResumeSettings() {
 
                 // Verify the file was deleted
                 if (result.resume) {
-                    console.warn('Resume field still exists after deletion attempt:', result.resume);
+                    // console.warn('Resume field still exists after deletion attempt:', result.resume);
                     toast.dismiss(loadingToast);
                     toast.error('Failed to completely remove the resume. Please try again.');
                     setUploading(false);
                     return;
                 }
 
-                console.log('Resume deletion successful for user:', user.id);
+                // console.log('Resume deletion successful for user:', user.id);
 
                 // Fetch the updated user record to ensure we have the latest data
                 const refreshedUser = await get.getOne<User>(Collections.USERS, user.id);
-                console.log('Refreshed user data after deletion:', refreshedUser);
+                // console.log('Refreshed user data after deletion:', refreshedUser);
 
                 // Double check that the resume field is empty
                 if (refreshedUser.resume) {
-                    console.warn('Resume field is still present in the refreshed user data:', refreshedUser.resume);
+                    // console.warn('Resume field is still present in the refreshed user data:', refreshedUser.resume);
                 }
             } catch (deleteError) {
                 console.error('Error in file deletion process:', deleteError);
@@ -275,7 +275,7 @@ export default function ResumeSettings() {
             toast.success('Resume deleted successfully');
 
             // Log the successful deletion
-            console.log('Resume deleted successfully for user:', user.id);
+            // console.log('Resume deleted successfully for user:', user.id);
 
             // Dispatch a custom event to notify the dashboard about the resume deletion
             const event = new CustomEvent('resumeUploaded', {
@@ -356,11 +356,11 @@ export default function ResumeSettings() {
                 const loadingToast = toast.loading('Replacing resume...');
 
                 // Log the file being uploaded for debugging
-                console.log('Replacing resume with file:', {
-                    name: file.name,
-                    size: file.size,
-                    type: file.type
-                });
+                // console.log('Replacing resume with file:', {
+                //     name: file.name,
+                //     size: file.size,
+                //     type: file.type
+                // });
 
                 // Create a FormData object for the file upload
                 const formData = new FormData();

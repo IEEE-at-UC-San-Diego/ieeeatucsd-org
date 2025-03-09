@@ -60,7 +60,7 @@ export class RedirectHandler {
           { emailVisibility: false },
         );
 
-      console.log("Auth successful:", authData);
+      // console.log("Auth successful:", authData);
       this.contentEl.innerHTML = `
                 <p class="text-3xl font-bold text-green-500 mb-4">Authentication Successful!</p>
                 <p class="text-2xl font-medium">Initializing your data...</p>
@@ -99,19 +99,15 @@ export class RedirectHandler {
   private async initializeDataSync(): Promise<void> {
     try {
       // Dynamically import the AuthSyncService to avoid circular dependencies
-      const { AuthSyncService } = await import('../database/AuthSyncService');
-      
+      const { AuthSyncService } = await import("../database/AuthSyncService");
+
       // Get the instance and trigger a full sync
       const authSync = AuthSyncService.getInstance();
       const syncResult = await authSync.handleLogin();
-      
-      if (syncResult) {
-        console.log('Initial data sync completed successfully');
-      } else {
-        console.warn('Initial data sync completed with issues');
-      }
+
+      // console.log('Initial data sync completed successfully');
     } catch (error) {
-      console.error('Failed to initialize data sync:', error);
+      console.error("Failed to initialize data sync:", error);
       // Continue with login process even if sync fails
     }
   }

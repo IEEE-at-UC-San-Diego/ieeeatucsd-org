@@ -87,20 +87,20 @@ export class Authentication {
     try {
       // Initialize AuthSyncService if needed (lazy loading)
       await this.initAuthSyncService();
-      
+
       // Get AuthSyncService instance
-      const { AuthSyncService } = await import('../database/AuthSyncService');
+      const { AuthSyncService } = await import("../database/AuthSyncService");
       const authSync = AuthSyncService.getInstance();
-      
+
       // Handle data cleanup before actual logout
       await authSync.handleLogout();
-      
+
       // Clear auth store
       this.pb.authStore.clear();
-      
-      console.log('Logout completed successfully with data cleanup');
+
+      // console.log('Logout completed successfully with data cleanup');
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error("Error during logout:", error);
       // Fallback to basic logout if sync fails
       this.pb.authStore.clear();
     }
@@ -133,9 +133,12 @@ export class Authentication {
    */
   public onAuthStateChange(callback: (isValid: boolean) => void): void {
     this.authChangeCallbacks.push(callback);
-    
+
     // Initialize AuthSyncService when first callback is registered
-    if (!this.authSyncServiceInitialized && this.authChangeCallbacks.length === 1) {
+    if (
+      !this.authSyncServiceInitialized &&
+      this.authChangeCallbacks.length === 1
+    ) {
       this.initAuthSyncService();
     }
   }
@@ -164,32 +167,32 @@ export class Authentication {
     const isValid = this.pb.authStore.isValid;
     this.authChangeCallbacks.forEach((callback) => callback(isValid));
   }
-  
+
   /**
    * Initialize the AuthSyncService (lazy loading)
    */
   private async initAuthSyncService(): Promise<void> {
     if (this.authSyncServiceInitialized) return;
-    
+
     try {
       // Dynamically import AuthSyncService to avoid circular dependencies
-      const { AuthSyncService } = await import('../database/AuthSyncService');
-      
+      const { AuthSyncService } = await import("../database/AuthSyncService");
+
       // Initialize the service
       AuthSyncService.getInstance();
-      
+
       this.authSyncServiceInitialized = true;
-      console.log('AuthSyncService initialized successfully');
-      
+      // console.log('AuthSyncService initialized successfully');
+
       // If user is already authenticated, trigger initial sync
       if (this.isAuthenticated()) {
         const authSync = AuthSyncService.getInstance();
-        authSync.handleLogin().catch(err => {
-          console.error('Error during initial data sync:', err);
+        authSync.handleLogin().catch((err) => {
+          console.error("Error during initial data sync:", err);
         });
       }
     } catch (error) {
-      console.error('Failed to initialize AuthSyncService:', error);
+      console.error("Failed to initialize AuthSyncService:", error);
     }
   }
 }

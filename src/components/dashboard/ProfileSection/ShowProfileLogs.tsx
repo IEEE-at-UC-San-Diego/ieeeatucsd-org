@@ -49,7 +49,7 @@ export default function ShowProfileLogs() {
 
         try {
             setIsFetchingAll(true);
-            console.log("Fetching logs for user:", userId);
+            // console.log("Fetching logs for user:", userId);
 
             // Use DataSyncService to fetch logs
             const dataSync = DataSyncService.getInstance();
@@ -70,15 +70,15 @@ export default function ShowProfileLogs() {
                 "-created"
             );
 
-            console.log("Fetched logs:", fetchedLogs.length);
+            // console.log("Fetched logs:", fetchedLogs.length);
 
             if (fetchedLogs.length === 0) {
                 // If no logs found, try to fetch directly from PocketBase
-                console.log("No logs found in IndexedDB, trying direct fetch from PocketBase");
+                // console.log("No logs found in IndexedDB, trying direct fetch from PocketBase");
                 try {
                     const sendLog = SendLog.getInstance();
                     const directLogs = await sendLog.getUserLogs(userId);
-                    console.log("Direct fetch logs:", directLogs.length);
+                    // console.log("Direct fetch logs:", directLogs.length);
 
                     if (directLogs.length > 0) {
                         setAllLogs(directLogs);
@@ -90,7 +90,7 @@ export default function ShowProfileLogs() {
                         setTotalLogs(fetchedLogs.length);
                     }
                 } catch (directError) {
-                    console.error("Failed to fetch logs directly:", directError);
+                    // console.error("Failed to fetch logs directly:", directError);
                     setAllLogs(fetchedLogs);
                     setTotalPages(Math.ceil(fetchedLogs.length / LOGS_PER_PAGE));
                     setTotalLogs(fetchedLogs.length);
@@ -101,7 +101,7 @@ export default function ShowProfileLogs() {
                 setTotalLogs(fetchedLogs.length);
             }
         } catch (error) {
-            console.error("Failed to fetch logs:", error);
+            // console.error("Failed to fetch logs:", error);
             setError("Error loading activity");
         } finally {
             setLoading(false);
@@ -134,7 +134,7 @@ export default function ShowProfileLogs() {
     // Update displayed logs whenever filtered results change
     useEffect(() => {
         setLogs(filteredLogs);
-        console.log("Filtered logs updated:", filteredLogs.length, "logs");
+        // console.log("Filtered logs updated:", filteredLogs.length, "logs");
     }, [filteredLogs]);
 
     // Debounced search handler
@@ -178,12 +178,12 @@ export default function ShowProfileLogs() {
                 setTimeout(async () => {
                     // Check if logs were loaded
                     if (allLogs.length === 0) {
-                        console.log("No logs found after initial fetch, trying direct fetch");
+                        // console.log("No logs found after initial fetch, trying direct fetch");
                         await directFetchLogs();
                     }
                 }, 1000);
             } catch (error) {
-                console.error("Failed to load logs with retry:", error);
+                // console.error("Failed to load logs with retry:", error);
             }
         };
 
@@ -200,14 +200,14 @@ export default function ShowProfileLogs() {
 
             // Check if the logs collection exists and has any records
             const result = await pb.collection(Collections.LOGS).getList(1, 1);
-            console.log("Logs collection check:", {
-                totalItems: result.totalItems,
-                page: result.page,
-                perPage: result.perPage,
-                totalPages: result.totalPages
-            });
+            // console.log("Logs collection check:", {
+            //     totalItems: result.totalItems,
+            //     page: result.page,
+            //     perPage: result.perPage,
+            //     totalPages: result.totalPages
+            // });
         } catch (error) {
-            console.error("Failed to check logs collection:", error);
+            // console.error("Failed to check logs collection:", error);
         }
     };
 
@@ -255,7 +255,7 @@ export default function ShowProfileLogs() {
                 return;
             }
 
-            console.log("Direct fetching logs for user:", userId);
+            // console.log("Direct fetching logs for user:", userId);
 
             // Fetch logs directly from PocketBase
             const result = await pb.collection(Collections.LOGS).getList<Log>(1, 100, {
@@ -264,10 +264,10 @@ export default function ShowProfileLogs() {
                 expand: "user"
             });
 
-            console.log("Direct fetch result:", {
-                totalItems: result.totalItems,
-                items: result.items.length
-            });
+            // console.log("Direct fetch result:", {
+            //     totalItems: result.totalItems,
+            //     items: result.items.length
+            // });
 
             if (result.items.length > 0) {
                 setAllLogs(result.items);
@@ -275,7 +275,7 @@ export default function ShowProfileLogs() {
                 setTotalLogs(result.items.length);
             }
         } catch (error) {
-            console.error("Failed to direct fetch logs:", error);
+            // console.error("Failed to direct fetch logs:", error);
             setError("Error loading activity");
         } finally {
             setLoading(false);
@@ -315,13 +315,13 @@ export default function ShowProfileLogs() {
     }
 
     // Debug logs
-    console.log("Render state:", {
-        logsLength: logs.length,
-        allLogsLength: allLogs.length,
-        searchQuery,
-        loading,
-        currentPage
-    });
+    // console.log("Render state:", {
+    //     logsLength: logs.length,
+    //     allLogsLength: allLogs.length,
+    //     searchQuery,
+    //     loading,
+    //     currentPage
+    // });
 
     if (allLogs.length === 0 && !searchQuery && !loading) {
         return (
@@ -348,10 +348,10 @@ export default function ShowProfileLogs() {
                                     "Test log created for debugging",
                                     userId
                                 );
-                                console.log("Created test log");
+                                // console.log("Created test log");
                                 setTimeout(() => fetchLogs(true), 1000);
                             } catch (error) {
-                                console.error("Failed to create test log:", error);
+                                // console.error("Failed to create test log:", error);
                             }
                         }}
                     >

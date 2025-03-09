@@ -112,27 +112,27 @@ export default function ReimbursementList() {
     const fileManager = FileManager.getInstance();
 
     useEffect(() => {
-        console.log('Component mounted');
+        // console.log('Component mounted');
         fetchReimbursements();
     }, []);
 
     // Add effect to monitor requests state
     useEffect(() => {
-        console.log('Requests state updated:', requests);
-        console.log('Number of requests:', requests.length);
+        // console.log('Requests state updated:', requests);
+        // console.log('Number of requests:', requests.length);
     }, [requests]);
 
     // Add a useEffect to log preview URL and filename changes
     useEffect(() => {
-        console.log('Preview URL changed:', previewUrl);
-        console.log('Preview filename changed:', previewFilename);
+        // console.log('Preview URL changed:', previewUrl);
+        // console.log('Preview filename changed:', previewFilename);
     }, [previewUrl, previewFilename]);
 
     // Add a useEffect to log when the preview modal is shown/hidden
     useEffect(() => {
-        console.log('Show preview changed:', showPreview);
+        // console.log('Show preview changed:', showPreview);
         if (showPreview) {
-            console.log('Selected receipt:', selectedReceipt);
+            // console.log('Selected receipt:', selectedReceipt);
         }
     }, [showPreview, selectedReceipt]);
 
@@ -167,7 +167,7 @@ export default function ReimbursementList() {
                 '-created'
             );
 
-            console.log('Reimbursement records from IndexedDB:', reimbursementRecords);
+            // console.log('Reimbursement records from IndexedDB:', reimbursementRecords);
 
             // Process the records
             const processedRecords = reimbursementRecords.map(record => {
@@ -183,7 +183,7 @@ export default function ReimbursementList() {
                             auditNotes = record.audit_notes;
                         }
                     } catch (e) {
-                        console.error('Error parsing audit notes:', e);
+                        // console.error('Error parsing audit notes:', e);
                     }
                 }
 
@@ -217,7 +217,7 @@ export default function ReimbursementList() {
                                             itemizedExpenses = receiptRecord.itemized_expenses as ItemizedExpense[];
                                         }
                                     } catch (e) {
-                                        console.error('Error parsing itemized expenses:', e);
+                                        // console.error('Error parsing itemized expenses:', e);
                                     }
                                 }
 
@@ -241,13 +241,13 @@ export default function ReimbursementList() {
                                 }));
                             }
                         } catch (e) {
-                            console.error(`Error fetching receipt ${receiptId}:`, e);
+                            // console.error(`Error fetching receipt ${receiptId}:`, e);
                         }
                     }
                 }
             }
         } catch (err) {
-            console.error('Error fetching reimbursements:', err);
+            // console.error('Error fetching reimbursements:', err);
             setError('Failed to load reimbursements. Please try again.');
         } finally {
             setLoading(false);
@@ -256,7 +256,7 @@ export default function ReimbursementList() {
 
     const handlePreviewFile = async (request: ReimbursementRequest, receiptId: string) => {
         try {
-            console.log('Previewing file for receipt ID:', receiptId);
+            // console.log('Previewing file for receipt ID:', receiptId);
             const pb = auth.getPocketBase();
             const fileManager = FileManager.getInstance();
 
@@ -265,13 +265,13 @@ export default function ReimbursementList() {
 
             // Check if we already have the receipt details in our map
             if (receiptDetailsMap[receiptId]) {
-                console.log('Using cached receipt details');
+                // console.log('Using cached receipt details');
                 // Use the cached receipt details
                 setSelectedReceipt(receiptDetailsMap[receiptId]);
 
                 // Check if the receipt has a file
                 if (!receiptDetailsMap[receiptId].file) {
-                    console.error('Receipt has no file attached');
+                    // console.error('Receipt has no file attached');
                     toast.error('This receipt has no file attached');
                     setPreviewUrl('');
                     setPreviewFilename('');
@@ -280,7 +280,7 @@ export default function ReimbursementList() {
                 }
 
                 // Get the file URL with token for protected files
-                console.log('Getting file URL with token');
+                // console.log('Getting file URL with token');
                 const url = await fileManager.getFileUrlWithToken(
                     'receipts',
                     receiptId,
@@ -290,7 +290,7 @@ export default function ReimbursementList() {
 
                 // Check if the URL is empty
                 if (!url) {
-                    console.error('Failed to get file URL: Empty URL returned');
+                    // console.error('Failed to get file URL: Empty URL returned');
                     toast.error('Failed to load receipt: Could not generate file URL');
                     // Still show the preview modal but with empty URL to display the error message
                     setPreviewUrl('');
@@ -299,7 +299,7 @@ export default function ReimbursementList() {
                     return;
                 }
 
-                console.log('Got URL:', url.substring(0, 50) + '...');
+                // console.log('Got URL:', url.substring(0, 50) + '...');
 
                 // Set the preview URL and filename
                 setPreviewUrl(url);
@@ -309,28 +309,28 @@ export default function ReimbursementList() {
                 setShowPreview(true);
 
                 // Log the current state
-                console.log('Current state after setting:', {
-                    previewUrl: url,
-                    previewFilename: receiptDetailsMap[receiptId].file,
-                    showPreview: true
-                });
+                // console.log('Current state after setting:', {
+                //     previewUrl: url,
+                //     previewFilename: receiptDetailsMap[receiptId].file,
+                //     showPreview: true
+                // });
 
                 return;
             }
 
             // If not in the map, get the receipt record using its ID
-            console.log('Fetching receipt details from server');
+            // console.log('Fetching receipt details from server');
             const receiptRecord = await pb.collection('receipts').getOne(receiptId, {
                 $autoCancel: false
             });
 
             if (receiptRecord) {
-                console.log('Receipt record found:', receiptRecord.id);
-                console.log('Receipt file:', receiptRecord.file);
+                // console.log('Receipt record found:', receiptRecord.id);
+                // console.log('Receipt file:', receiptRecord.file);
 
                 // Check if the receipt has a file
                 if (!receiptRecord.file) {
-                    console.error('Receipt has no file attached');
+                    // console.error('Receipt has no file attached');
                     toast.error('This receipt has no file attached');
                     setPreviewUrl('');
                     setPreviewFilename('');
@@ -367,7 +367,7 @@ export default function ReimbursementList() {
                 setSelectedReceipt(receiptDetails);
 
                 // Get the file URL with token for protected files
-                console.log('Getting file URL with token for new receipt');
+                // console.log('Getting file URL with token for new receipt');
                 const url = await fileManager.getFileUrlWithToken(
                     'receipts',
                     receiptRecord.id,
@@ -377,7 +377,7 @@ export default function ReimbursementList() {
 
                 // Check if the URL is empty
                 if (!url) {
-                    console.error('Failed to get file URL: Empty URL returned');
+                    // console.error('Failed to get file URL: Empty URL returned');
                     toast.error('Failed to load receipt: Could not generate file URL');
                     // Still show the preview modal but with empty URL to display the error message
                     setPreviewUrl('');
@@ -386,7 +386,7 @@ export default function ReimbursementList() {
                     return;
                 }
 
-                console.log('Got URL:', url.substring(0, 50) + '...');
+                // console.log('Got URL:', url.substring(0, 50) + '...');
 
                 // Set the preview URL and filename
                 setPreviewUrl(url);
@@ -396,16 +396,16 @@ export default function ReimbursementList() {
                 setShowPreview(true);
 
                 // Log the current state
-                console.log('Current state after setting:', {
-                    previewUrl: url,
-                    previewFilename: receiptRecord.file,
-                    showPreview: true
-                });
+                // console.log('Current state after setting:', {
+                //     previewUrl: url,
+                //     previewFilename: receiptRecord.file,
+                //     showPreview: true
+                // });
             } else {
                 throw new Error('Receipt not found');
             }
         } catch (error) {
-            console.error('Error loading receipt:', error);
+            // console.error('Error loading receipt:', error);
             toast.error('Failed to load receipt. Please try again.');
             // Show the preview modal with empty URL to display the error message
             setPreviewUrl('');
@@ -423,7 +423,7 @@ export default function ReimbursementList() {
     };
 
     if (loading) {
-        console.log('Rendering loading state');
+        // console.log('Rendering loading state');
         return (
             <motion.div
                 initial={{ opacity: 0 }}
@@ -437,7 +437,7 @@ export default function ReimbursementList() {
     }
 
     if (error) {
-        console.log('Rendering error state:', error);
+        // console.log('Rendering error state:', error);
         return (
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
@@ -450,8 +450,8 @@ export default function ReimbursementList() {
         );
     }
 
-    console.log('Rendering main component. Requests:', requests);
-    console.log('Requests length:', requests.length);
+    // console.log('Rendering main component. Requests:', requests);
+    // console.log('Requests length:', requests.length);
 
     return (
         <>
@@ -482,7 +482,7 @@ export default function ReimbursementList() {
                     >
                         <AnimatePresence mode="popLayout">
                             {requests.map((request, index) => {
-                                console.log('Rendering request:', request);
+                                // console.log('Rendering request:', request);
                                 return (
                                     <motion.div
                                         key={request.id}

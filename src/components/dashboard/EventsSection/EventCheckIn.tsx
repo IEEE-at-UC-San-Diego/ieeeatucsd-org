@@ -249,8 +249,6 @@ const EventCheckIn = () => {
                 // Create the attendee record in PocketBase
                 const newAttendee = await update.create(Collections.EVENT_ATTENDEES, attendeeData);
 
-                console.log("Successfully created attendance record");
-
                 // Update user's total points
                 // First, get all the user's attendance records to calculate total points
                 const userAttendance = await get.getList<EventAttendee>(
@@ -267,7 +265,7 @@ const EventCheckIn = () => {
                 });
 
                 // Log the points update
-                console.log(`Updating user points to: ${totalPoints}`);
+                // console.log(`Updating user points to: ${totalPoints}`);
 
                 // Update the user record with the new total points
                 await update.updateFields(Collections.USERS, userId, {

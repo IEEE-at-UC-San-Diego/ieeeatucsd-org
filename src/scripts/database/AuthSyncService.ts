@@ -78,7 +78,7 @@ export class AuthSyncService {
     if (!isBrowser) return true;
 
     if (this.isSyncing) {
-      console.log("Sync already in progress, queueing login sync");
+      // console.log("Sync already in progress, queueing login sync");
       if (this.syncPromise) {
         this.syncPromise = this.syncPromise.then(() => this.performLoginSync());
       } else {
@@ -100,7 +100,7 @@ export class AuthSyncService {
     if (!isBrowser) return;
 
     if (!this.auth.isAuthenticated()) {
-      console.log("Not authenticated, skipping login sync");
+      // console.log("Not authenticated, skipping login sync");
       return;
     }
 
@@ -108,7 +108,7 @@ export class AuthSyncService {
     this.syncErrors = {};
 
     try {
-      console.log("Starting login sync process...");
+      // console.log("Starting login sync process...");
 
       // Display sync notification if in browser environment
       this.showSyncNotification("Syncing your data...");
@@ -123,7 +123,7 @@ export class AuthSyncService {
         );
 
         // Log the sync operation
-        console.log("User data synchronized on login");
+        // console.log("User data synchronized on login");
       }
 
       // Sync all collections in parallel with conflict resolution
@@ -131,9 +131,9 @@ export class AuthSyncService {
         this.collectionsToSync.map(async (collection) => {
           try {
             await this.dataSync.syncCollection(collection);
-            console.log(`Successfully synced ${collection}`);
+            // console.log(`Successfully synced ${collection}`);
           } catch (error) {
-            console.error(`Error syncing ${collection}:`, error);
+            // console.error(`Error syncing ${collection}:`, error);
             this.syncErrors[collection] = error as Error;
           }
         }),
@@ -146,17 +146,17 @@ export class AuthSyncService {
       const syncVerification = await this.verifySyncSuccess();
 
       if (syncVerification.success) {
-        console.log("Login sync completed successfully");
+        // console.log("Login sync completed successfully");
         this.showSyncNotification("Data sync complete!", "success");
       } else {
-        console.warn(
-          "Login sync completed with issues:",
-          syncVerification.errors,
-        );
+        // console.warn(
+        //   "Login sync completed with issues:",
+        //   syncVerification.errors,
+        // );
         this.showSyncNotification("Some data could not be synced", "warning");
       }
     } catch (error) {
-      console.error("Error during login sync:", error);
+      // console.error("Error during login sync:", error);
       this.showSyncNotification("Failed to sync data", "error");
     } finally {
       this.isSyncing = false;
@@ -180,7 +180,7 @@ export class AuthSyncService {
     if (!isBrowser) return true;
 
     if (this.isSyncing) {
-      console.log("Sync already in progress, queueing logout cleanup");
+      // console.log("Sync already in progress, queueing logout cleanup");
       this.syncQueue.push("logout");
       return true;
     }
@@ -188,7 +188,7 @@ export class AuthSyncService {
     this.isSyncing = true;
 
     try {
-      console.log("Starting logout cleanup process...");
+      // console.log("Starting logout cleanup process...");
 
       // Ensure any pending changes are synced before logout
       await this.syncPendingChanges();
@@ -196,10 +196,10 @@ export class AuthSyncService {
       // Clear all data from IndexedDB
       await this.dexieService.clearAllData();
 
-      console.log("Logout cleanup completed successfully");
+      // console.log("Logout cleanup completed successfully");
       return true;
     } catch (error) {
-      console.error("Error during logout cleanup:", error);
+      // console.error("Error during logout cleanup:", error);
       return false;
     } finally {
       this.isSyncing = false;
@@ -224,7 +224,7 @@ export class AuthSyncService {
 
     // This would be implemented if we had offline capabilities
     // For now, we just log that we would sync pending changes
-    console.log("Checking for pending changes to sync before logout...");
+    // console.log("Checking for pending changes to sync before logout...");
     // In a real implementation, this would sync any offline changes
   }
 
@@ -284,7 +284,7 @@ export class AuthSyncService {
       window.toast(message, { type });
     } else {
       // Fallback to console
-      console.log(`[${type.toUpperCase()}] ${message}`);
+      // console.log(`[${type.toUpperCase()}] ${message}`);
     }
   }
 
@@ -293,7 +293,7 @@ export class AuthSyncService {
    */
   public async forceSyncAll(): Promise<boolean> {
     if (this.isSyncing) {
-      console.log("Sync already in progress, queueing full sync");
+      // console.log("Sync already in progress, queueing full sync");
       this.syncQueue.push("login"); // Reuse login sync logic
       return true;
     }

@@ -45,29 +45,7 @@ export default function PasswordChangeSettings({
     const logtoTokenEndpoint = envLogtoTokenEndpoint || propLogtoTokenEndpoint;
     const logtoApiEndpoint = envLogtoApiEndpoint || propLogtoApiEndpoint;
 
-    // Log props and environment variables for debugging
-    useEffect(() => {
-        console.log("PasswordChangeSettings props and env vars:");
-        console.log("Props - logtoAppId:", propLogtoAppId);
-        console.log("Props - logtoAppSecret:", propLogtoAppSecret);
-        console.log("Props - logtoEndpoint:", propLogtoEndpoint);
-        console.log("Props - logtoTokenEndpoint:", propLogtoTokenEndpoint);
-        console.log("Props - logtoApiEndpoint:", propLogtoApiEndpoint);
-        console.log("Env - LOGTO_APP_ID:", envLogtoAppId);
-        console.log("Env - LOGTO_APP_SECRET:", envLogtoAppSecret);
-        console.log("Env - LOGTO_ENDPOINT:", envLogtoEndpoint);
-        console.log("Env - LOGTO_TOKEN_ENDPOINT:", envLogtoTokenEndpoint);
-        console.log("Env - LOGTO_API_ENDPOINT:", envLogtoApiEndpoint);
-        console.log("Using - logtoAppId:", logtoAppId);
-        console.log("Using - logtoAppSecret:", logtoAppSecret);
-        console.log("Using - logtoEndpoint:", logtoEndpoint);
-        console.log("Using - logtoTokenEndpoint:", logtoTokenEndpoint);
-        console.log("Using - logtoApiEndpoint:", logtoApiEndpoint);
-    }, [
-        propLogtoAppId, propLogtoAppSecret, propLogtoEndpoint, propLogtoTokenEndpoint, propLogtoApiEndpoint,
-        envLogtoAppId, envLogtoAppSecret, envLogtoEndpoint, envLogtoTokenEndpoint, envLogtoApiEndpoint,
-        logtoAppId, logtoAppSecret, logtoEndpoint, logtoTokenEndpoint, logtoApiEndpoint
-    ]);
+
 
     // Get the user's Logto ID on component mount
     useEffect(() => {
@@ -80,17 +58,17 @@ export default function PasswordChangeSettings({
                     return;
                 }
 
-                console.log("Current user:", user);
+                // console.log("Current user:", user);
                 const pb = auth.getPocketBase();
 
                 try {
                     const externalAuthRecord = await pb.collection('_externalAuths').getFirstListItem(`recordRef="${user.id}" && provider="oidc"`);
-                    console.log("Found external auth record:", externalAuthRecord);
+                    // console.log("Found external auth record:", externalAuthRecord);
 
                     const userId = externalAuthRecord.providerId;
                     if (userId) {
                         setLogtoUserId(userId);
-                        console.log("Set Logto user ID:", userId);
+                        // console.log("Set Logto user ID:", userId);
                     } else {
                         console.error("No providerId found in external auth record");
                         toast.error("Could not determine your user ID. Please try again later or contact support.");
@@ -153,7 +131,7 @@ export default function PasswordChangeSettings({
         try {
             const response = await fetch('/api/check-env');
             const data = await response.json();
-            console.log("Environment variables status:", data);
+            // console.log("Environment variables status:", data);
 
             // Check if all required environment variables are set
             const { envStatus } = data;
@@ -244,7 +222,7 @@ export default function PasswordChangeSettings({
                         const iframeDocument = iframe.contentDocument || iframe.contentWindow?.document;
                         if (iframeDocument) {
                             const responseText = iframeDocument.body.innerText;
-                            console.log("Response from iframe:", responseText);
+                            // console.log("Response from iframe:", responseText);
 
                             if (responseText) {
                                 try {
@@ -308,7 +286,7 @@ export default function PasswordChangeSettings({
             } else {
                 // Use the fetch API with JSON
                 const endpoint = '/api/change-password';
-                console.log(`Calling server-side API endpoint: ${endpoint}`);
+                // console.log(`Calling server-side API endpoint: ${endpoint}`);
 
                 // Ensure we have the Logto user ID
                 if (!logtoUserId) {
@@ -317,13 +295,13 @@ export default function PasswordChangeSettings({
                 }
 
                 // Log the values we're about to use
-                console.log("Values being used for API call:");
-                console.log("- logtoUserId:", logtoUserId);
-                console.log("- newPassword:", formData.newPassword ? "[PRESENT]" : "[MISSING]");
-                console.log("- logtoAppId:", logtoAppId);
-                console.log("- logtoAppSecret:", logtoAppSecret ? "[PRESENT]" : "[MISSING]");
-                console.log("- logtoTokenEndpoint:", logtoTokenEndpoint);
-                console.log("- logtoApiEndpoint:", logtoApiEndpoint);
+                // console.log("Values being used for API call:");
+                // console.log("- logtoUserId:", logtoUserId);
+                // console.log("- newPassword:", formData.newPassword ? "[PRESENT]" : "[MISSING]");
+                // console.log("- logtoAppId:", logtoAppId);
+                // console.log("- logtoAppSecret:", logtoAppSecret ? "[PRESENT]" : "[MISSING]");
+                // console.log("- logtoTokenEndpoint:", logtoTokenEndpoint);
+                // console.log("- logtoApiEndpoint:", logtoApiEndpoint);
 
                 // Prepare request data with explicit values (not relying on variable references that might be undefined)
                 const requestData = {
@@ -336,12 +314,12 @@ export default function PasswordChangeSettings({
                     logtoApiEndpoint: logtoApiEndpoint || logtoEndpoint
                 };
 
-                console.log("Request data:", {
-                    ...requestData,
-                    currentPassword: "[REDACTED]",
-                    newPassword: "[REDACTED]",
-                    logtoAppSecret: "[REDACTED]"
-                });
+                // console.log("Request data:", {
+                //     ...requestData,
+                //     currentPassword: "[REDACTED]",
+                //     newPassword: "[REDACTED]",
+                //     logtoAppSecret: "[REDACTED]"
+                // });
 
                 // Validate request data before sending
                 if (!requestData.userId) {
@@ -368,7 +346,7 @@ export default function PasswordChangeSettings({
 
                 // Stringify the request data to ensure it's valid JSON
                 const requestBody = JSON.stringify(requestData);
-                console.log("Request body (stringified):", requestBody);
+                // console.log("Request body (stringified):", requestBody);
 
                 // Create a debug object to display in the UI
                 const debugObj = {
@@ -394,13 +372,13 @@ export default function PasswordChangeSettings({
                     body: requestBody
                 });
 
-                console.log("Response status:", response.status);
+                // console.log("Response status:", response.status);
 
                 // Process the response
                 let result: any;
                 try {
                     const responseText = await response.text();
-                    console.log("Raw response:", responseText);
+                    // console.log("Raw response:", responseText);
 
                     if (responseText) {
                         result = JSON.parse(responseText);
@@ -408,7 +386,7 @@ export default function PasswordChangeSettings({
                         result = { success: false, message: 'Empty response from server' };
                     }
 
-                    console.log("API response:", result);
+                    // console.log("API response:", result);
 
                     // Add response to debug info
                     setDebugInfo((prev: any) => ({
@@ -470,13 +448,13 @@ export default function PasswordChangeSettings({
                             type="button"
                             className="btn btn-sm btn-warning"
                             onClick={() => {
-                                console.log("Debug Info:");
-                                console.log("- logtoUserId:", logtoUserId);
-                                console.log("- Environment Variables:");
-                                console.log("  - LOGTO_APP_ID:", import.meta.env.LOGTO_APP_ID);
-                                console.log("  - LOGTO_ENDPOINT:", import.meta.env.LOGTO_ENDPOINT);
-                                console.log("  - LOGTO_TOKEN_ENDPOINT:", import.meta.env.LOGTO_TOKEN_ENDPOINT);
-                                console.log("  - LOGTO_API_ENDPOINT:", import.meta.env.LOGTO_API_ENDPOINT);
+                                // console.log("Debug Info:");
+                                // console.log("- logtoUserId:", logtoUserId);
+                                // console.log("- Environment Variables:");
+                                // console.log("  - LOGTO_APP_ID:", import.meta.env.LOGTO_APP_ID);
+                                // console.log("  - LOGTO_ENDPOINT:", import.meta.env.LOGTO_ENDPOINT);
+                                // console.log("  - LOGTO_TOKEN_ENDPOINT:", import.meta.env.LOGTO_TOKEN_ENDPOINT);
+                                // console.log("  - LOGTO_API_ENDPOINT:", import.meta.env.LOGTO_API_ENDPOINT);
 
                                 toast.success("Debug info logged to console");
                             }}

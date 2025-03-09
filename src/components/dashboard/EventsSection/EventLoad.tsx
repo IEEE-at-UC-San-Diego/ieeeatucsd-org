@@ -74,9 +74,9 @@ const EventLoad = () => {
 
             // Clear events table
             if (db && db.events) {
-                console.log("Clearing events cache...");
+                // console.log("Clearing events cache...");
                 await db.events.clear();
-                console.log("Events cache cleared successfully");
+                // console.log("Events cache cleared successfully");
             }
 
             // Reset sync timestamp for events by updating it to 0
@@ -84,7 +84,7 @@ const EventLoad = () => {
             const currentInfo = await dexieService.getLastSync(Collections.EVENTS);
             // Then update it with a timestamp of 0 (forcing a fresh sync)
             await dexieService.updateLastSync(Collections.EVENTS);
-            console.log("Events sync timestamp reset");
+            // console.log("Events sync timestamp reset");
 
             // Reload events
             setLoading(true);
@@ -245,7 +245,7 @@ const EventLoad = () => {
             const dataSync = DataSyncService.getInstance();
             const auth = Authentication.getInstance();
 
-            console.log("Starting to load events...");
+            // console.log("Starting to load events...");
 
             // Check if user is authenticated
             if (!auth.isAuthenticated()) {
@@ -255,7 +255,7 @@ const EventLoad = () => {
             }
 
             // Force sync to ensure we have the latest data
-            console.log("Syncing events collection...");
+            // console.log("Syncing events collection...");
             let syncSuccess = false;
             let retryCount = 0;
             const maxRetries = 3;
@@ -263,13 +263,13 @@ const EventLoad = () => {
             while (!syncSuccess && retryCount < maxRetries) {
                 try {
                     if (retryCount > 0) {
-                        console.log(`Retry attempt ${retryCount} of ${maxRetries}...`);
+                        // console.log(`Retry attempt ${retryCount} of ${maxRetries}...`);
                         // Add a small delay between retries
                         await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
                     }
 
                     await dataSync.syncCollection(Collections.EVENTS, "published = true", "-start_date");
-                    console.log("Events collection synced successfully");
+                    // console.log("Events collection synced successfully");
                     syncSuccess = true;
                 } catch (syncError) {
                     retryCount++;
@@ -282,7 +282,7 @@ const EventLoad = () => {
             }
 
             // Get events from IndexedDB
-            console.log("Fetching events from IndexedDB...");
+            // console.log("Fetching events from IndexedDB...");
             const allEvents = await dataSync.getData<Event>(
                 Collections.EVENTS,
                 false, // Don't force sync again
@@ -290,27 +290,27 @@ const EventLoad = () => {
                 "-start_date"
             );
 
-            console.log(`Retrieved ${allEvents.length} events from IndexedDB`);
+            // console.log(`Retrieved ${allEvents.length} events from IndexedDB`);
 
             // Filter out invalid events
             const validEvents = allEvents.filter(event => isValidEvent(event));
-            console.log(`Filtered out ${allEvents.length - validEvents.length} invalid events`);
+            // console.log(`Filtered out ${allEvents.length - validEvents.length} invalid events`);
 
             // If no valid events found in IndexedDB, try fetching directly from PocketBase as fallback
             let eventsToProcess = validEvents;
             if (allEvents.length === 0) {
-                console.log("No events found in IndexedDB, trying direct PocketBase fetch...");
+                // console.log("No events found in IndexedDB, trying direct PocketBase fetch...");
                 try {
                     const pbEvents = await get.getAll<Event>(
                         Collections.EVENTS,
                         "published = true",
                         "-start_date"
                     );
-                    console.log(`Retrieved ${pbEvents.length} events directly from PocketBase`);
+                    // console.log(`Retrieved ${pbEvents.length} events directly from PocketBase`);
 
                     // Filter out invalid events from PocketBase results
                     const validPbEvents = pbEvents.filter(event => isValidEvent(event));
-                    console.log(`Filtered out ${pbEvents.length - validPbEvents.length} invalid events from PocketBase`);
+                    // console.log(`Filtered out ${pbEvents.length - validPbEvents.length} invalid events from PocketBase`);
 
                     eventsToProcess = validPbEvents;
 
@@ -319,7 +319,7 @@ const EventLoad = () => {
                         const dexieService = DexieService.getInstance();
                         const db = dexieService.getDB();
                         if (db && db.events) {
-                            console.log(`Storing ${validPbEvents.length} valid PocketBase events in IndexedDB...`);
+                            // console.log(`Storing ${validPbEvents.length} valid PocketBase events in IndexedDB...`);
                             await db.events.bulkPut(validPbEvents);
                         }
                     }
@@ -329,7 +329,7 @@ const EventLoad = () => {
             }
 
             // Split events into upcoming, ongoing, and past based on start and end dates
-            console.log("Categorizing events...");
+            // console.log("Categorizing events...");
             const now = new Date();
             const { upcoming, ongoing, past } = eventsToProcess.reduce(
                 (acc, event) => {
@@ -382,7 +382,7 @@ const EventLoad = () => {
                 }
             );
 
-            console.log(`Categorized events: ${upcoming.length} upcoming, ${ongoing.length} ongoing, ${past.length} past`);
+            // console.log(`Categorized events: ${upcoming.length} upcoming, ${ongoing.length} ongoing, ${past.length} past`);
 
             // Sort events
             upcoming.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
@@ -409,16 +409,16 @@ const EventLoad = () => {
 
                     // Try to load from IndexedDB only as a last resort
                     try {
-                        console.log("Attempting to load events from IndexedDB only...");
+                        // console.log("Attempting to load events from IndexedDB only...");
                         const dexieService = DexieService.getInstance();
                         const db = dexieService.getDB();
                         if (db && db.events) {
                             const allCachedEvents = await db.events.filter(event => event.published === true).toArray();
-                            console.log(`Found ${allCachedEvents.length} cached events in IndexedDB`);
+                            // console.log(`Found ${allCachedEvents.length} cached events in IndexedDB`);
 
                             // Filter out invalid events
                             const cachedEvents = allCachedEvents.filter(event => isValidEvent(event));
-                            console.log(`Filtered out ${allCachedEvents.length - cachedEvents.length} invalid cached events`);
+                            // console.log(`Filtered out ${allCachedEvents.length - cachedEvents.length} invalid cached events`);
 
                             if (cachedEvents.length > 0) {
                                 // Process these events
@@ -458,7 +458,7 @@ const EventLoad = () => {
                                     ongoing: ongoing.slice(0, 50),
                                     past: past.slice(0, 50)
                                 });
-                                console.log("Successfully loaded events from cache");
+                                // console.log("Successfully loaded events from cache");
                             }
                         }
                     } catch (cacheError) {

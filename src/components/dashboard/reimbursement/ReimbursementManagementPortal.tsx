@@ -134,7 +134,6 @@ export default function ReimbursementManagementPortal() {
             }
 
             const records = await get.getAll<ExtendedReimbursement>('reimbursement', filter, sort);
-            console.log('Loaded reimbursements:', records);
 
             // Load user data for submitters
             const userIds = new Set(records.map(r => r.submitted_by));
@@ -165,11 +164,9 @@ export default function ReimbursementManagementPortal() {
 
             // Load associated receipts
             const receiptIds = enrichedRecords.flatMap(r => r.receipts || []);
-            console.log('Extracted receipt IDs:', receiptIds, 'from reimbursements:', enrichedRecords.map(r => ({ id: r.id, receipts: r.receipts })));
 
             if (receiptIds.length > 0) {
                 try {
-                    console.log('Attempting to load receipts with IDs:', receiptIds);
                     const receiptRecords = await Promise.all(
                         receiptIds.map(async id => {
                             try {
@@ -202,12 +199,10 @@ export default function ReimbursementManagementPortal() {
                     );
 
                     const validReceipts = receiptRecords.filter((r): r is ExtendedReceipt => r !== null);
-                    console.log('Successfully loaded receipt records:', validReceipts);
 
                     const receiptMap = Object.fromEntries(
                         validReceipts.map(receipt => [receipt.id, receipt])
                     );
-                    console.log('Created receipt map:', receiptMap);
                     setReceipts(receiptMap);
                 } catch (error: any) {
                     console.error('Error loading receipts:', error);
@@ -219,7 +214,7 @@ export default function ReimbursementManagementPortal() {
                     toast.error('Failed to load receipts: ' + (error?.message || 'Unknown error'));
                 }
             } else {
-                console.log('No receipt IDs found in reimbursements');
+                // console.log('No receipt IDs found in reimbursements');
                 setReceipts({});
             }
         } catch (error) {

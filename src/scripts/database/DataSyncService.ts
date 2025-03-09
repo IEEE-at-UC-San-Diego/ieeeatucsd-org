@@ -83,7 +83,7 @@ export class DataSyncService {
   private async handleOnline(): Promise<void> {
     if (!isBrowser) return;
 
-    console.log("Device is online, syncing pending changes...");
+    // console.log("Device is online, syncing pending changes...");
     this.offlineMode = false;
     await this.syncOfflineChanges();
   }
@@ -94,7 +94,7 @@ export class DataSyncService {
   private handleOffline(): void {
     if (!isBrowser) return;
 
-    console.log("Device is offline, enabling offline mode...");
+    // console.log("Device is offline, enabling offline mode...");
     this.offlineMode = true;
   }
 
@@ -109,13 +109,13 @@ export class DataSyncService {
   ): Promise<T[]> {
     // Skip in non-browser environments
     if (!isBrowser) {
-      console.log(`Skipping sync for ${collection} in non-browser environment`);
+      // console.log(`Skipping sync for ${collection} in non-browser environment`);
       return [];
     }
 
     // Prevent multiple syncs of the same collection at the same time
     if (this.syncInProgress[collection]) {
-      console.log(`Sync already in progress for ${collection}`);
+      // console.log(`Sync already in progress for ${collection}`);
       return [];
     }
 
@@ -124,19 +124,19 @@ export class DataSyncService {
     try {
       // Check if we're authenticated
       if (!this.auth.isAuthenticated()) {
-        console.log(`Not authenticated, skipping sync for ${collection}`);
+        // console.log(`Not authenticated, skipping sync for ${collection}`);
         return [];
       }
 
       // Check if we're offline
       if (this.offlineMode) {
-        console.log(`Device is offline, using cached data for ${collection}`);
+        // console.log(`Device is offline, using cached data for ${collection}`);
         const db = this.dexieService.getDB();
         const table = this.getTableForCollection(collection);
         return table ? ((await table.toArray()) as T[]) : [];
       }
 
-      console.log(`Syncing ${collection}...`);
+      // console.log(`Syncing ${collection}...`);
 
       // Normalize expand parameter to be an array of strings
       let normalizedExpand: string[] | undefined;
@@ -158,7 +158,7 @@ export class DataSyncService {
       const items = await this.get.getAll<T>(collection, filter, sort, {
         expand: normalizedExpand,
       });
-      console.log(`Fetched ${items.length} items from ${collection}`);
+      // console.log(`Fetched ${items.length} items from ${collection}`);
 
       // Get the database table
       const db = this.dexieService.getDB();
@@ -181,11 +181,11 @@ export class DataSyncService {
           const existingItem = existingItemsMap.get(item.id);
 
           // SECURITY FIX: Remove event_code from events before storing in IndexedDB
-          if (collection === Collections.EVENTS && 'event_code' in item) {
+          if (collection === Collections.EVENTS && "event_code" in item) {
             // Keep the event_code but ensure files array is properly handled
-            if ('files' in item && Array.isArray((item as any).files)) {
+            if ("files" in item && Array.isArray((item as any).files)) {
               // Ensure files array is properly stored
-              console.log(`Event ${item.id} has ${(item as any).files.length} files`);
+              // console.log(`Event ${item.id} has ${(item as any).files.length} files`);
             } else {
               // Initialize empty files array if not present
               (item as any).files = [];
@@ -232,18 +232,21 @@ export class DataSyncService {
     // For events, ensure we handle the files field properly
     if (collection === Collections.EVENTS) {
       // Ensure files array is properly handled
-      if ('files' in serverItem && Array.isArray((serverItem as any).files)) {
-        console.log(`Server event ${serverItem.id} has ${(serverItem as any).files.length} files`);
+      if ("files" in serverItem && Array.isArray((serverItem as any).files)) {
+        // console.log(`Server event ${serverItem.id} has ${(serverItem as any).files.length} files`);
       } else {
         // Initialize empty files array if not present
         (serverItem as any).files = [];
       }
-      
+
       // If local item has files but server doesn't, preserve local files
-      if ('files' in localItem && Array.isArray((localItem as any).files) && 
-          (localItem as any).files.length > 0 && 
-          (!('files' in serverItem) || !(serverItem as any).files.length)) {
-        console.log(`Preserving local files for event ${localItem.id}`);
+      if (
+        "files" in localItem &&
+        Array.isArray((localItem as any).files) &&
+        (localItem as any).files.length > 0 &&
+        (!("files" in serverItem) || !(serverItem as any).files.length)
+      ) {
+        // console.log(`Preserving local files for event ${localItem.id}`);
         (serverItem as any).files = (localItem as any).files;
       }
     }
@@ -255,9 +258,9 @@ export class DataSyncService {
     );
 
     if (pendingChanges.length > 0) {
-      console.log(
-        `Found ${pendingChanges.length} pending changes for ${collection}:${localItem.id}`,
-      );
+      // console.log(
+      //   `Found ${pendingChanges.length} pending changes for ${collection}:${localItem.id}`,
+      // );
 
       // Server-wins strategy by default, but preserve local changes that haven't been synced
       const mergedItem = { ...serverItem };
@@ -268,12 +271,16 @@ export class DataSyncService {
           // Apply each field change individually
           Object.entries(change.data).forEach(([key, value]) => {
             // Special handling for files array
-            if (key === 'files' && Array.isArray(value)) {
+            if (key === "files" && Array.isArray(value)) {
               // Merge files arrays, removing duplicates
-              const existingFiles = Array.isArray((mergedItem as any)[key]) ? (mergedItem as any)[key] : [];
+              const existingFiles = Array.isArray((mergedItem as any)[key])
+                ? (mergedItem as any)[key]
+                : [];
               const newFiles = value as string[];
-              (mergedItem as any)[key] = [...new Set([...existingFiles, ...newFiles])];
-              console.log(`Merged files for ${collection}:${localItem.id}`, (mergedItem as any)[key]);
+              (mergedItem as any)[key] = [
+                ...new Set([...existingFiles, ...newFiles]),
+              ];
+              // console.log(`Merged files for ${collection}:${localItem.id}`, (mergedItem as any)[key]);
             } else {
               (mergedItem as any)[key] = value;
             }
@@ -326,11 +333,11 @@ export class DataSyncService {
         .toArray();
 
       if (pendingChanges.length === 0) {
-        console.log("No pending offline changes to sync");
+        // console.log("No pending offline changes to sync");
         return true;
       }
 
-      console.log(`Syncing ${pendingChanges.length} offline changes...`);
+      // console.log(`Syncing ${pendingChanges.length} offline changes...`);
 
       // Group changes by collection for more efficient processing
       const changesByCollection = pendingChanges.reduce(
@@ -411,9 +418,9 @@ export class DataSyncService {
       };
 
       const id = await this.offlineChangesTable.add(change as OfflineChange);
-      console.log(
-        `Recorded offline change: ${operation} on ${collection}:${recordId}`,
-      );
+      // console.log(
+      //   `Recorded offline change: ${operation} on ${collection}:${recordId}`,
+      // );
 
       // Try to sync immediately if we're online
       if (!this.offlineMode) {
@@ -500,7 +507,7 @@ export class DataSyncService {
     // SECURITY FIX: Remove event_code from events before returning them
     if (collection === Collections.EVENTS) {
       data = data.map((item: any) => {
-        if ('event_code' in item) {
+        if ("event_code" in item) {
           const { event_code, ...rest } = item;
           return rest;
         }
@@ -538,17 +545,22 @@ export class DataSyncService {
           // For events, ensure we handle the files field properly
           if (collection === Collections.EVENTS) {
             // Ensure files array is properly handled
-            if (!('files' in pbItem) || !Array.isArray((pbItem as any).files)) {
+            if (!("files" in pbItem) || !Array.isArray((pbItem as any).files)) {
               (pbItem as any).files = [];
             }
-            
+
             // If we already have a local item with files, preserve them if server has none
-            if (item && 'files' in item && Array.isArray((item as any).files) && 
-                (item as any).files.length > 0 && !(pbItem as any).files.length) {
-              console.log(`Preserving local files for event ${id}`);
+            if (
+              item &&
+              "files" in item &&
+              Array.isArray((item as any).files) &&
+              (item as any).files.length > 0 &&
+              !(pbItem as any).files.length
+            ) {
+              // console.log(`Preserving local files for event ${id}`);
               (pbItem as any).files = (item as any).files;
             }
-            
+
             await table.put(pbItem);
             item = pbItem;
           } else {
@@ -587,21 +599,21 @@ export class DataSyncService {
     }
 
     // Special handling for files field in events
-    if (collection === Collections.EVENTS && 'files' in data) {
-      console.log(`Updating files for event ${id}`, (data as any).files);
-      
+    if (collection === Collections.EVENTS && "files" in data) {
+      // console.log(`Updating files for event ${id}`, (data as any).files);
+
       // Ensure files is an array
       if (!Array.isArray((data as any).files)) {
         (data as any).files = [];
       }
-      
+
       // If we're updating files, make sure we're not losing any
-      if ('files' in currentItem && Array.isArray((currentItem as any).files)) {
+      if ("files" in currentItem && Array.isArray((currentItem as any).files)) {
         // Merge files arrays, removing duplicates
         const existingFiles = (currentItem as any).files as string[];
         const newFiles = (data as any).files as string[];
         (data as any).files = [...new Set([...existingFiles, ...newFiles])];
-        console.log(`Merged files for event ${id}`, (data as any).files);
+        // console.log(`Merged files for event ${id}`, (data as any).files);
       }
     }
 
@@ -689,11 +701,14 @@ export class DataSyncService {
 
     try {
       // Store in localStorage instead of IndexedDB for security
-      localStorage.setItem('pending_event_code', eventCode);
-      localStorage.setItem('pending_event_code_timestamp', Date.now().toString());
-      console.log('Event code stored for offline check-in');
+      localStorage.setItem("pending_event_code", eventCode);
+      localStorage.setItem(
+        "pending_event_code_timestamp",
+        Date.now().toString(),
+      );
+      // console.log('Event code stored for offline check-in');
     } catch (error) {
-      console.error('Error storing event code:', error);
+      console.error("Error storing event code:", error);
     }
   }
 
@@ -704,11 +719,11 @@ export class DataSyncService {
     if (!isBrowser) return;
 
     try {
-      localStorage.removeItem('pending_event_code');
-      localStorage.removeItem('pending_event_code_timestamp');
-      console.log('Event code cleared');
+      localStorage.removeItem("pending_event_code");
+      localStorage.removeItem("pending_event_code_timestamp");
+      // console.log('Event code cleared');
     } catch (error) {
-      console.error('Error clearing event code:', error);
+      console.error("Error clearing event code:", error);
     }
   }
 
@@ -716,21 +731,24 @@ export class DataSyncService {
    * Get the stored event code from local storage
    * @returns The stored event code, or null if none exists
    */
-  public async getStoredEventCode(): Promise<{ code: string; timestamp: number } | null> {
+  public async getStoredEventCode(): Promise<{
+    code: string;
+    timestamp: number;
+  } | null> {
     if (!isBrowser) return null;
 
     try {
-      const code = localStorage.getItem('pending_event_code');
-      const timestamp = localStorage.getItem('pending_event_code_timestamp');
-      
+      const code = localStorage.getItem("pending_event_code");
+      const timestamp = localStorage.getItem("pending_event_code_timestamp");
+
       if (!code || !timestamp) return null;
-      
+
       return {
         code,
-        timestamp: parseInt(timestamp)
+        timestamp: parseInt(timestamp),
       };
     } catch (error) {
-      console.error('Error getting stored event code:', error);
+      console.error("Error getting stored event code:", error);
       return null;
     }
   }
@@ -745,31 +763,31 @@ export class DataSyncService {
     try {
       const db = this.dexieService.getDB();
       const table = this.getTableForCollection(Collections.EVENTS);
-      
+
       if (!table) {
-        console.error('Events table not found');
+        console.error("Events table not found");
         return;
       }
-      
+
       // Get all events
       const events = await table.toArray();
-      
+
       // Remove event_code from each event
-      const updatedEvents = events.map(event => {
-        if ('event_code' in event) {
+      const updatedEvents = events.map((event) => {
+        if ("event_code" in event) {
           const { event_code, ...rest } = event;
           return rest;
         }
         return event;
       });
-      
+
       // Clear the table and add the updated events
       await table.clear();
       await table.bulkAdd(updatedEvents);
-      
-      console.log('Successfully purged event codes from IndexedDB');
+
+      // console.log('Successfully purged event codes from IndexedDB');
     } catch (error) {
-      console.error('Error purging event codes:', error);
+      console.error("Error purging event codes:", error);
     }
   }
 }
