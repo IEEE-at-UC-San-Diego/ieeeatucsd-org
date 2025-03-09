@@ -37,6 +37,7 @@ export interface User extends BaseRecord {
   display_preferences?: string; // JSON string of display settings (theme, font size, etc.)
   accessibility_settings?: string; // JSON string of accessibility settings (color blind mode, reduced motion)
   resume?: string;
+  requested_email?: boolean; // Whether the user has requested an IEEE email address
 }
 
 /**
