@@ -28,7 +28,10 @@ export default function EmailRequestSettings() {
                 setLoading(true);
                 const currentUser = auth.getCurrentUser();
                 if (!currentUser) {
-                    toast.error('You must be logged in to access this page');
+                    // Don't show toast on dashboard page for unauthenticated users
+                    if (!window.location.pathname.includes('/dashboard')) {
+                        toast.error('You must be logged in to access this page');
+                    }
                     return;
                 }
 
@@ -47,7 +50,10 @@ export default function EmailRequestSettings() {
                 }
             } catch (error) {
                 console.error('Error loading user data:', error);
-                toast.error('Failed to load user data. Please try again later.');
+                // Don't show toast on dashboard page for unauthenticated users
+                if (auth.isAuthenticated() || !window.location.pathname.includes('/dashboard')) {
+                    toast.error('Failed to load user data. Please try again later.');
+                }
             } finally {
                 setLoading(false);
             }

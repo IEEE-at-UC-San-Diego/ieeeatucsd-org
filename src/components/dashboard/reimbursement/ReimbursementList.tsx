@@ -145,6 +145,11 @@ export default function ReimbursementList() {
             const userId = pb.authStore.model?.id;
 
             if (!userId) {
+                // Silently return without error when on dashboard page
+                if (window.location.pathname.includes('/dashboard')) {
+                    setLoading(false);
+                    return;
+                }
                 throw new Error('User not authenticated');
             }
 

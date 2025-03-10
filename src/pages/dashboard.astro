@@ -322,6 +322,11 @@ const components = Object.fromEntries(
       const get = Get.getInstance();
       const logger = SendLog.getInstance();
 
+      // Ensure toast function is defined
+      if (typeof window !== "undefined" && !window.toast) {
+        window.toast = () => {};
+      }
+
       // Initialize page state
       const pageLoadingState = document.getElementById("pageLoadingState");
       const pageErrorState = document.getElementById("pageErrorState");
@@ -580,17 +585,29 @@ const components = Object.fromEntries(
       // Function to initialize the page
       const initializePage = async () => {
         try {
-          // Initialize auth sync for IndexedDB
-          await initAuthSync();
+          // Define a temporary toast function that does nothing for unauthenticated users
+          const originalToast = window.toast;
 
           // Check if user is authenticated
           if (!auth.isAuthenticated()) {
+            // Temporarily override toast function to prevent notifications for unauthenticated users
+            window.toast = () => {};
+
+            // Initialize auth sync for IndexedDB (but toast notifications will be suppressed)
+            await initAuthSync();
+
+            // Restore original toast function
+            window.toast = originalToast;
+
             // console.log("User not authenticated");
             if (pageLoadingState) pageLoadingState.classList.add("hidden");
             if (notAuthenticatedState)
               notAuthenticatedState.classList.remove("hidden");
             return;
           }
+
+          // Initialize auth sync for IndexedDB (for authenticated users)
+          await initAuthSync();
 
           if (pageLoadingState) pageLoadingState.classList.remove("hidden");
           if (pageErrorState) pageErrorState.classList.add("hidden");

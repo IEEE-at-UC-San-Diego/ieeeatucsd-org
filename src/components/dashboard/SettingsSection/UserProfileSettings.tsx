@@ -46,7 +46,11 @@ export default function UserProfileSettings({
             try {
                 const currentUser = auth.getCurrentUser();
                 if (!currentUser) {
-                    throw new Error('User not authenticated');
+                    // Don't show error toast on dashboard page for unauthenticated users
+                    if (!window.location.pathname.includes('/dashboard')) {
+                        throw new Error('User not authenticated');
+                    }
+                    return;
                 }
 
                 // Get the Logto user ID from PocketBase's external auth collection
@@ -102,11 +106,17 @@ export default function UserProfileSettings({
                     }
                 } catch (error) {
                     console.error('Error fetching external auth record:', error);
-                    toast.error('Could not determine your user ID. Please try again later or contact support.');
+                    // Don't show error toast on dashboard page for unauthenticated users
+                    if (auth.isAuthenticated() || !window.location.pathname.includes('/dashboard')) {
+                        toast.error('Could not determine your user ID. Please try again later or contact support.');
+                    }
                 }
             } catch (error) {
                 console.error('Error loading user data:', error);
-                toast.error('Failed to load user data. Please try again later.');
+                // Don't show error toast on dashboard page for unauthenticated users
+                if (auth.isAuthenticated() || !window.location.pathname.includes('/dashboard')) {
+                    toast.error('Failed to load user data. Please try again later.');
+                }
             } finally {
                 setLoading(false);
             }

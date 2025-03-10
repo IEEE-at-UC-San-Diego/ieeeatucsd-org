@@ -249,6 +249,11 @@ const EventLoad = () => {
 
             // Check if user is authenticated
             if (!auth.isAuthenticated()) {
+                // Silently return without error when on dashboard page
+                if (window.location.pathname.includes('/dashboard')) {
+                    setLoading(false);
+                    return;
+                }
                 console.error("User not authenticated, cannot load events");
                 setLoading(false);
                 return;

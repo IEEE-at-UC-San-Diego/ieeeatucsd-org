@@ -117,13 +117,22 @@ export default function ReimbursementForm() {
             const userId = pb.authStore.model?.id;
 
             if (!userId) {
+                // Silently return without error when on dashboard page
+                if (window.location.pathname.includes('/dashboard')) {
+                    setIsLoading(false);
+                    return;
+                }
                 throw new Error('User not authenticated');
             }
 
             const user = await pb.collection('users').getOne(userId);
             setHasZelleInfo(!!user.zelle_information);
         } catch (error) {
-            console.error('Error checking Zelle information:', error);
+            // Only log error if not on dashboard page or if it's not an authentication error
+            if (!window.location.pathname.includes('/dashboard') ||
+                !(error instanceof Error && error.message === 'User not authenticated')) {
+                console.error('Error checking Zelle information:', error);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -175,6 +184,10 @@ export default function ReimbursementForm() {
             const userId = pb.authStore.model?.id;
 
             if (!userId) {
+                // Silently return without error when on dashboard page
+                if (window.location.pathname.includes('/dashboard')) {
+                    return;
+                }
                 toast.error('User not authenticated');
                 throw new Error('User not authenticated');
             }
@@ -244,6 +257,11 @@ export default function ReimbursementForm() {
             const userId = pb.authStore.model?.id;
 
             if (!userId) {
+                // Silently return without error when on dashboard page
+                if (window.location.pathname.includes('/dashboard')) {
+                    setIsSubmitting(false);
+                    return;
+                }
                 throw new Error('User not authenticated');
             }
 

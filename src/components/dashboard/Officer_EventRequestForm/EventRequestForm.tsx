@@ -234,14 +234,20 @@ const EventRequestForm: React.FC = () => {
             const dataSync = DataSyncService.getInstance();
 
             if (!auth.isAuthenticated()) {
-                toast.error('You must be logged in to submit an event request');
+                // Don't show error toast on dashboard page for unauthenticated users
+                if (!window.location.pathname.includes('/dashboard')) {
+                    toast.error('You must be logged in to submit an event request');
+                }
                 throw new Error('You must be logged in to submit an event request');
             }
 
             // Create the event request record
             const userId = auth.getUserId();
             if (!userId) {
-                toast.error('User ID not found');
+                // Don't show error toast on dashboard page for unauthenticated users
+                if (auth.isAuthenticated() || !window.location.pathname.includes('/dashboard')) {
+                    toast.error('User ID not found');
+                }
                 throw new Error('User ID not found');
             }
 

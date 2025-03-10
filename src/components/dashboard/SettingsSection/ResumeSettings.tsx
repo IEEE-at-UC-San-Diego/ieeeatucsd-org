@@ -27,7 +27,11 @@ export default function ResumeSettings() {
                 setLoading(true);
                 const currentUser = auth.getCurrentUser();
                 if (!currentUser) {
-                    throw new Error('User not authenticated');
+                    // Don't show error toast on dashboard page for unauthenticated users
+                    if (!window.location.pathname.includes('/dashboard')) {
+                        throw new Error('User not authenticated');
+                    }
+                    return;
                 }
 
                 const userData = await get.getOne<User>('users', currentUser.id);
@@ -42,7 +46,10 @@ export default function ResumeSettings() {
                 }
             } catch (error) {
                 console.error('Error fetching user data:', error);
-                toast.error('Failed to load user data');
+                // Don't show error toast on dashboard page for unauthenticated users
+                if (auth.isAuthenticated() || !window.location.pathname.includes('/dashboard')) {
+                    toast.error('Failed to load user data');
+                }
             } finally {
                 setLoading(false);
             }

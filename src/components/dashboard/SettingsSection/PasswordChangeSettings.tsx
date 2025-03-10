@@ -53,8 +53,11 @@ export default function PasswordChangeSettings({
             try {
                 const user = auth.getCurrentUser();
                 if (!user) {
-                    console.error("User not authenticated");
-                    toast.error("You must be logged in to change your password");
+                    // Don't show error on dashboard page for unauthenticated users
+                    if (!window.location.pathname.includes('/dashboard')) {
+                        console.error("User not authenticated");
+                        toast.error("You must be logged in to change your password");
+                    }
                     return;
                 }
 

@@ -4,6 +4,16 @@ import { DexieService } from "./DexieService";
 import { Collections } from "../../schemas/pocketbase/schema";
 import { SendLog } from "../pocketbase/SendLog";
 
+// Define the window interface to include the toast function
+declare global {
+  interface Window {
+    toast?: (
+      message: string,
+      options?: { type: "info" | "success" | "warning" | "error" },
+    ) => void;
+  }
+}
+
 // Check if we're in a browser environment
 const isBrowser =
   typeof window !== "undefined" && typeof window.indexedDB !== "undefined";
@@ -279,6 +289,14 @@ export class AuthSyncService {
     // Only run in browser environment
     if (!isBrowser) return;
 
+    // Don't show notifications if user is not authenticated and on the dashboard page
+    if (
+      !this.auth.isAuthenticated() &&
+      window.location.pathname.includes("/dashboard")
+    ) {
+      return;
+    }
+
     // Check if toast function exists (from react-hot-toast or similar)
     if (typeof window.toast === "function") {
       window.toast(message, { type });
@@ -313,15 +331,5 @@ export class AuthSyncService {
    */
   public getSyncErrors(): Record<string, Error> {
     return { ...this.syncErrors };
-  }
-}
-
-// Add toast type to window for TypeScript
-declare global {
-  interface Window {
-    toast?: (
-      message: string,
-      options?: { type: "info" | "success" | "warning" | "error" },
-    ) => void;
   }
 }
