@@ -82,6 +82,9 @@ export interface EventRequestFormData {
     formReviewed?: boolean; // Track if the form has been reviewed
 }
 
+// Add CustomAlert import
+import CustomAlert from '../universal/CustomAlert';
+
 const EventRequestForm: React.FC = () => {
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -164,10 +167,22 @@ const EventRequestForm: React.FC = () => {
 
     // Handle form section data changes
     const handleSectionDataChange = (sectionData: Partial<EventRequestFormData>) => {
-        setFormData(prevData => ({
-            ...prevData,
-            ...sectionData
-        }));
+        // Ensure both needs_graphics and flyers_needed are synchronized
+        if (sectionData.flyers_needed !== undefined && sectionData.needs_graphics === undefined) {
+            sectionData.needs_graphics = sectionData.flyers_needed ? true : false;
+        }
+
+        // Ensure both needs_as_funding and as_funding_required are synchronized
+        if (sectionData.needs_as_funding !== undefined && sectionData.as_funding_required === undefined) {
+            sectionData.as_funding_required = sectionData.needs_as_funding ? true : false;
+        }
+
+        setFormData(prevData => {
+            // Save to localStorage
+            const updatedData = { ...prevData, ...sectionData };
+            localStorage.setItem('eventRequestFormData', JSON.stringify(updatedData));
+            return updatedData;
+        });
     };
 
     // Add this function before the handleSubmit function
@@ -260,19 +275,22 @@ const EventRequestForm: React.FC = () => {
                 end_date_time: new Date(formData.end_date_time).toISOString(),
                 event_description: formData.event_description,
                 flyers_needed: formData.flyers_needed,
+                photography_needed: formData.photography_needed,
+                as_funding_required: formData.needs_as_funding,
+                food_drinks_being_served: formData.food_drinks_being_served,
+                // Store the itemized_invoice as a string for backward compatibility
+                itemized_invoice: formData.itemized_invoice,
                 flyer_type: formData.flyer_type,
                 other_flyer_type: formData.other_flyer_type,
                 flyer_advertising_start_date: formData.flyer_advertising_start_date ? new Date(formData.flyer_advertising_start_date).toISOString() : '',
                 flyer_additional_requests: formData.flyer_additional_requests,
-                photography_needed: formData.photography_needed,
                 required_logos: formData.required_logos,
                 advertising_format: formData.advertising_format,
                 will_or_have_room_booking: formData.will_or_have_room_booking,
                 expected_attendance: formData.expected_attendance,
-                as_funding_required: formData.as_funding_required,
-                food_drinks_being_served: formData.food_drinks_being_served,
-                // Store the itemized_invoice as a string for backward compatibility
-                itemized_invoice: formData.itemized_invoice,
+                // Add these fields explicitly to match the schema
+                needs_graphics: formData.needs_graphics,
+                needs_as_funding: formData.needs_as_funding,
                 // Store the invoice data as a properly formatted JSON object
                 invoice_data: {
                     items: formData.invoiceData.items.map(item => ({
@@ -417,18 +435,30 @@ const EventRequestForm: React.FC = () => {
 
     // Validate TAP Form Section
     const validateTAPFormSection = () => {
-        if (!formData.expected_attendance) {
-            toast.error('Please enter the expected attendance');
+        // Verify that all required fields are filled
+        if (!formData.will_or_have_room_booking && formData.will_or_have_room_booking !== false) {
+            toast.error('Please indicate whether you will or have a room booking');
             return false;
         }
 
-        if (!formData.room_booking && formData.will_or_have_room_booking) {
+        if (!formData.expected_attendance || formData.expected_attendance <= 0) {
+            toast.error('Please enter a valid expected attendance');
+            return false;
+        }
+
+        if (formData.will_or_have_room_booking && !formData.room_booking) {
             toast.error('Please upload your room booking confirmation');
             return false;
         }
 
-        if (formData.food_drinks_being_served === null || formData.food_drinks_being_served === undefined) {
-            toast.error('Please specify if food/drinks will be served');
+        if (!formData.food_drinks_being_served && formData.food_drinks_being_served !== false) {
+            toast.error('Please indicate whether food/drinks will be served');
+            return false;
+        }
+
+        // Validate AS funding question if food is being served
+        if (formData.food_drinks_being_served && formData.needs_as_funding === undefined) {
+            toast.error('Please indicate whether you need AS funding');
             return false;
         }
 
@@ -495,18 +525,28 @@ const EventRequestForm: React.FC = () => {
             isValid = validateASFundingSection();
         }
 
-        if (isValid) {
-            // Set the current step
-            setCurrentStep(nextStep);
+        if (!isValid) {
+            return; // Don't proceed if validation fails
+        }
 
-            // If moving to the review step, mark the form as reviewed
-            // but don't submit it automatically
-            if (nextStep === 6) {
-                setFormData(prevData => ({
-                    ...prevData,
-                    formReviewed: true
-                }));
+        // If we're moving from step 4 to step 5
+        if (currentStep === 4 && nextStep === 5) {
+            // If food and drinks aren't being served or if AS funding isn't needed, skip to step 6 (review)
+            if (!formData.food_drinks_being_served || !formData.needs_as_funding) {
+                nextStep = 6;
             }
+        }
+
+        // Set the current step
+        setCurrentStep(nextStep);
+
+        // If moving to the review step, mark the form as reviewed
+        // but don't submit it automatically
+        if (nextStep === 6) {
+            setFormData(prevData => ({
+                ...prevData,
+                formReviewed: true
+            }));
         }
     };
 
@@ -653,55 +693,19 @@ const EventRequestForm: React.FC = () => {
                     variants={containerVariants}
                     className="space-y-6"
                 >
-                    {formData.food_drinks_being_served && (
-                        <div className="bg-base-200/50 p-6 rounded-lg mb-6">
-                            <h3 className="text-xl font-semibold mb-4">Do you need AS funding for this event?</h3>
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <button
-                                    className={`btn btn-lg ${formData.needs_as_funding ? 'btn-primary' : 'btn-outline'} flex-1`}
-                                    onClick={() => {
-                                        setFormData({ ...formData, needs_as_funding: true, as_funding_required: true });
-                                    }}
-                                >
-                                    Yes
-                                </button>
-                                <button
-                                    className={`btn btn-lg ${!formData.needs_as_funding && formData.needs_as_funding !== null ? 'btn-primary' : 'btn-outline'} flex-1`}
-                                    onClick={() => {
-                                        setFormData({ ...formData, needs_as_funding: false, as_funding_required: false });
-                                    }}
-                                >
-                                    No
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    <div className="bg-base-200/50 p-6 rounded-lg mb-6">
+                        <h3 className="text-xl font-semibold mb-4">AS Funding Details</h3>
+                        <p className="mb-4">Please provide the necessary information for your AS funding request.</p>
+                    </div>
 
-                    {!formData.food_drinks_being_served && (
-                        <div className="bg-base-200/50 p-6 rounded-lg mb-6">
-                            <h3 className="text-xl font-semibold mb-4">AS Funding Information</h3>
-                            <p className="mb-4">Since you're not serving food or drinks, AS funding is not applicable for this event.</p>
-                            <div className="alert alert-info">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-5 w-5 stroke-current">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                <div>
-                                    <p>If you need to request AS funding for other purposes, please contact the AS office directly.</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {formData.needs_as_funding && formData.food_drinks_being_served && (
-                        <ASFundingSection formData={formData} onDataChange={handleSectionDataChange} />
-                    )}
+                    <ASFundingSection formData={formData} onDataChange={handleSectionDataChange} />
 
                     <div className="flex justify-between mt-8">
                         <button className="btn btn-outline" onClick={() => setCurrentStep(4)}>
                             Back
                         </button>
                         <button className="btn btn-primary" onClick={() => handleNextStep(6)}>
-                            Review Form
+                            Next
                         </button>
                     </div>
                 </motion.div>
@@ -730,18 +734,27 @@ const EventRequestForm: React.FC = () => {
 
                         <div className="divider my-6">Ready to Submit?</div>
 
-                        <div className="alert alert-info mb-6">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-5 w-5 stroke-current">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <div>
-                                <p>Once submitted, you'll need to notify PR and/or Coordinators in the #-events Slack channel.</p>
-                            </div>
-                        </div>
+                        <CustomAlert
+                            type="info"
+                            title="Important Note"
+                            message="Once submitted, you'll need to notify PR and/or Coordinators in the #-events Slack channel."
+                            icon="heroicons:information-circle"
+                            className="mb-6"
+                        />
                     </div>
 
                     <div className="flex justify-between mt-8">
-                        <button className="btn btn-outline" onClick={() => setCurrentStep(5)}>
+                        <button
+                            className="btn btn-outline"
+                            onClick={() => {
+                                // Skip the AS Funding section if not needed
+                                if (!formData.food_drinks_being_served || !formData.needs_as_funding) {
+                                    setCurrentStep(4);  // Go back to TAP Form section
+                                } else {
+                                    setCurrentStep(5);  // Go back to AS Funding section
+                                }
+                            }}
+                        >
                             Back
                         </button>
                         <button
@@ -784,21 +797,20 @@ const EventRequestForm: React.FC = () => {
                     }}
                     className="space-y-6"
                 >
-                    <AnimatePresence mode="wait">
-                        {error && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                                className="alert alert-error shadow-lg"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 stroke-current" fill="none" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                                <span>{error}</span>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                    {error && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                        >
+                            <CustomAlert
+                                type="error"
+                                title="Error"
+                                message={error}
+                                icon="heroicons:exclamation-triangle"
+                            />
+                        </motion.div>
+                    )}
 
                     {/* Progress indicator */}
                     <div className="w-full mb-6">

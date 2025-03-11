@@ -4,6 +4,7 @@ import type { EventRequestFormData } from './EventRequestForm';
 import type { InvoiceItem } from './InvoiceBuilder';
 import type { EventRequest } from '../../../schemas/pocketbase';
 import { FlyerTypes, LogoOptions, EventRequestStatus } from '../../../schemas/pocketbase';
+import CustomAlert from '../universal/CustomAlert';
 
 // Create a standalone component that can be used to show the preview as a modal
 export const EventRequestFormPreviewModal: React.FC = () => {
@@ -376,9 +377,13 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                                     </table>
                                 </div>
                             ) : (
-                                <div className="alert alert-info mb-4">
-                                    <div>No invoice items have been added yet.</div>
-                                </div>
+                                <CustomAlert
+                                    type="info"
+                                    title="Information"
+                                    message="The actual invoice items will be available to coordinators after submission."
+                                    icon="heroicons:information-circle"
+                                    className="mb-4"
+                                />
                             )}
 
                             <div className="mt-4 mb-4">

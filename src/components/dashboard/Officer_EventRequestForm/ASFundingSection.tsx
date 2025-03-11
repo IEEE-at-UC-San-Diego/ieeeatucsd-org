@@ -3,21 +3,65 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import type { EventRequestFormData } from './EventRequestForm';
 import InvoiceBuilder from './InvoiceBuilder';
-import type { InvoiceData } from './InvoiceBuilder';
+import type { InvoiceData, InvoiceItem } from './InvoiceBuilder';
 import CustomAlert from '../universal/CustomAlert';
+import { Icon } from '@iconify/react';
 
-// Animation variants
+// Enhanced animation variants with faster transitions
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.035,
+            when: "beforeChildren",
+            duration: 0.3,
+            ease: "easeOut"
+        }
+    }
+};
+
 const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 10 },
     visible: {
         opacity: 1,
         y: 0,
         transition: {
             type: "spring",
-            stiffness: 300,
-            damping: 24
+            stiffness: 500,
+            damping: 25,
+            mass: 0.8,
+            duration: 0.25
         }
     }
+};
+
+// Input field hover animation
+const inputHoverVariants = {
+    hover: {
+        scale: 1.01,
+        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+        transition: { duration: 0.15 }
+    }
+};
+
+// Button animation
+const buttonVariants = {
+    hover: {
+        scale: 1.03,
+        transition: { duration: 0.15, ease: "easeOut" }
+    },
+    tap: {
+        scale: 0.97,
+        transition: { duration: 0.1 }
+    }
+};
+
+// Toggle animation
+const toggleVariants = {
+    checked: { backgroundColor: "rgba(var(--p), 0.2)" },
+    unchecked: { backgroundColor: "rgba(0, 0, 0, 0.05)" },
+    hover: { scale: 1.01, transition: { duration: 0.15 } }
 };
 
 interface ASFundingSectionProps {
@@ -26,395 +70,370 @@ interface ASFundingSectionProps {
 }
 
 const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataChange }) => {
-    const [invoiceFile, setInvoiceFile] = useState<File | null>(formData.invoice);
     const [invoiceFiles, setInvoiceFiles] = useState<File[]>(formData.invoice_files || []);
-    const [useJsonInput, setUseJsonInput] = useState(false);
-    const [jsonInput, setJsonInput] = useState('');
-    const [jsonError, setJsonError] = useState('');
-    const [showExample, setShowExample] = useState(false);
+    const [jsonInput, setJsonInput] = useState<string>('');
+    const [jsonError, setJsonError] = useState<string>('');
+    const [showJsonInput, setShowJsonInput] = useState<boolean>(false);
+    const [isDragging, setIsDragging] = useState(false);
 
-    // Example JSON for the user to reference
-    const jsonExample = {
-        items: [
-            {
-                item: "Chicken Plate",
-                quantity: 10,
-                unit_price: 12.99
-            },
-            {
-                item: "Vegetarian Plate",
-                quantity: 5,
-                unit_price: 11.99
-            },
-            {
-                item: "Bottled Water",
-                quantity: 15,
-                unit_price: 1.50
-            }
-        ],
-        tax: 10.14,
-        tip: 15.00,
-        vendor: "L&L Hawaiian BBQ"
-    };
-
-    // Handle single invoice file upload (for backward compatibility)
+    // Handle invoice file upload
     const handleInvoiceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            setInvoiceFile(file);
-            onDataChange({ invoice: file });
+            const newFiles = Array.from(e.target.files) as File[];
+            setInvoiceFiles(newFiles);
+            onDataChange({ invoice_files: newFiles });
         }
-    };
-
-    // Handle multiple invoice files upload
-    const handleMultipleInvoiceFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const files = Array.from(e.target.files) as File[];
-
-            // Check file sizes
-            const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit per file
-            const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
-
-            if (oversizedFiles.length > 0) {
-                toast.error(`Some files exceed the 10MB size limit: ${oversizedFiles.map(f => f.name).join(', ')}`);
-                return;
-            }
-
-            // Update state with new files
-            const updatedFiles = [...invoiceFiles, ...files];
-            setInvoiceFiles(updatedFiles);
-            onDataChange({ invoice_files: updatedFiles });
-
-            // Also set the first file as the main invoice file for backward compatibility
-            if (files.length > 0 && !formData.invoice) {
-                setInvoiceFile(files[0]);
-                onDataChange({ invoice: files[0] });
-            }
-
-            toast.success(`Added ${files.length} file${files.length > 1 ? 's' : ''} successfully`);
-        }
-    };
-
-    // Remove an invoice file
-    const handleRemoveInvoiceFile = (index: number) => {
-        const updatedFiles = [...invoiceFiles];
-        const removedFileName = updatedFiles[index].name;
-        updatedFiles.splice(index, 1);
-        setInvoiceFiles(updatedFiles);
-        onDataChange({ invoice_files: updatedFiles });
-
-        // Update the main invoice file if needed
-        if (invoiceFile && invoiceFile.name === removedFileName) {
-            const newMainFile = updatedFiles.length > 0 ? updatedFiles[0] : null;
-            setInvoiceFile(newMainFile);
-            onDataChange({ invoice: newMainFile });
-        }
-
-        toast.success(`Removed ${removedFileName}`);
-    };
-
-    // Handle invoice data change
-    const handleInvoiceDataChange = (invoiceData: InvoiceData) => {
-        // Update the invoiceData in the form
-        onDataChange({ invoiceData });
-
-        // For backward compatibility, create a properly formatted JSON string
-        const jsonFormat = {
-            items: invoiceData.items.map(item => ({
-                item: item.description,
-                quantity: item.quantity,
-                unit_price: item.unitPrice
-            })),
-            tax: invoiceData.taxAmount,
-            tip: invoiceData.tipAmount,
-            total: invoiceData.total,
-            vendor: invoiceData.vendor
-        };
-
-        // For backward compatibility, still update the itemized_invoice field
-        // but with a more structured format that's easier to parse if needed
-        const itemizedText = JSON.stringify(jsonFormat, null, 2);
-
-        // Update the itemized_invoice field for backward compatibility
-        onDataChange({ itemized_invoice: itemizedText });
     };
 
     // Handle JSON input change
     const handleJsonInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const value = e.target.value;
-        setJsonInput(value);
-
-        // Validate JSON as user types
-        if (value.trim()) {
-            try {
-                JSON.parse(value);
-                setJsonError('');
-            } catch (err) {
-                setJsonError('Invalid JSON format. Please check your syntax.');
-            }
-        } else {
-            setJsonError('');
-        }
+        setJsonInput(e.target.value);
+        setJsonError('');
     };
 
     // Show JSON example
     const showJsonExample = () => {
-        // Toggle example visibility
-        setShowExample(!showExample);
-
-        // If showing example, populate the textarea with the example JSON
-        if (!showExample) {
-            setJsonInput(JSON.stringify(jsonExample, null, 2));
-        }
+        const example = {
+            vendor: "Example Restaurant",
+            items: [
+                {
+                    id: "item-1",
+                    description: "Burger",
+                    quantity: 2,
+                    unitPrice: 12.99,
+                    amount: 25.98
+                },
+                {
+                    id: "item-2",
+                    description: "Fries",
+                    quantity: 2,
+                    unitPrice: 4.99,
+                    amount: 9.98
+                }
+            ],
+            subtotal: 35.96,
+            taxRate: 9.0,
+            taxAmount: 3.24,
+            tipPercentage: 13.9,
+            tipAmount: 5.00,
+            total: 44.20
+        };
+        setJsonInput(JSON.stringify(example, null, 2));
     };
 
     // Validate and apply JSON
     const validateAndApplyJson = () => {
         try {
-            // Parse the JSON input
-            const parsedJson = JSON.parse(jsonInput);
-
-            // Validate the structure
-            let validationError = '';
-
-            // Check for required fields
-            if (!parsedJson.items || !Array.isArray(parsedJson.items)) {
-                validationError = 'Missing or invalid "items" array.';
-            } else if (parsedJson.items.length === 0) {
-                validationError = 'The "items" array cannot be empty.';
-            } else {
-                // Check each item in the array
-                for (let i = 0; i < parsedJson.items.length; i++) {
-                    const item = parsedJson.items[i];
-                    if (!item.item || typeof item.item !== 'string') {
-                        validationError = `Item #${i + 1} is missing a valid "item" name.`;
-                        break;
-                    }
-                    if (typeof item.quantity !== 'number' || item.quantity <= 0) {
-                        validationError = `Item #${i + 1} is missing a valid "quantity" (must be a positive number).`;
-                        break;
-                    }
-                    if (typeof item.unit_price !== 'number' || item.unit_price < 0) {
-                        validationError = `Item #${i + 1} is missing a valid "unit_price" (must be a non-negative number).`;
-                        break;
-                    }
-                }
-            }
-
-            // Check other required fields
-            if (!validationError) {
-                if (typeof parsedJson.tax !== 'number') {
-                    validationError = 'Missing or invalid "tax" amount (must be a number).';
-                } else if (typeof parsedJson.tip !== 'number') {
-                    validationError = 'Missing or invalid "tip" amount (must be a number).';
-                } else if (!parsedJson.vendor || typeof parsedJson.vendor !== 'string') {
-                    validationError = 'Missing or invalid "vendor" name.';
-                }
-            }
-
-            if (validationError) {
-                setJsonError(validationError);
+            if (!jsonInput.trim()) {
+                setJsonError('JSON input is empty');
                 return;
             }
 
-            // Calculate subtotal and total
-            const subtotal = parsedJson.items.reduce((sum: number, item: any) => sum + (item.quantity * item.unit_price), 0);
-            const total = subtotal + parsedJson.tax + parsedJson.tip;
+            const data = JSON.parse(jsonInput);
 
-            // Convert the JSON to the format expected by InvoiceData
-            const invoiceData: InvoiceData = {
-                items: parsedJson.items.map((item: any, index: number) => ({
-                    id: `item-${index + 1}`,
-                    description: item.item,
+            // Validate structure
+            if (!data.vendor) {
+                setJsonError('Vendor field is required');
+                return;
+            }
+
+            if (!Array.isArray(data.items) || data.items.length === 0) {
+                setJsonError('Items array is required and must contain at least one item');
+                return;
+            }
+
+            // Validate items
+            for (const item of data.items) {
+                if (!item.description || typeof item.unitPrice !== 'number' || typeof item.quantity !== 'number') {
+                    setJsonError('Each item must have description, unitPrice, and quantity fields');
+                    return;
+                }
+            }
+
+            // Validate tax, tip, and total
+            if (typeof data.taxAmount !== 'number') {
+                setJsonError('Tax amount must be a number');
+                return;
+            }
+
+            if (typeof data.tipAmount !== 'number') {
+                setJsonError('Tip amount must be a number');
+                return;
+            }
+
+            if (typeof data.total !== 'number') {
+                setJsonError('Total is required and must be a number');
+                return;
+            }
+
+            // Create itemized invoice string for Pocketbase
+            const itemizedInvoice = JSON.stringify({
+                vendor: data.vendor,
+                items: data.items.map((item: InvoiceItem) => ({
+                    item: item.description,
                     quantity: item.quantity,
-                    unitPrice: item.unit_price,
-                    amount: item.quantity * item.unit_price
+                    unit_price: item.unitPrice,
+                    amount: item.amount
                 })),
-                subtotal: subtotal,
-                taxRate: subtotal ? (parsedJson.tax / subtotal) * 100 : 0,
-                taxAmount: parsedJson.tax,
-                tipPercentage: subtotal ? (parsedJson.tip / subtotal) * 100 : 0,
-                tipAmount: parsedJson.tip,
-                total: total,
-                vendor: parsedJson.vendor
-            };
+                subtotal: data.subtotal,
+                tax: data.taxAmount,
+                tip: data.tipAmount,
+                total: data.total
+            }, null, 2);
 
-            // Update the form data
-            handleInvoiceDataChange(invoiceData);
+            // Apply the JSON data to the form
+            onDataChange({
+                invoiceData: data,
+                itemized_invoice: itemizedInvoice,
+                as_funding_required: true
+            });
 
-            // Update the itemized_invoice field with the complete JSON including calculated total
-            const completeJson = {
-                ...parsedJson,
-                subtotal: subtotal,
-                total: total
-            };
-            onDataChange({ itemized_invoice: JSON.stringify(completeJson, null, 2) });
-
-            // Show success message
-            toast.success('JSON invoice data applied successfully!');
-
-            // Optionally, switch back to the invoice builder view to show the applied data
-            setUseJsonInput(false);
-        } catch (err) {
-            setJsonError('Failed to parse JSON. Please check your syntax.');
+            toast.success('Invoice data applied successfully');
+            setShowJsonInput(false);
+        } catch (error) {
+            setJsonError('Invalid JSON format: ' + (error as Error).message);
         }
     };
 
+    // Handle drag events for file upload
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const newFiles = Array.from(e.dataTransfer.files) as File[];
+            setInvoiceFiles(newFiles);
+            onDataChange({ invoice_files: newFiles });
+        }
+    };
+
+    // Handle invoice data change
+    const handleInvoiceDataChange = (data: InvoiceData) => {
+        // Create itemized invoice string for Pocketbase
+        const itemizedInvoice = JSON.stringify({
+            vendor: data.vendor,
+            items: data.items.map((item: InvoiceItem) => ({
+                item: item.description,
+                quantity: item.quantity,
+                unit_price: item.unitPrice,
+                amount: item.amount
+            })),
+            subtotal: data.subtotal,
+            tax: data.taxAmount,
+            tip: data.tipAmount,
+            total: data.total
+        }, null, 2);
+
+        onDataChange({
+            invoiceData: data,
+            itemized_invoice: itemizedInvoice
+        });
+    };
+
     return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold mb-4 text-primary">AS Funding Information</h2>
-
-            <CustomAlert
-                type="warning"
-                title="Important Information"
-                message="Please make sure the restaurant is a valid AS Funding food vendor! An invoice can be an unofficial receipt. Just make sure that the restaurant name and location, desired pickup or delivery date and time, all the items ordered plus their prices, discount/fees/tax/tip, and total are on the invoice! We don't recommend paying out of pocket because reimbursements can be a hassle when you're not a Principal Member."
-                className="mb-6"
-                icon="heroicons:exclamation-triangle"
-            />
-
-            {/* Invoice Builder Instructions */}
-            <motion.div variants={itemVariants} className="bg-base-300/50 p-4 rounded-lg mb-6">
-                <h3 className="font-bold text-lg mb-2">How to Use the Invoice Builder</h3>
-                <ol className="list-decimal list-inside space-y-2 text-sm">
-                    <li>Enter the vendor/restaurant name in the field provided.</li>
-                    <li>Add each item from your invoice by filling in the description, quantity, and unit price, then click "Add Item".</li>
-                    <li>The subtotal, tax, and tip will be calculated automatically based on the tax rate and tip percentage.</li>
-                    <li>You can adjust the tax rate (default is 7.75% for San Diego) and tip percentage as needed.</li>
-                    <li>Remove items by clicking the "X" button next to each item.</li>
-                    <li>Upload your actual invoice file (receipt, screenshot, etc.) using the file upload below.</li>
-                </ol>
-            </motion.div>
-
-            {/* JSON Invoice Paste Option */}
-            <motion.div variants={itemVariants} className="bg-base-300/50 p-4 rounded-lg mb-6">
-                <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-bold text-lg">Paste JSON Invoice</h3>
-                    <div className="form-control">
-                        <label className="label cursor-pointer">
-                            <span className="label-text mr-2">Use JSON input</span>
-                            <input
-                                type="checkbox"
-                                className="toggle toggle-primary"
-                                checked={useJsonInput}
-                                onChange={(e) => setUseJsonInput(e.target.checked)}
-                            />
-                        </label>
-                    </div>
-                </div>
-
-                {useJsonInput && (
-                    <>
-                        <div className="form-control mb-4">
-                            <label className="label">
-                                <span className="label-text font-medium">Paste your JSON invoice data</span>
-                                <span className="label-text-alt">
-                                    <div className="tooltip tooltip-left" data-tip={jsonInput.trim().length > 0 ? "Clear the text field to see an example" : ""}>
-                                        <button
-                                            type="button"
-                                            className="btn btn-xs btn-ghost"
-                                            onClick={showJsonExample}
-                                            disabled={jsonInput.trim().length > 0}
-                                        >
-                                            See example
-                                        </button>
-                                    </div>
-                                </span>
-                            </label>
-                            <textarea
-                                className={`textarea textarea-bordered h-48 font-mono text-sm ${jsonError ? 'textarea-error' : ''}`}
-                                value={jsonInput}
-                                onChange={handleJsonInputChange}
-                                placeholder="paste json here"
-                            ></textarea>
-                            {jsonError && (
-                                <label className="label">
-                                    <span className="label-text-alt text-error">{jsonError}</span>
-                                </label>
-                            )}
-                        </div>
-
-                        <div className="flex justify-end mb-4">
-                            <button
-                                type="button"
-                                className="btn btn-primary btn-sm"
-                                onClick={validateAndApplyJson}
-                                disabled={!!jsonError}
-                            >
-                                Apply JSON
-                            </button>
-                        </div>
-
-                        <CustomAlert
-                            type="info"
-                            title="Required JSON Format"
-                            message={`Your JSON must include: an array of items (each with item name, quantity, and unit_price), tax amount, tip amount, and vendor name. The total will be calculated automatically.`}
-                            className="mb-4"
-                            icon="heroicons:information-circle"
-                        />
-                    </>
-                )}
-            </motion.div>
-
-            {/* Invoice Builder */}
-            {!useJsonInput && (
-                <InvoiceBuilder
-                    invoiceData={formData.invoiceData}
-                    onChange={handleInvoiceDataChange}
-                />
-            )}
-
-            {/* Invoice file upload */}
-            <motion.div variants={itemVariants} className="form-control">
-                <label className="label">
-                    <span className="label-text font-medium">
-                        Upload your invoice files (receipts, screenshots, etc.)
-                    </span>
-                    <span className="label-text-alt text-error">*</span>
-                </label>
-                <input
-                    type="file"
-                    className="file-input file-input-bordered w-full file-input-primary hover:file-input-ghost transition-all duration-300"
-                    onChange={handleMultipleInvoiceFilesChange}
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    multiple
-                    required={invoiceFiles.length === 0}
-                />
-
-                {invoiceFiles.length > 0 && (
-                    <div className="mt-4">
-                        <p className="text-sm font-medium mb-2">Uploaded files:</p>
-                        <div className="space-y-2">
-                            {invoiceFiles.map((file, index) => (
-                                <div key={index} className="flex items-center justify-between bg-base-300/30 p-2 rounded">
-                                    <span className="text-sm truncate max-w-[80%]">{file.name}</span>
-                                    <button
-                                        type="button"
-                                        className="btn btn-ghost btn-xs"
-                                        onClick={() => handleRemoveInvoiceFile(index)}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                <p className="text-xs text-gray-400 mt-2">
-                    Official food invoices will be required 2 weeks before the start of your event. Please use the following naming format: EventName_OrderLocation_DateOfEvent (i.e. QPWorkathon#1_PapaJohns_01/06/2025)
+        <motion.div
+            className="space-y-8"
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+        >
+            <motion.div variants={itemVariants}>
+                <h2 className="text-3xl font-bold mb-4 text-primary bg-gradient-to-r from-primary to-primary-focus bg-clip-text text-transparent">
+                    AS Funding Details
+                </h2>
+                <p className="text-lg text-base-content/80 mb-6">
+                    Please provide the necessary information for your Associated Students funding request.
                 </p>
             </motion.div>
 
-            <CustomAlert
-                type="warning"
-                title="Important Note"
-                message="AS Funding requests must be submitted at least 6 weeks before your event. Please check the Funding Guide or the Google Calendar for the funding request deadlines."
-                className="mb-4"
-                icon="heroicons:clock"
-            />
-        </div>
+            <motion.div variants={itemVariants}>
+                <CustomAlert
+                    type="warning"
+                    title="Important Deadline"
+                    message="AS Funding requests must be submitted at least 6 weeks before your event. Please check the Funding Guide or the Google Calendar for the funding request deadlines."
+                    className="mb-4"
+                    icon="heroicons:clock"
+                />
+            </motion.div>
+
+            {/* Invoice Upload Section */}
+            <motion.div
+                variants={itemVariants}
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                whileHover={{ y: -2 }}
+            >
+                <h3 className="text-xl font-semibold mb-2 text-primary">Invoice Information</h3>
+                <p className="text-sm text-gray-500 mb-4">Upload your invoice files or create an itemized invoice below.</p>
+
+                <motion.div
+                    className={`mt-2 border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-base-300 hover:border-primary/50'
+                        }`}
+                    whileHover={{ scale: 1.02, boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)" }}
+                    whileTap={{ scale: 0.98 }}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => document.getElementById('invoice-files')?.click()}
+                >
+                    <input
+                        id="invoice-files"
+                        type="file"
+                        className="hidden"
+                        onChange={handleInvoiceFileChange}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        multiple
+                    />
+
+                    <div className="flex flex-col items-center justify-center gap-3">
+                        <motion.div
+                            className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary"
+                            whileHover={{ rotate: 15, scale: 1.1 }}
+                        >
+                            <Icon icon="heroicons:document-text" className="h-8 w-8" />
+                        </motion.div>
+
+                        {invoiceFiles.length > 0 ? (
+                            <>
+                                <p className="font-medium text-primary">{invoiceFiles.length} file(s) selected:</p>
+                                <div className="max-h-24 overflow-y-auto text-left w-full">
+                                    <ul className="list-disc list-inside text-sm">
+                                        {invoiceFiles.map((file, index) => (
+                                            <li key={index} className="truncate">{file.name}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <p className="text-xs text-gray-500">Click or drag to replace</p>
+                            </>
+                        ) : (
+                            <>
+                                <p className="font-medium">Drop your invoice files here or click to browse</p>
+                                <p className="text-xs text-gray-500">Supports PDF, JPG, JPEG, PNG</p>
+                            </>
+                        )}
+                    </div>
+                </motion.div>
+            </motion.div>
+
+            {/* JSON/Builder Toggle */}
+            <motion.div
+                variants={itemVariants}
+                className="bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                whileHover={{ y: -2 }}
+            >
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-primary">Invoice Details</h3>
+
+                    <motion.div
+                        className="bg-base-300/50 p-1 rounded-lg flex items-center"
+                        whileHover="hover"
+                        variants={toggleVariants}
+                    >
+                        <motion.button
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${!showJsonInput ? 'bg-primary text-primary-content' : 'hover:bg-base-200'
+                                }`}
+                            onClick={() => setShowJsonInput(false)}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            Invoice Builder
+                        </motion.button>
+                        <motion.button
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${showJsonInput ? 'bg-primary text-primary-content' : 'hover:bg-base-200'
+                                }`}
+                            onClick={() => setShowJsonInput(true)}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            Paste JSON
+                        </motion.button>
+                    </motion.div>
+                </div>
+
+                {showJsonInput ? (
+                    <motion.div
+                        className="space-y-4"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <div className="flex justify-between items-center">
+                            <label className="label-text font-medium">JSON Invoice Data</label>
+                            <motion.button
+                                type="button"
+                                className="btn btn-sm btn-ghost text-primary"
+                                onClick={showJsonExample}
+                                whileHover="hover"
+                                whileTap="tap"
+                                variants={buttonVariants}
+                            >
+                                <Icon icon="heroicons:code-bracket" className="w-4 h-4 mr-1" />
+                                Show Example
+                            </motion.button>
+                        </div>
+
+                        <motion.textarea
+                            className={`textarea textarea-bordered w-full h-64 font-mono text-sm ${jsonError ? 'textarea-error' : 'focus:textarea-primary'}`}
+                            value={jsonInput}
+                            onChange={handleJsonInputChange}
+                            placeholder="Paste your JSON invoice data here..."
+                            whileHover="hover"
+                            variants={inputHoverVariants}
+                        />
+
+                        {jsonError && (
+                            <div className="text-error text-sm flex items-center gap-1">
+                                <Icon icon="heroicons:exclamation-circle" className="w-4 h-4" />
+                                {jsonError}
+                            </div>
+                        )}
+
+                        <div className="flex justify-end">
+                            <motion.button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={validateAndApplyJson}
+                                whileHover="hover"
+                                whileTap="tap"
+                                variants={buttonVariants}
+                            >
+                                <Icon icon="heroicons:check-circle" className="w-5 h-5 mr-1" />
+                                Apply JSON
+                            </motion.button>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <InvoiceBuilder
+                            invoiceData={formData.invoiceData || {
+                                vendor: '',
+                                items: [],
+                                subtotal: 0,
+                                taxRate: 0,
+                                taxAmount: 0,
+                                tipPercentage: 0,
+                                tipAmount: 0,
+                                total: 0
+                            }}
+                            onChange={handleInvoiceDataChange}
+                        />
+                    </motion.div>
+                )}
+            </motion.div>
+        </motion.div>
     );
 };
 

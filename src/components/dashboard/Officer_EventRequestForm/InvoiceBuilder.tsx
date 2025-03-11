@@ -2,18 +2,76 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import CustomAlert from '../universal/CustomAlert';
+import { Icon } from '@iconify/react';
 
-// Animation variants
+// Enhanced animation variants with faster transitions
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.035,
+            when: "beforeChildren",
+            duration: 0.3,
+            ease: "easeOut"
+        }
+    }
+};
+
 const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 10 },
     visible: {
         opacity: 1,
         y: 0,
         transition: {
             type: "spring",
-            stiffness: 300,
-            damping: 24
+            stiffness: 500,
+            damping: 25,
+            mass: 0.8,
+            duration: 0.25
         }
+    }
+};
+
+// Input field hover animation
+const inputHoverVariants = {
+    hover: {
+        scale: 1.01,
+        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+        transition: { duration: 0.15 }
+    }
+};
+
+// Button animation
+const buttonVariants = {
+    hover: {
+        scale: 1.03,
+        transition: { duration: 0.15, ease: "easeOut" }
+    },
+    tap: {
+        scale: 0.97,
+        transition: { duration: 0.1 }
+    }
+};
+
+// Row animation
+const rowVariants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: {
+        opacity: 1,
+        x: 0,
+        transition: {
+            type: "spring",
+            stiffness: 500,
+            damping: 25,
+            mass: 0.8,
+            duration: 0.25
+        }
+    },
+    exit: {
+        opacity: 0,
+        x: 10,
+        transition: { duration: 0.15 }
     }
 };
 
@@ -30,9 +88,7 @@ export interface InvoiceItem {
 export interface InvoiceData {
     items: InvoiceItem[];
     subtotal: number;
-    taxRate: number;
     taxAmount: number;
-    tipPercentage: number;
     tipAmount: number;
     total: number;
     vendor: string;
@@ -44,11 +100,18 @@ interface InvoiceBuilderProps {
 }
 
 const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }) => {
-    // State for new item form with optional fields for input handling
+    const [validationMessages, setValidationMessages] = useState({
+        vendor: '',
+        items: '',
+        tax: '',
+        tip: ''
+    });
+
+    // State for new item form
     const [newItem, setNewItem] = useState<{
         description: string;
-        quantity: number | '';
-        unitPrice: number | string;
+        quantity: number;
+        unitPrice: string;
     }>({
         description: '',
         quantity: 1,
@@ -60,7 +123,6 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
         description?: string;
         quantity?: string;
         unitPrice?: string;
-        vendor?: string;
     }>({});
 
     // State for raw input values (to preserve exact user input)
@@ -72,102 +134,32 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
         tipAmount: ''
     });
 
-    // State for input validation messages
-    const [validationMessages, setValidationMessages] = useState<{
-        vendor?: string;
-        items?: string;
-        tax?: string;
-        tip?: string;
-    }>({});
+    // Validate inputs
+    useEffect(() => {
+        const newValidationMessages = {
+            vendor: !invoiceData.vendor ? 'Vendor name is required' : '',
+            items: invoiceData.items.length === 0 ? 'At least one item is required' : '',
+            tax: invoiceData.taxAmount && isNaN(parseFloat(invoiceData.taxAmount.toString())) ? 'Tax must be a valid number' : '',
+            tip: invoiceData.tipAmount && isNaN(parseFloat(invoiceData.tipAmount.toString())) ? 'Tip must be a valid number' : ''
+        };
+
+        setValidationMessages(newValidationMessages);
+    }, [invoiceData]);
+
+    // Handle vendor name change
+    const handleVendorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange({ ...invoiceData, vendor: e.target.value });
+    };
 
     // Generate a unique ID for new items
     const generateId = () => {
         return `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     };
 
-    // Helper function to round to 2 decimal places for calculations only
+    // Helper function to round to 2 decimal places
     const roundToTwoDecimals = (num: number): number => {
         return Math.round((num + Number.EPSILON) * 100) / 100;
     };
-
-    // Update raw input values when invoiceData changes from outside
-    useEffect(() => {
-        if (invoiceData.taxAmount === 0 && rawInputs.taxAmount === '') {
-            // Don't update if it's already empty and the value is 0
-        } else if (invoiceData.taxAmount.toString() !== rawInputs.taxAmount) {
-            setRawInputs(prev => ({
-                ...prev,
-                taxAmount: invoiceData.taxAmount === 0 ? '' : invoiceData.taxAmount.toString()
-            }));
-        }
-
-        if (invoiceData.tipAmount === 0 && rawInputs.tipAmount === '') {
-            // Don't update if it's already empty and the value is 0
-        } else if (invoiceData.tipAmount.toString() !== rawInputs.tipAmount) {
-            setRawInputs(prev => ({
-                ...prev,
-                tipAmount: invoiceData.tipAmount === 0 ? '' : invoiceData.tipAmount.toString()
-            }));
-        }
-    }, [invoiceData.taxAmount, invoiceData.tipAmount]);
-
-    // Validate the entire invoice
-    useEffect(() => {
-        const messages: {
-            vendor?: string;
-            items?: string;
-            tax?: string;
-            tip?: string;
-        } = {};
-
-        // Validate vendor
-        if (!invoiceData.vendor.trim()) {
-            messages.vendor = 'Please enter a vendor/restaurant name';
-        }
-
-        // Validate items
-        if (invoiceData.items.length === 0) {
-            messages.items = 'Please add at least one item to the invoice';
-        }
-
-        // Validate tax (optional but must be valid if provided)
-        if (rawInputs.taxAmount && isNaN(parseFloat(rawInputs.taxAmount))) {
-            messages.tax = 'Tax amount must be a valid number';
-        }
-
-        // Validate tip (optional but must be valid if provided)
-        if (rawInputs.tipAmount && isNaN(parseFloat(rawInputs.tipAmount))) {
-            messages.tip = 'Tip amount must be a valid number';
-        }
-
-        setValidationMessages(messages);
-    }, [invoiceData.vendor, invoiceData.items, rawInputs.taxAmount, rawInputs.tipAmount]);
-
-    // Calculate subtotal, tax, tip, and total whenever items, tax rate, or tip percentage changes
-    useEffect(() => {
-        const subtotal = roundToTwoDecimals(
-            invoiceData.items.reduce((sum, item) => sum + item.amount, 0)
-        );
-        const taxAmount = roundToTwoDecimals((invoiceData.taxRate / 100) * subtotal);
-        const tipAmount = roundToTwoDecimals((invoiceData.tipPercentage / 100) * subtotal);
-        const total = roundToTwoDecimals(subtotal + taxAmount + tipAmount);
-
-        // Only update if values have changed to prevent infinite loop
-        if (
-            subtotal !== invoiceData.subtotal ||
-            taxAmount !== invoiceData.taxAmount ||
-            tipAmount !== invoiceData.tipAmount ||
-            total !== invoiceData.total
-        ) {
-            onChange({
-                ...invoiceData,
-                subtotal,
-                taxAmount,
-                tipAmount,
-                total
-            });
-        }
-    }, [invoiceData.items, invoiceData.taxRate, invoiceData.tipPercentage]);
 
     // Validate new item before adding
     const validateNewItem = () => {
@@ -175,47 +167,39 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             description?: string;
             quantity?: string;
             unitPrice?: string;
-            vendor?: string;
         } = {};
 
         if (!newItem.description.trim()) {
-            newErrors.description = 'Description is required';
+            newErrors.description = 'Item description is required';
         }
 
-        if (newItem.quantity === '' || typeof newItem.quantity === 'number' && newItem.quantity <= 0) {
-            newErrors.quantity = 'Quantity must be greater than 0';
+        if (typeof newItem.quantity !== 'number' || newItem.quantity <= 0) {
+            newErrors.quantity = 'Quantity must be a positive number';
         }
 
-        if (newItem.unitPrice === '' || typeof newItem.unitPrice === 'number' && newItem.unitPrice < 0) {
-            newErrors.unitPrice = 'Unit price must be 0 or greater';
-        }
+        const unitPrice = typeof newItem.unitPrice === 'string'
+            ? parseFloat(newItem.unitPrice)
+            : newItem.unitPrice;
 
-        // Check for duplicate description
-        const isDuplicate = invoiceData.items.some(
-            item => item.description.toLowerCase() === newItem.description.toLowerCase()
-        );
-
-        if (isDuplicate) {
-            newErrors.description = 'An item with this description already exists';
+        if (isNaN(unitPrice) || unitPrice <= 0) {
+            newErrors.unitPrice = 'Price must be a positive number';
         }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    // Add a new item to the invoice
+    // Add new item
     const handleAddItem = () => {
         if (!validateNewItem()) {
             return;
         }
 
-        // Calculate amount with proper rounding for display and calculations
+        // Calculate amount
         const quantity = typeof newItem.quantity === 'number' ? newItem.quantity : 0;
-        const unitPrice = typeof newItem.unitPrice === 'number'
-            ? newItem.unitPrice
-            : typeof newItem.unitPrice === 'string' && newItem.unitPrice !== ''
-                ? parseFloat(newItem.unitPrice)
-                : 0;
+        const unitPrice = typeof newItem.unitPrice === 'string' && newItem.unitPrice !== ''
+            ? parseFloat(newItem.unitPrice)
+            : 0;
 
         const amount = roundToTwoDecimals(quantity * unitPrice);
 
@@ -224,20 +208,33 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             id: generateId(),
             description: newItem.description,
             quantity: quantity,
-            unitPrice: unitPrice, // Store the exact value
-            amount
+            unitPrice: unitPrice,
+            amount: amount
         };
 
         // Add item to invoice
+        const updatedItems = [...invoiceData.items, item];
+
+        // Calculate new subtotal
+        const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
+
+        // Recalculate tax and tip amounts based on rates
+        const taxAmount = roundToTwoDecimals(invoiceData.taxAmount);
+        const tipAmount = roundToTwoDecimals(invoiceData.tipAmount);
+
+        // Calculate new total
+        const total = roundToTwoDecimals(subtotal + taxAmount + tipAmount);
+
         onChange({
             ...invoiceData,
-            items: [...invoiceData.items, item]
+            items: updatedItems,
+            subtotal: subtotal,
+            taxAmount: taxAmount,
+            tipAmount: tipAmount,
+            total: total
         });
 
-        // Show success toast
-        toast.success(`Added ${item.description} to invoice`);
-
-        // Reset new item form
+        // Reset form
         setNewItem({
             description: '',
             quantity: 1,
@@ -246,350 +243,495 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
 
         // Clear errors
         setErrors({});
+
+        toast.success(`Added ${item.description} to invoice`);
     };
 
-    // Remove an item
-    const handleRemoveItem = (id: string) => {
-        const itemToRemove = invoiceData.items.find(item => item.id === id);
+    // Handle item changes
+    const handleItemChange = (index: number, field: keyof InvoiceItem, value: string | number) => {
+        const updatedItems = [...invoiceData.items];
+
+        if (field === 'description') {
+            updatedItems[index] = { ...updatedItems[index], description: value as string };
+        } else if (field === 'unitPrice') {
+            const unitPrice = parseFloat(value.toString());
+            if (!isNaN(unitPrice)) {
+                const amount = roundToTwoDecimals(unitPrice * updatedItems[index].quantity);
+                updatedItems[index] = {
+                    ...updatedItems[index],
+                    unitPrice: unitPrice,
+                    amount: amount
+                };
+            }
+        } else if (field === 'quantity') {
+            const quantity = parseInt(value.toString());
+            if (!isNaN(quantity)) {
+                const amount = roundToTwoDecimals(quantity * updatedItems[index].unitPrice);
+                updatedItems[index] = {
+                    ...updatedItems[index],
+                    quantity: quantity,
+                    amount: amount
+                };
+            }
+        }
+
+        // Calculate new subtotal
+        const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
+
+        // Recalculate tax and tip amounts based on rates
+        const taxAmount = roundToTwoDecimals(invoiceData.taxAmount);
+        const tipAmount = roundToTwoDecimals(invoiceData.tipAmount);
+
+        // Calculate new total
+        const total = roundToTwoDecimals(subtotal + taxAmount + tipAmount);
+
         onChange({
             ...invoiceData,
-            items: invoiceData.items.filter(item => item.id !== id)
+            items: updatedItems,
+            subtotal: subtotal,
+            taxAmount: taxAmount,
+            tipAmount: tipAmount,
+            total: total
+        });
+    };
+
+    // Remove item
+    const handleRemoveItem = (id: string) => {
+        const updatedItems = invoiceData.items.filter(item => item.id !== id);
+
+        // Calculate new subtotal
+        const subtotal = updatedItems.reduce((sum, item) => sum + item.amount, 0);
+
+        // Recalculate tax and tip amounts based on rates
+        const taxAmount = roundToTwoDecimals(invoiceData.taxAmount);
+        const tipAmount = roundToTwoDecimals(invoiceData.tipAmount);
+
+        // Calculate new total
+        const total = roundToTwoDecimals(subtotal + taxAmount + tipAmount);
+
+        onChange({
+            ...invoiceData,
+            items: updatedItems,
+            subtotal: subtotal,
+            taxAmount: taxAmount,
+            tipAmount: tipAmount,
+            total: total
         });
 
-        if (itemToRemove) {
-            toast.success(`Removed ${itemToRemove.description} from invoice`);
-        }
+        toast.success('Item removed from invoice');
     };
 
-    // Format currency
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(amount);
-    };
-
-    // Update tax amount directly - preserve exact input
+    // Handle tax change
     const handleTaxAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-
-        // Store the raw input value
-        setRawInputs(prev => ({
-            ...prev,
-            taxAmount: value
-        }));
-
-        if (value === '' || /^\d*\.?\d*$/.test(value)) {
-            const taxAmount = value === '' ? 0 : parseFloat(value);
-            const taxRate = invoiceData.subtotal > 0 && !isNaN(taxAmount)
-                ? roundToTwoDecimals((taxAmount / invoiceData.subtotal) * 100)
-                : 0;
+        const taxAmount = parseFloat(e.target.value);
+        if (!isNaN(taxAmount)) {
+            const total = roundToTwoDecimals(invoiceData.subtotal + taxAmount + invoiceData.tipAmount);
 
             onChange({
                 ...invoiceData,
-                taxAmount: isNaN(taxAmount) ? 0 : taxAmount,
-                taxRate
+                taxAmount: taxAmount,
+                total: total
             });
+        } else {
+            onChange({ ...invoiceData, taxAmount: 0 });
         }
     };
 
-    // Update tip amount directly - preserve exact input
+    // Handle tip change
     const handleTipAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-
-        // Store the raw input value
-        setRawInputs(prev => ({
-            ...prev,
-            tipAmount: value
-        }));
-
-        if (value === '' || /^\d*\.?\d*$/.test(value)) {
-            const tipAmount = value === '' ? 0 : parseFloat(value);
-            const tipPercentage = invoiceData.subtotal > 0 && !isNaN(tipAmount)
-                ? roundToTwoDecimals((tipAmount / invoiceData.subtotal) * 100)
-                : 0;
+        const tipAmount = parseFloat(e.target.value);
+        if (!isNaN(tipAmount)) {
+            const total = roundToTwoDecimals(invoiceData.subtotal + invoiceData.taxAmount + tipAmount);
 
             onChange({
                 ...invoiceData,
-                tipAmount: isNaN(tipAmount) ? 0 : tipAmount,
-                tipPercentage
+                tipAmount: tipAmount,
+                total: total
             });
+        } else {
+            onChange({ ...invoiceData, tipAmount: 0 });
         }
     };
 
-    // Custom CSS to hide spinner buttons on number inputs
-    const numberInputStyle = {
-        /* For Chrome, Safari, Edge, Opera */
-        WebkitAppearance: 'none',
-        margin: 0,
-        /* For Firefox */
-        MozAppearance: 'textfield'
-    } as React.CSSProperties;
+    // Calculate subtotal
+    const subtotal = invoiceData.subtotal;
+
+    // Calculate tax amount
+    const taxAmount = invoiceData.taxAmount;
+
+    // Calculate tip amount
+    const tipAmount = invoiceData.tipAmount;
+
+    // Calculate total
+    const total = invoiceData.total;
 
     return (
-        <motion.div variants={itemVariants} className="space-y-6">
-            <div className="bg-base-200/50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold mb-4">Invoice Builder</h3>
+        <motion.div
+            className="space-y-6"
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+        >
+            <motion.div variants={itemVariants}>
+                <h3 className="text-xl font-bold mb-4 text-primary">Invoice Builder</h3>
+            </motion.div>
 
-                {/* AS Funding Limit Notice */}
-                <CustomAlert
-                    type="warning"
-                    title="AS Funding Limits"
-                    message="Maximum of $10.00 per expected student attendee and $5,000 per event."
-                    className="mb-4"
-                    icon="heroicons:exclamation-triangle"
-                />
+            {/* AS Funding Limit Notice */}
+            <CustomAlert
+                type="warning"
+                title="AS Funding Limits"
+                message="Maximum of $10.00 per expected student attendee and $5,000 per event."
+                className="mb-4"
+                icon="heroicons:exclamation-triangle"
+            />
 
-                {/* Vendor information */}
-                <div className="form-control mb-4">
-                    <label className="label">
-                        <span className="label-text font-medium">Vendor/Restaurant Name</span>
-                        <span className="label-text-alt text-error">*</span>
-                    </label>
-                    <input
+            {/* Vendor Input */}
+            <motion.div
+                variants={itemVariants}
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                whileHover={{ y: -2 }}
+            >
+                <label className="label">
+                    <span className="label-text font-medium text-lg">Vendor Name</span>
+                    <span className="label-text-alt text-error">*</span>
+                </label>
+
+                <div className="relative">
+                    <motion.input
                         type="text"
-                        className={`input input-bordered ${errors.vendor || validationMessages.vendor ? 'input-error' : ''}`}
+                        className={`input input-bordered w-full ${validationMessages.vendor ? 'input-error' : 'focus:input-primary'}`}
+                        placeholder="Enter vendor name"
                         value={invoiceData.vendor}
-                        onChange={(e) => {
-                            onChange({
-                                ...invoiceData,
-                                vendor: e.target.value
-                            });
-
-                            // Clear vendor error if it exists
-                            if (errors.vendor && e.target.value.trim()) {
-                                setErrors({ ...errors, vendor: undefined });
-                            }
-                        }}
-                        placeholder="e.g. L&L Hawaiian Barbeque"
+                        onChange={handleVendorChange}
+                        whileHover="hover"
+                        variants={inputHoverVariants}
                     />
-                    {(errors.vendor || validationMessages.vendor) && (
-                        <label className="label">
-                            <span className="label-text-alt text-error">{errors.vendor || validationMessages.vendor}</span>
-                        </label>
+                    {validationMessages.vendor && (
+                        <div className="text-error text-sm mt-1 flex items-center gap-1">
+                            <Icon icon="heroicons:exclamation-circle" className="w-4 h-4" />
+                            {validationMessages.vendor}
+                        </div>
                     )}
                 </div>
+            </motion.div>
 
-                {/* Item list */}
-                <div className="overflow-x-auto mb-4">
-                    <table className="table w-full">
+            {/* Add New Item Form */}
+            <motion.div
+                variants={itemVariants}
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                whileHover={{ y: -2 }}
+            >
+                <h4 className="font-medium text-lg mb-4">Add New Item</h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text">Description</span>
+                        </label>
+                        <motion.input
+                            type="text"
+                            className={`input input-bordered w-full ${errors.description ? 'input-error' : 'focus:input-primary'}`}
+                            placeholder="Item description"
+                            value={newItem.description}
+                            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                            whileHover="hover"
+                            variants={inputHoverVariants}
+                        />
+                        {errors.description && (
+                            <div className="text-error text-sm mt-1 flex items-center gap-1">
+                                <Icon icon="heroicons:exclamation-circle" className="w-4 h-4" />
+                                {errors.description}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text">Price ($)</span>
+                        </label>
+                        <motion.input
+                            type="number"
+                            className={`input input-bordered w-full ${errors.unitPrice ? 'input-error' : 'focus:input-primary'}`}
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                            value={newItem.unitPrice}
+                            onChange={(e) => setNewItem({ ...newItem, unitPrice: e.target.value })}
+                            whileHover="hover"
+                            variants={inputHoverVariants}
+                        />
+                        {errors.unitPrice && (
+                            <div className="text-error text-sm mt-1 flex items-center gap-1">
+                                <Icon icon="heroicons:exclamation-circle" className="w-4 h-4" />
+                                {errors.unitPrice}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text">Quantity</span>
+                        </label>
+                        <motion.input
+                            type="number"
+                            className={`input input-bordered w-full ${errors.quantity ? 'input-error' : 'focus:input-primary'}`}
+                            placeholder="1"
+                            min="1"
+                            value={newItem.quantity}
+                            onChange={(e) => {
+                                const value = parseInt(e.target.value);
+                                setNewItem({
+                                    ...newItem,
+                                    quantity: isNaN(value) ? 1 : value
+                                });
+                            }}
+                            whileHover="hover"
+                            variants={inputHoverVariants}
+                        />
+                        {errors.quantity && (
+                            <div className="text-error text-sm mt-1 flex items-center gap-1">
+                                <Icon icon="heroicons:exclamation-circle" className="w-4 h-4" />
+                                {errors.quantity}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex justify-end">
+                    <motion.button
+                        type="button"
+                        className="btn btn-primary gap-2"
+                        onClick={handleAddItem}
+                        whileHover="hover"
+                        whileTap="tap"
+                        variants={buttonVariants}
+                    >
+                        <Icon icon="heroicons:plus-circle" className="w-5 h-5" />
+                        Add Item
+                    </motion.button>
+                </div>
+            </motion.div>
+
+            {/* Items Section */}
+            <motion.div
+                variants={itemVariants}
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                whileHover={{ y: -2 }}
+            >
+                <div className="flex justify-between items-center mb-4">
+                    <label className="label-text font-medium text-lg">
+                        Items
+                        <span className="text-error ml-1">*</span>
+                    </label>
+                </div>
+
+                {validationMessages.items && (
+                    <div className="text-error text-sm mb-3 flex items-center gap-1">
+                        <Icon icon="heroicons:exclamation-circle" className="w-4 h-4" />
+                        {validationMessages.items}
+                    </div>
+                )}
+
+                <div className="overflow-x-auto">
+                    <table className="table table-zebra w-full">
                         <thead>
-                            <tr>
-                                <th>Description</th>
-                                <th className="text-right">Qty</th>
-                                <th className="text-right">Unit Price</th>
-                                <th className="text-right">Amount</th>
-                                <th></th>
+                            <tr className="bg-base-300/50">
+                                <th className="w-[40%]">Item</th>
+                                <th className="w-[20%]">Price ($)</th>
+                                <th className="w-[15%]">Qty</th>
+                                <th className="w-[20%]">Total ($)</th>
+                                <th className="w-[5%]"></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {invoiceData.items.map(item => (
-                                <tr key={item.id} className="hover">
-                                    <td>{item.description}</td>
-                                    <td className="text-right">{item.quantity}</td>
-                                    <td className="text-right">{formatCurrency(item.unitPrice)}</td>
-                                    <td className="text-right">{formatCurrency(item.amount)}</td>
-                                    <td className="text-right">
-                                        <button
-                                            type="button"
-                                            className="btn btn-ghost btn-xs"
-                                            onClick={() => handleRemoveItem(item.id)}
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                        </button>
+                            {invoiceData.items.map((item, index) => (
+                                <motion.tr
+                                    key={item.id}
+                                    variants={rowVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                    className="hover:bg-base-300/30 transition-colors"
+                                >
+                                    <td>
+                                        <motion.input
+                                            type="text"
+                                            className="input input-bordered input-sm w-full focus:input-primary"
+                                            placeholder="Item name"
+                                            value={item.description}
+                                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                                            whileHover="hover"
+                                            variants={inputHoverVariants}
+                                        />
                                     </td>
-                                </tr>
+                                    <td>
+                                        <motion.input
+                                            type="number"
+                                            className="input input-bordered input-sm w-full focus:input-primary"
+                                            placeholder="0.00"
+                                            min="0"
+                                            step="0.01"
+                                            value={item.unitPrice}
+                                            onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
+                                            whileHover="hover"
+                                            variants={inputHoverVariants}
+                                        />
+                                    </td>
+                                    <td>
+                                        <motion.input
+                                            type="number"
+                                            className="input input-bordered input-sm w-full focus:input-primary"
+                                            placeholder="1"
+                                            min="1"
+                                            value={item.quantity}
+                                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                                            whileHover="hover"
+                                            variants={inputHoverVariants}
+                                        />
+                                    </td>
+                                    <td>
+                                        <div className="input input-sm input-bordered bg-base-200/50 w-full text-right">
+                                            {item.amount.toFixed(2)}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <motion.button
+                                            type="button"
+                                            className="btn btn-sm btn-ghost btn-circle text-error"
+                                            onClick={() => handleRemoveItem(item.id)}
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.9 }}
+                                        >
+                                            <Icon icon="heroicons:trash" className="w-5 h-5" />
+                                        </motion.button>
+                                    </td>
+                                </motion.tr>
                             ))}
                             {invoiceData.items.length === 0 && (
                                 <tr>
                                     <td colSpan={5} className="text-center py-4 text-gray-500">
-                                        No items added yet
+                                        No items added yet. Use the form above to add items.
                                     </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
+            </motion.div>
 
-                {validationMessages.items && (
-                    <div className="mb-4">
-                        <span className="text-error text-sm">{validationMessages.items}</span>
-                    </div>
-                )}
+            {/* Tax and Tip Section */}
+            <motion.div
+                variants={itemVariants}
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                whileHover={{ y: -2 }}
+            >
+                <label className="label-text font-medium text-lg mb-4">Tax and Tip</label>
 
-                {/* Add new item form */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text font-medium">Description</span>
+                            <span className="label-text">Tax Amount ($)</span>
                         </label>
-                        <input
-                            type="text"
-                            className={`input input-bordered input-sm ${errors.description ? 'input-error' : ''}`}
-                            value={newItem.description}
-                            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                            placeholder="e.g. Chicken Cutlet with Gravy"
-                        />
-                        {errors.description && (
-                            <label className="label">
-                                <span className="label-text-alt text-error">{errors.description}</span>
-                            </label>
-                        )}
+                        <div className="relative">
+                            <motion.input
+                                type="number"
+                                className={`input input-bordered w-full ${validationMessages.tax ? 'input-error' : 'focus:input-primary'}`}
+                                placeholder="0.00"
+                                min="0"
+                                step="0.01"
+                                value={invoiceData.taxAmount || ''}
+                                onChange={handleTaxAmountChange}
+                                whileHover="hover"
+                                variants={inputHoverVariants}
+                            />
+                            {validationMessages.tax && (
+                                <div className="text-error text-sm mt-1 flex items-center gap-1">
+                                    <Icon icon="heroicons:exclamation-circle" className="w-4 h-4" />
+                                    {validationMessages.tax}
+                                </div>
+                            )}
+                        </div>
                     </div>
+
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text font-medium">Quantity</span>
+                            <span className="label-text">Tip Amount ($)</span>
                         </label>
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            id="quantity"
-                            className={`input input-bordered input-sm ${errors.quantity ? 'input-error' : ''}`}
-                            style={numberInputStyle}
-                            value={newItem.quantity}
-                            onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === '' || /^\d*$/.test(value)) {
-                                    setNewItem({
-                                        ...newItem,
-                                        quantity: value === '' ? '' : parseInt(value) || 0
-                                    });
-                                }
-                            }}
-                            placeholder="Enter quantity"
-                        />
-                        {errors.quantity && <div className="text-error text-xs mt-1">{errors.quantity}</div>}
-                    </div>
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text font-medium">Unit Price ($)</span>
-                        </label>
-                        <input
-                            type="text"
-                            inputMode="decimal"
-                            pattern="[0-9]*\.?[0-9]*"
-                            id="unitPrice"
-                            className={`input input-bordered input-sm ${errors.unitPrice ? 'input-error' : ''}`}
-                            style={numberInputStyle}
-                            value={newItem.unitPrice}
-                            onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                                    setNewItem({
-                                        ...newItem,
-                                        unitPrice: value
-                                    });
-                                }
-                            }}
-                            placeholder="Enter price"
-                        />
-                        {errors.unitPrice && (
-                            <label className="label">
-                                <span className="label-text-alt text-error">{errors.unitPrice}</span>
-                            </label>
-                        )}
+                        <div className="relative">
+                            <motion.input
+                                type="number"
+                                className={`input input-bordered w-full ${validationMessages.tip ? 'input-error' : 'focus:input-primary'}`}
+                                placeholder="0.00"
+                                min="0"
+                                step="0.01"
+                                value={invoiceData.tipAmount || ''}
+                                onChange={handleTipAmountChange}
+                                whileHover="hover"
+                                variants={inputHoverVariants}
+                            />
+                            {validationMessages.tip && (
+                                <div className="text-error text-sm mt-1 flex items-center gap-1">
+                                    <Icon icon="heroicons:exclamation-circle" className="w-4 h-4" />
+                                    {validationMessages.tip}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
+            </motion.div>
 
-                <div className="flex justify-end">
-                    <button
-                        type="button"
-                        className="btn btn-primary btn-sm"
-                        onClick={handleAddItem}
-                    >
-                        Add Item
-                    </button>
-                </div>
+            {/* Totals Section */}
+            <motion.div
+                variants={itemVariants}
+                className="bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                whileHover={{ y: -2 }}
+            >
+                <h3 className="text-lg font-medium mb-4">Invoice Summary</h3>
 
-                {/* Tax and tip */}
-                <div className="divider"></div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text font-medium">Tax Amount ($)</span>
-                        </label>
-                        <input
-                            type="text"
-                            inputMode="decimal"
-                            pattern="[0-9]*\.?[0-9]*"
-                            className={`input input-bordered input-sm ${validationMessages.tax ? 'input-error' : ''}`}
-                            style={numberInputStyle}
-                            value={rawInputs.taxAmount}
-                            onChange={handleTaxAmountChange}
-                            placeholder="Enter tax amount"
-                        />
-                        {validationMessages.tax && (
-                            <label className="label">
-                                <span className="label-text-alt text-error">{validationMessages.tax}</span>
-                            </label>
-                        )}
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                        <span className="text-base-content/70">Subtotal:</span>
+                        <span className="font-medium">${subtotal.toFixed(2)}</span>
                     </div>
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text font-medium">Tip Amount ($)</span>
-                        </label>
-                        <input
-                            type="text"
-                            inputMode="decimal"
-                            pattern="[0-9]*\.?[0-9]*"
-                            className={`input input-bordered input-sm ${validationMessages.tip ? 'input-error' : ''}`}
-                            style={numberInputStyle}
-                            value={rawInputs.tipAmount}
-                            onChange={handleTipAmountChange}
-                            placeholder="Enter tip amount"
-                        />
-                        {validationMessages.tip && (
-                            <label className="label">
-                                <span className="label-text-alt text-error">{validationMessages.tip}</span>
-                            </label>
-                        )}
+
+                    <div className="flex justify-between items-center">
+                        <span className="text-base-content/70">Tax:</span>
+                        <span className="font-medium">${taxAmount.toFixed(2)}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                        <span className="text-base-content/70">Tip:</span>
+                        <span className="font-medium">${tipAmount.toFixed(2)}</span>
+                    </div>
+
+                    <div className="divider my-2"></div>
+
+                    <div className="flex justify-between items-center">
+                        <span className="text-lg font-bold">Total:</span>
+                        <span className="text-lg font-bold text-primary">${total.toFixed(2)}</span>
                     </div>
                 </div>
+            </motion.div>
 
-                {/* Totals */}
-                <div className="bg-base-300/30 p-4 rounded-lg">
-                    <div className="flex justify-between mb-2">
-                        <span>Subtotal:</span>
-                        <span>{formatCurrency(invoiceData.subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between mb-2">
-                        <span>Tax:</span>
-                        <span>{formatCurrency(invoiceData.taxAmount)}</span>
-                    </div>
-                    <div className="flex justify-between mb-2">
-                        <span>Tip:</span>
-                        <span>{formatCurrency(invoiceData.tipAmount)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold">
-                        <span>Total:</span>
-                        <span>{formatCurrency(invoiceData.total)}</span>
-                    </div>
-                </div>
-
-                {/* Validation notice */}
-                {invoiceData.items.length === 0 && (
-                    <CustomAlert
-                        type="info"
-                        title="Invoice Required"
-                        message="Please add at least one item to the invoice."
-                        className="mt-4"
-                        icon="heroicons:information-circle"
-                    />
-                )}
-
-                {/* Important Note */}
+            {/* Validation notice */}
+            {invoiceData.items.length === 0 && (
                 <CustomAlert
-                    type="warning"
-                    title="Important Note"
-                    message="The invoice builder helps you itemize your expenses for AS funding. You must still upload the actual invoice file."
+                    type="info"
+                    title="Invoice Required"
+                    message="Please add at least one item to the invoice."
                     className="mt-4"
-                    icon="heroicons:exclamation-triangle"
+                    icon="heroicons:information-circle"
                 />
-            </div>
+            )}
+
+            {/* Important Note */}
+            <CustomAlert
+                type="warning"
+                title="Important Note"
+                message="The invoice builder helps you itemize your expenses for AS funding. You must still upload the actual invoice file."
+                className="mt-4"
+                icon="heroicons:exclamation-triangle"
+            />
         </motion.div>
     );
 };
