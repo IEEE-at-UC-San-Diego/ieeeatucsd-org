@@ -25,6 +25,7 @@ interface ExtendedEventRequest extends SchemaEventRequest {
         [key: string]: any;
     };
     invoice_data?: any;
+    invoice_files?: string[]; // Array of invoice file IDs
     status: "submitted" | "pending" | "completed" | "declined";
 }
 
