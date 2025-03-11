@@ -24,7 +24,6 @@
     "astro": "5.1.1",
     "astro-expressive-code": "^0.40.2",
     "astro-icon": "^1.1.5",
-    "axios": "^1.8.2",
     "chart.js": "^4.4.7",
     "dexie": "^4.0.11",
     "framer-motion": "^12.4.4",

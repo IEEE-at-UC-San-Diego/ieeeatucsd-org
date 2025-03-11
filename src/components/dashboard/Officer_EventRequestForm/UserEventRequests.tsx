@@ -4,6 +4,8 @@ import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
 import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase';
+import { EventRequestFormPreview } from './EventRequestFormPreview';
+import type { EventRequestFormData } from './EventRequestForm';
 
 // Declare the global window interface to include our custom function
 declare global {
@@ -17,9 +19,145 @@ export interface EventRequest extends SchemaEventRequest {
     invoice_data?: any;
 }
 
+// Helper function to convert EventRequest to EventRequestFormData
+const convertToFormData = (request: EventRequest): EventRequestFormData => {
+    try {
+        // Parse itemized_invoice if it's a string
+        let invoiceData = {};
+        try {
+            if (request.itemized_invoice) {
+                if (typeof request.itemized_invoice === 'string') {
+                    invoiceData = JSON.parse(request.itemized_invoice);
+                } else {
+                    invoiceData = request.itemized_invoice;
+                }
+            } else if (request.invoice_data) {
+                invoiceData = request.invoice_data;
+            }
+        } catch (e) {
+            console.error('Error parsing invoice data:', e);
+        }
+
+        // Cast to unknown first, then to EventRequestFormData to avoid type checking
+        return {
+            name: request.name,
+            location: request.location,
+            start_date_time: request.start_date_time,
+            end_date_time: request.end_date_time,
+            event_description: request.event_description || '',
+            flyers_needed: request.flyers_needed || false,
+            photography_needed: request.photography_needed || false,
+            flyer_type: request.flyer_type || [],
+            other_flyer_type: request.other_flyer_type || '',
+            flyer_advertising_start_date: request.flyer_advertising_start_date || '',
+            advertising_format: request.advertising_format || '',
+            required_logos: request.required_logos || [],
+            other_logos: [] as File[], // EventRequest doesn't have this as files
+            flyer_additional_requests: request.flyer_additional_requests || '',
+            will_or_have_room_booking: request.will_or_have_room_booking || false,
+            room_booking: null,
+            room_booking_confirmation: [] as File[], // EventRequest doesn't have this as files
+            expected_attendance: request.expected_attendance || 0,
+            food_drinks_being_served: request.food_drinks_being_served || false,
+            needs_as_funding: request.as_funding_required || false,
+            as_funding_required: request.as_funding_required || false,
+            invoice: null,
+            invoice_files: [],
+            invoiceData: invoiceData,
+            needs_graphics: request.flyers_needed || false,
+            status: request.status || '',
+            created_by: request.requested_user || '',
+            id: request.id || '',
+            created: request.created || '',
+            updated: request.updated || '',
+            itemized_invoice: request.itemized_invoice || '',
+        } as unknown as EventRequestFormData;
+    } catch (error) {
+        console.error("Error converting EventRequest to EventRequestFormData:", error);
+
+        // Return a minimal valid object to prevent rendering errors
+        return {
+            name: request?.name || "Unknown Event",
+            location: request?.location || "",
+            start_date_time: request?.start_date_time || new Date().toISOString(),
+            end_date_time: request?.end_date_time || new Date().toISOString(),
+            event_description: request?.event_description || "",
+            flyers_needed: false,
+            photography_needed: false,
+            flyer_type: [],
+            other_flyer_type: "",
+            flyer_advertising_start_date: "",
+            advertising_format: "",
+            required_logos: [],
+            other_logos: [] as File[],
+            flyer_additional_requests: "",
+            will_or_have_room_booking: false,
+            room_booking: null,
+            room_booking_confirmation: [] as File[],
+            expected_attendance: 0,
+            food_drinks_being_served: false,
+            needs_as_funding: false,
+            as_funding_required: false,
+            invoice: null,
+            invoice_files: [],
+            invoiceData: {},
+            needs_graphics: false,
+            status: request?.status || "",
+            created_by: "",
+            id: request?.id || "",
+            created: request?.created || "",
+            updated: request?.updated || "",
+            itemized_invoice: ""
+        } as unknown as EventRequestFormData;
+    }
+};
+
 interface UserEventRequestsProps {
     eventRequests: EventRequest[];
 }
+
+// Create a portal component for the modal to ensure it's rendered at the root level
+const EventRequestModal: React.FC<{ isOpen: boolean, onClose: () => void, children: React.ReactNode }> = ({
+    isOpen,
+    onClose,
+    children
+}) => {
+    if (!isOpen) return null;
+
+    return (
+        <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999]"
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: '100vw',
+                height: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1rem',
+                margin: 0,
+                overflow: 'auto'
+            }}
+            onClick={onClose}
+        >
+            <div
+                className="bg-base-100 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                style={{
+                    position: 'relative',
+                    margin: 'auto',
+                    zIndex: 100000
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {children}
+            </div>
+        </div>
+    );
+};
 
 const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: initialEventRequests }) => {
     const [eventRequests, setEventRequests] = useState<EventRequest[]>(initialEventRequests);
@@ -191,8 +329,8 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
 
     return (
         <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
         >
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
@@ -280,15 +418,17 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                                         </span>
                                     </td>
                                     <td>
-                                        <button
-                                            className="btn btn-ghost btn-sm rounded-full"
-                                            onClick={() => openDetailModal(request)}
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button
+                                                className="btn btn-sm btn-outline"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openDetailModal(request);
+                                                }}
+                                            >
+                                                View Details
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -339,12 +479,17 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                                     )}
                                 </div>
                                 <div className="card-actions justify-end mt-4">
-                                    <button
-                                        className="btn btn-primary btn-sm"
-                                        onClick={() => openDetailModal(request)}
-                                    >
-                                        View Details
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            className="btn btn-sm btn-outline"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                openDetailModal(request);
+                                            }}
+                                        >
+                                            View Details
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
@@ -381,382 +526,45 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                 </ul>
             </div>
 
-            {/* Event Request Detail Modal */}
-            <AnimatePresence>
-                {isModalOpen && selectedRequest && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm"
-                        onClick={closeModal}
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                            className="bg-base-100 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="sticky top-0 z-10 bg-base-100 px-6 py-4 border-b border-base-300 flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-xl font-bold">{selectedRequest.name}</h2>
-                                    <span className={`badge ${getStatusBadge(selectedRequest.status)}`}>
-                                        {selectedRequest.status || 'Pending'}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        className="btn btn-sm btn-primary"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            // console.log('Full Preview button clicked', selectedRequest);
-                                            try {
-                                                // Direct call to the global function
-                                                if (typeof window.showEventRequestFormPreview === 'function') {
-                                                    window.showEventRequestFormPreview(selectedRequest);
-                                                } else {
-                                                    // console.log('Fallback: showEventRequestPreviewModal event dispatched');
-                                                    // Fallback to event dispatch if function is not available
-                                                    const event = new CustomEvent("showEventRequestPreviewModal", {
-                                                        detail: { formData: selectedRequest }
-                                                    });
-                                                    document.dispatchEvent(event);
-                                                    // console.log('Fallback: showEventRequestPreviewModal event dispatched');
-                                                }
-                                            } catch (error) {
-                                                console.error('Error showing full preview:', error);
-                                            }
-                                        }}
-                                    >
-                                        Full Preview
-                                    </button>
-                                    <button
-                                        className="btn btn-sm btn-circle btn-ghost"
-                                        onClick={closeModal}
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
+            {/* Use the new portal component for the modal */}
+            {isModalOpen && selectedRequest && (
+                <EventRequestModal
+                    isOpen={isModalOpen}
+                    onClose={closeModal}
+                >
+                    <div className="sticky top-0 z-10 bg-base-100 px-6 py-4 border-b border-base-300 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-xl font-bold text-base-content">{selectedRequest.name}</h2>
+                            <span className={`badge ${getStatusBadge(selectedRequest.status)}`}>
+                                {selectedRequest.status || 'Pending'}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                className="btn btn-sm btn-circle"
+                                onClick={closeModal}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        {selectedRequest ? (
+                            <EventRequestFormPreview
+                                formData={convertToFormData(selectedRequest)}
+                                isModal={true}
+                            />
+                        ) : (
+                            <div className="flex items-center justify-center h-64">
+                                <div className="loading loading-spinner loading-lg text-primary"></div>
                             </div>
-
-                            <div className="p-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                                    <div>
-                                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-primary">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            Event Details
-                                        </h3>
-                                        <div className="space-y-4 bg-base-200/50 p-4 rounded-lg">
-                                            <div>
-                                                <p className="text-sm text-base-content/60">Event Name</p>
-                                                <p className="font-medium">{selectedRequest.name}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-base-content/60">Location</p>
-                                                <p className="font-medium">{selectedRequest.location}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-base-content/60">Start Date & Time</p>
-                                                <p className="font-medium">{formatDate(selectedRequest.start_date_time)}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-base-content/60">End Date & Time</p>
-                                                <p className="font-medium">{formatDate(selectedRequest.end_date_time)}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-base-content/60">Room Booking</p>
-                                                <p className="font-medium">{selectedRequest.will_or_have_room_booking ? 'Yes' : 'No'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-base-content/60">Expected Attendance</p>
-                                                <p className="font-medium">{selectedRequest.expected_attendance || 'Not specified'}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-primary">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                            Event Description
-                                        </h3>
-                                        <div className="bg-base-200/50 p-4 rounded-lg h-full">
-                                            <p className="whitespace-pre-line">{selectedRequest.event_description}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {selectedRequest.flyers_needed && (
-                                    <div className="mb-8">
-                                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-primary">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            PR Materials
-                                        </h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-base-200/50 p-4 rounded-lg">
-                                            <div>
-                                                <p className="text-sm text-base-content/60">Flyer Types</p>
-                                                <p className="font-medium">
-                                                    {selectedRequest.flyer_type?.join(', ') || 'Not specified'}
-                                                    {selectedRequest.other_flyer_type && ` (${selectedRequest.other_flyer_type})`}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-base-content/60">Advertising Start Date</p>
-                                                <p className="font-medium">
-                                                    {selectedRequest.flyer_advertising_start_date
-                                                        ? formatDate(selectedRequest.flyer_advertising_start_date)
-                                                        : 'Not specified'}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-base-content/60">Required Logos</p>
-                                                <p className="font-medium">
-                                                    {selectedRequest.required_logos?.join(', ') || 'None'}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-base-content/60">Advertising Format</p>
-                                                <p className="font-medium">{selectedRequest.advertising_format || 'Not specified'}</p>
-                                            </div>
-                                            <div className="md:col-span-2">
-                                                <p className="text-sm text-base-content/60">Additional Requests</p>
-                                                <p className="font-medium whitespace-pre-line">
-                                                    {selectedRequest.flyer_additional_requests || 'None'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {selectedRequest.as_funding_required && (
-                                    <div className="mb-8">
-                                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-primary">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            AS Funding Details
-                                        </h3>
-                                        <div className="space-y-4 bg-base-200/50 p-4 rounded-lg">
-                                            <div>
-                                                <p className="text-sm text-base-content/60">Food/Drinks Being Served</p>
-                                                <p className="font-medium">
-                                                    {selectedRequest.food_drinks_being_served ? 'Yes' : 'No'}
-                                                </p>
-                                            </div>
-                                            {selectedRequest.invoice_data && (
-                                                <div>
-                                                    <p className="text-sm text-base-content/60">Vendor</p>
-                                                    <p className="font-medium">
-                                                        {selectedRequest.invoice_data.vendor || 'Not specified'}
-                                                    </p>
-                                                </div>
-                                            )}
-                                            <div>
-                                                <p className="text-sm text-base-content/60">Itemized Invoice</p>
-                                                {(() => {
-                                                    try {
-                                                        let invoiceData: any = null;
-
-                                                        // Parse the invoice data if it's a string, or use it directly if it's an object
-                                                        if (typeof selectedRequest.itemized_invoice === 'string') {
-                                                            try {
-                                                                invoiceData = JSON.parse(selectedRequest.itemized_invoice);
-                                                            } catch (e) {
-                                                                console.error('Failed to parse invoice JSON:', e);
-                                                                return (
-                                                                    <pre className="bg-base-300 p-3 rounded-lg text-xs overflow-x-auto mt-2">
-                                                                        {selectedRequest.itemized_invoice || 'Not provided'}
-                                                                    </pre>
-                                                                );
-                                                            }
-                                                        } else if (typeof selectedRequest.itemized_invoice === 'object') {
-                                                            invoiceData = selectedRequest.itemized_invoice;
-                                                        }
-
-                                                        // If we have valid invoice data with items
-                                                        if (invoiceData && Array.isArray(invoiceData.items) && invoiceData.items.length > 0) {
-                                                            // Calculate total from items if not provided or if NaN
-                                                            let calculatedTotal = 0;
-
-                                                            // Try to use the provided total first
-                                                            if (invoiceData.total !== undefined) {
-                                                                const parsedTotal = typeof invoiceData.total === 'string'
-                                                                    ? parseFloat(invoiceData.total)
-                                                                    : invoiceData.total;
-
-                                                                if (!isNaN(parsedTotal)) {
-                                                                    calculatedTotal = parsedTotal;
-                                                                }
-                                                            }
-
-                                                            // If total is NaN or not provided, calculate from items
-                                                            if (calculatedTotal === 0 || isNaN(calculatedTotal)) {
-                                                                calculatedTotal = invoiceData.items.reduce((sum: number, item: any) => {
-                                                                    const quantity = typeof item.quantity === 'string'
-                                                                        ? parseFloat(item.quantity)
-                                                                        : (item.quantity || 1);
-
-                                                                    const unitPrice = typeof item.unit_price === 'string'
-                                                                        ? parseFloat(item.unit_price)
-                                                                        : (item.unit_price || 0);
-
-                                                                    const itemTotal = !isNaN(quantity) && !isNaN(unitPrice)
-                                                                        ? quantity * unitPrice
-                                                                        : 0;
-
-                                                                    return sum + itemTotal;
-                                                                }, 0);
-
-                                                                // Add tax and tip if available
-                                                                if (invoiceData.tax && !isNaN(parseFloat(invoiceData.tax))) {
-                                                                    calculatedTotal += parseFloat(invoiceData.tax);
-                                                                }
-
-                                                                if (invoiceData.tip && !isNaN(parseFloat(invoiceData.tip))) {
-                                                                    calculatedTotal += parseFloat(invoiceData.tip);
-                                                                }
-                                                            }
-
-                                                            return (
-                                                                <div className="bg-base-300 p-3 rounded-lg overflow-x-auto mt-2">
-                                                                    <table className="table w-full">
-                                                                        <thead>
-                                                                            <tr>
-                                                                                <th>Item</th>
-                                                                                <th className="text-right">Qty</th>
-                                                                                <th className="text-right">Price</th>
-                                                                                <th className="text-right">Total</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody>
-                                                                            {invoiceData.items.map((item: any, index: number) => {
-                                                                                const quantity = typeof item.quantity === 'string'
-                                                                                    ? parseFloat(item.quantity)
-                                                                                    : (item.quantity || 1);
-
-                                                                                const unitPrice = typeof item.unit_price === 'string'
-                                                                                    ? parseFloat(item.unit_price)
-                                                                                    : (item.unit_price || 0);
-
-                                                                                const itemTotal = !isNaN(quantity) && !isNaN(unitPrice)
-                                                                                    ? quantity * unitPrice
-                                                                                    : 0;
-
-                                                                                return (
-                                                                                    <tr key={index}>
-                                                                                        <td>{item.item || 'Unnamed item'}</td>
-                                                                                        <td className="text-right">{!isNaN(quantity) ? quantity : 1}</td>
-                                                                                        <td className="text-right">${!isNaN(unitPrice) ? unitPrice.toFixed(2) : '0.00'}</td>
-                                                                                        <td className="text-right">${!isNaN(itemTotal) ? itemTotal.toFixed(2) : '0.00'}</td>
-                                                                                    </tr>
-                                                                                );
-                                                                            })}
-                                                                        </tbody>
-                                                                        <tfoot>
-                                                                            {invoiceData.tax !== undefined && (
-                                                                                <tr>
-                                                                                    <td colSpan={3} className="text-right font-medium">Tax:</td>
-                                                                                    <td className="text-right">
-                                                                                        ${typeof invoiceData.tax === 'string'
-                                                                                            ? (parseFloat(invoiceData.tax) || 0).toFixed(2)
-                                                                                            : (invoiceData.tax || 0).toFixed(2)}
-                                                                                    </td>
-                                                                                </tr>
-                                                                            )}
-                                                                            {invoiceData.tip !== undefined && (
-                                                                                <tr>
-                                                                                    <td colSpan={3} className="text-right font-medium">Tip:</td>
-                                                                                    <td className="text-right">
-                                                                                        ${typeof invoiceData.tip === 'string'
-                                                                                            ? (parseFloat(invoiceData.tip) || 0).toFixed(2)
-                                                                                            : (invoiceData.tip || 0).toFixed(2)}
-                                                                                    </td>
-                                                                                </tr>
-                                                                            )}
-                                                                            <tr>
-                                                                                <td colSpan={3} className="text-right font-bold">Total:</td>
-                                                                                <td className="text-right font-bold">
-                                                                                    ${!isNaN(calculatedTotal) ? calculatedTotal.toFixed(2) : '0.00'}
-                                                                                </td>
-                                                                            </tr>
-                                                                        </tfoot>
-                                                                    </table>
-                                                                    {invoiceData.vendor && (
-                                                                        <div className="mt-3 text-sm">
-                                                                            <span className="font-medium">Vendor:</span> {invoiceData.vendor}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        } else if (invoiceData && typeof invoiceData.total !== 'undefined') {
-                                                            // If we have a total but no items, show a simplified view
-                                                            const total = typeof invoiceData.total === 'string'
-                                                                ? parseFloat(invoiceData.total)
-                                                                : invoiceData.total;
-
-                                                            return (
-                                                                <div className="bg-base-300 p-3 rounded-lg mt-2">
-                                                                    <div className="flex justify-between items-center">
-                                                                        <span className="font-medium">Total Amount:</span>
-                                                                        <span className="font-bold">${!isNaN(total) ? total.toFixed(2) : '0.00'}</span>
-                                                                    </div>
-                                                                    {invoiceData.vendor && (
-                                                                        <div className="mt-2">
-                                                                            <span className="font-medium">Vendor:</span> {invoiceData.vendor}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        } else {
-                                                            // Fallback to display the JSON in a readable format
-                                                            return (
-                                                                <pre className="bg-base-300 p-3 rounded-lg text-xs overflow-x-auto mt-2">
-                                                                    {typeof selectedRequest.itemized_invoice === 'object'
-                                                                        ? JSON.stringify(selectedRequest.itemized_invoice, null, 2)
-                                                                        : (selectedRequest.itemized_invoice || 'Not provided')}
-                                                                </pre>
-                                                            );
-                                                        }
-                                                    } catch (error) {
-                                                        console.error('Error rendering invoice:', error);
-                                                        return (
-                                                            <pre className="bg-base-300 p-3 rounded-lg text-xs overflow-x-auto mt-2">
-                                                                Error displaying invoice. Please check the console for details.
-                                                            </pre>
-                                                        );
-                                                    }
-                                                })()}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="mt-8 pt-4 border-t border-base-300">
-                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                        <div>
-                                            <p className="text-sm text-base-content/60">Submission Date</p>
-                                            <p className="font-medium">{formatDate(selectedRequest.created)}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-sm text-base-content/60">Status:</p>
-                                            <span className={`badge ${getStatusBadge(selectedRequest.status)} badge-lg`}>
-                                                {selectedRequest.status || 'Pending'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                        )}
+                    </div>
+                </EventRequestModal>
+            )}
         </motion.div>
     );
 };

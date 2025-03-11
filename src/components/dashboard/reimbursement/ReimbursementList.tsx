@@ -547,7 +547,7 @@ export default function ReimbursementList() {
                                                                             ? 'bg-success text-success-content ring-2 ring-success/20'
                                                                             : status === 'in_progress'
                                                                                 ? 'bg-warning text-warning-content ring-2 ring-warning/20'
-                                                                                : 'bg-primary text-primary-content ring-2 ring-primary/20'
+                                                                                : 'bg-primary text-white ring-2 ring-primary/20'
                                                                     : isActive
                                                                         ? status === 'rejected'
                                                                             ? 'bg-error/20 text-error'

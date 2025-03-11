@@ -333,30 +333,24 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-bold text-primary">Invoice Details</h3>
 
-                    <motion.div
-                        className="bg-base-300/50 p-1 rounded-lg flex items-center"
-                        whileHover="hover"
-                        variants={toggleVariants}
-                    >
-                        <motion.button
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${!showJsonInput ? 'bg-primary text-primary-content' : 'hover:bg-base-200'
-                                }`}
+                    <div className="flex mb-4 border rounded-lg overflow-hidden">
+                        <button
+                            type="button"
                             onClick={() => setShowJsonInput(false)}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            Invoice Builder
-                        </motion.button>
-                        <motion.button
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${showJsonInput ? 'bg-primary text-primary-content' : 'hover:bg-base-200'
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${!showJsonInput ? 'bg-primary text-white' : 'hover:bg-base-200'
                                 }`}
-                            onClick={() => setShowJsonInput(true)}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
                         >
-                            Paste JSON
-                        </motion.button>
-                    </motion.div>
+                            Visual Editor
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowJsonInput(true)}
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${showJsonInput ? 'bg-primary text-white' : 'hover:bg-base-200'
+                                }`}
+                        >
+                            JSON Editor
+                        </button>
+                    </div>
                 </div>
 
                 {showJsonInput ? (
