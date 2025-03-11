@@ -453,7 +453,7 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                             </h2>
                         </div>
                         <p className="text-base-content/70">
-                            Please review all information carefully before submitting. You can go back to any section to make changes if needed.
+                            Please review all information to make sure it is correct. Please contact the event coordinator any issues occur
                         </p>
                     </motion.div>
                 )}

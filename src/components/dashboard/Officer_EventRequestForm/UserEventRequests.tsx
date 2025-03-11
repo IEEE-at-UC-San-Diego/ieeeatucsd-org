@@ -159,6 +159,12 @@ const EventRequestModal: React.FC<{ isOpen: boolean, onClose: () => void, childr
     );
 };
 
+// Add a utility function to truncate text with an ellipsis
+const truncateText = (text: string, maxLength: number) => {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+};
+
 const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: initialEventRequests }) => {
     const [eventRequests, setEventRequests] = useState<EventRequest[]>(initialEventRequests);
     const [selectedRequest, setSelectedRequest] = useState<EventRequest | null>(null);
@@ -226,10 +232,9 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
         try {
             const date = new Date(dateString);
             return date.toLocaleDateString('en-US', {
-                year: 'numeric',
                 month: 'short',
                 day: 'numeric',
-                hour: '2-digit',
+                hour: 'numeric',
                 minute: '2-digit'
             });
         } catch (e) {
@@ -377,56 +382,84 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
             </div>
 
             {viewMode === 'table' ? (
-                <div className="overflow-x-auto rounded-xl shadow-sm">
-                    <table className="table table-zebra w-full">
-                        <thead className="bg-base-300/50">
+                <div className="overflow-x-auto overflow-y-auto rounded-xl shadow-sm max-h-[70vh]">
+                    <table className="table table-zebra w-full text-xs">
+                        <thead className="bg-base-300/50 sticky top-0 z-10">
                             <tr>
-                                <th>Event Name</th>
-                                <th>Date</th>
-                                <th>Location</th>
-                                <th>PR Materials</th>
-                                <th>AS Funding</th>
-                                <th>Submitted</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th className="w-[17%]">Event Name</th>
+                                <th className="w-[16%]">Date</th>
+                                <th className="w-[14%]">Location</th>
+                                <th className="w-[7%] text-center">PR</th>
+                                <th className="w-[7%] text-center">AS</th>
+                                <th className="w-[15%]">Submitted</th>
+                                <th className="w-[14%] text-center">Status</th>
+                                <th className="w-[10%] px-0 text-center">View</th>
                             </tr>
                         </thead>
                         <tbody>
                             {eventRequests.map((request) => (
                                 <tr key={request.id} className={`hover border-l-4 ${getCardBorderClass(request.status)}`}>
-                                    <td className="font-medium">{request.name}</td>
-                                    <td>{formatDate(request.start_date_time)}</td>
-                                    <td>{request.location}</td>
+                                    <td className="font-medium">
+                                        <div className="tooltip" data-tip={request.name}>
+                                            <span className="block truncate max-w-[125px]">
+                                                {truncateText(request.name, 18)}
+                                            </span>
+                                        </div>
+                                    </td>
                                     <td>
+                                        <div className="tooltip" data-tip={formatDate(request.start_date_time)}>
+                                            <span className="block truncate max-w-[110px]">
+                                                {formatDate(request.start_date_time)}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className="tooltip" data-tip={request.location}>
+                                            <span className="block truncate max-w-[90px]">
+                                                {truncateText(request.location, 14)}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="text-center">
                                         {request.flyers_needed ? (
                                             <span className="badge badge-success badge-sm">Yes</span>
                                         ) : (
                                             <span className="badge badge-ghost badge-sm">No</span>
                                         )}
                                     </td>
-                                    <td>
+                                    <td className="text-center">
                                         {request.as_funding_required ? (
                                             <span className="badge badge-success badge-sm">Yes</span>
                                         ) : (
                                             <span className="badge badge-ghost badge-sm">No</span>
                                         )}
                                     </td>
-                                    <td>{formatDate(request.created)}</td>
                                     <td>
+                                        <div className="tooltip" data-tip={formatDate(request.created)}>
+                                            <span className="block truncate max-w-[100px]">
+                                                {formatDate(request.created)}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="text-center">
                                         <span className={`badge ${getStatusBadge(request.status)} badge-sm`}>
                                             {request.status || 'Submitted'}
                                         </span>
                                     </td>
-                                    <td>
-                                        <div className="flex gap-2">
+                                    <td className="text-center px-0">
+                                        <div className="flex justify-center">
                                             <button
-                                                className="btn btn-sm btn-outline"
+                                                className="btn btn-xs btn-ghost btn-circle tooltip flex items-center justify-center p-0"
+                                                data-tip="View Details"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     openDetailModal(request);
                                                 }}
                                             >
-                                                View Details
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
                                             </button>
                                         </div>
                                     </td>
@@ -447,24 +480,30 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                         >
                             <div className="card-body p-5">
                                 <div className="flex justify-between items-start">
-                                    <h3 className="card-title text-base">{request.name}</h3>
+                                    <h3 className="card-title text-base tooltip" data-tip={request.name}>
+                                        <span className="block truncate max-w-[180px]">
+                                            {truncateText(request.name, 25)}
+                                        </span>
+                                    </h3>
                                     <span className={`badge ${getStatusBadge(request.status)}`}>
                                         {request.status || 'Pending'}
                                     </span>
                                 </div>
                                 <div className="space-y-2 mt-2 text-sm">
                                     <div className="flex items-start gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-base-content/60 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-base-content/60 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
-                                        <span>{formatDate(request.start_date_time)}</span>
+                                        <span className="truncate">{formatDate(request.start_date_time)}</span>
                                     </div>
                                     <div className="flex items-start gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-base-content/60 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-base-content/60 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
-                                        <span>{request.location}</span>
+                                        <span className="truncate tooltip" data-tip={request.location}>
+                                            {truncateText(request.location, 25)}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap gap-2 mt-3">
@@ -479,17 +518,19 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                                     )}
                                 </div>
                                 <div className="card-actions justify-end mt-4">
-                                    <div className="flex gap-2">
-                                        <button
-                                            className="btn btn-sm btn-outline"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                openDetailModal(request);
-                                            }}
-                                        >
-                                            View Details
-                                        </button>
-                                    </div>
+                                    <button
+                                        className="btn btn-sm btn-circle btn-ghost text-primary tooltip flex items-center justify-center"
+                                        data-tip="View Details"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openDetailModal(request);
+                                        }}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
                         </motion.div>
