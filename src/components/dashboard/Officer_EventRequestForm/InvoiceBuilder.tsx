@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import CustomAlert from '../universal/CustomAlert';
 
 // Animation variants
 const itemVariants = {
@@ -43,24 +44,18 @@ interface InvoiceBuilderProps {
 }
 
 const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }) => {
-    // State for new item form
-    const [newItem, setNewItem] = useState<Omit<InvoiceItem, 'id' | 'amount'>>({
+    // State for new item form with optional fields for input handling
+    const [newItem, setNewItem] = useState<{
+        description: string;
+        quantity: number | '';
+        unitPrice: number | string;
+    }>({
         description: '',
         quantity: 1,
-        unitPrice: 0
+        unitPrice: ''
     });
 
-    // Use a counter for generating IDs to avoid hydration issues
-    const [idCounter, setIdCounter] = useState(1);
-
-    // Generate a unique ID for new items without using non-deterministic functions
-    const generateId = () => {
-        const id = `item-${idCounter}`;
-        setIdCounter(prev => prev + 1);
-        return id;
-    };
-
-    // State for validation errors
+    // State for form errors
     const [errors, setErrors] = useState<{
         description?: string;
         quantity?: string;
@@ -68,34 +63,111 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
         vendor?: string;
     }>({});
 
-    // Calculate totals whenever invoice data changes
-    useEffect(() => {
-        calculateTotals();
-    }, [invoiceData.items, invoiceData.taxRate, invoiceData.tipPercentage]);
+    // State for raw input values (to preserve exact user input)
+    const [rawInputs, setRawInputs] = useState<{
+        taxAmount: string;
+        tipAmount: string;
+    }>({
+        taxAmount: '',
+        tipAmount: ''
+    });
 
-    // Calculate all totals
-    const calculateTotals = () => {
-        // Calculate subtotal
-        const subtotal = invoiceData.items.reduce((sum, item) => sum + item.amount, 0);
+    // State for input validation messages
+    const [validationMessages, setValidationMessages] = useState<{
+        vendor?: string;
+        items?: string;
+        tax?: string;
+        tip?: string;
+    }>({});
 
-        // Calculate tax amount (ensure it's based on the current subtotal)
-        const taxAmount = subtotal * (invoiceData.taxRate / 100);
-
-        // Calculate tip amount (ensure it's based on the current subtotal)
-        const tipAmount = subtotal * (invoiceData.tipPercentage / 100);
-
-        // Calculate total
-        const total = subtotal + taxAmount + tipAmount;
-
-        // Update invoice data
-        onChange({
-            ...invoiceData,
-            subtotal,
-            taxAmount,
-            tipAmount,
-            total
-        });
+    // Generate a unique ID for new items
+    const generateId = () => {
+        return `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     };
+
+    // Helper function to round to 2 decimal places for calculations only
+    const roundToTwoDecimals = (num: number): number => {
+        return Math.round((num + Number.EPSILON) * 100) / 100;
+    };
+
+    // Update raw input values when invoiceData changes from outside
+    useEffect(() => {
+        if (invoiceData.taxAmount === 0 && rawInputs.taxAmount === '') {
+            // Don't update if it's already empty and the value is 0
+        } else if (invoiceData.taxAmount.toString() !== rawInputs.taxAmount) {
+            setRawInputs(prev => ({
+                ...prev,
+                taxAmount: invoiceData.taxAmount === 0 ? '' : invoiceData.taxAmount.toString()
+            }));
+        }
+
+        if (invoiceData.tipAmount === 0 && rawInputs.tipAmount === '') {
+            // Don't update if it's already empty and the value is 0
+        } else if (invoiceData.tipAmount.toString() !== rawInputs.tipAmount) {
+            setRawInputs(prev => ({
+                ...prev,
+                tipAmount: invoiceData.tipAmount === 0 ? '' : invoiceData.tipAmount.toString()
+            }));
+        }
+    }, [invoiceData.taxAmount, invoiceData.tipAmount]);
+
+    // Validate the entire invoice
+    useEffect(() => {
+        const messages: {
+            vendor?: string;
+            items?: string;
+            tax?: string;
+            tip?: string;
+        } = {};
+
+        // Validate vendor
+        if (!invoiceData.vendor.trim()) {
+            messages.vendor = 'Please enter a vendor/restaurant name';
+        }
+
+        // Validate items
+        if (invoiceData.items.length === 0) {
+            messages.items = 'Please add at least one item to the invoice';
+        }
+
+        // Validate tax (optional but must be valid if provided)
+        if (rawInputs.taxAmount && isNaN(parseFloat(rawInputs.taxAmount))) {
+            messages.tax = 'Tax amount must be a valid number';
+        }
+
+        // Validate tip (optional but must be valid if provided)
+        if (rawInputs.tipAmount && isNaN(parseFloat(rawInputs.tipAmount))) {
+            messages.tip = 'Tip amount must be a valid number';
+        }
+
+        setValidationMessages(messages);
+    }, [invoiceData.vendor, invoiceData.items, rawInputs.taxAmount, rawInputs.tipAmount]);
+
+    // Calculate subtotal, tax, tip, and total whenever items, tax rate, or tip percentage changes
+    useEffect(() => {
+        const subtotal = roundToTwoDecimals(
+            invoiceData.items.reduce((sum, item) => sum + item.amount, 0)
+        );
+        const taxAmount = roundToTwoDecimals((invoiceData.taxRate / 100) * subtotal);
+        const tipAmount = roundToTwoDecimals((invoiceData.tipPercentage / 100) * subtotal);
+        const total = roundToTwoDecimals(subtotal + taxAmount + tipAmount);
+
+        // Only update if values have changed to prevent infinite loop
+        if (
+            subtotal !== invoiceData.subtotal ||
+            taxAmount !== invoiceData.taxAmount ||
+            tipAmount !== invoiceData.tipAmount ||
+            total !== invoiceData.total
+        ) {
+            onChange({
+                ...invoiceData,
+                subtotal,
+                taxAmount,
+                tipAmount,
+                total
+            });
+        }
+    }, [invoiceData.items, invoiceData.taxRate, invoiceData.tipPercentage]);
 
     // Validate new item before adding
     const validateNewItem = () => {
@@ -110,11 +182,11 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             newErrors.description = 'Description is required';
         }
 
-        if (newItem.quantity <= 0) {
+        if (newItem.quantity === '' || typeof newItem.quantity === 'number' && newItem.quantity <= 0) {
             newErrors.quantity = 'Quantity must be greater than 0';
         }
 
-        if (newItem.unitPrice < 0) {
+        if (newItem.unitPrice === '' || typeof newItem.unitPrice === 'number' && newItem.unitPrice < 0) {
             newErrors.unitPrice = 'Unit price must be 0 or greater';
         }
 
@@ -137,15 +209,22 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             return;
         }
 
-        // Calculate amount
-        const amount = newItem.quantity * newItem.unitPrice;
+        // Calculate amount with proper rounding for display and calculations
+        const quantity = typeof newItem.quantity === 'number' ? newItem.quantity : 0;
+        const unitPrice = typeof newItem.unitPrice === 'number'
+            ? newItem.unitPrice
+            : typeof newItem.unitPrice === 'string' && newItem.unitPrice !== ''
+                ? parseFloat(newItem.unitPrice)
+                : 0;
+
+        const amount = roundToTwoDecimals(quantity * unitPrice);
 
         // Create new item
         const item: InvoiceItem = {
             id: generateId(),
             description: newItem.description,
-            quantity: newItem.quantity,
-            unitPrice: newItem.unitPrice,
+            quantity: quantity,
+            unitPrice: unitPrice, // Store the exact value
             amount
         };
 
@@ -162,7 +241,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
         setNewItem({
             description: '',
             quantity: 1,
-            unitPrice: 0
+            unitPrice: ''
         });
 
         // Clear errors
@@ -182,37 +261,6 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
         }
     };
 
-    // Update tax rate
-    const handleTaxRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseFloat(e.target.value);
-        onChange({
-            ...invoiceData,
-            taxRate: isNaN(value) ? 0 : Math.max(0, value)
-        });
-    };
-
-    // Update tip percentage
-    const handleTipPercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseFloat(e.target.value);
-        onChange({
-            ...invoiceData,
-            tipPercentage: isNaN(value) ? 0 : Math.max(0, value)
-        });
-    };
-
-    // Update vendor
-    const handleVendorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onChange({
-            ...invoiceData,
-            vendor: e.target.value
-        });
-
-        // Clear vendor error if it exists
-        if (errors.vendor && e.target.value.trim()) {
-            setErrors({ ...errors, vendor: undefined });
-        }
-    };
-
     // Format currency
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -221,20 +269,76 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
         }).format(amount);
     };
 
+    // Update tax amount directly - preserve exact input
+    const handleTaxAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+
+        // Store the raw input value
+        setRawInputs(prev => ({
+            ...prev,
+            taxAmount: value
+        }));
+
+        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+            const taxAmount = value === '' ? 0 : parseFloat(value);
+            const taxRate = invoiceData.subtotal > 0 && !isNaN(taxAmount)
+                ? roundToTwoDecimals((taxAmount / invoiceData.subtotal) * 100)
+                : 0;
+
+            onChange({
+                ...invoiceData,
+                taxAmount: isNaN(taxAmount) ? 0 : taxAmount,
+                taxRate
+            });
+        }
+    };
+
+    // Update tip amount directly - preserve exact input
+    const handleTipAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+
+        // Store the raw input value
+        setRawInputs(prev => ({
+            ...prev,
+            tipAmount: value
+        }));
+
+        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+            const tipAmount = value === '' ? 0 : parseFloat(value);
+            const tipPercentage = invoiceData.subtotal > 0 && !isNaN(tipAmount)
+                ? roundToTwoDecimals((tipAmount / invoiceData.subtotal) * 100)
+                : 0;
+
+            onChange({
+                ...invoiceData,
+                tipAmount: isNaN(tipAmount) ? 0 : tipAmount,
+                tipPercentage
+            });
+        }
+    };
+
+    // Custom CSS to hide spinner buttons on number inputs
+    const numberInputStyle = {
+        /* For Chrome, Safari, Edge, Opera */
+        WebkitAppearance: 'none',
+        margin: 0,
+        /* For Firefox */
+        MozAppearance: 'textfield'
+    } as React.CSSProperties;
+
     return (
         <motion.div variants={itemVariants} className="space-y-6">
             <div className="bg-base-200/50 p-4 rounded-lg">
                 <h3 className="text-lg font-semibold mb-4">Invoice Builder</h3>
 
                 {/* AS Funding Limit Notice */}
-                <div className="alert alert-warning mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 stroke-current" fill="none" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <div>
-                        <span className="font-bold">AS Funding Limits:</span> Maximum of $10.00 per expected student attendee and $5,000 per event.
-                    </div>
-                </div>
+                <CustomAlert
+                    type="warning"
+                    title="AS Funding Limits"
+                    message="Maximum of $10.00 per expected student attendee and $5,000 per event."
+                    className="mb-4"
+                    icon="heroicons:exclamation-triangle"
+                />
 
                 {/* Vendor information */}
                 <div className="form-control mb-4">
@@ -244,14 +348,24 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
                     </label>
                     <input
                         type="text"
-                        className={`input input-bordered ${errors.vendor ? 'input-error' : ''}`}
+                        className={`input input-bordered ${errors.vendor || validationMessages.vendor ? 'input-error' : ''}`}
                         value={invoiceData.vendor}
-                        onChange={handleVendorChange}
+                        onChange={(e) => {
+                            onChange({
+                                ...invoiceData,
+                                vendor: e.target.value
+                            });
+
+                            // Clear vendor error if it exists
+                            if (errors.vendor && e.target.value.trim()) {
+                                setErrors({ ...errors, vendor: undefined });
+                            }
+                        }}
                         placeholder="e.g. L&L Hawaiian Barbeque"
                     />
-                    {errors.vendor && (
+                    {(errors.vendor || validationMessages.vendor) && (
                         <label className="label">
-                            <span className="label-text-alt text-error">{errors.vendor}</span>
+                            <span className="label-text-alt text-error">{errors.vendor || validationMessages.vendor}</span>
                         </label>
                     )}
                 </div>
@@ -299,6 +413,12 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
                     </table>
                 </div>
 
+                {validationMessages.items && (
+                    <div className="mb-4">
+                        <span className="text-error text-sm">{validationMessages.items}</span>
+                    </div>
+                )}
+
                 {/* Add new item form */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="form-control">
@@ -323,13 +443,23 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
                             <span className="label-text font-medium">Quantity</span>
                         </label>
                         <input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             id="quantity"
                             className={`input input-bordered input-sm ${errors.quantity ? 'input-error' : ''}`}
+                            style={numberInputStyle}
                             value={newItem.quantity}
-                            onChange={(e) => setNewItem({ ...newItem, quantity: parseInt(e.target.value) || 0 })}
-                            min="1"
-                            step="1"
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || /^\d*$/.test(value)) {
+                                    setNewItem({
+                                        ...newItem,
+                                        quantity: value === '' ? '' : parseInt(value) || 0
+                                    });
+                                }
+                            }}
+                            placeholder="Enter quantity"
                         />
                         {errors.quantity && <div className="text-error text-xs mt-1">{errors.quantity}</div>}
                     </div>
@@ -338,13 +468,23 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
                             <span className="label-text font-medium">Unit Price ($)</span>
                         </label>
                         <input
-                            type="number"
+                            type="text"
+                            inputMode="decimal"
+                            pattern="[0-9]*\.?[0-9]*"
                             id="unitPrice"
                             className={`input input-bordered input-sm ${errors.unitPrice ? 'input-error' : ''}`}
+                            style={numberInputStyle}
                             value={newItem.unitPrice}
-                            onChange={(e) => setNewItem({ ...newItem, unitPrice: parseFloat(e.target.value) || 0 })}
-                            min="0"
-                            step="0.01"
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                    setNewItem({
+                                        ...newItem,
+                                        unitPrice: value
+                                    });
+                                }
+                            }}
+                            placeholder="Enter price"
                         />
                         {errors.unitPrice && (
                             <label className="label">
@@ -370,29 +510,43 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text font-medium">Tax Rate (%)</span>
+                            <span className="label-text font-medium">Tax Amount ($)</span>
                         </label>
                         <input
-                            type="number"
-                            className="input input-bordered input-sm"
-                            value={invoiceData.taxRate}
-                            onChange={handleTaxRateChange}
-                            min="0"
-                            step="0.01"
+                            type="text"
+                            inputMode="decimal"
+                            pattern="[0-9]*\.?[0-9]*"
+                            className={`input input-bordered input-sm ${validationMessages.tax ? 'input-error' : ''}`}
+                            style={numberInputStyle}
+                            value={rawInputs.taxAmount}
+                            onChange={handleTaxAmountChange}
+                            placeholder="Enter tax amount"
                         />
+                        {validationMessages.tax && (
+                            <label className="label">
+                                <span className="label-text-alt text-error">{validationMessages.tax}</span>
+                            </label>
+                        )}
                     </div>
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text font-medium">Tip Percentage (%)</span>
+                            <span className="label-text font-medium">Tip Amount ($)</span>
                         </label>
                         <input
-                            type="number"
-                            className="input input-bordered input-sm"
-                            value={invoiceData.tipPercentage}
-                            onChange={handleTipPercentageChange}
-                            min="0"
-                            step="0.01"
+                            type="text"
+                            inputMode="decimal"
+                            pattern="[0-9]*\.?[0-9]*"
+                            className={`input input-bordered input-sm ${validationMessages.tip ? 'input-error' : ''}`}
+                            style={numberInputStyle}
+                            value={rawInputs.tipAmount}
+                            onChange={handleTipAmountChange}
+                            placeholder="Enter tip amount"
                         />
+                        {validationMessages.tip && (
+                            <label className="label">
+                                <span className="label-text-alt text-error">{validationMessages.tip}</span>
+                            </label>
+                        )}
                     </div>
                 </div>
 
@@ -400,21 +554,41 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
                 <div className="bg-base-300/30 p-4 rounded-lg">
                     <div className="flex justify-between mb-2">
                         <span>Subtotal:</span>
-                        <span className="font-medium">{formatCurrency(invoiceData.subtotal)}</span>
+                        <span>{formatCurrency(invoiceData.subtotal)}</span>
                     </div>
                     <div className="flex justify-between mb-2">
-                        <span>Tax ({invoiceData.taxRate}%):</span>
-                        <span className="font-medium">{formatCurrency(invoiceData.taxAmount)}</span>
+                        <span>Tax:</span>
+                        <span>{formatCurrency(invoiceData.taxAmount)}</span>
                     </div>
                     <div className="flex justify-between mb-2">
-                        <span>Tip ({invoiceData.tipPercentage}%):</span>
-                        <span className="font-medium">{formatCurrency(invoiceData.tipAmount)}</span>
+                        <span>Tip:</span>
+                        <span>{formatCurrency(invoiceData.tipAmount)}</span>
                     </div>
-                    <div className="flex justify-between font-bold text-lg">
+                    <div className="flex justify-between font-bold">
                         <span>Total:</span>
                         <span>{formatCurrency(invoiceData.total)}</span>
                     </div>
                 </div>
+
+                {/* Validation notice */}
+                {invoiceData.items.length === 0 && (
+                    <CustomAlert
+                        type="info"
+                        title="Invoice Required"
+                        message="Please add at least one item to the invoice."
+                        className="mt-4"
+                        icon="heroicons:information-circle"
+                    />
+                )}
+
+                {/* Important Note */}
+                <CustomAlert
+                    type="warning"
+                    title="Important Note"
+                    message="The invoice builder helps you itemize your expenses for AS funding. You must still upload the actual invoice file."
+                    className="mt-4"
+                    icon="heroicons:exclamation-triangle"
+                />
             </div>
         </motion.div>
     );
