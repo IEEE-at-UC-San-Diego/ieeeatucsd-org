@@ -152,6 +152,7 @@ export class Get {
         ...(options?.fields && { fields: options.fields.join(",") }),
         ...(expandString && { expand: expandString }),
         ...(options?.disableAutoCancellation && { requestKey: null }),
+        emailVisibility: true,
       };
 
       const result = await pb
@@ -206,6 +207,7 @@ export class Get {
         ...(options?.fields && { fields: options.fields.join(",") }),
         ...(expandString && { expand: expandString }),
         ...(options?.disableAutoCancellation && { requestKey: null }),
+        emailVisibility: true,
       };
 
       const result = await pb
@@ -251,11 +253,24 @@ export class Get {
 
     try {
       const pb = this.auth.getPocketBase();
+
+      // Handle expand parameter
+      let expandString: string | undefined;
+      if (options?.expand) {
+        if (Array.isArray(options.expand)) {
+          expandString = options.expand.join(",");
+        } else if (typeof options.expand === "string") {
+          expandString = options.expand;
+        }
+      }
+
       const requestOptions = {
         ...(filter && { filter }),
         ...(sort && { sort }),
         ...(options?.fields && { fields: options.fields.join(",") }),
+        ...(expandString && { expand: expandString }),
         ...(options?.disableAutoCancellation && { requestKey: null }),
+        emailVisibility: true,
       };
 
       const result = await pb
@@ -290,14 +305,9 @@ export class Get {
     options?: RequestOptions,
   ): Promise<T[]> {
     if (!this.auth.isAuthenticated()) {
-      console.warn(
-        `User not authenticated, but attempting to get records from ${collectionName} anyway`,
-      );
+      throw new Error("User must be authenticated to retrieve all records");
     }
 
-    // Try to get records even if authentication check fails
-    // This is a workaround for cases where isAuthenticated() returns false
-    // but the token is still valid for API requests
     try {
       const pb = this.auth.getPocketBase();
 
@@ -317,11 +327,14 @@ export class Get {
         ...(options?.fields && { fields: options.fields.join(",") }),
         ...(expandString && { expand: expandString }),
         ...(options?.disableAutoCancellation && { requestKey: null }),
+        emailVisibility: true,
       };
 
+      // Get all items (will handle pagination automatically)
       const result = await pb
         .collection(collectionName)
         .getFullList<T>(requestOptions);
+
       return result.map((item) => convertUTCToLocal(item));
     } catch (err) {
       console.error(`Failed to get all records from ${collectionName}:`, err);
