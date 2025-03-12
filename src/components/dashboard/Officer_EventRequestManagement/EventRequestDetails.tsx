@@ -75,9 +75,9 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                 // Construct the secure file URL
                 const auth = Authentication.getInstance();
                 const token = auth.getAuthToken();
-                const pbUrl = import.meta.env.PUBLIC_POCKETBASE_URL;
 
-                const secureUrl = `${pbUrl}/api/files/${collectionName}/${recordId}/${fileName}?token=${token}`;
+                // Use hardcoded PocketBase URL
+                const secureUrl = `https://pocketbase.ieeeucsd.org/api/files/${collectionName}/${recordId}/${fileName}?token=${token}`;
 
                 setFileUrl(secureUrl);
 
@@ -414,10 +414,18 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
 
     if (!request.as_funding_required) {
         return (
-            <div>
-                <h4 className="text-sm font-medium text-gray-400 mb-1">AS Funding Required</h4>
-                <p>No</p>
-            </div>
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className="bg-base-100/10 p-6 rounded-lg border border-base-100/10"
+            >
+                <div className="text-center py-8">
+                    <Icon icon="mdi:cash-off" className="h-16 w-16 mx-auto text-gray-500 mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">No AS Funding Required</h3>
+                    <p className="text-gray-400">This event does not require AS funding.</p>
+                </div>
+            </motion.div>
         );
     }
 
@@ -455,87 +463,203 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
     };
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h4 className="text-sm font-medium text-gray-400 mb-1">AS Funding Required</h4>
-                <p>Yes</p>
+        <motion.div
+            className="space-y-6"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+        >
+            <div className="flex flex-col md:flex-row gap-6">
+                {/* Funding Status Card */}
+                <motion.div
+                    className="bg-base-100/10 p-5 rounded-lg border border-base-100/10 flex-1"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 }}
+                >
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="bg-success/20 p-3 rounded-full">
+                            <Icon icon="mdi:cash-multiple" className="h-6 w-6 text-success" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold">AS Funding Status</h3>
+                            <p className="text-sm text-gray-400">Funding has been requested for this event</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div className="bg-base-200/30 p-3 rounded-lg">
+                            <span className="text-xs text-gray-400 block mb-1">Funding Status</span>
+                            <div className="flex items-center gap-2">
+                                <div className="badge badge-success">Required</div>
+                            </div>
+                        </div>
+
+                        <div className="bg-base-200/30 p-3 rounded-lg">
+                            <span className="text-xs text-gray-400 block mb-1">Food & Drinks</span>
+                            <div className="flex items-center gap-2">
+                                {request.food_drinks_being_served ? (
+                                    <div className="badge badge-success">Yes</div>
+                                ) : (
+                                    <div className="badge badge-ghost">No</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* Invoice Summary Card (if available) */}
+                {invoiceData && (
+                    <motion.div
+                        className="bg-base-100/10 p-5 rounded-lg border border-base-100/10 flex-1"
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
+                    >
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="bg-primary/20 p-3 rounded-full">
+                                <Icon icon="mdi:file-document-outline" className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold">Invoice Summary</h3>
+                                <p className="text-sm text-gray-400">Quick overview of funding details</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-4">
+                            {typeof invoiceData === 'object' && invoiceData !== null && (
+                                <div className="space-y-2">
+                                    {/* Calculate total from invoiceData */}
+                                    {(() => {
+                                        let total = 0;
+                                        let items = [];
+
+                                        if (invoiceData.items && Array.isArray(invoiceData.items)) {
+                                            items = invoiceData.items;
+                                        } else if (Array.isArray(invoiceData)) {
+                                            items = invoiceData;
+                                        }
+
+                                        if (items.length > 0) {
+                                            total = items.reduce((sum: number, item: any) => {
+                                                const quantity = parseFloat(item?.quantity || 1);
+                                                const price = parseFloat(item?.unit_price || item?.price || 0);
+                                                return sum + (quantity * price);
+                                            }, 0);
+                                        }
+
+                                        // If we have a total in the invoice data, use that instead
+                                        if (invoiceData.total) {
+                                            total = parseFloat(invoiceData.total);
+                                        }
+
+                                        return (
+                                            <div className="flex flex-col space-y-3">
+                                                <div className="flex justify-between items-center bg-base-200/30 p-3 rounded-lg">
+                                                    <span className="text-sm">Total Amount:</span>
+                                                    <span className="text-lg font-bold">${total.toFixed(2)}</span>
+                                                </div>
+
+                                                {invoiceData.vendor && (
+                                                    <div className="flex justify-between items-center bg-base-200/30 p-3 rounded-lg">
+                                                        <span className="text-sm">Vendor:</span>
+                                                        <span className="font-medium">{invoiceData.vendor}</span>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex justify-between items-center bg-base-200/30 p-3 rounded-lg">
+                                                    <span className="text-sm">Items:</span>
+                                                    <span className="font-medium">{items.length} items</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
             </div>
 
-            {request.food_drinks_being_served && (
-                <div>
-                    <h4 className="text-sm font-medium text-gray-400 mb-1">Food/Drinks Being Served</h4>
-                    <p>Yes</p>
-                </div>
-            )}
-
-            {/* Display invoice files if available */}
+            {/* Invoice Files Section */}
             {hasInvoiceFiles ? (
-                <div>
-                    <h4 className="text-sm font-medium text-gray-400 mb-1">Invoice Files</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                <motion.div
+                    className="bg-base-100/10 p-5 rounded-lg border border-base-100/10"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                >
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="bg-info/20 p-3 rounded-full">
+                            <Icon icon="mdi:file-multiple-outline" className="h-6 w-6 text-info" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold">Invoice Files</h3>
+                            <p className="text-sm text-gray-400">Attached documentation for the funding request</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                         {/* Display invoice_files array if available */}
                         {request.invoice_files && request.invoice_files.map((fileId, index) => {
                             const extension = getFileExtension(fileId);
                             const displayName = getFriendlyFileName(fileId, 25);
 
                             return (
-                                <div
+                                <motion.div
                                     key={`file-${index}`}
-                                    className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer"
+                                    className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-sm"
                                     onClick={() => openFilePreview(fileId, displayName)}
+                                    initial={{ opacity: 0, y: 5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.3 + (index * 0.05) }}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
                                 >
                                     <div className="p-4 flex items-center gap-3">
                                         {isImageFile(fileId) ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
+                                            <Icon icon="mdi:image" className="h-8 w-8 text-primary" />
                                         ) : isPdfFile(fileId) ? (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                            </svg>
+                                            <Icon icon="mdi:file-pdf-box" className="h-8 w-8 text-error" />
                                         ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
+                                            <Icon icon="mdi:file-document" className="h-8 w-8 text-secondary" />
                                         )}
                                         <div className="flex-grow">
-                                            <p className="font-medium truncate" title={fileId}>{displayName}</p>
+                                            <p className="font-medium truncate" title={fileId}>
+                                                {displayName}
+                                            </p>
                                             <p className="text-xs text-gray-400">
                                                 {extension ? extension.toUpperCase() : 'FILE'}
                                             </p>
                                         </div>
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                        </svg>
+                                        <Icon icon="mdi:eye" className="h-5 w-5" />
                                     </div>
-                                </div>
+                                </motion.div>
                             );
                         })}
 
                         {/* Display single invoice file if available */}
                         {request.invoice && (
-                            <div
+                            <motion.div
                                 key="invoice"
-                                className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer"
+                                className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-sm"
                                 onClick={() => {
                                     const invoiceFile = request.invoice || '';
                                     openFilePreview(invoiceFile, getFriendlyFileName(invoiceFile, 25));
                                 }}
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 + ((request.invoice_files?.length || 0) * 0.05) }}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
                             >
                                 <div className="p-4 flex items-center gap-3">
                                     {isImageFile(request.invoice) ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
+                                        <Icon icon="mdi:image" className="h-8 w-8 text-primary" />
                                     ) : isPdfFile(request.invoice) ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                        </svg>
+                                        <Icon icon="mdi:file-pdf-box" className="h-8 w-8 text-error" />
                                     ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
+                                        <Icon icon="mdi:file-document" className="h-8 w-8 text-secondary" />
                                     )}
                                     <div className="flex-grow">
                                         <p className="font-medium truncate" title={request.invoice}>
@@ -545,29 +669,48 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
                                             {getFileExtension(request.invoice) ? getFileExtension(request.invoice).toUpperCase() : 'FILE'}
                                         </p>
                                     </div>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
+                                    <Icon icon="mdi:eye" className="h-5 w-5" />
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
                     </div>
-                </div>
+                </motion.div>
             ) : (
-                <CustomAlert
-                    type="info"
-                    title="No Invoice Files"
-                    message="No invoice files have been uploaded."
-                    icon="heroicons:information-circle"
-                />
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                >
+                    <CustomAlert
+                        type="info"
+                        title="No Invoice Files"
+                        message="No invoice files have been uploaded for this funding request."
+                        icon="heroicons:information-circle"
+                    />
+                </motion.div>
             )}
 
-            {/* Display invoice data if available */}
-            <div>
-                <h4 className="text-sm font-medium text-gray-400 mb-1">Invoice Data</h4>
-                <InvoiceTable invoiceData={invoiceData} />
-            </div>
+            {/* Invoice Data Table */}
+            <motion.div
+                className="bg-base-100/10 p-5 rounded-lg border border-base-100/10"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+            >
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="bg-secondary/20 p-3 rounded-full">
+                        <Icon icon="mdi:table-large" className="h-6 w-6 text-secondary" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-semibold">Invoice Details</h3>
+                        <p className="text-sm text-gray-400">Itemized breakdown of the funding request</p>
+                    </div>
+                </div>
+
+                <div className="mt-4">
+                    <InvoiceTable invoiceData={invoiceData} />
+                </div>
+            </motion.div>
 
             {/* File Preview Modal */}
             <FilePreviewModal
@@ -578,7 +721,7 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
                 fileName={selectedFile.name}
                 displayName={selectedFile.displayName}
             />
-        </div>
+        </motion.div>
     );
 };
 
@@ -1179,9 +1322,7 @@ const EventRequestDetails = ({
                         onClick={() => setActiveTab('details')}
                     >
                         <div className="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                            <Icon icon="mdi:information-outline" className="h-4 w-4" />
                             Event Details
                         </div>
                     </button>
@@ -1191,9 +1332,7 @@ const EventRequestDetails = ({
                             onClick={() => setActiveTab('funding')}
                         >
                             <div className="flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                                <Icon icon="mdi:cash-multiple" className="h-4 w-4" />
                                 AS Funding
                             </div>
                         </button>
@@ -1204,9 +1343,7 @@ const EventRequestDetails = ({
                             onClick={() => setActiveTab('pr')}
                         >
                             <div className="flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
+                                <Icon icon="mdi:image-outline" className="h-4 w-4" />
                                 PR Materials
                             </div>
                         </button>
@@ -1300,116 +1437,135 @@ const EventRequestDetails = ({
             {/* Tab content */}
             <div className="px-6 pb-6">
                 {activeTab === 'details' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-6">
-                            <div className="bg-base-100/10 p-4 rounded-lg border border-base-100/10">
-                                <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Event Information
-                                </h3>
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="text-xs text-gray-400">Event Name</label>
-                                        <p className="text-white font-medium">{request.name}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-gray-400">Event Description</label>
-                                        <p className="text-white">{request.event_description}</p>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="text-xs text-gray-400">Start Date & Time</label>
-                                            <p className="text-white">{formatDate(request.start_date_time)}</p>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-400">End Date & Time</label>
-                                            <p className="text-white">{formatDate(request.end_date_time)}</p>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-gray-400">Location</label>
-                                        <p className="text-white">{request.location}</p>
-                                    </div>
+                    <div className="space-y-6">
+                        <div className="bg-base-100/10 p-5 rounded-lg border border-base-100/10">
+                            <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                                <Icon icon="mdi:information-outline" className="h-5 w-5 mr-2 text-primary" />
+                                Event Information
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                <div>
+                                    <label className="text-xs text-gray-400">Event Name</label>
+                                    <p className="text-white font-medium">{request.name}</p>
+                                </div>
+
+                                <div className="md:row-span-2">
+                                    <label className="text-xs text-gray-400">Event Description</label>
+                                    <p className="text-white">{request.event_description}</p>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-400">Location</label>
+                                    <p className="text-white">{request.location}</p>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-400">Start Date & Time</label>
+                                    <p className="text-white">{formatDate(request.start_date_time)}</p>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-400">End Date & Time</label>
+                                    <p className="text-white">{formatDate(request.end_date_time)}</p>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="bg-base-100/10 p-4 rounded-lg border border-base-100/10">
-                                <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                    </svg>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-base-100/10 p-5 rounded-lg border border-base-100/10">
+                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                                    <Icon icon="mdi:check-decagram-outline" className="h-5 w-5 mr-2 text-primary" />
                                     Requirements & Special Requests
                                 </h3>
                                 <div className="space-y-3">
-                                    <div className="flex items-center">
-                                        <div className={`mr-2 badge ${request.as_funding_required ? 'badge-success' : 'badge-ghost'}`}>
+                                    <div className="flex items-center justify-between bg-base-200/30 p-3 rounded-lg">
+                                        <p className="text-white">AS Funding Required</p>
+                                        <div className={`badge ${request.as_funding_required ? 'badge-success' : 'badge-ghost'}`}>
                                             {request.as_funding_required ? 'Yes' : 'No'}
                                         </div>
-                                        <p className="text-white">AS Funding Required</p>
                                     </div>
-                                    <div className="flex items-center">
-                                        <div className={`mr-2 badge ${request.flyers_needed ? 'badge-success' : 'badge-ghost'}`}>
+                                    <div className="flex items-center justify-between bg-base-200/30 p-3 rounded-lg">
+                                        <p className="text-white">PR Materials Needed</p>
+                                        <div className={`badge ${request.flyers_needed ? 'badge-success' : 'badge-ghost'}`}>
                                             {request.flyers_needed ? 'Yes' : 'No'}
                                         </div>
-                                        <p className="text-white">PR Materials Needed</p>
                                     </div>
-                                    <div className="flex items-center">
-                                        <div className={`mr-2 badge ${request.room_reservation_needed ? 'badge-success' : 'badge-ghost'}`}>
+                                    <div className="flex items-center justify-between bg-base-200/30 p-3 rounded-lg">
+                                        <p className="text-white">Room Reservation Needed</p>
+                                        <div className={`badge ${request.room_reservation_needed ? 'badge-success' : 'badge-ghost'}`}>
                                             {request.room_reservation_needed ? 'Yes' : 'No'}
                                         </div>
-                                        <p className="text-white">Room Reservation Needed</p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="space-y-6">
-                            {request.room_reservation_needed && (
-                                <div className="bg-base-100/10 p-4 rounded-lg border border-base-100/10">
-                                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                        </svg>
+                            {request.room_reservation_needed ? (
+                                <div className="bg-base-100/10 p-5 rounded-lg border border-base-100/10">
+                                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                                        <Icon icon="mdi:map-marker-outline" className="h-5 w-5 mr-2 text-primary" />
                                         Room Reservation Details
                                     </h3>
                                     <div className="space-y-3">
-                                        <div>
-                                            <label className="text-xs text-gray-400">Room/Location</label>
-                                            <p className="text-white">{request.room_reservation_location || 'Not specified'}</p>
+                                        <div className="bg-base-200/30 p-3 rounded-lg">
+                                            <label className="text-xs text-gray-400 block mb-1">Room/Location</label>
+                                            <p className="text-white font-medium">{request.room_reservation_location || 'Not specified'}</p>
                                         </div>
-                                        <div>
-                                            <label className="text-xs text-gray-400">Confirmation Status</label>
-                                            <p className="text-white">{request.room_reservation_confirmed ? 'Confirmed' : 'Not confirmed'}</p>
+                                        <div className="bg-base-200/30 p-3 rounded-lg">
+                                            <label className="text-xs text-gray-400 block mb-1">Confirmation Status</label>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`badge ${request.room_reservation_confirmed ? 'badge-success' : 'badge-warning'}`}>
+                                                    {request.room_reservation_confirmed ? 'Confirmed' : 'Pending'}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            )}
-
-                            {request.files && request.files.length > 0 && (
-                                <div className="bg-base-100/10 p-4 rounded-lg border border-base-100/10">
-                                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        Event Files
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {request.files.map((file, index) => (
-                                            <FilePreview
-                                                key={index}
-                                                fileUrl={`/api/files/event_requests/${request.id}/${file}`}
-                                                fileName={file}
-                                                collectionName="event_requests"
-                                                recordId={request.id}
-                                                originalFileName={file}
-                                            />
-                                        ))}
+                            ) : (
+                                request.files && request.files.length > 0 && (
+                                    <div className="bg-base-100/10 p-5 rounded-lg border border-base-100/10">
+                                        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                                            <Icon icon="mdi:file-document-outline" className="h-5 w-5 mr-2 text-primary" />
+                                            Event Files
+                                        </h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {request.files.map((file, index) => (
+                                                <FilePreview
+                                                    key={index}
+                                                    fileUrl={`https://pocketbase.ieeeucsd.org/api/files/event_requests/${request.id}/${file}`}
+                                                    fileName={file}
+                                                    collectionName="event_requests"
+                                                    recordId={request.id}
+                                                    originalFileName={file}
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )
                             )}
                         </div>
+
+                        {/* Display event files if available and not shown above */}
+                        {!request.room_reservation_needed && request.files && request.files.length > 0 && (
+                            <div className="bg-base-100/10 p-5 rounded-lg border border-base-100/10">
+                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                                    <Icon icon="mdi:file-document-outline" className="h-5 w-5 mr-2 text-primary" />
+                                    Event Files
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                    {request.files.map((file, index) => (
+                                        <FilePreview
+                                            key={index}
+                                            fileUrl={`https://pocketbase.ieeeucsd.org/api/files/event_requests/${request.id}/${file}`}
+                                            fileName={file}
+                                            collectionName="event_requests"
+                                            recordId={request.id}
+                                            originalFileName={file}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
