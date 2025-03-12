@@ -95,16 +95,16 @@ export interface EventRequest extends BaseRecord {
   event_description: string;
   flyers_needed: boolean;
   flyer_type?: string[]; // digital_with_social, digital_no_social, physical_with_advertising, physical_no_advertising, newsletter, other
-  other_flyer_type?: string;
+  other_flyer_type?: string; 
   flyer_advertising_start_date?: string;
   flyer_additional_requests?: string;
   photography_needed: boolean;
   required_logos?: string[]; // IEEE, AS, HKN, TESC, PIB, TNT, SWE, OTHER
-  other_logos?: string[];
+  other_logos?: string[]; // Array of logo IDs
   advertising_format?: string;
   will_or_have_room_booking?: boolean;
   expected_attendance?: number;
-  room_booking?: string;
+  room_booking?: string; // signle file
   as_funding_required: boolean;
   food_drinks_being_served: boolean;
   itemized_invoice?: string; // JSON string

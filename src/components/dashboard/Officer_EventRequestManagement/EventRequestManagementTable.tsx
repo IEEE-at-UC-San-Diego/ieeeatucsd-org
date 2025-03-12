@@ -31,13 +31,17 @@ interface ExtendedEventRequest extends SchemaEventRequest {
 
 interface EventRequestManagementTableProps {
     eventRequests: ExtendedEventRequest[];
+    onRequestSelect: (request: ExtendedEventRequest) => void;
+    onStatusChange: (id: string, status: "submitted" | "pending" | "completed" | "declined") => Promise<void>;
 }
 
-const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: EventRequestManagementTableProps) => {
+const EventRequestManagementTable = ({
+    eventRequests: initialEventRequests,
+    onRequestSelect,
+    onStatusChange
+}: EventRequestManagementTableProps) => {
     const [eventRequests, setEventRequests] = useState<ExtendedEventRequest[]>(initialEventRequests);
     const [filteredRequests, setFilteredRequests] = useState<ExtendedEventRequest[]>(initialEventRequests);
-    const [selectedRequest, setSelectedRequest] = useState<ExtendedEventRequest | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [searchTerm, setSearchTerm] = useState<string>('');
@@ -135,8 +139,7 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
     // Update event request status
     const updateEventRequestStatus = async (id: string, status: "submitted" | "pending" | "completed" | "declined"): Promise<void> => {
         try {
-            const update = Update.getInstance();
-            const result = await update.updateField('event_request', id, 'status', status);
+            await onStatusChange(id, status);
 
             // Find the event request to get its name
             const eventRequest = eventRequests.find(req => req.id === id);
@@ -154,11 +157,6 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                     request.id === id ? { ...request, status } : request
                 )
             );
-
-            // Update selected request if open
-            if (selectedRequest && selectedRequest.id === id) {
-                setSelectedRequest({ ...selectedRequest, status });
-            }
 
             // Force sync to update IndexedDB
             await dataSync.syncCollection<ExtendedEventRequest>(Collections.EVENT_REQUESTS);
@@ -211,43 +209,38 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
         }
     };
 
-    // Open modal with event request details
-    const openDetailModal = (request: ExtendedEventRequest) => {
-        setSelectedRequest(request);
-        setIsModalOpen(true);
+    // Helper function to truncate text
+    const truncateText = (text: string, maxLength: number) => {
+        if (!text) return '';
+        return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
     };
 
-    // Close modal
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setSelectedRequest(null);
-    };
-
-    // Open update modal
-    const openUpdateModal = (request: ExtendedEventRequest) => {
-        setRequestToUpdate(request);
-        setIsUpdateModalOpen(true);
-    };
-
-    // Close update modal
-    const closeUpdateModal = () => {
-        setIsUpdateModalOpen(false);
-        setRequestToUpdate(null);
-    };
-
-    // Update status and close modal
-    const handleUpdateStatus = async (status: "submitted" | "pending" | "completed" | "declined") => {
-        if (requestToUpdate) {
-            try {
-                await updateEventRequestStatus(requestToUpdate.id, status);
-                // Toast is now shown in updateEventRequestStatus
-                closeUpdateModal();
-            } catch (error) {
-                // console.error('Error in handleUpdateStatus:', error);
-                // Toast is now shown in updateEventRequestStatus
-                // Keep modal open so user can try again
-            }
+    // Helper to get user display info - always show email address
+    const getUserDisplayInfo = (request: ExtendedEventRequest) => {
+        // First try to get from the expand object
+        if (request.expand?.requested_user) {
+            const user = request.expand.requested_user;
+            // Show "Loading..." instead of "Unknown" while data is being fetched
+            const name = user.name || 'Unknown';
+            // Always show email regardless of emailVisibility
+            const email = user.email || 'Unknown';
+            return { name, email };
         }
+
+        // Then try the requested_user_expand
+        if (request.requested_user_expand) {
+            const name = request.requested_user_expand.name || 'Unknown';
+            const email = request.requested_user_expand.email || 'Unknown';
+            return { name, email };
+        }
+
+        // Last fallback - don't use "Unknown" to avoid confusing users
+        return { name: 'Unknown', email: '(Unknown)' };
+    };
+
+    // Update openDetailModal to call the prop function
+    const openDetailModal = (request: ExtendedEventRequest) => {
+        onRequestSelect(request);
     };
 
     // Handle sort change
@@ -524,13 +517,22 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                         <tbody>
                             {filteredRequests.map((request) => (
                                 <tr key={request.id} className="hover">
-                                    <td className="font-medium">{request.name}</td>
+                                    <td className="font-medium">
+                                        <div className="truncate max-w-[180px] md:max-w-[250px]" title={request.name}>
+                                            {truncateText(request.name, 30)}
+                                        </div>
+                                    </td>
                                     <td className="hidden md:table-cell">{formatDate(request.start_date_time)}</td>
                                     <td>
-                                        <div className="flex flex-col">
-                                            <span>{request.expand?.requested_user?.name || 'Unknown'}</span>
-                                            <span className="text-xs text-gray-400">{request.expand?.requested_user?.email}</span>
-                                        </div>
+                                        {(() => {
+                                            const { name, email } = getUserDisplayInfo(request);
+                                            return (
+                                                <div className="flex flex-col">
+                                                    <span>{name}</span>
+                                                    <span className="text-xs text-gray-400">{email}</span>
+                                                </div>
+                                            );
+                                        })()}
                                     </td>
                                     <td className="hidden lg:table-cell">
                                         {request.flyers_needed ? (
@@ -555,12 +557,6 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                                     <td>
                                         <div className="flex items-center gap-2">
                                             <button
-                                                className="btn btn-sm btn-outline"
-                                                onClick={() => openUpdateModal(request)}
-                                            >
-                                                Update
-                                            </button>
-                                            <button
                                                 className="btn btn-sm btn-ghost"
                                                 onClick={() => openDetailModal(request)}
                                             >
@@ -568,6 +564,7 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                 </svg>
+                                                View Details
                                             </button>
                                         </div>
                                     </td>
@@ -577,85 +574,6 @@ const EventRequestManagementTable = ({ eventRequests: initialEventRequests }: Ev
                     </table>
                 </div>
             </motion.div>
-
-            {/* Event request details modal - Now outside the main component div */}
-            {isModalOpen && selectedRequest && (
-                <AnimatePresence>
-                    <EventRequestDetails
-                        request={selectedRequest}
-                        onClose={closeModal}
-                        onStatusChange={updateEventRequestStatus}
-                    />
-                </AnimatePresence>
-            )}
-
-            {/* Update status modal */}
-            {isUpdateModalOpen && requestToUpdate && (
-                <AnimatePresence>
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            transition={{ duration: 0.2 }}
-                            className="bg-base-200 rounded-lg shadow-xl w-full max-w-md overflow-hidden flex flex-col"
-                        >
-                            {/* Header */}
-                            <div className="bg-base-300 p-4 flex justify-between items-center">
-                                <h3 className="text-xl font-bold">Update Status</h3>
-                                <button
-                                    className="btn btn-sm btn-circle"
-                                    onClick={closeUpdateModal}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-
-                            {/* Content */}
-                            <div className="p-6">
-                                <p className="mb-4">
-                                    Update status for event: <span className="font-semibold">{requestToUpdate.name}</span>
-                                </p>
-                                <div className="flex flex-col gap-3">
-                                    <button
-                                        className="btn btn-outline w-full justify-start"
-                                        onClick={() => handleUpdateStatus("pending")}
-                                    >
-                                        <span className="badge badge-warning mr-2">Pending</span>
-                                        Mark as Pending
-                                    </button>
-                                    <button
-                                        className="btn btn-outline w-full justify-start"
-                                        onClick={() => handleUpdateStatus("completed")}
-                                    >
-                                        <span className="badge badge-success mr-2">Completed</span>
-                                        Mark as Completed
-                                    </button>
-                                    <button
-                                        className="btn btn-outline w-full justify-start"
-                                        onClick={() => handleUpdateStatus("declined")}
-                                    >
-                                        <span className="badge badge-error mr-2">Declined</span>
-                                        Mark as Declined
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="p-4 border-t border-base-300 flex justify-end">
-                                <button
-                                    className="btn btn-ghost"
-                                    onClick={closeUpdateModal}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                </AnimatePresence>
-            )}
         </>
     );
 };

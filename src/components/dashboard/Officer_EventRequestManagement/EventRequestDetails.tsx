@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
 import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase/schema';
 import { FileManager } from '../../../scripts/pocketbase/FileManager';
+import { Icon } from "@iconify/react";
+import CustomAlert from '../universal/CustomAlert';
+import { Authentication } from '../../../scripts/pocketbase/Authentication';
 
 // Extended EventRequest interface with additional properties needed for this component
 interface ExtendedEventRequest extends SchemaEventRequest {
@@ -12,8 +15,20 @@ interface ExtendedEventRequest extends SchemaEventRequest {
         name: string;
         email: string;
     };
+    expand?: {
+        requested_user?: {
+            id: string;
+            name: string;
+            email: string;
+            emailVisibility?: boolean;
+            [key: string]: any;
+        };
+        [key: string]: any;
+    };
     invoice_data?: string | any;
     invoice_files?: string[]; // Array of invoice file IDs
+    flyer_files?: string[]; // Add this for PR-related files
+    files?: string[]; // Generic files field
 }
 
 interface EventRequestDetailsProps {
@@ -43,41 +58,33 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     const [fileUrl, setFileUrl] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [fileType, setFileType] = useState<'image' | 'pdf' | 'other'>('other');
+    const [fileType, setFileType] = useState<string>('');
 
     useEffect(() => {
+        if (!isOpen) return;
+
         const loadFile = async () => {
-            if (!isOpen) return;
-
-            setIsLoading(true);
-            setError(null);
-
             try {
-                const fileManager = FileManager.getInstance();
+                setIsLoading(true);
+                setError(null);
 
-                // Get file URL with token for secure access
-                const url = await fileManager.getFileUrlWithToken(
-                    collectionName,
-                    recordId,
-                    fileName,
-                    true // Use token for secure access
-                );
+                // Construct the secure file URL
+                const auth = Authentication.getInstance();
+                const token = auth.getAuthToken();
+                const pbUrl = import.meta.env.PUBLIC_POCKETBASE_URL;
 
-                setFileUrl(url);
+                const secureUrl = `${pbUrl}/api/files/${collectionName}/${recordId}/${fileName}?token=${token}`;
 
-                // Determine file type based on extension
+                setFileUrl(secureUrl);
+
+                // Determine file type from extension
                 const extension = fileName.split('.').pop()?.toLowerCase() || '';
-                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
-                    setFileType('image');
-                } else if (extension === 'pdf') {
-                    setFileType('pdf');
-                } else {
-                    setFileType('other');
-                }
+                setFileType(extension);
+
+                setIsLoading(false);
             } catch (err) {
                 console.error('Error loading file:', err);
                 setError('Failed to load file. Please try again.');
-            } finally {
                 setIsLoading(false);
             }
         };
@@ -87,46 +94,35 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
 
     const handleDownload = async () => {
         try {
-            const fileManager = FileManager.getInstance();
-            const blob = await fileManager.downloadFile(collectionName, recordId, fileName);
-
-            // Create a download link
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = displayName || fileName;
-            document.body.appendChild(a);
-            a.click();
-
-            // Clean up
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-            toast.success('File downloaded successfully');
+            // Create a temporary link element
+            const link = document.createElement('a');
+            link.href = fileUrl;
+            link.download = displayName || fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         } catch (err) {
             console.error('Error downloading file:', err);
-            toast.error('Failed to download file');
+            setError('Failed to download file. Please try again.');
         }
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="bg-base-200 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-            >
-                {/* Header */}
-                <div className="bg-base-300 p-4 flex justify-between items-center">
-                    <h3 className="text-xl font-bold truncate max-w-[80%]">{displayName || fileName}</h3>
-                    <div className="flex items-center gap-2">
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center p-4 overflow-y-auto"
+        >
+            <div className="bg-base-300 rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden relative">
+                <div className="p-4 flex justify-between items-center border-b border-base-200">
+                    <h3 className="text-lg font-bold truncate">{displayName || fileName}</h3>
+                    <div className="flex gap-2">
                         <button
-                            className="btn btn-sm btn-outline"
                             onClick={handleDownload}
+                            className="btn btn-sm btn-ghost"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -134,8 +130,8 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                             Download
                         </button>
                         <button
-                            className="btn btn-sm btn-circle"
                             onClick={onClose}
+                            className="btn btn-sm btn-ghost"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -144,50 +140,44 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                     </div>
                 </div>
 
-                {/* Content */}
-                <div className="flex-grow overflow-auto p-4 flex items-center justify-center bg-base-300/30">
+                <div className="p-4 overflow-auto max-h-[70vh]">
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center p-8">
+                        <div className="flex items-center justify-center h-64">
                             <div className="loading loading-spinner loading-lg"></div>
-                            <p className="mt-4">Loading file...</p>
                         </div>
                     ) : error ? (
-                        <div className="alert alert-error">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            <span>{error}</span>
+                        <div className="bg-error/10 text-error p-4 rounded-lg">
+                            <p>{error}</p>
                         </div>
                     ) : (
                         <>
-                            {fileType === 'image' && (
-                                <div className="max-h-full max-w-full">
+                            {(fileType === 'jpg' || fileType === 'jpeg' || fileType === 'png' || fileType === 'gif') ? (
+                                <div className="flex justify-center">
                                     <img
                                         src={fileUrl}
                                         alt={displayName || fileName}
-                                        className="max-h-[70vh] max-w-full object-contain"
-                                        onError={() => setError('Failed to load image')}
+                                        className="max-w-full max-h-[60vh] object-contain rounded-lg"
+                                        onError={() => setError('Failed to load image.')}
                                     />
                                 </div>
-                            )}
-
-                            {fileType === 'pdf' && (
+                            ) : fileType === 'pdf' ? (
                                 <iframe
-                                    src={`${fileUrl}#toolbar=0`}
-                                    className="w-full h-[70vh]"
+                                    src={`${fileUrl}#view=FitH`}
+                                    className="w-full h-[60vh] rounded-lg"
                                     title={displayName || fileName}
                                 ></iframe>
-                            )}
-
-                            {fileType === 'other' && (
-                                <div className="flex flex-col items-center justify-center p-8 text-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            ) : (
+                                <div className="bg-base-200 p-6 rounded-lg text-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
-                                    <p className="mb-4">This file type cannot be previewed directly.</p>
+                                    <h4 className="text-lg font-semibold mb-2">File Preview Not Available</h4>
+                                    <p className="text-base-content/70 mb-4">
+                                        This file type ({fileType}) cannot be previewed in the browser.
+                                    </p>
                                     <button
-                                        className="btn btn-primary"
                                         onClick={handleDownload}
+                                        className="btn btn-primary btn-sm"
                                     >
                                         Download File
                                     </button>
@@ -196,8 +186,8 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                         </>
                     )}
                 </div>
-            </motion.div>
-        </div>
+            </div>
+        </motion.div>
     );
 };
 
@@ -273,9 +263,7 @@ const FilePreview: React.FC<{
                 <div className="border rounded-lg overflow-hidden bg-base-300/30 p-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
+                            <Icon className="h-5 w-5 text-warning" icon="heroicons:book-open" />
                             <span className="text-sm truncate max-w-[80%]">{displayName}</span>
                         </div>
                         <button
@@ -563,10 +551,12 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
                     </div>
                 </div>
             ) : (
-                <div className="alert alert-info">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span>No invoice files have been uploaded.</span>
-                </div>
+                <CustomAlert
+                    type="info"
+                    title="No Invoice Files"
+                    message="No invoice files have been uploaded."
+                    icon="heroicons:information-circle"
+                />
             )}
 
             {/* Display invoice data if available */}
@@ -593,10 +583,12 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
     // If no invoice data is provided, show a message
     if (!invoiceData) {
         return (
-            <div className="alert alert-info">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                <span>No invoice data available.</span>
-            </div>
+            <CustomAlert
+                type="info"
+                title="No Invoice Data"
+                message="No invoice data available."
+                icon="heroicons:information-circle"
+            />
         );
     }
 
@@ -610,10 +602,12 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
             } catch (e) {
                 console.error('Failed to parse invoice data string:', e);
                 return (
-                    <div className="alert alert-warning">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                        <span>Invalid invoice data format.</span>
-                    </div>
+                    <CustomAlert
+                        type="warning"
+                        title="Invalid Format"
+                        message="Invalid invoice data format."
+                        icon="heroicons:exclamation-triangle"
+                    />
                 );
             }
         } else if (typeof invoiceData === 'object' && invoiceData !== null) {
@@ -623,10 +617,12 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
         // Check if we have valid invoice data
         if (!parsedInvoice || typeof parsedInvoice !== 'object') {
             return (
-                <div className="alert alert-info">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span>No structured invoice data available.</span>
-                </div>
+                <CustomAlert
+                    type="info"
+                    title="No Structured Data"
+                    message="No structured invoice data available."
+                    icon="heroicons:information-circle"
+                />
             );
         }
 
@@ -656,10 +652,12 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
         // If we still don't have items, show a message
         if (items.length === 0) {
             return (
-                <div className="alert alert-info">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span>No invoice items found in the data.</span>
-                </div>
+                <CustomAlert
+                    type="info"
+                    title="No Invoice Items"
+                    message="No invoice items found in the data."
+                    icon="heroicons:information-circle"
+                />
             );
         }
 
@@ -741,14 +739,366 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
     } catch (error) {
         console.error('Error rendering invoice table:', error);
         return (
-            <div className="alert alert-error">
-                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                <span>An unexpected error occurred while processing the invoice.</span>
-            </div>
+            <CustomAlert
+                type="error"
+                title="Processing Error"
+                message="An unexpected error occurred while processing the invoice."
+                icon="heroicons:exclamation-triangle"
+            />
         );
     }
 };
 
+// Now, add a new component for the PR Materials tab
+const PRMaterialsTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) => {
+    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
+    const [selectedFile, setSelectedFile] = useState<{ name: string, displayName: string }>({ name: '', displayName: '' });
+
+    // Format date for display
+    const formatDate = (dateString: string) => {
+        if (!dateString) return 'Not specified';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (e) {
+            return dateString;
+        }
+    };
+
+    // Use the same utility functions as in the ASFundingTab
+    const getFileExtension = (filename: string): string => {
+        const parts = filename.split('.');
+        return parts.length > 1 ? parts.pop()?.toLowerCase() || '' : '';
+    };
+
+    const isImageFile = (filename: string): boolean => {
+        const extension = getFileExtension(filename);
+        return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension);
+    };
+
+    const isPdfFile = (filename: string): boolean => {
+        return getFileExtension(filename) === 'pdf';
+    };
+
+    const getFriendlyFileName = (filename: string, maxLength: number = 20): string => {
+        const basename = filename.split('/').pop() || filename;
+        if (basename.length <= maxLength) return basename;
+        const extension = getFileExtension(basename);
+        const name = basename.substring(0, basename.length - extension.length - 1);
+        const truncatedName = name.substring(0, maxLength - 3 - extension.length) + '...';
+        return extension ? `${truncatedName}.${extension}` : truncatedName;
+    };
+
+    // Check if we have any PR-related files (flyer_files or related files)
+    const hasFiles = (
+        request.flyer_files && request.flyer_files.length > 0 ||
+        request.files && request.files.length > 0 ||
+        request.other_logos && request.other_logos.length > 0
+    );
+
+    // Open file preview modal
+    const openFilePreview = (fileName: string, displayName: string) => {
+        setSelectedFile({ name: fileName, displayName });
+        setIsPreviewModalOpen(true);
+    };
+
+    // Close file preview modal
+    const closeFilePreview = () => {
+        setIsPreviewModalOpen(false);
+    };
+
+    return (
+        <motion.div
+            className="space-y-6"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+        >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                    <div className="bg-base-300/20 p-4 rounded-lg">
+                        <h4 className="text-sm font-medium text-gray-400 mb-1">Flyers Needed</h4>
+                        <div className="flex items-center gap-2">
+                            {request.flyers_needed ? (
+                                <span className="badge badge-success">Yes</span>
+                            ) : (
+                                <span className="badge badge-ghost">No</span>
+                            )}
+                        </div>
+                    </div>
+
+                    {request.flyers_needed && (
+                        <motion.div
+                            className="space-y-4"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.1 }}
+                        >
+                            <div className="bg-base-300/20 p-4 rounded-lg">
+                                <h4 className="text-sm font-medium text-gray-400 mb-1">Flyer Types</h4>
+                                <ul className="space-y-1 mt-2">
+                                    {request.flyer_type?.map((type, index) => (
+                                        <motion.li
+                                            key={index}
+                                            className="flex items-center gap-2"
+                                            initial={{ opacity: 0, x: -5 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.1 + (index * 0.05) }}
+                                        >
+                                            <Icon icon="mdi:check" className="h-4 w-4 text-success" />
+                                            <span>{type}</span>
+                                        </motion.li>
+                                    ))}
+                                    {request.other_flyer_type && (
+                                        <motion.li
+                                            className="flex items-center gap-2"
+                                            initial={{ opacity: 0, x: -5 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.1 + ((request.flyer_type?.length || 0) * 0.05) }}
+                                        >
+                                            <Icon icon="mdi:check" className="h-4 w-4 text-success" />
+                                            <span>{request.other_flyer_type}</span>
+                                        </motion.li>
+                                    )}
+                                </ul>
+                            </div>
+
+                            <div className="bg-base-300/20 p-4 rounded-lg">
+                                <h4 className="text-sm font-medium text-gray-400 mb-1">Advertising Start Date</h4>
+                                <p>{formatDate(request.flyer_advertising_start_date || '')}</p>
+                            </div>
+
+                            <div className="bg-base-300/20 p-4 rounded-lg">
+                                <h4 className="text-sm font-medium text-gray-400 mb-1">Advertising Format</h4>
+                                <p>{request.advertising_format || 'Not specified'}</p>
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+
+                <div className="space-y-4">
+                    <div className="bg-base-300/20 p-4 rounded-lg">
+                        <h4 className="text-sm font-medium text-gray-400 mb-1">Photography Needed</h4>
+                        <div className="flex items-center gap-2">
+                            {request.photography_needed ? (
+                                <span className="badge badge-success">Yes</span>
+                            ) : (
+                                <span className="badge badge-ghost">No</span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Logo Requirements Section */}
+                    <motion.div
+                        className="bg-base-300/20 p-4 rounded-lg"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                    >
+                        <h4 className="text-sm font-medium text-gray-400 mb-1">Required Logos</h4>
+                        <ul className="space-y-1 mt-2">
+                            {request.required_logos?.map((logo, index) => (
+                                <motion.li
+                                    key={index}
+                                    className="flex items-center gap-2"
+                                    initial={{ opacity: 0, x: -5 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.1 + (index * 0.05) }}
+                                >
+                                    <Icon icon="mdi:check" className="h-4 w-4 text-success" />
+                                    <span>{logo}</span>
+                                </motion.li>
+                            ))}
+                            {(!request.required_logos || request.required_logos.length === 0) && (
+                                <motion.li
+                                    className="flex items-center gap-2"
+                                    initial={{ opacity: 0, x: -5 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                >
+                                    <Icon icon="mdi:information" className="h-4 w-4 text-info" />
+                                    <span>No specific logos required</span>
+                                </motion.li>
+                            )}
+                        </ul>
+                    </motion.div>
+
+                    {/* Display custom logos if available */}
+                    {request.other_logos && request.other_logos.length > 0 && (
+                        <motion.div
+                            className="bg-base-300/20 p-4 rounded-lg"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                        >
+                            <h4 className="text-sm font-medium text-gray-400 mb-1">Custom Logos</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                                {request.other_logos.map((logoId, index) => {
+                                    const displayName = getFriendlyFileName(logoId, 15);
+
+                                    return (
+                                        <motion.div
+                                            key={`logo-${index}`}
+                                            className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-sm"
+                                            onClick={() => openFilePreview(logoId, displayName)}
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.2 + (index * 0.05) }}
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                        >
+                                            <div className="p-3 flex items-center gap-2">
+                                                {isImageFile(logoId) ? (
+                                                    <Icon icon="mdi:image" className="h-5 w-5 text-primary" />
+                                                ) : (
+                                                    <Icon icon="mdi:file-document" className="h-5 w-5 text-secondary" />
+                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm truncate" title={logoId}>
+                                                        {displayName}
+                                                    </p>
+                                                </div>
+                                                <Icon icon="mdi:eye" className="h-4 w-4" />
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    <div className="bg-base-300/20 p-4 rounded-lg">
+                        <h4 className="text-sm font-medium text-gray-400 mb-1">Additional Requests</h4>
+                        <p className="whitespace-pre-line">{request.flyer_additional_requests || 'None'}</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Display PR-related files if available */}
+            {hasFiles && (
+                <motion.div
+                    className="mt-6"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                >
+                    <h4 className="text-sm font-medium text-gray-400 mb-1">Related Files</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                        {/* Display flyer_files if available */}
+                        {request.flyer_files && request.flyer_files.map((fileId, index) => {
+                            const extension = getFileExtension(fileId);
+                            const displayName = getFriendlyFileName(fileId, 25);
+
+                            return (
+                                <motion.div
+                                    key={`flyer-file-${index}`}
+                                    className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-sm"
+                                    onClick={() => openFilePreview(fileId, displayName)}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 + (index * 0.05) }}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    <div className="p-4 flex items-center gap-3">
+                                        {isImageFile(fileId) ? (
+                                            <Icon icon="mdi:image" className="h-8 w-8 text-primary" />
+                                        ) : isPdfFile(fileId) ? (
+                                            <Icon icon="mdi:file-pdf-box" className="h-8 w-8 text-error" />
+                                        ) : (
+                                            <Icon icon="mdi:file-document" className="h-8 w-8 text-secondary" />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium truncate" title={fileId}>
+                                                {displayName}
+                                            </p>
+                                            <p className="text-xs text-gray-400">
+                                                {extension ? extension.toUpperCase() : 'FILE'}
+                                            </p>
+                                        </div>
+                                        <Icon icon="mdi:eye" className="h-5 w-5" />
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+
+                        {/* Display general files if available */}
+                        {request.files && request.files.map((fileId, index) => {
+                            const extension = getFileExtension(fileId);
+                            const displayName = getFriendlyFileName(fileId, 25);
+
+                            return (
+                                <motion.div
+                                    key={`general-file-${index}`}
+                                    className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-sm"
+                                    onClick={() => openFilePreview(fileId, displayName)}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 + ((request.flyer_files?.length || 0) + index) * 0.05 }}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    <div className="p-4 flex items-center gap-3">
+                                        {isImageFile(fileId) ? (
+                                            <Icon icon="mdi:image" className="h-8 w-8 text-primary" />
+                                        ) : isPdfFile(fileId) ? (
+                                            <Icon icon="mdi:file-pdf-box" className="h-8 w-8 text-error" />
+                                        ) : (
+                                            <Icon icon="mdi:file-document" className="h-8 w-8 text-secondary" />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium truncate" title={fileId}>
+                                                {displayName}
+                                            </p>
+                                            <p className="text-xs text-gray-400">
+                                                {extension ? extension.toUpperCase() : 'FILE'}
+                                            </p>
+                                        </div>
+                                        <Icon icon="mdi:eye" className="h-5 w-5" />
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                </motion.div>
+            )}
+
+            {/* No files message */}
+            {!hasFiles && (
+                <motion.div
+                    className="mt-4"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                >
+                    <CustomAlert
+                        type="info"
+                        title="No PR Files"
+                        message="No PR-related files have been uploaded."
+                        icon="heroicons:information-circle"
+                    />
+                </motion.div>
+            )}
+
+            {/* File Preview Modal */}
+            <FilePreviewModal
+                isOpen={isPreviewModalOpen}
+                onClose={closeFilePreview}
+                collectionName={Collections.EVENT_REQUESTS}
+                recordId={request.id}
+                fileName={selectedFile.name}
+                displayName={selectedFile.displayName}
+            />
+        </motion.div>
+    );
+};
+
+// Now, update the EventRequestDetails component to use the new PRMaterialsTab
 const EventRequestDetails = ({
     request,
     onClose,
@@ -801,47 +1151,63 @@ const EventRequestDetails = ({
         setIsStatusChanging(false);
     };
 
-    return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="bg-base-200 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
-            >
-                {/* Header */}
-                <div className="bg-base-300 p-4 flex justify-between items-center">
-                    <h3 className="text-xl font-bold">{request.name}</h3>
-                    <button
-                        className="btn btn-sm btn-circle"
-                        onClick={onClose}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
+    // Animation variants
+    const fadeInVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+    };
 
-                {/* Status and controls */}
-                <div className="bg-base-300/50 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    const tabVariants = {
+        hidden: { opacity: 0, y: 10 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+    };
+
+    return (
+        <motion.div
+            className="bg-base-200 rounded-xl overflow-hidden shadow-xl max-w-5xl w-full"
+            initial="hidden"
+            animate="visible"
+            variants={fadeInVariants}
+        >
+            <div className="p-6">
+                <div className="bg-base-300/50 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-400">Status:</span>
-                            <span className={`badge ${getStatusBadge(status)}`}>
+                            <motion.span
+                                className={`badge ${getStatusBadge(status)}`}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                            >
                                 {status || 'Pending'}
-                            </span>
+                            </motion.span>
                         </div>
                         <div className="text-sm text-gray-400">
-                            Requested by: <span className="text-white">{request.requested_user_expand?.name || request.requested_user || 'Unknown'}</span>
+                            Requested by: <span className="text-white">
+                                {request.requested_user_expand?.name ||
+                                    (request.expand?.requested_user?.name) ||
+                                    'Unknown'}
+                            </span>
+                            {" - "}
+                            <span className="text-white">
+                                {request.requested_user_expand?.email ||
+                                    (request.expand?.requested_user?.email) ||
+                                    'No email available'}
+                            </span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="dropdown dropdown-end">
-                            <label tabIndex={0} className="btn btn-sm">
+                            <motion.label
+                                tabIndex={0}
+                                className="btn btn-sm btn-primary"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                            >
                                 Update Status
-                            </label>
-                            <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-52">
+                            </motion.label>
+                            <ul tabIndex={0} className="dropdown-content z-[101] menu p-2 shadow bg-base-200 rounded-lg w-52">
                                 <li><a onClick={() => handleStatusChange('pending')}>Pending</a></li>
                                 <li><a onClick={() => handleStatusChange('completed')}>Completed</a></li>
                                 <li><a onClick={() => handleStatusChange('declined')}>Declined</a></li>
@@ -851,144 +1217,143 @@ const EventRequestDetails = ({
                 </div>
 
                 {/* Tabs */}
-                <div className="tabs tabs-boxed bg-base-300/30 px-4 pt-4">
-                    <a
+                <div className="tabs tabs-boxed my-6 bg-base-300/30">
+                    <motion.a
                         className={`tab ${activeTab === 'details' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('details')}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                     >
                         Event Details
-                    </a>
-                    <a
+                    </motion.a>
+                    <motion.a
                         className={`tab ${activeTab === 'pr' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('pr')}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                     >
                         PR Materials
-                    </a>
-                    <a
+                    </motion.a>
+                    <motion.a
                         className={`tab ${activeTab === 'funding' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('funding')}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                     >
                         AS Funding
-                    </a>
+                    </motion.a>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto flex-grow">
+                <AnimatePresence mode="wait">
                     {/* Event Details Tab */}
                     {activeTab === 'details' && (
-                        <div className="space-y-6">
+                        <motion.div
+                            className="space-y-6"
+                            key="details-tab"
+                            initial="hidden"
+                            animate="visible"
+                            exit={{ opacity: 0, y: -10 }}
+                            variants={tabVariants}
+                        >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
-                                    <div>
+                                    <div className="bg-base-300/20 p-4 rounded-lg">
                                         <h4 className="text-sm font-medium text-gray-400 mb-1">Event Name</h4>
                                         <p className="text-lg">{request.name}</p>
                                     </div>
-                                    <div>
+                                    <div className="bg-base-300/20 p-4 rounded-lg">
                                         <h4 className="text-sm font-medium text-gray-400 mb-1">Location</h4>
                                         <p>{request.location || 'Not specified'}</p>
                                     </div>
-                                    <div>
+                                    <div className="bg-base-300/20 p-4 rounded-lg">
                                         <h4 className="text-sm font-medium text-gray-400 mb-1">Start Date & Time</h4>
                                         <p>{formatDate(request.start_date_time)}</p>
                                     </div>
-                                    <div>
+                                    <div className="bg-base-300/20 p-4 rounded-lg">
                                         <h4 className="text-sm font-medium text-gray-400 mb-1">End Date & Time</h4>
                                         <p>{formatDate(request.end_date_time)}</p>
                                     </div>
-                                    <div>
+                                    <div className="bg-base-300/20 p-4 rounded-lg">
                                         <h4 className="text-sm font-medium text-gray-400 mb-1">Expected Attendance</h4>
                                         <p>{request.expected_attendance || 'Not specified'}</p>
                                     </div>
                                 </div>
                                 <div className="space-y-4">
-                                    <div>
+                                    <div className="bg-base-300/20 p-4 rounded-lg">
                                         <h4 className="text-sm font-medium text-gray-400 mb-1">Event Description</h4>
                                         <p className="whitespace-pre-line">{request.event_description || 'No description provided'}</p>
                                     </div>
-                                    <div>
+                                    <div className="bg-base-300/20 p-4 rounded-lg">
                                         <h4 className="text-sm font-medium text-gray-400 mb-1">Room Booking</h4>
-                                        <p>{request.will_or_have_room_booking ? 'Yes' : 'No'}</p>
+                                        <div className="flex items-center gap-2">
+                                            {request.will_or_have_room_booking ? (
+                                                <span className="badge badge-success">Yes</span>
+                                            ) : (
+                                                <span className="badge badge-ghost">No</span>
+                                            )}
+                                        </div>
+
+                                        {/* Display room booking file if available */}
+                                        {request.room_booking && (
+                                            <div className="mt-3">
+                                                <FilePreview
+                                                    fileUrl={request.room_booking}
+                                                    fileName={request.room_booking.split('/').pop() || 'Room Booking'}
+                                                    collectionName={Collections.EVENT_REQUESTS}
+                                                    recordId={request.id}
+                                                    originalFileName={request.room_booking}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
-                                    <div>
+                                    <div className="bg-base-300/20 p-4 rounded-lg">
                                         <h4 className="text-sm font-medium text-gray-400 mb-1">Food/Drinks Served</h4>
-                                        <p>{request.food_drinks_being_served ? 'Yes' : 'No'}</p>
+                                        <div className="flex items-center gap-2">
+                                            {request.food_drinks_being_served ? (
+                                                <span className="badge badge-success">Yes</span>
+                                            ) : (
+                                                <span className="badge badge-ghost">No</span>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div>
+                                    <div className="bg-base-300/20 p-4 rounded-lg">
                                         <h4 className="text-sm font-medium text-gray-400 mb-1">Submission Date</h4>
                                         <p>{formatDate(request.created)}</p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
                     )}
 
                     {/* PR Materials Tab */}
                     {activeTab === 'pr' && (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <div>
-                                        <h4 className="text-sm font-medium text-gray-400 mb-1">Flyers Needed</h4>
-                                        <p>{request.flyers_needed ? 'Yes' : 'No'}</p>
-                                    </div>
-                                    {request.flyers_needed && (
-                                        <>
-                                            <div>
-                                                <h4 className="text-sm font-medium text-gray-400 mb-1">Flyer Types</h4>
-                                                <ul className="list-disc list-inside">
-                                                    {request.flyer_type?.map((type, index) => (
-                                                        <li key={index}>{type}</li>
-                                                    ))}
-                                                    {request.other_flyer_type && <li>{request.other_flyer_type}</li>}
-                                                </ul>
-                                            </div>
-                                            <div>
-                                                <h4 className="text-sm font-medium text-gray-400 mb-1">Advertising Start Date</h4>
-                                                <p>{formatDate(request.flyer_advertising_start_date || '')}</p>
-                                            </div>
-                                            <div>
-                                                <h4 className="text-sm font-medium text-gray-400 mb-1">Advertising Format</h4>
-                                                <p>{request.advertising_format || 'Not specified'}</p>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                                <div className="space-y-4">
-                                    <div>
-                                        <h4 className="text-sm font-medium text-gray-400 mb-1">Photography Needed</h4>
-                                        <p>{request.photography_needed ? 'Yes' : 'No'}</p>
-                                    </div>
-                                    {request.flyers_needed && (
-                                        <>
-                                            <div>
-                                                <h4 className="text-sm font-medium text-gray-400 mb-1">Required Logos</h4>
-                                                <ul className="list-disc list-inside">
-                                                    {request.required_logos?.map((logo, index) => (
-                                                        <li key={index}>{logo}</li>
-                                                    ))}
-                                                    {(!request.required_logos || request.required_logos.length === 0) &&
-                                                        <li>No specific logos required</li>
-                                                    }
-                                                </ul>
-                                            </div>
-                                            <div>
-                                                <h4 className="text-sm font-medium text-gray-400 mb-1">Additional Requests</h4>
-                                                <p className="whitespace-pre-line">{request.flyer_additional_requests || 'None'}</p>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                        <motion.div
+                            key="pr-tab"
+                            initial="hidden"
+                            animate="visible"
+                            exit={{ opacity: 0, y: -10 }}
+                            variants={tabVariants}
+                        >
+                            <PRMaterialsTab request={request} />
+                        </motion.div>
                     )}
 
                     {/* AS Funding Tab */}
                     {activeTab === 'funding' && (
-                        <ASFundingTab request={request} />
+                        <motion.div
+                            key="funding-tab"
+                            initial="hidden"
+                            animate="visible"
+                            exit={{ opacity: 0, y: -10 }}
+                            variants={tabVariants}
+                        >
+                            <ASFundingTab request={request} />
+                        </motion.div>
                     )}
-                </div>
-            </motion.div>
-        </div>
+                </AnimatePresence>
+            </div>
+        </motion.div>
     );
 };
 
