@@ -380,32 +380,33 @@ const EventRequestManagementTable = ({
                 {/* Filters and controls */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 p-4 bg-base-300/50 rounded-lg border border-base-100/10 mb-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
-                        <div className="form-control w-full sm:w-auto">
-                            <div className="input-group">
-                                <input
-                                    type="text"
-                                    placeholder="Search events..."
-                                    className="input input-bordered focus:border-primary w-full sm:w-64"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                                <button className="btn btn-square bg-primary/10 border-primary/20 text-primary hover:bg-primary/20">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                </button>
-                            </div>
+                        <div className="relative flex items-center w-full sm:w-auto">
+                            <input
+                                type="text"
+                                placeholder="Search events..."
+                                className="input bg-[#1e2029] border-[#2a2d3a] focus:border-primary w-full sm:w-64 pr-10 rounded-lg"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            <button className="absolute right-0 top-0 btn btn-square bg-primary text-white hover:bg-primary/90 border-none rounded-l-none h-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </button>
                         </div>
-                        <select
-                            className="select select-bordered focus:border-primary w-full sm:w-auto"
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                        >
-                            <option value="all">All Statuses</option>
-                            <option value="pending">Pending</option>
-                            <option value="completed">Completed</option>
-                            <option value="declined">Declined</option>
-                        </select>
+                        <div className="relative w-full sm:w-auto">
+                            <select
+                                className="select bg-[#1e2029] border-[#2a2d3a] focus:border-primary w-full appearance-none pr-10 rounded-lg"
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                            >
+                                <option value="all">All Statuses</option>
+                                <option value="pending">Pending</option>
+                                <option value="completed">Completed</option>
+                                <option value="declined">Declined</option>
+                            </select>
+
+                        </div>
                     </div>
                     <div className="flex items-center gap-3 w-full lg:w-auto justify-between sm:justify-end">
                         <span className="text-sm text-gray-400">
