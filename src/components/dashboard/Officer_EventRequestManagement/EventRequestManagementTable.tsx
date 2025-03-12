@@ -221,21 +221,21 @@ const EventRequestManagementTable = ({
         if (request.expand?.requested_user) {
             const user = request.expand.requested_user;
             // Show "Loading..." instead of "Unknown" while data is being fetched
-            const name = user.name || 'Unknown';
+            const name = user.name || 'Loading...';
             // Always show email regardless of emailVisibility
-            const email = user.email || 'Unknown';
+            const email = user.email || 'Loading...';
             return { name, email };
         }
 
         // Then try the requested_user_expand
         if (request.requested_user_expand) {
-            const name = request.requested_user_expand.name || 'Unknown';
-            const email = request.requested_user_expand.email || 'Unknown';
+            const name = request.requested_user_expand.name || 'Loading...';
+            const email = request.requested_user_expand.email || 'Loading...';
             return { name, email };
         }
 
         // Last fallback - don't use "Unknown" to avoid confusing users
-        return { name: 'Unknown', email: '(Unknown)' };
+        return { name: 'Loading...', email: 'Loading...' };
     };
 
     // Update openDetailModal to call the prop function
@@ -317,13 +317,13 @@ const EventRequestManagementTable = ({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="bg-base-200 rounded-xl p-8 text-center shadow-sm"
+                className="bg-gradient-to-b from-base-200 to-base-300 rounded-xl p-8 text-center shadow-sm border border-base-300/30"
             >
                 <div className="flex flex-col items-center justify-center py-6">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-base-content/30 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
-                    <h3 className="text-xl font-semibold mb-3">No Event Requests Found</h3>
+                    <h3 className="text-xl font-semibold mb-3 text-white">No Event Requests Found</h3>
                     <p className="text-base-content/60 mb-6 max-w-md">
                         {statusFilter !== 'all' || searchTerm
                             ? 'No event requests match your current filters. Try adjusting your search criteria.'
@@ -331,7 +331,7 @@ const EventRequestManagementTable = ({
                     </p>
                     <div className="flex gap-3">
                         <button
-                            className="btn btn-outline btn-sm gap-2"
+                            className="btn btn-primary btn-outline btn-sm gap-2"
                             onClick={refreshEventRequests}
                             disabled={isRefreshing}
                         >
@@ -351,7 +351,7 @@ const EventRequestManagementTable = ({
                         </button>
                         {(statusFilter !== 'all' || searchTerm) && (
                             <button
-                                className="btn btn-outline btn-sm gap-2"
+                                className="btn btn-ghost btn-sm gap-2"
                                 onClick={() => {
                                     setStatusFilter('all');
                                     setSearchTerm('');
@@ -378,18 +378,18 @@ const EventRequestManagementTable = ({
                 style={{ minHeight: "500px" }}
             >
                 {/* Filters and controls */}
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 p-4 bg-base-300/50 rounded-lg border border-base-100/10 mb-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
                         <div className="form-control w-full sm:w-auto">
                             <div className="input-group">
                                 <input
                                     type="text"
                                     placeholder="Search events..."
-                                    className="input input-bordered w-full sm:w-64"
+                                    className="input input-bordered focus:border-primary w-full sm:w-64"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
-                                <button className="btn btn-square">
+                                <button className="btn btn-square bg-primary/10 border-primary/20 text-primary hover:bg-primary/20">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
@@ -397,7 +397,7 @@ const EventRequestManagementTable = ({
                             </div>
                         </div>
                         <select
-                            className="select select-bordered w-full sm:w-auto"
+                            className="select select-bordered focus:border-primary w-full sm:w-auto"
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
                         >
@@ -412,7 +412,7 @@ const EventRequestManagementTable = ({
                             {filteredRequests.length} {filteredRequests.length === 1 ? 'request' : 'requests'} found
                         </span>
                         <button
-                            className="btn btn-outline btn-sm gap-2"
+                            className="btn btn-primary btn-outline btn-sm gap-2"
                             onClick={refreshEventRequests}
                             disabled={isRefreshing}
                         >
@@ -435,49 +435,49 @@ const EventRequestManagementTable = ({
 
                 {/* Event requests table */}
                 <div
-                    className="rounded-xl shadow-sm overflow-x-auto"
+                    className="rounded-xl shadow-sm overflow-x-auto bg-base-100/10 border border-base-100/20"
                     style={{
                         maxHeight: "unset",
                         height: "auto"
                     }}
                 >
                     <table className="table table-zebra w-full">
-                        <thead className="bg-base-300/50">
+                        <thead className="bg-base-300/50 sticky top-0 z-10">
                             <tr>
                                 <th
-                                    className="cursor-pointer hover:bg-base-300"
+                                    className="cursor-pointer hover:bg-base-300 transition-colors"
                                     onClick={() => handleSortChange('name')}
                                 >
                                     <div className="flex items-center gap-1">
                                         Event Name
                                         {sortField === 'name' && (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
                                             </svg>
                                         )}
                                     </div>
                                 </th>
                                 <th
-                                    className="cursor-pointer hover:bg-base-300 hidden md:table-cell"
+                                    className="cursor-pointer hover:bg-base-300 transition-colors hidden md:table-cell"
                                     onClick={() => handleSortChange('start_date_time')}
                                 >
                                     <div className="flex items-center gap-1">
                                         Date
                                         {sortField === 'start_date_time' && (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
                                             </svg>
                                         )}
                                     </div>
                                 </th>
                                 <th
-                                    className="cursor-pointer hover:bg-base-300"
+                                    className="cursor-pointer hover:bg-base-300 transition-colors"
                                     onClick={() => handleSortChange('requested_user')}
                                 >
                                     <div className="flex items-center gap-1">
                                         Requested By
                                         {sortField === 'requested_user' && (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
                                             </svg>
                                         )}
@@ -486,26 +486,26 @@ const EventRequestManagementTable = ({
                                 <th className="hidden lg:table-cell">PR Materials</th>
                                 <th className="hidden lg:table-cell">AS Funding</th>
                                 <th
-                                    className="cursor-pointer hover:bg-base-300 hidden md:table-cell"
+                                    className="cursor-pointer hover:bg-base-300 transition-colors hidden md:table-cell"
                                     onClick={() => handleSortChange('created')}
                                 >
                                     <div className="flex items-center gap-1">
                                         Submitted
                                         {sortField === 'created' && (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
                                             </svg>
                                         )}
                                     </div>
                                 </th>
                                 <th
-                                    className="cursor-pointer hover:bg-base-300"
+                                    className="cursor-pointer hover:bg-base-300 transition-colors"
                                     onClick={() => handleSortChange('status')}
                                 >
                                     <div className="flex items-center gap-1">
                                         Status
                                         {sortField === 'status' && (
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
                                             </svg>
                                         )}
@@ -516,7 +516,7 @@ const EventRequestManagementTable = ({
                         </thead>
                         <tbody>
                             {filteredRequests.map((request) => (
-                                <tr key={request.id} className="hover">
+                                <tr key={request.id} className="hover transition-colors">
                                     <td className="font-medium">
                                         <div className="truncate max-w-[180px] md:max-w-[250px]" title={request.name}>
                                             {truncateText(request.name, 30)}
@@ -551,20 +551,20 @@ const EventRequestManagementTable = ({
                                     <td className="hidden md:table-cell">{formatDate(request.created)}</td>
                                     <td>
                                         <span className={`badge ${getStatusBadge(request.status)}`}>
-                                            {request.status || 'Pending'}
+                                            {request.status?.charAt(0).toUpperCase() + request.status?.slice(1) || 'Pending'}
                                         </span>
                                     </td>
                                     <td>
                                         <div className="flex items-center gap-2">
                                             <button
-                                                className="btn btn-sm btn-ghost"
+                                                className="btn btn-sm btn-primary btn-outline btn-sm gap-2"
                                                 onClick={() => openDetailModal(request)}
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                 </svg>
-                                                View Details
+                                                View
                                             </button>
                                         </div>
                                     </td>

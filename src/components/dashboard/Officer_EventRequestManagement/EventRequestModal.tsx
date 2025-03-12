@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EventRequestDetails from './EventRequestDetails';
 import EventRequestManagementTable from './EventRequestManagementTable';
@@ -131,6 +131,50 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [localEventRequests, setLocalEventRequests] = useState<ExtendedEventRequest[]>(eventRequests);
     const [isLoadingUserData, setIsLoadingUserData] = useState(true); // Start as true to show loading immediately
+
+    // Fix scrollbar flashing when modal opens/closes
+    useLayoutEffect(() => {
+        const originalStyle = window.getComputedStyle(document.body).overflow;
+        const originalPaddingRight = window.getComputedStyle(document.body).paddingRight;
+
+        if (isModalOpen) {
+            // Store scroll position
+            const scrollY = window.scrollY;
+
+            // Measure the scrollbar width
+            const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+            // Add padding to prevent layout shift
+            document.body.style.paddingRight = `${scrollbarWidth}px`;
+
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.width = '100%';
+        } else {
+            // Restore scrolling
+            const scrollY = document.body.style.top;
+            document.body.style.overflow = originalStyle;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            document.body.style.paddingRight = originalPaddingRight;
+
+            if (scrollY) {
+                window.scrollTo(0, parseInt(scrollY || '0') * -1);
+            }
+        }
+
+        return () => {
+            // Clean up
+            document.body.style.overflow = originalStyle;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            document.body.style.paddingRight = originalPaddingRight;
+        };
+    }, [isModalOpen]);
 
     // Function to refresh user data
     const refreshUserDataAndUpdate = async (requests: ExtendedEventRequest[] = localEventRequests) => {
@@ -282,33 +326,14 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
 
     return (
         <>
-            {/* Table component placed here */}
+            {/* Table component with modernized UI */}
             <div
-                className="bg-base-200 rounded-xl shadow-xl overflow-hidden dashboard-card card-enter event-table-container"
+                className="bg-gradient-to-b from-base-200 to-base-300 rounded-xl shadow-xl overflow-hidden dashboard-card card-enter event-table-container border border-base-300/30"
                 style={{ animationDelay: ANIMATION_DELAY }}
             >
                 <div className="p-4 md:p-6 h-auto">
-                    <div className="flex justify-between items-center mb-4">
-                        {isLoadingUserData ? (
-                            <div className="flex items-center">
-                                <div className="loading loading-spinner loading-sm mr-2"></div>
-                                <span className="text-sm text-gray-400">Loading user data...</span>
-                            </div>
-                        ) : (
-                            <div></div>
-                        )}
-                        <button
-                            className="btn btn-sm btn-ghost"
-                            onClick={() => refreshUserDataAndUpdate()}
-                            disabled={isLoadingUserData}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            Refresh User Data
-                        </button>
-                    </div>
-                    <div id="event-request-table-container">
+
+                    <div id="event-request-table-container" className="relative">
                         <TableWrapper
                             eventRequests={localEventRequests}
                             handleSelectRequest={handleSelectRequest}
@@ -318,31 +343,40 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Modal with improved styling */}
             <AnimatePresence>
                 {isModalOpen && selectedRequest && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4 overflow-y-auto"
+                        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200]"
                     >
-                        <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto relative">
-                            <div className="absolute top-4 right-4 z-[201]">
-                                <button
-                                    onClick={closeModal}
-                                    className="btn btn-circle btn-sm bg-base-300/90 hover:bg-base-300"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <EventRequestDetails
-                                request={selectedRequest}
-                                onClose={closeModal}
-                                onStatusChange={handleStatusChange}
-                            />
+                        <div className="flex items-center justify-center min-h-screen p-4 overflow-hidden">
+                            <motion.div
+                                initial={{ scale: 0.95, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.95, opacity: 0 }}
+                                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                                className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-base-200 to-base-300 rounded-xl shadow-2xl border border-base-100/20 relative"
+                            >
+                                <div className="sticky top-0 right-0 z-[201] flex justify-between items-center p-4 bg-base-300/80 backdrop-blur-md border-b border-base-100/10">
+                                    <h2 className="text-xl font-bold text-white">{selectedRequest.name}</h2>
+                                    <button
+                                        onClick={closeModal}
+                                        className="btn btn-circle btn-sm bg-base-100/20 hover:bg-base-100/40 border-none text-white"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <EventRequestDetails
+                                    request={selectedRequest}
+                                    onClose={closeModal}
+                                    onStatusChange={handleStatusChange}
+                                />
+                            </motion.div>
                         </div>
                     </motion.div>
                 )}

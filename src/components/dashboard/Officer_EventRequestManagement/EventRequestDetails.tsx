@@ -29,6 +29,10 @@ interface ExtendedEventRequest extends SchemaEventRequest {
     invoice_files?: string[]; // Array of invoice file IDs
     flyer_files?: string[]; // Add this for PR-related files
     files?: string[]; // Generic files field
+    room_reservation_needed?: boolean;
+    room_reservation_location?: string;
+    room_reservation_confirmed?: boolean;
+    additional_notes?: string;
 }
 
 interface EventRequestDetailsProps {
@@ -1104,28 +1108,22 @@ const EventRequestDetails = ({
     onClose,
     onStatusChange
 }: EventRequestDetailsProps): React.ReactNode => {
-    const [activeTab, setActiveTab] = useState<'details' | 'pr' | 'funding'>('details');
-    const [status, setStatus] = useState<"submitted" | "pending" | "completed" | "declined">(request.status);
-    const [isStatusChanging, setIsStatusChanging] = useState(false);
+    const [activeTab, setActiveTab] = useState('details');
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [newStatus, setNewStatus] = useState<"submitted" | "pending" | "completed" | "declined">("pending");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [alertInfo, setAlertInfo] = useState<{ show: boolean; type: "success" | "error" | "warning" | "info"; message: string }>({
+        show: false,
+        type: "info",
+        message: ""
+    });
 
-    // Format date for display
     const formatDate = (dateString: string) => {
-        if (!dateString) return 'Not specified';
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch (e) {
-            return dateString;
-        }
+        if (!dateString) return "Not specified";
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric' });
     };
 
-    // Get status badge class based on status
     const getStatusBadge = (status?: "submitted" | "pending" | "completed" | "declined") => {
         if (!status) return 'badge-warning';
 
@@ -1143,46 +1141,95 @@ const EventRequestDetails = ({
         }
     };
 
-    // Handle status change
     const handleStatusChange = async (newStatus: "submitted" | "pending" | "completed" | "declined") => {
-        setIsStatusChanging(true);
-        await onStatusChange(request.id, newStatus);
-        setStatus(newStatus);
-        setIsStatusChanging(false);
+        setNewStatus(newStatus);
+        setIsConfirmModalOpen(true);
     };
 
-    // Animation variants
-    const fadeInVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
-    };
+    const confirmStatusChange = async () => {
+        setIsSubmitting(true);
+        setAlertInfo({ show: false, type: "info", message: "" });
 
-    const tabVariants = {
-        hidden: { opacity: 0, y: 10 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+        try {
+            await onStatusChange(request.id, newStatus);
+            setAlertInfo({
+                show: true,
+                type: "success",
+                message: `Status successfully changed to ${newStatus}.`
+            });
+        } catch (error) {
+            setAlertInfo({
+                show: true,
+                type: "error",
+                message: `Failed to update status: ${error}`
+            });
+        } finally {
+            setIsSubmitting(false);
+            setIsConfirmModalOpen(false);
+        }
     };
 
     return (
-        <motion.div
-            className="bg-base-200 rounded-xl overflow-hidden shadow-xl max-w-5xl w-full"
-            initial="hidden"
-            animate="visible"
-            variants={fadeInVariants}
-        >
-            <div className="p-6">
-                <div className="bg-base-300/50 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="flex flex-col gap-1">
+        <div className="bg-transparent w-full">
+            {/* Tabs navigation */}
+            <div className="px-6 pt-2 mb-4">
+                <div className="flex flex-wrap gap-2 border-b border-base-100/20">
+                    <button
+                        className={`px-4 py-2 font-medium transition-all rounded-t-lg ${activeTab === 'details' ? 'bg-primary/10 text-primary border-b-2 border-primary' : 'hover:bg-base-100/10 text-gray-300'}`}
+                        onClick={() => setActiveTab('details')}
+                    >
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-400">Status:</span>
-                            <motion.span
-                                className={`badge ${getStatusBadge(status)}`}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                {status || 'Pending'}
-                            </motion.span>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Event Details
                         </div>
+                    </button>
+                    {request.as_funding_required && (
+                        <button
+                            className={`px-4 py-2 font-medium transition-all rounded-t-lg ${activeTab === 'funding' ? 'bg-primary/10 text-primary border-b-2 border-primary' : 'hover:bg-base-100/10 text-gray-300'}`}
+                            onClick={() => setActiveTab('funding')}
+                        >
+                            <div className="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                AS Funding
+                            </div>
+                        </button>
+                    )}
+                    {request.flyers_needed && (
+                        <button
+                            className={`px-4 py-2 font-medium transition-all rounded-t-lg ${activeTab === 'pr' ? 'bg-primary/10 text-primary border-b-2 border-primary' : 'hover:bg-base-100/10 text-gray-300'}`}
+                            onClick={() => setActiveTab('pr')}
+                        >
+                            <div className="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                PR Materials
+                            </div>
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Alert for status updates */}
+            {alertInfo.show && (
+                <div className="px-6 mb-4">
+                    <CustomAlert
+                        type={alertInfo.type}
+                        title={alertInfo.type.charAt(0).toUpperCase() + alertInfo.type.slice(1)}
+                        message={alertInfo.message}
+                        onClose={() => setAlertInfo({ ...alertInfo, show: false })}
+                    />
+                </div>
+            )}
+
+            {/* Status bar */}
+            <div className="mb-6 px-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-base-100/10 rounded-lg border border-base-100/10">
+                    <div className="space-y-1">
                         <div className="text-sm text-gray-400">
                             Requested by: <span className="text-white">
                                 {request.requested_user_expand?.name ||
@@ -1196,164 +1243,215 @@ const EventRequestDetails = ({
                                     'No email available'}
                             </span>
                         </div>
+                        <div className="flex items-center gap-2">
+                            <span className={`badge ${getStatusBadge(request.status)}`}>
+                                {request.status?.charAt(0).toUpperCase() + request.status?.slice(1) || 'Pending'}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                                Submitted on {formatDate(request.created)}
+                            </span>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="dropdown dropdown-end">
-                            <motion.label
-                                tabIndex={0}
-                                className="btn btn-sm btn-primary"
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                            >
+                            <label tabIndex={0} className="btn btn-sm">
                                 Update Status
-                            </motion.label>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </label>
                             <ul tabIndex={0} className="dropdown-content z-[101] menu p-2 shadow bg-base-200 rounded-lg w-52">
-                                <li><a onClick={() => handleStatusChange('pending')}>Pending</a></li>
-                                <li><a onClick={() => handleStatusChange('completed')}>Completed</a></li>
-                                <li><a onClick={() => handleStatusChange('declined')}>Declined</a></li>
+                                <li>
+                                    <button
+                                        className={`flex items-center ${request.status === 'pending' ? 'bg-warning/20 text-warning' : ''}`}
+                                        onClick={() => handleStatusChange('pending')}
+                                        disabled={request.status === 'pending'}
+                                    >
+                                        <div className="w-2 h-2 rounded-full bg-warning mr-2"></div>
+                                        Pending
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        className={`flex items-center ${request.status === 'completed' ? 'bg-success/20 text-success' : ''}`}
+                                        onClick={() => handleStatusChange('completed')}
+                                        disabled={request.status === 'completed'}
+                                    >
+                                        <div className="w-2 h-2 rounded-full bg-success mr-2"></div>
+                                        Completed
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        className={`flex items-center ${request.status === 'declined' ? 'bg-error/20 text-error' : ''}`}
+                                        onClick={() => handleStatusChange('declined')}
+                                        disabled={request.status === 'declined'}
+                                    >
+                                        <div className="w-2 h-2 rounded-full bg-error mr-2"></div>
+                                        Declined
+                                    </button>
+                                </li>
                             </ul>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Tabs */}
-                <div className="tabs tabs-boxed my-6 bg-base-300/30">
-                    <motion.a
-                        className={`tab ${activeTab === 'details' ? 'tab-active' : ''}`}
-                        onClick={() => setActiveTab('details')}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                    >
-                        Event Details
-                    </motion.a>
-                    <motion.a
-                        className={`tab ${activeTab === 'pr' ? 'tab-active' : ''}`}
-                        onClick={() => setActiveTab('pr')}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                    >
-                        PR Materials
-                    </motion.a>
-                    <motion.a
-                        className={`tab ${activeTab === 'funding' ? 'tab-active' : ''}`}
-                        onClick={() => setActiveTab('funding')}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                    >
-                        AS Funding
-                    </motion.a>
-                </div>
-
-                {/* Content */}
-                <AnimatePresence mode="wait">
-                    {/* Event Details Tab */}
-                    {activeTab === 'details' && (
-                        <motion.div
-                            className="space-y-6"
-                            key="details-tab"
-                            initial="hidden"
-                            animate="visible"
-                            exit={{ opacity: 0, y: -10 }}
-                            variants={tabVariants}
-                        >
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <div className="bg-base-300/20 p-4 rounded-lg">
-                                        <h4 className="text-sm font-medium text-gray-400 mb-1">Event Name</h4>
-                                        <p className="text-lg">{request.name}</p>
+            {/* Tab content */}
+            <div className="px-6 pb-6">
+                {activeTab === 'details' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-6">
+                            <div className="bg-base-100/10 p-4 rounded-lg border border-base-100/10">
+                                <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Event Information
+                                </h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="text-xs text-gray-400">Event Name</label>
+                                        <p className="text-white font-medium">{request.name}</p>
                                     </div>
-                                    <div className="bg-base-300/20 p-4 rounded-lg">
-                                        <h4 className="text-sm font-medium text-gray-400 mb-1">Location</h4>
-                                        <p>{request.location || 'Not specified'}</p>
+                                    <div>
+                                        <label className="text-xs text-gray-400">Event Description</label>
+                                        <p className="text-white">{request.event_description}</p>
                                     </div>
-                                    <div className="bg-base-300/20 p-4 rounded-lg">
-                                        <h4 className="text-sm font-medium text-gray-400 mb-1">Start Date & Time</h4>
-                                        <p>{formatDate(request.start_date_time)}</p>
-                                    </div>
-                                    <div className="bg-base-300/20 p-4 rounded-lg">
-                                        <h4 className="text-sm font-medium text-gray-400 mb-1">End Date & Time</h4>
-                                        <p>{formatDate(request.end_date_time)}</p>
-                                    </div>
-                                    <div className="bg-base-300/20 p-4 rounded-lg">
-                                        <h4 className="text-sm font-medium text-gray-400 mb-1">Expected Attendance</h4>
-                                        <p>{request.expected_attendance || 'Not specified'}</p>
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                    <div className="bg-base-300/20 p-4 rounded-lg">
-                                        <h4 className="text-sm font-medium text-gray-400 mb-1">Event Description</h4>
-                                        <p className="whitespace-pre-line">{request.event_description || 'No description provided'}</p>
-                                    </div>
-                                    <div className="bg-base-300/20 p-4 rounded-lg">
-                                        <h4 className="text-sm font-medium text-gray-400 mb-1">Room Booking</h4>
-                                        <div className="flex items-center gap-2">
-                                            {request.will_or_have_room_booking ? (
-                                                <span className="badge badge-success">Yes</span>
-                                            ) : (
-                                                <span className="badge badge-ghost">No</span>
-                                            )}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs text-gray-400">Start Date & Time</label>
+                                            <p className="text-white">{formatDate(request.start_date_time)}</p>
                                         </div>
-
-                                        {/* Display room booking file if available */}
-                                        {request.room_booking && (
-                                            <div className="mt-3">
-                                                <FilePreview
-                                                    fileUrl={request.room_booking}
-                                                    fileName={request.room_booking.split('/').pop() || 'Room Booking'}
-                                                    collectionName={Collections.EVENT_REQUESTS}
-                                                    recordId={request.id}
-                                                    originalFileName={request.room_booking}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="bg-base-300/20 p-4 rounded-lg">
-                                        <h4 className="text-sm font-medium text-gray-400 mb-1">Food/Drinks Served</h4>
-                                        <div className="flex items-center gap-2">
-                                            {request.food_drinks_being_served ? (
-                                                <span className="badge badge-success">Yes</span>
-                                            ) : (
-                                                <span className="badge badge-ghost">No</span>
-                                            )}
+                                        <div>
+                                            <label className="text-xs text-gray-400">End Date & Time</label>
+                                            <p className="text-white">{formatDate(request.end_date_time)}</p>
                                         </div>
                                     </div>
-                                    <div className="bg-base-300/20 p-4 rounded-lg">
-                                        <h4 className="text-sm font-medium text-gray-400 mb-1">Submission Date</h4>
-                                        <p>{formatDate(request.created)}</p>
+                                    <div>
+                                        <label className="text-xs text-gray-400">Location</label>
+                                        <p className="text-white">{request.location}</p>
                                     </div>
                                 </div>
                             </div>
-                        </motion.div>
-                    )}
 
-                    {/* PR Materials Tab */}
-                    {activeTab === 'pr' && (
-                        <motion.div
-                            key="pr-tab"
-                            initial="hidden"
-                            animate="visible"
-                            exit={{ opacity: 0, y: -10 }}
-                            variants={tabVariants}
-                        >
-                            <PRMaterialsTab request={request} />
-                        </motion.div>
-                    )}
+                            <div className="bg-base-100/10 p-4 rounded-lg border border-base-100/10">
+                                <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                    Requirements & Special Requests
+                                </h3>
+                                <div className="space-y-3">
+                                    <div className="flex items-center">
+                                        <div className={`mr-2 badge ${request.as_funding_required ? 'badge-success' : 'badge-ghost'}`}>
+                                            {request.as_funding_required ? 'Yes' : 'No'}
+                                        </div>
+                                        <p className="text-white">AS Funding Required</p>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <div className={`mr-2 badge ${request.flyers_needed ? 'badge-success' : 'badge-ghost'}`}>
+                                            {request.flyers_needed ? 'Yes' : 'No'}
+                                        </div>
+                                        <p className="text-white">PR Materials Needed</p>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <div className={`mr-2 badge ${request.room_reservation_needed ? 'badge-success' : 'badge-ghost'}`}>
+                                            {request.room_reservation_needed ? 'Yes' : 'No'}
+                                        </div>
+                                        <p className="text-white">Room Reservation Needed</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                    {/* AS Funding Tab */}
-                    {activeTab === 'funding' && (
-                        <motion.div
-                            key="funding-tab"
-                            initial="hidden"
-                            animate="visible"
-                            exit={{ opacity: 0, y: -10 }}
-                            variants={tabVariants}
-                        >
-                            <ASFundingTab request={request} />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                        <div className="space-y-6">
+                            {request.room_reservation_needed && (
+                                <div className="bg-base-100/10 p-4 rounded-lg border border-base-100/10">
+                                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                        Room Reservation Details
+                                    </h3>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-xs text-gray-400">Room/Location</label>
+                                            <p className="text-white">{request.room_reservation_location || 'Not specified'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-400">Confirmation Status</label>
+                                            <p className="text-white">{request.room_reservation_confirmed ? 'Confirmed' : 'Not confirmed'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {request.files && request.files.length > 0 && (
+                                <div className="bg-base-100/10 p-4 rounded-lg border border-base-100/10">
+                                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        Event Files
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {request.files.map((file, index) => (
+                                            <FilePreview
+                                                key={index}
+                                                fileUrl={`/api/files/event_requests/${request.id}/${file}`}
+                                                fileName={file}
+                                                collectionName="event_requests"
+                                                recordId={request.id}
+                                                originalFileName={file}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'funding' && request.as_funding_required && <ASFundingTab request={request} />}
+                {activeTab === 'pr' && request.flyers_needed && <PRMaterialsTab request={request} />}
             </div>
-        </motion.div>
+
+            {/* Confirmation modal */}
+            {isConfirmModalOpen && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+                    <div className="bg-base-300 rounded-lg p-6 w-full max-w-md">
+                        <h3 className="text-lg font-bold mb-4">Confirm Status Change</h3>
+                        <p className="mb-4">
+                            Are you sure you want to change the status to <span className="font-bold text-primary">{newStatus}</span>?
+                        </p>
+                        <div className="flex justify-end gap-2 mt-4">
+                            <button
+                                className="btn btn-ghost"
+                                onClick={() => setIsConfirmModalOpen(false)}
+                                disabled={isSubmitting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={confirmStatusChange}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-xs"></span>
+                                        Updating...
+                                    </>
+                                ) : (
+                                    'Confirm'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 
