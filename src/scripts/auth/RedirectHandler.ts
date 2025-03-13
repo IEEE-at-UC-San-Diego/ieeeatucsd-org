@@ -57,7 +57,7 @@ export class RedirectHandler {
           code,
           this.provider.codeVerifier,
           window.location.origin + "/oauth2-redirect",
-          { emailVisibility: false },
+          { emailVisibility: true },
         );
 
       // console.log("Auth successful:", authData);
