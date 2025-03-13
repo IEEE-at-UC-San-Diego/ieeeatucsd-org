@@ -256,7 +256,7 @@ try {
     <EventRequestModal client:load eventRequests={allEventRequests} />
 </div>
 
-<script define:vars={{ ANIMATION_DELAYS }}>
+<script type="module" define:vars={{ ANIMATION_DELAYS }}>
     // Import the DataSyncService for client-side use
     import { DataSyncService } from "../../scripts/database/DataSyncService";
     import { Collections } from "../../schemas/pocketbase/schema";
@@ -266,6 +266,20 @@ try {
         if (document.visibilityState === "visible") {
             // Dispatch a custom event that components can listen for
             document.dispatchEvent(new CustomEvent("dashboardTabVisible"));
+        }
+    });
+
+    // Also force refresh when this tab is clicked in dashboard
+    document.addEventListener("DOMContentLoaded", () => {
+        // Find dashboard tab for event request management
+        const eventRequestManagementTab = document.querySelector(
+            '[data-section="eventRequestManagement"]'
+        );
+        if (eventRequestManagementTab) {
+            eventRequestManagementTab.addEventListener("click", () => {
+                // Dispatch custom event to refresh data when this tab is clicked
+                document.dispatchEvent(new CustomEvent("dashboardTabVisible"));
+            });
         }
     });
 

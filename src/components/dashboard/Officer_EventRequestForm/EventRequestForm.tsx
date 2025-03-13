@@ -13,7 +13,7 @@ import PRSection from './PRSection';
 import EventDetailsSection from './EventDetailsSection';
 import TAPFormSection from './TAPFormSection';
 import ASFundingSection from './ASFundingSection';
-import EventRequestFormPreview from './EventRequestFormPreview';
+import { EventRequestFormPreview } from './EventRequestFormPreview';
 import type { InvoiceData, InvoiceItem } from './InvoiceBuilder';
 
 // Animation variants
@@ -119,9 +119,7 @@ const EventRequestForm: React.FC = () => {
         invoiceData: {
             items: [],
             subtotal: 0,
-            taxRate: 7.75, // Default tax rate for San Diego
             taxAmount: 0,
-            tipPercentage: 15, // Default tip percentage
             tipAmount: 0,
             total: 0,
             vendor: ''
@@ -204,7 +202,7 @@ const EventRequestForm: React.FC = () => {
             advertising_format: '',
             will_or_have_room_booking: false,
             expected_attendance: 0,
-            room_booking: null,
+            room_booking: null, // No room booking by default
             as_funding_required: false,
             food_drinks_being_served: false,
             itemized_invoice: '',
@@ -215,9 +213,7 @@ const EventRequestForm: React.FC = () => {
             invoiceData: {
                 items: [],
                 subtotal: 0,
-                taxRate: 7.75, // Default tax rate for San Diego
                 taxAmount: 0,
-                tipPercentage: 15, // Default tip percentage
                 tipAmount: 0,
                 total: 0,
                 vendor: ''
@@ -272,13 +268,12 @@ const EventRequestForm: React.FC = () => {
                 name: formData.name,
                 location: formData.location,
                 start_date_time: new Date(formData.start_date_time).toISOString(),
-                end_date_time: new Date(formData.end_date_time).toISOString(),
+                end_date_time: formData.end_date_time ? new Date(formData.end_date_time).toISOString() : new Date(formData.start_date_time).toISOString(),
                 event_description: formData.event_description,
                 flyers_needed: formData.flyers_needed,
                 photography_needed: formData.photography_needed,
                 as_funding_required: formData.needs_as_funding,
                 food_drinks_being_served: formData.food_drinks_being_served,
-                // Store the itemized_invoice as a string for backward compatibility
                 itemized_invoice: formData.itemized_invoice,
                 flyer_type: formData.flyer_type,
                 other_flyer_type: formData.other_flyer_type,
@@ -288,23 +283,19 @@ const EventRequestForm: React.FC = () => {
                 advertising_format: formData.advertising_format,
                 will_or_have_room_booking: formData.will_or_have_room_booking,
                 expected_attendance: formData.expected_attendance,
-                // Add these fields explicitly to match the schema
                 needs_graphics: formData.needs_graphics,
                 needs_as_funding: formData.needs_as_funding,
-                // Store the invoice data as a properly formatted JSON object
                 invoice_data: {
                     items: formData.invoiceData.items.map(item => ({
                         item: item.description,
                         quantity: item.quantity,
                         unit_price: item.unitPrice
                     })),
-                    tax: formData.invoiceData.taxAmount,
-                    tip: formData.invoiceData.tipAmount,
+                    taxAmount: formData.invoiceData.taxAmount,
+                    tipAmount: formData.invoiceData.tipAmount,
                     total: formData.invoiceData.total,
                     vendor: formData.invoiceData.vendor
                 },
-                // Set the initial status to "submitted"
-                status: EventRequestStatus.SUBMITTED,
             };
 
             // Create the record using the Update service
@@ -400,37 +391,45 @@ const EventRequestForm: React.FC = () => {
 
     // Validate Event Details Section
     const validateEventDetailsSection = () => {
-        if (!formData.name) {
-            toast.error('Please enter an event name');
-            return false;
+        let valid = true;
+        const errors: string[] = [];
+
+        if (!formData.name || formData.name.trim() === '') {
+            errors.push('Event name is required');
+            valid = false;
         }
 
-        if (!formData.event_description) {
-            toast.error('Please enter an event description');
-            return false;
+        if (!formData.event_description || formData.event_description.trim() === '') {
+            errors.push('Event description is required');
+            valid = false;
         }
 
-        if (!formData.start_date_time) {
-            toast.error('Please enter a start date and time');
-            return false;
+        if (!formData.start_date_time || formData.start_date_time.trim() === '') {
+            errors.push('Event start date and time is required');
+            valid = false;
         }
 
         if (!formData.end_date_time) {
-            toast.error('Please enter an end date and time');
+            errors.push('Event end time is required');
+            valid = false;
+        }
+
+        if (!formData.location || formData.location.trim() === '') {
+            errors.push('Event location is required');
+            valid = false;
+        }
+
+        if (formData.will_or_have_room_booking === undefined) {
+            errors.push('Room booking status is required');
+            valid = false;
+        }
+
+        if (errors.length > 0) {
+            setError(errors[0]);
             return false;
         }
 
-        if (!formData.location) {
-            toast.error('Please enter an event location');
-            return false;
-        }
-
-        if (formData.will_or_have_room_booking === null || formData.will_or_have_room_booking === undefined) {
-            toast.error('Please specify if you have a room booking');
-            return false;
-        }
-
-        return true;
+        return valid;
     };
 
     // Validate TAP Form Section
@@ -446,6 +445,7 @@ const EventRequestForm: React.FC = () => {
             return false;
         }
 
+        // Only require room booking file if will_or_have_room_booking is true
         if (formData.will_or_have_room_booking && !formData.room_booking) {
             toast.error('Please upload your room booking confirmation');
             return false;
@@ -467,17 +467,22 @@ const EventRequestForm: React.FC = () => {
 
     // Validate AS Funding Section
     const validateASFundingSection = () => {
-        if (formData.needs_as_funding) {
-            // Check if vendor is provided
-            if (!formData.invoiceData.vendor) {
-                toast.error('Please enter the vendor/restaurant name');
+        if (formData.as_funding_required) {
+            // Check if invoice data is present and has items
+            if (!formData.invoiceData || !formData.invoiceData.items || formData.invoiceData.items.length === 0) {
+                setError('Please add at least one item to your invoice');
                 return false;
             }
 
-            // No longer require items in the invoice
-            // Check if at least one invoice file is uploaded
-            if (!formData.invoice && (!formData.invoice_files || formData.invoice_files.length === 0)) {
-                toast.error('Please upload at least one invoice file');
+            // Calculate the total budget from invoice items
+            const totalBudget = formData.invoiceData.items.reduce(
+                (sum, item) => sum + (item.unitPrice * item.quantity), 0
+            );
+
+            // Check if the budget exceeds the maximum allowed ($5000 cap regardless of attendance)
+            const maxBudget = Math.min(formData.expected_attendance * 10, 5000);
+            if (totalBudget > maxBudget) {
+                setError(`Your budget (${totalBudget.toFixed(2)} dollars) exceeds the maximum allowed (${maxBudget} dollars). The absolute maximum is $5,000.`);
                 return false;
             }
         }
@@ -487,8 +492,11 @@ const EventRequestForm: React.FC = () => {
 
     // Validate all sections before submission
     const validateAllSections = () => {
-        // Validate Event Details
+        // We no longer forcibly set end_date_time to match start_date_time
+        // The end time is now configured separately with the same date
+
         if (!validateEventDetailsSection()) {
+            setCurrentStep(1);
             return false;
         }
 
@@ -579,6 +587,14 @@ const EventRequestForm: React.FC = () => {
                     variants={containerVariants}
                     className="space-y-6"
                 >
+                    <CustomAlert
+                        type="warning"
+                        title="Multiple Events Notice"
+                        message="If you have multiple events, you must submit a separate TAP form for each one. Multiple-day events require individual submissions for each day."
+                        icon="heroicons:exclamation-triangle"
+                        className="mb-4"
+                    />
+
                     <h2 className="text-2xl font-bold mb-4 text-primary">Event Request Form</h2>
 
                     <div className="bg-base-300/50 p-4 rounded-lg mb-6">

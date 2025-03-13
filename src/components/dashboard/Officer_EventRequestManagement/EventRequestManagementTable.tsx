@@ -33,12 +33,14 @@ interface EventRequestManagementTableProps {
     eventRequests: ExtendedEventRequest[];
     onRequestSelect: (request: ExtendedEventRequest) => void;
     onStatusChange: (id: string, status: "submitted" | "pending" | "completed" | "declined") => Promise<void>;
+    isLoadingUserData?: boolean;
 }
 
 const EventRequestManagementTable = ({
     eventRequests: initialEventRequests,
     onRequestSelect,
-    onStatusChange
+    onStatusChange,
+    isLoadingUserData = false
 }: EventRequestManagementTableProps) => {
     const [eventRequests, setEventRequests] = useState<ExtendedEventRequest[]>(initialEventRequests);
     const [filteredRequests, setFilteredRequests] = useState<ExtendedEventRequest[]>(initialEventRequests);
@@ -69,13 +71,54 @@ const EventRequestManagementTable = ({
                 true, // Force sync
                 '', // No filter
                 '-created',
-                'requested_user'
+                'requested_user' // This is correct but we need to ensure it's working in the DataSyncService
             );
+
+            // If we still have "Unknown" users, try to fetch them directly
+            const requestsWithUsers = await Promise.all(
+                updatedRequests.map(async (request) => {
+                    // If user data is missing, try to fetch it directly
+                    if (!request.expand?.requested_user && request.requested_user) {
+                        try {
+                            const userData = await dataSync.getItem(
+                                Collections.USERS,
+                                request.requested_user,
+                                true // Force sync the user data
+                            );
+
+                            if (userData) {
+                                // TypeScript cast to access the properties
+                                const typedUserData = userData as unknown as {
+                                    id: string;
+                                    name?: string;
+                                    email?: string;
+                                };
+
+                                // Update the expand object with the user data
+                                return {
+                                    ...request,
+                                    expand: {
+                                        ...(request.expand || {}),
+                                        requested_user: {
+                                            id: typedUserData.id,
+                                            name: typedUserData.name || 'Unknown',
+                                            email: typedUserData.email || 'Unknown'
+                                        }
+                                    }
+                                } as ExtendedEventRequest;
+                            }
+                        } catch (error) {
+                            console.error(`Error fetching user data for request ${request.id}:`, error);
+                        }
+                    }
+                    return request;
+                })
+            ) as ExtendedEventRequest[];
 
             // console.log(`Fetched ${updatedRequests.length} event requests`);
 
-            setEventRequests(updatedRequests);
-            applyFilters(updatedRequests);
+            setEventRequests(requestsWithUsers);
+            applyFilters(requestsWithUsers);
         } catch (error) {
             // console.error('Error refreshing event requests:', error);
             toast.error('Failed to refresh event requests');
@@ -217,25 +260,32 @@ const EventRequestManagementTable = ({
 
     // Helper to get user display info - always show email address
     const getUserDisplayInfo = (request: ExtendedEventRequest) => {
+        // If we're still loading user data, show loading indicator
+        if (isLoadingUserData) {
+            return {
+                name: request.expand?.requested_user?.name || 'Loading...',
+                email: request.expand?.requested_user?.email || 'Loading...'
+            };
+        }
+
         // First try to get from the expand object
         if (request.expand?.requested_user) {
             const user = request.expand.requested_user;
-            // Show "Loading..." instead of "Unknown" while data is being fetched
-            const name = user.name || 'Loading...';
+            const name = user.name || 'Unknown';
             // Always show email regardless of emailVisibility
-            const email = user.email || 'Loading...';
+            const email = user.email || 'Unknown';
             return { name, email };
         }
 
         // Then try the requested_user_expand
         if (request.requested_user_expand) {
-            const name = request.requested_user_expand.name || 'Loading...';
-            const email = request.requested_user_expand.email || 'Loading...';
+            const name = request.requested_user_expand.name || 'Unknown';
+            const email = request.requested_user_expand.email || 'Unknown';
             return { name, email };
         }
 
-        // Last fallback - don't use "Unknown" to avoid confusing users
-        return { name: 'Loading...', email: 'Loading...' };
+        // Last fallback
+        return { name: 'Unknown', email: 'Unknown' };
     };
 
     // Update openDetailModal to call the prop function

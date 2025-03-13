@@ -113,12 +113,14 @@ const TableWrapper: React.FC<{
     eventRequests: ExtendedEventRequest[];
     handleSelectRequest: (request: ExtendedEventRequest) => void;
     handleStatusChange: (id: string, status: "submitted" | "pending" | "completed" | "declined") => Promise<void>;
-}> = ({ eventRequests, handleSelectRequest, handleStatusChange }) => {
+    isLoadingUserData?: boolean;
+}> = ({ eventRequests, handleSelectRequest, handleStatusChange, isLoadingUserData = false }) => {
     return (
         <EventRequestManagementTable
             eventRequests={eventRequests}
             onRequestSelect={handleSelectRequest}
             onStatusChange={handleStatusChange}
+            isLoadingUserData={isLoadingUserData}
         />
     );
 };
@@ -189,28 +191,31 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
         }
     };
 
-    // Immediately load user data on mount
+    // Immediately load user data on mount and when eventRequests change
     useEffect(() => {
-        refreshUserDataAndUpdate(eventRequests);
-    }, []);
-
-    // Effect to update local state when props change
-    useEffect(() => {
-        // Only update if we have new eventRequests from props
-        if (eventRequests.length > 0) {
-            // First update with what we have from props
-            setLocalEventRequests(prevRequests => {
-                // Only replace if we have different data
-                if (eventRequests.length !== prevRequests.length) {
-                    return eventRequests;
-                }
-                return prevRequests;
-            });
-
+        if (eventRequests && eventRequests.length > 0) {
+            // First update with existing data from props
+            setLocalEventRequests(eventRequests);
             // Then refresh user data
             refreshUserDataAndUpdate(eventRequests);
         }
     }, [eventRequests]);
+
+    // Ensure user data is loaded immediately when component mounts
+    useEffect(() => {
+        // Refresh user data immediately on mount
+        refreshUserDataAndUpdate();
+
+        // Set up auto-refresh every 30 seconds
+        const refreshInterval = setInterval(() => {
+            refreshUserDataAndUpdate();
+        }, 30000); // 30 seconds
+
+        // Clear interval on unmount
+        return () => {
+            clearInterval(refreshInterval);
+        };
+    }, []);
 
     // Set up event listeners for communication with the table component
     useEffect(() => {
@@ -252,7 +257,7 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
         return () => {
             document.removeEventListener('dashboardTabVisible', handleTabVisible);
         };
-    }, [localEventRequests]);
+    }, []);
 
     const closeModal = () => {
         setIsModalOpen(false);
@@ -338,6 +343,7 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
                             eventRequests={localEventRequests}
                             handleSelectRequest={handleSelectRequest}
                             handleStatusChange={handleStatusChange}
+                            isLoadingUserData={isLoadingUserData}
                         />
                     </div>
                 </div>

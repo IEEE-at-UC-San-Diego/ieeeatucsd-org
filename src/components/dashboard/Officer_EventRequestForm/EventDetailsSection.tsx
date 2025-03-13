@@ -114,7 +114,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
             {/* Date and Time Section */}
             <motion.div
                 variants={itemVariants}
-                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                className="grid grid-cols-1 gap-6"
             >
                 {/* Event Start Date */}
                 <motion.div
@@ -122,7 +122,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
                     whileHover={{ y: -2 }}
                 >
                     <label className="label">
-                        <span className="label-text font-medium text-lg">Event Start</span>
+                        <span className="label-text font-medium text-lg">Event Start Date & Time</span>
                         <span className="label-text-alt text-error">*</span>
                     </label>
                     <motion.input
@@ -134,26 +134,48 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
                         whileHover="hover"
                         variants={inputHoverVariants}
                     />
+                    <p className="text-sm text-base-content/70 mt-2">
+                        Note: For multi-day events, please submit a separate request for each day.
+                    </p>
+                    <p className="text-sm text-base-content/70 mt-1">
+                        The event time should not include setup time.
+                    </p>
                 </motion.div>
 
-                {/* Event End Date */}
+                {/* Event End Time */}
                 <motion.div
                     className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
                     whileHover={{ y: -2 }}
                 >
                     <label className="label">
-                        <span className="label-text font-medium text-lg">Event End</span>
+                        <span className="label-text font-medium text-lg">Event End Time</span>
                         <span className="label-text-alt text-error">*</span>
                     </label>
-                    <motion.input
-                        type="datetime-local"
-                        className="input input-bordered focus:input-primary transition-all duration-300 mt-2"
-                        value={formData.end_date_time}
-                        onChange={(e) => onDataChange({ end_date_time: e.target.value })}
-                        required
-                        whileHover="hover"
-                        variants={inputHoverVariants}
-                    />
+                    <div className="flex flex-col gap-2">
+                        <motion.input
+                            type="time"
+                            className="input input-bordered focus:input-primary transition-all duration-300"
+                            value={formData.end_date_time ? new Date(formData.end_date_time).toTimeString().substring(0, 5) : ''}
+                            onChange={(e) => {
+                                if (formData.start_date_time) {
+                                    // Create a new date object from start_date_time
+                                    const startDate = new Date(formData.start_date_time);
+                                    // Parse the time value
+                                    const [hours, minutes] = e.target.value.split(':').map(Number);
+                                    // Set the hours and minutes on the date
+                                    startDate.setHours(hours, minutes);
+                                    // Update end_date_time with the new time but same date as start
+                                    onDataChange({ end_date_time: startDate.toISOString() });
+                                }
+                            }}
+                            required
+                            whileHover="hover"
+                            variants={inputHoverVariants}
+                        />
+                        <p className="text-xs text-base-content/60">
+                            The end time will use the same date as the start date.
+                        </p>
+                    </div>
                 </motion.div>
             </motion.div>
 
@@ -202,7 +224,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
                             onChange={() => onDataChange({ will_or_have_room_booking: true })}
                             required
                         />
-                        <span className="font-medium">Yes, I have/will have a booking</span>
+                        <span className="font-medium">Yes, I have a room booking</span>
                     </motion.label>
                     <motion.label
                         className="flex items-center gap-3 cursor-pointer bg-base-100 p-3 rounded-lg hover:bg-primary/10 transition-colors"
@@ -213,12 +235,29 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
                             type="radio"
                             className="radio radio-primary"
                             checked={formData.will_or_have_room_booking === false}
-                            onChange={() => onDataChange({ will_or_have_room_booking: false })}
+                            onChange={() => {
+                                onDataChange({ will_or_have_room_booking: false });
+                            }}
                             required
                         />
                         <span className="font-medium">No, I don't need a booking</span>
                     </motion.label>
                 </div>
+
+                {formData.will_or_have_room_booking === false && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-4"
+                    >
+                        <CustomAlert
+                            type="warning"
+                            title="IMPORTANT: Event Will Be Cancelled"
+                            message="If you need a booking and submit without one, your event WILL BE CANCELLED. This is non-negotiable. Contact the event coordinator immediately if you have any booking concerns."
+                        />
+                    </motion.div>
+                )}
             </motion.div>
         </motion.div>
     );

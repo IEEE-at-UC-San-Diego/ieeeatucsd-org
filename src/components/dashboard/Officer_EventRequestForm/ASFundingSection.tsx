@@ -217,26 +217,14 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
         }
     };
 
-    // Handle invoice data change
+    // Handle invoice data change from the invoice builder
     const handleInvoiceDataChange = (data: InvoiceData) => {
-        // Create itemized invoice string for Pocketbase
-        const itemizedInvoice = JSON.stringify({
-            vendor: data.vendor,
-            items: data.items.map((item: InvoiceItem) => ({
-                item: item.description,
-                quantity: item.quantity,
-                unit_price: item.unitPrice,
-                amount: item.amount
-            })),
-            subtotal: data.subtotal,
-            tax: data.taxAmount,
-            tip: data.tipAmount,
-            total: data.total
-        }, null, 2);
+        // Calculate if budget exceeds maximum allowed
+        const maxBudget = Math.min(formData.expected_attendance * 10, 5000);
 
         onDataChange({
             invoiceData: data,
-            itemized_invoice: itemizedInvoice
+            itemized_invoice: JSON.stringify(data)
         });
     };
 
@@ -251,18 +239,15 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
                 <h2 className="text-3xl font-bold mb-4 text-primary bg-gradient-to-r from-primary to-primary-focus bg-clip-text text-transparent">
                     AS Funding Details
                 </h2>
-                <p className="text-lg text-base-content/80 mb-6">
-                    Please provide the necessary information for your Associated Students funding request.
-                </p>
             </motion.div>
 
             <motion.div variants={itemVariants}>
                 <CustomAlert
-                    type="warning"
-                    title="Important Deadline"
-                    message="AS Funding requests must be submitted at least 6 weeks before your event. Please check the Funding Guide or the Google Calendar for the funding request deadlines."
-                    className="mb-4"
-                    icon="heroicons:clock"
+                    type="info"
+                    title="AS Funding Information"
+                    message="AS funding can cover food and other expenses for your event. Please itemize all expenses in the invoice builder below."
+                    className="mb-6"
+                    icon="heroicons:information-circle"
                 />
             </motion.div>
 
@@ -407,18 +392,15 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
                     </motion.div>
                 ) : (
                     <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
+                        variants={itemVariants}
+                        className="form-control space-y-6"
                     >
                         <InvoiceBuilder
                             invoiceData={formData.invoiceData || {
                                 vendor: '',
                                 items: [],
                                 subtotal: 0,
-                                taxRate: 0,
                                 taxAmount: 0,
-                                tipPercentage: 0,
                                 tipAmount: 0,
                                 total: 0
                             }}

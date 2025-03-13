@@ -708,7 +708,7 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
                 </div>
 
                 <div className="mt-4">
-                    <InvoiceTable invoiceData={invoiceData} />
+                    <InvoiceTable invoiceData={invoiceData} expectedAttendance={request.expected_attendance} />
                 </div>
             </motion.div>
 
@@ -726,7 +726,7 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
 };
 
 // Separate component for invoice table
-const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
+const InvoiceTable: React.FC<{ invoiceData: any, expectedAttendance?: number }> = ({ invoiceData, expectedAttendance }) => {
     // If no invoice data is provided, show a message
     if (!invoiceData) {
         return (
@@ -811,7 +811,7 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
         // Calculate subtotal from items
         const subtotal = items.reduce((sum: number, item: any) => {
             const quantity = parseFloat(item?.quantity || 1);
-            const price = parseFloat(item?.unit_price || item?.price || 0);
+            const price = parseFloat(item?.unit_price || item?.unitPrice || item?.price || 0);
             return sum + (quantity * price);
         }, 0);
 
@@ -820,9 +820,26 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
         const tip = parseFloat(parsedInvoice.tip || parsedInvoice.tipAmount || 0);
         const total = parseFloat(parsedInvoice.total || 0) || (subtotal + tax + tip);
 
+        // Calculate budget limit if expected attendance is provided
+        const budgetLimit = expectedAttendance ? Math.min(expectedAttendance * 10, 5000) : null;
+        const isOverBudget = budgetLimit !== null && total > budgetLimit;
+
         // Render the invoice table
         return (
             <div className="overflow-x-auto">
+                {budgetLimit !== null && (
+                    <div className={`mb-4 p-3 rounded-lg ${isOverBudget ? 'bg-error/20' : 'bg-success/20'}`}>
+                        <p className="text-sm font-medium">
+                            Budget Limit: ${budgetLimit.toFixed(2)} (based on {expectedAttendance} attendees)
+                        </p>
+                        {isOverBudget && (
+                            <p className="text-sm font-bold text-error mt-1">
+                                WARNING: This invoice exceeds the budget limit by ${(total - budgetLimit).toFixed(2)}
+                            </p>
+                        )}
+                    </div>
+                )}
+
                 <table className="table table-zebra w-full">
                     <thead>
                         <tr>
@@ -840,7 +857,7 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
                                 : (item?.item || item?.description || item?.name || 'N/A');
 
                             const quantity = parseFloat(item?.quantity || 1);
-                            const unitPrice = parseFloat(item?.unit_price || item?.price || 0);
+                            const unitPrice = parseFloat(item?.unit_price || item?.unitPrice || item?.price || 0);
                             const itemTotal = quantity * unitPrice;
 
                             return (
@@ -858,21 +875,17 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
                             <td colSpan={3} className="text-right font-medium">Subtotal:</td>
                             <td>${subtotal.toFixed(2)}</td>
                         </tr>
-                        {tax > 0 && (
-                            <tr>
-                                <td colSpan={3} className="text-right font-medium">Tax:</td>
-                                <td>${tax.toFixed(2)}</td>
-                            </tr>
-                        )}
-                        {tip > 0 && (
-                            <tr>
-                                <td colSpan={3} className="text-right font-medium">Tip:</td>
-                                <td>${tip.toFixed(2)}</td>
-                            </tr>
-                        )}
+                        <tr>
+                            <td colSpan={3} className="text-right font-medium">Tax:</td>
+                            <td>${tax.toFixed(2)}</td>
+                        </tr>
+                        <tr>
+                            <td colSpan={3} className="text-right font-medium">Tip:</td>
+                            <td>${tip.toFixed(2)}</td>
+                        </tr>
                         <tr>
                             <td colSpan={3} className="text-right font-bold">Total:</td>
-                            <td className="font-bold">${total.toFixed(2)}</td>
+                            <td className={`font-bold ${isOverBudget ? 'text-error' : ''}`}>${total.toFixed(2)}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -888,9 +901,9 @@ const InvoiceTable: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
         return (
             <CustomAlert
                 type="error"
-                title="Processing Error"
-                message="An unexpected error occurred while processing the invoice."
-                icon="heroicons:exclamation-triangle"
+                title="Error"
+                message="An error occurred while processing the invoice data."
+                icon="heroicons:exclamation-circle"
             />
         );
     }
@@ -1216,21 +1229,23 @@ const PRMaterialsTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }
             )}
 
             {/* No files message */}
-            {!hasFiles && (
-                <motion.div
-                    className="mt-4"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                >
-                    <CustomAlert
-                        type="info"
-                        title="No PR Files"
-                        message="No PR-related files have been uploaded."
-                        icon="heroicons:information-circle"
-                    />
-                </motion.div>
-            )}
+            {
+                !hasFiles && (
+                    <motion.div
+                        className="mt-4"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                    >
+                        <CustomAlert
+                            type="info"
+                            title="No PR Files"
+                            message="No PR-related files have been uploaded."
+                            icon="heroicons:information-circle"
+                        />
+                    </motion.div>
+                )
+            }
 
             {/* File Preview Modal */}
             <FilePreviewModal
@@ -1463,11 +1478,6 @@ const EventRequestDetails = ({
                                 <div>
                                     <label className="text-xs text-gray-400">Start Date & Time</label>
                                     <p className="text-white">{formatDate(request.start_date_time)}</p>
-                                </div>
-
-                                <div>
-                                    <label className="text-xs text-gray-400">End Date & Time</label>
-                                    <p className="text-white">{formatDate(request.end_date_time)}</p>
                                 </div>
                             </div>
                         </div>

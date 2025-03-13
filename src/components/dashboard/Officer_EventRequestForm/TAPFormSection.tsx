@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { EventRequestFormData } from './EventRequestForm';
 import type { EventRequest } from '../../../schemas/pocketbase';
 import CustomAlert from '../universal/CustomAlert';
+import FilePreview from '../universal/FilePreview';
 
 // Enhanced animation variants
 const containerVariants = {
@@ -38,6 +39,19 @@ const inputHoverVariants = {
     }
 };
 
+// Add a new CSS class to hide the number input arrows
+const hiddenNumberInputArrows = `
+    /* Hide number input spinners */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
+`;
+
 // File upload animation
 const fileUploadVariants = {
     initial: { scale: 1 },
@@ -57,13 +71,42 @@ interface TAPFormSectionProps {
 const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange }) => {
     const [roomBookingFile, setRoomBookingFile] = useState<File | null>(formData.room_booking);
     const [isDragging, setIsDragging] = useState(false);
+    const [fileError, setFileError] = useState<string | null>(null);
+    const [showFilePreview, setShowFilePreview] = useState(false);
+    const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
 
-    // Handle room booking file upload
+    // Add style tag for hidden arrows
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.textContent = hiddenNumberInputArrows;
+        document.head.appendChild(style);
+
+        return () => {
+            document.head.removeChild(style);
+        };
+    }, []);
+
+    // Handle room booking file upload with size limit
     const handleRoomBookingFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
+
+            // Check file size - 1MB limit
+            if (file.size > 1024 * 1024) {
+                setFileError("Room booking file size must be under 1MB");
+                return;
+            }
+
+            setFileError(null);
             setRoomBookingFile(file);
             onDataChange({ room_booking: file });
+
+            // Create preview URL
+            if (filePreviewUrl) {
+                URL.revokeObjectURL(filePreviewUrl);
+            }
+            const url = URL.createObjectURL(file);
+            setFilePreviewUrl(url);
         }
     };
 
@@ -84,10 +127,39 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
 
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const file = e.dataTransfer.files[0];
+
+            // Check file size - 1MB limit
+            if (file.size > 1024 * 1024) {
+                setFileError("Room booking file size must be under 1MB");
+                return;
+            }
+
+            setFileError(null);
             setRoomBookingFile(file);
             onDataChange({ room_booking: file });
+
+            // Create preview URL
+            if (filePreviewUrl) {
+                URL.revokeObjectURL(filePreviewUrl);
+            }
+            const url = URL.createObjectURL(file);
+            setFilePreviewUrl(url);
         }
     };
+
+    // Function to toggle file preview
+    const toggleFilePreview = () => {
+        setShowFilePreview(!showFilePreview);
+    };
+
+    // Clean up object URL when component unmounts
+    useEffect(() => {
+        return () => {
+            if (filePreviewUrl) {
+                URL.revokeObjectURL(filePreviewUrl);
+            }
+        };
+    }, [filePreviewUrl]);
 
     return (
         <motion.div
@@ -105,10 +177,10 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
             <motion.div variants={itemVariants}>
                 <CustomAlert
                     type="info"
-                    title="Important Information"
-                    message="Please ensure you have ALL sections completed. If something is not available, let the coordinators know and be advised on how to proceed."
+                    title="CRITICAL INFORMATION"
+                    message="Failure to complete ALL sections with accurate information WILL result in event cancellation. This is non-negotiable. If information is not available, contact the event coordinator BEFORE submitting."
                     className="mb-6"
-                    icon="heroicons:information-circle"
+                    icon="heroicons:exclamation-triangle"
                 />
             </motion.div>
 
@@ -127,7 +199,11 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
                         type="number"
                         className="input input-bordered focus:input-primary transition-all duration-300 w-full pr-20"
                         value={formData.expected_attendance || ''}
-                        onChange={(e) => onDataChange({ expected_attendance: parseInt(e.target.value) || 0 })}
+                        onChange={(e) => {
+                            // Allow any attendance number, no longer limiting to 500
+                            const attendance = parseInt(e.target.value) || 0;
+                            onDataChange({ expected_attendance: attendance });
+                        }}
                         min="0"
                         placeholder="Enter expected attendance"
                         required
@@ -138,6 +214,30 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
                         people
                     </div>
                 </div>
+                {formData.expected_attendance > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-4 bg-success/20 p-3 rounded-lg"
+                    >
+                        <p className="text-sm font-medium">
+                            Budget Calculator: $10 per person × {formData.expected_attendance} people
+                        </p>
+                        <p className="text-base font-bold mt-1">
+                            {formData.expected_attendance * 10 <= 5000 ? (
+                                `You cannot exceed spending past $${formData.expected_attendance * 10} dollars.`
+                            ) : (
+                                `You cannot exceed spending past $5,000 dollars.`
+                            )}
+                        </p>
+                        {formData.expected_attendance * 10 > 5000 && (
+                            <p className="text-xs mt-1 text-warning">
+                                Budget cap reached. Maximum budget is $5,000 regardless of attendance.
+                            </p>
+                        )}
+                    </motion.div>
+                )}
 
                 <motion.div
                     className="mt-4 p-4 bg-base-300/30 rounded-lg text-xs text-gray-400"
@@ -152,7 +252,7 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
                 </motion.div>
             </motion.div>
 
-            {/* Room booking confirmation */}
+            {/* Room booking confirmation - Show file error if present */}
             <motion.div
                 variants={itemVariants}
                 className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
@@ -160,53 +260,110 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
             >
                 <label className="label">
                     <span className="label-text font-medium text-lg">Room Booking Confirmation</span>
-                    <span className="label-text-alt text-error">*</span>
+                    {formData.will_or_have_room_booking && <span className="label-text-alt text-error">*</span>}
                 </label>
 
-                <motion.div
-                    className={`mt-2 border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-base-300 hover:border-primary/50'
-                        }`}
-                    variants={fileUploadVariants}
-                    initial="initial"
-                    whileHover="hover"
-                    whileTap="tap"
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    onClick={() => document.getElementById('room-booking-file')?.click()}
-                >
-                    <input
-                        id="room-booking-file"
-                        type="file"
-                        className="hidden"
-                        onChange={handleRoomBookingFileChange}
-                        accept=".pdf,.png,.jpg,.jpeg"
-                    />
-
-                    <div className="flex flex-col items-center justify-center gap-3">
-                        <motion.div
-                            className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary"
-                            whileHover={{ rotate: 15, scale: 1.1 }}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                        </motion.div>
-
-                        {roomBookingFile ? (
-                            <>
-                                <p className="font-medium text-primary">File selected:</p>
-                                <p className="text-sm">{roomBookingFile.name}</p>
-                                <p className="text-xs text-gray-500">Click or drag to replace</p>
-                            </>
-                        ) : (
-                            <>
-                                <p className="font-medium">Drop your file here or click to browse</p>
-                                <p className="text-xs text-gray-500">Accepted formats: PDF, PNG, JPG</p>
-                            </>
-                        )}
+                {fileError && (
+                    <div className="mt-2 mb-2">
+                        <CustomAlert
+                            type="error"
+                            title="File Error"
+                            message={fileError}
+                        />
                     </div>
-                </motion.div>
+                )}
+
+                {formData.will_or_have_room_booking ? (
+                    <motion.div
+                        className={`mt-2 border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-base-300 hover:border-primary/50'
+                            }`}
+                        variants={fileUploadVariants}
+                        initial="initial"
+                        whileHover="hover"
+                        whileTap="tap"
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={() => document.getElementById('room-booking-file')?.click()}
+                    >
+                        <input
+                            id="room-booking-file"
+                            type="file"
+                            className="hidden"
+                            onChange={handleRoomBookingFileChange}
+                            accept=".pdf,.png,.jpg,.jpeg"
+                        />
+
+                        <div className="flex flex-col items-center justify-center gap-3">
+                            <motion.div
+                                className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary"
+                                whileHover={{ rotate: 15, scale: 1.1 }}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                            </motion.div>
+
+                            {roomBookingFile ? (
+                                <>
+                                    <p className="font-medium text-primary">File selected:</p>
+                                    <p className="text-sm">{roomBookingFile.name}</p>
+                                    <p className="text-xs text-gray-500">Click or drag to replace (Max size: 1MB)</p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="font-medium">Drop your file here or click to browse</p>
+                                    <p className="text-xs text-gray-500">Accepted formats: PDF, PNG, JPG (Max size: 1MB)</p>
+                                </>
+                            )}
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        className="mt-2 bg-base-300/30 rounded-lg p-4 text-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                    >
+                        <p className="text-sm text-base-content/70">Room booking upload not required when no booking is needed.</p>
+                    </motion.div>
+                )}
+
+                {/* Preview File Button - Outside the upload area */}
+                {formData.will_or_have_room_booking && roomBookingFile && (
+                    <div className="mt-3 flex justify-end">
+                        <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            onClick={toggleFilePreview}
+                        >
+                            {showFilePreview ? 'Hide Preview' : 'Preview File'}
+                        </button>
+                    </div>
+                )}
+
+                {/* File Preview Component */}
+                {showFilePreview && filePreviewUrl && roomBookingFile && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="mt-4 p-4 bg-base-200 rounded-lg"
+                    >
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-medium">File Preview</h3>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-circle"
+                                onClick={toggleFilePreview}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <FilePreview url={filePreviewUrl} filename={roomBookingFile.name} />
+                    </motion.div>
+                )}
             </motion.div>
 
             {/* Food/Drinks */}

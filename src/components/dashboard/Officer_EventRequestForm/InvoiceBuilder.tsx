@@ -713,6 +713,17 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
                 </div>
             </motion.div>
 
+            {/* Budget Warning */}
+            {total > 0 && (
+                <CustomAlert
+                    type="warning"
+                    title="BUDGET RESTRICTION"
+                    message="Your total cannot exceed $10 per expected attendee, with an absolute maximum of $5,000. Your form WILL BE REJECTED if it exceeds this limit."
+                    className="mt-4"
+                    icon="heroicons:exclamation-triangle"
+                />
+            )}
+
             {/* Validation notice */}
             {invoiceData.items.length === 0 && (
                 <CustomAlert
@@ -732,6 +743,42 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
                 className="mt-4"
                 icon="heroicons:exclamation-triangle"
             />
+
+            {/* Summary Section */}
+            <motion.div
+                variants={itemVariants}
+                className="mt-6 bg-base-200/40 rounded-lg p-4"
+            >
+                <div className=" md:grid-cols-2 gap-6">
+
+
+                    {/* Right Column: Summary */}
+                    <div>
+                        <h3 className="font-medium text-lg mb-3">Invoice Summary</h3>
+                        <div className="bg-base-100/50 p-4 rounded-lg">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-sm">Subtotal:</span>
+                                <span className="font-medium">${invoiceData.subtotal.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-sm">Tax:</span>
+                                <span className="font-medium">${invoiceData.taxAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-sm">Tip:</span>
+                                <span className="font-medium">${invoiceData.tipAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="divider my-1"></div>
+                            <div className="flex justify-between items-center font-bold text-primary">
+                                <span>Total:</span>
+                                <span>${invoiceData.total.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+            </motion.div>
         </motion.div>
     );
 };

@@ -65,6 +65,20 @@ const modalVariants = {
     }
 };
 
+// Extended version of InvoiceItem to handle multiple property names
+interface ExtendedInvoiceItem {
+    id?: string;
+    description?: string;
+    item?: string;
+    name?: string;
+    quantity: number;
+    unitPrice?: number;
+    unit_price?: number;
+    price?: number;
+    amount?: number;
+    [key: string]: any; // Allow any additional properties
+}
+
 // Helper function to normalize EventRequest to match EventRequestFormData structure
 const normalizeFormData = (data: EventRequestFormData | (EventRequest & {
     invoiceData?: any;
@@ -108,7 +122,26 @@ const normalizeFormData = (data: EventRequestFormData | (EventRequest & {
                             ...invoiceData,
                             ...(parsed as any),
                             items: Array.isArray((parsed as any).items) ? (parsed as any).items : [],
+                            // Normalize tax/tip fields
+                            taxAmount: parseFloat(parsed.taxAmount || parsed.tax || 0),
+                            tipAmount: parseFloat(parsed.tipAmount || parsed.tip || 0)
                         };
+
+                        // Normalize item property names
+                        invoiceData.items = invoiceData.items.map(item => {
+                            // Create a normalized item with all possible property names
+                            return {
+                                id: item.id || `item-${Math.random().toString(36).substr(2, 9)}`,
+                                description: item.description || item.item || item.name || 'Item',
+                                quantity: parseFloat(item.quantity) || 1,
+                                unitPrice: parseFloat(item.unitPrice || item.unit_price || item.price || 0),
+                                unit_price: parseFloat(item.unitPrice || item.unit_price || item.price || 0),
+                                price: parseFloat(item.unitPrice || item.unit_price || item.price || 0),
+                                amount: parseFloat(item.amount) ||
+                                    (parseFloat(item.quantity) || 1) *
+                                    parseFloat(item.unitPrice || item.unit_price || item.price || 0)
+                            };
+                        });
                     }
                 } catch (e) {
                     console.error('Error parsing itemized_invoice:', e);
@@ -119,7 +152,25 @@ const normalizeFormData = (data: EventRequestFormData | (EventRequest & {
                     ...invoiceData,
                     ...parsed,
                     items: Array.isArray(parsed.items) ? parsed.items : [],
+                    // Normalize tax/tip fields
+                    taxAmount: parseFloat(parsed.taxAmount || parsed.tax || 0),
+                    tipAmount: parseFloat(parsed.tipAmount || parsed.tip || 0)
                 };
+
+                // Normalize item property names
+                invoiceData.items = invoiceData.items.map(item => {
+                    return {
+                        id: item.id || `item-${Math.random().toString(36).substr(2, 9)}`,
+                        description: item.description || item.item || item.name || 'Item',
+                        quantity: parseFloat(item.quantity) || 1,
+                        unitPrice: parseFloat(item.unitPrice || item.unit_price || item.price || 0),
+                        unit_price: parseFloat(item.unitPrice || item.unit_price || item.price || 0),
+                        price: parseFloat(item.unitPrice || item.unit_price || item.price || 0),
+                        amount: parseFloat(item.amount) ||
+                            (parseFloat(item.quantity) || 1) *
+                            parseFloat(item.unitPrice || item.unit_price || item.price || 0)
+                    };
+                });
             }
         } else if (eventRequest.invoiceData) {
             const parsed = eventRequest.invoiceData as any;
@@ -128,7 +179,25 @@ const normalizeFormData = (data: EventRequestFormData | (EventRequest & {
                     ...invoiceData,
                     ...parsed,
                     items: Array.isArray(parsed.items) ? parsed.items : [],
+                    // Normalize tax/tip fields
+                    taxAmount: parseFloat(parsed.taxAmount || parsed.tax || 0),
+                    tipAmount: parseFloat(parsed.tipAmount || parsed.tip || 0)
                 };
+
+                // Normalize item property names
+                invoiceData.items = invoiceData.items.map(item => {
+                    return {
+                        id: item.id || `item-${Math.random().toString(36).substr(2, 9)}`,
+                        description: item.description || item.item || item.name || 'Item',
+                        quantity: parseFloat(item.quantity) || 1,
+                        unitPrice: parseFloat(item.unitPrice || item.unit_price || item.price || 0),
+                        unit_price: parseFloat(item.unitPrice || item.unit_price || item.price || 0),
+                        price: parseFloat(item.unitPrice || item.unit_price || item.price || 0),
+                        amount: parseFloat(item.amount) ||
+                            (parseFloat(item.quantity) || 1) *
+                            parseFloat(item.unitPrice || item.unit_price || item.price || 0)
+                    };
+                });
             }
         }
 
@@ -288,7 +357,7 @@ interface EventRequestFormPreviewProps {
     }); // Accept both form data and event request types
     isOpen?: boolean; // Control whether the modal is open
     onClose?: () => void; // Callback when modal is closed
-    isModal?: boolean; // Whether to render as a modal or inline component
+    isModal: boolean; // Whether to render as a modal or inline component
 }
 
 // Define the main EventRequestFormPreview component
@@ -495,22 +564,22 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                                     <span className="text-sm">Expected Attendance</span>
                                 </div>
                                 <p className="font-medium text-base-content">{formData.expected_attendance || 'Not specified'}</p>
+                                {formData.expected_attendance > 0 && (
+                                    <p className="text-xs text-primary">
+                                        Budget limit: ${Math.min(formData.expected_attendance * 10, 5000)} (max $5,000)
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-1">
                                 <div className="flex items-center text-base-content/60">
                                     <Icon icon="heroicons:calendar" className="w-4 h-4 mr-1" />
-                                    <span className="text-sm">Start Date & Time</span>
+                                    <span className="text-sm">Date & Time</span>
                                 </div>
                                 <p className="font-medium text-base-content">{formatDateTime(formData.start_date_time)}</p>
-                            </div>
-
-                            <div className="space-y-1">
-                                <div className="flex items-center text-base-content/60">
-                                    <Icon icon="heroicons:calendar" className="w-4 h-4 mr-1" />
-                                    <span className="text-sm">End Date & Time</span>
-                                </div>
-                                <p className="font-medium text-base-content">{formatDateTime(formData.end_date_time)}</p>
+                                <p className="text-xs text-base-content/60">
+                                    Note: Multi-day events require separate submissions for each day.
+                                </p>
                             </div>
 
                             <div className="space-y-1">
@@ -637,7 +706,7 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                                 </h4>
                                 <div className="flex items-center">
                                     <span className={`badge ${formData.will_or_have_room_booking ? 'badge-success' : 'badge-neutral'}`}>
-                                        {formData.will_or_have_room_booking ? 'Has/Will Have Booking' : 'No Booking Needed'}
+                                        {formData.will_or_have_room_booking ? 'Room Booking Confirmed' : 'No Booking Needed'}
                                     </span>
 
                                     {formData.will_or_have_room_booking && formData.room_booking && (
@@ -690,12 +759,12 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {formData.invoiceData.items.map((item: InvoiceItem, index: number) => (
+                                            {formData.invoiceData.items.map((item: ExtendedInvoiceItem, index: number) => (
                                                 <tr key={item.id || index} className="border-t border-base-300">
-                                                    <td className="py-2 font-medium text-base-content">{item.description || 'Item'}</td>
+                                                    <td className="py-2 font-medium text-base-content">{item.description || item.item || item.name || 'Item'}</td>
                                                     <td className="py-2 text-right text-base-content">{item.quantity || 1}</td>
-                                                    <td className="py-2 text-right text-base-content">${(item.unitPrice || 0).toFixed(2)}</td>
-                                                    <td className="py-2 text-right font-medium text-base-content">${(item.amount || 0).toFixed(2)}</td>
+                                                    <td className="py-2 text-right text-base-content">${(item.unitPrice || item.unit_price || item.price || 0).toFixed(2)}</td>
+                                                    <td className="py-2 text-right font-medium text-base-content">${(item.amount || (item.quantity * (item.unitPrice || item.unit_price || item.price || 0)) || 0).toFixed(2)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -704,18 +773,14 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                                                 <td colSpan={3} className="py-2 text-right font-medium text-base-content">Subtotal:</td>
                                                 <td className="py-2 text-right font-medium text-base-content">${(formData.invoiceData.subtotal || 0).toFixed(2)}</td>
                                             </tr>
-                                            {formData.invoiceData.taxAmount && formData.invoiceData.taxAmount > 0 && (
-                                                <tr className="border-t border-base-300">
-                                                    <td colSpan={3} className="py-2 text-right font-medium text-base-content">Tax:</td>
-                                                    <td className="py-2 text-right font-medium text-base-content">${(formData.invoiceData.taxAmount || 0).toFixed(2)}</td>
-                                                </tr>
-                                            )}
-                                            {formData.invoiceData.tipAmount && formData.invoiceData.tipAmount > 0 && (
-                                                <tr className="border-t border-base-300">
-                                                    <td colSpan={3} className="py-2 text-right font-medium text-base-content">Tip:</td>
-                                                    <td className="py-2 text-right font-medium text-base-content">${(formData.invoiceData.tipAmount || 0).toFixed(2)}</td>
-                                                </tr>
-                                            )}
+                                            <tr className="border-t border-base-300">
+                                                <td colSpan={3} className="py-2 text-right font-medium text-base-content">Tax:</td>
+                                                <td className="py-2 text-right font-medium text-base-content">${(typeof formData.invoiceData.taxAmount === 'number' ? formData.invoiceData.taxAmount : 0).toFixed(2)}</td>
+                                            </tr>
+                                            <tr className="border-t border-base-300">
+                                                <td colSpan={3} className="py-2 text-right font-medium text-base-content">Tip:</td>
+                                                <td className="py-2 text-right font-medium text-base-content">${(typeof formData.invoiceData.tipAmount === 'number' ? formData.invoiceData.tipAmount : 0).toFixed(2)}</td>
+                                            </tr>
                                             <tr className="bg-primary/5">
                                                 <td colSpan={3} className="py-2 text-right font-bold text-primary">Total:</td>
                                                 <td className="py-2 text-right font-bold text-primary">${(formData.invoiceData.total || 0).toFixed(2)}</td>
@@ -730,28 +795,7 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                     </motion.div>
                 )}
 
-                {/* Submission Information */}
-                <motion.div
-                    variants={sectionVariants}
-                    className="bg-base-100 rounded-xl border border-base-300/50 shadow-sm overflow-hidden mt-8"
-                >
-                    <div className="p-4 flex justify-between items-center border-b border-base-300/30">
-                        <h4 className="font-medium flex items-center">
-                            <Icon icon="heroicons:check-circle" className="w-5 h-5 mr-2 text-success" />
-                            Ready to Submit
-                        </h4>
 
-                        {formData.formReviewed && (
-                            <span className="badge badge-success">Reviewed</span>
-                        )}
-                    </div>
-
-                    <div className="p-4 bg-base-100/50">
-                        <p className="text-sm text-base-content/70">
-                            Once submitted, you'll need to notify PR and/or Coordinators in the #-events Slack channel.
-                        </p>
-                    </div>
-                </motion.div>
             </motion.div>
         );
     };
