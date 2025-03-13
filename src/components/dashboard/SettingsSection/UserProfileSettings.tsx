@@ -35,12 +35,6 @@ export default function UserProfileSettings({
     // Use environment variables or props (fallback)
     const logtoApiEndpoint = envLogtoApiEndpoint || propLogtoApiEndpoint;
 
-    // Parse the majors list from the text file and sort alphabetically
-    const majorsList = allMajors
-        .split('\n')
-        .filter(major => major.trim() !== '')
-        .sort((a, b) => a.localeCompare(b));
-
     useEffect(() => {
         const loadUserData = async () => {
             try {
@@ -83,6 +77,7 @@ export default function UserProfileSettings({
                     // Extract username from Logto data or email if not set
                     const defaultUsername = logtoUser.data?.username || currentUser.email?.split('@')[0] || '';
 
+                    // Remove all the major matching logic and just use the server value directly
                     setUser(currentUser);
                     setFormData({
                         name: currentUser.name || '',
@@ -334,11 +329,23 @@ export default function UserProfileSettings({
                             className="select select-bordered w-full"
                         >
                             <option value="">Select a major</option>
-                            {majorsList.map((major, index) => (
-                                <option key={index} value={major}>
-                                    {major}
-                                </option>
-                            ))}
+                            {(() => {
+                                const standardMajors = allMajors
+                                    .split('\n')
+                                    .filter(major => major.trim() !== '')
+                                    .sort((a, b) => a.localeCompare(b));
+
+                                if (formData.major && !standardMajors.includes(formData.major)) {
+                                    standardMajors.push(formData.major);
+                                    standardMajors.sort((a, b) => a.localeCompare(b));
+                                }
+
+                                return standardMajors.map((major, index) => (
+                                    <option key={index} value={major}>
+                                        {major}
+                                    </option>
+                                ));
+                            })()}
                         </select>
                     </div>
 

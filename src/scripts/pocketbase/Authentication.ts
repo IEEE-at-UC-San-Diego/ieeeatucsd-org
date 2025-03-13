@@ -202,4 +202,18 @@ export class Authentication {
       console.error("Failed to initialize AuthSyncService:", error);
     }
   }
+
+  /**
+   * Check if the current user has completed the initial sign-up process
+   * This is used to determine if the onboarding process should be shown
+   * @returns boolean indicating if the user has signed up or not
+   */
+  public isUserSignedUp(): boolean {
+    const user = this.getCurrentUser();
+    if (!user) return false;
+    
+    // If the signed_up field is explicitly set to false, return false
+    // Otherwise, if it's undefined or true, return true
+    return user.signed_up !== false;
+  }
 }
