@@ -123,8 +123,8 @@ const normalizeFormData = (data: EventRequestFormData | (EventRequest & {
                             ...(parsed as any),
                             items: Array.isArray((parsed as any).items) ? (parsed as any).items : [],
                             // Normalize tax/tip fields
-                            taxAmount: parseFloat(parsed.taxAmount || parsed.tax || 0),
-                            tipAmount: parseFloat(parsed.tipAmount || parsed.tip || 0)
+                            taxAmount: Number(parsed.taxAmount ?? parsed.tax ?? 0),
+                            tipAmount: Number(parsed.tipAmount ?? parsed.tip ?? 0)
                         };
 
                         // Normalize item property names
@@ -153,8 +153,8 @@ const normalizeFormData = (data: EventRequestFormData | (EventRequest & {
                     ...parsed,
                     items: Array.isArray(parsed.items) ? parsed.items : [],
                     // Normalize tax/tip fields
-                    taxAmount: parseFloat(parsed.taxAmount || parsed.tax || 0),
-                    tipAmount: parseFloat(parsed.tipAmount || parsed.tip || 0)
+                    taxAmount: Number(parsed.taxAmount ?? parsed.tax ?? 0),
+                    tipAmount: Number(parsed.tipAmount ?? parsed.tip ?? 0)
                 };
 
                 // Normalize item property names
@@ -180,8 +180,8 @@ const normalizeFormData = (data: EventRequestFormData | (EventRequest & {
                     ...parsed,
                     items: Array.isArray(parsed.items) ? parsed.items : [],
                     // Normalize tax/tip fields
-                    taxAmount: parseFloat(parsed.taxAmount || parsed.tax || 0),
-                    tipAmount: parseFloat(parsed.tipAmount || parsed.tip || 0)
+                    taxAmount: Number(parsed.taxAmount ?? parsed.tax ?? 0),
+                    tipAmount: Number(parsed.tipAmount ?? parsed.tip ?? 0)
                 };
 
                 // Normalize item property names
@@ -775,11 +775,11 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                                             </tr>
                                             <tr className="border-t border-base-300">
                                                 <td colSpan={3} className="py-2 text-right font-medium text-base-content">Tax:</td>
-                                                <td className="py-2 text-right font-medium text-base-content">${(typeof formData.invoiceData.taxAmount === 'number' ? formData.invoiceData.taxAmount : 0).toFixed(2)}</td>
+                                                <td className="py-2 text-right font-medium text-base-content">${(formData.invoiceData.taxAmount || 0).toFixed(2)}</td>
                                             </tr>
                                             <tr className="border-t border-base-300">
                                                 <td colSpan={3} className="py-2 text-right font-medium text-base-content">Tip:</td>
-                                                <td className="py-2 text-right font-medium text-base-content">${(typeof formData.invoiceData.tipAmount === 'number' ? formData.invoiceData.tipAmount : 0).toFixed(2)}</td>
+                                                <td className="py-2 text-right font-medium text-base-content">${(formData.invoiceData.tipAmount || 0).toFixed(2)}</td>
                                             </tr>
                                             <tr className="bg-primary/5">
                                                 <td colSpan={3} className="py-2 text-right font-bold text-primary">Total:</td>

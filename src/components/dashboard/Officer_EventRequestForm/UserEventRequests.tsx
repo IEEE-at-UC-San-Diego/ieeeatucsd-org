@@ -27,12 +27,81 @@ const convertToFormData = (request: EventRequest): EventRequestFormData => {
         try {
             if (request.itemized_invoice) {
                 if (typeof request.itemized_invoice === 'string') {
-                    invoiceData = JSON.parse(request.itemized_invoice);
+                    const parsedInvoice = JSON.parse(request.itemized_invoice) as Record<string, any>;
+
+                    // Get or calculate subtotal from items
+                    const subtotal = parsedInvoice.subtotal ??
+                        (Array.isArray(parsedInvoice.items) ?
+                            parsedInvoice.items.reduce((sum: number, item: any) => {
+                                const amount = typeof item.amount === 'number' ? item.amount : 0;
+                                return sum + amount;
+                            }, 0) : 0);
+
+                    // Normalize tax and tip amounts
+                    const taxAmount = Number(parsedInvoice.taxAmount ?? parsedInvoice.tax ?? 0);
+                    const tipAmount = Number(parsedInvoice.tipAmount ?? parsedInvoice.tip ?? 0);
+
+                    // Calculate or get total
+                    const total = parsedInvoice.total ?? (subtotal + taxAmount + tipAmount);
+
+                    invoiceData = {
+                        ...parsedInvoice,
+                        subtotal,
+                        taxAmount,
+                        tipAmount,
+                        total
+                    };
                 } else {
-                    invoiceData = request.itemized_invoice;
+                    const parsedInvoice = request.itemized_invoice as Record<string, any>;
+
+                    // Get or calculate subtotal from items
+                    const subtotal = parsedInvoice.subtotal ??
+                        (Array.isArray(parsedInvoice.items) ?
+                            parsedInvoice.items.reduce((sum: number, item: any) => {
+                                const amount = typeof item.amount === 'number' ? item.amount : 0;
+                                return sum + amount;
+                            }, 0) : 0);
+
+                    // Normalize tax and tip amounts
+                    const taxAmount = Number(parsedInvoice.taxAmount ?? parsedInvoice.tax ?? 0);
+                    const tipAmount = Number(parsedInvoice.tipAmount ?? parsedInvoice.tip ?? 0);
+
+                    // Calculate or get total
+                    const total = parsedInvoice.total ?? (subtotal + taxAmount + tipAmount);
+
+                    invoiceData = {
+                        ...parsedInvoice,
+                        subtotal,
+                        taxAmount,
+                        tipAmount,
+                        total
+                    };
                 }
             } else if (request.invoice_data) {
-                invoiceData = request.invoice_data;
+                const parsedInvoice = request.invoice_data as Record<string, any>;
+
+                // Get or calculate subtotal from items
+                const subtotal = parsedInvoice.subtotal ??
+                    (Array.isArray(parsedInvoice.items) ?
+                        parsedInvoice.items.reduce((sum: number, item: any) => {
+                            const amount = typeof item.amount === 'number' ? item.amount : 0;
+                            return sum + amount;
+                        }, 0) : 0);
+
+                // Normalize tax and tip amounts
+                const taxAmount = Number(parsedInvoice.taxAmount ?? parsedInvoice.tax ?? 0);
+                const tipAmount = Number(parsedInvoice.tipAmount ?? parsedInvoice.tip ?? 0);
+
+                // Calculate or get total
+                const total = parsedInvoice.total ?? (subtotal + taxAmount + tipAmount);
+
+                invoiceData = {
+                    ...parsedInvoice,
+                    subtotal,
+                    taxAmount,
+                    tipAmount,
+                    total
+                };
             }
         } catch (e) {
             console.error('Error parsing invoice data:', e);
