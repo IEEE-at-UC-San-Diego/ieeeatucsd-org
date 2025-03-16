@@ -380,24 +380,6 @@ const components = Object.fromEntries(
         <!-- Centralized Toast Provider -->
         <ToastProvider client:load />
 
-        <!-- Only include in development mode -->
-        {
-            import.meta.env.DEV && (
-                <script>
-                    import {(checkUserSignUpStatus, resetUserSignUpStatus)} from
-                    '../scripts/checkFirstTimeUsers'; // Expose testing
-                    utilities to window for development testing
-                    window.checkUserSignUpStatus = checkUserSignUpStatus;
-                    window.resetUserSignUpStatus = resetUserSignUpStatus;
-                    console.log("First-time login test utilities loaded.");
-                    console.log("Use window.checkUserSignUpStatus() to check the
-                    current signed_up status"); console.log("Use
-                    window.resetUserSignUpStatus() to reset the signed_up status
-                    to false for testing");
-                </script>
-            )
-        }
-
         <script>
             import { Authentication } from "../scripts/pocketbase/Authentication";
             import { Get } from "../scripts/pocketbase/Get";
