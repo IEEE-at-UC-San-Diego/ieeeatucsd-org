@@ -1,6 +1,11 @@
 /** @type {import('tailwindcss').Config} */
+const { heroui } = require("@heroui/react");
+
 export default {
-  content: ["./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}"],
+  content: [
+    "./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}",
+    "./node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}",
+  ],
   safelist: [
     "col-span-1",
     "col-span-2",
@@ -40,5 +45,6 @@ export default {
     function ({ addVariant }) {
       addVariant("in-view", "&.in-view");
     },
+    heroui(),
   ],
 };
