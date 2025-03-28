@@ -27,6 +27,9 @@ interface OfflineChange {
   syncAttempts: number;
 }
 
+// Import ThemeSettings interface
+import type { ThemeSettings } from "./ThemeService";
+
 export class DashboardDatabase extends Dexie {
   users!: Dexie.Table<User, string>;
   events!: Dexie.Table<Event, string>;
@@ -38,6 +41,7 @@ export class DashboardDatabase extends Dexie {
   receipts!: Dexie.Table<Receipt, string>;
   sponsors!: Dexie.Table<Sponsor, string>;
   offlineChanges!: Dexie.Table<OfflineChange, string>;
+  themeSettings!: Dexie.Table<ThemeSettings, string>;
 
   // Store last sync timestamps
   syncInfo!: Dexie.Table<
@@ -76,6 +80,11 @@ export class DashboardDatabase extends Dexie {
     this.version(4).stores({
       events:
         "id, event_name, event_code, start_date, end_date, published, files",
+    });
+    
+    // Add version 5 with themeSettings table
+    this.version(5).stores({
+      themeSettings: "id, theme, fontSize, updatedAt",
     });
   }
 
@@ -178,6 +187,7 @@ export class DexieService {
     await db.receipts.clear();
     await db.sponsors.clear();
     await db.offlineChanges.clear();
+    // Note: We don't clear themeSettings as they should persist across logins
 
     // Reset sync timestamps
     const collections = [

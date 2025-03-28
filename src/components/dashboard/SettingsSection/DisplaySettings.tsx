@@ -3,59 +3,44 @@ import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { Collections } from '../../../schemas/pocketbase/schema';
 import { toast } from 'react-hot-toast';
-
-// Default display preferences
-const DEFAULT_DISPLAY_PREFERENCES = {
-    theme: 'dark',
-    fontSize: 'medium'
-};
-
-// Default accessibility settings
-const DEFAULT_ACCESSIBILITY_SETTINGS = {
-    colorBlindMode: false,
-    reducedMotion: false
-};
+import { ThemeService, DEFAULT_THEME_SETTINGS, type ThemeSettings } from '../../../scripts/database/ThemeService';
 
 export default function DisplaySettings() {
     const auth = Authentication.getInstance();
     const update = Update.getInstance();
-    const [theme, setTheme] = useState(DEFAULT_DISPLAY_PREFERENCES.theme);
-    const [fontSize, setFontSize] = useState(DEFAULT_DISPLAY_PREFERENCES.fontSize);
-    const [colorBlindMode, setColorBlindMode] = useState(DEFAULT_ACCESSIBILITY_SETTINGS.colorBlindMode);
-    const [reducedMotion, setReducedMotion] = useState(DEFAULT_ACCESSIBILITY_SETTINGS.reducedMotion);
+    const themeService = ThemeService.getInstance();
+
+    // Current applied settings
+    const [currentSettings, setCurrentSettings] = useState<ThemeSettings | null>(null);
+
+    // Form state (unsaved changes)
+    const [theme, setTheme] = useState<'light' | 'dark'>(DEFAULT_THEME_SETTINGS.theme);
+    const [fontSize, setFontSize] = useState(DEFAULT_THEME_SETTINGS.fontSize);
+    const [colorBlindMode, setColorBlindMode] = useState(DEFAULT_THEME_SETTINGS.colorBlindMode);
+    const [reducedMotion, setReducedMotion] = useState(DEFAULT_THEME_SETTINGS.reducedMotion);
     const [saving, setSaving] = useState(false);
+
+    // Track if form has unsaved changes
+    const [hasChanges, setHasChanges] = useState(false);
 
     // Load saved preferences on component mount
     useEffect(() => {
         const loadPreferences = async () => {
             try {
-                // First check localStorage for immediate UI updates
-                const savedTheme = localStorage.getItem('theme') || DEFAULT_DISPLAY_PREFERENCES.theme;
-                // Ensure theme is either light or dark
-                const validTheme = ['light', 'dark'].includes(savedTheme) ? savedTheme : DEFAULT_DISPLAY_PREFERENCES.theme;
-                const savedFontSize = localStorage.getItem('fontSize') || DEFAULT_DISPLAY_PREFERENCES.fontSize;
-                const savedColorBlindMode = localStorage.getItem('colorBlindMode') === 'true';
-                const savedReducedMotion = localStorage.getItem('reducedMotion') === 'true';
+                // First load theme settings from IndexedDB
+                const themeSettings = await themeService.getThemeSettings();
 
-                setTheme(validTheme);
-                setFontSize(savedFontSize);
-                setColorBlindMode(savedColorBlindMode);
-                setReducedMotion(savedReducedMotion);
+                // Store current settings
+                setCurrentSettings(themeSettings);
 
-                // Apply theme to document
-                document.documentElement.setAttribute('data-theme', validTheme);
+                // Set form state from theme settings
+                setTheme(themeSettings.theme);
+                setFontSize(themeSettings.fontSize);
+                setColorBlindMode(themeSettings.colorBlindMode);
+                setReducedMotion(themeSettings.reducedMotion);
 
-                // Apply font size
-                applyFontSize(savedFontSize);
-
-                // Apply accessibility settings
-                if (savedColorBlindMode) {
-                    document.documentElement.classList.add('color-blind-mode');
-                }
-
-                if (savedReducedMotion) {
-                    document.documentElement.classList.add('reduced-motion');
-                }
+                // Reset changes flag
+                setHasChanges(false);
 
                 // Then check if user has saved preferences in their profile
                 const user = auth.getCurrentUser();
@@ -68,20 +53,20 @@ export default function DisplaySettings() {
                         try {
                             const userPrefs = JSON.parse(user.display_preferences);
 
-                            // Only update if values exist and are different from localStorage
-                            if (userPrefs.theme && ['light', 'dark'].includes(userPrefs.theme) && userPrefs.theme !== validTheme) {
-                                setTheme(userPrefs.theme);
-                                localStorage.setItem('theme', userPrefs.theme);
-                                document.documentElement.setAttribute('data-theme', userPrefs.theme);
+                            // Only update if values exist and are different from IndexedDB
+                            if (userPrefs.theme && ['light', 'dark'].includes(userPrefs.theme) && userPrefs.theme !== themeSettings.theme) {
+                                setTheme(userPrefs.theme as 'light' | 'dark');
+                                // Don't update theme service yet, wait for save
+                                setHasChanges(true);
                             } else if (!['light', 'dark'].includes(userPrefs.theme)) {
                                 // If theme is not valid, mark for update
                                 needsDisplayPrefsUpdate = true;
                             }
 
-                            if (userPrefs.fontSize && userPrefs.fontSize !== savedFontSize) {
+                            if (userPrefs.fontSize && userPrefs.fontSize !== themeSettings.fontSize) {
                                 setFontSize(userPrefs.fontSize);
-                                localStorage.setItem('fontSize', userPrefs.fontSize);
-                                applyFontSize(userPrefs.fontSize);
+                                // Don't update theme service yet, wait for save
+                                setHasChanges(true);
                             }
                         } catch (e) {
                             console.error('Error parsing display preferences:', e);
@@ -97,27 +82,17 @@ export default function DisplaySettings() {
                             const accessibilityPrefs = JSON.parse(user.accessibility_settings);
 
                             if (typeof accessibilityPrefs.colorBlindMode === 'boolean' &&
-                                accessibilityPrefs.colorBlindMode !== savedColorBlindMode) {
+                                accessibilityPrefs.colorBlindMode !== themeSettings.colorBlindMode) {
                                 setColorBlindMode(accessibilityPrefs.colorBlindMode);
-                                localStorage.setItem('colorBlindMode', accessibilityPrefs.colorBlindMode.toString());
-
-                                if (accessibilityPrefs.colorBlindMode) {
-                                    document.documentElement.classList.add('color-blind-mode');
-                                } else {
-                                    document.documentElement.classList.remove('color-blind-mode');
-                                }
+                                // Don't update theme service yet, wait for save
+                                setHasChanges(true);
                             }
 
                             if (typeof accessibilityPrefs.reducedMotion === 'boolean' &&
-                                accessibilityPrefs.reducedMotion !== savedReducedMotion) {
+                                accessibilityPrefs.reducedMotion !== themeSettings.reducedMotion) {
                                 setReducedMotion(accessibilityPrefs.reducedMotion);
-                                localStorage.setItem('reducedMotion', accessibilityPrefs.reducedMotion.toString());
-
-                                if (accessibilityPrefs.reducedMotion) {
-                                    document.documentElement.classList.add('reduced-motion');
-                                } else {
-                                    document.documentElement.classList.remove('reduced-motion');
-                                }
+                                // Don't update theme service yet, wait for save
+                                setHasChanges(true);
                             }
                         } catch (e) {
                             console.error('Error parsing accessibility settings:', e);
@@ -141,6 +116,23 @@ export default function DisplaySettings() {
         loadPreferences();
     }, []);
 
+    // Check for changes when form values change
+    useEffect(() => {
+        if (!currentSettings) return;
+
+        const hasThemeChanged = theme !== currentSettings.theme;
+        const hasFontSizeChanged = fontSize !== currentSettings.fontSize;
+        const hasColorBlindModeChanged = colorBlindMode !== currentSettings.colorBlindMode;
+        const hasReducedMotionChanged = reducedMotion !== currentSettings.reducedMotion;
+
+        setHasChanges(
+            hasThemeChanged ||
+            hasFontSizeChanged ||
+            hasColorBlindModeChanged ||
+            hasReducedMotionChanged
+        );
+    }, [theme, fontSize, colorBlindMode, reducedMotion, currentSettings]);
+
     // Initialize default settings if not set
     const initializeDefaultSettings = async (userId: string, updateDisplayPrefs: boolean, updateAccessibility: boolean) => {
         try {
@@ -162,91 +154,38 @@ export default function DisplaySettings() {
 
             if (Object.keys(updateData).length > 0) {
                 await update.updateFields(Collections.USERS, userId, updateData);
-                // console.log('Initialized default display and accessibility settings');
             }
         } catch (error) {
             console.error('Error initializing default settings:', error);
         }
     };
 
-    // Apply font size to document
-    const applyFontSize = (size: string) => {
-        const htmlElement = document.documentElement;
-
-        // Remove existing font size classes
-        htmlElement.classList.remove('text-sm', 'text-base', 'text-lg', 'text-xl');
-
-        // Add new font size class
-        switch (size) {
-            case 'small':
-                htmlElement.classList.add('text-sm');
-                break;
-            case 'medium':
-                htmlElement.classList.add('text-base');
-                break;
-            case 'large':
-                htmlElement.classList.add('text-lg');
-                break;
-            case 'extra-large':
-                htmlElement.classList.add('text-xl');
-                break;
-        }
-    };
-
     // Handle theme change
     const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newTheme = e.target.value;
+        const newTheme = e.target.value as 'light' | 'dark';
         setTheme(newTheme);
-
-        // Apply theme to document
-        document.documentElement.setAttribute('data-theme', newTheme);
-
-        // Save to localStorage
-        localStorage.setItem('theme', newTheme);
+        // Changes will be applied on save
     };
 
     // Handle font size change
     const handleFontSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newSize = e.target.value;
+        const newSize = e.target.value as 'small' | 'medium' | 'large' | 'extra-large';
         setFontSize(newSize);
-
-        // Apply font size
-        applyFontSize(newSize);
-
-        // Save to localStorage
-        localStorage.setItem('fontSize', newSize);
+        // Changes will be applied on save
     };
 
     // Handle color blind mode toggle
     const handleColorBlindModeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const enabled = e.target.checked;
         setColorBlindMode(enabled);
-
-        // Apply to document
-        if (enabled) {
-            document.documentElement.classList.add('color-blind-mode');
-        } else {
-            document.documentElement.classList.remove('color-blind-mode');
-        }
-
-        // Save to localStorage
-        localStorage.setItem('colorBlindMode', enabled.toString());
+        // Changes will be applied on save
     };
 
     // Handle reduced motion toggle
     const handleReducedMotionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const enabled = e.target.checked;
         setReducedMotion(enabled);
-
-        // Apply to document
-        if (enabled) {
-            document.documentElement.classList.add('reduced-motion');
-        } else {
-            document.documentElement.classList.remove('reduced-motion');
-        }
-
-        // Save to localStorage
-        localStorage.setItem('reducedMotion', enabled.toString());
+        // Changes will be applied on save
     };
 
     // Handle form submission
@@ -270,7 +209,17 @@ export default function DisplaySettings() {
                 reducedMotion
             };
 
-            // Update user record
+            // First update IndexedDB with the new settings
+            await themeService.saveThemeSettings({
+                id: "current",
+                theme,
+                fontSize,
+                colorBlindMode,
+                reducedMotion,
+                updatedAt: Date.now()
+            });
+
+            // Then update user record in PocketBase
             await update.updateFields(
                 Collections.USERS,
                 user.id,
@@ -279,6 +228,19 @@ export default function DisplaySettings() {
                     accessibility_settings: JSON.stringify(accessibilitySettings)
                 }
             );
+
+            // Update current settings state to match the new settings
+            setCurrentSettings({
+                id: "current",
+                theme,
+                fontSize,
+                colorBlindMode,
+                reducedMotion,
+                updatedAt: Date.now()
+            });
+
+            // Reset changes flag
+            setHasChanges(false);
 
             // Show success message
             toast.success('Display settings saved successfully!');
@@ -367,19 +329,26 @@ export default function DisplaySettings() {
                 </div>
 
                 <p className="text-sm text-info">
-                    These settings are saved to your browser and your IEEE UCSD account. They will be applied whenever you log in.
+                    These settings are saved to your browser using IndexedDB and your IEEE UCSD account. They will be applied whenever you log in.
                 </p>
 
                 <div className="form-control">
-                    <button
-                        type="submit"
-                        className={`btn btn-primary ${saving ? 'loading' : ''}`}
-                        disabled={saving}
-                    >
-                        {saving ? 'Saving...' : 'Save Settings'}
-                    </button>
+                    <div className="flex flex-col gap-2">
+                        {hasChanges && (
+                            <p className="text-sm text-warning">
+                                You have unsaved changes. Click "Save Settings" to apply them.
+                            </p>
+                        )}
+                        <button
+                            type="submit"
+                            className={`btn btn-primary ${saving ? 'loading' : ''}`}
+                            disabled={saving || !hasChanges}
+                        >
+                            {saving ? 'Saving...' : 'Save Settings'}
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     );
-} 
+}
