@@ -14,6 +14,13 @@ sections:
     component: "EventsSection"
     class: "text-secondary hover:text-secondary-focus"
 
+  leaderboard:
+    title: "Leaderboard"
+    icon: "heroicons:trophy"
+    role: "none"
+    component: "LeaderboardSection"
+    class: "text-warning hover:text-warning-focus"
+
   reimbursement:
     title: "Reimbursement"
     icon: "heroicons:credit-card"
@@ -91,7 +98,7 @@ sections:
 categories:
   main:
     title: "Main Menu"
-    sections: ["profile", "events", "reimbursement"]
+    sections: ["profile", "events", "leaderboard", "reimbursement"]
     role: "none"
 
   officer:
