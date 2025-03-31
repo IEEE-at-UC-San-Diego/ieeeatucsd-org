@@ -53,7 +53,7 @@ try {
             "",
             "-created",
             {
-                expand: ["requested_user"],
+                expand: "requested_user",
             }
         )
         .catch((err) => {
@@ -308,7 +308,7 @@ try {
                 Collections.EVENT_REQUESTS,
                 "",
                 "-created",
-                { expand: "requested_user" }
+                "requested_user"
             );
         } catch (err) {
             console.error("Error during initial data sync:", err);

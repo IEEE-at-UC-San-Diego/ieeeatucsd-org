@@ -154,7 +154,7 @@ export class DataSyncService {
         }
       }
 
-      // Get data from PocketBase
+      // Get data from PocketBase with expanded relations
       const items = await this.get.getAll<T>(collection, filter, sort, {
         expand: normalizedExpand,
       });

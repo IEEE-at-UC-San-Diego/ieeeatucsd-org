@@ -7,6 +7,7 @@ import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocket
 import { FileManager } from '../../../scripts/pocketbase/FileManager';
 import { Icon } from "@iconify/react";
 import CustomAlert from '../universal/CustomAlert';
+import UniversalFilePreview from '../universal/FilePreview';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 
 // Extended EventRequest interface with additional properties needed for this component
@@ -29,9 +30,9 @@ interface ExtendedEventRequest extends SchemaEventRequest {
     invoice_files?: string[]; // Array of invoice file IDs
     flyer_files?: string[]; // Add this for PR-related files
     files?: string[]; // Generic files field
-    room_reservation_needed?: boolean;
-    room_reservation_location?: string;
-    room_reservation_confirmed?: boolean;
+    will_or_have_room_booking?: boolean;
+    room_booking?: string; // Single file for room booking
+    room_reservation_needed?: boolean; // Keep for backward compatibility
     additional_notes?: string;
 }
 
@@ -1503,14 +1504,14 @@ const EventRequestDetails = ({
                                     </div>
                                     <div className="flex items-center justify-between bg-base-200/30 p-3 rounded-lg">
                                         <p className="text-white">Room Reservation Needed</p>
-                                        <div className={`badge ${request.room_reservation_needed ? 'badge-success' : 'badge-ghost'}`}>
-                                            {request.room_reservation_needed ? 'Yes' : 'No'}
+                                        <div className={`badge ${request.will_or_have_room_booking ? 'badge-success' : 'badge-ghost'}`}>
+                                            {request.will_or_have_room_booking ? 'Yes' : 'No'}
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {request.room_reservation_needed ? (
+                            {request.will_or_have_room_booking ? (
                                 <div className="bg-base-100/10 p-5 rounded-lg border border-base-100/10">
                                     <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
                                         <Icon icon="mdi:map-marker-outline" className="h-5 w-5 mr-2 text-primary" />
@@ -1519,14 +1520,35 @@ const EventRequestDetails = ({
                                     <div className="space-y-3">
                                         <div className="bg-base-200/30 p-3 rounded-lg">
                                             <label className="text-xs text-gray-400 block mb-1">Room/Location</label>
-                                            <p className="text-white font-medium">{request.room_reservation_location || 'Not specified'}</p>
+                                            <p className="text-white font-medium">{request.location || 'Not specified'}</p>
                                         </div>
                                         <div className="bg-base-200/30 p-3 rounded-lg">
                                             <label className="text-xs text-gray-400 block mb-1">Confirmation Status</label>
                                             <div className="flex items-center gap-2">
-                                                <div className={`badge ${request.room_reservation_confirmed ? 'badge-success' : 'badge-warning'}`}>
-                                                    {request.room_reservation_confirmed ? 'Confirmed' : 'Pending'}
+                                                <div className={`badge ${request.room_booking ? 'badge-success' : 'badge-warning'}`}>
+                                                    {request.room_booking ? 'Booking File Uploaded' : 'No Booking File'}
                                                 </div>
+                                                {request.room_booking && (
+                                                    <button
+                                                        onClick={() => {
+                                                            // Dispatch event to update file preview modal
+                                                            const event = new CustomEvent('filePreviewStateChange', {
+                                                                detail: {
+                                                                    url: `https://pocketbase.ieeeucsd.org/api/files/event_request/${request.id}/${request.room_booking}`,
+                                                                    filename: request.room_booking
+                                                                }
+                                                            });
+                                                            window.dispatchEvent(event);
+
+                                                            // Open the modal
+                                                            const modal = document.getElementById('file-preview-modal') as HTMLDialogElement;
+                                                            if (modal) modal.showModal();
+                                                        }}
+                                                        className="btn btn-xs btn-primary ml-2"
+                                                    >
+                                                        View File
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -1617,8 +1639,25 @@ const EventRequestDetails = ({
                     </div>
                 </div>
             )}
+
+            {/* File Preview Modal */}
+            <dialog id="file-preview-modal" className="modal modal-bottom sm:modal-middle">
+                <div className="modal-box bg-base-200 p-0 overflow-hidden max-w-4xl">
+                    <div className="p-4">
+                        <UniversalFilePreview isModal={true} />
+                    </div>
+                    <div className="modal-action mt-0 p-4 border-t border-base-300">
+                        <form method="dialog">
+                            <button className="btn btn-sm">Close</button>
+                        </form>
+                    </div>
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button>close</button>
+                </form>
+            </dialog>
         </div>
     );
 };
 
-export default EventRequestDetails; 
+export default EventRequestDetails;
