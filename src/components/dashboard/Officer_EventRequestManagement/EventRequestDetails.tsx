@@ -713,6 +713,28 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
                 </div>
             </motion.div>
 
+            {/* Copyable Invoice Format */}
+            <motion.div
+                className="bg-base-100/10 p-5 rounded-lg border border-base-100/10"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+            >
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="bg-info/20 p-3 rounded-full">
+                        <Icon icon="mdi:content-copy" className="h-6 w-6 text-info" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-semibold">Copyable Format</h3>
+                        <p className="text-sm text-gray-400">Copy formatted invoice data for easy sharing</p>
+                    </div>
+                </div>
+
+                <div className="mt-4">
+                    <CopyableInvoiceFormat invoiceData={invoiceData} />
+                </div>
+            </motion.div>
+
             {/* File Preview Modal */}
             <FilePreviewModal
                 isOpen={isPreviewModalOpen}
@@ -723,6 +745,150 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
                 displayName={selectedFile.displayName}
             />
         </motion.div>
+    );
+};
+
+// Component for copyable invoice format
+const CopyableInvoiceFormat: React.FC<{ invoiceData: any }> = ({ invoiceData }) => {
+    const [copied, setCopied] = useState(false);
+    const [formattedText, setFormattedText] = useState<string>('');
+
+    useEffect(() => {
+        if (!invoiceData) {
+            setFormattedText('No invoice data available');
+            return;
+        }
+
+        try {
+            // Parse invoice data if it's a string
+            let parsedInvoice = null;
+
+            if (typeof invoiceData === 'string') {
+                try {
+                    parsedInvoice = JSON.parse(invoiceData);
+                } catch (e) {
+                    console.error('Failed to parse invoice data string:', e);
+                    setFormattedText('Invalid invoice data format');
+                    return;
+                }
+            } else if (typeof invoiceData === 'object' && invoiceData !== null) {
+                parsedInvoice = invoiceData;
+            } else {
+                setFormattedText('No structured invoice data available');
+                return;
+            }
+
+            // Extract items array
+            let items = [];
+            if (parsedInvoice.items && Array.isArray(parsedInvoice.items)) {
+                items = parsedInvoice.items;
+            } else if (Array.isArray(parsedInvoice)) {
+                items = parsedInvoice;
+            } else if (parsedInvoice.items && typeof parsedInvoice.items === 'object') {
+                items = [parsedInvoice.items]; // Wrap single item in array
+            } else {
+                // Try to find any array in the object
+                for (const key in parsedInvoice) {
+                    if (Array.isArray(parsedInvoice[key])) {
+                        items = parsedInvoice[key];
+                        break;
+                    }
+                }
+            }
+
+            // If we still don't have items, check if the object itself looks like an item
+            if (items.length === 0 && (parsedInvoice.item || parsedInvoice.description || parsedInvoice.name)) {
+                items = [parsedInvoice];
+            }
+
+            // Format the items into the required string format
+            const formattedItems = items.map((item: any) => {
+                const quantity = parseFloat(item?.quantity || 1);
+                const itemName = typeof item?.item === 'object'
+                    ? JSON.stringify(item.item)
+                    : (item?.item || item?.description || item?.name || 'N/A');
+                const unitPrice = parseFloat(item?.unit_price || item?.unitPrice || item?.price || 0);
+
+                return `${quantity} ${itemName} x${unitPrice.toFixed(2)} each`;
+            }).join(' | ');
+
+            // Get tax, tip and total
+            const tax = parseFloat(parsedInvoice.tax || parsedInvoice.taxAmount || 0);
+            const tip = parseFloat(parsedInvoice.tip || parsedInvoice.tipAmount || 0);
+            const total = parseFloat(parsedInvoice.total || 0) ||
+                items.reduce((sum: number, item: any) => {
+                    const quantity = parseFloat(item?.quantity || 1);
+                    const price = parseFloat(item?.unit_price || item?.unitPrice || item?.price || 0);
+                    return sum + (quantity * price);
+                }, 0) + tax + tip;
+
+            // Get vendor/location
+            const location = parsedInvoice.vendor || parsedInvoice.location || 'Unknown Vendor';
+
+            // Build the final formatted string
+            let result = formattedItems;
+
+            if (tax > 0) {
+                result += ` | Tax = ${tax.toFixed(2)}`;
+            }
+
+            if (tip > 0) {
+                result += ` | Tip = ${tip.toFixed(2)}`;
+            }
+
+            result += ` | Total = ${total.toFixed(2)} from ${location}`;
+
+            setFormattedText(result);
+        } catch (error) {
+            console.error('Error formatting invoice data:', error);
+            setFormattedText('Error formatting invoice data');
+        }
+    }, [invoiceData]);
+
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(formattedText)
+            .then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+                toast.success('Copied to clipboard!');
+            })
+            .catch(err => {
+                console.error('Failed to copy text: ', err);
+                toast.error('Failed to copy text');
+            });
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="bg-base-200/30 p-4 rounded-lg">
+                <div className="flex justify-between items-start mb-2">
+                    <label className="text-sm font-medium text-gray-400">Formatted Invoice Data</label>
+                    <button
+                        onClick={copyToClipboard}
+                        className="btn btn-sm btn-primary gap-2"
+                        disabled={!formattedText || formattedText.includes('No') || formattedText.includes('Error')}
+                    >
+                        {copied ? (
+                            <>
+                                <Icon icon="mdi:check" className="h-4 w-4" />
+                                Copied!
+                            </>
+                        ) : (
+                            <>
+                                <Icon icon="mdi:content-copy" className="h-4 w-4" />
+                                Copy
+                            </>
+                        )}
+                    </button>
+                </div>
+                <div className="bg-base-300/50 p-3 rounded-lg mt-2 whitespace-pre-wrap break-words text-sm">
+                    {formattedText}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                    Format: N_1 {'{item_1}'} x{'{cost_1}'} each | N_2 {'{item_2}'} x{'{cost_2}'} each | Tax = {'{tax}'} | Tip = {'{tip}'} | Total = {'{total}'} from {'{location}'}
+                </p>
+            </div>
+        </div>
     );
 };
 

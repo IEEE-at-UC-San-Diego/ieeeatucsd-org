@@ -37,6 +37,38 @@ export default {
           "radial-gradient(circle at 0% 0%, var(--tw-gradient-stops))",
       },
     },
+    daisyui: {
+      themes: [
+        {
+          light: {
+            primary: "#06659d",
+            secondary: "#4b92db",
+            accent: "#F3C135",
+            neutral: "#2a323c",
+            "base-100": "#ffffff",
+            "base-200": "#f8f9fa",
+            "base-300": "#e9ecef",
+            info: "#3abff8",
+            success: "#36d399",
+            warning: "#fbbd23",
+            error: "#f87272",
+          },
+          dark: {
+            primary: "#88BFEC",
+            secondary: "#4b92db",
+            accent: "#F3C135",
+            neutral: "#191D24",
+            "base-100": "#0A0E1A",
+            "base-200": "#0d1324",
+            "base-300": "#1a2035",
+            info: "#3abff8",
+            success: "#36d399",
+            warning: "#fbbd23",
+            error: "#f87272",
+          },
+        },
+      ],
+    },
   },
   plugins: [
     require("tailwindcss-motion"),
