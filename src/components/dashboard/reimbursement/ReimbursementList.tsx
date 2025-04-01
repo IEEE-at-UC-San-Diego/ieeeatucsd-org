@@ -114,6 +114,27 @@ export default function ReimbursementList() {
     useEffect(() => {
         // console.log('Component mounted');
         fetchReimbursements();
+
+        // Set up an interval to refresh the reimbursements list periodically
+        const refreshInterval = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                fetchReimbursements();
+            }
+        }, 30000); // Refresh every 30 seconds when tab is visible
+
+        // Listen for visibility changes to refresh when user returns to the tab
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchReimbursements();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            clearInterval(refreshInterval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []);
 
     // Add effect to monitor requests state
@@ -156,7 +177,7 @@ export default function ReimbursementList() {
             // Use DataSyncService to get data from IndexedDB with forced sync
             const dataSync = DataSyncService.getInstance();
 
-            // Sync reimbursements collection
+            // Sync reimbursements collection with force sync
             await dataSync.syncCollection(
                 Collections.REIMBURSEMENTS,
                 `submitted_by="${userId}"`,
@@ -164,10 +185,10 @@ export default function ReimbursementList() {
                 'audit_notes'
             );
 
-            // Get reimbursements from IndexedDB
+            // Get reimbursements from IndexedDB with forced sync to ensure latest data
             const reimbursementRecords = await dataSync.getData<ReimbursementRequest>(
                 Collections.REIMBURSEMENTS,
-                false, // Don't force sync again
+                true, // Force sync to ensure we have the latest data
                 `submitted_by="${userId}"`,
                 '-created'
             );

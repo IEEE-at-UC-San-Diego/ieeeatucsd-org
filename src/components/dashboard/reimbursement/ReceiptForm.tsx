@@ -155,7 +155,11 @@ export default function ReceiptForm({ onSubmit, onCancel }: ReceiptFormProps) {
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
-                className="space-y-4 overflow-y-auto max-h-[70vh] pr-4 custom-scrollbar"
+                className="space-y-4 overflow-y-auto max-h-[70vh] pr-8 overflow-x-hidden"
+                style={{
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: 'rgba(156, 163, 175, 0.5) transparent'
+                }}
             >
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <AnimatePresence mode="wait">
@@ -272,10 +276,10 @@ export default function ReceiptForm({ onSubmit, onCancel }: ReceiptFormProps) {
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: 20 }}
-                                    className="card bg-base-200/50 hover:bg-base-200 transition-colors duration-300 backdrop-blur-sm shadow-sm"
+                                    className="card bg-base-200/50 hover:bg-base-200 transition-colors duration-300 backdrop-blur-sm shadow-sm overflow-visible"
                                 >
                                     <div className="card-body p-4">
-                                        <div className="grid gap-4">
+                                        <div className="grid gap-4 overflow-visible">
                                             <div className="form-control">
                                                 <label className="label">
                                                     <span className="label-text">Description</span>
@@ -289,47 +293,53 @@ export default function ReceiptForm({ onSubmit, onCancel }: ReceiptFormProps) {
                                                 />
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="form-control">
-                                                    <label className="label">
-                                                        <span className="label-text">Category</span>
-                                                    </label>
-                                                    <select
-                                                        className="select select-bordered"
-                                                        value={item.category}
-                                                        onChange={(e) => handleExpenseItemChange(index, 'category', e.target.value)}
-                                                        required
-                                                    >
-                                                        <option value="">Select category</option>
-                                                        {EXPENSE_CATEGORIES.map(category => (
-                                                            <option key={category} value={category}>{category}</option>
-                                                        ))}
-                                                    </select>
+                                            <div className="flex flex-col gap-4">
+                                                <div className="flex justify-between items-center">
+                                                    <h4 className="text-sm font-medium">Item #{index + 1}</h4>
+                                                    {itemizedExpenses.length > 1 && (
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-sm btn-ghost text-error hover:bg-error/10"
+                                                            onClick={() => removeExpenseItem(index)}
+                                                            aria-label="Remove item"
+                                                        >
+                                                            <Icon icon="heroicons:trash" className="h-4 w-4" />
+                                                            <span className="text-xs">Remove</span>
+                                                        </button>
+                                                    )}
                                                 </div>
 
-                                                <div className="form-control">
-                                                    <label className="label">
-                                                        <span className="label-text">Amount ($)</span>
-                                                    </label>
-                                                    <div className="flex items-center space-x-2">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Category</span>
+                                                        </label>
+                                                        <select
+                                                            className="select select-bordered w-full"
+                                                            value={item.category}
+                                                            onChange={(e) => handleExpenseItemChange(index, 'category', e.target.value)}
+                                                            required
+                                                        >
+                                                            <option value="">Select category</option>
+                                                            {EXPENSE_CATEGORIES.map(category => (
+                                                                <option key={category} value={category}>{category}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Amount ($)</span>
+                                                        </label>
                                                         <input
                                                             type="number"
-                                                            className="input input-bordered"
-                                                            value={item.amount}
+                                                            className="input input-bordered w-full"
+                                                            value={item.amount === 0 ? '' : item.amount}
                                                             onChange={(e) => handleExpenseItemChange(index, 'amount', Number(e.target.value))}
                                                             min="0"
                                                             step="0.01"
                                                             required
                                                         />
-                                                        {itemizedExpenses.length > 1 && (
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn-square btn-sm btn-error"
-                                                                onClick={() => removeExpenseItem(index)}
-                                                            >
-                                                                <Icon icon="heroicons:trash" className="h-4 w-4" />
-                                                            </button>
-                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -348,7 +358,7 @@ export default function ReceiptForm({ onSubmit, onCancel }: ReceiptFormProps) {
                         <input
                             type="number"
                             className="input input-bordered focus:input-primary transition-all duration-300"
-                            value={tax}
+                            value={tax === 0 ? '' : tax}
                             onChange={(e) => setTax(Number(e.target.value))}
                             min="0"
                             step="0.01"
@@ -439,4 +449,4 @@ export default function ReceiptForm({ onSubmit, onCancel }: ReceiptFormProps) {
             </motion.div>
         </motion.div>
     );
-} 
+}

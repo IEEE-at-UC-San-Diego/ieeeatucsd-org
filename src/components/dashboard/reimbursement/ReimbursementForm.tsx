@@ -277,11 +277,34 @@ export default function ReimbursementForm() {
             formData.append('receipts', JSON.stringify(request.receipts));
             formData.append('department', request.department);
 
-            await pb.collection('reimbursement').create(formData);
+            // Create the reimbursement record
+            const newReimbursement = await pb.collection('reimbursement').create(formData);
 
             // Sync the reimbursements collection to update IndexedDB
             const dataSync = DataSyncService.getInstance();
-            await dataSync.syncCollection(Collections.REIMBURSEMENTS);
+
+            // Force sync with specific filter to ensure the new record is fetched
+            await dataSync.syncCollection(
+                Collections.REIMBURSEMENTS,
+                `submitted_by="${userId}"`,
+                '-created',
+                'audit_notes'
+            );
+
+            // Verify the new record is in IndexedDB
+            const syncedData = await dataSync.getData(
+                Collections.REIMBURSEMENTS,
+                true, // Force sync again to be sure
+                `id="${newReimbursement.id}"`
+            );
+
+            if (syncedData.length === 0) {
+                console.warn('New reimbursement not found in IndexedDB after sync, forcing another sync');
+                // Try one more time with a slight delay
+                setTimeout(async () => {
+                    await dataSync.syncCollection(Collections.REIMBURSEMENTS);
+                }, 500);
+            }
 
             // Reset form
             setRequest({

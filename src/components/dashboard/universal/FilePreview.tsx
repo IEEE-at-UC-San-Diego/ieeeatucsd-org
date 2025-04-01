@@ -14,6 +14,8 @@ interface ImageWithFallbackProps {
 const ImageWithFallback = ({ url, filename, onError }: ImageWithFallbackProps) => {
     const [imgSrc, setImgSrc] = useState<string>(url);
     const [isObjectUrl, setIsObjectUrl] = useState<boolean>(false);
+    const [errorCount, setErrorCount] = useState<number>(0);
+    const maxRetries = 2;
 
     // Clean up object URL when component unmounts
     useEffect(() => {
@@ -24,13 +26,51 @@ const ImageWithFallback = ({ url, filename, onError }: ImageWithFallbackProps) =
         };
     }, [imgSrc, url, isObjectUrl]);
 
+    // Reset when URL changes
+    useEffect(() => {
+        setImgSrc(url);
+        setIsObjectUrl(false);
+        setErrorCount(0);
+    }, [url]);
+
+    // Special handling for blob URLs
+    useEffect(() => {
+        const handleBlobUrl = async () => {
+            if (url.startsWith('blob:') && !isObjectUrl) {
+                try {
+                    // For blob URLs, we don't need to fetch again, just set directly
+                    setImgSrc(url);
+                } catch (error) {
+                    console.error('Error with blob URL:', error);
+                }
+            }
+        };
+
+        handleBlobUrl();
+    }, [url, isObjectUrl]);
+
     const handleError = async () => {
-        console.error('Image failed to load:', url);
+        // Prevent infinite retry loops
+        if (errorCount >= maxRetries) {
+            console.error(`Image failed to load after ${maxRetries} attempts:`, url);
+            onError('Failed to load image after multiple attempts. The file may be corrupted or unsupported.');
+            return;
+        }
+
+        setErrorCount(prev => prev + 1);
+        console.error(`Image failed to load (attempt ${errorCount + 1}):`, url);
 
         try {
+            // Skip fetch for blob URLs that already failed
+            if (url.startsWith('blob:')) {
+                throw new Error('Blob URL failed to load directly');
+            }
+
             // Try to fetch the image as a blob and create an object URL
-            // console.log('Trying to fetch image as blob:', url);
-            const response = await fetch(url, { mode: 'cors' });
+            const response = await fetch(url, {
+                mode: 'cors',
+                cache: 'no-cache' // Avoid caching issues
+            });
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -38,27 +78,24 @@ const ImageWithFallback = ({ url, filename, onError }: ImageWithFallbackProps) =
 
             const blob = await response.blob();
             const objectUrl = URL.createObjectURL(blob);
-            // console.log('Created object URL:', objectUrl);
 
             // Update the image source with the object URL
             setImgSrc(objectUrl);
             setIsObjectUrl(true);
         } catch (fetchError) {
             console.error('Error fetching image as blob:', fetchError);
-            onError('Failed to load image. This might be due to permission issues or the file may not exist.');
 
-            // Log additional details
-            // console.log('Image URL that failed:', url);
-            // console.log('Current auth status:',
-            //     Authentication.getInstance().isAuthenticated() ? 'Authenticated' : 'Not authenticated'
-            // );
+            // Only show error to user on final retry
+            if (errorCount >= maxRetries - 1) {
+                onError('Failed to load image. This might be due to permission issues or the file may not exist.');
+            }
         }
     };
 
     return (
         <img
             src={imgSrc}
-            alt={filename}
+            alt={filename || 'Image preview'}
             className="max-w-full h-auto rounded-lg"
             loading="lazy"
             onError={handleError}
@@ -167,6 +204,22 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
         setState(prev => ({ ...prev, loading: true, error: null }));
 
         try {
+            // Check cache first
+            const cacheKey = `${state.url}_${state.filename}`;
+            const cachedData = contentCache.get(cacheKey);
+
+            if (cachedData && Date.now() - cachedData.timestamp < CACHE_DURATION) {
+                // Use cached data
+                setState(prev => ({
+                    ...prev,
+                    content: cachedData.content,
+                    fileType: cachedData.fileType,
+                    loading: false
+                }));
+                loadingRef.current = false;
+                return;
+            }
+
             // Special handling for PDFs
             if (state.url.endsWith('.pdf')) {
                 setState(prev => ({
@@ -175,12 +228,377 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                     fileType: 'application/pdf',
                     loading: false
                 }));
+
+                // Cache the result
+                contentCache.set(cacheKey, {
+                    content: 'pdf',
+                    fileType: 'application/pdf',
+                    timestamp: Date.now()
+                });
+
                 loadingRef.current = false;
                 return;
             }
 
-            // Rest of your existing loadContent logic
-            // ... existing content loading code ...
+            // Handle image files
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+            if (imageExtensions.some(ext => state.url.toLowerCase().endsWith(ext) ||
+                (state.filename && state.filename.toLowerCase().endsWith(ext)))) {
+                setState(prev => ({
+                    ...prev,
+                    content: 'image',
+                    fileType: 'image/' + (state.url.split('.').pop() || 'jpeg'),
+                    loading: false
+                }));
+
+                // Cache the result
+                contentCache.set(cacheKey, {
+                    content: 'image',
+                    fileType: 'image/' + (state.url.split('.').pop() || 'jpeg'),
+                    timestamp: Date.now()
+                });
+
+                loadingRef.current = false;
+                return;
+            }
+
+            // Handle video files
+            const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi'];
+            if (videoExtensions.some(ext => state.url.toLowerCase().endsWith(ext) ||
+                (state.filename && state.filename.toLowerCase().endsWith(ext)))) {
+                setState(prev => ({
+                    ...prev,
+                    content: 'video',
+                    fileType: 'video/' + (state.url.split('.').pop() || 'mp4'),
+                    loading: false
+                }));
+
+                // Cache the result
+                contentCache.set(cacheKey, {
+                    content: 'video',
+                    fileType: 'video/' + (state.url.split('.').pop() || 'mp4'),
+                    timestamp: Date.now()
+                });
+
+                loadingRef.current = false;
+                return;
+            }
+
+            // For other file types, try to fetch the content
+            // Handle blob URLs (for local file previews)
+            if (state.url.startsWith('blob:')) {
+                try {
+                    // Determine file type from filename if available
+                    let fileType = '';
+                    if (state.filename) {
+                        const extension = state.filename.split('.').pop()?.toLowerCase();
+                        if (extension) {
+                            switch (extension) {
+                                case 'jpg':
+                                case 'jpeg':
+                                case 'png':
+                                case 'gif':
+                                case 'webp':
+                                case 'bmp':
+                                case 'svg':
+                                    fileType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+                                    break;
+                                case 'mp4':
+                                case 'webm':
+                                case 'ogg':
+                                case 'mov':
+                                    fileType = `video/${extension}`;
+                                    break;
+                                case 'pdf':
+                                    fileType = 'application/pdf';
+                                    break;
+                                case 'doc':
+                                    fileType = 'application/msword';
+                                    break;
+                                case 'docx':
+                                    fileType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                                    break;
+                                case 'xls':
+                                    fileType = 'application/vnd.ms-excel';
+                                    break;
+                                case 'xlsx':
+                                    fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                                    break;
+                                case 'ppt':
+                                    fileType = 'application/vnd.ms-powerpoint';
+                                    break;
+                                case 'pptx':
+                                    fileType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+                                    break;
+                                case 'txt':
+                                case 'md':
+                                case 'js':
+                                case 'jsx':
+                                case 'ts':
+                                case 'tsx':
+                                case 'html':
+                                case 'css':
+                                case 'json':
+                                case 'yml':
+                                case 'yaml':
+                                case 'csv':
+                                    fileType = 'text/plain';
+                                    break;
+                                default:
+                                    fileType = 'application/octet-stream';
+                            }
+                        }
+                    }
+
+                    // Try to fetch the blob
+                    const response = await fetch(state.url);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch blob: ${response.status}`);
+                    }
+
+                    const blob = await response.blob();
+
+                    // If we couldn't determine file type from filename, use the blob type
+                    if (!fileType && blob.type) {
+                        fileType = blob.type;
+                    }
+
+                    // Handle different file types
+                    if (fileType.startsWith('image/') ||
+                        (state.filename && /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(state.filename))) {
+                        setState(prev => ({
+                            ...prev,
+                            content: 'image',
+                            fileType: fileType || 'image/jpeg',
+                            loading: false
+                        }));
+
+                        // Cache the result
+                        contentCache.set(cacheKey, {
+                            content: 'image',
+                            fileType: fileType || 'image/jpeg',
+                            timestamp: Date.now()
+                        });
+                    } else if (fileType.startsWith('video/') ||
+                        (state.filename && /\.(mp4|webm|ogg|mov|avi)$/i.test(state.filename))) {
+                        setState(prev => ({
+                            ...prev,
+                            content: 'video',
+                            fileType: fileType || 'video/mp4',
+                            loading: false
+                        }));
+
+                        // Cache the result
+                        contentCache.set(cacheKey, {
+                            content: 'video',
+                            fileType: fileType || 'video/mp4',
+                            timestamp: Date.now()
+                        });
+                    } else if (fileType === 'application/pdf' ||
+                        (state.filename && /\.pdf$/i.test(state.filename))) {
+                        setState(prev => ({
+                            ...prev,
+                            content: 'pdf',
+                            fileType: 'application/pdf',
+                            loading: false
+                        }));
+
+                        // Cache the result
+                        contentCache.set(cacheKey, {
+                            content: 'pdf',
+                            fileType: 'application/pdf',
+                            timestamp: Date.now()
+                        });
+                    } else if (
+                        fileType === 'application/msword' ||
+                        fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                        fileType === 'application/vnd.ms-excel' ||
+                        fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                        fileType === 'application/vnd.ms-powerpoint' ||
+                        fileType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+                        (state.filename && /\.(doc|docx|xls|xlsx|ppt|pptx)$/i.test(state.filename))
+                    ) {
+                        // Handle Office documents with a document icon and download option
+                        const extension = state.filename?.split('.').pop()?.toLowerCase() || '';
+                        let documentType = 'document';
+
+                        if (['xls', 'xlsx'].includes(extension)) {
+                            documentType = 'spreadsheet';
+                        } else if (['ppt', 'pptx'].includes(extension)) {
+                            documentType = 'presentation';
+                        }
+
+                        setState(prev => ({
+                            ...prev,
+                            content: `document-${documentType}`,
+                            fileType: fileType || `application/${documentType}`,
+                            loading: false
+                        }));
+
+                        // Cache the result
+                        contentCache.set(cacheKey, {
+                            content: `document-${documentType}`,
+                            fileType: fileType || `application/${documentType}`,
+                            timestamp: Date.now()
+                        });
+                    } else {
+                        // For text files, read the content
+                        try {
+                            const text = await blob.text();
+                            setState(prev => ({
+                                ...prev,
+                                content: text,
+                                fileType: fileType || 'text/plain',
+                                loading: false
+                            }));
+
+                            // Cache the result
+                            contentCache.set(cacheKey, {
+                                content: text,
+                                fileType: fileType || 'text/plain',
+                                timestamp: Date.now()
+                            });
+                        } catch (textError) {
+                            console.error('Error reading blob as text:', textError);
+                            throw new Error('Failed to read file content');
+                        }
+                    }
+
+                    loadingRef.current = false;
+                    return;
+                } catch (error) {
+                    console.error('Error processing blob URL:', error);
+                    setState(prev => ({
+                        ...prev,
+                        error: 'Failed to load file preview. Please try again or proceed with upload.',
+                        loading: false
+                    }));
+                    loadingRef.current = false;
+                    return;
+                }
+            }
+
+            // For remote files
+            const response = await fetch(state.url);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+
+            if (contentType.startsWith('image/')) {
+                setState(prev => ({
+                    ...prev,
+                    content: 'image',
+                    fileType: contentType,
+                    loading: false
+                }));
+
+                // Cache the result
+                contentCache.set(cacheKey, {
+                    content: 'image',
+                    fileType: contentType,
+                    timestamp: Date.now()
+                });
+            } else if (contentType.startsWith('video/')) {
+                setState(prev => ({
+                    ...prev,
+                    content: 'video',
+                    fileType: contentType,
+                    loading: false
+                }));
+
+                // Cache the result
+                contentCache.set(cacheKey, {
+                    content: 'video',
+                    fileType: contentType,
+                    timestamp: Date.now()
+                });
+            } else if (contentType === 'application/pdf') {
+                setState(prev => ({
+                    ...prev,
+                    content: 'pdf',
+                    fileType: contentType,
+                    loading: false
+                }));
+
+                // Cache the result
+                contentCache.set(cacheKey, {
+                    content: 'pdf',
+                    fileType: contentType,
+                    timestamp: Date.now()
+                });
+            } else if (
+                contentType === 'application/msword' ||
+                contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                (state.filename && /\.(doc|docx)$/i.test(state.filename))
+            ) {
+                setState(prev => ({
+                    ...prev,
+                    content: 'document-document',
+                    fileType: contentType || 'application/document',
+                    loading: false
+                }));
+
+                // Cache the result
+                contentCache.set(cacheKey, {
+                    content: 'document-document',
+                    fileType: contentType || 'application/document',
+                    timestamp: Date.now()
+                });
+            } else if (
+                contentType === 'application/vnd.ms-excel' ||
+                contentType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                (state.filename && /\.(xls|xlsx)$/i.test(state.filename))
+            ) {
+                setState(prev => ({
+                    ...prev,
+                    content: 'document-spreadsheet',
+                    fileType: contentType || 'application/spreadsheet',
+                    loading: false
+                }));
+
+                // Cache the result
+                contentCache.set(cacheKey, {
+                    content: 'document-spreadsheet',
+                    fileType: contentType || 'application/spreadsheet',
+                    timestamp: Date.now()
+                });
+            } else if (
+                contentType === 'application/vnd.ms-powerpoint' ||
+                contentType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+                (state.filename && /\.(ppt|pptx)$/i.test(state.filename))
+            ) {
+                setState(prev => ({
+                    ...prev,
+                    content: 'document-presentation',
+                    fileType: contentType || 'application/presentation',
+                    loading: false
+                }));
+
+                // Cache the result
+                contentCache.set(cacheKey, {
+                    content: 'document-presentation',
+                    fileType: contentType || 'application/presentation',
+                    timestamp: Date.now()
+                });
+            } else {
+                // For text files, read the content
+                const text = await response.text();
+                setState(prev => ({
+                    ...prev,
+                    content: text,
+                    fileType: contentType,
+                    loading: false
+                }));
+
+                // Cache the result
+                contentCache.set(cacheKey, {
+                    content: text,
+                    fileType: contentType,
+                    timestamp: Date.now()
+                });
+            }
         } catch (err) {
             console.error('Error loading content:', err);
             setState(prev => ({
@@ -193,8 +611,20 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
     }, [state.url]);
 
     useEffect(() => {
-        if (!state.url || (!state.isVisible && isModal)) return;
-        loadContent();
+        if (!state.url) return;
+
+        // For modal, only load when visible
+        if (isModal && !state.isVisible) return;
+
+        // Reset loading state when URL changes
+        loadingRef.current = false;
+
+        // Small timeout to ensure state updates are processed
+        const timer = setTimeout(() => {
+            loadContent();
+        }, 50);
+
+        return () => clearTimeout(timer);
     }, [state.url, state.isVisible, isModal, loadContent]);
 
     // Intersection observer effect
@@ -364,7 +794,14 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
     // Update the Try Again button handler
     const handleTryAgain = useCallback(() => {
         loadingRef.current = false; // Reset loading ref
-        loadContent();
+        setState(prev => ({
+            ...prev,
+            error: null,
+            loading: true
+        }));
+        setTimeout(() => {
+            loadContent();
+        }, 100); // Small delay to ensure state is updated
     }, [loadContent]);
 
     // If URL is empty, show a message
@@ -399,7 +836,8 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
             </div>
 
             <div className="preview-content overflow-auto border border-base-300 rounded-lg bg-base-200/50 relative">
-                {!state.loading && !state.error && state.content === null && (
+                {/* Initial loading state - show immediately when URL is provided but content hasn't loaded yet */}
+                {state.url && !state.loading && !state.error && state.content === null && (
                     <div className="flex justify-center items-center p-8">
                         <span className="loading loading-spinner loading-lg"></span>
                     </div>
@@ -448,21 +886,38 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
 
                 {!state.loading && !state.error && state.content === 'video' && (
                     <div className="flex justify-center bg-base-200 p-4 rounded-b-lg">
-                        <video
-                            controls
-                            className="max-w-full h-auto rounded-lg"
-                            preload="metadata"
-                            onError={(e) => {
-                                console.error('Video failed to load:', e);
-                                setState(prev => ({
-                                    ...prev,
-                                    error: 'Failed to load video. This might be due to permission issues or the file may not exist.'
-                                }));
-                            }}
-                        >
-                            <source src={state.url} type={state.fileType || 'video/mp4'} />
-                            Your browser does not support the video tag.
-                        </video>
+                        <div className="w-full max-w-2xl">
+                            <video
+                                controls
+                                className="max-w-full h-auto rounded-lg"
+                                preload="metadata"
+                                src={state.url}
+                                onError={(e) => {
+                                    console.error('Video failed to load:', e);
+
+                                    // For blob URLs, try a different approach
+                                    if (state.url.startsWith('blob:')) {
+                                        const videoElement = e.target as HTMLVideoElement;
+
+                                        // Try to set the src directly
+                                        try {
+                                            videoElement.src = state.url;
+                                            videoElement.load();
+                                            return;
+                                        } catch (directError) {
+                                            console.error('Direct src assignment failed:', directError);
+                                        }
+                                    }
+
+                                    setState(prev => ({
+                                        ...prev,
+                                        error: 'Failed to load video. This might be due to permission issues or the file may not exist.'
+                                    }));
+                                }}
+                            >
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
                     </div>
                 )}
 
@@ -519,6 +974,41 @@ export default function FilePreview({ url: initialUrl = '', filename: initialFil
                                 </div>
                             </object>
                         </div>
+                    </div>
+                )}
+
+                {!state.loading && !state.error && state.content && state.content.startsWith('document-') && (
+                    <div className="flex flex-col items-center justify-center bg-base-200 p-8 rounded-b-lg">
+                        <div className="bg-primary/10 p-6 rounded-full mb-6">
+                            <Icon
+                                icon={
+                                    state.content === 'document-spreadsheet'
+                                        ? "mdi:file-excel"
+                                        : state.content === 'document-presentation'
+                                            ? "mdi:file-powerpoint"
+                                            : "mdi:file-word"
+                                }
+                                className="h-16 w-16 text-primary"
+                            />
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2">{state.filename}</h3>
+                        <p className="text-base-content/70 mb-6 text-center max-w-md">
+                            This document cannot be previewed in the browser. Please download it to view its contents.
+                        </p>
+                        <a
+                            href={state.url}
+                            download={state.filename}
+                            className="btn btn-primary btn-lg gap-2"
+                        >
+                            <Icon icon="mdi:download" className="h-5 w-5" />
+                            Download {
+                                state.content === 'document-spreadsheet'
+                                    ? 'Spreadsheet'
+                                    : state.content === 'document-presentation'
+                                        ? 'Presentation'
+                                        : 'Document'
+                            }
+                        </a>
                     </div>
                 )}
 
