@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
-import type { User } from "../../../schemas/pocketbase/schema";
 import FirstTimeLoginPopup from "./FirstTimeLoginPopup";
 
 interface FirstTimeLoginManagerProps {

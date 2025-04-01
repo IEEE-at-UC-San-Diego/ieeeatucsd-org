@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
@@ -7,7 +7,7 @@ import ReceiptForm from './ReceiptForm';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import FilePreview from '../universal/FilePreview';
-import type { ItemizedExpense, Reimbursement, Receipt } from '../../../schemas/pocketbase';
+import type { ItemizedExpense, Reimbursement } from '../../../schemas/pocketbase';
 
 interface ReceiptFormData {
     file: File;

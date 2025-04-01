@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
 import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase/schema';
-import { FileManager } from '../../../scripts/pocketbase/FileManager';
 import { Icon } from "@iconify/react";
 import CustomAlert from '../universal/CustomAlert';
 import UniversalFilePreview from '../universal/FilePreview';

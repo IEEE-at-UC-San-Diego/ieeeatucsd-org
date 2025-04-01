@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
-import { DataSyncService } from "../../../scripts/database/DataSyncService";
 import { Collections } from "../../../schemas/pocketbase/schema";
-import type { Event, Log, User } from "../../../schemas/pocketbase";
+import type { Event, User } from "../../../schemas/pocketbase";
 import { Get } from "../../../scripts/pocketbase/Get";
 import type { EventAttendee } from "../../../schemas/pocketbase";
 import { Update } from "../../../scripts/pocketbase/Update";

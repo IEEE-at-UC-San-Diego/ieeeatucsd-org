@@ -1,11 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Get } from '../../../scripts/pocketbase/Get';
-import { Update } from '../../../scripts/pocketbase/Update';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import toast from 'react-hot-toast';
-import EventRequestDetails from './EventRequestDetails';
 import type { EventRequest as SchemaEventRequest } from '../../../schemas/pocketbase/schema';
 import { Collections } from '../../../schemas/pocketbase/schema';
 
