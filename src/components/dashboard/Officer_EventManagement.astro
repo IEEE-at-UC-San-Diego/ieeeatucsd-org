@@ -891,27 +891,27 @@ const currentPage = eventResponse.page;
     let start: Date, end: Date;
 
     // Determine quarter (0-based months: 0-11)
-    // Q1: Sept-Dec (8-11)
-    // Q2: Jan-Mar (0-2)
-    // Q3: Mar-Jun (2-5)
-    // Q4: Jun-Sept (5-8)
+    // Fall: Sept-Dec (8-11)
+    // Winter: Jan-Mar (0-2)
+    // Spring: Apr-Jun (3-5)
+    // Summer: Jul-Sept (6-8)
 
     if (month >= 8) {
-      // Q1: Sept-Dec
+      // Fall: Sept-Dec
       start = new Date(year, 8, 1);
       end = new Date(year, 11, 31);
-    } else if (month < 2) {
-      // Q2: Jan-Mar
+    } else if (month >= 0 && month < 3) {
+      // Winter: Jan-Mar
       start = new Date(year, 0, 1);
       end = new Date(year, 2, 31);
-    } else if (month < 5) {
-      // Q3: Mar-Jun
-      start = new Date(year, 2, 1);
+    } else if (month >= 3 && month < 6) {
+      // Spring: Apr-Jun
+      start = new Date(year, 3, 1);
       end = new Date(year, 5, 30);
     } else {
-      // Q4: Jun-Sept
-      start = new Date(year, 5, 1);
-      end = new Date(year, 8, 0); // End on Aug 31
+      // Summer: Jul-Sept
+      start = new Date(year, 6, 1);
+      end = new Date(year, 8, 30);
     }
 
     return { start, end };
@@ -924,14 +924,14 @@ const currentPage = eventResponse.page;
     if (month >= 8) {
       // Sept-Dec
       return "Fall";
-    } else if (month < 2) {
+    } else if (month >= 0 && month < 3) {
       // Jan-Mar
       return "Winter";
-    } else if (month < 5) {
-      // Mar-Jun
+    } else if (month >= 3 && month < 6) {
+      // Apr-Jun
       return "Spring";
     } else {
-      // Jun-Sept
+      // Jul-Sept
       return "Summer";
     }
   }
@@ -979,13 +979,13 @@ const currentPage = eventResponse.page;
               isInQuarter = month >= 8 && month <= 11; // Sept-Dec
               break;
             case "winter":
-              isInQuarter = month >= 0 && month <= 2; // Jan-Mar
+              isInQuarter = month >= 0 && month < 3; // Jan-Mar (0-2)
               break;
             case "spring":
-              isInQuarter = month >= 2 && month <= 5; // Mar-Jun
+              isInQuarter = month >= 3 && month < 6; // Apr-Jun (3-5)
               break;
             case "summer":
-              isInQuarter = month >= 5 && month <= 8; // Jun-Sept
+              isInQuarter = month >= 6 && month < 9; // Jul-Sept (6-8)
               break;
           }
           if (isInQuarter) {
