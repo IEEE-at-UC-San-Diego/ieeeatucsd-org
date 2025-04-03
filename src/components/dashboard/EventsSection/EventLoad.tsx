@@ -210,7 +210,7 @@ const EventLoad = () => {
                                 {event.files && event.files.length > 0 && (
                                     <button
                                         onClick={() => window.openDetailsModal(event as ExtendedEvent)}
-                                        className="btn btn-ghost btn-sm text-xs sm:text-sm gap-1 h-8 min-h-0 px-2"
+                                        className="btn btn-accent  btn-sm text-xs sm:text-sm gap-1 h-8 min-h-0 px-3 shadow-md hover:shadow-lg transition-all duration-300 rounded-full"
                                     >
                                         <Icon icon="heroicons:document-duplicate" className="h-3 w-3 sm:h-4 sm:w-4" />
                                         Files ({event.files.length})
