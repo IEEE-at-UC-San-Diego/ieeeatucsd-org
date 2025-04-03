@@ -5,6 +5,7 @@ import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { Update } from "../../../scripts/pocketbase/Update";
 import { FileManager } from "../../../scripts/pocketbase/FileManager";
 import { SendLog } from "../../../scripts/pocketbase/SendLog";
+import { Realtime } from "../../../scripts/pocketbase/Realtime";
 import FilePreview from "../universal/FilePreview";
 import type { Event as SchemaEvent, AttendeeEntry } from "../../../schemas/pocketbase";
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
@@ -240,7 +241,15 @@ const EventForm = memo(({
                                 // Show error for rejected files
                                 if (rejectedFiles.length > 0) {
                                     const errorMessage = `The following files were not added:\n${rejectedFiles.map(f => `${f.name}: ${f.reason}`).join('\n')}`;
-                                    toast.error(errorMessage);
+                                    // Use toast with custom styling to ensure visibility above modal
+                                    toast.error(errorMessage, {
+                                        duration: 5000,
+                                        style: {
+                                            zIndex: 9999, // Ensure it's above the modal
+                                            maxWidth: '500px',
+                                            whiteSpace: 'pre-line' // Preserve line breaks
+                                        }
+                                    });
                                 }
 
                                 setSelectedFiles(newFiles);
@@ -292,6 +301,31 @@ const EventForm = memo(({
                                                 }}
                                             >
                                                 <Icon icon="heroicons:eye" className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn btn-ghost btn-xs"
+                                                onClick={async () => {
+                                                    if (event?.id) {
+                                                        try {
+                                                            // Get file URL with token for protected files
+                                                            const url = await fileManager.getFileUrlWithToken(
+                                                                "events",
+                                                                event.id,
+                                                                filename,
+                                                                true
+                                                            );
+
+                                                            // Open file in new tab
+                                                            window.open(url, '_blank');
+                                                        } catch (error) {
+                                                            console.error("Failed to open file:", error);
+                                                            toast.error("Failed to open file. Please try again.");
+                                                        }
+                                                    }
+                                                }}
+                                            >
+                                                <Icon icon="heroicons:arrow-top-right-on-square" className="h-4 w-4" />
                                             </button>
                                             <div className="text-error">
                                                 {filesToDelete.has(filename) ? (
@@ -571,7 +605,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         auth: Authentication.getInstance(),
         update: Update.getInstance(),
         fileManager: FileManager.getInstance(),
-        sendLog: SendLog.getInstance()
+        sendLog: SendLog.getInstance(),
+        realtime: Realtime.getInstance()
     }), []);
 
     // Handle field changes
@@ -590,16 +625,34 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
     const initializeEventData = useCallback(async (eventId: string) => {
         try {
             if (eventId) {
+                // Show loading state
+                setIsSubmitting(true);
+
                 // Clear cache to ensure fresh data
                 const dataSync = DataSyncService.getInstance();
                 await dataSync.clearCache();
 
-                // Fetch fresh event data
-                const eventData = await services.get.getOne<Event>(Collections.EVENTS, eventId);
+                // Fetch fresh event data with expanded relations if needed
+                const eventData = await services.get.getOne<Event>(
+                    Collections.EVENTS,
+                    eventId,
+                    {
+                        disableAutoCancellation: true,
+                        // Add any fields to expand if needed
+                        // expand: ['related_field1', 'related_field2']
+                    }
+                );
 
                 if (!eventData) {
                     throw new Error("Event not found");
                 }
+
+                // Log successful data fetch
+                await services.sendLog.send(
+                    "view",
+                    "event",
+                    `Loaded event data: ${eventData.event_name} (${eventId})`
+                );
 
                 // Ensure dates are properly formatted for datetime-local input
                 if (eventData.start_date) {
@@ -631,8 +684,36 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                     has_food: eventData.has_food || false
                 });
 
+                // Set up realtime subscription for this event
+                const realtime = services.realtime;
+
+                // Define the RealtimeEvent type for proper typing
+                interface RealtimeEvent<T> {
+                    action: "create" | "update" | "delete";
+                    record: T;
+                }
+
+                const subscriptionId = realtime.subscribeToRecord<RealtimeEvent<Event>>(
+                    Collections.EVENTS,
+                    eventId,
+                    (data) => {
+                        if (data.action === "update") {
+                            // Auto-refresh data when event is updated elsewhere
+                            initializeEventData(eventId);
+                            toast.success("Event data has been updated");
+                        }
+                    }
+                );
+
+                // Store subscription ID for cleanup
+                (window as any).eventSubscriptionId = subscriptionId;
+
                 // console.log("Event data loaded successfully:", eventData);
             } else {
+                // Creating a new event
+                const now = new Date();
+                const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+
                 setEvent({
                     id: '',
                     created: '',
@@ -643,8 +724,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                     location: '',
                     files: [],
                     points_to_reward: 0,
-                    start_date: '',
-                    end_date: '',
+                    start_date: Get.formatLocalDate(now, false),
+                    end_date: Get.formatLocalDate(oneHourLater, false),
                     published: false,
                     has_food: false
                 });
@@ -656,8 +737,10 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         } catch (error) {
             console.error("Failed to initialize event data:", error);
             toast.error("Failed to load event data. Please try again.");
+        } finally {
+            setIsSubmitting(false);
         }
-    }, [services.get]);
+    }, [services]);
 
     // Expose initializeEventData to window
     useEffect(() => {
@@ -698,6 +781,12 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             if (!confirmed) return;
         }
 
+        // Clean up realtime subscription if it exists
+        if ((window as any).eventSubscriptionId) {
+            services.realtime.unsubscribe((window as any).eventSubscriptionId);
+            delete (window as any).eventSubscriptionId;
+        }
+
         setEvent({
             id: "",
             created: "",
@@ -719,12 +808,24 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         setPreviewUrl("");
         setPreviewFilename("");
 
+        // Clear file input element to reset filename display
+        const fileInput = document.querySelector('input[name="editEventFiles"]') as HTMLInputElement;
+        if (fileInput) {
+            fileInput.value = "";
+        }
+
         const modal = document.getElementById("editEventModal") as HTMLDialogElement;
         if (modal) modal.close();
-    }, [hasUnsavedChanges, isSubmitting]);
+    }, [hasUnsavedChanges, isSubmitting, services.realtime]);
 
     // Function to close modal after saving (without confirmation)
     const closeModalAfterSave = useCallback(() => {
+        // Clean up realtime subscription if it exists
+        if ((window as any).eventSubscriptionId) {
+            services.realtime.unsubscribe((window as any).eventSubscriptionId);
+            delete (window as any).eventSubscriptionId;
+        }
+
         setEvent({
             id: "",
             created: "",
@@ -746,9 +847,15 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         setPreviewUrl("");
         setPreviewFilename("");
 
+        // Reset the file input element to clear the filename display
+        const fileInput = document.querySelector('input[name="editEventFiles"]') as HTMLInputElement;
+        if (fileInput) {
+            fileInput.value = "";
+        }
+
         const modal = document.getElementById("editEventModal") as HTMLDialogElement;
         if (modal) modal.close();
-    }, []);
+    }, [services.realtime]);
 
     const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();

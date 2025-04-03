@@ -7,7 +7,7 @@ import { DataSyncService } from "../../../scripts/database/DataSyncService";
 import { Collections } from "../../../schemas/pocketbase/schema";
 import { Icon } from "@iconify/react";
 import toast from "react-hot-toast";
-import type { Event, EventAttendee } from "../../../schemas/pocketbase";
+import type { Event, EventAttendee, LimitedUser } from "../../../schemas/pocketbase";
 
 // Extended Event interface with additional properties needed for this component
 interface ExtendedEvent extends Event {
@@ -264,20 +264,48 @@ const EventCheckIn = () => {
                     totalPoints += attendee.points_earned || 0;
                 });
 
-                // Log the points update
-                // console.log(`Updating user points to: ${totalPoints}`);
+                // Update the LimitedUser record with the new points total
+                try {
+                    // Try to get the LimitedUser record to check if it exists
+                    let limitedUserExists = false;
+                    try {
+                        const limitedUser = await get.getOne(Collections.LIMITED_USERS, userId);
+                        limitedUserExists = !!limitedUser;
+                    } catch (e) {
+                        // Record doesn't exist
+                        limitedUserExists = false;
+                    }
 
-                // Update the user record with the new total points
-                await update.updateFields(Collections.USERS, userId, {
-                    points: totalPoints
-                });
+                    // Create or update the LimitedUser record
+                    if (limitedUserExists) {
+                        await update.updateFields(Collections.LIMITED_USERS, userId, {
+                            points: JSON.stringify(totalPoints),
+                            total_events_attended: JSON.stringify(userAttendance.totalItems)
+                        });
+                    } else {
+                        // Get user data to create LimitedUser record
+                        const userData = await get.getOne(Collections.USERS, userId);
+                        if (userData) {
+                            await update.create(Collections.LIMITED_USERS, {
+                                id: userId, // Use same ID as user record
+                                name: userData.name || 'Anonymous User',
+                                major: userData.major || '',
+                                points: JSON.stringify(totalPoints),
+                                total_events_attended: JSON.stringify(userAttendance.totalItems)
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to update LimitedUser record:', error);
+                }
 
                 // Ensure local data is in sync with backend
                 // First sync the new attendance record
                 await dataSync.syncCollection(Collections.EVENT_ATTENDEES);
 
-                // Then sync the updated user data to ensure points are correctly reflected locally
+                // Then sync the updated user and LimitedUser data
                 await dataSync.syncCollection(Collections.USERS);
+                await dataSync.syncCollection(Collections.LIMITED_USERS);
 
                 // Clear event code from local storage
                 await dataSync.clearEventCode();

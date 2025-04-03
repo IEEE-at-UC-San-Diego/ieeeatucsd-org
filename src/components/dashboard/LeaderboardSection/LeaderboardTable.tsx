@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Get } from '../../../scripts/pocketbase/Get';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
-import type { User } from '../../../schemas/pocketbase/schema';
+import type { User, LimitedUser } from '../../../schemas/pocketbase/schema';
+import { Collections } from '../../../schemas/pocketbase/schema';
 
 interface LeaderboardUser {
     id: string;
@@ -63,21 +64,44 @@ export default function LeaderboardTable() {
                 setLoading(true);
 
                 // Fetch users without sorting - we'll sort on client side
-                const response = await get.getList('limitedUser', 1, 100, '', '', {
+                const response = await get.getList(Collections.LIMITED_USERS, 1, 100, '', '', {
                     fields: ['id', 'name', 'points', 'avatar', 'major']
                 });
 
                 // First get the current user separately so we can include them even if they have 0 points
                 let currentUserData = null;
                 if (isAuthenticated && currentUserId) {
-                    currentUserData = response.items.find((user: Partial<User>) => user.id === currentUserId);
+                    currentUserData = response.items.find((user: Partial<LimitedUser>) => user.id === currentUserId);
                 }
 
+                // Parse points from JSON string and convert to number
+                const processedUsers = response.items.map((user: any) => {
+                    let pointsValue = 0;
+                    try {
+                        if (user.points) {
+                            // Parse the JSON string to get the points value
+                            const pointsData = JSON.parse(user.points);
+                            pointsValue = typeof pointsData === 'number' ? pointsData : 0;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing points data:', e);
+                    }
+
+                    return {
+                        id: user.id,
+                        name: user.name,
+                        major: user.major,
+                        avatar: user.avatar, // Include avatar if it exists
+                        points: user.points,
+                        parsedPoints: pointsValue
+                    };
+                });
+
                 // Filter and map to our leaderboard user format, and sort client-side
-                let leaderboardUsers = response.items
-                    .filter((user: Partial<User>) => user.points !== undefined && user.points !== null && user.points > 0)
-                    .sort((a: Partial<User>, b: Partial<User>) => (b.points || 0) - (a.points || 0))
-                    .map((user: Partial<User>, index: number) => {
+                let leaderboardUsers = processedUsers
+                    .filter(user => user.parsedPoints > 0)
+                    .sort((a, b) => (b.parsedPoints || 0) - (a.parsedPoints || 0))
+                    .map((user, index: number) => {
                         // Check if this is the current user
                         if (isAuthenticated && user.id === currentUserId) {
                             setCurrentUserRank(index + 1);
@@ -86,7 +110,7 @@ export default function LeaderboardTable() {
                         return {
                             id: user.id || '',
                             name: user.name || 'Anonymous User',
-                            points: user.points || 0,
+                            points: user.parsedPoints,
                             avatar: user.avatar,
                             major: user.major
                         };
@@ -94,16 +118,20 @@ export default function LeaderboardTable() {
 
                 // Include current user even if they have 0 points,
                 // but don't include in ranking if they have no points
-                if (isAuthenticated && currentUserData &&
-                    !leaderboardUsers.some(user => user.id === currentUserId)) {
-                    // User isn't already in the list (has 0 points)
-                    leaderboardUsers.push({
-                        id: currentUserData.id || '',
-                        name: currentUserData.name || 'Anonymous User',
-                        points: currentUserData.points || 0,
-                        avatar: currentUserData.avatar,
-                        major: currentUserData.major
-                    });
+                if (isAuthenticated && currentUserId) {
+                    // Find current user in processed users
+                    const currentUserProcessed = processedUsers.find(user => user.id === currentUserId);
+
+                    // If current user exists and isn't already in the leaderboard (has 0 points)
+                    if (currentUserProcessed && !leaderboardUsers.some(user => user.id === currentUserId)) {
+                        leaderboardUsers.push({
+                            id: currentUserProcessed.id || '',
+                            name: currentUserProcessed.name || 'Anonymous User',
+                            points: currentUserProcessed.parsedPoints || 0,
+                            avatar: currentUserProcessed.avatar,
+                            major: currentUserProcessed.major
+                        });
+                    }
                 }
 
                 setUsers(leaderboardUsers);
@@ -117,7 +145,7 @@ export default function LeaderboardTable() {
         };
 
         fetchLeaderboard();
-    }, [isAuthenticated, currentUserId]);
+    }, [get, isAuthenticated, currentUserId]);
 
     useEffect(() => {
         if (searchQuery.trim() === '') {

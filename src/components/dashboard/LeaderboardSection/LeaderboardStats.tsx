@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Get } from '../../../scripts/pocketbase/Get';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
+import { Collections } from '../../../schemas/pocketbase/schema';
+import type { LimitedUser } from '../../../schemas/pocketbase/schema';
 
 interface LeaderboardStats {
     totalUsers: number;
@@ -54,34 +56,50 @@ export default function LeaderboardStats() {
                 setLoading(true);
 
                 // Get all users without sorting - we'll sort on client side
-                const response = await get.getList('limitedUser', 1, 500, '', '', {
+                const response = await get.getList(Collections.LIMITED_USERS, 1, 500, '', '', {
                     fields: ['id', 'name', 'points']
                 });
 
+                // Parse points from JSON string and convert to number
+                const processedUsers = response.items.map((user: Partial<LimitedUser>) => {
+                    let pointsValue = 0;
+                    try {
+                        if (user.points) {
+                            // Parse the JSON string to get the points value
+                            const pointsData = JSON.parse(user.points);
+                            pointsValue = typeof pointsData === 'number' ? pointsData : 0;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing points data:', e);
+                    }
+
+                    return {
+                        id: user.id,
+                        name: user.name,
+                        parsedPoints: pointsValue
+                    };
+                });
+
                 // Filter out users with no points for the leaderboard stats
-                const leaderboardUsers = response.items
-                    .filter((user: any) =>
-                        user.points !== undefined &&
-                        user.points !== null &&
-                        user.points > 0
-                    )
+                const leaderboardUsers = processedUsers
+                    .filter(user => user.parsedPoints > 0)
                     // Sort by points descending
-                    .sort((a: any, b: any) => b.points - a.points);
+                    .sort((a, b) => b.parsedPoints - a.parsedPoints);
 
                 const totalUsers = leaderboardUsers.length;
-                const totalPoints = leaderboardUsers.reduce((sum: number, user: any) => sum + (user.points || 0), 0);
-                const topScore = leaderboardUsers.length > 0 ? leaderboardUsers[0].points : 0;
+                const totalPoints = leaderboardUsers.reduce((sum: number, user) => sum + user.parsedPoints, 0);
+                const topScore = leaderboardUsers.length > 0 ? leaderboardUsers[0].parsedPoints : 0;
 
                 // Find current user's points and rank - BUT don't filter by points > 0 for the current user
                 let yourPoints = 0;
                 let yourRank = null;
 
                 if (isAuthenticated && currentUserId) {
-                    // Look for the current user in ALL users, not just those with points > 0
-                    const currentUser = response.items.find((user: any) => user.id === currentUserId);
+                    // Look for the current user in ALL processed users, not just those with points > 0
+                    const currentUser = processedUsers.find(user => user.id === currentUserId);
 
                     if (currentUser) {
-                        yourPoints = currentUser.points || 0;
+                        yourPoints = currentUser.parsedPoints || 0;
 
                         // Only calculate rank if user has points
                         if (yourPoints > 0) {
@@ -119,7 +137,7 @@ export default function LeaderboardStats() {
         };
 
         fetchStats();
-    }, [isAuthenticated, currentUserId]);
+    }, [get, isAuthenticated, currentUserId]);
 
     if (loading) {
         return (

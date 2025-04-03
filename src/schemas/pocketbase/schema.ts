@@ -32,13 +32,25 @@ export interface User extends BaseRecord {
   major?: string;
   zelle_information?: string;
   last_login?: string;
-  points?: number; // Total points earned from events
+  // points?: number; // Total points earned from events (DEPRECATED)
   notification_preferences?: string; // JSON string of notification settings
   display_preferences?: string; // JSON string of display settings (theme, font size, etc.)
   accessibility_settings?: string; // JSON string of accessibility settings (color blind mode, reduced motion)
   resume?: string;
   signed_up?: boolean; // Whether the user has filled out the registration form.
   requested_email?: boolean; // Whether the user has requested an IEEE email address
+}
+
+/**
+ * Limited User Collection
+ * Represents limited user information for public display
+ * Collection ID: pbc_2802685943
+ */
+export interface LimitedUser extends BaseRecord {
+  name: string;
+  major: string;
+  points: string; // JSON string
+  total_events_attended: string; // JSON string
 }
 
 /**
@@ -96,7 +108,7 @@ export interface EventRequest extends BaseRecord {
   event_description: string;
   flyers_needed: boolean;
   flyer_type?: string[]; // digital_with_social, digital_no_social, physical_with_advertising, physical_no_advertising, newsletter, other
-  other_flyer_type?: string; 
+  other_flyer_type?: string;
   flyer_advertising_start_date?: string;
   flyer_additional_requests?: string;
   photography_needed: boolean;
@@ -217,6 +229,7 @@ export const Collections = {
   REIMBURSEMENTS: "reimbursement",
   RECEIPTS: "receipts",
   SPONSORS: "sponsors",
+  LIMITED_USERS: "limitedUser",
 };
 
 /**

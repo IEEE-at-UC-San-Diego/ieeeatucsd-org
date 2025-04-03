@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { Authentication } from "../../../scripts/pocketbase/Authentication";
 import { Collections } from "../../../schemas/pocketbase/schema";
-import type { Event, User } from "../../../schemas/pocketbase";
+import type { Event, User, LimitedUser } from "../../../schemas/pocketbase";
 import { Get } from "../../../scripts/pocketbase/Get";
 import type { EventAttendee } from "../../../schemas/pocketbase";
 import { Update } from "../../../scripts/pocketbase/Update";
 
-// Extended User interface with points property
+// Extended User interface with member_type property
 interface ExtendedUser extends User {
-    points?: number;
     member_type?: string;
 }
 
@@ -83,47 +82,44 @@ export function Stats() {
 
                 setEventsAttended(attendedEvents.totalItems);
 
-                // Get user points - either from the user record or calculate from attendees
+                // Calculate points from attendees
                 let totalPoints = 0;
 
                 // Calculate quarterly points
                 const quarterStartDate = getCurrentQuarterStartDate();
                 let pointsThisQuarter = 0;
 
-                // If user has points field, use that for total points
-                if (currentUser && currentUser.points !== undefined) {
-                    totalPoints = currentUser.points;
+                // Calculate both total and quarterly points from attendees
+                attendedEvents.items.forEach(attendee => {
+                    const points = attendee.points_earned || 0;
+                    totalPoints += points;
 
-                    // Still need to calculate quarterly points from attendees
-                    attendedEvents.items.forEach(attendee => {
-                        const checkinDate = new Date(attendee.time_checked_in);
-                        if (checkinDate >= quarterStartDate) {
-                            pointsThisQuarter += attendee.points_earned || 0;
-                        }
-                    });
-                } else {
-                    // Calculate both total and quarterly points from attendees
-                    attendedEvents.items.forEach(attendee => {
-                        const points = attendee.points_earned || 0;
-                        totalPoints += points;
+                    const checkinDate = new Date(attendee.time_checked_in);
+                    if (checkinDate >= quarterStartDate) {
+                        pointsThisQuarter += points;
+                    }
+                });
 
-                        const checkinDate = new Date(attendee.time_checked_in);
-                        if (checkinDate >= quarterStartDate) {
-                            pointsThisQuarter += points;
-                        }
-                    });
+                // Try to get the LimitedUser record to check if points match
+                try {
+                    const limitedUserRecord = await get.getOne(
+                        Collections.LIMITED_USERS,
+                        userId
+                    );
 
-                    // Update the user record with calculated points if needed
-                    if (currentUser) {
+                    if (limitedUserRecord && limitedUserRecord.points) {
                         try {
-                            const update = Update.getInstance();
-                            await update.updateFields(Collections.USERS, currentUser.id, {
-                                points: totalPoints
-                            });
-                        } catch (error) {
-                            console.error("Error updating user points:", error);
+                            // Parse the points JSON string
+                            const parsedPoints = JSON.parse(limitedUserRecord.points);
+                            if (parsedPoints !== totalPoints) {
+                                console.log(`Points mismatch: LimitedUser has ${parsedPoints}, calculated ${totalPoints}`);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing points from LimitedUser:', e);
                         }
                     }
+                } catch (e) {
+                    // LimitedUser record might not exist yet, that's okay
                 }
 
                 setPointsEarned(totalPoints);
