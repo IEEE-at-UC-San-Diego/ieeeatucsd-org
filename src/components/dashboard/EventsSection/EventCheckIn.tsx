@@ -180,7 +180,7 @@ const EventCheckIn = () => {
                     <div>
                         <strong>Event with food found!</strong>
                         <p className="text-sm mt-1">{event.event_name}</p>
-                        <p className="text-xs mt-1">Please select your food preference</p>
+                        <p className="text-xs mt-1">Please select the food you ate (or will eat) at the event!</p>
                     </div>,
                     { duration: 5000 }
                 );
@@ -456,12 +456,12 @@ const EventCheckIn = () => {
                     <div className="badge badge-primary mb-4">
                         {currentCheckInEvent?.points_to_reward} points
                     </div>
-                    <p className="mb-4">This event has food! Please let us know what you'd like to eat:</p>
+                    <p className="mb-4">This event has food! Please let us know what you ate (or will eat):</p>
                     <form onSubmit={handleSubmit}>
                         <div className="form-control">
                             <input
                                 type="text"
-                                placeholder="Enter your food preference"
+                                placeholder="Enter your ference"
                                 className="input input-bordered w-full"
                                 value={foodInput}
                                 onChange={(e) => setFoodInput(e.target.value)}
