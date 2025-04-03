@@ -194,7 +194,7 @@ export function Stats() {
             </div>
             <div className="stats shadow-lg bg-base-100 rounded-2xl border border-base-200 hover:border-secondary transition-all duration-300 hover:-translate-y-1 transform">
                 <div className="stat">
-                    <div className="stat-title font-medium opacity-80">Loyalty Points</div>
+                    <div className="stat-title font-medium opacity-80">Points</div>
                     <div className="stat-value text-secondary">{loyaltyPoints}</div>
                     <div className="stat-desc flex flex-col items-start gap-1 mt-1">
                         <div className="flex items-center justify-between w-full">
