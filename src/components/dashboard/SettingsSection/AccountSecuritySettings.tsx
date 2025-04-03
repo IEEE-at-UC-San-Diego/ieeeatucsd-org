@@ -59,16 +59,7 @@ export default function AccountSecuritySettings({
         checkAuth();
     }, []);
 
-    const handleLogout = async () => {
-        try {
-            await logger.send('logout', 'auth', 'User manually logged out from settings page');
-            await auth.logout();
-            window.location.href = '/';
-        } catch (error) {
-            console.error('Error during logout:', error);
-            toast.error('Failed to log out. Please try again.');
-        }
-    };
+    // No logout functions needed here as logout is handled in the dashboard menu
 
     const detectBrowser = (userAgent: string): string => {
         if (userAgent.indexOf('Chrome') > -1) return 'Chrome';
@@ -179,16 +170,12 @@ export default function AccountSecuritySettings({
                     <h4 className="font-semibold text-lg mb-2">Account Actions</h4>
 
                     <div className="space-y-4">
-                        <button
-                            onClick={handleLogout}
-                            className="btn btn-error btn-outline w-full md:w-auto"
-                        >
-                            Sign Out
-                        </button>
-
                         <p className="text-sm text-warning p-3 bg-warning bg-opacity-10 rounded-lg">
                             If you need to delete your account or have other account-related issues,
                             please contact an IEEE UCSD administrator.
+                        </p>
+                        <p className="text-sm text-info p-3 bg-info bg-opacity-10 rounded-lg">
+                            To log out of your account, use the Logout option in the dashboard menu.
                         </p>
                     </div>
                 </div>
