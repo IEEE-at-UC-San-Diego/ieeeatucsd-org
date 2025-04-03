@@ -366,7 +366,7 @@ export default function ReimbursementManagementPortal() {
     };
 
     // Update the updateStatus function
-    const updateStatus = async (id: string, status: 'submitted' | 'under_review' | 'approved' | 'rejected' | 'in_progress' | 'paid') => {
+    const updateStatus = async (id: string, status: 'submitted' | 'under_review' | 'approved' | 'rejected' | 'in_progress' | 'paid', showToast: boolean = true) => {
         try {
             setLoadingStatus(true);
             const update = Update.getInstance();
@@ -383,7 +383,9 @@ export default function ReimbursementManagementPortal() {
                 to: status
             });
 
-            toast.success(`Reimbursement ${status} successfully`);
+            if (showToast) {
+                toast.success(`Reimbursement ${status} successfully`);
+            }
             await refreshAuditData(id);
         } catch (error) {
             console.error('Error updating status:', error);
@@ -612,8 +614,8 @@ export default function ReimbursementManagementPortal() {
         try {
             setLoadingStatus(true);
 
-            // First update the status
-            await updateStatus(rejectingId, 'rejected');
+            // First update the status (passing false to suppress the toast message)
+            await updateStatus(rejectingId, 'rejected', false);
 
             // Then add the rejection reason as a public note
             const auth = Authentication.getInstance();
