@@ -143,7 +143,7 @@ const EventForm = memo(({
                             type="number"
                             name="editEventPoints"
                             className="input input-bordered"
-                            value={event?.points_to_reward || 0}
+                            value={event?.points_to_reward || ""}
                             onChange={(e) => handleChange('points_to_reward', Number(e.target.value))}
                             min="0"
                             required
@@ -584,7 +584,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         event_code: "",
         location: "",
         files: [],
-        points_to_reward: 0,
+        points_to_reward: null as unknown as number,
         start_date: "",
         end_date: "",
         published: false,
@@ -677,7 +677,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                     event_code: eventData.event_code || '',
                     location: eventData.location || '',
                     files: eventData.files || [],
-                    points_to_reward: eventData.points_to_reward || 0,
+                    points_to_reward: eventData.points_to_reward || null as unknown as number,
                     start_date: eventData.start_date || '',
                     end_date: eventData.end_date || '',
                     published: eventData.published || false,
@@ -723,7 +723,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                     event_code: '',
                     location: '',
                     files: [],
-                    points_to_reward: 0,
+                    points_to_reward: null as unknown as number,
                     start_date: Get.formatLocalDate(now, false),
                     end_date: Get.formatLocalDate(oneHourLater, false),
                     published: false,
@@ -796,7 +796,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             event_code: "",
             location: "",
             files: [],
-            points_to_reward: 0,
+            points_to_reward: null as unknown as number,
             start_date: "",
             end_date: "",
             published: false,
@@ -835,7 +835,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             event_code: "",
             location: "",
             files: [],
-            points_to_reward: 0,
+            points_to_reward: null as unknown as number,
             start_date: "",
             end_date: "",
             published: false,
@@ -885,7 +885,7 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 event_code: formData.get("editEventCode") as string,
                 location: formData.get("editEventLocation") as string,
                 files: event.files || [],
-                points_to_reward: parseInt(formData.get("editEventPoints") as string) || 0,
+                points_to_reward: formData.get("editEventPoints") ? parseInt(formData.get("editEventPoints") as string) : null as unknown as number,
                 start_date: formData.get("editEventStartDate") as string,
                 end_date: formData.get("editEventEndDate") as string,
                 published: formData.get("editEventPublished") === "on",
