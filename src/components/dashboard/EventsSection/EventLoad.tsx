@@ -146,7 +146,7 @@ const EventLoad = () => {
                     try {
                         const get = Get.getInstance();
                         const attendees = await get.getList<EventAttendee>(
-                            "event_attendees",
+                            Collections.EVENT_ATTENDEES,
                             1,
                             1,
                             `user="${currentUser.id}" && event="${event.id}"`
@@ -154,12 +154,38 @@ const EventLoad = () => {
 
                         const hasAttendedEvent = attendees.totalItems > 0;
 
+                        // Store the attendance status in the window object with the event
+                        const eventDataId = `event_${event.id}`;
+                        if (window[eventDataId]) {
+                            window[eventDataId].hasAttended = hasAttendedEvent;
+                        }
+
                         // Update the card UI based on attendance status
                         const cardElement = document.getElementById(`event-card-${event.id}`);
-                        if (cardElement && hasAttendedEvent) {
-                            const attendedBadge = cardElement.querySelector('.attended-badge');
-                            if (attendedBadge) {
-                                (attendedBadge as HTMLElement).style.display = 'flex';
+                        if (cardElement) {
+                            const attendedBadge = document.getElementById(`attendance-badge-${event.id}`);
+                            if (attendedBadge && hasAttendedEvent) {
+                                attendedBadge.classList.remove('badge-ghost');
+                                attendedBadge.classList.add('badge-success');
+
+                                // Update the icon and text
+                                const icon = attendedBadge.querySelector('svg');
+                                if (icon) {
+                                    icon.setAttribute('icon', 'heroicons:check-circle');
+                                }
+
+                                // Update the text content
+                                attendedBadge.textContent = '';
+
+                                // Recreate the icon
+                                const iconElement = document.createElement('span');
+                                iconElement.className = 'h-3 w-3';
+                                iconElement.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><path fill="currentColor" d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10zm-.997-6l7.07-7.071l-1.414-1.414l-5.656 5.657l-2.829-2.829l-1.414 1.414L11.003 16z"/></svg>';
+                                attendedBadge.appendChild(iconElement);
+
+                                // Add the text
+                                const textNode = document.createTextNode(' Attended');
+                                attendedBadge.appendChild(textNode);
                             }
                         }
                     } catch (error) {
@@ -178,7 +204,7 @@ const EventLoad = () => {
             const isPastEvent = endDate < now;
 
             return (
-                <div key={event.id} className="card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden">
+                <div id={`event-card-${event.id}`} key={event.id} className="card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden">
                     <div className="card-body p-3 sm:p-4">
                         <div className="flex flex-col h-full">
                             <div className="flex flex-col gap-2">
@@ -217,7 +243,7 @@ const EventLoad = () => {
                                     </button>
                                 )}
                                 {isPastEvent && (
-                                    <div className={`badge ${hasAttended ? 'badge-success' : 'badge-ghost'} text-xs gap-1`}>
+                                    <div id={`attendance-badge-${event.id}`} className={`badge ${hasAttended ? 'badge-success' : 'badge-ghost'} text-xs gap-1`}>
                                         <Icon
                                             icon={hasAttended ? "heroicons:check-circle" : "heroicons:x-circle"}
                                             className="h-3 w-3"
