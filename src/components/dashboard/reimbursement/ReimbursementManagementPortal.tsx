@@ -483,8 +483,7 @@ export default function ReimbursementManagementPortal() {
                 }
             }));
 
-            setSelectedReceipt(receipt);
-            setShowReceiptModal(true);
+            // Don't show the receipt modal when auditing
             toast.success('Receipt audited successfully');
         } catch (error) {
             console.error('Error auditing receipt:', error);
