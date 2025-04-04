@@ -70,6 +70,12 @@ interface ASFundingSectionProps {
 }
 
 const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataChange }) => {
+    // Check initial budget status
+    React.useEffect(() => {
+        if (formData.invoiceData?.total) {
+            checkBudgetLimit(formData.invoiceData.total);
+        }
+    }, [formData.expected_attendance]);
     const [invoiceFiles, setInvoiceFiles] = useState<File[]>(formData.invoice_files || []);
     const [jsonInput, setJsonInput] = useState<string>('');
     const [jsonError, setJsonError] = useState<string>('');
@@ -122,6 +128,19 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
     };
 
     // Validate and apply JSON
+    // Check budget limits and show warning if exceeded
+    const checkBudgetLimit = (total: number) => {
+        const maxBudget = Math.min(formData.expected_attendance * 10, 5000);
+        if (total > maxBudget) {
+            toast.error(`Total amount ($${total.toFixed(2)}) exceeds maximum funding of $${maxBudget.toFixed(2)} for ${formData.expected_attendance} attendees.`, {
+                duration: 4000,
+                position: 'top-center'
+            });
+            return true;
+        }
+        return false;
+    };
+
     const validateAndApplyJson = () => {
         try {
             if (!jsonInput.trim()) {
@@ -181,6 +200,9 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
                 total: data.total
             }, null, 2);
 
+            // Check budget limits and show toast if needed
+            checkBudgetLimit(data.total);
+
             // Apply the JSON data to the form
             onDataChange({
                 invoiceData: data,
@@ -219,8 +241,8 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
 
     // Handle invoice data change from the invoice builder
     const handleInvoiceDataChange = (data: InvoiceData) => {
-        // Calculate if budget exceeds maximum allowed
-        const maxBudget = Math.min(formData.expected_attendance * 10, 5000);
+        // Check budget limits and show toast if needed
+        checkBudgetLimit(data.total);
 
         onDataChange({
             invoiceData: data,
