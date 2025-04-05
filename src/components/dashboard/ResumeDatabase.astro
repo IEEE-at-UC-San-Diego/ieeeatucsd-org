@@ -1,0 +1,187 @@
+---
+import ResumeList from "./ResumeDatabase/ResumeList";
+import ResumeFilters from "./ResumeDatabase/ResumeFilters";
+import ResumeSearch from "./ResumeDatabase/ResumeSearch";
+import ResumeDetail from "./ResumeDatabase/ResumeDetail";
+---
+
+<div class="space-y-6">
+    <div
+        class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+    >
+        <div>
+            <h2 class="text-2xl font-bold">Resume Database</h2>
+            <p class="text-base-content/70">
+                Search and filter student resumes for recruitment opportunities
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="refreshResumesBtn" class="btn btn-sm btn-outline">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="lucide lucide-refresh-cw"
+                >
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"
+                    ></path>
+                    <path d="M21 3v5h-5"></path>
+                    <path
+                        d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"
+                    ></path>
+                    <path d="M3 21v-5h5"></path>
+                </svg>
+                <span>Refresh</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Resume Database Interface -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Filters Panel -->
+        <div class="lg:col-span-1">
+            <div class="card bg-base-100 shadow-md">
+                <div class="card-body">
+                    <h3 class="card-title text-lg">Filters</h3>
+                    <ResumeFilters client:load />
+                </div>
+            </div>
+        </div>
+
+        <!-- Resume List and Detail View -->
+        <div class="lg:col-span-3 space-y-6">
+            <!-- Search Bar -->
+            <div class="card bg-base-100 shadow-md">
+                <div class="card-body">
+                    <ResumeSearch client:load />
+                </div>
+            </div>
+
+            <!-- Resume List -->
+            <div class="card bg-base-100 shadow-md">
+                <div class="card-body">
+                    <h3 class="card-title text-lg">Student Resumes</h3>
+                    <ResumeList client:load />
+                </div>
+            </div>
+
+            <!-- Resume Detail View (initially hidden, shown when a resume is selected) -->
+            <div
+                id="resumeDetailContainer"
+                class="card bg-base-100 shadow-md hidden"
+            >
+                <div class="card-body">
+                    <div class="flex justify-between items-center">
+                        <h3 class="card-title text-lg">Resume Details</h3>
+                        <button
+                            id="closeResumeDetail"
+                            class="btn btn-sm btn-ghost"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                class="lucide lucide-x"
+                            >
+                                <path d="M18 6 6 18"></path>
+                                <path d="m6 6 12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <ResumeDetail client:load />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    import { Authentication } from "../../scripts/pocketbase/Authentication";
+    import { Get } from "../../scripts/pocketbase/Get";
+    import { Realtime } from "../../scripts/pocketbase/Realtime";
+    import { Collections } from "../../schemas/pocketbase/schema";
+
+    // Initialize services
+    const auth = Authentication.getInstance();
+    const get = Get.getInstance();
+    const realtime = Realtime.getInstance();
+
+    // Initialize the resume database
+    async function initResumeDatabase() {
+        if (!auth.isAuthenticated()) {
+            console.error("User not authenticated");
+            return;
+        }
+
+        try {
+            // Set up event listeners
+            document
+                .getElementById("refreshResumesBtn")
+                ?.addEventListener("click", () => {
+                    // Dispatch custom event to notify components to refresh
+                    window.dispatchEvent(
+                        new CustomEvent("resumeDatabaseRefresh")
+                    );
+                });
+
+            // Close resume detail view
+            document
+                .getElementById("closeResumeDetail")
+                ?.addEventListener("click", () => {
+                    document
+                        .getElementById("resumeDetailContainer")
+                        ?.classList.add("hidden");
+                });
+
+            // Set up realtime updates
+            setupRealtimeUpdates();
+        } catch (error) {
+            console.error("Error initializing resume database:", error);
+        }
+    }
+
+    // Set up realtime updates
+    function setupRealtimeUpdates() {
+        // Subscribe to users collection for resume updates
+        realtime.subscribeToCollection(Collections.USERS, (data) => {
+            console.log("User data updated:", data);
+            // Dispatch custom event to notify components to refresh
+            window.dispatchEvent(new CustomEvent("resumeDatabaseRefresh"));
+        });
+    }
+
+    // Initialize when document is ready
+    document.addEventListener("DOMContentLoaded", initResumeDatabase);
+
+    // Custom event listener for resume selection
+    window.addEventListener("resumeSelected", (e) => {
+        const customEvent = e as CustomEvent;
+        const resumeId = customEvent.detail.resumeId;
+
+        if (resumeId) {
+            // Show the resume detail container
+            document
+                .getElementById("resumeDetailContainer")
+                ?.classList.remove("hidden");
+
+            // Dispatch event to the ResumeDetail component
+            window.dispatchEvent(
+                new CustomEvent("loadResumeDetail", {
+                    detail: { resumeId },
+                })
+            );
+        }
+    });
+</script>

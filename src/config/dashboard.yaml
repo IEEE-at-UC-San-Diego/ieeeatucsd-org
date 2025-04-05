@@ -65,19 +65,19 @@ sections:
     class: "text-info hover:text-info-focus"
 
   # Sponsor Menu
-  sponsorDashboard:
-    title: "Sponsor Dashboard"
-    icon: "heroicons:briefcase"
-    role: "sponsor"
-    component: "SponsorDashboard"
-    class: "text-warning hover:text-warning-focus"
-
   sponsorAnalytics:
-    title: "Analytics"
+    title: "Event Analytics"
     icon: "heroicons:chart-bar"
     role: "sponsor"
-    component: "SponsorAnalytics"
-    class: "text-warning hover:text-warning-focus"
+    component: "SponsorAnalyticsSection"
+    class: "text-primary hover:text-primary-focus"
+
+  resumeDatabase:
+    title: "Resume Database"
+    icon: "heroicons:document-text"
+    role: "sponsor"
+    component: "ResumeDatabase"
+    class: "text-secondary hover:text-secondary-focus"
 
   # Administrator Menu
   adminDashboard:
@@ -126,7 +126,7 @@ categories:
 
   sponsor:
     title: "Sponsor Portal"
-    sections: ["sponsorDashboard", "sponsorAnalytics"]
+    sections: ["sponsorAnalytics", "resumeDatabase"]
     role: "sponsor"
 
   account:
