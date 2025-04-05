@@ -3,6 +3,12 @@ import yaml from "js-yaml";
 import { Icon } from "astro-icon/components";
 import fs from "node:fs";
 import path from "node:path";
+import { Authentication } from "../scripts/pocketbase/Authentication";
+import { Get } from "../scripts/pocketbase/Get";
+import { SendLog } from "../scripts/pocketbase/SendLog";
+import { hasAccess, type OfficerStatus } from "../utils/roleAccess";
+import { OfficerTypes } from "../schemas/pocketbase/schema";
+import { initAuthSync } from "../scripts/database/initAuthSync";
 import ToastProvider from "../components/dashboard/universal/ToastProvider";
 import FirstTimeLoginManager from "../components/dashboard/universal/FirstTimeLoginManager";
 
@@ -51,21 +57,11 @@ const components = Object.fromEntries(
             logtoApiEndpoint={logtoApiEndpoint}
         />
 
-        <div class="flex h-screen overflow-hidden">
+        <div class="flex h-screen">
             <!-- Sidebar -->
             <aside
-                id="dashboardSidebar"
-                class="bg-base-100 w-80 flex flex-col shadow-xl border-r border-base-200 transition-all duration-300 fixed lg:static h-full z-50 transform -translate-x-full lg:translate-x-0 overflow-y-auto"
+                class="bg-base-100 w-80 flex flex-col shadow-xl border-r border-base-200 transition-all duration-300 fixed xl:relative h-full z-50 -translate-x-full xl:translate-x-0"
             >
-                <!-- Add close button for mobile -->
-                <button
-                    id="closeSidebarBtn"
-                    class="absolute top-4 right-4 btn btn-sm btn-ghost lg:hidden"
-                    aria-label="Close menu"
-                >
-                    <Icon name="heroicons:x-mark" class="h-5 w-5" />
-                </button>
-
                 <!-- Logo -->
                 <div class="p-6 border-b border-base-200">
                     <div class="flex items-center justify-center">
@@ -158,127 +154,126 @@ const components = Object.fromEntries(
                 <nav
                     class="flex-1 overflow-y-auto scrollbar-hide py-6 flex flex-col"
                 >
-                    <!-- Loading Skeleton -->
-                    <div id="menuLoadingSkeleton">
-                        {
-                            [1, 2, 3].map((group) => (
-                                <>
-                                    <li class="menu-title font-medium opacity-70">
-                                        <div class="h-4 w-24 bg-base-300 animate-pulse rounded" />
-                                    </li>
-                                    {[1, 2, 3].map((item) => (
-                                        <li>
-                                            <div class="flex items-center gap-4 py-2">
-                                                <div class="h-5 w-5 bg-base-300 animate-pulse rounded" />
-                                                <div class="h-4 w-32 bg-base-300 animate-pulse rounded" />
-                                            </div>
-                                        </li>
-                                    ))}
-                                </>
-                            ))
-                        }
-                    </div>
-
-                    <!-- Actual Menu -->
-                    <div id="actualMenu" class="hidden">
-                        {
-                            Object.entries(dashboardConfig.categories).map(
-                                ([categoryKey, category]: [string, any]) => (
+                    <ul
+                        class="menu gap-2 px-4 text-base-content/80 flex-1 flex flex-col"
+                    >
+                        <!-- Loading Skeleton -->
+                        <div id="menuLoadingSkeleton">
+                            {
+                                [1, 2, 3].map((group) => (
                                     <>
-                                        <li
-                                            class={`menu-title font-medium opacity-70 ${
-                                                category.role &&
-                                                category.role !== "none"
-                                                    ? "hidden"
-                                                    : ""
-                                            }`}
-                                            data-role-required={
-                                                category.role || "none"
-                                            }
-                                        >
-                                            <span>{category.title}</span>
+                                        <li class="menu-title font-medium opacity-70">
+                                            <div class="h-4 w-24 bg-base-300 animate-pulse rounded" />
                                         </li>
-                                        {category.sections.map(
-                                            (sectionKey: string) => {
-                                                const section =
-                                                    dashboardConfig.sections[
-                                                        sectionKey
-                                                    ];
-                                                return (
-                                                    <li
-                                                        class={
-                                                            section.role &&
-                                                            section.role !==
-                                                                "none"
-                                                                ? "hidden"
-                                                                : ""
-                                                        }
-                                                        data-role-required={
-                                                            section.role
-                                                        }
-                                                    >
-                                                        <button
-                                                            class={`dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 ${section.class || ""}`}
-                                                            data-section={
-                                                                sectionKey
+                                        {[1, 2, 3].map((item) => (
+                                            <li>
+                                                <div class="flex items-center gap-4 py-2">
+                                                    <div class="h-5 w-5 bg-base-300 animate-pulse rounded" />
+                                                    <div class="h-4 w-32 bg-base-300 animate-pulse rounded" />
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </>
+                                ))
+                            }
+                        </div>
+
+                        <!-- Actual Menu -->
+                        <div id="actualMenu" class="hidden">
+                            {
+                                Object.entries(dashboardConfig.categories).map(
+                                    ([categoryKey, category]: [
+                                        string,
+                                        any,
+                                    ]) => (
+                                        <>
+                                            <li
+                                                class={`menu-title font-medium opacity-70 ${
+                                                    category.role &&
+                                                    category.role !== "none"
+                                                        ? "hidden"
+                                                        : ""
+                                                }`}
+                                                data-role-required={
+                                                    category.role || "none"
+                                                }
+                                            >
+                                                <span>{category.title}</span>
+                                            </li>
+                                            {category.sections.map(
+                                                (sectionKey: string) => {
+                                                    const section =
+                                                        dashboardConfig
+                                                            .sections[
+                                                            sectionKey
+                                                        ];
+                                                    return (
+                                                        <li
+                                                            class={
+                                                                section.role &&
+                                                                section.role !==
+                                                                    "none"
+                                                                    ? "hidden"
+                                                                    : ""
+                                                            }
+                                                            data-role-required={
+                                                                section.role
                                                             }
                                                         >
-                                                            <Icon
-                                                                name={
-                                                                    section.icon
+                                                            <button
+                                                                class={`dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 ${section.class || ""}`}
+                                                                data-section={
+                                                                    sectionKey
                                                                 }
-                                                                class="h-5 w-5"
-                                                            />
-                                                            {section.title}
-                                                        </button>
-                                                    </li>
-                                                );
-                                            }
-                                        )}
-                                    </>
+                                                            >
+                                                                <Icon
+                                                                    name={
+                                                                        section.icon
+                                                                    }
+                                                                    class="h-5 w-5"
+                                                                />
+                                                                {section.title}
+                                                            </button>
+                                                        </li>
+                                                    );
+                                                }
+                                            )}
+                                        </>
+                                    )
                                 )
-                            )
-                        }
+                            }
 
-                        {/* Add Logout Button to the bottom of the menu */}
-                        <li class="mt-auto">
-                            <button
-                                class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 text-error"
-                                data-section="logout"
-                            >
-                                <Icon
-                                    name="heroicons:arrow-left-on-rectangle"
-                                    class="h-5 w-5"
-                                />
-                                Logout
-                            </button>
-                        </li>
-                    </div>
+                            {/* Add Logout Button to the bottom of the menu */}
+                            <li class="mt-auto">
+                                <button
+                                    class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 text-error"
+                                    data-section="logout"
+                                >
+                                    <Icon
+                                        name="heroicons:arrow-left-on-rectangle"
+                                        class="h-5 w-5"
+                                    />
+                                    Logout
+                                </button>
+                            </li>
+                        </div>
+                    </ul>
                 </nav>
             </aside>
 
-            <!-- Sidebar Overlay - Only visible on mobile when sidebar is open -->
-            <div
-                id="sidebarOverlay"
-                class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"
-                aria-hidden="true"
-            >
-            </div>
-
             <!-- Main Content -->
             <main
-                class="flex-1 overflow-x-hidden overflow-y-auto bg-base-200 w-full"
+                class="flex-1 overflow-x-hidden overflow-y-auto bg-base-200 w-full xl:w-[calc(100%-20rem)]"
             >
                 <!-- Mobile Header -->
                 <header
-                    class="bg-base-100 p-4 shadow-md lg:hidden sticky top-0 z-40"
+                    class="bg-base-100 p-4 shadow-md xl:hidden sticky top-0 z-40"
                 >
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-2">
                             <button
                                 id="mobileSidebarToggle"
                                 class="btn btn-square btn-ghost"
-                                aria-label="Open menu"
                             >
                                 <Icon name="heroicons:bars-3" class="h-6 w-6" />
                             </button>
@@ -435,418 +430,50 @@ const components = Object.fromEntries(
             const userName = document.getElementById("userName");
             const userRole = document.getElementById("userRole");
 
-            // Centralized sidebar management
-            class SidebarManager {
-                private sidebar: HTMLElement | null = null;
-                private overlay: HTMLElement | null = null;
-                private toggleBtn: HTMLElement | null = null;
-                private closeBtn: HTMLElement | null = null;
-                private breakpoint = 1024; // lg breakpoint
-                private isInitialized = false;
-
-                constructor() {
-                    // Initialize elements
-                    this.sidebar = document.getElementById("dashboardSidebar");
-                    this.overlay = document.getElementById("sidebarOverlay");
-                    this.toggleBtn = document.getElementById(
-                        "mobileSidebarToggle"
-                    );
-                    this.closeBtn = document.getElementById("closeSidebarBtn");
-
-                    if (!this.sidebar || !this.overlay) {
-                        console.error("Sidebar elements not found");
-                        return;
-                    }
-
-                    this.setupEventListeners();
-                    this.checkViewportSize();
-                    this.isInitialized = true;
-                }
-
-                private setupEventListeners(): void {
-                    // Toggle button (mobile only)
-                    this.toggleBtn?.addEventListener("click", () =>
-                        this.openSidebar()
-                    );
-
-                    // Close button (mobile only)
-                    this.closeBtn?.addEventListener("click", () =>
-                        this.closeSidebar()
-                    );
-
-                    // Overlay click to close
-                    this.overlay?.addEventListener("click", () =>
-                        this.closeSidebar()
-                    );
-
-                    // ESC key to close
-                    document.addEventListener("keydown", (e) => {
-                        if (e.key === "Escape") this.closeSidebar();
-                    });
-
-                    // Handle resize events with debounce
-                    let resizeTimer: ReturnType<typeof setTimeout>;
-                    window.addEventListener("resize", () => {
-                        clearTimeout(resizeTimer);
-                        resizeTimer = setTimeout(() => {
-                            this.checkViewportSize();
-                        }, 100);
-                    });
-
-                    // Handle navigation item clicks
+            // Function to update section visibility based on role
+            const updateSectionVisibility = (officerStatus: OfficerStatus) => {
+                // Special handling for sponsor role
+                if (officerStatus === "sponsor") {
+                    // Hide all sections first
                     document
-                        .querySelectorAll(".dashboard-nav-btn")
-                        .forEach((btn) => {
-                            btn.addEventListener("click", (e) => {
-                                const target = e.currentTarget as HTMLElement;
-                                const sectionKey =
-                                    target.getAttribute("data-section");
-
-                                // Skip for logout button
-                                if (sectionKey === "logout") return;
-
-                                // Close sidebar on mobile when navigation happens
-                                if (window.innerWidth < this.breakpoint) {
-                                    this.closeSidebar();
-                                }
-                            });
+                        .querySelectorAll("[data-role-required]")
+                        .forEach((element) => {
+                            element.classList.add("hidden");
                         });
+
+                    // Only show sponsor sections
+                    document
+                        .querySelectorAll('[data-role-required="sponsor"]')
+                        .forEach((element) => {
+                            element.classList.remove("hidden");
+                        });
+                    return;
                 }
 
-                private checkViewportSize(): void {
-                    if (!this.sidebar) return;
+                // For non-sponsor roles, handle normally
+                document
+                    .querySelectorAll("[data-role-required]")
+                    .forEach((element) => {
+                        const requiredRole = element.getAttribute(
+                            "data-role-required"
+                        ) as OfficerStatus;
 
-                    const isMobile = window.innerWidth < this.breakpoint;
-
-                    if (isMobile) {
-                        // On mobile, ensure sidebar starts closed
-                        this.closeSidebar();
-                    } else {
-                        // On desktop, ensure sidebar is always visible
-                        this.sidebar.classList.remove("-translate-x-full");
-                        this.sidebar.classList.add("translate-x-0");
-                        document.body.classList.remove("overflow-hidden");
-                        this.hideOverlay();
-                    }
-                }
-
-                private openSidebar(): void {
-                    if (!this.sidebar) return;
-
-                    // Show sidebar
-                    this.sidebar.classList.remove("-translate-x-full");
-                    this.sidebar.classList.add("translate-x-0");
-
-                    // Prevent body scrolling
-                    document.body.classList.add("overflow-hidden");
-
-                    // Show overlay
-                    this.showOverlay();
-                }
-
-                private closeSidebar(): void {
-                    if (!this.sidebar || window.innerWidth >= this.breakpoint)
-                        return;
-
-                    // Hide sidebar
-                    this.sidebar.classList.add("-translate-x-full");
-                    this.sidebar.classList.remove("translate-x-0");
-
-                    // Restore body scrolling
-                    document.body.classList.remove("overflow-hidden");
-
-                    // Hide overlay
-                    this.hideOverlay();
-                }
-
-                private showOverlay(): void {
-                    this.overlay?.classList.remove("hidden");
-                }
-
-                private hideOverlay(): void {
-                    this.overlay?.classList.add("hidden");
-                }
-
-                // Public API
-                public toggle(): void {
-                    if (!this.sidebar) return;
-
-                    if (this.sidebar.classList.contains("-translate-x-full")) {
-                        this.openSidebar();
-                    } else {
-                        this.closeSidebar();
-                    }
-                }
-            }
-
-            // Handle navigation
-            const handleNavigation = () => {
-                const navButtons =
-                    document.querySelectorAll(".dashboard-nav-btn");
-                const sections =
-                    document.querySelectorAll(".dashboard-section");
-                const mainContentDiv = document.getElementById("mainContent");
-
-                // Ensure mainContent is visible
-                if (mainContentDiv) {
-                    mainContentDiv.classList.remove("hidden");
-                }
-
-                navButtons.forEach((button) => {
-                    button.addEventListener("click", () => {
-                        const sectionKey = button.getAttribute("data-section");
-
-                        // Handle logout button
-                        if (sectionKey === "logout") {
-                            showLogoutConfirmation();
+                        // Skip elements that don't have a role requirement
+                        if (!requiredRole || requiredRole === "none") {
+                            element.classList.remove("hidden");
                             return;
                         }
 
-                        // Remove active class from all buttons
-                        navButtons.forEach((btn) => {
-                            btn.classList.remove("active", "bg-base-200");
-                        });
+                        // Check if user has permission for this role
+                        const hasPermission = hasAccess(
+                            officerStatus,
+                            requiredRole
+                        );
 
-                        // Add active class to clicked button
-                        button.classList.add("active", "bg-base-200");
-
-                        // Hide all sections
-                        sections.forEach((section) => {
-                            section.classList.add("hidden");
-                        });
-
-                        // Show selected section
-                        const sectionId = `${sectionKey}Section`;
-                        const targetSection =
-                            document.getElementById(sectionId);
-                        if (targetSection) {
-                            targetSection.classList.remove("hidden");
-                        }
+                        // Only show elements if user has permission
+                        element.classList.toggle("hidden", !hasPermission);
                     });
-                });
             };
-
-            // Function to initialize the page
-            const initializePage = async () => {
-                try {
-                    // Define a temporary toast function that does nothing for unauthenticated users
-                    const originalToast = window.toast;
-
-                    // Check if user is authenticated
-                    if (!auth.isAuthenticated()) {
-                        // Temporarily override toast function to prevent notifications for unauthenticated users
-                        window.toast = () => {};
-
-                        // Initialize auth sync for IndexedDB (but toast notifications will be suppressed)
-                        await initAuthSync();
-
-                        // Restore original toast function
-                        window.toast = originalToast;
-
-                        // console.log("User not authenticated");
-                        if (pageLoadingState)
-                            pageLoadingState.classList.add("hidden");
-                        if (notAuthenticatedState)
-                            notAuthenticatedState.classList.remove("hidden");
-                        return;
-                    }
-
-                    // Initialize auth sync for IndexedDB (for authenticated users)
-                    await initAuthSync();
-
-                    if (pageLoadingState)
-                        pageLoadingState.classList.remove("hidden");
-                    if (pageErrorState) pageErrorState.classList.add("hidden");
-                    if (notAuthenticatedState)
-                        notAuthenticatedState.classList.add("hidden");
-
-                    // Show loading states
-                    const userProfileSkeleton = document.getElementById(
-                        "userProfileSkeleton"
-                    );
-                    const userProfileSignedOut = document.getElementById(
-                        "userProfileSignedOut"
-                    );
-                    const userProfileSummary =
-                        document.getElementById("userProfileSummary");
-                    const menuLoadingSkeleton = document.getElementById(
-                        "menuLoadingSkeleton"
-                    );
-                    const actualMenu = document.getElementById("actualMenu");
-
-                    if (userProfileSkeleton)
-                        userProfileSkeleton.classList.remove("hidden");
-                    if (userProfileSummary)
-                        userProfileSummary.classList.add("hidden");
-                    if (userProfileSignedOut)
-                        userProfileSignedOut.classList.add("hidden");
-                    if (menuLoadingSkeleton)
-                        menuLoadingSkeleton.classList.remove("hidden");
-                    if (actualMenu) actualMenu.classList.add("hidden");
-
-                    const user = auth.getCurrentUser();
-                    await updateUserProfile(user);
-
-                    // Show actual profile and hide skeleton
-                    if (userProfileSkeleton)
-                        userProfileSkeleton.classList.add("hidden");
-                    if (userProfileSummary)
-                        userProfileSummary.classList.remove("hidden");
-
-                    // Hide all sections first
-                    document
-                        .querySelectorAll(".dashboard-section")
-                        .forEach((section) => {
-                            section.classList.add("hidden");
-                        });
-
-                    // Show appropriate default section based on role
-                    // Get the officer record for this user if it exists
-                    let officerStatus: OfficerStatus = "none";
-
-                    try {
-                        const officerRecords = await get.getList(
-                            "officers",
-                            1,
-                            50,
-                            `user="${user.id}"`,
-                            "",
-                            {
-                                fields: ["id", "type", "role"],
-                            }
-                        );
-
-                        if (officerRecords && officerRecords.items.length > 0) {
-                            const officerType = officerRecords.items[0].type;
-                            // We can also get the role here if needed for display elsewhere
-                            const officerRole = officerRecords.items[0].role;
-
-                            // Map the officer type to our OfficerStatus
-                            switch (officerType) {
-                                case OfficerTypes.ADMINISTRATOR:
-                                    officerStatus = "administrator";
-                                    break;
-                                case OfficerTypes.EXECUTIVE:
-                                    officerStatus = "executive";
-                                    break;
-                                case OfficerTypes.GENERAL:
-                                    officerStatus = "general";
-                                    break;
-                                case OfficerTypes.HONORARY:
-                                    officerStatus = "honorary";
-                                    break;
-                                case OfficerTypes.PAST:
-                                    officerStatus = "past";
-                                    break;
-                                default:
-                                    officerStatus = "none";
-                            }
-                        } else {
-                            // Check if user is a sponsor by querying the sponsors collection
-                            const sponsorRecords = await get.getList(
-                                "sponsors",
-                                1,
-                                1,
-                                `user="${user.id}"`,
-                                "",
-                                {
-                                    fields: ["id", "company"],
-                                }
-                            );
-
-                            if (
-                                sponsorRecords &&
-                                sponsorRecords.items.length > 0
-                            ) {
-                                officerStatus = "sponsor";
-                            } else {
-                                officerStatus = "none";
-                            }
-                        }
-                    } catch (error) {
-                        console.error(
-                            "Error determining officer status:",
-                            error
-                        );
-                        officerStatus = "none";
-                    }
-
-                    let defaultSection;
-                    let defaultButton;
-
-                    // Set default section based on role
-                    // Only sponsors get a different default view
-                    if (officerStatus === "sponsor") {
-                        // For sponsors, show the sponsor dashboard
-                        defaultSection = document.getElementById(
-                            "sponsorDashboardSection"
-                        );
-                        defaultButton = document.querySelector(
-                            '[data-section="sponsorDashboard"]'
-                        );
-                    } else {
-                        // For all other users (including administrators), show the profile section
-                        defaultSection =
-                            document.getElementById("profileSection");
-                        defaultButton = document.querySelector(
-                            '[data-section="profile"]'
-                        );
-                    }
-
-                    if (defaultSection) {
-                        defaultSection.classList.remove("hidden");
-                    }
-                    if (defaultButton) {
-                        defaultButton.classList.add("active", "bg-base-200");
-                    }
-
-                    // Initialize navigation
-                    handleNavigation();
-
-                    // Show actual menu and hide skeleton
-                    if (menuLoadingSkeleton)
-                        menuLoadingSkeleton.classList.add("hidden");
-                    if (actualMenu) actualMenu.classList.remove("hidden");
-
-                    // Show main content and hide loading
-                    if (mainContent) mainContent.classList.remove("hidden");
-                    if (pageLoadingState)
-                        pageLoadingState.classList.add("hidden");
-                } catch (error) {
-                    console.error("Error initializing dashboard:", error);
-                    if (pageLoadingState)
-                        pageLoadingState.classList.add("hidden");
-                    if (pageErrorState)
-                        pageErrorState.classList.remove("hidden");
-                }
-            };
-
-            // Initialize when DOM is loaded
-            document.addEventListener("DOMContentLoaded", () => {
-                initializePage();
-
-                // Initialize sidebar manager
-                new SidebarManager();
-            });
-
-            // Handle login button click
-            document
-                .querySelector(".login-button")
-                ?.addEventListener("click", async () => {
-                    try {
-                        if (pageLoadingState)
-                            pageLoadingState.classList.remove("hidden");
-                        if (notAuthenticatedState)
-                            notAuthenticatedState.classList.add("hidden");
-                        await auth.login();
-                    } catch (error) {
-                        console.error("Login error:", error);
-                        if (pageLoadingState)
-                            pageLoadingState.classList.add("hidden");
-                        if (pageErrorState)
-                            pageErrorState.classList.remove("hidden");
-                    }
-                });
 
             // Function to delete all cookies (to handle Logto logout)
             const deleteAllCookies = () => {
@@ -1022,49 +649,61 @@ const components = Object.fromEntries(
                 if (modal) (modal as HTMLDialogElement).showModal();
             };
 
-            // Function to update section visibility based on role
-            const updateSectionVisibility = (officerStatus: OfficerStatus) => {
-                // Special handling for sponsor role
-                if (officerStatus === "sponsor") {
-                    // Hide all sections first
-                    document
-                        .querySelectorAll("[data-role-required]")
-                        .forEach((element) => {
-                            element.classList.add("hidden");
-                        });
+            // Handle navigation
+            const handleNavigation = () => {
+                const navButtons =
+                    document.querySelectorAll(".dashboard-nav-btn");
+                const sections =
+                    document.querySelectorAll(".dashboard-section");
+                const mainContentDiv = document.getElementById("mainContent");
 
-                    // Only show sponsor sections
-                    document
-                        .querySelectorAll('[data-role-required="sponsor"]')
-                        .forEach((element) => {
-                            element.classList.remove("hidden");
-                        });
-                    return;
+                // Ensure mainContent is visible
+                if (mainContentDiv) {
+                    mainContentDiv.classList.remove("hidden");
                 }
 
-                // For non-sponsor roles, handle normally
-                document
-                    .querySelectorAll("[data-role-required]")
-                    .forEach((element) => {
-                        const requiredRole = element.getAttribute(
-                            "data-role-required"
-                        ) as OfficerStatus;
+                navButtons.forEach((button) => {
+                    button.addEventListener("click", () => {
+                        const sectionKey = button.getAttribute("data-section");
 
-                        // Skip elements that don't have a role requirement
-                        if (!requiredRole || requiredRole === "none") {
-                            element.classList.remove("hidden");
+                        // Handle logout button
+                        if (sectionKey === "logout") {
+                            showLogoutConfirmation();
                             return;
                         }
 
-                        // Check if user has permission for this role
-                        const hasPermission = hasAccess(
-                            officerStatus,
-                            requiredRole
-                        );
+                        // Remove active class from all buttons
+                        navButtons.forEach((btn) => {
+                            btn.classList.remove("active", "bg-base-200");
+                        });
 
-                        // Only show elements if user has permission
-                        element.classList.toggle("hidden", !hasPermission);
+                        // Add active class to clicked button
+                        button.classList.add("active", "bg-base-200");
+
+                        // Hide all sections
+                        sections.forEach((section) => {
+                            section.classList.add("hidden");
+                        });
+
+                        // Show selected section
+                        const sectionId = `${sectionKey}Section`;
+                        const targetSection =
+                            document.getElementById(sectionId);
+                        if (targetSection) {
+                            targetSection.classList.remove("hidden");
+                            // console.log(`Showing section: ${sectionId}`); // Debug log
+                        }
+
+                        // Close mobile sidebar if needed
+                        if (window.innerWidth < 1024 && sidebar) {
+                            sidebar.classList.add("-translate-x-full");
+                            document.body.classList.remove("overflow-hidden");
+                            const overlay =
+                                document.getElementById("sidebarOverlay");
+                            overlay?.remove();
+                        }
                     });
+                });
             };
 
             // Display user profile information and handle role-based access
@@ -1187,6 +826,275 @@ const components = Object.fromEntries(
                     updateSectionVisibility("" as OfficerStatus);
                 }
             };
+
+            // Mobile sidebar toggle
+            const mobileSidebarToggle = document.getElementById(
+                "mobileSidebarToggle"
+            );
+            if (mobileSidebarToggle && sidebar) {
+                const toggleSidebar = () => {
+                    const isOpen =
+                        !sidebar.classList.contains("-translate-x-full");
+
+                    if (isOpen) {
+                        sidebar.classList.add("-translate-x-full");
+                        document.body.classList.remove("overflow-hidden");
+                        const overlay =
+                            document.getElementById("sidebarOverlay");
+                        overlay?.remove();
+                    } else {
+                        sidebar.classList.remove("-translate-x-full");
+                        document.body.classList.add("overflow-hidden");
+                        const overlay = document.createElement("div");
+                        overlay.id = "sidebarOverlay";
+                        overlay.className =
+                            "fixed inset-0 bg-black bg-opacity-50 z-40 xl:hidden";
+                        overlay.addEventListener("click", toggleSidebar);
+                        document.body.appendChild(overlay);
+                    }
+                };
+
+                mobileSidebarToggle.addEventListener("click", toggleSidebar);
+            }
+
+            // Function to initialize the page
+            const initializePage = async () => {
+                try {
+                    // Define a temporary toast function that does nothing for unauthenticated users
+                    const originalToast = window.toast;
+
+                    // Check if user is authenticated
+                    if (!auth.isAuthenticated()) {
+                        // Temporarily override toast function to prevent notifications for unauthenticated users
+                        window.toast = () => {};
+
+                        // Initialize auth sync for IndexedDB (but toast notifications will be suppressed)
+                        await initAuthSync();
+
+                        // Restore original toast function
+                        window.toast = originalToast;
+
+                        // console.log("User not authenticated");
+                        if (pageLoadingState)
+                            pageLoadingState.classList.add("hidden");
+                        if (notAuthenticatedState)
+                            notAuthenticatedState.classList.remove("hidden");
+                        return;
+                    }
+
+                    // Initialize auth sync for IndexedDB (for authenticated users)
+                    await initAuthSync();
+
+                    if (pageLoadingState)
+                        pageLoadingState.classList.remove("hidden");
+                    if (pageErrorState) pageErrorState.classList.add("hidden");
+                    if (notAuthenticatedState)
+                        notAuthenticatedState.classList.add("hidden");
+
+                    // Show loading states
+                    const userProfileSkeleton = document.getElementById(
+                        "userProfileSkeleton"
+                    );
+                    const userProfileSignedOut = document.getElementById(
+                        "userProfileSignedOut"
+                    );
+                    const userProfileSummary =
+                        document.getElementById("userProfileSummary");
+                    const menuLoadingSkeleton = document.getElementById(
+                        "menuLoadingSkeleton"
+                    );
+                    const actualMenu = document.getElementById("actualMenu");
+
+                    if (userProfileSkeleton)
+                        userProfileSkeleton.classList.remove("hidden");
+                    if (userProfileSummary)
+                        userProfileSummary.classList.add("hidden");
+                    if (userProfileSignedOut)
+                        userProfileSignedOut.classList.add("hidden");
+                    if (menuLoadingSkeleton)
+                        menuLoadingSkeleton.classList.remove("hidden");
+                    if (actualMenu) actualMenu.classList.add("hidden");
+
+                    const user = auth.getCurrentUser();
+                    await updateUserProfile(user);
+
+                    // Show actual profile and hide skeleton
+                    if (userProfileSkeleton)
+                        userProfileSkeleton.classList.add("hidden");
+                    if (userProfileSummary)
+                        userProfileSummary.classList.remove("hidden");
+
+                    // Hide all sections first
+                    document
+                        .querySelectorAll(".dashboard-section")
+                        .forEach((section) => {
+                            section.classList.add("hidden");
+                        });
+
+                    // Show appropriate default section based on role
+                    // Get the officer record for this user if it exists
+                    let officerStatus: OfficerStatus = "none";
+
+                    try {
+                        const officerRecords = await get.getList(
+                            "officers",
+                            1,
+                            50,
+                            `user="${user.id}"`,
+                            "",
+                            {
+                                fields: ["id", "type", "role"],
+                            }
+                        );
+
+                        if (officerRecords && officerRecords.items.length > 0) {
+                            const officerType = officerRecords.items[0].type;
+                            // We can also get the role here if needed for display elsewhere
+                            const officerRole = officerRecords.items[0].role;
+
+                            // Map the officer type to our OfficerStatus
+                            switch (officerType) {
+                                case OfficerTypes.ADMINISTRATOR:
+                                    officerStatus = "administrator";
+                                    break;
+                                case OfficerTypes.EXECUTIVE:
+                                    officerStatus = "executive";
+                                    break;
+                                case OfficerTypes.GENERAL:
+                                    officerStatus = "general";
+                                    break;
+                                case OfficerTypes.HONORARY:
+                                    officerStatus = "honorary";
+                                    break;
+                                case OfficerTypes.PAST:
+                                    officerStatus = "past";
+                                    break;
+                                default:
+                                    officerStatus = "none";
+                            }
+                        } else {
+                            // Check if user is a sponsor by querying the sponsors collection
+                            const sponsorRecords = await get.getList(
+                                "sponsors",
+                                1,
+                                1,
+                                `user="${user.id}"`,
+                                "",
+                                {
+                                    fields: ["id", "company"],
+                                }
+                            );
+
+                            if (
+                                sponsorRecords &&
+                                sponsorRecords.items.length > 0
+                            ) {
+                                officerStatus = "sponsor";
+                            } else {
+                                officerStatus = "none";
+                            }
+                        }
+                    } catch (error) {
+                        console.error(
+                            "Error determining officer status:",
+                            error
+                        );
+                        officerStatus = "none";
+                    }
+
+                    let defaultSection;
+                    let defaultButton;
+
+                    // Set default section based on role
+                    // Only sponsors get a different default view
+                    if (officerStatus === "sponsor") {
+                        // For sponsors, show the sponsor dashboard
+                        defaultSection = document.getElementById(
+                            "sponsorDashboardSection"
+                        );
+                        defaultButton = document.querySelector(
+                            '[data-section="sponsorDashboard"]'
+                        );
+                    } else {
+                        // For all other users (including administrators), show the profile section
+                        defaultSection =
+                            document.getElementById("profileSection");
+                        defaultButton = document.querySelector(
+                            '[data-section="profile"]'
+                        );
+
+                        // Log the default section for debugging
+                        // console.log(`Setting default section to profile for user with role: ${officerStatus}`);
+                    }
+
+                    if (defaultSection) {
+                        defaultSection.classList.remove("hidden");
+                    }
+                    if (defaultButton) {
+                        defaultButton.classList.add("active", "bg-base-200");
+                    }
+
+                    // Initialize navigation
+                    handleNavigation();
+
+                    // Show actual menu and hide skeleton
+                    if (menuLoadingSkeleton)
+                        menuLoadingSkeleton.classList.add("hidden");
+                    if (actualMenu) actualMenu.classList.remove("hidden");
+
+                    // Show main content and hide loading
+                    if (mainContent) mainContent.classList.remove("hidden");
+                    if (pageLoadingState)
+                        pageLoadingState.classList.add("hidden");
+                } catch (error) {
+                    console.error("Error initializing dashboard:", error);
+                    if (pageLoadingState)
+                        pageLoadingState.classList.add("hidden");
+                    if (pageErrorState)
+                        pageErrorState.classList.remove("hidden");
+                }
+            };
+
+            // Initialize when DOM is loaded
+            document.addEventListener("DOMContentLoaded", initializePage);
+
+            // Handle login button click
+            document
+                .querySelector(".login-button")
+                ?.addEventListener("click", async () => {
+                    try {
+                        if (pageLoadingState)
+                            pageLoadingState.classList.remove("hidden");
+                        if (notAuthenticatedState)
+                            notAuthenticatedState.classList.add("hidden");
+                        await auth.login();
+                    } catch (error) {
+                        console.error("Login error:", error);
+                        if (pageLoadingState)
+                            pageLoadingState.classList.add("hidden");
+                        if (pageErrorState)
+                            pageErrorState.classList.remove("hidden");
+                    }
+                });
+
+            // Handle responsive sidebar
+            if (sidebar) {
+                if (window.innerWidth < 1024) {
+                    sidebar.classList.add("-translate-x-full");
+                }
+
+                window.addEventListener("resize", () => {
+                    if (window.innerWidth >= 1024) {
+                        const overlay =
+                            document.getElementById("sidebarOverlay");
+                        if (overlay) {
+                            overlay.remove();
+                            document.body.classList.remove("overflow-hidden");
+                        }
+                        sidebar.classList.remove("-translate-x-full");
+                    }
+                });
+            }
         </script>
     </body>
 </html>
