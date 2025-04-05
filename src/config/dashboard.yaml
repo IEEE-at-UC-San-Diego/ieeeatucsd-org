@@ -50,6 +50,13 @@ sections:
     component: "Officer_EventRequestManagement"
     class: "text-info hover:text-info-focus"
 
+  officerManagement:
+    title: "Officer Management"
+    icon: "heroicons:user-group"
+    role: "executive"
+    component: "OfficerManagement"
+    class: "text-info hover:text-info-focus"
+
   eventRequestForm:
     title: "Event Request Form"
     icon: "heroicons:document-text"
@@ -108,7 +115,8 @@ categories:
 
   executive:
     title: "Executive Menu"
-    sections: ["reimbursementManagement", "eventRequestManagement"]
+    sections:
+      ["reimbursementManagement", "eventRequestManagement", "officerManagement"]
     role: "executive"
 
   admin:
@@ -123,5 +131,5 @@ categories:
 
   account:
     title: "Account"
-    sections: ["settings", "logout"]
+    sections: ["settings"]
     role: "none"
