@@ -32,6 +32,9 @@ export const GET: APIRoute = async ({ request, redirect }) => {
 
     // Make a POST request to the Logto session end endpoint with the redirect in the body
     const logoutUrl = `${logtoEndpoint}/oidc/session/end`;
+    
+    console.log(`Using Logto endpoint: ${logtoEndpoint}`);
+    console.log(`Full logout URL: ${logoutUrl}`);
 
     try {
       // Try to make a POST request with the redirect in the body and client ID
