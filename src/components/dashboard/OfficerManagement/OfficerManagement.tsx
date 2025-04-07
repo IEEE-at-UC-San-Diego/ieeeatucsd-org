@@ -3,6 +3,7 @@ import { Authentication, Get, Update, Realtime } from '../../../scripts/pocketba
 import { Collections, OfficerTypes } from '../../../schemas/pocketbase';
 import type { User, Officer } from '../../../schemas/pocketbase/schema';
 import { Button } from '../universal/Button';
+import toast from 'react-hot-toast';
 import { Toast } from '../universal/Toast';
 
 // Interface for officer with expanded user data
@@ -41,8 +42,12 @@ export default function OfficerManagement() {
     const [selectedOfficers, setSelectedOfficers] = useState<string[]>([]);
     const [bulkActionType, setBulkActionType] = useState<string>('');
 
-    // State for toast notifications
-    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+    // State for officer replacement confirmation
+    const [officerToReplace, setOfficerToReplace] = useState<{
+        existingOfficer: OfficerWithUser;
+        newRole: string;
+        newType: string;
+    } | null>(null);
 
     // State for keyboard navigation
     const [currentHighlightedIndex, setCurrentHighlightedIndex] = useState(-1);
@@ -142,10 +147,7 @@ export default function OfficerManagement() {
             setUserSearchResults(searchResults);
         } catch (err) {
             console.error('Failed to search users:', err);
-            setToast({
-                message: 'Failed to search users. Please try again.',
-                type: 'error'
-            });
+            toast.error('Failed to search users. Please try again.');
         }
     };
 
@@ -194,17 +196,6 @@ export default function OfficerManagement() {
 
     // Handle selecting a user from search results
     const handleSelectUser = (user: UserSearchResult) => {
-        // Check if user is already an officer
-        const isAlreadyOfficer = officers.some(officer => officer.expand?.user.id === user.id);
-
-        if (isAlreadyOfficer) {
-            setToast({
-                message: `${user.name} is already an officer`,
-                type: 'info'
-            });
-            return;
-        }
-
         // Toggle selection - add if not selected, remove if already selected
         setSelectedUsers(prev => {
             // Check if user is already in the array
@@ -223,59 +214,197 @@ export default function OfficerManagement() {
         setSelectedUsers(prev => prev.filter(user => user.id !== userId));
     };
 
+    // Handle replacing an existing officer
+    const handleReplaceOfficer = async () => {
+        if (!officerToReplace) return;
+
+        try {
+            const pb = auth.getPocketBase();
+
+            // Update the existing officer record
+            await pb.collection(Collections.OFFICERS).update(officerToReplace.existingOfficer.id, {
+                role: officerToReplace.newRole,
+                type: officerToReplace.newType
+            });
+
+            // Show success message
+            toast.success(`Officer role updated successfully for ${officerToReplace.existingOfficer.expand?.user.name}`);
+
+            // Close the modal
+            const modal = document.getElementById("replaceOfficerModal") as HTMLDialogElement;
+            if (modal) modal.close();
+
+            // Reset the state
+            setOfficerToReplace(null);
+
+            // Refresh officers list
+            fetchOfficers();
+        } catch (err) {
+            console.error('Failed to update officer:', err);
+            toast.error('Failed to update officer. Please try again.');
+        }
+    };
+
+    // Handle adding an existing officer to the selection
+    const handleAddExistingOfficer = () => {
+        if (!officerToReplace) return;
+
+        // Get the user from the existing officer
+        const user = {
+            id: officerToReplace.existingOfficer.expand?.user.id || '',
+            name: officerToReplace.existingOfficer.expand?.user.name || 'Unknown User',
+            email: officerToReplace.existingOfficer.expand?.user.email || ''
+        };
+
+        // Add the user to the selected users list
+        setSelectedUsers(prev => {
+            // Check if user is already in the array
+            const exists = prev.some(u => u.id === user.id);
+            if (exists) {
+                return prev;
+            }
+            return [...prev, user];
+        });
+
+        // Close the modal
+        const modal = document.getElementById("replaceOfficerModal") as HTMLDialogElement;
+        if (modal) modal.close();
+
+        // Reset the state
+        setOfficerToReplace(null);
+
+        // Show a toast message
+        toast(`${user.name} added to selection. Submit the form to update their role.`);
+    };
+
     // Handle adding a new officer
     const handleAddOfficer = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (selectedUsers.length === 0) {
-            setToast({
-                message: 'Please select at least one user',
-                type: 'error'
-            });
+            toast.error('Please select at least one user');
             return;
         }
 
         if (!newOfficerRole) {
-            setToast({
-                message: 'Please enter a role',
-                type: 'error'
-            });
+            toast.error('Please enter a role');
             return;
         }
 
         // Check if trying to add an administrator without being an administrator
         if (newOfficerType === OfficerTypes.ADMINISTRATOR && !isCurrentUserAdmin) {
-            setToast({
-                message: 'Only administrators can add new administrators',
-                type: 'error'
-            });
+            toast.error('Only administrators can add new administrators');
             return;
         }
 
-        try {
-            // Filter out users who are already officers
-            const usersToAdd = selectedUsers.filter(user =>
-                !officers.some(officer => officer.expand?.user.id === user.id)
+        // Check if any of the selected users are already officers
+        const existingOfficers = selectedUsers.filter(user =>
+            officers.some(officer => officer.expand?.user.id === user.id)
+        );
+
+        // If there's exactly one existing officer, show the replacement modal
+        if (existingOfficers.length === 1) {
+            const existingOfficer = officers.find(officer =>
+                officer.expand?.user.id === existingOfficers[0].id
             );
 
-            if (usersToAdd.length === 0) {
-                setToast({
-                    message: 'All selected users are already officers',
-                    type: 'error'
+            if (existingOfficer) {
+                setOfficerToReplace({
+                    existingOfficer,
+                    newRole: newOfficerRole,
+                    newType: newOfficerType
                 });
+
+                // Open the confirmation modal
+                const modal = document.getElementById("replaceOfficerModal") as HTMLDialogElement;
+                if (modal) modal.showModal();
+
                 return;
             }
+        }
 
-            // Create officer records for each user
-            const createPromises = usersToAdd.map(user =>
-                updateService.create(Collections.OFFICERS, {
-                    user: user.id,
-                    role: newOfficerRole,
-                    type: newOfficerType
-                })
-            );
+        // If there are multiple existing officers, ask for confirmation
+        if (existingOfficers.length > 1) {
+            if (!window.confirm(`${existingOfficers.length} selected users are already officers. Do you want to update their roles to "${newOfficerRole}" and type to "${newOfficerType}"?`)) {
+                return;
+            }
+        }
 
-            await Promise.all(createPromises);
+        try {
+            // Get all users to add or update
+            const usersToProcess = selectedUsers;
+
+            // First verify that all users exist in the database
+            const userVerificationPromises = selectedUsers.map(async user => {
+                try {
+                    // Verify the user exists before creating an officer record
+                    await getService.getOne(Collections.USERS, user.id);
+                    return { user, exists: true };
+                } catch (error) {
+                    console.error(`User with ID ${user.id} does not exist:`, error);
+                    return { user, exists: false };
+                }
+            });
+
+            const userVerificationResults = await Promise.all(userVerificationPromises);
+            const validUsers = userVerificationResults.filter(result => result.exists).map(result => result.user);
+            const invalidUsers = userVerificationResults.filter(result => !result.exists).map(result => result.user);
+
+            if (invalidUsers.length > 0) {
+                toast.error(`Cannot add ${invalidUsers.length} user(s) as officers: User records not found`);
+
+                if (validUsers.length === 0) {
+                    return; // No valid users to add
+                }
+            }
+
+            // Get direct access to PocketBase instance
+            const pb = auth.getPocketBase();
+
+            // Track successful creations, updates, and failures
+            const successfulCreations = [];
+            const successfulUpdates = [];
+            const failedOperations = [];
+
+            // Process each valid user
+            for (const user of validUsers) {
+                try {
+                    // Ensure type is one of the valid enum values
+                    const validType = Object.values(OfficerTypes).includes(newOfficerType)
+                        ? newOfficerType
+                        : OfficerTypes.GENERAL;
+
+                    // Check if user is already an officer
+                    const existingOfficer = officers.find(officer => officer.expand?.user.id === user.id);
+
+                    if (existingOfficer) {
+                        // Update existing officer
+                        const updatedOfficer = await pb.collection(Collections.OFFICERS).update(existingOfficer.id, {
+                            role: newOfficerRole,
+                            type: validType
+                        });
+
+                        successfulUpdates.push(updatedOfficer);
+                    } else {
+                        // Create new officer record
+                        const createdOfficer = await pb.collection(Collections.OFFICERS).create({
+                            user: user.id,
+                            role: newOfficerRole,
+                            type: validType
+                        });
+
+                        successfulCreations.push(createdOfficer);
+                    }
+                } catch (error) {
+                    console.error(`Failed to process officer for user ${user.name}:`, error);
+                    failedOperations.push(user);
+                }
+            }
+
+            // Update the success/error message based on results
+            if (successfulCreations.length === 0 && successfulUpdates.length === 0 && failedOperations.length > 0) {
+                throw new Error(`Failed to add or update any officers. Please check user permissions and try again.`);
+            }
 
             // Reset form
             setSelectedUsers([]);
@@ -283,19 +412,31 @@ export default function OfficerManagement() {
             setNewOfficerRole('');
             setNewOfficerType(OfficerTypes.GENERAL);
 
-            setToast({
-                message: `${usersToAdd.length} officer(s) added successfully`,
-                type: 'success'
-            });
+            toast.success(`${successfulCreations.length} officer(s) added and ${successfulUpdates.length} updated successfully${failedOperations.length > 0 ? ` (${failedOperations.length} failed)` : ''}`);
 
             // Refresh officers list
             fetchOfficers();
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to add officer:', err);
-            setToast({
-                message: 'Failed to add officer. Please try again.',
-                type: 'error'
-            });
+
+            // Provide more specific error messages based on the error
+            let errorMessage = 'Failed to add officer. Please try again.';
+
+            if (err.data?.data) {
+                // Handle validation errors from PocketBase
+                const validationErrors = err.data.data;
+                if (validationErrors.user) {
+                    errorMessage = `User error: ${validationErrors.user.message}`;
+                } else if (validationErrors.role) {
+                    errorMessage = `Role error: ${validationErrors.role.message}`;
+                } else if (validationErrors.type) {
+                    errorMessage = `Type error: ${validationErrors.type.message}`;
+                }
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+
+            toast.error(errorMessage);
         }
     };
 
@@ -318,19 +459,13 @@ export default function OfficerManagement() {
     // Apply bulk action to selected officers
     const applyBulkAction = async () => {
         if (!bulkActionType || selectedOfficers.length === 0) {
-            setToast({
-                message: 'Please select officers and an action type',
-                type: 'info'
-            });
+            toast('Please select officers and an action type');
             return;
         }
 
         // Check if trying to set officers to administrator without being an administrator
         if (bulkActionType === OfficerTypes.ADMINISTRATOR && !isCurrentUserAdmin) {
-            setToast({
-                message: 'Only administrators can promote officers to administrator',
-                type: 'error'
-            });
+            toast.error('Only administrators can promote officers to administrator');
             return;
         }
 
@@ -342,10 +477,7 @@ export default function OfficerManagement() {
             });
 
             if (hasAdmins) {
-                setToast({
-                    message: 'Only administrators can modify administrator officers',
-                    type: 'error'
-                });
+                toast.error('Only administrators can modify administrator officers');
                 return;
             }
         }
@@ -359,10 +491,7 @@ export default function OfficerManagement() {
 
             await updateService.batchUpdateFields(Collections.OFFICERS, updates);
 
-            setToast({
-                message: `Successfully updated ${selectedOfficers.length} officers`,
-                type: 'success'
-            });
+            toast.success(`Successfully updated ${selectedOfficers.length} officers`);
 
             // Reset selection
             setSelectedOfficers([]);
@@ -372,10 +501,7 @@ export default function OfficerManagement() {
             fetchOfficers();
         } catch (err) {
             console.error('Failed to apply bulk action:', err);
-            setToast({
-                message: 'Failed to update officers. Please try again.',
-                type: 'error'
-            });
+            toast.error('Failed to update officers. Please try again.');
         }
     };
 
@@ -383,10 +509,7 @@ export default function OfficerManagement() {
     const archiveCurrentOfficers = async () => {
         // Only administrators can perform this bulk action
         if (!isCurrentUserAdmin) {
-            setToast({
-                message: 'Only administrators can archive all officers',
-                type: 'error'
-            });
+            toast.error('Only administrators can archive all officers');
             return;
         }
 
@@ -397,10 +520,7 @@ export default function OfficerManagement() {
             );
 
             if (officersToArchive.length === 0) {
-                setToast({
-                    message: 'No general or executive officers to archive',
-                    type: 'info'
-                });
+                toast('No general or executive officers to archive');
                 return;
             }
 
@@ -417,19 +537,13 @@ export default function OfficerManagement() {
 
             await updateService.batchUpdateFields(Collections.OFFICERS, updates);
 
-            setToast({
-                message: `Successfully archived ${officersToArchive.length} officers`,
-                type: 'success'
-            });
+            toast.success(`Successfully archived ${officersToArchive.length} officers`);
 
             // Refresh officers list
             fetchOfficers();
         } catch (err) {
             console.error('Failed to archive officers:', err);
-            setToast({
-                message: 'Failed to archive officers. Please try again.',
-                type: 'error'
-            });
+            toast.error('Failed to archive officers. Please try again.');
         }
     };
 
@@ -450,19 +564,13 @@ export default function OfficerManagement() {
         const officerToRemove = officers.find(o => o.id === officerId);
 
         if (!officerToRemove) {
-            setToast({
-                message: 'Officer not found',
-                type: 'error'
-            });
+            toast.error('Officer not found');
             return;
         }
 
         // Check permissions
         if (officerToRemove.type === OfficerTypes.ADMINISTRATOR && !isCurrentUserAdmin) {
-            setToast({
-                message: 'Only administrators can remove administrator officers',
-                type: 'error'
-            });
+            toast.error('Only administrators can remove administrator officers');
             return;
         }
 
@@ -475,19 +583,13 @@ export default function OfficerManagement() {
 
             await pb.collection(Collections.OFFICERS).delete(officerId);
 
-            setToast({
-                message: 'Officer removed successfully',
-                type: 'success'
-            });
+            toast.success('Officer removed successfully');
 
             // Refresh officers list
             fetchOfficers();
         } catch (err) {
             console.error('Failed to remove officer:', err);
-            setToast({
-                message: 'Failed to remove officer. Please try again.',
-                type: 'error'
-            });
+            toast.error('Failed to remove officer. Please try again.');
         }
     };
 
@@ -497,10 +599,7 @@ export default function OfficerManagement() {
         const officerToEdit = officers.find(o => o.id === officerId);
 
         if (!officerToEdit) {
-            setToast({
-                message: 'Officer not found',
-                type: 'error'
-            });
+            toast.error('Officer not found');
             return;
         }
 
@@ -513,51 +612,32 @@ export default function OfficerManagement() {
             !isCurrentUserAdmin &&
             officerToEdit.type !== newType
         ) {
-            setToast({
-                message: 'You cannot change your own role. Only administrators can do that.',
-                type: 'error'
-            });
+            toast.error('You cannot change your own role. Only administrators can do that.');
             return;
         }
 
         // Check permissions for changing to/from administrator
         if ((officerToEdit.type === OfficerTypes.ADMINISTRATOR || newType === OfficerTypes.ADMINISTRATOR) && !isCurrentUserAdmin) {
-            setToast({
-                message: 'Only administrators can change administrator status',
-                type: 'error'
-            });
+            toast.error('Only administrators can change administrator status');
             return;
         }
 
         try {
             await updateService.updateField(Collections.OFFICERS, officerId, 'type', newType);
 
-            setToast({
-                message: 'Officer updated successfully',
-                type: 'success'
-            });
+            toast.success('Officer updated successfully');
 
             // Refresh officers list
             fetchOfficers();
         } catch (err) {
             console.error('Failed to update officer:', err);
-            setToast({
-                message: 'Failed to update officer. Please try again.',
-                type: 'error'
-            });
+            toast.error('Failed to update officer. Please try again.');
         }
     };
 
     return (
         <div className="container mx-auto text-base-content">
-            {/* Toast notification */}
-            {toast && (
-                <Toast
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast(null)}
-                />
-            )}
+            {/* Toast notifications are handled by react-hot-toast */}
 
             {/* Admin status indicator */}
             {isCurrentUserAdmin && (
@@ -1023,6 +1103,74 @@ export default function OfficerManagement() {
                     </div>
                 )}
             </div>
+
+            {/* Officer Replacement Confirmation Modal */}
+            <dialog id="replaceOfficerModal" className="modal">
+                <div className="modal-box">
+                    <h3 className="font-bold text-lg mb-4">Officer Already Exists</h3>
+
+                    {officerToReplace && (
+                        <>
+                            <p className="mb-4">
+                                <span className="font-medium">{officerToReplace.existingOfficer.expand?.user.name}</span> is already an officer.
+                                Would you like to update their role?
+                            </p>
+
+                            <div className="bg-base-300 p-4 rounded-lg mb-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <h4 className="font-medium text-sm mb-2">Current Role</h4>
+                                        <div className="bg-base-100 p-3 rounded border border-base-content/10">
+                                            <p className="font-bold">{officerToReplace.existingOfficer.role}</p>
+                                            <p className="text-sm opacity-70 mt-1">Type: {officerToReplace.existingOfficer.type}</p>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="font-medium text-sm mb-2">New Role</h4>
+                                        <div className="bg-primary/10 p-3 rounded border border-primary/30">
+                                            <p className="font-bold">{officerToReplace.newRole}</p>
+                                            <p className="text-sm opacity-70 mt-1">Type: {officerToReplace.newType}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    <div className="modal-action flex flex-wrap justify-end gap-2">
+                        <button
+                            className="btn btn-outline"
+                            onClick={() => {
+                                const modal = document.getElementById("replaceOfficerModal") as HTMLDialogElement;
+                                if (modal) modal.close();
+                                setOfficerToReplace(null);
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="btn btn-primary"
+                            onClick={handleReplaceOfficer}
+                        >
+                            Update Now
+                        </button>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={handleAddExistingOfficer}
+                        >
+                            Add to Selection
+                        </button>
+                    </div>
+                    <p className="text-xs text-base-content/60 mt-4">
+                        <strong>Update Now:</strong> Immediately update the officer's role.<br />
+                        <strong>Add to Selection:</strong> Add to the current selection to update with other officers.
+                    </p>
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button>close</button>
+                </form>
+            </dialog>
         </div>
     );
 }
