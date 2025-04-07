@@ -461,7 +461,7 @@ const EventCheckIn = () => {
                         <div className="form-control">
                             <input
                                 type="text"
-                                placeholder="Enter your ference"
+                                placeholder="Enter the food you will or are eating"
                                 className="input input-bordered w-full"
                                 value={foodInput}
                                 onChange={(e) => setFoodInput(e.target.value)}
