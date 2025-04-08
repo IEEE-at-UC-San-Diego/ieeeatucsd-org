@@ -234,8 +234,17 @@ export default function OfficerManagement() {
             const modal = document.getElementById("replaceOfficerModal") as HTMLDialogElement;
             if (modal) modal.close();
 
-            // Reset the state
+            // Reset the state and form completely
             setOfficerToReplace(null);
+            setSelectedUsers([]);
+            setUserSearchTerm('');
+            setUserSearchResults([]);
+            setNewOfficerRole('');
+            setNewOfficerType(OfficerTypes.GENERAL);
+
+            // Force clear any input fields
+            const roleInput = document.getElementById('role') as HTMLInputElement;
+            if (roleInput) roleInput.value = '';
 
             // Refresh officers list
             fetchOfficers();
@@ -270,8 +279,19 @@ export default function OfficerManagement() {
         const modal = document.getElementById("replaceOfficerModal") as HTMLDialogElement;
         if (modal) modal.close();
 
-        // Reset the state
+        // Reset the state and form
         setOfficerToReplace(null);
+
+        // Clear form completely
+        setSelectedUsers([]);
+        setUserSearchTerm('');
+        setUserSearchResults([]);
+        setNewOfficerRole('');
+        setNewOfficerType(OfficerTypes.GENERAL);
+
+        // Force clear any input fields
+        const roleInput = document.getElementById('role') as HTMLInputElement;
+        if (roleInput) roleInput.value = '';
 
         // Show a toast message
         toast(`${user.name} added to selection. Submit the form to update their role.`);
@@ -406,11 +426,16 @@ export default function OfficerManagement() {
                 throw new Error(`Failed to add or update any officers. Please check user permissions and try again.`);
             }
 
-            // Reset form
+            // Reset form completely
             setSelectedUsers([]);
             setUserSearchTerm('');
+            setUserSearchResults([]);
             setNewOfficerRole('');
             setNewOfficerType(OfficerTypes.GENERAL);
+
+            // Force clear any input fields
+            const roleInput = document.getElementById('role') as HTMLInputElement;
+            if (roleInput) roleInput.value = '';
 
             toast.success(`${successfulCreations.length} officer(s) added and ${successfulUpdates.length} updated successfully${failedOperations.length > 0 ? ` (${failedOperations.length} failed)` : ''}`);
 
@@ -743,7 +768,6 @@ export default function OfficerManagement() {
                                                             onClick={() => handleSelectUser(user)}
                                                             className={`px-4 py-2 hover:bg-base-100 cursor-pointer 
                                                                 ${isSelected ? 'bg-primary/10' : ''} 
-                                                                ${isAlreadyOfficer ? 'opacity-50' : ''} 
                                                                 ${isHighlighted ? 'bg-base-content/10' : ''}`}
                                                         >
                                                             <div className="flex items-center justify-between">
@@ -1154,12 +1178,6 @@ export default function OfficerManagement() {
                             onClick={handleReplaceOfficer}
                         >
                             Update Now
-                        </button>
-                        <button
-                            className="btn btn-secondary"
-                            onClick={handleAddExistingOfficer}
-                        >
-                            Add to Selection
                         </button>
                     </div>
                     <p className="text-xs text-base-content/60 mt-4">
