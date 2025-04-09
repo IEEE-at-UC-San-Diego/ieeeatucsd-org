@@ -12,6 +12,7 @@ import type { Event, EventAttendee, LimitedUser } from "../../../schemas/pocketb
 // Extended Event interface with additional properties needed for this component
 interface ExtendedEvent extends Event {
     description?: string; // This component uses 'description' but schema has 'event_description'
+    event_type: string; // Add event_type field from schema
 }
 
 // Note: Date conversion is now handled automatically by the Get and Update classes.

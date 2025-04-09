@@ -10,6 +10,7 @@ import type { Event, AttendeeEntry, EventAttendee } from "../../../schemas/pocke
 // Extended Event interface with additional properties needed for this component
 interface ExtendedEvent extends Event {
     description?: string; // This component uses 'description' but schema has 'event_description'
+    event_type: string; // Add event_type field from schema
 }
 
 declare global {
@@ -276,6 +277,10 @@ const EventLoad = () => {
                             <div className="flex items-center gap-2">
                                 <Icon icon="heroicons:map-pin" className="h-3.5 w-3.5 text-primary" />
                                 <span className="line-clamp-1">{event.location || "No location specified"}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Icon icon="heroicons:tag" className="h-3.5 w-3.5 text-primary" />
+                                <span className="line-clamp-1 capitalize">{event.event_type || "Other"}</span>
                             </div>
                         </div>
 
