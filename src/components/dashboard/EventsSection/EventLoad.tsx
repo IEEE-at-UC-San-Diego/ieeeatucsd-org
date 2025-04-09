@@ -62,6 +62,19 @@ const EventLoad = () => {
     const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
+
+    const toggleDescription = (eventId: string) => {
+        setExpandedDescriptions(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(eventId)) {
+                newSet.delete(eventId);
+            } else {
+                newSet.add(eventId);
+            }
+            return newSet;
+        });
+    };
 
     // Function to clear the events cache and force a fresh sync
     const refreshEvents = async () => {
@@ -202,59 +215,90 @@ const EventLoad = () => {
             const endDate = new Date(event.end_date);
             const now = new Date();
             const isPastEvent = endDate < now;
+            const isExpanded = expandedDescriptions.has(event.id);
+            const description = event.event_description || "No description available";
 
             return (
                 <div id={`event-card-${event.id}`} key={event.id} className="card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden">
-                    <div className="card-body p-3 sm:p-4">
-                        <div className="flex flex-col h-full">
-                            <div className="flex flex-col gap-2">
-                                <div className="flex-1">
-                                    <h3 className="card-title text-base sm:text-lg font-semibold mb-1 line-clamp-2">{event.event_name}</h3>
-                                    <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-base-content/70">
-                                        <div className="badge badge-primary badge-sm">{event.points_to_reward} pts</div>
-                                        <div className="text-xs sm:text-sm opacity-75">
-                                            {startDate.toLocaleDateString("en-US", {
-                                                weekday: "short",
-                                                month: "short",
-                                                day: "numeric",
-                                            })}
-                                            {" • "}
-                                            {startDate.toLocaleTimeString("en-US", {
-                                                hour: "numeric",
-                                                minute: "2-digit",
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div className="card-body p-4">
+                        {/* Event Header */}
+                        <div className="flex justify-between items-start mb-2">
+                            <h3 className="card-title text-base sm:text-lg font-semibold line-clamp-2">{event.event_name}</h3>
+                            <div className="badge badge-primary badge-sm flex-shrink-0">{event.points_to_reward} pts</div>
+                        </div>
 
-                            <div className="text-xs sm:text-sm text-base-content/70 my-2 line-clamp-2">
-                                {event.event_description || "No description available"}
-                            </div>
+                        {/* Event Description */}
+                        <div className="mb-3">
+                            <p className={`text-xs sm:text-sm text-base-content/70 ${isExpanded ? '' : 'line-clamp-2'}`}>
+                                {description}
+                            </p>
+                            {description.length > 80 && (
+                                <button
+                                    onClick={() => toggleDescription(event.id)}
+                                    className="text-xs text-primary hover:text-primary-focus mt-1 flex items-center"
+                                >
+                                    {isExpanded ? (
+                                        <>
+                                            <Icon icon="heroicons:chevron-up" className="h-3 w-3 mr-1" />
+                                            Show less
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Icon icon="heroicons:chevron-down" className="h-3 w-3 mr-1" />
+                                            Show more
+                                        </>
+                                    )}
+                                </button>
+                            )}
+                        </div>
 
-                            <div className="flex flex-wrap items-center gap-2 mt-auto pt-2">
-                                {event.files && event.files.length > 0 && (
-                                    <button
-                                        onClick={() => window.openDetailsModal(event as ExtendedEvent)}
-                                        className="btn btn-accent  btn-sm text-xs sm:text-sm gap-1 h-8 min-h-0 px-3 shadow-md hover:shadow-lg transition-all duration-300 rounded-full"
-                                    >
-                                        <Icon icon="heroicons:document-duplicate" className="h-3 w-3 sm:h-4 sm:w-4" />
-                                        Files ({event.files.length})
-                                    </button>
-                                )}
-                                {isPastEvent && (
-                                    <div id={`attendance-badge-${event.id}`} className={`badge ${hasAttended ? 'badge-success' : 'badge-ghost'} text-xs gap-1`}>
-                                        <Icon
-                                            icon={hasAttended ? "heroicons:check-circle" : "heroicons:x-circle"}
-                                            className="h-3 w-3"
-                                        />
-                                        {hasAttended ? 'Attended' : 'Not Attended'}
-                                    </div>
-                                )}
-                                <div className="text-xs sm:text-sm opacity-75 ml-auto">
-                                    {event.location}
-                                </div>
+                        {/* Event Details */}
+                        <div className="grid grid-cols-1 gap-1 mb-3 text-xs sm:text-sm">
+                            <div className="flex items-center gap-2">
+                                <Icon icon="heroicons:calendar" className="h-3.5 w-3.5 text-primary" />
+                                <span>
+                                    {startDate.toLocaleDateString("en-US", {
+                                        weekday: "short",
+                                        month: "short",
+                                        day: "numeric",
+                                    })}
+                                </span>
                             </div>
+                            <div className="flex items-center gap-2">
+                                <Icon icon="heroicons:clock" className="h-3.5 w-3.5 text-primary" />
+                                <span>
+                                    {startDate.toLocaleTimeString("en-US", {
+                                        hour: "numeric",
+                                        minute: "2-digit",
+                                    })}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Icon icon="heroicons:map-pin" className="h-3.5 w-3.5 text-primary" />
+                                <span className="line-clamp-1">{event.location || "No location specified"}</span>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap items-center gap-2 mt-auto">
+                            {event.files && event.files.length > 0 && (
+                                <button
+                                    onClick={() => window.openDetailsModal(event as ExtendedEvent)}
+                                    className="btn btn-accent btn-sm text-xs sm:text-sm gap-1 h-8 min-h-0 px-3 shadow-md hover:shadow-lg transition-all duration-300 rounded-full"
+                                >
+                                    <Icon icon="heroicons:document-duplicate" className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    Files ({event.files.length})
+                                </button>
+                            )}
+                            {isPastEvent && (
+                                <div id={`attendance-badge-${event.id}`} className={`badge ${hasAttended ? 'badge-success' : 'badge-ghost'} text-xs gap-1 ml-auto`}>
+                                    <Icon
+                                        icon={hasAttended ? "heroicons:check-circle" : "heroicons:x-circle"}
+                                        className="h-3 w-3"
+                                    />
+                                    {hasAttended ? 'Attended' : 'Not Attended'}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
