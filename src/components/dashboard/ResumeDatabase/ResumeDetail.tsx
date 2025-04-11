@@ -14,6 +14,11 @@ interface ResumeUser {
     avatar?: string;
 }
 
+function getResumeUrl(user: ResumeUser): string | undefined {
+    if (!user.resume) return undefined;
+    return `https://pocketbase.ieeeucsd.org/api/files/users/${user.id}/${user.resume}`;
+}
+
 export default function ResumeDetail() {
     const [user, setUser] = useState<ResumeUser | null>(null);
     const [loading, setLoading] = useState(false);
@@ -140,7 +145,7 @@ export default function ResumeDetail() {
                 <div className="bg-base-200 px-4 py-2 border-b border-base-300 flex justify-between items-center">
                     <h3 className="font-medium">Resume</h3>
                     <a
-                        href={user.resume}
+                        href={getResumeUrl(user)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="btn btn-sm btn-primary"
@@ -152,7 +157,15 @@ export default function ResumeDetail() {
                     {user.resume && user.resume.toLowerCase().endsWith('.pdf') ? (
                         <div className="aspect-[8.5/11] w-full">
                             <iframe
-                                src={`${user.resume}#toolbar=0&navpanes=0`}
+                                src={`${getResumeUrl(user)}#toolbar=0&navpanes=0`}
+                                className="w-full h-full border-0"
+                                title={`${user.name}'s Resume`}
+                            />
+                        </div>
+                    ) : user.resume && user.resume.toLowerCase().endsWith('.docx') ? (
+                        <div className="aspect-[8.5/11] w-full">
+                            <iframe
+                                src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(getResumeUrl(user) ?? '')}`}
                                 className="w-full h-full border-0"
                                 title={`${user.name}'s Resume`}
                             />
