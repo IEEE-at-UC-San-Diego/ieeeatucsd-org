@@ -133,6 +133,28 @@ const EventForm = memo(({
                         />
                     </div>
 
+                    {/* Event Type */}
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text">Event Type</span>
+                            <span className="label-text-alt text-error">*</span>
+                        </label>
+                        <select
+                            name="editEventType"
+                            className="select select-bordered"
+                            value={event?.event_type || "other"}
+                            onChange={(e) => handleChange('event_type', e.target.value)}
+                            required
+                        >
+                            <option value="social">Social</option>
+                            <option value="technical">Technical</option>
+                            <option value="outreach">Outreach</option>
+                            <option value="professional">Professional</option>
+                            <option value="workshop">Projects</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
                     {/* Points to Reward */}
                     <div className="form-control">
                         <label className="label">
@@ -435,6 +457,7 @@ interface EventChanges {
     end_date?: string;
     published?: boolean;
     has_food?: boolean;
+    event_type?: string;
 }
 
 interface FileChanges {
@@ -521,7 +544,8 @@ class ChangeTracker {
             'start_date',
             'end_date',
             'published',
-            'has_food'
+            'has_food',
+            'event_type'
         ];
 
         for (const field of fields) {
@@ -588,7 +612,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
         start_date: "",
         end_date: "",
         published: false,
-        has_food: false
+        has_food: false,
+        event_type: "other"
     });
 
     const [previewUrl, setPreviewUrl] = useState("");
@@ -681,7 +706,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                     start_date: eventData.start_date || '',
                     end_date: eventData.end_date || '',
                     published: eventData.published || false,
-                    has_food: eventData.has_food || false
+                    has_food: eventData.has_food || false,
+                    event_type: eventData.event_type || 'other'
                 });
 
                 // Set up realtime subscription for this event
@@ -727,7 +753,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                     start_date: Get.formatLocalDate(now, false),
                     end_date: Get.formatLocalDate(oneHourLater, false),
                     published: false,
-                    has_food: false
+                    has_food: false,
+                    event_type: "other"
                 });
             }
             setSelectedFiles(new Map());
@@ -800,7 +827,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             start_date: "",
             end_date: "",
             published: false,
-            has_food: false
+            has_food: false,
+            event_type: "other"
         });
         setSelectedFiles(new Map());
         setFilesToDelete(new Set());
@@ -839,7 +867,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
             start_date: "",
             end_date: "",
             published: false,
-            has_food: false
+            has_food: false,
+            event_type: "other"
         });
         setSelectedFiles(new Map());
         setFilesToDelete(new Set());
@@ -889,7 +918,8 @@ export default function EventEditor({ onEventSaved }: EventEditorProps) {
                 start_date: formData.get("editEventStartDate") as string,
                 end_date: formData.get("editEventEndDate") as string,
                 published: formData.get("editEventPublished") === "on",
-                has_food: formData.get("editEventHasFood") === "on"
+                has_food: formData.get("editEventHasFood") === "on",
+                event_type: formData.get("editEventType") as string || "other"
             };
 
             // Log the update attempt

@@ -12,6 +12,7 @@ import type { Event, EventAttendee, LimitedUser } from "../../../schemas/pocketb
 // Extended Event interface with additional properties needed for this component
 interface ExtendedEvent extends Event {
     description?: string; // This component uses 'description' but schema has 'event_description'
+    event_type: string; // Add event_type field from schema
 }
 
 // Note: Date conversion is now handled automatically by the Get and Update classes.
@@ -156,7 +157,12 @@ const EventCheckIn = () => {
             );
 
             // Store event code in local storage for offline check-in
-            await dataSync.storeEventCode(eventCode);
+            try {
+                await dataSync.storeEventCode(eventCode);
+            } catch (syncError) {
+                // Log the error but don't show a toast to the user
+                console.error("Error storing event code locally:", syncError);
+            }
 
             // Show event details toast only for non-food events
             // For food events, we'll show the toast after food selection
@@ -301,14 +307,24 @@ const EventCheckIn = () => {
 
                 // Ensure local data is in sync with backend
                 // First sync the new attendance record
-                await dataSync.syncCollection(Collections.EVENT_ATTENDEES);
+                try {
+                    await dataSync.syncCollection(Collections.EVENT_ATTENDEES);
 
-                // Then sync the updated user and LimitedUser data
-                await dataSync.syncCollection(Collections.USERS);
-                await dataSync.syncCollection(Collections.LIMITED_USERS);
+                    // Then sync the updated user and LimitedUser data
+                    await dataSync.syncCollection(Collections.USERS);
+                    await dataSync.syncCollection(Collections.LIMITED_USERS);
+                } catch (syncError) {
+                    // Log the error but don't show a toast to the user
+                    console.error('Local sync failed:', syncError);
+                }
 
                 // Clear event code from local storage
-                await dataSync.clearEventCode();
+                try {
+                    await dataSync.clearEventCode();
+                } catch (clearError) {
+                    // Log the error but don't show a toast to the user
+                    console.error("Error clearing event code from local storage:", clearError);
+                }
 
                 // Log successful check-in
                 await logger.send(
@@ -461,7 +477,7 @@ const EventCheckIn = () => {
                         <div className="form-control">
                             <input
                                 type="text"
-                                placeholder="Enter your ference"
+                                placeholder="Enter the food you will or are eating"
                                 className="input input-bordered w-full"
                                 value={foodInput}
                                 onChange={(e) => setFoodInput(e.target.value)}

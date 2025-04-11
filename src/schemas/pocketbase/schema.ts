@@ -68,6 +68,7 @@ export interface Event extends BaseRecord {
   start_date: string;
   end_date: string;
   published: boolean;
+  event_type: string; // social, technical, outreach, professional, projects, other
   has_food: boolean;
 }
 
