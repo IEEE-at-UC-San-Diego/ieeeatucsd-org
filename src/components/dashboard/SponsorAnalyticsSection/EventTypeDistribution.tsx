@@ -26,12 +26,12 @@ ChartJS.register(
 
 // Define event types and their colors
 const EVENT_TYPES = [
-    { name: 'Technical Workshop', color: 'rgba(54, 162, 235, 0.8)' },
-    { name: 'Social', color: 'rgba(255, 99, 132, 0.8)' },
-    { name: 'Professional Development', color: 'rgba(75, 192, 192, 0.8)' },
-    { name: 'Project Meeting', color: 'rgba(255, 206, 86, 0.8)' },
-    { name: 'Industry Talk', color: 'rgba(153, 102, 255, 0.8)' },
-    { name: 'Other', color: 'rgba(255, 159, 64, 0.8)' },
+    { name: 'Social', key: 'social', color: 'rgba(255, 99, 132, 0.8)' },
+    { name: 'Technical', key: 'technical', color: 'rgba(54, 162, 235, 0.8)' },
+    { name: 'Outreach', key: 'outreach', color: 'rgba(255, 206, 86, 0.8)' },
+    { name: 'Professional', key: 'professional', color: 'rgba(75, 192, 192, 0.8)' },
+    { name: 'Projects', key: 'projects', color: 'rgba(153, 102, 255, 0.8)' },
+    { name: 'Other', key: 'other', color: 'rgba(255, 159, 64, 0.8)' },
 ];
 
 export default function EventTypeDistribution() {
@@ -118,29 +118,12 @@ export default function EventTypeDistribution() {
             return acc;
         }, {} as Record<string, number>);
 
+        // Count events by event_type field from schema
         events.forEach(event => {
-            const eventName = event.event_name.toLowerCase();
-            const eventDesc = event.event_description.toLowerCase();
-
-            // Simple classification logic - in a real app, you'd have actual event types
-            if (eventName.includes('workshop') || eventDesc.includes('workshop')) {
-                eventTypeCount['Technical Workshop']++;
-            } else if (eventName.includes('social') || eventDesc.includes('social') ||
-                eventName.includes('mixer') || eventDesc.includes('mixer')) {
-                eventTypeCount['Social']++;
-            } else if (eventName.includes('professional') || eventDesc.includes('professional') ||
-                eventName.includes('resume') || eventDesc.includes('resume') ||
-                eventName.includes('career') || eventDesc.includes('career')) {
-                eventTypeCount['Professional Development']++;
-            } else if (eventName.includes('project') || eventDesc.includes('project') ||
-                eventName.includes('meeting') || eventDesc.includes('meeting')) {
-                eventTypeCount['Project Meeting']++;
-            } else if (eventName.includes('industry') || eventDesc.includes('industry') ||
-                eventName.includes('talk') || eventDesc.includes('talk') ||
-                eventName.includes('speaker') || eventDesc.includes('speaker')) {
-                eventTypeCount['Industry Talk']++;
-            } else {
-                eventTypeCount['Other']++;
+            const type = event.event_type && EVENT_TYPES.find(t => t.key === event.event_type) ? event.event_type : 'other';
+            const typeObj = EVENT_TYPES.find(t => t.key === type);
+            if (typeObj) {
+                eventTypeCount[typeObj.name]++;
             }
         });
 
@@ -180,11 +163,8 @@ export default function EventTypeDistribution() {
             tooltip: {
                 callbacks: {
                     label: function (context: any) {
-                        const label = context.label || '';
-                        const value = context.raw || 0;
-                        const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                        const percentage = Math.round((value / total) * 100);
-                        return `${label}: ${value} (${percentage}%)`;
+                        // Only show the label, not the value
+                        return context.label || '';
                     }
                 }
             }
