@@ -276,7 +276,7 @@ export default function ReceiptForm({ onSubmit, onCancel }: ReceiptFormProps) {
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: 20 }}
-                                    className="card bg-base-200/50 hover:bg-base-200 transition-colors duration-300 backdrop-blur-sm shadow-sm overflow-visible"
+                                    className="card bg-base-200/50 hover:bg-base-200 transition-colors duration-300 backdrop-blur-xs shadow-xs overflow-visible"
                                 >
                                     <div className="card-body p-4">
                                         <div className="grid gap-4 overflow-visible">
@@ -366,7 +366,7 @@ export default function ReceiptForm({ onSubmit, onCancel }: ReceiptFormProps) {
                     </motion.div>
 
                     {/* Total */}
-                    <motion.div variants={itemVariants} className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm">
+                    <motion.div variants={itemVariants} className="card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs">
                         <div className="space-y-2">
                             <div className="flex justify-between items-center text-base-content/70">
                                 <span>Subtotal:</span>
@@ -422,7 +422,7 @@ export default function ReceiptForm({ onSubmit, onCancel }: ReceiptFormProps) {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                            className="bg-base-200/50 backdrop-blur-sm rounded-xl p-4 shadow-sm"
+                            className="bg-base-200/50 backdrop-blur-xs rounded-xl p-4 shadow-xs"
                         >
                             <FilePreview
                                 url={previewUrl}

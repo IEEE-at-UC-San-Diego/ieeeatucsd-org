@@ -258,7 +258,7 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
             variants={containerVariants}
         >
             <motion.div variants={itemVariants}>
-                <h2 className="text-3xl font-bold mb-4 text-primary bg-gradient-to-r from-primary to-primary-focus bg-clip-text text-transparent">
+                <h2 className="text-3xl font-bold mb-4 text-primary bg-linear-to-r from-primary to-primary-focus bg-clip-text text-transparent">
                     AS Funding Details
                 </h2>
             </motion.div>
@@ -276,7 +276,7 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
             {/* Invoice Upload Section */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <h3 className="text-xl font-semibold mb-2 text-primary">Invoice Information</h3>
@@ -334,7 +334,7 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
             {/* JSON/Builder Toggle */}
             <motion.div
                 variants={itemVariants}
-                className="bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <div className="flex justify-between items-center mb-4">

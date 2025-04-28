@@ -332,7 +332,7 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
         <>
             {/* Table component with modernized UI */}
             <div
-                className="bg-gradient-to-b from-base-200 to-base-300 rounded-xl shadow-xl overflow-hidden dashboard-card card-enter event-table-container border border-base-300/30"
+                className="bg-linear-to-b from-base-200 to-base-300 rounded-xl shadow-xl overflow-hidden dashboard-card card-enter event-table-container border border-base-300/30"
                 style={{ animationDelay: ANIMATION_DELAY }}
             >
                 <div className="p-4 md:p-6 h-auto">
@@ -355,7 +355,7 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200]"
+                        className="fixed inset-0 bg-black/70 backdrop-blur-xs z-200"
                     >
                         <div className="flex items-center justify-center min-h-screen p-4 overflow-hidden">
                             <motion.div
@@ -363,9 +363,9 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.95, opacity: 0 }}
                                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                                className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-gradient-to-b from-base-200 to-base-300 rounded-xl shadow-2xl border border-base-100/20 relative"
+                                className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-linear-to-b from-base-200 to-base-300 rounded-xl shadow-2xl border border-base-100/20 relative"
                             >
-                                <div className="sticky top-0 right-0 z-[201] flex justify-between items-center p-4 bg-base-300/80 backdrop-blur-md border-b border-base-100/10">
+                                <div className="sticky top-0 right-0 z-201 flex justify-between items-center p-4 bg-base-300/80 backdrop-blur-md border-b border-base-100/10">
                                     <h2 className="text-xl font-bold text-white">{selectedRequest.name}</h2>
                                     <button
                                         onClick={closeModal}

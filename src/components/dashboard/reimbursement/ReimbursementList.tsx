@@ -492,7 +492,7 @@ export default function ReimbursementList() {
                         variants={itemVariants}
                         initial="hidden"
                         animate="visible"
-                        className="text-center py-16 bg-base-200/50 backdrop-blur-sm rounded-2xl border-2 border-dashed border-base-300"
+                        className="text-center py-16 bg-base-200/50 backdrop-blur-xs rounded-2xl border-2 border-dashed border-base-300"
                     >
                         <Icon icon="heroicons:document" className="h-16 w-16 mx-auto text-base-content/30" />
                         <h3 className="mt-6 text-xl font-medium">No reimbursement requests</h3>
@@ -516,7 +516,7 @@ export default function ReimbursementList() {
                                         initial="hidden"
                                         animate="visible"
                                         layout
-                                        className="card bg-base-100 hover:bg-base-200 transition-all duration-300 border border-base-200 hover:border-primary shadow-sm hover:shadow-md"
+                                        className="card bg-base-100 hover:bg-base-200 transition-all duration-300 border border-base-200 hover:border-primary shadow-xs hover:shadow-md"
                                     >
                                         <div className="card-body p-5">
                                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -541,7 +541,7 @@ export default function ReimbursementList() {
                                                 <motion.button
                                                     whileHover={{ scale: 1.05 }}
                                                     whileTap={{ scale: 0.95 }}
-                                                    className="btn btn-primary btn-sm gap-2 shadow-sm hover:shadow-md transition-all duration-300"
+                                                    className="btn btn-primary btn-sm gap-2 shadow-xs hover:shadow-md transition-all duration-300"
                                                     onClick={() => setSelectedRequest(request)}
                                                 >
                                                     <Icon icon="heroicons:eye" className="h-4 w-4" />
@@ -549,7 +549,7 @@ export default function ReimbursementList() {
                                                 </motion.button>
                                             </div>
 
-                                            <div className="mt-4 card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm">
+                                            <div className="mt-4 card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs">
                                                 <div className="flex items-center justify-between w-full relative py-2">
                                                     <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-base-300 -translate-y-[1.0rem]" />
                                                     {STATUS_ORDER.map((status, index) => {
@@ -623,7 +623,7 @@ export default function ReimbursementList() {
                                 className="modal-box max-w-3xl bg-base-100/95 backdrop-blur-md"
                             >
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                                    <h3 className="text-2xl font-bold bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent">
                                         {selectedRequest.title}
                                     </h3>
                                     <motion.button
@@ -638,44 +638,44 @@ export default function ReimbursementList() {
 
                                 <div className="grid gap-6">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm">
+                                        <div className="card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs">
                                             <label className="text-sm font-medium text-base-content/70">Status</label>
                                             <div className={`badge ${STATUS_COLORS[selectedRequest.status]} badge-lg gap-1 mt-1`}>
                                                 <Icon icon={STATUS_ICONS[selectedRequest.status]} className="h-4 w-4" />
                                                 {STATUS_LABELS[selectedRequest.status]}
                                             </div>
                                         </div>
-                                        <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm">
+                                        <div className="card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs">
                                             <label className="text-sm font-medium text-base-content/70">Department</label>
                                             <div className="badge badge-outline badge-lg mt-1">
                                                 {DEPARTMENT_LABELS[selectedRequest.department]}
                                             </div>
                                         </div>
-                                        <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm">
+                                        <div className="card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs">
                                             <label className="text-sm font-medium text-base-content/70">Total Amount</label>
                                             <p className="mt-1 text-xl font-mono font-bold text-primary">
                                                 ${selectedRequest.total_amount.toFixed(2)}
                                             </p>
                                         </div>
-                                        <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm">
+                                        <div className="card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs">
                                             <label className="text-sm font-medium text-base-content/70">Date of Purchase</label>
                                             <p className="mt-1 font-medium">{formatDate(selectedRequest.date_of_purchase)}</p>
                                         </div>
-                                        <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm col-span-2">
+                                        <div className="card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs col-span-2">
                                             <label className="text-sm font-medium text-base-content/70">Payment Method</label>
                                             <p className="mt-1 font-medium">{selectedRequest.payment_method}</p>
                                         </div>
                                     </div>
 
                                     {selectedRequest.additional_info && (
-                                        <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm">
+                                        <div className="card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs">
                                             <label className="text-sm font-medium text-base-content/70">Additional Information</label>
                                             <p className="mt-2 whitespace-pre-wrap">{selectedRequest.additional_info}</p>
                                         </div>
                                     )}
 
                                     {selectedRequest.audit_notes && selectedRequest.audit_notes.filter(note => !note.is_private).length > 0 && (
-                                        <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm border-l-4 border-primary">
+                                        <div className="card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs border-l-4 border-primary">
                                             <div className="flex items-center gap-2 mb-3">
                                                 <Icon icon="heroicons:chat-bubble-left-right" className="h-5 w-5 text-primary" />
                                                 <label className="text-base font-medium">Public Notes</label>
@@ -699,7 +699,7 @@ export default function ReimbursementList() {
                                         </div>
                                     )}
 
-                                    <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm">
+                                    <div className="card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs">
                                         <label className="text-sm font-medium text-base-content/70 mb-2">Receipts</label>
                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                                             {(selectedRequest.receipts || []).map((receiptId, index) => (
@@ -720,11 +720,11 @@ export default function ReimbursementList() {
                                     <div className="divider before:bg-base-300 after:bg-base-300"></div>
 
                                     <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm">
+                                        <div className="card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs">
                                             <label className="text-sm font-medium text-base-content/70">Submitted At</label>
                                             <p className="mt-1">{formatDate(selectedRequest.created)}</p>
                                         </div>
-                                        <div className="card bg-base-200/50 backdrop-blur-sm p-4 shadow-sm">
+                                        <div className="card bg-base-200/50 backdrop-blur-xs p-4 shadow-xs">
                                             <label className="text-sm font-medium text-base-content/70">Last Updated</label>
                                             <p className="mt-1">{formatDate(selectedRequest.updated)}</p>
                                         </div>
@@ -752,7 +752,7 @@ export default function ReimbursementList() {
                                 className="modal-box max-w-7xl bg-base-100/95 backdrop-blur-md"
                             >
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                                    <h3 className="text-2xl font-bold bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent">
                                         Receipt Details
                                     </h3>
                                     <motion.button
@@ -841,7 +841,7 @@ export default function ReimbursementList() {
                                                 View Full Size
                                             </motion.a>
                                         </div>
-                                        <div className="bg-base-200/50 backdrop-blur-sm rounded-lg p-4 shadow-sm">
+                                        <div className="bg-base-200/50 backdrop-blur-xs rounded-lg p-4 shadow-xs">
                                             {previewUrl ? (
                                                 <FilePreview
                                                     url={previewUrl}

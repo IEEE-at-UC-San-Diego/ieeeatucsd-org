@@ -47,7 +47,7 @@ const centerIndex = Math.floor(subteams.length); // center in the middle
                         >
                             <div class="relative">
                                 <div class="relative w-full h-full backdrop-blur-md overflow-hidden rounded-[2vw]">
-                                    <div class="px-[8%] flex flex-col justify-center items-center md:w-[22vw] w-[25vw] md:h-[24vw] h-[36vw] bg-gradient-to-b from-ieee-blue-100/25 to-ieee-black backdrop-blur rounded-[2vw] border-white/40 border-[0.1vw]">
+                                    <div class="px-[8%] flex flex-col justify-center items-center md:w-[22vw] w-[25vw] md:h-[24vw] h-[36vw] bg-linear-to-b from-ieee-blue-100/25 to-ieee-black backdrop-blur-sm rounded-[2vw] border-white/40 border-[0.1vw]">
                                         <p class="md:text-[1.5vw] text-[2vw] mb-[10%] font-semibold pt-[10%]">
                                             {subteam.title}
                                         </p>
@@ -60,7 +60,7 @@ const centerIndex = Math.floor(subteams.length); // center in the middle
                                         </ul>
                                     </div>
                                 </div>
-                                <div class="-top-[10%] left-1/2 -translate-x-1/2 w-fit p-[5%] shadow-ieee-blue-300 md:text-[3.2vw] text-[4.5vw] bg-gradient-to-b from-ieee-blue-100 to-ieee-blue-300 rounded-full absolute">
+                                <div class="-top-[10%] left-1/2 -translate-x-1/2 w-fit p-[5%] shadow-ieee-blue-300 md:text-[3.2vw] text-[4.5vw] bg-linear-to-b from-ieee-blue-100 to-ieee-blue-300 rounded-full absolute">
                                     {subteam.title === "Mechanical" && (
                                         <FaGear />
                                     )}
@@ -80,14 +80,14 @@ const centerIndex = Math.floor(subteams.length); // center in the middle
         </div>
         <button
             id="prevBtn"
-            class="absolute left-[-3vw] top-[calc(50%-1.5vw)] transform -translate-y-1/2 text-[3vw] text-white hover:text-white/70 duration-300 z-20 bg-black/30 hover:bg-black/50 p-2 rounded-full backdrop-blur-sm"
+            class="absolute left-[-3vw] top-[calc(50%-1.5vw)] transform -translate-y-1/2 text-[3vw] text-white hover:text-white/70 duration-300 z-20 bg-black/30 hover:bg-black/50 p-2 rounded-full backdrop-blur-xs"
             aria-label="Previous card"
         >
             <IoIosArrowBack />
         </button>
         <button
             id="nextBtn"
-            class="absolute right-[-3vw] top-[calc(50%-1.5vw)] transform -translate-y-1/2 text-[3vw] text-white hover:text-white/70 duration-300 z-20 bg-black/30 hover:bg-black/50 p-2 rounded-full backdrop-blur-sm"
+            class="absolute right-[-3vw] top-[calc(50%-1.5vw)] transform -translate-y-1/2 text-[3vw] text-white hover:text-white/70 duration-300 z-20 bg-black/30 hover:bg-black/50 p-2 rounded-full backdrop-blur-xs"
             aria-label="Next card"
         >
             <IoIosArrowForward />

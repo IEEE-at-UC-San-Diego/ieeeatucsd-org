@@ -70,15 +70,6 @@ export default {
       ],
     },
   },
-  plugins: [
-    require("tailwindcss-motion"),
-    require("tailwindcss-animated"),
-    require("daisyui"),
-    function ({ addVariant }) {
-      addVariant("in-view", "&.in-view");
-    },
-    heroui(),
-  ],
   daisyui: {
     themes: [
       {

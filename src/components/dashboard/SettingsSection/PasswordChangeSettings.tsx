@@ -480,7 +480,7 @@ export default function PasswordChangeSettings({
                     {debugInfo && (
                         <div className="mt-4 border-t pt-2">
                             <p className="font-semibold">Debug Info:</p>
-                            <div className="overflow-auto max-h-60 bg-base-300 p-2 rounded text-xs">
+                            <div className="overflow-auto max-h-60 bg-base-300 p-2 rounded-sm text-xs">
                                 <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
                             </div>
                         </div>

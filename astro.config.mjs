@@ -1,7 +1,6 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 
-import tailwind from "@astrojs/tailwind";
 
 import mdx from "@astrojs/mdx";
 
@@ -13,10 +12,12 @@ import node from "@astrojs/node";
 
 import icon from "astro-icon";
 
+import tailwindcss from "@tailwindcss/vite";
+
 // https://astro.build/config
 export default defineConfig({
   output: "server",
-  integrations: [tailwind(), expressiveCode(), react(), icon(), mdx()],
+  integrations: [ expressiveCode(), react(), icon(), mdx()],
 
   adapter: node({
     mode: "standalone",
@@ -39,5 +40,6 @@ export default defineConfig({
         process.env.LOGTO_API_ENDPOINT,
       ),
     },
+    plugins: [tailwindcss()],
   },
 });

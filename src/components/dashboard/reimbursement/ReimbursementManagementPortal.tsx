@@ -682,7 +682,7 @@ export default function ReimbursementManagementPortal() {
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.8fr),minmax(0,1fr)] gap-4 p-2 sm:p-4 max-w-[1600px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] gap-4 p-2 sm:p-4 max-w-[1600px] mx-auto">
             {/* Left side - List of reimbursements */}
             <div className="space-y-3 sm:space-y-4">
                 <motion.div
@@ -691,7 +691,7 @@ export default function ReimbursementManagementPortal() {
                     className="sticky top-0 lg:top-4 z-10 bg-base-100 p-3 sm:p-5 rounded-xl shadow-lg border border-base-300"
                 >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-4">
-                        <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                        <h2 className="text-lg sm:text-xl font-bold bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent">
                             Reimbursement Requests
                         </h2>
                         <span className="badge badge-primary badge-md font-medium">
@@ -706,7 +706,7 @@ export default function ReimbursementManagementPortal() {
                                     <Icon icon="heroicons:funnel" className="h-4 w-4" />
                                 </div>
                                 <select
-                                    className={`select select-bordered select-sm w-full focus:outline-none h-full join-item rounded-l-none ${filters.status.length > 0 ? 'pr-16' : 'pr-8'}`}
+                                    className={`select select-bordered select-sm w-full focus:outline-hidden h-full join-item rounded-l-none ${filters.status.length > 0 ? 'pr-16' : 'pr-8'}`}
                                     value="placeholder"
                                     onChange={(e) => {
                                         const value = e.target.value;
@@ -761,7 +761,7 @@ export default function ReimbursementManagementPortal() {
                                     <Icon icon="heroicons:building-office" className="h-4 w-4" />
                                 </div>
                                 <select
-                                    className={`select select-bordered select-sm w-full focus:outline-none h-full join-item rounded-l-none ${filters.department.length > 0 ? 'pr-16' : 'pr-8'}`}
+                                    className={`select select-bordered select-sm w-full focus:outline-hidden h-full join-item rounded-l-none ${filters.department.length > 0 ? 'pr-16' : 'pr-8'}`}
                                     value="placeholder"
                                     onChange={(e) => {
                                         const value = e.target.value;
@@ -813,7 +813,7 @@ export default function ReimbursementManagementPortal() {
                                     <Icon icon="heroicons:calendar" className="h-4 w-4" />
                                 </div>
                                 <select
-                                    className="select select-bordered select-sm w-full focus:outline-none h-full join-item rounded-l-none"
+                                    className="select select-bordered select-sm w-full focus:outline-hidden h-full join-item rounded-l-none"
                                     value={filters.dateRange}
                                     onChange={(e) => setFilters({ ...filters, dateRange: e.target.value as FilterOptions['dateRange'] })}
                                 >
@@ -831,7 +831,7 @@ export default function ReimbursementManagementPortal() {
                                     <Icon icon="heroicons:arrows-up-down" className="h-4 w-4" />
                                 </div>
                                 <select
-                                    className="select select-bordered select-sm w-full focus:outline-none h-full join-item rounded-none"
+                                    className="select select-bordered select-sm w-full focus:outline-hidden h-full join-item rounded-none"
                                     value={filters.sortBy}
                                     onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as FilterOptions['sortBy'] })}
                                 >
@@ -893,16 +893,16 @@ export default function ReimbursementManagementPortal() {
                                                 </h3>
                                                 <div className="flex flex-wrap gap-3 text-sm">
                                                     <div className="flex items-center gap-1.5 text-base-content/70">
-                                                        <Icon icon="heroicons:calendar" className="h-4 w-4 flex-shrink-0" />
+                                                        <Icon icon="heroicons:calendar" className="h-4 w-4 shrink-0" />
                                                         <span>{new Date(reimbursement.date_of_purchase).toLocaleDateString()}</span>
                                                     </div>
                                                     <div className="flex items-center gap-1.5 text-base-content/70">
-                                                        <Icon icon="heroicons:building-office" className="h-4 w-4 flex-shrink-0" />
+                                                        <Icon icon="heroicons:building-office" className="h-4 w-4 shrink-0" />
                                                         <span className="truncate">{reimbursement.department}</span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                                            <div className="flex flex-col items-end gap-2 shrink-0">
                                                 <span className="font-mono font-bold text-lg text-primary whitespace-nowrap">
                                                     ${reimbursement.total_amount.toFixed(2)}
                                                 </span>
@@ -920,7 +920,7 @@ export default function ReimbursementManagementPortal() {
                                                                     reimbursement.status === 'in_progress' ? 'heroicons:currency-dollar' :
                                                                         reimbursement.status === 'paid' ? 'heroicons:banknotes' :
                                                                             'heroicons:clock'
-                                                    } className="h-4 w-4 flex-shrink-0" />
+                                                    } className="h-4 w-4 shrink-0" />
                                                     {reimbursement.status.replace('_', ' ')}
                                                 </span>
                                             </div>
@@ -958,11 +958,11 @@ export default function ReimbursementManagementPortal() {
                                                     <img
                                                         src={getUserAvatarUrl(selectedReimbursement.submitter)}
                                                         alt=""
-                                                        className="w-6 h-6 rounded-full flex-shrink-0"
+                                                        className="w-6 h-6 rounded-full shrink-0"
                                                     />
                                                 )}
                                                 <span className="font-medium text-base-content truncate">{selectedReimbursement.submitter?.name || 'Unknown User'}</span>
-                                                <Icon icon="heroicons:chevron-down" className="h-4 w-4 flex-shrink-0" />
+                                                <Icon icon="heroicons:chevron-down" className="h-4 w-4 shrink-0" />
                                             </button>
                                             {showUserProfile === selectedReimbursement.submitted_by && (
                                                 <motion.div
@@ -988,7 +988,7 @@ export default function ReimbursementManagementPortal() {
                                                             <div className="pt-2 border-t border-base-300">
                                                                 <h4 className="text-sm font-medium text-base-content/70 mb-1">Zelle Information</h4>
                                                                 <p className="text-sm flex items-center gap-2">
-                                                                    <Icon icon="heroicons:banknotes" className="h-4 w-4 text-primary flex-shrink-0" />
+                                                                    <Icon icon="heroicons:banknotes" className="h-4 w-4 text-primary shrink-0" />
                                                                     {selectedReimbursement.submitter.zelle_information}
                                                                 </p>
                                                             </div>
@@ -1009,7 +1009,7 @@ export default function ReimbursementManagementPortal() {
                                             {loadingStatus ? (
                                                 <span className="loading loading-spinner loading-sm" />
                                             ) : (
-                                                <Icon icon="heroicons:eye" className="h-4 w-4 flex-shrink-0" />
+                                                <Icon icon="heroicons:eye" className="h-4 w-4 shrink-0" />
                                             )}
                                             <span className="font-medium">Review</span>
                                         </button>
@@ -1024,7 +1024,7 @@ export default function ReimbursementManagementPortal() {
                                             {loadingStatus ? (
                                                 <span className="loading loading-spinner loading-sm" />
                                             ) : (
-                                                <Icon icon="heroicons:check" className="h-4 w-4 flex-shrink-0" />
+                                                <Icon icon="heroicons:check" className="h-4 w-4 shrink-0" />
                                             )}
                                             <span className="font-medium">Approve</span>
                                         </button>
@@ -1038,7 +1038,7 @@ export default function ReimbursementManagementPortal() {
                                             {loadingStatus ? (
                                                 <span className="loading loading-spinner loading-sm" />
                                             ) : (
-                                                <Icon icon="heroicons:currency-dollar" className="h-4 w-4 flex-shrink-0" />
+                                                <Icon icon="heroicons:currency-dollar" className="h-4 w-4 shrink-0" />
                                             )}
                                             <span className="font-medium">Mark as in progress</span>
                                         </button>
@@ -1052,7 +1052,7 @@ export default function ReimbursementManagementPortal() {
                                             {loadingStatus ? (
                                                 <span className="loading loading-spinner loading-sm" />
                                             ) : (
-                                                <Icon icon="heroicons:check-circle" className="h-4 w-4 flex-shrink-0" />
+                                                <Icon icon="heroicons:check-circle" className="h-4 w-4 shrink-0" />
                                             )}
                                             <span className="font-medium">Mark as Paid</span>
                                         </button>
@@ -1066,7 +1066,7 @@ export default function ReimbursementManagementPortal() {
                                             {loadingStatus ? (
                                                 <span className="loading loading-spinner loading-sm" />
                                             ) : (
-                                                <Icon icon="heroicons:x-mark" className="h-4 w-4 flex-shrink-0" />
+                                                <Icon icon="heroicons:x-mark" className="h-4 w-4 shrink-0" />
                                             )}
                                             <span className="font-medium">Reject</span>
                                         </button>
@@ -1082,34 +1082,34 @@ export default function ReimbursementManagementPortal() {
 
                             <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-3">
                                 <div className="card bg-base-200 hover:bg-base-300 transition-colors">
-                                    <div className="card-body !p-3">
+                                    <div className="card-body p-3!">
                                         <h3 className="text-sm font-medium text-base-content/70">Date of Purchase</h3>
                                         <p className="flex items-center gap-2 font-medium mt-1">
-                                            <Icon icon="heroicons:calendar" className="h-4 w-4 text-primary flex-shrink-0" />
+                                            <Icon icon="heroicons:calendar" className="h-4 w-4 text-primary shrink-0" />
                                             {new Date(selectedReimbursement.date_of_purchase).toLocaleDateString()}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="card bg-base-200 hover:bg-base-300 transition-colors">
-                                    <div className="card-body !p-3">
+                                    <div className="card-body p-3!">
                                         <h3 className="text-sm font-medium text-base-content/70">Payment Method</h3>
                                         <p className="flex items-center gap-2 font-medium mt-1">
-                                            <Icon icon="heroicons:credit-card" className="h-4 w-4 text-primary flex-shrink-0" />
+                                            <Icon icon="heroicons:credit-card" className="h-4 w-4 text-primary shrink-0" />
                                             {selectedReimbursement.payment_method}
                                         </p>
                                     </div>
                                 </div>
                                 <div className="card bg-base-200 hover:bg-base-300 transition-colors">
-                                    <div className="card-body !p-3">
+                                    <div className="card-body p-3!">
                                         <h3 className="text-sm font-medium text-base-content/70">Department</h3>
                                         <p className="flex items-center gap-2 font-medium mt-1">
-                                            <Icon icon="heroicons:building-office" className="h-4 w-4 text-primary flex-shrink-0" />
+                                            <Icon icon="heroicons:building-office" className="h-4 w-4 text-primary shrink-0" />
                                             <span className="capitalize">{selectedReimbursement.department.replace('_', ' ')}</span>
                                         </p>
                                     </div>
                                 </div>
                                 <div className="card bg-base-200 hover:bg-base-300 transition-colors">
-                                    <div className="card-body !p-3">
+                                    <div className="card-body p-3!">
                                         <h3 className="text-sm font-medium text-base-content/70">Total Amount</h3>
                                         <p className="font-mono font-bold text-xl text-primary">
                                             ${selectedReimbursement.total_amount.toFixed(2)}
@@ -1118,10 +1118,10 @@ export default function ReimbursementManagementPortal() {
                                 </div>
                                 {selectedReimbursement.submitter?.zelle_information && (
                                     <div className="card bg-base-200 hover:bg-base-300 transition-colors xs:col-span-2">
-                                        <div className="card-body !p-3">
+                                        <div className="card-body p-3!">
                                             <h3 className="text-sm font-medium text-base-content/70">Zelle Information</h3>
                                             <p className="flex items-center gap-2 font-medium mt-1">
-                                                <Icon icon="heroicons:banknotes" className="h-4 w-4 text-primary flex-shrink-0" />
+                                                <Icon icon="heroicons:banknotes" className="h-4 w-4 text-primary shrink-0" />
                                                 {selectedReimbursement.submitter.zelle_information}
                                             </p>
                                         </div>
@@ -1153,7 +1153,7 @@ export default function ReimbursementManagementPortal() {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 className="card bg-base-200 hover:bg-base-300 transition-all duration-200"
                                             >
-                                                <div className="card-body !p-3 sm:!p-4">
+                                                <div className="card-body p-3! sm:p-4!">
                                                     <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4">
                                                         <div className="space-y-1 flex-1 min-w-0">
                                                             <h3 className="font-semibold text-base sm:text-lg truncate">
@@ -1161,11 +1161,11 @@ export default function ReimbursementManagementPortal() {
                                                             </h3>
                                                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-base-content/70">
                                                                 <div className="flex items-center gap-1.5">
-                                                                    <Icon icon="heroicons:map-pin" className="h-4 w-4 flex-shrink-0" />
+                                                                    <Icon icon="heroicons:map-pin" className="h-4 w-4 shrink-0" />
                                                                     <span className="truncate">{receipt.location_address}</span>
                                                                 </div>
                                                                 <div className="flex items-center gap-1.5">
-                                                                    <Icon icon="heroicons:calendar" className="h-4 w-4 flex-shrink-0" />
+                                                                    <Icon icon="heroicons:calendar" className="h-4 w-4 shrink-0" />
                                                                     <span>{new Date(receipt.date).toLocaleDateString()}</span>
                                                                 </div>
                                                             </div>

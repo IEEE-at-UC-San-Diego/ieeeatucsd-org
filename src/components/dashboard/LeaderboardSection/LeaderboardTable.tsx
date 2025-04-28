@@ -213,7 +213,7 @@ export default function LeaderboardTable() {
                     type="text"
                     placeholder="Search by name or major..."
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg 
-                    bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-200 focus:outline-none 
+                    bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-200 focus:outline-hidden 
                     focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -260,7 +260,7 @@ export default function LeaderboardTable() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
-                                            <div className="flex-shrink-0 h-10 w-10">
+                                            <div className="shrink-0 h-10 w-10">
                                                 <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden relative">
                                                     {user.avatar ? (
                                                         <img className="h-10 w-10 rounded-full" src={user.avatar} alt={user.name} />

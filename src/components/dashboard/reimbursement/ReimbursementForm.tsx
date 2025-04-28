@@ -445,7 +445,7 @@ export default function ReimbursementForm() {
                     </motion.div>
 
                     {/* Receipts */}
-                    <motion.div variants={itemVariants} className="card bg-base-200/50 backdrop-blur-sm p-6 shadow-sm">
+                    <motion.div variants={itemVariants} className="card bg-base-200/50 backdrop-blur-xs p-6 shadow-xs">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-medium">Receipts</h3>
                             <motion.button
@@ -469,7 +469,7 @@ export default function ReimbursementForm() {
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -20 }}
-                                            className="card bg-base-100 hover:bg-base-200 transition-all duration-300 shadow-sm"
+                                            className="card bg-base-100 hover:bg-base-200 transition-all duration-300 shadow-xs"
                                         >
                                             <div className="card-body p-4">
                                                 <div className="flex justify-between items-start">
@@ -562,7 +562,7 @@ export default function ReimbursementForm() {
                                 className="modal-box max-w-5xl bg-base-100/95 backdrop-blur-md"
                             >
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Add Receipt</h3>
+                                    <h3 className="text-2xl font-bold bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent">Add Receipt</h3>
                                     <motion.button
                                         whileHover={{ scale: 1.1, rotate: 90 }}
                                         whileTap={{ scale: 0.9 }}
@@ -598,7 +598,7 @@ export default function ReimbursementForm() {
                                 className="modal-box max-w-4xl bg-base-100/95 backdrop-blur-md"
                             >
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                                    <h3 className="text-2xl font-bold bg-linear-to-r from-primary to-secondary bg-clip-text text-transparent">
                                         Receipt Details
                                     </h3>
                                     <motion.button
@@ -674,7 +674,7 @@ export default function ReimbursementForm() {
                                         <div className="flex justify-between items-center mb-4">
                                             <h3 className="text-lg font-medium">Receipt Image</h3>
                                         </div>
-                                        <div className="bg-base-200/50 backdrop-blur-sm rounded-lg p-4 shadow-sm">
+                                        <div className="bg-base-200/50 backdrop-blur-xs rounded-lg p-4 shadow-xs">
                                             <FilePreview
                                                 url={URL.createObjectURL(selectedReceiptDetails.file)}
                                                 filename={selectedReceiptDetails.file.name}

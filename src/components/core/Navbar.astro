@@ -66,7 +66,7 @@ import pages from "../../data/pages.json";
     <!-- Mobile Hamburger/Close Button -->
     <button
       id="menu-btn"
-      class="md:hidden text-white p-2 flex justify-center items-center focus:outline-none relative z-[60] scale-150"
+      class="md:hidden text-white p-2 flex justify-center items-center focus:outline-hidden relative z-60 scale-150"
       aria-label="Toggle menu"
     >
       <!-- Hamburger Icon -->
@@ -101,7 +101,7 @@ import pages from "../../data/pages.json";
   <!-- Mobile Menu -->
   <div
     id="mobile-menu"
-    class="fixed inset-0 z-[51] hidden xl:hidden motion-safe:transition-transform motion-safe:duration-300 translate-x-full bg-black"
+    class="fixed inset-0 z-51 hidden xl:hidden motion-safe:transition-transform motion-safe:duration-300 translate-x-full bg-black"
   >
     <div
       class="flex flex-col items-center min-h-screen w-full justify-center py-20 px-4 space-y-6 overflow-y-auto"
@@ -167,9 +167,7 @@ import pages from "../../data/pages.json";
 </div>
 
 <style>
-  #mobile-menu.show {
-    @apply translate-x-0;
-  }
+  
 
   .mobile-dropdown-content {
     opacity: 0;

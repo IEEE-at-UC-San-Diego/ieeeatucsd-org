@@ -109,7 +109,7 @@ export default function ResumeDetail() {
         <div className="space-y-6">
             {/* Student Information */}
             <div className="flex flex-col md:flex-row gap-6">
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                     <div className="avatar">
                         <div className="w-24 h-24 rounded-xl">
                             {user.avatar ? (
@@ -123,7 +123,7 @@ export default function ResumeDetail() {
                     </div>
                 </div>
 
-                <div className="flex-grow">
+                <div className="grow">
                     <h3 className="text-xl font-bold">{user.name}</h3>
                     <p className="text-base-content/70">{user.email}</p>
 

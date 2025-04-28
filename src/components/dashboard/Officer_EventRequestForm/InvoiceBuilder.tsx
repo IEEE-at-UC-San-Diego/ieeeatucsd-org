@@ -388,7 +388,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             {/* Vendor Input */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">
@@ -418,7 +418,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             {/* Add New Item Form */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <h4 className="font-medium text-lg mb-4">Add New Item</h4>
@@ -515,7 +515,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             {/* Items Section */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <div className="flex justify-between items-center mb-4">
@@ -622,7 +622,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             {/* Tax and Tip Section */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label-text font-medium text-lg mb-4">Tax and Tip</label>
@@ -683,7 +683,7 @@ const InvoiceBuilder: React.FC<InvoiceBuilderProps> = ({ invoiceData, onChange }
             {/* Totals Section */}
             <motion.div
                 variants={itemVariants}
-                className="bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <h3 className="text-lg font-medium mb-4">Invoice Summary</h3>

@@ -104,7 +104,7 @@ export default function ThemeToggle() {
                     )
                 )}
             </button>
-            <div className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 mt-2 text-xs">
+            <div className="dropdown-content z-1 menu p-2 shadow-sm bg-base-100 rounded-box w-52 mt-2 text-xs">
                 <div className="p-2">
                     <p className="font-bold text-warning mb-1">Warning:</p>
                     <p>Light mode is experimental and not fully supported yet. Some UI elements may not display correctly.</p>

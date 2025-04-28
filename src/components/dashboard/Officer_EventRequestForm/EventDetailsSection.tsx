@@ -52,7 +52,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
             variants={containerVariants}
         >
             <motion.div variants={itemVariants}>
-                <h2 className="text-3xl font-bold mb-4 text-primary bg-gradient-to-r from-primary to-primary-focus bg-clip-text text-transparent">
+                <h2 className="text-3xl font-bold mb-4 text-primary bg-linear-to-r from-primary to-primary-focus bg-clip-text text-transparent">
                     Event Details
                 </h2>
             </motion.div>
@@ -70,7 +70,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
             {/* Event Name */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">
@@ -92,7 +92,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
             {/* Event Description */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">
@@ -118,7 +118,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
             >
                 {/* Event Start Date */}
                 <motion.div
-                    className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                    className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                     whileHover={{ y: -2 }}
                 >
                     <label className="label">
@@ -144,7 +144,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
 
                 {/* Event End Time */}
                 <motion.div
-                    className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                    className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                     whileHover={{ y: -2 }}
                 >
                     <label className="label">
@@ -182,7 +182,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
             {/* Event Location */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">
@@ -204,7 +204,7 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
             {/* Room Booking */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">

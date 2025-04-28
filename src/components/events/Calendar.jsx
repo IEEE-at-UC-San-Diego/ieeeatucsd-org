@@ -247,7 +247,7 @@ const Calendar = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
     >
       {/* Hovering Calendar Header */}
       <div className="flex justify-center mb-[2vw]">
-        <div className="bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[1.5vw] p-[1vw] backdrop-blur-sm w-[30vw] px-[2vw]">
+        <div className="bg-linear-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[1.5vw] p-[1vw] backdrop-blur-xs w-[30vw] px-[2vw]">
           <div className="flex items-center gap-[3vw]">
             <button
               onClick={() => changeMonth(-1)}
@@ -269,7 +269,7 @@ const Calendar = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
       </div>
 
       {/* Main Calendar Body */}
-      <div className="bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[1.5vw] p-[1vw] relative">
+      <div className="bg-linear-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[1.5vw] p-[1vw] relative">
         {/* Week Days Header */}
         <div className="grid grid-cols-7 gap-[0.5vw] mb-[1vw]">
           {weekDays.map((day, index) => (
@@ -308,7 +308,7 @@ const Calendar = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
                     {getEventsForDay(day).map((event, eventIndex) => (
                       <div
                         key={eventIndex}
-                        className="text-[0.8vw] border border-gray-300 text-white p-[0.5vw] rounded truncate cursor-pointer hover:bg-white/10 transition-colors relative"
+                        className="text-[0.8vw] border border-gray-300 text-white p-[0.5vw] rounded-sm truncate cursor-pointer hover:bg-white/10 transition-colors relative"
                         onMouseEnter={(e) => handleEventMouseEnter(event, e)}
                         onMouseLeave={handleEventMouseLeave}
                       >
@@ -325,7 +325,7 @@ const Calendar = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
         {/* Tooltip */}
         {hoveredEvent && (
           <div
-            className="fixed z-[9999] bg-ieee-blue-100 text-white p-[1vw] rounded-[0.5vw] shadow-xl border border-white/20 min-w-[15vw]"
+            className="fixed z-9999 bg-ieee-blue-100 text-white p-[1vw] rounded-[0.5vw] shadow-xl border border-white/20 min-w-[15vw]"
             style={{
               left: `${tooltipPosition.x + 15}px`,
               top: `${tooltipPosition.y + 15}px`,

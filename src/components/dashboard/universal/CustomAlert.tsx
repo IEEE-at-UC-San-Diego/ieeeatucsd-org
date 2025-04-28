@@ -79,7 +79,7 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
         <div className={`${color.bg} border-l-4 ${color.border} p-4 rounded-lg shadow-md ${className}`}>
             <div className="flex items-center justify-between">
                 <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 mt-0.5">
+                    <div className="shrink-0 mt-0.5">
                         <div className={`p-1.5 ${color.iconBg} rounded-full`}>
                             <Icon
                                 icon={selectedIcon}
@@ -100,7 +100,7 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
                     {actionLabel && onAction && (
                         <button
                             onClick={onAction}
-                            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${color.actionBg} ${color.actionHover} focus:outline-none focus:ring-2 focus:ring-offset-2 ${color.actionRing} transition-colors duration-200`}
+                            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-xs text-white ${color.actionBg} ${color.actionHover} focus:outline-hidden focus:ring-2 focus:ring-offset-2 ${color.actionRing} transition-colors duration-200`}
                         >
                             {actionLabel}
                         </button>

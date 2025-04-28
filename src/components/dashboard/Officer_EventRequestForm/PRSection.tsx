@@ -157,7 +157,7 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
             variants={containerVariants}
         >
             <motion.div variants={itemVariants}>
-                <h2 className="text-3xl font-bold mb-4 text-primary bg-gradient-to-r from-primary to-primary-focus bg-clip-text text-transparent">
+                <h2 className="text-3xl font-bold mb-4 text-primary bg-linear-to-r from-primary to-primary-focus bg-clip-text text-transparent">
                     PR Materials
                 </h2>
             </motion.div>
@@ -175,7 +175,7 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
             {/* Type of material needed */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">
@@ -239,7 +239,7 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
             ) && (
                     <motion.div
                         variants={itemVariants}
-                        className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                        className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}
@@ -266,7 +266,7 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
             {/* Logos Required */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">
@@ -304,7 +304,7 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
             {formData.required_logos.includes(LogoOptions.OTHER) && (
                 <motion.div
                     variants={itemVariants}
-                    className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                    className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
@@ -373,7 +373,7 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
             {/* Format */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">
@@ -400,7 +400,7 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
             {/* Additional specifications */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">
@@ -422,7 +422,7 @@ const PRSection: React.FC<PRSectionProps> = ({ formData, onDataChange }) => {
             {/* Photography Needed */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">

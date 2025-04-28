@@ -195,7 +195,7 @@ const EventRequestModal: React.FC<{ isOpen: boolean, onClose: () => void, childr
 
     return (
         <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99999]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-99999"
             style={{
                 position: 'fixed',
                 top: 0,
@@ -369,7 +369,7 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="bg-base-200 rounded-xl p-8 text-center shadow-sm"
+                className="bg-base-200 rounded-xl p-8 text-center shadow-xs"
             >
                 <div className="flex flex-col items-center justify-center py-6">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-base-content/30 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -451,7 +451,7 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
             </div>
 
             {viewMode === 'table' ? (
-                <div className="overflow-x-auto overflow-y-auto rounded-xl shadow-sm max-h-[70vh]">
+                <div className="overflow-x-auto overflow-y-auto rounded-xl shadow-xs max-h-[70vh]">
                     <table className="table table-zebra w-full text-xs">
                         <thead className="bg-base-300/50 sticky top-0 z-10">
                             <tr>
@@ -545,7 +545,7 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3 }}
-                            className={`card bg-base-200 shadow-sm hover:shadow-md transition-shadow border-l-4 ${getCardBorderClass(request.status)}`}
+                            className={`card bg-base-200 shadow-xs hover:shadow-md transition-shadow border-l-4 ${getCardBorderClass(request.status)}`}
                         >
                             <div className="card-body p-5">
                                 <div className="flex justify-between items-start">
@@ -607,7 +607,7 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                 </div>
             )}
 
-            <div className="bg-base-300/30 p-5 rounded-xl text-sm shadow-sm">
+            <div className="bg-base-300/30 p-5 rounded-xl text-sm shadow-xs">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
