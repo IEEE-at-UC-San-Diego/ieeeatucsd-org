@@ -169,7 +169,7 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
             variants={containerVariants}
         >
             <motion.div variants={itemVariants}>
-                <h2 className="text-3xl font-bold mb-4 text-primary bg-linear-to-r from-primary to-primary-focus bg-clip-text text-transparent">
+                <h2 className="text-3xl font-bold mb-4 text-primary bg-gradient-to-r from-primary to-primary-focus bg-clip-text text-transparent">
                     TAP Form Information
                 </h2>
             </motion.div>
@@ -187,7 +187,7 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
             {/* Expected attendance */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">
@@ -210,7 +210,7 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
                         whileHover="hover"
                         variants={inputHoverVariants}
                     />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 bg-base-100 px-2 py-1 rounded-sm">
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 bg-base-100 px-2 py-1 rounded">
                         people
                     </div>
                 </div>
@@ -255,7 +255,7 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
             {/* Room booking confirmation - Show file error if present */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">
@@ -369,7 +369,7 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
             {/* Food/Drinks */}
             <motion.div
                 variants={itemVariants}
-                className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
+                className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
                 whileHover={{ y: -2 }}
             >
                 <label className="label">
@@ -421,7 +421,7 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
             {formData.food_drinks_being_served && (
                 <motion.div
                     variants={itemVariants}
-                    className="form-control bg-base-200/50 p-6 rounded-xl shadow-xs hover:shadow-md transition-all duration-300"
+                    className="form-control bg-base-200/50 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
                     whileHover={{ y: -2 }}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

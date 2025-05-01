@@ -144,8 +144,8 @@ export default function LeaderboardStats() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {[1, 2, 3, 4].map((i) => (
                     <div key={i} className="h-24 bg-gray-100/50 dark:bg-gray-800/50 animate-pulse rounded-xl">
-                        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded-sm mb-2 mt-4 mx-4"></div>
-                        <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-sm mx-4"></div>
+                        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2 mt-4 mx-4"></div>
+                        <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded mx-4"></div>
                     </div>
                 ))}
             </div>
@@ -154,25 +154,25 @@ export default function LeaderboardStats() {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-6 bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-xs border border-gray-100 dark:border-gray-700">
+            <div className="p-6 bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
                 <div className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Members</div>
                 <div className="mt-2 text-3xl font-bold text-gray-800 dark:text-white">{stats.totalUsers}</div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">In the leaderboard</div>
             </div>
 
-            <div className="p-6 bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-xs border border-gray-100 dark:border-gray-700">
+            <div className="p-6 bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
                 <div className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Points</div>
                 <div className="mt-2 text-3xl font-bold text-gray-800 dark:text-white">{stats.totalPoints}</div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Earned by all members</div>
             </div>
 
-            <div className="p-6 bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-xs border border-gray-100 dark:border-gray-700">
+            <div className="p-6 bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
                 <div className="text-sm font-medium text-gray-600 dark:text-gray-300">Top Score</div>
                 <div className="mt-2 text-3xl font-bold text-indigo-600 dark:text-indigo-400">{stats.topScore}</div>
                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Highest individual points</div>
             </div>
 
-            <div className="p-6 bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-xs border border-gray-100 dark:border-gray-700">
+            <div className="p-6 bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
                 <div className="text-sm font-medium text-gray-600 dark:text-gray-300">Your Score</div>
                 <div className="mt-2 text-3xl font-bold text-indigo-600 dark:text-indigo-400">
                     {isAuthenticated ? stats.yourPoints : '-'}

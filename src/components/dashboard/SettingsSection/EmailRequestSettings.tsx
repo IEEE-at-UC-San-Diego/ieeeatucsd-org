@@ -228,7 +228,7 @@ export default function EmailRequestSettings() {
                     </h3>
 
                     <div className="mb-4">
-                        <p className="text-xl font-mono bg-base-100 p-2 rounded-sm">
+                        <p className="text-xl font-mono bg-base-100 p-2 rounded">
                             {createdEmail || (user ? `${user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "")}@ieeeucsd.org` : '')}
                         </p>
                         {initialPassword ? (
@@ -398,7 +398,7 @@ export default function EmailRequestSettings() {
                     <div className="p-4 bg-base-200 rounded-lg">
                         <h3 className="font-bold text-lg mb-2">Your IEEE Email Address</h3>
                         <p className="text-sm mb-2">When you request an email, you'll receive:</p>
-                        <p className="text-xl font-mono bg-base-100 p-2 rounded-sm">
+                        <p className="text-xl font-mono bg-base-100 p-2 rounded">
                             {user?.email ? `${user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, "")}@ieeeucsd.org` : 'Loading...'}
                         </p>
                     </div>

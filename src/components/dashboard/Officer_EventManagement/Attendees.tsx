@@ -50,7 +50,7 @@ const HighlightText = ({ text, searchTerms }: { text: string | number | null | u
                         part.toLowerCase().includes(term.toLowerCase())
                     );
                     return isMatch ? (
-                        <mark key={i} className="bg-primary/20 rounded-sm px-1">{part}</mark>
+                        <mark key={i} className="bg-primary/20 rounded px-1">{part}</mark>
                     ) : (
                         <span key={i}>{part}</span>
                     );

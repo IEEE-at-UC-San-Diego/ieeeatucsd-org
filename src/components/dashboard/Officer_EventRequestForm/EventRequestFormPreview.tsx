@@ -317,7 +317,7 @@ export const EventRequestFormPreviewModal = ({ formData, closeModal }: EventRequ
     return (
         <div
             id="event-request-preview-modal-overlay"
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-999999 overflow-y-auto p-4"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[999999] overflow-y-auto p-4"
             onClick={(e) => {
                 if (e.target === e.currentTarget) {
                     closeModal();
@@ -530,9 +530,9 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                 {/* Event Details Section */}
                 <motion.div
                     variants={sectionVariants}
-                    className="bg-base-100 rounded-xl border border-base-300 shadow-xs overflow-hidden"
+                    className="bg-base-100 rounded-xl border border-base-300 shadow-sm overflow-hidden"
                 >
-                    <div className="bg-linear-to-r from-primary/10 to-primary/5 p-4 flex items-center">
+                    <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-4 flex items-center">
                         <Icon icon="heroicons:calendar" className="text-primary w-5 h-5 mr-2" />
                         <h3 className="text-lg font-semibold text-base-content">
                             Event Details
@@ -599,9 +599,9 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                 {formData.flyers_needed && (
                     <motion.div
                         variants={sectionVariants}
-                        className="bg-base-100 rounded-xl border border-base-300 shadow-xs overflow-hidden"
+                        className="bg-base-100 rounded-xl border border-base-300 shadow-sm overflow-hidden"
                     >
-                        <div className="bg-linear-to-r from-primary/10 to-primary/5 p-4 flex items-center">
+                        <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-4 flex items-center">
                             <Icon icon="heroicons:document-duplicate" className="text-primary w-5 h-5 mr-2" />
                             <h3 className="text-lg font-semibold text-base-content">
                                 PR Materials
@@ -688,9 +688,9 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                 {/* TAP Form Section */}
                 <motion.div
                     variants={sectionVariants}
-                    className="bg-base-100 rounded-xl border border-base-300 shadow-xs overflow-hidden"
+                    className="bg-base-100 rounded-xl border border-base-300 shadow-sm overflow-hidden"
                 >
-                    <div className="bg-linear-to-r from-accent/10 to-accent/5 p-4 flex items-center">
+                    <div className="bg-gradient-to-r from-accent/10 to-accent/5 p-4 flex items-center">
                         <Icon icon="heroicons:building-office-2" className="text-accent w-5 h-5 mr-2" />
                         <h3 className="text-lg font-semibold text-base-content">
                             TAP Information
@@ -732,9 +732,9 @@ const EventRequestFormPreview: React.FC<EventRequestFormPreviewProps> = ({
                 {formData.needs_as_funding && (
                     <motion.div
                         variants={sectionVariants}
-                        className="bg-base-100 rounded-xl border border-base-300 shadow-xs overflow-hidden"
+                        className="bg-base-100 rounded-xl border border-base-300 shadow-sm overflow-hidden"
                     >
-                        <div className="bg-linear-to-r from-primary/10 to-primary/5 p-4 flex items-center">
+                        <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-4 flex items-center">
                             <Icon icon="heroicons:currency-dollar" className="text-primary w-5 h-5 mr-2" />
                             <h3 className="text-lg font-semibold text-base-content">
                                 AS Funding

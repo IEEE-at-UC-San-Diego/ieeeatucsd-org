@@ -1182,7 +1182,7 @@ export default function OfficerManagement() {
                                                         setUserSearchTerm('');
                                                         searchInputRef.current?.focus();
                                                     }}
-                                                    className="text-xs px-2 py-1 bg-base-100 rounded-sm hover:bg-base-200"
+                                                    className="text-xs px-2 py-1 bg-base-100 rounded hover:bg-base-200"
                                                     type="button"
                                                     title="Clear search"
                                                 >
@@ -1231,7 +1231,7 @@ export default function OfficerManagement() {
                                                                     <div className="font-medium flex items-center">
                                                                         {user.name}
                                                                         {isAlreadyOfficer && (
-                                                                            <span className="ml-2 text-xs bg-warning/20 text-warning px-1.5 py-0.5 rounded-sm">
+                                                                            <span className="ml-2 text-xs bg-warning/20 text-warning px-1.5 py-0.5 rounded">
                                                                                 Already an officer
                                                                             </span>
                                                                         )}
@@ -1483,7 +1483,7 @@ export default function OfficerManagement() {
                                                 </span>
                                             )}
                                         </h3>
-                                        <div className="w-[140px] shrink-0">
+                                        <div className="w-[140px] flex-shrink-0">
                                             <label className="flex items-center gap-2 cursor-pointer">
                                                 <input
                                                     type="checkbox"
@@ -1582,7 +1582,7 @@ export default function OfficerManagement() {
                                                     </div>
 
                                                     {match.matchedUser ? (
-                                                        <div className="bg-base-200 p-3 rounded-sm text-sm mt-3">
+                                                        <div className="bg-base-200 p-3 rounded text-sm mt-3">
                                                             <div className="flex justify-between items-start mb-2">
                                                                 <div className="w-full">
                                                                     <div className="font-medium">{match.matchedUser.name}</div>
@@ -1600,7 +1600,7 @@ export default function OfficerManagement() {
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="bg-base-200 p-3 rounded-sm text-sm text-error mt-3">
+                                                        <div className="bg-base-200 p-3 rounded text-sm text-error mt-3">
                                                             No matching user found
                                                         </div>
                                                     )}
@@ -1699,7 +1699,7 @@ export default function OfficerManagement() {
                         Current Officers
                     </h2>
                     <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                        <div className="relative grow">
+                        <div className="relative flex-grow">
                             <input
                                 type="text"
                                 placeholder="Search officers..."
@@ -1848,7 +1848,7 @@ export default function OfficerManagement() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <h4 className="font-medium text-sm mb-2">Current Role</h4>
-                                        <div className="bg-base-100 p-3 rounded-sm border border-base-content/10">
+                                        <div className="bg-base-100 p-3 rounded border border-base-content/10">
                                             <p className="font-bold">{officerToReplace.existingOfficer.role}</p>
                                             <p className="text-sm opacity-70 mt-1">Type: {officerToReplace.existingOfficer.type}</p>
                                         </div>
@@ -1856,7 +1856,7 @@ export default function OfficerManagement() {
 
                                     <div>
                                         <h4 className="font-medium text-sm mb-2">New Role</h4>
-                                        <div className="bg-primary/10 p-3 rounded-sm border border-primary/30">
+                                        <div className="bg-primary/10 p-3 rounded border border-primary/30">
                                             <p className="font-bold">{officerToReplace.newRole}</p>
                                             <p className="text-sm opacity-70 mt-1">Type: {officerToReplace.newType}</p>
                                         </div>

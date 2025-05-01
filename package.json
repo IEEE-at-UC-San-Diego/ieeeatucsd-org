@@ -13,11 +13,11 @@
     "@astrojs/mdx": "^4.2.3",
     "@astrojs/node": "^9.1.3",
     "@astrojs/react": "^4.2.3",
+    "@astrojs/tailwind": "^6.0.2",
     "@heroui/react": "^2.7.5",
     "@iconify-json/heroicons": "^1.2.2",
     "@iconify-json/mdi": "^1.2.3",
     "@iconify/react": "^5.2.0",
-    "@tailwindcss/vite": "^4.1.4",
     "@types/highlight.js": "^10.1.0",
     "@types/js-yaml": "^4.0.9",
     "@types/lodash": "^4.17.15",
@@ -43,11 +43,11 @@
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.4.0",
     "rehype-expressive-code": "^0.40.2",
-    "tailwindcss": "^4.1.4"
+    "tailwindcss": "^3.4.16"
   },
   "devDependencies": {
     "@types/prismjs": "^1.26.5",
-    "daisyui": "^5.0.28",
+    "daisyui": "^4.12.23",
     "prettier": "^3.4.2",
     "prettier-plugin-astro": "^0.14.1",
     "tailwindcss-animated": "^1.1.2",

@@ -14,12 +14,12 @@ const { image, text, link, delay } = Astro.props;
   <img
     src={image}
     alt="involvement background"
-    class="opacity-70 aspect-230/425 object-cover rounded-[2vw] group-hover:opacity-50 duration-300"
+    class="opacity-70 aspect-[230/425] object-cover rounded-[2vw] group-hover:opacity-50 duration-300"
   />
   <Link
     href={link}
     target={text === "H.A.R.D. HACK" ? "_blank" : "_self"}
-    className="absolute top-0 md:w-[15vw] w-[25vw] pt-[5%] aspect-230/425 flex flex-col justify-between"
+    className="absolute top-0 md:w-[15vw] w-[25vw] pt-[5%] aspect-[230/425] flex flex-col justify-between"
   >
     <div class="w-full flex justify-end md:pr-[5%] pr-[2vw]">
       <div
@@ -38,7 +38,7 @@ const { image, text, link, delay } = Astro.props;
     </div>
 
     <div
-      class="px-[3%] text-white w-full bg-linear-to-t from-black via-black to-transparent rounded-b-[2vw] pt-[20vw] pb-[3vw] md:pt-[30%] md:pb-[5%]"
+      class="px-[3%] text-white w-full bg-gradient-to-t from-black via-black to-transparent rounded-b-[2vw] pt-[20vw] pb-[3vw] md:pt-[30%] md:pb-[5%]"
     >
       <div
         class="text-[2vw] md:text-[1.1vw] duration-300 flex w-full px-[3%] justify-between items-end"

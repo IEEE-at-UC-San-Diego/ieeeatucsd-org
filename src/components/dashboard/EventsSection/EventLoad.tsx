@@ -225,7 +225,7 @@ const EventLoad = () => {
                         {/* Event Header */}
                         <div className="flex justify-between items-start mb-2">
                             <h3 className="card-title text-base sm:text-lg font-semibold line-clamp-2">{event.event_name}</h3>
-                            <div className="badge badge-primary badge-sm shrink-0">{event.points_to_reward} pts</div>
+                            <div className="badge badge-primary badge-sm flex-shrink-0">{event.points_to_reward} pts</div>
                         </div>
 
                         {/* Event Description */}

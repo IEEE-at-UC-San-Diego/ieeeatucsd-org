@@ -117,7 +117,7 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-xs z-300 flex items-center justify-center p-4 overflow-y-auto"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center p-4 overflow-y-auto"
         >
             <div className="bg-base-300 rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden relative">
                 <div className="p-4 flex justify-between items-center border-b border-base-200">
@@ -607,7 +607,7 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
                             return (
                                 <motion.div
                                     key={`file-${index}`}
-                                    className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-xs"
+                                    className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-sm"
                                     onClick={() => openFilePreview(fileId, displayName)}
                                     initial={{ opacity: 0, y: 5 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -623,7 +623,7 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
                                         ) : (
                                             <Icon icon="mdi:file-document" className="h-8 w-8 text-secondary" />
                                         )}
-                                        <div className="grow">
+                                        <div className="flex-grow">
                                             <p className="font-medium truncate" title={fileId}>
                                                 {displayName}
                                             </p>
@@ -641,7 +641,7 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
                         {request.invoice && (
                             <motion.div
                                 key="invoice"
-                                className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-xs"
+                                className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-sm"
                                 onClick={() => {
                                     const invoiceFile = request.invoice || '';
                                     openFilePreview(invoiceFile, getFriendlyFileName(invoiceFile, 25));
@@ -660,7 +660,7 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
                                     ) : (
                                         <Icon icon="mdi:file-document" className="h-8 w-8 text-secondary" />
                                     )}
-                                    <div className="grow">
+                                    <div className="flex-grow">
                                         <p className="font-medium truncate" title={request.invoice}>
                                             {getFriendlyFileName(request.invoice, 25)}
                                         </p>
@@ -1269,7 +1269,7 @@ const PRMaterialsTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }
                                     return (
                                         <motion.div
                                             key={`logo-${index}`}
-                                            className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-xs"
+                                            className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-sm"
                                             onClick={() => openFilePreview(logoId, displayName)}
                                             initial={{ opacity: 0, y: 5 }}
                                             animate={{ opacity: 1, y: 0 }}
@@ -1322,7 +1322,7 @@ const PRMaterialsTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }
                             return (
                                 <motion.div
                                     key={`flyer-file-${index}`}
-                                    className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-xs"
+                                    className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-sm"
                                     onClick={() => openFilePreview(fileId, displayName)}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -1360,7 +1360,7 @@ const PRMaterialsTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }
                             return (
                                 <motion.div
                                     key={`general-file-${index}`}
-                                    className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-xs"
+                                    className="border rounded-lg overflow-hidden bg-base-300/30 hover:bg-base-300/50 transition-colors cursor-pointer shadow-sm"
                                     onClick={() => openFilePreview(fileId, displayName)}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -1577,7 +1577,7 @@ const EventRequestDetails = ({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                 </svg>
                             </label>
-                            <ul tabIndex={0} className="dropdown-content z-101 menu p-2 shadow-sm bg-base-200 rounded-lg w-52">
+                            <ul tabIndex={0} className="dropdown-content z-[101] menu p-2 shadow bg-base-200 rounded-lg w-52">
                                 <li>
                                     <button
                                         className={`flex items-center ${request.status === 'pending' ? 'bg-warning/20 text-warning' : ''}`}
@@ -1771,7 +1771,7 @@ const EventRequestDetails = ({
 
             {/* Confirmation modal */}
             {isConfirmModalOpen && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-300 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
                     <div className="bg-base-300 rounded-lg p-6 w-full max-w-md">
                         <h3 className="text-lg font-bold mb-4">Confirm Status Change</h3>
                         <p className="mb-4">

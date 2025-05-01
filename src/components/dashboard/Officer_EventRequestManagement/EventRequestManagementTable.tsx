@@ -364,7 +364,7 @@ const EventRequestManagementTable = ({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="bg-linear-to-b from-base-200 to-base-300 rounded-xl p-8 text-center shadow-xs border border-base-300/30"
+                className="bg-gradient-to-b from-base-200 to-base-300 rounded-xl p-8 text-center shadow-sm border border-base-300/30"
             >
                 <div className="flex flex-col items-center justify-center py-6">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-base-content/30 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -483,7 +483,7 @@ const EventRequestManagementTable = ({
 
                 {/* Event requests table */}
                 <div
-                    className="rounded-xl shadow-xs overflow-x-auto bg-base-100/10 border border-base-100/20"
+                    className="rounded-xl shadow-sm overflow-x-auto bg-base-100/10 border border-base-100/20"
                     style={{
                         maxHeight: "unset",
                         height: "auto"

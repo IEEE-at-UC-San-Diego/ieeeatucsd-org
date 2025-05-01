@@ -16,7 +16,7 @@ export const Button: React.FC<ButtonProps> = ({
     ...props
 }) => {
     // Base classes
-    const baseClasses = 'font-medium rounded-md focus:outline-hidden transition-colors';
+    const baseClasses = 'font-medium rounded-md focus:outline-none transition-colors';
 
     // Size classes
     const sizeClasses = {

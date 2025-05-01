@@ -11,7 +11,7 @@ import { OfficerTypes } from "../schemas/pocketbase/schema";
 import { initAuthSync } from "../scripts/database/initAuthSync";
 import ToastProvider from "../components/dashboard/universal/ToastProvider";
 import FirstTimeLoginManager from "../components/dashboard/universal/FirstTimeLoginManager";
-import "../styles/global.css";
+
 const title = "Dashboard";
 
 // Load environment variables
@@ -87,11 +87,11 @@ const components = Object.fromEntries(
                         </div>
                         <div class="flex-1">
                             <div
-                                class="h-6 w-32 bg-base-300 animate-pulse rounded-sm mb-2"
+                                class="h-6 w-32 bg-base-300 animate-pulse rounded mb-2"
                             >
                             </div>
                             <div
-                                class="h-5 w-20 bg-base-300 animate-pulse rounded-sm"
+                                class="h-5 w-20 bg-base-300 animate-pulse rounded"
                             >
                             </div>
                         </div>
@@ -128,7 +128,7 @@ const components = Object.fromEntries(
                     >
                         <div class="avatar flex items-center justify-center">
                             <div
-                                class="w-12 h-12 rounded-xl bg-[#06659d] text-white ring-3 ring-base-200 ring-offset-base-100 ring-offset-2 inline-flex items-center justify-center"
+                                class="w-12 h-12 rounded-xl bg-[#06659d] text-white ring ring-base-200 ring-offset-base-100 ring-offset-2 inline-flex items-center justify-center"
                             >
                                 <span
                                     class="text-xl font-semibold select-none inline-flex items-center justify-center w-full h-full"
@@ -163,13 +163,13 @@ const components = Object.fromEntries(
                                 [1, 2, 3].map((group) => (
                                     <>
                                         <li class="menu-title font-medium opacity-70">
-                                            <div class="h-4 w-24 bg-base-300 animate-pulse rounded-sm" />
+                                            <div class="h-4 w-24 bg-base-300 animate-pulse rounded" />
                                         </li>
                                         {[1, 2, 3].map((item) => (
                                             <li>
                                                 <div class="flex items-center gap-4 py-2">
-                                                    <div class="h-5 w-5 bg-base-300 animate-pulse rounded-sm" />
-                                                    <div class="h-4 w-32 bg-base-300 animate-pulse rounded-sm" />
+                                                    <div class="h-5 w-5 bg-base-300 animate-pulse rounded" />
+                                                    <div class="h-4 w-32 bg-base-300 animate-pulse rounded" />
                                                 </div>
                                             </li>
                                         ))}
@@ -221,7 +221,7 @@ const components = Object.fromEntries(
                                                             }
                                                         >
                                                             <button
-                                                                class={`dashboard-nav-btn gap-4 transition-all duration-200 outline-hidden focus:outline-hidden hover:bg-opacity-5 ${section.class || ""}`}
+                                                                class={`dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 ${section.class || ""}`}
                                                                 data-section={
                                                                     sectionKey
                                                                 }
@@ -246,7 +246,7 @@ const components = Object.fromEntries(
                             {/* Add Logout Button to the bottom of the menu */}
                             <li class="mt-auto">
                                 <button
-                                    class="dashboard-nav-btn gap-4 transition-all duration-200 outline-hidden focus:outline-hidden hover:bg-opacity-5 text-error"
+                                    class="dashboard-nav-btn gap-4 transition-all duration-200 outline-none focus:outline-none hover:bg-opacity-5 text-error"
                                     data-section="logout"
                                 >
                                     <Icon

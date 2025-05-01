@@ -412,7 +412,7 @@ export default function ShowProfileLogs() {
                             <path fillRule="evenodd" d="M4.755 10.059a7.5 7.5 0 0112.548-3.364l1.903 1.903h-3.183a.75.75 0 100 1.5h4.992a.75.75 0 00.75-.75V4.356a.75.75 0 00-1.5 0v3.18l-1.9-1.9A9 9 0 003.306 9.67a.75.75 0 101.45.388zm15.408 3.352a.75.75 0 00-.919.53 7.5 7.5 0 01-12.548 3.364l-1.902-1.903h3.183a.75.75 0 000-1.5H2.984a.75.75 0 00-.75.75v4.992a.75.75 0 001.5 0v-3.18l1.9 1.9a9 9 0 0015.059-4.035.75.75 0 00-.53-.918z" clipRule="evenodd" />
                         </svg>
                     </button>
-                    <ul tabIndex={0} className="dropdown-content z-1 menu p-2 shadow-sm bg-base-100 rounded-box w-52">
+                    <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
                         <li>
                             <button
                                 onClick={() => setAutoRefresh(!autoRefresh)}
@@ -449,7 +449,7 @@ export default function ShowProfileLogs() {
             <div className="space-y-2">
                 {logs.map((log) => (
                     <div key={log.id} className="flex items-start gap-4 p-4 rounded-lg hover:bg-base-200 transition-colors duration-200">
-                        <div className="shrink-0">
+                        <div className="flex-shrink-0">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getLogTypeColor(log.type)}`}>
                                 {getLogTypeIcon(log.type)}
                             </div>
