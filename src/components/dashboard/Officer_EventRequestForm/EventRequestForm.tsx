@@ -176,9 +176,28 @@ const EventRequestForm: React.FC = () => {
         }
 
         setFormData(prevData => {
-            // Save to localStorage
             const updatedData = { ...prevData, ...sectionData };
-            localStorage.setItem('eventRequestFormData', JSON.stringify(updatedData));
+            
+            // Save to localStorage
+            try {
+                const dataToStore = {
+                    ...updatedData,
+                    // Remove file objects before saving to localStorage
+                    other_logos: [],
+                    room_booking: null,
+                    invoice: null,
+                    invoice_files: []
+                };
+                localStorage.setItem('eventRequestFormData', JSON.stringify(dataToStore));
+                
+                // Also update the preview data
+                window.dispatchEvent(new CustomEvent('formDataUpdated', {
+                    detail: { formData: updatedData }
+                }));
+            } catch (error) {
+                console.error('Error saving form data to localStorage:', error);
+            }
+            
             return updatedData;
         });
     };
@@ -267,8 +286,36 @@ const EventRequestForm: React.FC = () => {
                 requested_user: userId,
                 name: formData.name,
                 location: formData.location,
-                start_date_time: new Date(formData.start_date_time).toISOString(),
-                end_date_time: formData.end_date_time ? new Date(formData.end_date_time).toISOString() : new Date(formData.start_date_time).toISOString(),
+                start_date_time: (() => {
+                    try {
+                        const startDate = new Date(formData.start_date_time);
+                        if (isNaN(startDate.getTime())) {
+                            throw new Error('Invalid start date');
+                        }
+                        return startDate.toISOString();
+                    } catch (e) {
+                        throw new Error('Invalid start date format');
+                    }
+                })(),
+                end_date_time: (() => {
+                    try {
+                        if (formData.end_date_time) {
+                            const endDate = new Date(formData.end_date_time);
+                            if (isNaN(endDate.getTime())) {
+                                throw new Error('Invalid end date');
+                            }
+                            return endDate.toISOString();
+                        } else {
+                            // Fallback to start date if no end date (should not happen with validation)
+                            const startDate = new Date(formData.start_date_time);
+                            return startDate.toISOString();
+                        }
+                    } catch (e) {
+                        // Fallback to start date
+                        const startDate = new Date(formData.start_date_time);
+                        return startDate.toISOString();
+                    }
+                })(),
                 event_description: formData.event_description,
                 flyers_needed: formData.flyers_needed,
                 photography_needed: formData.photography_needed,
@@ -277,7 +324,14 @@ const EventRequestForm: React.FC = () => {
                 itemized_invoice: formData.itemized_invoice,
                 flyer_type: formData.flyer_type,
                 other_flyer_type: formData.other_flyer_type,
-                flyer_advertising_start_date: formData.flyer_advertising_start_date ? new Date(formData.flyer_advertising_start_date).toISOString() : '',
+                flyer_advertising_start_date: formData.flyer_advertising_start_date ? (() => {
+                    try {
+                        const advertDate = new Date(formData.flyer_advertising_start_date);
+                        return isNaN(advertDate.getTime()) ? '' : advertDate.toISOString();
+                    } catch (e) {
+                        return '';
+                    }
+                })() : '',
                 flyer_additional_requests: formData.flyer_additional_requests,
                 required_logos: formData.required_logos,
                 advertising_format: formData.advertising_format,
@@ -407,11 +461,47 @@ const EventRequestForm: React.FC = () => {
         if (!formData.start_date_time || formData.start_date_time.trim() === '') {
             errors.push('Event start date and time is required');
             valid = false;
+        } else {
+            // Validate start date format
+            try {
+                const startDate = new Date(formData.start_date_time);
+                if (isNaN(startDate.getTime())) {
+                    errors.push('Invalid start date and time format');
+                    valid = false;
+                } else {
+                    // Check if start date is in the future
+                    const now = new Date();
+                    if (startDate <= now) {
+                        errors.push('Event start date must be in the future');
+                        valid = false;
+                    }
+                }
+            } catch (e) {
+                errors.push('Invalid start date and time format');
+                valid = false;
+            }
         }
 
-        if (!formData.end_date_time) {
+        if (!formData.end_date_time || formData.end_date_time.trim() === '') {
             errors.push('Event end time is required');
             valid = false;
+        } else if (formData.start_date_time) {
+            // Validate end date format and logic
+            try {
+                const startDate = new Date(formData.start_date_time);
+                const endDate = new Date(formData.end_date_time);
+                
+                if (isNaN(endDate.getTime())) {
+                    errors.push('Invalid end date and time format');
+                    valid = false;
+                } else if (!isNaN(startDate.getTime()) && endDate <= startDate) {
+                    errors.push('Event end time must be after the start time');
+                    valid = false;
+                }
+            } catch (e) {
+                errors.push('Invalid end date and time format');
+                valid = false;
+            }
         }
 
         if (!formData.location || formData.location.trim() === '') {
@@ -419,7 +509,7 @@ const EventRequestForm: React.FC = () => {
             valid = false;
         }
 
-        if (formData.will_or_have_room_booking === undefined) {
+        if (formData.will_or_have_room_booking === undefined || formData.will_or_have_room_booking === null) {
             errors.push('Room booking status is required');
             valid = false;
         }

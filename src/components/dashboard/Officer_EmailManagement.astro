@@ -1,0 +1,89 @@
+---
+import { Icon } from "astro-icon/components";
+import EmailRequestSettings from "./SettingsSection/EmailRequestSettings";
+
+// Import environment variables for debugging if needed
+const logtoApiEndpoint = import.meta.env.LOGTO_API_ENDPOINT || "";
+---
+<div id="officer-email-section" class="">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold">IEEE Email Management</h2>
+        <p class="opacity-70">Manage your official IEEE UCSD email address</p>
+    </div>
+
+    <!-- IEEE Email Management Card -->
+    <div
+        class="card bg-card shadow-xl border border-border hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+    >
+        <div class="card-body">
+            <h3 class="card-title flex items-center gap-3">
+                <div
+                    class="inline-flex items-center justify-center p-3 rounded-full bg-primary text-primary-foreground"
+                >
+                    <Icon name="heroicons:envelope" class="h-5 w-5" />
+                </div>
+                IEEE Email Address
+            </h3>
+            <p class="text-sm opacity-70 mb-4">
+                Request and manage your official IEEE UCSD email address. This email can be used for official IEEE communications and professional purposes.
+            </p>
+            <div class="h-px w-full bg-border my-4"></div>
+            <EmailRequestSettings client:load />
+        </div>
+    </div>
+
+    <!-- Email Guidelines Card -->
+    <div
+        class="card bg-card shadow-xl border border-border hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
+    >
+        <div class="card-body">
+            <h3 class="card-title flex items-center gap-3">
+                <div
+                    class="inline-flex items-center justify-center p-3 rounded-full bg-info text-info-foreground"
+                >
+                    <Icon name="heroicons:information-circle" class="h-5 w-5" />
+                </div>
+                Email Usage Guidelines
+            </h3>
+            <div class="space-y-4 text-sm">
+                <div class="alert alert-info">
+                    <Icon name="heroicons:information-circle" class="h-4 w-4" />
+                    <div>
+                        <h4 class="font-bold">Officer Email Access</h4>
+                        <p>IEEE email addresses are only available to active IEEE UCSD officers. Your officer status is automatically verified when you request an email.</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <h4 class="font-semibold">Acceptable Use:</h4>
+                    <ul class="list-disc list-inside space-y-1 opacity-80">
+                        <li>Official IEEE UCSD communications</li>
+                        <li>Professional networking related to IEEE activities</li>
+                        <li>Event coordination and planning</li>
+                        <li>Communications with sponsors and external partners</li>
+                    </ul>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="font-semibold">Email Features:</h4>
+                    <ul class="list-disc list-inside space-y-1 opacity-80">
+                        <li>Webmail access at <a href="https://mail.ieeeucsd.org" target="_blank" rel="noopener noreferrer" class="link link-primary">https://mail.ieeeucsd.org</a></li>
+                        <li>IMAP/SMTP support for email clients</li>
+                        <li>5GB storage space</li>
+                        <li>Professional @ieeeucsd.org domain</li>
+                    </ul>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="font-semibold">Important Notes:</h4>
+                    <ul class="list-disc list-inside space-y-1 opacity-80">
+                        <li>Your email username is based on your personal email address</li>
+                        <li>Passwords can be reset through this interface</li>
+                        <li>Email access may be revoked when officer status changes</li>
+                        <li>Contact the webmaster for any technical issues</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

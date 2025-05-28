@@ -129,7 +129,27 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
                         type="datetime-local"
                         className="input input-bordered focus:input-primary transition-all duration-300 mt-2"
                         value={formData.start_date_time}
-                        onChange={(e) => onDataChange({ start_date_time: e.target.value })}
+                        onChange={(e) => {
+                            const newStartDateTime = e.target.value;
+                            onDataChange({ start_date_time: newStartDateTime });
+                            
+                            // If there's already an end time set, update it to use the new start date
+                            if (formData.end_date_time && newStartDateTime) {
+                                try {
+                                    const existingEndDate = new Date(formData.end_date_time);
+                                    const newStartDate = new Date(newStartDateTime);
+                                    
+                                    if (!isNaN(existingEndDate.getTime()) && !isNaN(newStartDate.getTime())) {
+                                        // Keep the same time but update to the new date
+                                        const updatedEndDate = new Date(newStartDate);
+                                        updatedEndDate.setHours(existingEndDate.getHours(), existingEndDate.getMinutes(), 0, 0);
+                                        onDataChange({ end_date_time: updatedEndDate.toISOString() });
+                                    }
+                                } catch (error) {
+                                    console.error('Error updating end date when start date changed:', error);
+                                }
+                            }
+                        }}
                         required
                         whileHover="hover"
                         variants={inputHoverVariants}
@@ -155,25 +175,59 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ formData, onD
                         <motion.input
                             type="time"
                             className="input input-bordered focus:input-primary transition-all duration-300"
-                            value={formData.end_date_time ? new Date(formData.end_date_time).toTimeString().substring(0, 5) : ''}
+                            value={formData.end_date_time ? (() => {
+                                try {
+                                    const endDate = new Date(formData.end_date_time);
+                                    if (isNaN(endDate.getTime())) return '';
+                                    return endDate.toTimeString().substring(0, 5);
+                                } catch (e) {
+                                    return '';
+                                }
+                            })() : ''}
                             onChange={(e) => {
-                                if (formData.start_date_time) {
-                                    // Create a new date object from start_date_time
-                                    const startDate = new Date(formData.start_date_time);
-                                    // Parse the time value
-                                    const [hours, minutes] = e.target.value.split(':').map(Number);
-                                    // Set the hours and minutes on the date
-                                    startDate.setHours(hours, minutes);
-                                    // Update end_date_time with the new time but same date as start
-                                    onDataChange({ end_date_time: startDate.toISOString() });
+                                const timeValue = e.target.value;
+                                if (timeValue && formData.start_date_time) {
+                                    try {
+                                        // Create a new date object from start_date_time
+                                        const startDate = new Date(formData.start_date_time);
+                                        if (isNaN(startDate.getTime())) {
+                                            console.error('Invalid start date time');
+                                            return;
+                                        }
+                                        
+                                        // Parse the time value
+                                        const [hours, minutes] = timeValue.split(':').map(Number);
+                                        
+                                        // Validate hours and minutes
+                                        if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+                                            console.error('Invalid time values');
+                                            return;
+                                        }
+                                        
+                                        // Create a new date with the same date as start but different time
+                                        const endDate = new Date(startDate);
+                                        endDate.setHours(hours, minutes, 0, 0);
+                                        
+                                        // Update end_date_time with the new time but same date as start
+                                        onDataChange({ end_date_time: endDate.toISOString() });
+                                    } catch (error) {
+                                        console.error('Error setting end time:', error);
+                                    }
+                                } else if (!timeValue) {
+                                    // Clear end_date_time if time is cleared
+                                    onDataChange({ end_date_time: '' });
                                 }
                             }}
                             required
+                            disabled={!formData.start_date_time}
                             whileHover="hover"
                             variants={inputHoverVariants}
                         />
                         <p className="text-xs text-base-content/60">
-                            The end time will use the same date as the start date.
+                            {!formData.start_date_time 
+                                ? "Please set the start date and time first." 
+                                : "The end time will use the same date as the start date."
+                            }
                         </p>
                     </div>
                 </motion.div>

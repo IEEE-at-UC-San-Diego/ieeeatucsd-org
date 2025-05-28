@@ -1644,6 +1644,11 @@ const EventRequestDetails = ({
                                     <label className="text-xs text-gray-400">Start Date & Time</label>
                                     <p className="text-white">{formatDate(request.start_date_time)}</p>
                                 </div>
+
+                                <div>
+                                    <label className="text-xs text-gray-400">End Date & Time</label>
+                                    <p className="text-white">{formatDate(request.end_date_time)}</p>
+                                </div>
                             </div>
                         </div>
 
