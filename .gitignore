@@ -5,6 +5,8 @@ dist/
 .astro/
 .cursor
 
+final_review_gate.py
+
 # dependencies
 node_modules/
 
