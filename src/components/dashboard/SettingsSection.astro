@@ -5,7 +5,6 @@ import AccountSecuritySettings from "./SettingsSection/AccountSecuritySettings";
 import NotificationSettings from "./SettingsSection/NotificationSettings";
 import DisplaySettings from "./SettingsSection/DisplaySettings";
 import ResumeSettings from "./SettingsSection/ResumeSettings";
-import EmailRequestSettings from "./SettingsSection/EmailRequestSettings";
 import ThemeToggle from "./universal/ThemeToggle";
 
 // Import environment variables
@@ -128,27 +127,6 @@ const safeLogtoApiEndpoint = logtoApiEndpoint || "";
             </p>
             <div class="h-px w-full bg-border my-4"></div>
             <ResumeSettings client:load />
-        </div>
-    </div>
-
-    <!-- IEEE Email Request Card -->
-    <div
-        class="card bg-card shadow-xl border border-border hover:border-primary transition-all duration-300 hover:-translate-y-1 transform mb-6"
-    >
-        <div class="card-body">
-            <h3 class="card-title flex items-center gap-3">
-                <div
-                    class="inline-flex items-center justify-center p-3 rounded-full bg-primary text-primary-foreground"
-                >
-                    <Icon name="heroicons:envelope" class="h-5 w-5" />
-                </div>
-                IEEE Email Address
-            </h3>
-            <p class="text-sm opacity-70 mb-4">
-                Request an official IEEE UCSD email address (officers only)
-            </p>
-            <div class="h-px w-full bg-border my-4"></div>
-            <EmailRequestSettings client:load />
         </div>
     </div>
 

@@ -36,6 +36,13 @@ sections:
     component: "Officer_EventManagement"
     class: "text-info hover:text-info-focus"
 
+  officerEmailManagement:
+    title: "IEEE Email Management"
+    icon: "heroicons:envelope"
+    role: "general"
+    component: "Officer_EmailManagement"
+    class: "text-info hover:text-info-focus"
+
   reimbursementManagement:
     title: "Reimbursement Management"
     icon: "heroicons:credit-card"
@@ -110,7 +117,7 @@ categories:
 
   officer:
     title: "Officer Menu"
-    sections: ["eventManagement", "eventRequestForm"]
+    sections: ["eventManagement", "officerEmailManagement", "eventRequestForm"]
     role: "general"
 
   executive:
