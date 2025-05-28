@@ -32,6 +32,10 @@ interface FilterOptions {
     dateRange: 'all' | 'week' | 'month' | 'year';
     sortBy: 'date_of_purchase' | 'total_amount' | 'status';
     sortOrder: 'asc' | 'desc';
+    hidePaid: boolean; // Auto-hide paid reimbursements
+    hideRejected: boolean; // Auto-hide rejected reimbursements
+    compactView: boolean; // Toggle for compact list view
+    search: string; // Search query
 }
 
 interface ItemizedExpense {
@@ -53,7 +57,11 @@ export default function ReimbursementManagementPortal() {
         department: [],
         dateRange: 'all',
         sortBy: 'date_of_purchase',
-        sortOrder: 'desc'
+        sortOrder: 'desc',
+        hidePaid: true,
+        hideRejected: true,
+        compactView: false,
+        search: ''
     });
     const [auditNote, setAuditNote] = useState('');
     const [loadingStatus, setLoadingStatus] = useState(false);
@@ -110,6 +118,21 @@ export default function ReimbursementManagementPortal() {
                 filter = `(${statusFilter})`;
             }
 
+            // When searching, don't auto-hide paid/rejected unless explicitly filtered
+            const isSearching = filters.search.trim().length > 0;
+            
+            // Auto-hide paid reimbursements if the option is enabled and not searching
+            if (filters.hidePaid && !isSearching) {
+                const hidePaidFilter = 'status != "paid"';
+                filter = filter ? `${filter} && ${hidePaidFilter}` : hidePaidFilter;
+            }
+
+            // Auto-hide rejected reimbursements if the option is enabled and not searching
+            if (filters.hideRejected && !isSearching) {
+                const hideRejectedFilter = 'status != "rejected"';
+                filter = filter ? `${filter} && ${hideRejectedFilter}` : hideRejectedFilter;
+            }
+
             if (filters.department.length > 0) {
                 const departmentFilter = filters.department.map(d => `department = "${d}"`).join(' || ');
                 filter = filter ? `${filter} && (${departmentFilter})` : `(${departmentFilter})`;
@@ -160,11 +183,10 @@ export default function ReimbursementManagementPortal() {
                 submitter: userMap[record.submitted_by]
             }));
 
-            setReimbursements(enrichedRecords);
-
             // Load associated receipts
             const receiptIds = enrichedRecords.flatMap(r => r.receipts || []);
 
+            let receiptMap: Record<string, ExtendedReceipt> = {};
             if (receiptIds.length > 0) {
                 try {
                     const receiptRecords = await Promise.all(
@@ -200,7 +222,7 @@ export default function ReimbursementManagementPortal() {
 
                     const validReceipts = receiptRecords.filter((r): r is ExtendedReceipt => r !== null);
 
-                    const receiptMap = Object.fromEntries(
+                    receiptMap = Object.fromEntries(
                         validReceipts.map(receipt => [receipt.id, receipt])
                     );
                     setReceipts(receiptMap);
@@ -217,6 +239,52 @@ export default function ReimbursementManagementPortal() {
                 // console.log('No receipt IDs found in reimbursements');
                 setReceipts({});
             }
+
+            // Apply client-side search filtering
+            let filteredRecords = enrichedRecords;
+            if (isSearching) {
+                const searchTerm = filters.search.toLowerCase().trim();
+                
+                filteredRecords = enrichedRecords.filter(record => {
+                    // Search in title
+                    if (record.title.toLowerCase().includes(searchTerm)) return true;
+                    
+                    // Search in submitter name
+                    if (record.submitter?.name?.toLowerCase().includes(searchTerm)) return true;
+                    
+                    // Search in date (multiple formats)
+                    const date = new Date(record.date_of_purchase);
+                    const dateFormats = [
+                        date.toLocaleDateString(), // Default locale format
+                        date.toLocaleDateString('en-US'), // MM/DD/YYYY
+                        date.toISOString().split('T')[0], // YYYY-MM-DD
+                        date.toDateString(), // "Mon Jan 01 2024"
+                        `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`, // M/D/YYYY
+                        `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` // YYYY-MM-DD
+                    ];
+                    if (dateFormats.some(format => format.toLowerCase().includes(searchTerm))) return true;
+                    
+                    // Search in receipt location names
+                    const reimbursementReceipts = record.receipts?.map(id => receiptMap[id]).filter(Boolean) || [];
+                    if (reimbursementReceipts.some(receipt => 
+                        receipt.location_name?.toLowerCase().includes(searchTerm) ||
+                        receipt.location_address?.toLowerCase().includes(searchTerm)
+                    )) return true;
+                    
+                    // Search in department
+                    if (record.department.toLowerCase().includes(searchTerm)) return true;
+                    
+                    // Search in status
+                    if (record.status.toLowerCase().replace('_', ' ').includes(searchTerm)) return true;
+                    
+                    // Search in additional info
+                    if (record.additional_info?.toLowerCase().includes(searchTerm)) return true;
+                    
+                    return false;
+                });
+            }
+
+            setReimbursements(filteredRecords);
         } catch (error) {
             console.error('Error loading reimbursements:', error);
             toast.error('Failed to load reimbursements. Please try again later.');
@@ -694,12 +762,59 @@ export default function ReimbursementManagementPortal() {
                         <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                             Reimbursement Requests
                         </h2>
-                        <span className="badge badge-primary badge-md font-medium">
-                            {reimbursements.length} Total
-                        </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="badge badge-primary badge-md font-medium">
+                                {reimbursements.length} Total
+                            </span>
+                            {filters.hidePaid && (
+                                <span className="badge badge-ghost badge-sm font-medium" title="Paid reimbursements are automatically hidden">
+                                    <Icon icon="heroicons:eye-slash" className="h-3 w-3 mr-1" />
+                                    Paid Hidden
+                                </span>
+                            )}
+                            {filters.hideRejected && (
+                                <span className="badge badge-ghost badge-sm font-medium" title="Rejected reimbursements are automatically hidden">
+                                    <Icon icon="heroicons:eye-slash" className="h-3 w-3 mr-1" />
+                                    Rejected Hidden
+                                </span>
+                            )}
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                        {/* Search Bar */}
+                        <div className="form-control sm:col-span-2">
+                            <div className="join h-9 relative">
+                                <div className="flex items-center justify-center w-9 bg-base-200 border border-base-300 rounded-l-lg join-item">
+                                    <Icon icon="heroicons:magnifying-glass" className="h-4 w-4" />
+                                </div>
+                                <input
+                                    type="text"
+                                    className={`input input-bordered input-sm w-full focus:outline-none h-full join-item rounded-l-none ${filters.search ? 'pr-16' : 'pr-8'}`}
+                                    placeholder="Search by title, user, date, receipt location..."
+                                    value={filters.search}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                                />
+                                {filters.search && (
+                                    <button
+                                        className="btn btn-ghost btn-sm absolute right-2 top-0 h-full px-2"
+                                        onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
+                                    >
+                                        <Icon icon="heroicons:x-mark" className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                            {filters.search && (
+                                <div className="label py-1">
+                                    <span className="label-text-alt text-info">
+                                        <Icon icon="heroicons:information-circle" className="h-3 w-3 inline mr-1" />
+                                        Search includes all reimbursements (including paid/rejected)
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Status Filter */}
                         <div className="form-control">
                             <div className="join h-9 relative">
                                 <div className="flex items-center justify-center w-9 bg-base-200 border border-base-300 rounded-l-lg join-item">
@@ -755,6 +870,7 @@ export default function ReimbursementManagementPortal() {
                             </div>
                         </div>
 
+                        {/* Department Filter */}
                         <div className="form-control">
                             <div className="join h-9 relative">
                                 <div className="flex items-center justify-center w-9 bg-base-200 border border-base-300 rounded-l-lg join-item">
@@ -807,6 +923,7 @@ export default function ReimbursementManagementPortal() {
                             </div>
                         </div>
 
+                        {/* Date Range Filter */}
                         <div className="form-control">
                             <div className="join h-9">
                                 <div className="flex items-center justify-center w-9 bg-base-200 border border-base-300 rounded-l-lg join-item">
@@ -825,7 +942,8 @@ export default function ReimbursementManagementPortal() {
                             </div>
                         </div>
 
-                        <div className="form-control md:col-span-2">
+                        {/* Sort Controls */}
+                        <div className="form-control">
                             <div className="join h-9">
                                 <div className="flex items-center justify-center w-9 bg-base-200 border border-base-300 rounded-l-lg join-item">
                                     <Icon icon="heroicons:arrows-up-down" className="h-4 w-4" />
@@ -851,6 +969,54 @@ export default function ReimbursementManagementPortal() {
                             </div>
                         </div>
                     </div>
+
+                    {/* Additional Filter Options */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-base-300 mt-4">
+                        <div className="form-control">
+                            <label className="label cursor-pointer justify-start gap-3 p-0">
+                                <input
+                                    type="checkbox"
+                                    className="checkbox checkbox-primary checkbox-sm"
+                                    checked={filters.hidePaid}
+                                    onChange={(e) => setFilters({ ...filters, hidePaid: e.target.checked })}
+                                />
+                                <div className="flex items-center gap-2">
+                                    <Icon icon="heroicons:eye-slash" className="h-4 w-4 text-base-content/70" />
+                                    <span className="label-text font-medium">Auto-hide paid requests</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div className="form-control">
+                            <label className="label cursor-pointer justify-start gap-3 p-0">
+                                <input
+                                    type="checkbox"
+                                    className="checkbox checkbox-primary checkbox-sm"
+                                    checked={filters.hideRejected}
+                                    onChange={(e) => setFilters({ ...filters, hideRejected: e.target.checked })}
+                                />
+                                <div className="flex items-center gap-2">
+                                    <Icon icon="heroicons:eye-slash" className="h-4 w-4 text-base-content/70" />
+                                    <span className="label-text font-medium">Auto-hide rejected requests</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div className="form-control">
+                            <label className="label cursor-pointer justify-start gap-3 p-0">
+                                <input
+                                    type="checkbox"
+                                    className="checkbox checkbox-primary checkbox-sm"
+                                    checked={filters.compactView}
+                                    onChange={(e) => setFilters({ ...filters, compactView: e.target.checked })}
+                                />
+                                <div className="flex items-center gap-2">
+                                    <Icon icon="heroicons:list-bullet" className="h-4 w-4 text-base-content/70" />
+                                    <span className="label-text font-medium">Compact view</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
                 </motion.div>
 
                 {loading ? (
@@ -874,7 +1040,7 @@ export default function ReimbursementManagementPortal() {
                     </motion.div>
                 ) : (
                     <AnimatePresence>
-                        <div className="space-y-4">
+                        <div className={`${filters.compactView ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2' : 'space-y-4'}`}>
                             {reimbursements.map((reimbursement, index) => (
                                 <motion.div
                                     key={reimbursement.id}
@@ -885,47 +1051,76 @@ export default function ReimbursementManagementPortal() {
                                         ${selectedReimbursement?.id === reimbursement.id ? 'ring-2 ring-primary shadow-lg scale-[1.02]' : 'hover:scale-[1.01] hover:shadow-md'}`}
                                     onClick={() => setSelectedReimbursement(reimbursement)}
                                 >
-                                    <div className="card-body p-5">
-                                        <div className="flex justify-between items-start gap-4">
-                                            <div className="space-y-2 flex-1 min-w-0">
-                                                <h3 className="font-bold text-lg group-hover:text-primary transition-colors truncate">
+                                    {filters.compactView ? (
+                                        // Compact Grid View
+                                        <div className="card-body p-3">
+                                            <div className="space-y-2">
+                                                <h3 className="font-semibold text-sm group-hover:text-primary transition-colors line-clamp-2 leading-tight">
                                                     {reimbursement.title}
                                                 </h3>
-                                                <div className="flex flex-wrap gap-3 text-sm">
-                                                    <div className="flex items-center gap-1.5 text-base-content/70">
-                                                        <Icon icon="heroicons:calendar" className="h-4 w-4 flex-shrink-0" />
-                                                        <span>{new Date(reimbursement.date_of_purchase).toLocaleDateString()}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 text-base-content/70">
-                                                        <Icon icon="heroicons:building-office" className="h-4 w-4 flex-shrink-0" />
-                                                        <span className="truncate">{reimbursement.department}</span>
-                                                    </div>
+                                                <div className="flex items-center justify-between text-xs text-base-content/70">
+                                                    <span>{new Date(reimbursement.date_of_purchase).toLocaleDateString()}</span>
+                                                    <span className="font-mono font-bold text-primary text-sm">
+                                                        ${reimbursement.total_amount.toFixed(2)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-center">
+                                                    <span className={`badge badge-sm ${reimbursement.status === 'approved' ? 'badge-success' :
+                                                        reimbursement.status === 'rejected' ? 'badge-error' :
+                                                            reimbursement.status === 'under_review' ? 'badge-info' :
+                                                                reimbursement.status === 'in_progress' ? 'badge-warning' :
+                                                                    reimbursement.status === 'paid' ? 'badge-success' :
+                                                                        'badge-ghost'
+                                                        } capitalize font-medium whitespace-nowrap`}>
+                                                        {reimbursement.status.replace('_', ' ')}
+                                                    </span>
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                                                <span className="font-mono font-bold text-lg text-primary whitespace-nowrap">
-                                                    ${reimbursement.total_amount.toFixed(2)}
-                                                </span>
-                                                <span className={`badge ${reimbursement.status === 'approved' ? 'badge-success' :
-                                                    reimbursement.status === 'rejected' ? 'badge-error' :
-                                                        reimbursement.status === 'under_review' ? 'badge-info' :
-                                                            reimbursement.status === 'in_progress' ? 'badge-warning' :
-                                                                reimbursement.status === 'paid' ? 'badge-success' :
-                                                                    'badge-ghost'
-                                                    } gap-1.5 px-3 py-2.5 capitalize font-medium`}>
-                                                    <Icon icon={
-                                                        reimbursement.status === 'approved' ? 'heroicons:check-circle' :
-                                                            reimbursement.status === 'rejected' ? 'heroicons:x-circle' :
-                                                                reimbursement.status === 'under_review' ? 'heroicons:eye' :
-                                                                    reimbursement.status === 'in_progress' ? 'heroicons:currency-dollar' :
-                                                                        reimbursement.status === 'paid' ? 'heroicons:banknotes' :
-                                                                            'heroicons:clock'
-                                                    } className="h-4 w-4 flex-shrink-0" />
-                                                    {reimbursement.status.replace('_', ' ')}
-                                                </span>
+                                        </div>
+                                    ) : (
+                                        // Regular View
+                                        <div className="card-body p-5">
+                                            <div className="flex justify-between items-start gap-4">
+                                                <div className="space-y-2 flex-1 min-w-0">
+                                                    <h3 className="font-bold text-lg group-hover:text-primary transition-colors truncate">
+                                                        {reimbursement.title}
+                                                    </h3>
+                                                    <div className="flex flex-wrap gap-3 text-sm">
+                                                        <div className="flex items-center gap-1.5 text-base-content/70">
+                                                            <Icon icon="heroicons:calendar" className="h-4 w-4 flex-shrink-0" />
+                                                            <span>{new Date(reimbursement.date_of_purchase).toLocaleDateString()}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-base-content/70">
+                                                            <Icon icon="heroicons:building-office" className="h-4 w-4 flex-shrink-0" />
+                                                            <span className="truncate">{reimbursement.department}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                                                    <span className="font-mono font-bold text-lg text-primary whitespace-nowrap">
+                                                        ${reimbursement.total_amount.toFixed(2)}
+                                                    </span>
+                                                    <span className={`badge ${reimbursement.status === 'approved' ? 'badge-success' :
+                                                        reimbursement.status === 'rejected' ? 'badge-error' :
+                                                            reimbursement.status === 'under_review' ? 'badge-info' :
+                                                                reimbursement.status === 'in_progress' ? 'badge-warning' :
+                                                                    reimbursement.status === 'paid' ? 'badge-success' :
+                                                                        'badge-ghost'
+                                                        } gap-1.5 px-3 py-2.5 capitalize font-medium`}>
+                                                        <Icon icon={
+                                                            reimbursement.status === 'approved' ? 'heroicons:check-circle' :
+                                                                reimbursement.status === 'rejected' ? 'heroicons:x-circle' :
+                                                                    reimbursement.status === 'under_review' ? 'heroicons:eye' :
+                                                                        reimbursement.status === 'in_progress' ? 'heroicons:currency-dollar' :
+                                                                            reimbursement.status === 'paid' ? 'heroicons:banknotes' :
+                                                                                'heroicons:clock'
+                                                        } className="h-4 w-4 flex-shrink-0" />
+                                                        {reimbursement.status.replace('_', ' ')}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </motion.div>
                             ))}
                         </div>
@@ -1710,4 +1905,4 @@ export default function ReimbursementManagementPortal() {
             )}
         </div>
     );
-} 
+}
