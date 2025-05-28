@@ -1,4 +1,4 @@
 [phases.setup]
-nixPkgs = ["nodejs_18", "bun"]
+nixPkgs = ["nodejs_20", "bun"]
 aptPkgs = ["curl", "wget"]
 
