@@ -1831,61 +1831,167 @@ export default function OfficerManagement() {
                     </div>
 
                     {/* Bulk Actions Section */}
-                    <div className="bg-base-200 p-6 rounded-xl shadow-md border border-base-content/5 transition-all duration-300 hover:shadow-lg">
-                        <h2 className="text-2xl font-semibold mb-4 text-base-content flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                            </svg>
-                            Bulk Actions
-                        </h2>
-                        <div className="space-y-4">
-                            <div className="flex flex-col gap-4">
-                                <div className="form-control">
-                                    <label htmlFor="bulkAction" className="block mb-2 text-sm font-medium text-base-content">
-                                        Set Selected Officers To
-                                    </label>
-                                    <select
-                                        id="bulkAction"
-                                        value={bulkActionType}
-                                        onChange={handleBulkActionTypeChange}
-                                        className="w-full p-3 bg-base-300 border border-base-content/20 rounded-lg text-base-content focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                                    >
-                                        <option value="">Select action...</option>
-                                        <option value={OfficerTypes.GENERAL}>General</option>
-                                        <option value={OfficerTypes.EXECUTIVE}>Executive</option>
-                                        <option value={OfficerTypes.ADMINISTRATOR} disabled={!isCurrentUserAdmin}>
-                                            Administrator {!isCurrentUserAdmin && "(Admin only)"}
-                                        </option>
-                                        <option value={OfficerTypes.HONORARY}>Honorary</option>
-                                        <option value={OfficerTypes.PAST}>Past</option>
-                                    </select>
+                    <div className="bg-gradient-to-br from-base-200 via-base-200 to-base-300/30 p-8 rounded-2xl shadow-xl border border-base-content/10 transition-all duration-300 hover:shadow-2xl group">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <div className="p-3 bg-gradient-to-br from-secondary to-secondary/80 rounded-2xl shadow-lg group-hover:shadow-secondary/25 transition-all duration-300">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-secondary-content" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                        </svg>
+                                    </div>
+                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-warning rounded-full border-2 border-base-200 animate-pulse"></div>
                                 </div>
-                                <Button
-                                    className="w-full"
-                                    onClick={applyBulkAction}
-                                    disabled={selectedOfficers.length === 0 || !bulkActionType}
-                                >
-                                    Apply to {selectedOfficers.length} Selected
-                                </Button>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-base-content">Bulk Actions</h2>
+                                    <p className="text-base-content/60 text-sm mt-1">Manage multiple officers simultaneously</p>
+                                </div>
                             </div>
-                            <div className="text-sm text-base-content/70 bg-base-300 p-2 rounded-lg">
-                                Select officers from the table below
+                            {selectedOfficers.length > 0 && (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-secondary/10 rounded-xl border border-secondary/20">
+                                    <div className="w-2 h-2 bg-secondary rounded-full animate-pulse"></div>
+                                    <span className="text-sm font-medium text-secondary">{selectedOfficers.length} selected</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-6">
+                            {/* Enhanced Bulk Type Change Section */}
+                            <div className="bg-gradient-to-br from-base-100 to-base-200/30 p-6 rounded-2xl border border-base-content/10 shadow-inner">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2 bg-secondary/10 rounded-xl">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-base-content">Change Officer Type</h3>
+                                        <p className="text-sm text-base-content/60">Update the type for selected officers</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-3">
+                                        <label htmlFor="bulkAction" className="flex items-center gap-2 text-sm font-semibold text-base-content">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                            </svg>
+                                            Set Selected Officers To
+                                        </label>
+                                        <select
+                                            id="bulkAction"
+                                            value={bulkActionType}
+                                            onChange={handleBulkActionTypeChange}
+                                            className="w-full px-4 py-4 bg-gradient-to-r from-base-100 to-base-100/50 border-2 border-base-content/10 rounded-2xl text-base-content focus:ring-4 focus:ring-secondary/20 focus:border-secondary/50 transition-all duration-300 shadow-sm hover:shadow-md text-lg"
+                                        >
+                                            <option value="">Choose new officer type...</option>
+                                            <option value={OfficerTypes.GENERAL}>General Officer</option>
+                                            <option value={OfficerTypes.EXECUTIVE}>Executive Officer</option>
+                                            <option value={OfficerTypes.ADMINISTRATOR} disabled={!isCurrentUserAdmin}>
+                                                Administrator {!isCurrentUserAdmin && "(Admin Only)"}
+                                            </option>
+                                            <option value={OfficerTypes.HONORARY}>Honorary Officer</option>
+                                            <option value={OfficerTypes.PAST}>Past Officer</option>
+                                        </select>
+                                    </div>
+
+                                    <Button
+                                        className="w-full py-4 text-lg font-semibold bg-gradient-to-r from-secondary to-secondary/90 hover:from-secondary/90 hover:to-secondary text-secondary-content border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                        onClick={applyBulkAction}
+                                        disabled={selectedOfficers.length === 0 || !bulkActionType}
+                                    >
+                                        <div className="flex items-center justify-center gap-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                            </svg>
+                                            <span>
+                                                Apply to {selectedOfficers.length > 0 ? `${selectedOfficers.length} ` : ''}Selected Officer{selectedOfficers.length !== 1 ? 's' : ''}
+                                                {bulkActionType && ` → ${bulkActionType.charAt(0).toUpperCase() + bulkActionType.slice(1)}`}
+                                            </span>
+                                        </div>
+                                    </Button>
+
+                                    {/* Enhanced Validation Hints */}
+                                    <div className="text-center">
+                                        {selectedOfficers.length === 0 ? (
+                                            <p className="text-sm text-base-content/50 flex items-center justify-center gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Select officers from the table below to enable bulk actions
+                                            </p>
+                                        ) : !bulkActionType ? (
+                                            <p className="text-sm text-base-content/50 flex items-center justify-center gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Choose an officer type for the {selectedOfficers.length} selected officer{selectedOfficers.length !== 1 ? 's' : ''}
+                                            </p>
+                                        ) : (
+                                            <p className="text-sm text-success flex items-center justify-center gap-2">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Ready to update {selectedOfficers.length} officer{selectedOfficers.length !== 1 ? 's' : ''} to {bulkActionType}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="pt-4 border-t border-base-content/10">
-                                <h3 className="text-lg font-medium mb-3 text-base-content">Quick Actions</h3>
-                                <Button
-                                    className="bg-warning hover:bg-warning/80 w-full"
-                                    onClick={archiveCurrentOfficers}
-                                    disabled={!isCurrentUserAdmin}
-                                    title={!isCurrentUserAdmin ? "Only administrators can perform this action" : ""}
-                                >
-                                    Set All General & Executive Officers to Past
-                                    {!isCurrentUserAdmin && " (Admin only)"}
-                                </Button>
-                                <div className="mt-2 text-sm text-base-content/70 bg-base-300 p-2 rounded-lg">
-                                    Use this button at the end of the academic year to archive current officers.
-                                    {!isCurrentUserAdmin && " Only administrators can perform this action."}
+                            {/* Enhanced Quick Actions Section */}
+                            <div className="bg-gradient-to-br from-warning/5 to-warning/10 p-6 rounded-2xl border border-warning/20 shadow-inner">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2 bg-warning/10 rounded-xl">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-base-content">Quick Actions</h3>
+                                        <p className="text-sm text-base-content/60">Administrative operations for officer management</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <Button
+                                        className="w-full py-4 text-lg font-semibold bg-gradient-to-r from-warning to-warning/90 hover:from-warning/90 hover:to-warning text-warning-content border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                        onClick={archiveCurrentOfficers}
+                                        disabled={!isCurrentUserAdmin}
+                                        title={!isCurrentUserAdmin ? "Only administrators can perform this action" : ""}
+                                    >
+                                        <div className="flex items-center justify-center gap-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                            </svg>
+                                            <span>
+                                                Archive All General & Executive Officers
+                                                {!isCurrentUserAdmin && " (Admin Only)"}
+                                            </span>
+                                        </div>
+                                    </Button>
+
+                                    <div className="bg-gradient-to-r from-warning/10 to-warning/5 p-4 rounded-xl border border-warning/20">
+                                        <div className="flex items-start gap-3">
+                                            <div className="p-1 bg-warning/20 rounded-lg mt-0.5">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="font-semibold text-warning text-sm mb-1">End of Year Action</h4>
+                                                <p className="text-sm text-base-content/70 leading-relaxed">
+                                                    Use this button at the end of the academic year to archive current officers and prepare for new leadership.
+                                                    {!isCurrentUserAdmin && " Only administrators can perform this action."}
+                                                </p>
+                                                {isCurrentUserAdmin && (
+                                                    <div className="mt-2 text-xs text-warning/80 bg-warning/5 px-2 py-1 rounded border border-warning/20">
+                                                        This will set all General & Executive officers to "Past" status
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
