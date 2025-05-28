@@ -1117,211 +1117,369 @@ export default function OfficerManagement() {
     };
 
     return (
-        <div className="container mx-auto text-base-content">
-            {/* Toast notifications are handled by react-hot-toast */}
-
-            {/* Admin status indicator */}
-            {isCurrentUserAdmin && (
-                <div className="bg-success/10 border border-success/30 rounded-lg p-3 mb-4 text-success flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                    <span>You have administrator privileges and can manage all officers</span>
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                {/* Add New Officer Section */}
-                <div className="bg-base-200 p-6 rounded-xl shadow-md border border-base-content/5 transition-all duration-300 hover:shadow-lg mb-8">
-                    <h2 className="text-2xl font-semibold mb-4 text-base-content flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                        </svg>
-                        Add New Officer
-                    </h2>
-                    <form className="space-y-4" onSubmit={handleAddOfficer}>
+        <div className="min-h-screen bg-gradient-to-br from-base-100 to-base-200/50">
+            {/* Header Section with Breadcrumb */}
+            <div className="sticky top-0 z-40 bg-base-100/95 backdrop-blur-sm border-b border-base-content/10">
+                <div className="container mx-auto px-4 py-4">
+                    {/* Breadcrumb */}
+                    <nav className="text-sm breadcrumbs mb-2">
+                        <ul>
+                            <li><span className="text-base-content/60">Dashboard</span></li>
+                            <li><span className="text-primary font-medium">Officer Management</span></li>
+                        </ul>
+                    </nav>
+                    
+                    {/* Page Title and Description */}
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div>
-                            <label htmlFor="user" className="block mb-2 text-sm font-medium text-base-content">
-                                Add Users
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    id="user"
-                                    value={userSearchTerm}
-                                    ref={searchInputRef}
-                                    onChange={handleUserSearchChange}
-                                    onKeyDown={handleSearchKeyDown}
-                                    placeholder="Search for users..."
-                                    className="w-full p-3 bg-base-300 border border-base-content/20 rounded-lg text-base-content placeholder-base-content/50 focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                                    onFocus={() => searchUsers(userSearchTerm)}
-                                />
-                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                    {selectedUsers.length > 0 ? (
-                                        <div className="bg-primary text-primary-content text-xs font-medium rounded-full h-5 w-5 flex items-center justify-center mr-2">
-                                            {selectedUsers.length}
-                                        </div>
-                                    ) : null}
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-base-content/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            <h1 className="text-3xl font-bold text-base-content mb-2 flex items-center gap-3">
+                                <div className="p-2 bg-primary/10 rounded-xl">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                     </svg>
                                 </div>
+                                Officer Management
+                            </h1>
+                            <p className="text-base-content/70 text-lg">Manage organization officers, roles, and permissions</p>
+                        </div>
+                        
+                        {/* Quick Stats */}
+                        <div className="flex gap-4">
+                            <div className="stats shadow-lg bg-base-200 border border-base-content/10">
+                                <div className="stat py-3 px-4">
+                                    <div className="stat-title text-xs">Total Officers</div>
+                                    <div className="stat-value text-2xl text-primary">{officers.length}</div>
+                                </div>
+                            </div>
+                            <div className="stats shadow-lg bg-base-200 border border-base-content/10">
+                                <div className="stat py-3 px-4">
+                                    <div className="stat-title text-xs">Active</div>
+                                    <div className="stat-value text-2xl text-success">
+                                        {officers.filter(o => o.type === OfficerTypes.GENERAL || o.type === OfficerTypes.EXECUTIVE).length}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                                {/* User search results dropdown */}
-                                {userSearchTerm.length > 0 && (
-                                    <div className="absolute z-10 mt-1 w-full bg-base-300 border border-base-content/20 rounded-lg shadow-lg">
-                                        <div className="sticky top-0 bg-base-300 p-2 border-b border-base-content/10 flex justify-between items-center">
-                                            <span className="text-sm font-medium">
-                                                {userSearchResults.length > 0
-                                                    ? `${userSearchResults.length} result${userSearchResults.length !== 1 ? 's' : ''}`
-                                                    : 'No results found'}
-                                            </span>
-                                            <div className="flex gap-2">
+                    {/* Admin status indicator */}
+                    {isCurrentUserAdmin && (
+                        <div className="mt-4 bg-gradient-to-r from-success/10 to-success/5 border border-success/20 rounded-xl p-4 text-success flex items-center shadow-sm">
+                            <div className="p-2 bg-success/20 rounded-lg mr-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <span className="font-semibold">Administrator Access</span>
+                                <p className="text-sm text-success/80 mt-1">You have full privileges to manage all officers and sensitive operations</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="container mx-auto px-4 py-8">
+                {/* Management Cards Grid */}
+                <div className="grid grid-cols-1 2xl:grid-cols-3 gap-8 mb-12">
+                    {/* Add New Officer Section */}
+                    <div className="bg-gradient-to-br from-base-200 via-base-200 to-base-300/30 p-8 rounded-2xl shadow-xl border border-base-content/10 transition-all duration-300 hover:shadow-2xl group">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <div className="p-3 bg-gradient-to-br from-primary to-primary/80 rounded-2xl shadow-lg group-hover:shadow-primary/25 transition-all duration-300">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-primary-content" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                        </svg>
+                                    </div>
+                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full border-2 border-base-200 animate-pulse"></div>
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-base-content">Add New Officer</h2>
+                                    <p className="text-base-content/60 text-sm mt-1">Search and assign roles to organization members</p>
+                                </div>
+                            </div>
+                            {selectedUsers.length > 0 && (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-xl border border-primary/20">
+                                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                                    <span className="text-sm font-medium text-primary">{selectedUsers.length} selected</span>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <form className="space-y-6" onSubmit={handleAddOfficer}>
+                            {/* Enhanced User Search Section */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="user" className="flex items-center gap-2 text-sm font-semibold text-base-content">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        Search Users
+                                    </label>
+                                    {userSearchResults.length > 0 && userSearchTerm && (
+                                        <span className="text-xs text-base-content/60 bg-base-300 px-2 py-1 rounded-lg">
+                                            {userSearchResults.length} found
+                                        </span>
+                                    )}
+                                </div>
+                                
+                                <div className="relative">
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            id="user"
+                                            value={userSearchTerm}
+                                            ref={searchInputRef}
+                                            onChange={handleUserSearchChange}
+                                            onKeyDown={handleSearchKeyDown}
+                                            placeholder="Type name or email to search..."
+                                            className="w-full pl-12 pr-16 py-4 bg-gradient-to-r from-base-100 to-base-100/50 border-2 border-base-content/10 rounded-2xl text-base-content placeholder-base-content/40 focus:ring-4 focus:ring-primary/20 focus:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md text-lg"
+                                            onFocus={() => searchUsers(userSearchTerm)}
+                                        />
+                                        
+                                        {/* Search Icon */}
+                                        <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                                            <div className="p-1 bg-primary/10 rounded-lg">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Selected Counter & Clear Button */}
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-4 gap-2">
+                                            {selectedUsers.length > 0 && (
+                                                <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-content text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
+                                                    {selectedUsers.length}
+                                                </div>
+                                            )}
+                                            {userSearchTerm && (
                                                 <button
+                                                    type="button"
                                                     onClick={() => {
                                                         setUserSearchTerm('');
+                                                        setUserSearchResults([]);
                                                         searchInputRef.current?.focus();
                                                     }}
-                                                    className="text-xs px-2 py-1 bg-base-100 rounded hover:bg-base-200"
-                                                    type="button"
+                                                    className="p-1.5 bg-base-300 hover:bg-error/20 text-base-content/60 hover:text-error rounded-lg transition-all duration-200"
                                                     title="Clear search"
-                                                >
-                                                    Clear
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setUserSearchResults([]);
-                                                        setUserSearchTerm('');
-                                                    }}
-                                                    className="text-base-content/70 hover:text-base-content"
-                                                    type="button"
                                                 >
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                                     </svg>
                                                 </button>
-                                            </div>
-                                        </div>
-
-                                        {userSearchResults.length === 0 ? (
-                                            <div className="py-6 text-center text-base-content/60">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto mb-2 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                                </svg>
-                                                <p>No users found matching "{userSearchTerm}"</p>
-                                                <p className="text-sm mt-1">Try a different search term</p>
-                                            </div>
-                                        ) : (
-                                            <ul className="py-1 max-h-60 overflow-auto">
-                                                {userSearchResults.map((user, index) => {
-                                                    const isSelected = selectedUsers.some(u => u.id === user.id);
-                                                    const isAlreadyOfficer = officers.some(officer => officer.expand?.user.id === user.id);
-                                                    const isHighlighted = index === currentHighlightedIndex;
-
-                                                    return (
-                                                        <li
-                                                            key={user.id}
-                                                            onClick={() => handleSelectUser(user)}
-                                                            className={`px-4 py-2 hover:bg-base-100 cursor-pointer 
-                                                                ${isSelected ? 'bg-primary/10' : ''} 
-                                                                ${isHighlighted ? 'bg-base-content/10' : ''}`}
-                                                        >
-                                                            <div className="flex items-center justify-between">
-                                                                <div>
-                                                                    <div className="font-medium flex items-center">
-                                                                        {user.name}
-                                                                        {isAlreadyOfficer && (
-                                                                            <span className="ml-2 text-xs bg-warning/20 text-warning px-1.5 py-0.5 rounded">
-                                                                                Already an officer
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="text-sm text-base-content/70">{user.email}</div>
-                                                                </div>
-                                                                {!isAlreadyOfficer && (
-                                                                    isSelected ? (
-                                                                        <div className="text-primary">
-                                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                                            </svg>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="text-primary/50">
-                                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                                                            </svg>
-                                                                        </div>
-                                                                    )
-                                                                )}
-                                                            </div>
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        )}
-
-                                        <div className="border-t border-base-content/10 p-2 sticky bottom-0 bg-base-300 flex justify-between">
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedUsers([]);
-                                                }}
-                                                className="btn btn-sm btn-outline btn-error flex-1 mr-1"
-                                                type="button"
-                                                disabled={selectedUsers.length === 0}
-                                            >
-                                                Clear All ({selectedUsers.length})
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setUserSearchResults([]);
-                                                    setUserSearchTerm('');
-                                                }}
-                                                className="btn btn-sm btn-primary flex-1 ml-1"
-                                                type="button"
-                                            >
-                                                Done
-                                            </button>
+                                            )}
                                         </div>
                                     </div>
-                                )}
-                            </div>
 
-                            {/* Selected users display */}
-                            {selectedUsers.length > 0 && (
-                                <div className="mt-3">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <label className="text-sm font-medium text-base-content">
-                                            Selected Users ({selectedUsers.length})
-                                        </label>
-                                        {selectedUsers.length > 0 && (
+                                    {/* Enhanced Search Results Dropdown */}
+                                    {userSearchTerm.length > 0 && (
+                                        <div className="absolute z-20 mt-2 w-full bg-gradient-to-br from-base-100 to-base-200/50 border-2 border-base-content/10 rounded-2xl shadow-2xl backdrop-blur-sm overflow-hidden">
+                                            {/* Results Header */}
+                                            <div className="sticky top-0 bg-gradient-to-r from-base-200 to-base-300/50 backdrop-blur-sm p-4 border-b border-base-content/10">
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                                                        <span className="text-sm font-semibold text-base-content">
+                                                            {userSearchResults.length > 0
+                                                                ? `${userSearchResults.length} user${userSearchResults.length !== 1 ? 's' : ''} found`
+                                                                : 'No users found'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex gap-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                setUserSearchTerm('');
+                                                                searchInputRef.current?.focus();
+                                                            }}
+                                                            className="text-xs px-3 py-1.5 bg-base-100 hover:bg-primary/10 text-base-content rounded-lg transition-all duration-200 font-medium"
+                                                            type="button"
+                                                        >
+                                                            Clear
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setUserSearchResults([]);
+                                                                setUserSearchTerm('');
+                                                            }}
+                                                            className="p-1.5 text-base-content/60 hover:text-error hover:bg-error/10 rounded-lg transition-all duration-200"
+                                                            type="button"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Search Results List */}
+                                            {userSearchResults.length === 0 ? (
+                                                <div className="py-12 text-center text-base-content/60">
+                                                    <div className="flex flex-col items-center gap-3">
+                                                        <div className="p-4 bg-base-content/5 rounded-2xl">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                            </svg>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium">No users found</p>
+                                                            <p className="text-sm mt-1">Try searching with a different name or email</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="max-h-80 overflow-y-auto">
+                                                    {userSearchResults.map((user, index) => {
+                                                        const isSelected = selectedUsers.some(u => u.id === user.id);
+                                                        const isAlreadyOfficer = officers.some(officer => officer.expand?.user.id === user.id);
+                                                        const isHighlighted = index === currentHighlightedIndex;
+
+                                                        return (
+                                                            <div
+                                                                key={user.id}
+                                                                onClick={() => handleSelectUser(user)}
+                                                                className={`relative px-6 py-4 cursor-pointer transition-all duration-200 border-b border-base-content/5 last:border-b-0 ${
+                                                                    isSelected ? 'bg-gradient-to-r from-primary/10 to-primary/5 border-l-4 border-l-primary' : 
+                                                                    isHighlighted ? 'bg-base-content/5' : 'hover:bg-base-content/5'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-4">
+                                                                        {/* User Avatar */}
+                                                                        <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold border-2 transition-all duration-200 ${
+                                                                            isSelected 
+                                                                                ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-content border-primary/30 shadow-lg' 
+                                                                                : 'bg-gradient-to-br from-base-300 to-base-200 text-base-content border-base-content/10'
+                                                                        }`}>
+                                                                            {user.name.charAt(0).toUpperCase()}
+                                                                            {isSelected && (
+                                                                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-base-100 flex items-center justify-center">
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 text-success-content" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                                                    </svg>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        
+                                                                        <div className="flex-1">
+                                                                            <div className="flex items-center gap-2 mb-1">
+                                                                                <span className="font-semibold text-base-content">{user.name}</span>
+                                                                                {isAlreadyOfficer && (
+                                                                                    <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-warning/15 text-warning border border-warning/30">
+                                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                                        </svg>
+                                                                                        Officer
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <p className="text-sm text-base-content/60">{user.email}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    {/* Selection Indicator */}
+                                                                    <div className="flex items-center">
+                                                                        {isSelected ? (
+                                                                            <div className="p-2 bg-primary/20 rounded-xl text-primary">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                                                </svg>
+                                                                            </div>
+                                                                        ) : !isAlreadyOfficer ? (
+                                                                            <div className="p-2 bg-base-content/5 rounded-xl text-base-content/40 group-hover:text-primary group-hover:bg-primary/10 transition-all duration-200">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                                                </svg>
+                                                                            </div>
+                                                                        ) : null}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
+                                            {/* Footer Actions */}
+                                            <div className="sticky bottom-0 bg-gradient-to-r from-base-200 to-base-300/50 backdrop-blur-sm p-4 border-t border-base-content/10">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setSelectedUsers([])}
+                                                        className="flex-1 btn btn-sm btn-outline btn-error"
+                                                        type="button"
+                                                        disabled={selectedUsers.length === 0}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Clear ({selectedUsers.length})
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setUserSearchResults([]);
+                                                            setUserSearchTerm('');
+                                                        }}
+                                                        className="flex-1 btn btn-sm btn-primary"
+                                                        type="button"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                        Done
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Enhanced Selected Users Display */}
+                                {selectedUsers.length > 0 && (
+                                    <div className="bg-gradient-to-br from-base-100 to-base-200/30 p-6 rounded-2xl border border-base-content/10 shadow-inner">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-primary/10 rounded-xl">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-base-content">Selected Users</h3>
+                                                    <p className="text-sm text-base-content/60">{selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''} ready to be assigned</p>
+                                                </div>
+                                            </div>
                                             <button
                                                 onClick={() => setSelectedUsers([])}
                                                 type="button"
-                                                className="text-xs text-error hover:text-error/80 flex items-center"
+                                                className="btn btn-sm btn-outline btn-error gap-2"
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                 </svg>
                                                 Clear All
                                             </button>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 p-3 bg-base-300 rounded-lg border border-base-content/10 max-h-28 overflow-y-auto">
-                                        {selectedUsers.length === 0 ? (
-                                            <div className="text-sm text-base-content/50 text-center w-full py-2">
-                                                No users selected
-                                            </div>
-                                        ) : (
-                                            selectedUsers.map(user => (
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-40 overflow-y-auto">
+                                            {selectedUsers.map((user, index) => (
                                                 <div
                                                     key={user.id}
-                                                    className="flex items-center bg-base-100 px-3 py-1.5 rounded-lg group border border-base-content/10 hover:border-error/30"
+                                                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-base-100 to-base-100/50 rounded-xl border border-base-content/10 group hover:border-primary/30 transition-all duration-200"
                                                 >
-                                                    <span className="mr-2 text-sm">{user.name}</span>
+                                                    <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl flex items-center justify-center text-primary font-semibold border border-primary/20">
+                                                        {user.name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-semibold text-base-content truncate">{user.name}</p>
+                                                        <p className="text-xs text-base-content/60 truncate">{user.email}</p>
+                                                    </div>
                                                     <button
                                                         onClick={() => handleRemoveSelectedUser(user.id)}
                                                         type="button"
-                                                        className="text-base-content/50 hover:text-error transition-colors"
+                                                        className="p-2 text-base-content/40 hover:text-error hover:bg-error/10 rounded-lg transition-all duration-200 opacity-60 group-hover:opacity-100"
                                                         title="Remove user"
                                                     >
                                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1329,107 +1487,152 @@ export default function OfficerManagement() {
                                                         </svg>
                                                     </button>
                                                 </div>
-                                            ))
-                                        )}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </div>
 
-                        <div>
-                            <label htmlFor="role" className="block mb-2 text-sm font-medium text-base-content">
-                                Role
-                            </label>
-                            <input
-                                type="text"
-                                id="role"
-                                value={newOfficerRole}
-                                onChange={(e) => setNewOfficerRole(e.target.value)}
-                                placeholder="e.g. President, Technical Vice Chair"
-                                className="w-full p-3 bg-base-300 border border-base-content/20 rounded-lg text-base-content placeholder-base-content/50 focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="type" className="block mb-2 text-sm font-medium text-base-content">
-                                Officer Type
-                            </label>
-                            <select
-                                id="type"
-                                value={newOfficerType}
-                                onChange={(e) => setNewOfficerType(e.target.value)}
-                                className="w-full p-3 bg-base-300 border border-base-content/20 rounded-lg text-base-content focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                            >
-                                <option value={OfficerTypes.GENERAL}>General</option>
-                                <option value={OfficerTypes.EXECUTIVE}>Executive</option>
-                                <option value={OfficerTypes.ADMINISTRATOR} disabled={!isCurrentUserAdmin}>
-                                    Administrator {!isCurrentUserAdmin && "(Admin only)"}
-                                </option>
-                                <option value={OfficerTypes.HONORARY}>Honorary</option>
-                                <option value={OfficerTypes.PAST}>Past</option>
-                            </select>
-                        </div>
-
-                        <Button
-                            type="submit"
-                            className="w-full mt-2"
-                        >
-                            Add {selectedUsers.length > 0 ? `${selectedUsers.length} ` : ''}Officer{selectedUsers.length !== 1 ? 's' : ''}
-                        </Button>
-                    </form>
-                </div>
-
-                {/* JSON Import Section */}
-                <div className="bg-base-200 p-6 rounded-xl shadow-md border border-base-content/5 transition-all duration-300 hover:shadow-lg mb-8">
-                    <h2 className="text-2xl font-semibold mb-4 text-base-content flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        Import Officers from JSON
-                    </h2>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block mb-2 text-sm font-medium text-base-content">
-                                Paste JSON Data
-                                <button
-                                    onClick={() => {
-                                        const exampleJson = JSON.stringify([
-                                            {
-                                                name: "John Doe",
-                                                email: "john@example.com",
-                                                role: "President",
-                                                type: "executive",
-                                                pid: "A12345678",
-                                                major: "Computer Science",
-                                                graduation_year: 2024
-                                            },
-                                            {
-                                                name: "Jane Smith",
-                                                email: "jane@example.com",
-                                                role: "Technical Vice Chair",
-                                                type: "executive",
-                                                major: "Electrical Engineering",
-                                                graduation_year: 2025
-                                            }
-                                        ], null, 2);
-                                        navigator.clipboard.writeText(exampleJson);
-                                        toast.success('Example JSON copied to clipboard!');
-                                    }}
-                                    className="ml-2 text-xs text-primary hover:text-primary/80 inline-flex items-center"
-                                    type="button"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            {/* Enhanced Role Input */}
+                            <div className="space-y-3">
+                                <label htmlFor="role" className="flex items-center gap-2 text-sm font-semibold text-base-content">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m8 0H8m8 0v6a2 2 0 01-2 2H10a2 2 0 01-2-2V6m8 0V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m8 0H8" />
                                     </svg>
-                                    Copy Example
-                                </button>
-                            </label>
-                            <div className="relative">
-                                <textarea
-                                    value={jsonInput}
-                                    onChange={handleJsonInputChange}
-                                    placeholder={`[
+                                    Officer Role
+                                </label>
+                                <input
+                                    type="text"
+                                    id="role"
+                                    value={newOfficerRole}
+                                    onChange={(e) => setNewOfficerRole(e.target.value)}
+                                    placeholder="e.g. President, Technical Vice Chair, Secretary"
+                                    className="w-full px-4 py-4 bg-gradient-to-r from-base-100 to-base-100/50 border-2 border-base-content/10 rounded-2xl text-base-content placeholder-base-content/40 focus:ring-4 focus:ring-primary/20 focus:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md text-lg"
+                                />
+                            </div>
+
+                            {/* Enhanced Officer Type Selection */}
+                            <div className="space-y-3">
+                                <label htmlFor="type" className="flex items-center gap-2 text-sm font-semibold text-base-content">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                    </svg>
+                                    Officer Type
+                                </label>
+                                <select
+                                    id="type"
+                                    value={newOfficerType}
+                                    onChange={(e) => setNewOfficerType(e.target.value)}
+                                    className="w-full px-4 py-4 bg-gradient-to-r from-base-100 to-base-100/50 border-2 border-base-content/10 rounded-2xl text-base-content focus:ring-4 focus:ring-primary/20 focus:border-primary/50 transition-all duration-300 shadow-sm hover:shadow-md text-lg"
+                                >
+                                    <option value={OfficerTypes.GENERAL}>General Officer</option>
+                                    <option value={OfficerTypes.EXECUTIVE}>Executive Officer</option>
+                                    <option value={OfficerTypes.ADMINISTRATOR} disabled={!isCurrentUserAdmin}>
+                                        Administrator {!isCurrentUserAdmin && "(Admin Only)"}
+                                    </option>
+                                    <option value={OfficerTypes.HONORARY}>Honorary Officer</option>
+                                    <option value={OfficerTypes.PAST}>Past Officer</option>
+                                </select>
+                            </div>
+
+                            {/* Enhanced Submit Button */}
+                            <div className="pt-4">
+                                <Button
+                                    type="submit"
+                                    className="w-full py-4 text-lg font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-content border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                    disabled={selectedUsers.length === 0 || !newOfficerRole.trim()}
+                                >
+                                    <div className="flex items-center justify-center gap-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                        </svg>
+                                        <span>
+                                            Add {selectedUsers.length > 0 ? `${selectedUsers.length} ` : ''}Officer{selectedUsers.length !== 1 ? 's' : ''}
+                                            {selectedUsers.length > 0 && ` as ${newOfficerType.charAt(0).toUpperCase() + newOfficerType.slice(1)}`}
+                                        </span>
+                                    </div>
+                                </Button>
+                                
+                                {/* Form Validation Hints */}
+                                <div className="mt-3 text-center">
+                                    {selectedUsers.length === 0 ? (
+                                        <p className="text-sm text-base-content/50 flex items-center justify-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Select at least one user to continue
+                                        </p>
+                                    ) : !newOfficerRole.trim() ? (
+                                        <p className="text-sm text-base-content/50 flex items-center justify-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Enter a role for the selected user{selectedUsers.length !== 1 ? 's' : ''}
+                                        </p>
+                                    ) : (
+                                        <p className="text-sm text-success flex items-center justify-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Ready to create {selectedUsers.length} new officer{selectedUsers.length !== 1 ? 's' : ''}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* JSON Import Section */}
+                    <div className="bg-base-200 p-6 rounded-xl shadow-md border border-base-content/5 transition-all duration-300 hover:shadow-lg mb-8">
+                        <h2 className="text-2xl font-semibold mb-4 text-base-content flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            Import Officers from JSON
+                        </h2>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-base-content">
+                                    Paste JSON Data
+                                    <button
+                                        onClick={() => {
+                                            const exampleJson = JSON.stringify([
+                                                {
+                                                    name: "John Doe",
+                                                    email: "john@example.com",
+                                                    role: "President",
+                                                    type: "executive",
+                                                    pid: "A12345678",
+                                                    major: "Computer Science",
+                                                    graduation_year: 2024
+                                                },
+                                                {
+                                                    name: "Jane Smith",
+                                                    email: "jane@example.com",
+                                                    role: "Technical Vice Chair",
+                                                    type: "executive",
+                                                    major: "Electrical Engineering",
+                                                    graduation_year: 2025
+                                                }
+                                            ], null, 2);
+                                            navigator.clipboard.writeText(exampleJson);
+                                            toast.success('Example JSON copied to clipboard!');
+                                        }}
+                                        className="ml-2 text-xs text-primary hover:text-primary/80 inline-flex items-center"
+                                        type="button"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                        Copy Example
+                                    </button>
+                                </label>
+                                <div className="relative">
+                                    <textarea
+                                        value={jsonInput}
+                                        onChange={handleJsonInputChange}
+                                        placeholder={`[
   {
     "name": "John Doe",
     "email": "john@example.com",
@@ -1437,462 +1640,656 @@ export default function OfficerManagement() {
     "type": "executive"
   }
 ]`}
-                                    className="w-full h-48 p-3 bg-base-300 border border-base-content/20 rounded-lg text-base-content placeholder-base-content/50 focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-mono text-sm"
-                                />
-                            </div>
-                            <div className="mt-2 text-sm text-base-content/70 space-y-2">
-                                <p><strong>Available Types:</strong> "executive", "general", "honorary", "past"</p>
-                                <p><strong>Note:</strong> Any role containing "VC" or "Vice Chair" should be considered executive type.</p>
-                                <p><strong>Do not include:</strong> Any numbers in the role field (e.g. "Webmaster #1" should just be "Webmaster")</p>
-                            </div>
-                            {importError && (
-                                <div className="mt-2 text-error text-sm">
-                                    {importError}
+                                        className="w-full h-48 p-3 bg-base-300 border border-base-content/20 rounded-lg text-base-content placeholder-base-content/50 focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 font-mono text-sm"
+                                    />
                                 </div>
-                            )}
-                        </div>
-
-                        <Button
-                            onClick={() => processJsonImport(jsonInput)}
-                            disabled={!jsonInput || isProcessingImport}
-                            className="w-full"
-                        >
-                            {isProcessingImport ? (
-                                <div className="flex items-center justify-center">
-                                    <span className="loading loading-spinner loading-sm mr-2"></span>
-                                    Processing...
+                                <div className="mt-2 text-sm text-base-content/70 space-y-2">
+                                    <p><strong>Available Types:</strong> "executive", "general", "honorary", "past"</p>
+                                    <p><strong>Note:</strong> Any role containing "VC" or "Vice Chair" should be considered executive type.</p>
+                                    <p><strong>Do not include:</strong> Any numbers in the role field (e.g. "Webmaster #1" should just be "Webmaster")</p>
                                 </div>
-                            ) : (
-                                'Process JSON'
-                            )}
-                        </Button>
+                                {importError && (
+                                    <div className="mt-2 text-error text-sm">
+                                        {importError}
+                                    </div>
+                                )}
+                            </div>
 
-                        {/* User Matches Display */}
-                        {userMatches.length > 0 && (
-                            <div className="mt-6">
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                                    <div className="flex flex-wrap items-center gap-3">
-                                        <h3 className="text-lg font-medium whitespace-nowrap">
-                                            Matches
-                                            <span className="ml-1">
-                                                ({userMatches.filter(m => m.confidence > 0 || showUnmatched).length})
-                                            </span>
-                                            {!showUnmatched && userMatches.some(m => m.confidence === 0) && (
-                                                <span className="ml-1 text-sm text-base-content/70 whitespace-nowrap">
-                                                    +{userMatches.filter(m => m.confidence === 0).length} hidden
+                            <Button
+                                onClick={() => processJsonImport(jsonInput)}
+                                disabled={!jsonInput || isProcessingImport}
+                                className="w-full"
+                            >
+                                {isProcessingImport ? (
+                                    <div className="flex items-center justify-center">
+                                        <span className="loading loading-spinner loading-sm mr-2"></span>
+                                        Processing...
+                                    </div>
+                                ) : (
+                                    'Process JSON'
+                                )}
+                            </Button>
+
+                            {/* User Matches Display */}
+                            {userMatches.length > 0 && (
+                                <div className="mt-6">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <h3 className="text-lg font-medium whitespace-nowrap">
+                                                Matches
+                                                <span className="ml-1">
+                                                    ({userMatches.filter(m => m.confidence > 0 || showUnmatched).length})
                                                 </span>
-                                            )}
-                                        </h3>
-                                        <div className="w-[140px] flex-shrink-0">
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    className="checkbox checkbox-xs"
-                                                    checked={showUnmatched}
-                                                    onChange={(e) => setShowUnmatched(e.target.checked)}
-                                                />
-                                                <span className="text-sm whitespace-nowrap">Show Unmatched</span>
-                                            </label>
+                                                {!showUnmatched && userMatches.some(m => m.confidence === 0) && (
+                                                    <span className="ml-1 text-sm text-base-content/70 whitespace-nowrap">
+                                                        +{userMatches.filter(m => m.confidence === 0).length} hidden
+                                                    </span>
+                                                )}
+                                            </h3>
+                                            <div className="w-[140px] flex-shrink-0">
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="checkbox checkbox-xs"
+                                                        checked={showUnmatched}
+                                                        onChange={(e) => setShowUnmatched(e.target.checked)}
+                                                    />
+                                                    <span className="text-sm whitespace-nowrap">Show Unmatched</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 w-full sm:w-auto">
+                                            <Button
+                                                onClick={() => setUserMatches([])}
+                                                className="btn-sm btn-outline h-9 px-3 min-h-0 flex-1 sm:flex-none"
+                                            >
+                                                Clear
+                                            </Button>
+                                            <Button
+                                                onClick={processMatchedUsers}
+                                                disabled={!userMatches.some(m => m.confidence >= 70 || m.isApproved) || isSubmitting}
+                                                className="btn-sm btn-primary h-9 px-3 min-h-0 flex-1 sm:flex-none"
+                                            >
+                                                {isSubmitting ? (
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <div className="loading loading-spinner loading-xs"></div>
+                                                        <span className="whitespace-nowrap">
+                                                            Processing {processingProgress}%
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="whitespace-nowrap">
+                                                        Process ({userMatches.filter(m => m.confidence >= 70 || m.isApproved).length})
+                                                    </span>
+                                                )}
+                                            </Button>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2 w-full sm:w-auto">
-                                        <Button
-                                            onClick={() => setUserMatches([])}
-                                            className="btn-sm btn-outline h-9 px-3 min-h-0 flex-1 sm:flex-none"
-                                        >
-                                            Clear
-                                        </Button>
-                                        <Button
-                                            onClick={processMatchedUsers}
-                                            disabled={!userMatches.some(m => m.confidence >= 70 || m.isApproved) || isSubmitting}
-                                            className="btn-sm btn-primary h-9 px-3 min-h-0 flex-1 sm:flex-none"
-                                        >
-                                            {isSubmitting ? (
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <div className="loading loading-spinner loading-xs"></div>
-                                                    <span className="whitespace-nowrap">
-                                                        Processing {processingProgress}%
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <span className="whitespace-nowrap">
-                                                    Process ({userMatches.filter(m => m.confidence >= 70 || m.isApproved).length})
-                                                </span>
-                                            )}
-                                        </Button>
-                                    </div>
-                                </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto pr-1">
-                                    {userMatches
-                                        .filter(match => match.confidence > 0 || showUnmatched)
-                                        .map((match) => {
-                                            // Check if this is the current user
-                                            const isUserSelf = isCurrentUser(match.matchedUser?.id);
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto pr-1">
+                                        {userMatches
+                                            .filter(match => match.confidence > 0 || showUnmatched)
+                                            .map((match) => {
+                                                // Check if this is the current user
+                                                const isUserSelf = isCurrentUser(match.matchedUser?.id);
 
-                                            return (
-                                                <div
-                                                    key={match.id}
-                                                    onClick={() => {
-                                                        // Only allow toggle if not self and confidence < 70
-                                                        if (!isUserSelf && match.matchedUser && match.confidence < 70) {
-                                                            handleToggleApproval(match.id);
-                                                        }
-                                                    }}
-                                                    className={`bg-base-300 p-4 rounded-lg border transition-all duration-200 ${match.confidence >= 70
-                                                        ? 'border-success/30 bg-success/5'
-                                                        : match.confidence >= 40
-                                                            ? match.isApproved
-                                                                ? 'border-success/30 bg-success/5 cursor-pointer'
-                                                                : 'border-warning/30 hover:border-success/30 cursor-pointer'
-                                                            : match.isApproved
-                                                                ? 'border-success/30 bg-success/5 cursor-pointer'
-                                                                : match.confidence === 0
-                                                                    ? 'border-base-content/10 bg-base-200/50'
-                                                                    : 'border-error/30 hover:border-success/30 cursor-pointer'
-                                                        } ${match.confidence < 70 && match.confidence > 0 && !isUserSelf ? 'hover:shadow-md' : ''}`}
-                                                >
-                                                    <div className="flex items-start justify-between mb-3">
-                                                        <div className="flex-1 min-w-0 pr-2">
-                                                            <h4 className="font-medium text-base flex items-center gap-1 truncate">
-                                                                <span className="truncate">{match.importedData.name}</span>
-                                                                {(match.confidence >= 70 || match.isApproved) && (
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                                    </svg>
-                                                                )}
-                                                            </h4>
-                                                            <p className="text-sm text-base-content/70">{match.importedData.email}</p>
-                                                            <p className="text-sm mt-1">Role: {match.importedData.role}</p>
-                                                            {match.importedData.type && (
-                                                                <p className="text-sm mt-1">Type: {match.importedData.type}</p>
-                                                            )}
-                                                            {match.importedData.pid && (
-                                                                <p className="text-sm mt-1 text-base-content/70">PID: {match.importedData.pid}</p>
-                                                            )}
-                                                        </div>
-                                                        <div className={`text-right px-2 py-1 rounded text-sm font-medium shrink-0 ${match.confidence >= 70
-                                                            ? 'bg-success/20 text-success'
+                                                return (
+                                                    <div
+                                                        key={match.id}
+                                                        onClick={() => {
+                                                            // Only allow toggle if not self and confidence < 70
+                                                            if (!isUserSelf && match.matchedUser && match.confidence < 70) {
+                                                                handleToggleApproval(match.id);
+                                                            }
+                                                        }}
+                                                        className={`bg-base-300 p-4 rounded-lg border transition-all duration-200 ${match.confidence >= 70
+                                                            ? 'border-success/30 bg-success/5'
                                                             : match.confidence >= 40
-                                                                ? 'bg-warning/20 text-warning'
-                                                                : 'bg-error/20 text-error'
-                                                            }`}>
-                                                            {match.confidence.toFixed(1)}%
+                                                                ? match.isApproved
+                                                                    ? 'border-success/30 bg-success/5 cursor-pointer'
+                                                                    : 'border-warning/30 hover:border-success/30 cursor-pointer'
+                                                                : match.isApproved
+                                                                    ? 'border-success/30 bg-success/5 cursor-pointer'
+                                                                    : match.confidence === 0
+                                                                        ? 'border-base-content/10 bg-base-200/50'
+                                                                        : 'border-error/30 hover:border-success/30 cursor-pointer'
+                                                            } ${match.confidence < 70 && match.confidence > 0 && !isUserSelf ? 'hover:shadow-md' : ''}`}
+                                                    >
+                                                        <div className="flex items-start justify-between mb-3">
+                                                            <div className="flex-1 min-w-0 pr-2">
+                                                                <h4 className="font-medium text-base flex items-center gap-1 truncate">
+                                                                    <span className="truncate">{match.importedData.name}</span>
+                                                                    {(match.confidence >= 70 || match.isApproved) && (
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                                        </svg>
+                                                                    )}
+                                                                </h4>
+                                                                <p className="text-sm text-base-content/70">{match.importedData.email}</p>
+                                                                <p className="text-sm mt-1">Role: {match.importedData.role}</p>
+                                                                {match.importedData.type && (
+                                                                    <p className="text-sm mt-1">Type: {match.importedData.type}</p>
+                                                                )}
+                                                                {match.importedData.pid && (
+                                                                    <p className="text-sm mt-1 text-base-content/70">PID: {match.importedData.pid}</p>
+                                                                )}
+                                                            </div>
+                                                            <div className={`text-right px-2 py-1 rounded text-sm font-medium shrink-0 ${match.confidence >= 70
+                                                                ? 'bg-success/20 text-success'
+                                                                : match.confidence >= 40
+                                                                    ? 'bg-warning/20 text-warning'
+                                                                    : 'bg-error/20 text-error'
+                                                                }`}>
+                                                                {match.confidence.toFixed(1)}%
+                                                            </div>
                                                         </div>
-                                                    </div>
 
-                                                    {match.matchedUser ? (
-                                                        <div className="bg-base-200 p-3 rounded text-sm mt-3">
-                                                            <div className="flex justify-between items-start mb-2">
-                                                                <div className="w-full">
-                                                                    <div className="font-medium">{match.matchedUser.name}</div>
-                                                                    <div className="text-base-content/70 break-all">{match.matchedUser.email}</div>
+                                                        {match.matchedUser ? (
+                                                            <div className="bg-base-200 p-3 rounded text-sm mt-3">
+                                                                <div className="flex justify-between items-start mb-2">
+                                                                    <div className="w-full">
+                                                                        <div className="font-medium">{match.matchedUser.name}</div>
+                                                                        <div className="text-base-content/70 break-all">{match.matchedUser.email}</div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-sm space-y-1 mt-2">
+                                                                    <div className="font-medium">Match Reasons:</div>
+                                                                    {match.matchReason.map((reason, i) => (
+                                                                        <div key={i} className="flex items-center gap-1">
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
+                                                                            <span className="break-words">{reason}</span>
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             </div>
-                                                            <div className="text-sm space-y-1 mt-2">
-                                                                <div className="font-medium">Match Reasons:</div>
-                                                                {match.matchReason.map((reason, i) => (
-                                                                    <div key={i} className="flex items-center gap-1">
-                                                                        <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
-                                                                        <span className="break-words">{reason}</span>
-                                                                    </div>
-                                                                ))}
+                                                        ) : (
+                                                            <div className="bg-base-200 p-3 rounded text-sm text-error mt-3">
+                                                                No matching user found
                                                             </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="bg-base-200 p-3 rounded text-sm text-error mt-3">
-                                                            No matching user found
-                                                        </div>
-                                                    )}
+                                                        )}
 
-                                                    {/* Display warning when match is current user */}
-                                                    {isUserSelf && (
-                                                        <div className="mt-3 py-2 text-sm text-warning text-center bg-warning/10 border border-warning/20 rounded-lg">
-                                                            Cannot edit your own role
-                                                        </div>
-                                                    )}
+                                                        {/* Display warning when match is current user */}
+                                                        {isUserSelf && (
+                                                            <div className="mt-3 py-2 text-sm text-warning text-center bg-warning/10 border border-warning/20 rounded-lg">
+                                                                Cannot edit your own role
+                                                            </div>
+                                                        )}
 
-                                                    {/* Only show approval message for non-self users with confidence < 70 */}
-                                                    {match.confidence < 70 && match.matchedUser && !isUserSelf && (
-                                                        <div className="mt-3 py-2 text-sm text-base-content/70 text-center bg-base-100 rounded-lg">
-                                                            {match.isApproved ? '↑ Click to remove approval ↑' : '↑ Click to approve match ↑'}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
+                                                        {/* Only show approval message for non-self users with confidence < 70 */}
+                                                        {match.confidence < 70 && match.matchedUser && !isUserSelf && (
+                                                            <div className="mt-3 py-2 text-sm text-base-content/70 text-center bg-base-100 rounded-lg">
+                                                                {match.isApproved ? '↑ Click to remove approval ↑' : '↑ Click to approve match ↑'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Bulk Actions Section */}
+                    <div className="bg-base-200 p-6 rounded-xl shadow-md border border-base-content/5 transition-all duration-300 hover:shadow-lg">
+                        <h2 className="text-2xl font-semibold mb-4 text-base-content flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                            </svg>
+                            Bulk Actions
+                        </h2>
+                        <div className="space-y-4">
+                            <div className="flex flex-col gap-4">
+                                <div className="form-control">
+                                    <label htmlFor="bulkAction" className="block mb-2 text-sm font-medium text-base-content">
+                                        Set Selected Officers To
+                                    </label>
+                                    <select
+                                        id="bulkAction"
+                                        value={bulkActionType}
+                                        onChange={handleBulkActionTypeChange}
+                                        className="w-full p-3 bg-base-300 border border-base-content/20 rounded-lg text-base-content focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                                    >
+                                        <option value="">Select action...</option>
+                                        <option value={OfficerTypes.GENERAL}>General</option>
+                                        <option value={OfficerTypes.EXECUTIVE}>Executive</option>
+                                        <option value={OfficerTypes.ADMINISTRATOR} disabled={!isCurrentUserAdmin}>
+                                            Administrator {!isCurrentUserAdmin && "(Admin only)"}
+                                        </option>
+                                        <option value={OfficerTypes.HONORARY}>Honorary</option>
+                                        <option value={OfficerTypes.PAST}>Past</option>
+                                    </select>
+                                </div>
+                                <Button
+                                    className="w-full"
+                                    onClick={applyBulkAction}
+                                    disabled={selectedOfficers.length === 0 || !bulkActionType}
+                                >
+                                    Apply to {selectedOfficers.length} Selected
+                                </Button>
+                            </div>
+                            <div className="text-sm text-base-content/70 bg-base-300 p-2 rounded-lg">
+                                Select officers from the table below
+                            </div>
+
+                            <div className="pt-4 border-t border-base-content/10">
+                                <h3 className="text-lg font-medium mb-3 text-base-content">Quick Actions</h3>
+                                <Button
+                                    className="bg-warning hover:bg-warning/80 w-full"
+                                    onClick={archiveCurrentOfficers}
+                                    disabled={!isCurrentUserAdmin}
+                                    title={!isCurrentUserAdmin ? "Only administrators can perform this action" : ""}
+                                >
+                                    Set All General & Executive Officers to Past
+                                    {!isCurrentUserAdmin && " (Admin only)"}
+                                </Button>
+                                <div className="mt-2 text-sm text-base-content/70 bg-base-300 p-2 rounded-lg">
+                                    Use this button at the end of the academic year to archive current officers.
+                                    {!isCurrentUserAdmin && " Only administrators can perform this action."}
                                 </div>
                             </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Bulk Actions Section */}
-                <div className="bg-base-200 p-6 rounded-xl shadow-md border border-base-content/5 transition-all duration-300 hover:shadow-lg">
-                    <h2 className="text-2xl font-semibold mb-4 text-base-content flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                        </svg>
-                        Bulk Actions
-                    </h2>
-                    <div className="space-y-4">
-                        <div className="flex flex-col gap-4">
-                            <div className="form-control">
-                                <label htmlFor="bulkAction" className="block mb-2 text-sm font-medium text-base-content">
-                                    Set Selected Officers To
-                                </label>
-                                <select
-                                    id="bulkAction"
-                                    value={bulkActionType}
-                                    onChange={handleBulkActionTypeChange}
-                                    className="w-full p-3 bg-base-300 border border-base-content/20 rounded-lg text-base-content focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                                >
-                                    <option value="">Select action...</option>
-                                    <option value={OfficerTypes.GENERAL}>General</option>
-                                    <option value={OfficerTypes.EXECUTIVE}>Executive</option>
-                                    <option value={OfficerTypes.ADMINISTRATOR} disabled={!isCurrentUserAdmin}>
-                                        Administrator {!isCurrentUserAdmin && "(Admin only)"}
-                                    </option>
-                                    <option value={OfficerTypes.HONORARY}>Honorary</option>
-                                    <option value={OfficerTypes.PAST}>Past</option>
-                                </select>
-                            </div>
-                            <Button
-                                className="w-full"
-                                onClick={applyBulkAction}
-                                disabled={selectedOfficers.length === 0 || !bulkActionType}
-                            >
-                                Apply to {selectedOfficers.length} Selected
-                            </Button>
-                        </div>
-                        <div className="text-sm text-base-content/70 bg-base-300 p-2 rounded-lg">
-                            Select officers from the table below
-                        </div>
-
-                        <div className="pt-4 border-t border-base-content/10">
-                            <h3 className="text-lg font-medium mb-3 text-base-content">Quick Actions</h3>
-                            <Button
-                                className="bg-warning hover:bg-warning/80 w-full"
-                                onClick={archiveCurrentOfficers}
-                                disabled={!isCurrentUserAdmin}
-                                title={!isCurrentUserAdmin ? "Only administrators can perform this action" : ""}
-                            >
-                                Set All General & Executive Officers to Past
-                                {!isCurrentUserAdmin && " (Admin only)"}
-                            </Button>
-                            <div className="mt-2 text-sm text-base-content/70 bg-base-300 p-2 rounded-lg">
-                                Use this button at the end of the academic year to archive current officers.
-                                {!isCurrentUserAdmin && " Only administrators can perform this action."}
-                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Officers Table Section */}
-            <div className="bg-base-200 p-6 rounded-xl shadow-md border border-base-content/5 transition-all duration-300 hover:shadow-lg">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <h2 className="text-2xl font-semibold text-base-content flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        Current Officers
-                    </h2>
-                    <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                        <div className="relative flex-grow">
-                            <input
-                                type="text"
-                                placeholder="Search officers..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full p-3 pl-10 bg-base-300 border border-base-content/20 rounded-lg text-base-content placeholder-base-content/50 focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                            />
-                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-base-content/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                {/* Officers Table Section */}
+                <div className="bg-gradient-to-br from-base-200 to-base-300/50 p-8 rounded-2xl shadow-xl border border-base-content/10 transition-all duration-300 hover:shadow-2xl">
+                    {/* Header with improved styling */}
+                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-primary/10 rounded-xl">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
                             </div>
+                            <div>
+                                <h2 className="text-3xl font-bold text-base-content">Current Officers</h2>
+                                <p className="text-base-content/60 mt-1">View and manage all organization officers</p>
+                            </div>
                         </div>
-                        <select
-                            value={filterType}
-                            onChange={(e) => setFilterType(e.target.value)}
-                            className="p-3 bg-base-300 border border-base-content/20 rounded-lg text-base-content focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
-                        >
-                            <option value="">All Types</option>
-                            <option value={OfficerTypes.GENERAL}>General</option>
-                            <option value={OfficerTypes.EXECUTIVE}>Executive</option>
-                            <option value={OfficerTypes.ADMINISTRATOR}>Administrator</option>
-                            <option value={OfficerTypes.HONORARY}>Honorary</option>
-                            <option value={OfficerTypes.PAST}>Past</option>
-                        </select>
+                        
+                        {/* Enhanced search and filter controls */}
+                        <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto min-w-0">
+                            <div className="relative flex-grow lg:min-w-[300px]">
+                                <input
+                                    type="text"
+                                    placeholder="Search officers by name or role..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-12 pr-4 py-3 bg-base-100 border-2 border-base-content/10 rounded-xl text-base-content placeholder-base-content/50 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all duration-200 shadow-sm"
+                                />
+                                <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                {searchTerm && (
+                                    <button
+                                        onClick={() => setSearchTerm('')}
+                                        className="absolute inset-y-0 right-0 flex items-center pr-4 text-base-content/40 hover:text-base-content transition-colors"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
+                            <select
+                                value={filterType}
+                                onChange={(e) => setFilterType(e.target.value)}
+                                className="px-4 py-3 bg-base-100 border-2 border-base-content/10 rounded-xl text-base-content focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all duration-200 shadow-sm min-w-[140px]"
+                            >
+                                <option value="">All Types</option>
+                                <option value={OfficerTypes.GENERAL}>General</option>
+                                <option value={OfficerTypes.EXECUTIVE}>Executive</option>
+                                <option value={OfficerTypes.ADMINISTRATOR}>Administrator</option>
+                                <option value={OfficerTypes.HONORARY}>Honorary</option>
+                                <option value={OfficerTypes.PAST}>Past</option>
+                            </select>
+                        </div>
                     </div>
+
+                    {/* Results summary */}
+                    {!loading && !error && (
+                        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 p-4 bg-base-100/50 rounded-xl border border-base-content/5">
+                            <div className="flex items-center gap-3">
+                                <div className="text-sm text-base-content/70">
+                                    Showing <span className="font-semibold text-primary">{filteredOfficers.length}</span> of <span className="font-semibold">{officers.length}</span> officers
+                                </div>
+                                {(searchTerm || filterType) && (
+                                    <div className="flex gap-2">
+                                        {searchTerm && (
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary text-xs rounded-lg">
+                                                Search: "{searchTerm}"
+                                                <button onClick={() => setSearchTerm('')} className="hover:bg-primary/20 rounded p-0.5">
+                                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </span>
+                                        )}
+                                        {filterType && (
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-secondary/10 text-secondary text-xs rounded-lg">
+                                                Type: {filterType}
+                                                <button onClick={() => setFilterType('')} className="hover:bg-secondary/20 rounded p-0.5">
+                                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {selectedOfficers.length > 0 && (
+                                <div className="flex items-center gap-3">
+                                    <span className="text-sm text-base-content/70">
+                                        <span className="font-semibold text-primary">{selectedOfficers.length}</span> selected
+                                    </span>
+                                    <button
+                                        onClick={() => setSelectedOfficers([])}
+                                        className="text-xs text-error hover:text-error/80 underline"
+                                    >
+                                        Clear selection
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Enhanced loading state */}
+                    {loading ? (
+                        <div className="text-center py-16 bg-gradient-to-br from-base-100 to-base-200/50 rounded-2xl border border-base-content/5">
+                            <div className="flex flex-col items-center">
+                                <div className="relative">
+                                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/30 border-t-primary"></div>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <h3 className="text-xl font-semibold text-base-content mt-6 mb-2">Loading Officers</h3>
+                                <p className="text-base-content/60">Please wait while we fetch the latest officer data...</p>
+                            </div>
+                        </div>
+                    ) : error ? (
+                        <div className="text-center py-16 bg-gradient-to-br from-error/5 to-error/10 rounded-2xl border border-error/20">
+                            <div className="flex flex-col items-center">
+                                <div className="p-4 bg-error/10 rounded-full mb-6">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-semibold text-error mb-2">Failed to Load Officers</h3>
+                                <p className="text-error/80 mb-6 max-w-md">{error}</p>
+                                <Button 
+                                    onClick={fetchOfficers}
+                                    className="btn-outline btn-error"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    Try Again
+                                </Button>
+                            </div>
+                        </div>
+                    ) : filteredOfficers.length === 0 ? (
+                        <div className="text-center py-16 bg-gradient-to-br from-base-100 to-base-200/50 rounded-2xl border border-base-content/5">
+                            <div className="flex flex-col items-center">
+                                <div className="p-4 bg-base-content/5 rounded-full mb-6">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-semibold text-base-content mb-2">
+                                    {officers.length === 0 ? 'No Officers Found' : 'No Matching Officers'}
+                                </h3>
+                                <p className="text-base-content/60 mb-6 max-w-md">
+                                    {officers.length === 0 
+                                        ? 'Get started by adding your first officer using the form above.'
+                                        : 'Try adjusting your search terms or filters to find the officers you\'re looking for.'
+                                    }
+                                </p>
+                                {officers.length === 0 && (
+                                    <Button 
+                                        onClick={() => document.getElementById('user')?.focus()}
+                                        className="btn-primary"
+                                    >
+                                        Add First Officer
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        /* Enhanced table with better styling */
+                        <div className="bg-base-100 rounded-2xl shadow-lg border border-base-content/10 overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-base-content">
+                                    <thead className="bg-gradient-to-r from-base-200 to-base-300">
+                                        <tr className="border-b border-base-content/10">
+                                            <th className="p-4 text-left w-12">
+                                                <div className="flex items-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="checkbox checkbox-sm checkbox-primary"
+                                                        checked={selectedOfficers.length === filteredOfficers.length && filteredOfficers.length > 0}
+                                                        onChange={() => {
+                                                            if (selectedOfficers.length === filteredOfficers.length) {
+                                                                setSelectedOfficers([]);
+                                                            } else {
+                                                                setSelectedOfficers(filteredOfficers.map(o => o.id));
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            </th>
+                                            <th className="p-4 text-left font-semibold text-base-content">
+                                                <div className="flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                    </svg>
+                                                    Name
+                                                </div>
+                                            </th>
+                                            <th className="p-4 text-left font-semibold text-base-content">
+                                                <div className="flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m8 0H8m8 0v6a2 2 0 01-2 2H10a2 2 0 01-2-2V6m8 0V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m8 0H8" />
+                                                    </svg>
+                                                    Role
+                                                </div>
+                                            </th>
+                                            <th className="p-4 text-left font-semibold text-base-content">
+                                                <div className="flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                                    </svg>
+                                                    Type
+                                                </div>
+                                            </th>
+                                            <th className="p-4 text-left font-semibold text-base-content">
+                                                <div className="flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                                    </svg>
+                                                    Actions
+                                                </div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-base-content/5">
+                                        {filteredOfficers.map((officer, index) => {
+                                            const isCurrentUser = officer.expand?.user.id === auth.getUserId();
+                                            const isAdmin = officer.type === OfficerTypes.ADMINISTRATOR;
+                                            
+                                            return (
+                                                <tr 
+                                                    key={officer.id} 
+                                                    className={`transition-all duration-200 hover:bg-base-200/50 ${
+                                                        selectedOfficers.includes(officer.id) 
+                                                            ? 'bg-primary/5 border-l-4 border-l-primary' 
+                                                            : ''
+                                                    } ${isCurrentUser ? 'bg-success/5' : ''}`}
+                                                >
+                                                    <td className="p-4">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="checkbox checkbox-sm checkbox-primary"
+                                                            checked={selectedOfficers.includes(officer.id)}
+                                                            onChange={() => handleSelectOfficer(officer.id)}
+                                                        />
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex-shrink-0">
+                                                                <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center border-2 border-primary/20">
+                                                                    <span className="text-sm font-semibold text-primary">
+                                                                        {(officer.expand?.user.name || 'U').charAt(0).toUpperCase()}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-semibold text-base-content flex items-center gap-2">
+                                                                    {officer.expand?.user.name || 'Unknown User'}
+                                                                    {isCurrentUser && (
+                                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/10 text-success border border-success/20">
+                                                                            You
+                                                                        </span>
+                                                                    )}
+                                                                    {isAdmin && (
+                                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/20">
+                                                                            Admin
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-sm text-base-content/60">
+                                                                    {officer.expand?.user.email}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <span className="font-medium text-base-content">{officer.role}</span>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <select
+                                                            value={officer.type}
+                                                            onChange={(e) => handleEditOfficerType(officer.id, e.target.value)}
+                                                            className={`select select-sm select-bordered bg-base-100 w-full max-w-[140px] transition-all duration-200 ${
+                                                                (isAdmin && !isCurrentUserAdmin) || (isCurrentUser && !isCurrentUserAdmin)
+                                                                    ? 'opacity-50 cursor-not-allowed' 
+                                                                    : 'hover:border-primary/50 focus:border-primary'
+                                                            }`}
+                                                            disabled={
+                                                                (isAdmin && !isCurrentUserAdmin) ||
+                                                                (isCurrentUser && !isCurrentUserAdmin)
+                                                            }
+                                                            title={
+                                                                isAdmin && !isCurrentUserAdmin
+                                                                    ? "Only administrators can change administrator status"
+                                                                    : isCurrentUser && !isCurrentUserAdmin
+                                                                        ? "You cannot change your own role. Only administrators can do that."
+                                                                        : ""
+                                                            }
+                                                        >
+                                                            <option value={OfficerTypes.GENERAL}>General</option>
+                                                            <option value={OfficerTypes.EXECUTIVE}>Executive</option>
+                                                            <option value={OfficerTypes.ADMINISTRATOR}>Administrator</option>
+                                                            <option value={OfficerTypes.HONORARY}>Honorary</option>
+                                                            <option value={OfficerTypes.PAST}>Past</option>
+                                                        </select>
+                                                    </td>
+                                                    <td className="p-4">
+                                                        <button
+                                                            onClick={() => handleRemoveOfficer(officer.id)}
+                                                            className={`btn btn-sm btn-error btn-outline transition-all duration-200 ${
+                                                                (isAdmin && !isCurrentUserAdmin)
+                                                                    ? 'opacity-50 cursor-not-allowed'
+                                                                    : 'hover:btn-error hover:scale-105'
+                                                            }`}
+                                                            disabled={isAdmin && !isCurrentUserAdmin}
+                                                            title={isAdmin && !isCurrentUserAdmin ? 
+                                                                "Only administrators can remove administrator officers" : ""}
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                            Remove
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {loading ? (
-                    <div className="text-center p-8 bg-base-300 rounded-lg border border-base-content/10">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                        <p className="text-base-content/70 text-lg mt-4">Loading officers...</p>
-                    </div>
-                ) : error ? (
-                    <div className="text-center p-8 bg-base-300 rounded-lg border border-base-content/10">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-error mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p className="text-error text-lg">{error}</p>
-                        <Button className="mt-4" onClick={fetchOfficers}>Try Again</Button>
-                    </div>
-                ) : filteredOfficers.length === 0 ? (
-                    <div className="text-center p-8 bg-base-300 rounded-lg border border-base-content/10">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-base-content/30 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                        </svg>
-                        <p className="text-base-content/70 text-lg">No officers found.</p>
-                        <p className="text-base-content/50 mt-2">Add officers using the form on the left.</p>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-base-content">
-                            <thead className="bg-base-300">
-                                <tr>
-                                    <th className="p-3 text-left">
-                                        <input
-                                            type="checkbox"
-                                            className="checkbox checkbox-sm"
-                                            checked={selectedOfficers.length === filteredOfficers.length && filteredOfficers.length > 0}
-                                            onChange={() => {
-                                                if (selectedOfficers.length === filteredOfficers.length) {
-                                                    setSelectedOfficers([]);
-                                                } else {
-                                                    setSelectedOfficers(filteredOfficers.map(o => o.id));
-                                                }
-                                            }}
-                                        />
-                                    </th>
-                                    <th className="p-3 text-left">Name</th>
-                                    <th className="p-3 text-left">Role</th>
-                                    <th className="p-3 text-left">Type</th>
-                                    <th className="p-3 text-left">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredOfficers.map((officer) => (
-                                    <tr key={officer.id} className="border-b border-base-content/10 hover:bg-base-300/50">
-                                        <td className="p-3">
-                                            <input
-                                                type="checkbox"
-                                                className="checkbox checkbox-sm"
-                                                checked={selectedOfficers.includes(officer.id)}
-                                                onChange={() => handleSelectOfficer(officer.id)}
-                                            />
-                                        </td>
-                                        <td className="p-3 font-medium">
-                                            {officer.expand?.user.name || 'Unknown User'}
-                                        </td>
-                                        <td className="p-3">{officer.role}</td>
-                                        <td className="p-3">
-                                            <select
-                                                value={officer.type}
-                                                onChange={(e) => handleEditOfficerType(officer.id, e.target.value)}
-                                                className={`select select-sm select-bordered w-full max-w-xs ${(officer.type === OfficerTypes.ADMINISTRATOR && !isCurrentUserAdmin) ? 'opacity-70' : ''}`}
-                                                disabled={
-                                                    (officer.type === OfficerTypes.ADMINISTRATOR && !isCurrentUserAdmin) ||
-                                                    (officer.expand?.user.id === auth.getUserId() && !isCurrentUserAdmin)
-                                                }
-                                                title={
-                                                    officer.type === OfficerTypes.ADMINISTRATOR && !isCurrentUserAdmin
-                                                        ? "Only administrators can change administrator status"
-                                                        : officer.expand?.user.id === auth.getUserId() && !isCurrentUserAdmin
-                                                            ? "You cannot change your own role. Only administrators can do that."
-                                                            : ""
-                                                }
-                                            >
-                                                <option value={OfficerTypes.GENERAL}>General</option>
-                                                <option value={OfficerTypes.EXECUTIVE}>Executive</option>
-                                                <option value={OfficerTypes.ADMINISTRATOR}>Administrator</option>
-                                                <option value={OfficerTypes.HONORARY}>Honorary</option>
-                                                <option value={OfficerTypes.PAST}>Past</option>
-                                            </select>
-                                        </td>
-                                        <td className="p-3">
-                                            <button
-                                                onClick={() => handleRemoveOfficer(officer.id)}
-                                                className="btn btn-sm btn-error"
-                                                disabled={officer.type === OfficerTypes.ADMINISTRATOR && !isCurrentUserAdmin}
-                                                title={officer.type === OfficerTypes.ADMINISTRATOR && !isCurrentUserAdmin ?
-                                                    "Only administrators can remove administrator officers" : ""}
-                                            >
-                                                Remove
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
+                {/* Officer Replacement Confirmation Modal */}
+                <dialog id="replaceOfficerModal" className="modal">
+                    <div className="modal-box">
+                        <h3 className="font-bold text-lg mb-4">Officer Already Exists</h3>
 
-            {/* Officer Replacement Confirmation Modal */}
-            <dialog id="replaceOfficerModal" className="modal">
-                <div className="modal-box">
-                    <h3 className="font-bold text-lg mb-4">Officer Already Exists</h3>
+                        {officerToReplace && (
+                            <>
+                                <p className="mb-4">
+                                    <span className="font-medium">{officerToReplace.existingOfficer.expand?.user.name}</span> is already an officer.
+                                    Would you like to update their role?
+                                </p>
 
-                    {officerToReplace && (
-                        <>
-                            <p className="mb-4">
-                                <span className="font-medium">{officerToReplace.existingOfficer.expand?.user.name}</span> is already an officer.
-                                Would you like to update their role?
-                            </p>
-
-                            <div className="bg-base-300 p-4 rounded-lg mb-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <h4 className="font-medium text-sm mb-2">Current Role</h4>
-                                        <div className="bg-base-100 p-3 rounded border border-base-content/10">
-                                            <p className="font-bold">{officerToReplace.existingOfficer.role}</p>
-                                            <p className="text-sm opacity-70 mt-1">Type: {officerToReplace.existingOfficer.type}</p>
+                                <div className="bg-base-300 p-4 rounded-lg mb-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <h4 className="font-medium text-sm mb-2">Current Role</h4>
+                                            <div className="bg-base-100 p-3 rounded border border-base-content/10">
+                                                <p className="font-bold">{officerToReplace.existingOfficer.role}</p>
+                                                <p className="text-sm opacity-70 mt-1">Type: {officerToReplace.existingOfficer.type}</p>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div>
-                                        <h4 className="font-medium text-sm mb-2">New Role</h4>
-                                        <div className="bg-primary/10 p-3 rounded border border-primary/30">
-                                            <p className="font-bold">{officerToReplace.newRole}</p>
-                                            <p className="text-sm opacity-70 mt-1">Type: {officerToReplace.newType}</p>
+                                        <div>
+                                            <h4 className="font-medium text-sm mb-2">New Role</h4>
+                                            <div className="bg-primary/10 p-3 rounded border border-primary/30">
+                                                <p className="font-bold">{officerToReplace.newRole}</p>
+                                                <p className="text-sm opacity-70 mt-1">Type: {officerToReplace.newType}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </>
-                    )}
+                            </>
+                        )}
 
-                    <div className="modal-action flex flex-wrap justify-end gap-2">
-                        <button
-                            className="btn btn-outline"
-                            onClick={() => {
-                                const modal = document.getElementById("replaceOfficerModal") as HTMLDialogElement;
-                                if (modal) modal.close();
-                                setOfficerToReplace(null);
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            className="btn btn-primary"
-                            onClick={handleReplaceOfficer}
-                        >
-                            Update Now
-                        </button>
+                        <div className="modal-action flex flex-wrap justify-end gap-2">
+                            <button
+                                className="btn btn-outline"
+                                onClick={() => {
+                                    const modal = document.getElementById("replaceOfficerModal") as HTMLDialogElement;
+                                    if (modal) modal.close();
+                                    setOfficerToReplace(null);
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleReplaceOfficer}
+                            >
+                                Update Now
+                            </button>
+                        </div>
+                        <p className="text-xs text-base-content/60 mt-4">
+                            <strong>Update Now:</strong> Immediately update the officer's role.<br />
+                            <strong>Add to Selection:</strong> Add to the current selection to update with other officers.
+                        </p>
                     </div>
-                    <p className="text-xs text-base-content/60 mt-4">
-                        <strong>Update Now:</strong> Immediately update the officer's role.<br />
-                        <strong>Add to Selection:</strong> Add to the current selection to update with other officers.
-                    </p>
-                </div>
-                <form method="dialog" className="modal-backdrop">
-                    <button>close</button>
-                </form>
-            </dialog>
+                    <form method="dialog" className="modal-backdrop">
+                        <button>close</button>
+                    </form>
+                </dialog>
+            </div>
         </div>
     );
 }
