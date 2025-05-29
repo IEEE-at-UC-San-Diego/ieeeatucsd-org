@@ -14,6 +14,7 @@ export const POST: APIRoute = async ({ request }) => {
       comment, 
       commentByUserId, 
       isPrivate,
+      declinedReason,
       additionalContext,
       authData // Change to authData containing token and model
     } = await request.json();
@@ -135,7 +136,7 @@ export const POST: APIRoute = async ({ request }) => {
           newStatus,
           previousStatus,
           changedByUserId,
-          declinedReason: additionalContext?.declinedReason
+          declinedReason: declinedReason || additionalContext?.declinedReason
         });
         break;
 
