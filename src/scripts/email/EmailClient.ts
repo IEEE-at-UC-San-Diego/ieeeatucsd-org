@@ -6,14 +6,16 @@
 import { Authentication } from '../pocketbase/Authentication';
 
 interface EmailNotificationRequest {
-  type: 'status_change' | 'comment' | 'submission' | 'test';
-  reimbursementId: string;
+  type: 'status_change' | 'comment' | 'submission' | 'test' | 'event_request_submission' | 'event_request_status_change' | 'pr_completed' | 'design_pr_notification';
+  reimbursementId?: string;
+  eventRequestId?: string;
   previousStatus?: string;
   newStatus?: string;
   changedByUserId?: string;
   comment?: string;
   commentByUserId?: string;
   isPrivate?: boolean;
+  declinedReason?: string;
   additionalContext?: Record<string, any>;
   authData?: { token: string; model: any };
 }
@@ -142,11 +144,64 @@ export class EmailClient {
   /**
    * Send test email
    */
-  static async sendTestEmail(email: string): Promise<boolean> {
+  static async sendTestEmail(): Promise<boolean> {
     return this.sendEmailNotification({
       type: 'test',
-      reimbursementId: 'test', // Required but not used for test emails
-      additionalContext: { email }
+      reimbursementId: 'test' // Required but not used for test emails
+    });
+  }
+
+  /**
+   * Send event request submission notification to coordinators
+   */
+  static async notifyEventRequestSubmission(eventRequestId: string): Promise<boolean> {
+    return this.sendEmailNotification({
+      type: 'event_request_submission',
+      eventRequestId
+    });
+  }
+
+  /**
+   * Send email notification when an event request status is changed
+   */
+  static async notifyEventRequestStatusChange(
+    eventRequestId: string, 
+    previousStatus: string, 
+    newStatus: string, 
+    changedByUserId?: string,
+    declinedReason?: string
+  ): Promise<boolean> {
+    return this.sendEmailNotification({
+      type: 'event_request_status_change',
+      eventRequestId,
+      previousStatus,
+      newStatus,
+      changedByUserId,
+      declinedReason
+    });
+  }
+
+  /**
+   * Send email notification when PR work is completed for an event request
+   */
+  static async notifyPRCompleted(eventRequestId: string): Promise<boolean> {
+    return this.sendEmailNotification({
+      type: 'pr_completed',
+      eventRequestId
+    });
+  }
+
+  /**
+   * Send email notification to design team for PR-related actions
+   */
+  static async notifyDesignTeam(
+    eventRequestId: string, 
+    action: 'submission' | 'pr_update' | 'declined'
+  ): Promise<boolean> {
+    return this.sendEmailNotification({
+      type: 'design_pr_notification',
+      eventRequestId,
+      additionalContext: { action }
     });
   }
 } 

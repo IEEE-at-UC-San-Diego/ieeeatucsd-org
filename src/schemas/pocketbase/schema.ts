@@ -112,6 +112,7 @@ export interface EventRequest extends BaseRecord {
   other_flyer_type?: string;
   flyer_advertising_start_date?: string;
   flyer_additional_requests?: string;
+  flyers_completed?: boolean; // Track if flyers have been completed by PR team
   photography_needed: boolean;
   required_logos?: string[]; // IEEE, AS, HKN, TESC, PIB, TNT, SWE, OTHER
   other_logos?: string[]; // Array of logo IDs
@@ -127,6 +128,7 @@ export interface EventRequest extends BaseRecord {
   needs_graphics?: boolean;
   needs_as_funding?: boolean;
   status: "submitted" | "pending" | "completed" | "declined";
+  declined_reason?: string; // Reason for declining the event request
   requested_user?: string;
 }
 

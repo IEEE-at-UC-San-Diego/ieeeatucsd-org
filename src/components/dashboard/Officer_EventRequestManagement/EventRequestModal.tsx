@@ -7,6 +7,7 @@ import { Collections } from '../../../schemas/pocketbase/schema';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Get } from '../../../scripts/pocketbase/Get';
 import { toast } from 'react-hot-toast';
+import { EmailClient } from '../../../scripts/email/EmailClient';
 import type { EventRequest } from '../../../schemas/pocketbase/schema';
 
 // Extended EventRequest interface to include expanded fields that might come from the API
@@ -272,6 +273,11 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
             const dataSync = DataSyncService.getInstance();
             await dataSync.syncCollection(Collections.EVENT_REQUESTS);
 
+            // Find the request to get its name and previous status
+            const request = localEventRequests.find((req) => req.id === id);
+            const eventName = request?.name || "Event";
+            const previousStatus = request?.status;
+
             // Update local state
             setLocalEventRequests(prevRequests =>
                 prevRequests.map(req =>
@@ -279,12 +285,17 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
                 )
             );
 
-            // Find the request to get its name
-            const request = localEventRequests.find((req) => req.id === id);
-            const eventName = request?.name || "Event";
-
             // Notify success
             toast.success(`"${eventName}" status updated to ${status}`);
+
+            // Send email notification for status change (non-blocking)
+            try {
+                await EmailClient.notifyEventRequestStatusChange(id, previousStatus || 'unknown', status);
+                console.log('Event request status change notification email sent successfully');
+            } catch (emailError) {
+                console.error('Failed to send event request status change notification email:', emailError);
+                // Don't show error to user - email failure shouldn't disrupt the main operation
+            }
 
             // Dispatch event for other components
             document.dispatchEvent(

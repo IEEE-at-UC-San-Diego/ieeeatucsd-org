@@ -7,6 +7,7 @@ import { FileManager } from '../../../scripts/pocketbase/FileManager';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
 import { EventRequestStatus } from '../../../schemas/pocketbase';
+import { EmailClient } from '../../../scripts/email/EmailClient';
 
 // Form sections
 import PRSection from './PRSection';
@@ -88,7 +89,6 @@ import CustomAlert from '../universal/CustomAlert';
 const EventRequestForm: React.FC = () => {
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
 
     // Initialize form data
     const [formData, setFormData] = useState<EventRequestFormData>({
@@ -255,7 +255,6 @@ const EventRequestForm: React.FC = () => {
         }
 
         setIsSubmitting(true);
-        setError(null);
 
         try {
             const auth = Authentication.getInstance();
@@ -359,33 +358,100 @@ const EventRequestForm: React.FC = () => {
             // Force sync the event requests collection to update IndexedDB
             await dataSync.syncCollection(Collections.EVENT_REQUESTS);
 
-            // Upload files if they exist
+            console.log('Event request record created:', record.id);
+
+            // Upload files if they exist - handle each file type separately
+            const fileUploadErrors: string[] = [];
+
+            // Upload other logos
             if (formData.other_logos.length > 0) {
-                await fileManager.uploadFiles('event_request', record.id, 'other_logos', formData.other_logos);
+                try {
+                    console.log('Uploading other logos:', formData.other_logos.length, 'files');
+                    console.log('Other logos files:', formData.other_logos.map(f => ({ name: f.name, size: f.size, type: f.type })));
+                    await fileManager.uploadFiles('event_request', record.id, 'other_logos', formData.other_logos);
+                    console.log('Other logos uploaded successfully');
+                } catch (error) {
+                    console.error('Failed to upload other logos:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    fileUploadErrors.push(`Failed to upload custom logo files: ${errorMessage}`);
+                }
             }
 
+            // Upload room booking
             if (formData.room_booking) {
-                await fileManager.uploadFile('event_request', record.id, 'room_booking', formData.room_booking);
+                try {
+                    console.log('Uploading room booking file:', { name: formData.room_booking.name, size: formData.room_booking.size, type: formData.room_booking.type });
+                    await fileManager.uploadFile('event_request', record.id, 'room_booking', formData.room_booking);
+                    console.log('Room booking file uploaded successfully');
+                } catch (error) {
+                    console.error('Failed to upload room booking:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    fileUploadErrors.push(`Failed to upload room booking file: ${errorMessage}`);
+                }
             }
 
-            // Upload multiple invoice files
+            // Upload invoice files
             if (formData.invoice_files && formData.invoice_files.length > 0) {
-                await fileManager.appendFiles('event_request', record.id, 'invoice_files', formData.invoice_files);
+                try {
+                    console.log('Uploading invoice files:', formData.invoice_files.length, 'files');
+                    console.log('Invoice files:', formData.invoice_files.map(f => ({ name: f.name, size: f.size, type: f.type })));
+                    await fileManager.appendFiles('event_request', record.id, 'invoice_files', formData.invoice_files);
 
-                // For backward compatibility, also upload the first file as the main invoice
-                if (formData.invoice || formData.invoice_files[0]) {
-                    const mainInvoice = formData.invoice || formData.invoice_files[0];
-                    await fileManager.uploadFile('event_request', record.id, 'invoice', mainInvoice);
+                    // For backward compatibility, also upload the first file as the main invoice
+                    if (formData.invoice || formData.invoice_files[0]) {
+                        const mainInvoice = formData.invoice || formData.invoice_files[0];
+                        console.log('Uploading main invoice file:', { name: mainInvoice.name, size: mainInvoice.size, type: mainInvoice.type });
+                        await fileManager.uploadFile('event_request', record.id, 'invoice', mainInvoice);
+                    }
+                    console.log('Invoice files uploaded successfully');
+                } catch (error) {
+                    console.error('Failed to upload invoice files:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    fileUploadErrors.push(`Failed to upload invoice files: ${errorMessage}`);
                 }
             } else if (formData.invoice) {
-                await fileManager.uploadFile('event_request', record.id, 'invoice', formData.invoice);
+                try {
+                    console.log('Uploading single invoice file:', { name: formData.invoice.name, size: formData.invoice.size, type: formData.invoice.type });
+                    await fileManager.uploadFile('event_request', record.id, 'invoice', formData.invoice);
+                    console.log('Invoice file uploaded successfully');
+                } catch (error) {
+                    console.error('Failed to upload invoice file:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    fileUploadErrors.push(`Failed to upload invoice file: ${errorMessage}`);
+                }
+            }
+
+            // Show file upload warnings if any occurred
+            if (fileUploadErrors.length > 0) {
+                console.warn('File upload errors:', fileUploadErrors);
+                // Show each file upload error as a separate toast for better UX
+                fileUploadErrors.forEach(error => {
+                    toast.error(error, {
+                        duration: 6000, // Longer duration for file upload errors
+                        position: 'top-right'
+                    });
+                });
+                // Also show a summary toast
+                toast.error(`Event request submitted successfully, but ${fileUploadErrors.length} file upload(s) failed. Please check the errors above and re-upload the files manually.`, {
+                    duration: 8000,
+                    position: 'top-center'
+                });
+            } else {
+                // Keep success toast for form submission since it's a user action
+                toast.success('Event request submitted successfully!');
             }
 
             // Clear form data from localStorage
             localStorage.removeItem('eventRequestFormData');
 
-            // Keep success toast for form submission since it's a user action
-            toast.success('Event request submitted successfully!');
+            // Send email notification to coordinators (non-blocking)
+            try {
+                await EmailClient.notifyEventRequestSubmission(record.id);
+                console.log('Event request notification email sent successfully');
+            } catch (emailError) {
+                console.error('Failed to send event request notification email:', emailError);
+                // Don't show error to user - email failure shouldn't disrupt the main flow
+            }
 
             // Reset form
             resetForm();
@@ -398,7 +464,6 @@ const EventRequestForm: React.FC = () => {
         } catch (error) {
             console.error('Error submitting event request:', error);
             toast.error('Failed to submit event request. Please try again.');
-            setError('Failed to submit event request. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -515,7 +580,8 @@ const EventRequestForm: React.FC = () => {
         }
 
         if (errors.length > 0) {
-            setError(errors[0]);
+            // Show the first error as a toast instead of setting error state
+            toast.error(errors[0]);
             return false;
         }
 
@@ -560,7 +626,7 @@ const EventRequestForm: React.FC = () => {
         if (formData.as_funding_required) {
             // Check if invoice data is present and has items
             if (!formData.invoiceData || !formData.invoiceData.items || formData.invoiceData.items.length === 0) {
-                setError('Please add at least one item to your invoice');
+                toast.error('Please add at least one item to your invoice');
                 return false;
             }
 
@@ -572,7 +638,7 @@ const EventRequestForm: React.FC = () => {
             // Check if the budget exceeds the maximum allowed ($5000 cap regardless of attendance)
             const maxBudget = Math.min(formData.expected_attendance * 10, 5000);
             if (totalBudget > maxBudget) {
-                setError(`Your budget (${totalBudget.toFixed(2)} dollars) exceeds the maximum allowed (${maxBudget} dollars). The absolute maximum is $5,000.`);
+                toast.error(`Your budget ($${totalBudget.toFixed(2)}) exceeds the maximum allowed ($${maxBudget}). The absolute maximum is $5,000.`);
                 return false;
             }
         }
@@ -903,21 +969,6 @@ const EventRequestForm: React.FC = () => {
                     }}
                     className="space-y-6"
                 >
-                    {error && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        >
-                            <CustomAlert
-                                type="error"
-                                title="Error"
-                                message={error}
-                                icon="heroicons:exclamation-triangle"
-                            />
-                        </motion.div>
-                    )}
-
                     {/* Progress indicator */}
                     <div className="w-full mb-6">
                         <div className="flex justify-between mb-2">

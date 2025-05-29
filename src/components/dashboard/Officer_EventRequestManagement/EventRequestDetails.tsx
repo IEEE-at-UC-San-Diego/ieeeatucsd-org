@@ -32,6 +32,7 @@ interface ExtendedEventRequest extends SchemaEventRequest {
     room_booking?: string; // Single file for room booking
     room_reservation_needed?: boolean; // Keep for backward compatibility
     additional_notes?: string;
+    flyers_completed?: boolean; // Track if flyers have been completed by PR team
 }
 
 interface EventRequestDetailsProps {
@@ -623,7 +624,7 @@ const ASFundingTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) 
                                         ) : (
                                             <Icon icon="mdi:file-document" className="h-8 w-8 text-secondary" />
                                         )}
-                                        <div className="flex-grow">
+                                        <div className="flex-1 min-w-0">
                                             <p className="font-medium truncate" title={fileId}>
                                                 {displayName}
                                             </p>
@@ -1078,6 +1079,8 @@ const InvoiceTable: React.FC<{ invoiceData: any, expectedAttendance?: number }> 
 const PRMaterialsTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }) => {
     const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
     const [selectedFile, setSelectedFile] = useState<{ name: string, displayName: string }>({ name: '', displayName: '' });
+    const [flyersCompleted, setFlyersCompleted] = useState<boolean>(request.flyers_completed || false);
+    const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
     // Format date for display
     const formatDate = (dateString: string) => {
@@ -1095,6 +1098,30 @@ const PRMaterialsTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }
             return dateString;
         }
     };
+
+    // Handle flyers completed checkbox change
+    const handleFlyersCompletedChange = async (completed: boolean) => {
+        setIsUpdating(true);
+        try {
+            const { Update } = await import('../../../scripts/pocketbase/Update');
+            const update = Update.getInstance();
+            
+            await update.updateField("event_request", request.id, "flyers_completed", completed);
+            
+            setFlyersCompleted(completed);
+            toast.success(`Flyers completion status updated to ${completed ? 'completed' : 'not completed'}`);
+        } catch (error) {
+            console.error('Failed to update flyers completed status:', error);
+            toast.error('Failed to update flyers completion status');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    // Sync local state with request prop changes
+    useEffect(() => {
+        setFlyersCompleted(request.flyers_completed || false);
+    }, [request.flyers_completed]);
 
     // Use the same utility functions as in the ASFundingTab
     const getFileExtension = (filename: string): string => {
@@ -1157,6 +1184,46 @@ const PRMaterialsTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }
                             )}
                         </div>
                     </div>
+
+                    {/* Flyers Completed Checkbox - Only show if flyers are needed */}
+                    {request.flyers_needed && (
+                        <motion.div
+                            className="bg-base-300/20 p-4 rounded-lg"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.05 }}
+                        >
+                            <h4 className="text-sm font-medium text-gray-400 mb-3">Completion Status</h4>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={flyersCompleted}
+                                    onChange={(e) => handleFlyersCompletedChange(e.target.checked)}
+                                    disabled={isUpdating}
+                                    className="checkbox checkbox-primary"
+                                />
+                                <label className="text-sm font-medium">
+                                    Flyers completed by PR team
+                                </label>
+                                {isUpdating && (
+                                    <div className="loading loading-spinner loading-sm"></div>
+                                )}
+                            </div>
+                            <div className="mt-2">
+                                {flyersCompleted ? (
+                                    <span className="badge badge-success gap-1">
+                                        <Icon icon="mdi:check-circle" className="h-3 w-3" />
+                                        Completed
+                                    </span>
+                                ) : (
+                                    <span className="badge badge-warning gap-1">
+                                        <Icon icon="mdi:clock" className="h-3 w-3" />
+                                        Pending
+                                    </span>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
 
                     {request.flyers_needed && (
                         <motion.div
@@ -1435,6 +1502,9 @@ const EventRequestDetails = ({
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [newStatus, setNewStatus] = useState<"submitted" | "pending" | "completed" | "declined">("pending");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // Add state for decline reason modal
+    const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
+    const [declineReason, setDeclineReason] = useState<string>('');
     const [alertInfo, setAlertInfo] = useState<{ show: boolean; type: "success" | "error" | "warning" | "info"; message: string }>({
         show: false,
         type: "info",
@@ -1465,8 +1535,14 @@ const EventRequestDetails = ({
     };
 
     const handleStatusChange = async (newStatus: "submitted" | "pending" | "completed" | "declined") => {
-        setNewStatus(newStatus);
-        setIsConfirmModalOpen(true);
+        if (newStatus === 'declined') {
+            // Open decline reason modal instead of immediate confirmation
+            setDeclineReason('');
+            setIsDeclineModalOpen(true);
+        } else {
+            setNewStatus(newStatus);
+            setIsConfirmModalOpen(true);
+        }
     };
 
     const confirmStatusChange = async () => {
@@ -1490,6 +1566,72 @@ const EventRequestDetails = ({
             setIsSubmitting(false);
             setIsConfirmModalOpen(false);
         }
+    };
+
+    // Handle decline with reason
+    const handleDeclineWithReason = async () => {
+        if (!declineReason.trim()) {
+            toast.error('Please provide a reason for declining');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            // Use Update service to update both status and decline reason
+            const { Update } = await import('../../../scripts/pocketbase/Update');
+            const update = Update.getInstance();
+            
+            await update.updateFields("event_request", request.id, {
+                status: 'declined',
+                declined_reason: declineReason
+            });
+
+            // Send email notifications
+            const { EmailClient } = await import('../../../scripts/email/EmailClient');
+            const auth = Authentication.getInstance();
+            const changedByUserId = auth.getUserId();
+
+            await EmailClient.notifyEventRequestStatusChange(
+                request.id,
+                request.status,
+                'declined',
+                changedByUserId || undefined,
+                declineReason
+            );
+
+            // Send design team notification if PR materials were needed
+            if (request.flyers_needed) {
+                await EmailClient.notifyDesignTeam(request.id, 'declined');
+            }
+
+            setAlertInfo({
+                show: true,
+                type: "success",
+                message: "Event request has been declined successfully."
+            });
+
+            setIsDeclineModalOpen(false);
+            setDeclineReason('');
+
+            // Call the parent's onStatusChange if needed for UI updates
+            await onStatusChange(request.id, 'declined');
+
+        } catch (error) {
+            console.error('Error declining request:', error);
+            setAlertInfo({
+                show: true,
+                type: "error",
+                message: "Failed to decline event request. Please try again."
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Cancel decline action
+    const cancelDecline = () => {
+        setIsDeclineModalOpen(false);
+        setDeclineReason('');
     };
 
     return (
@@ -1806,6 +1948,56 @@ const EventRequestDetails = ({
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Decline Reason Modal */}
+            {isDeclineModalOpen && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-base-300 rounded-lg p-6 w-full max-w-md"
+                    >
+                        <h3 className="text-lg font-bold mb-4">Decline Event Request</h3>
+                        <p className="text-gray-300 mb-4">
+                            Please provide a reason for declining "{request.name}". This will be sent to the submitter and they will need to resubmit with proper information.
+                        </p>
+                        <textarea
+                            className="textarea textarea-bordered w-full h-32 bg-base-100 text-white border-base-300 focus:border-primary"
+                            placeholder="Enter decline reason (required)..."
+                            value={declineReason}
+                            onChange={(e) => setDeclineReason(e.target.value)}
+                            maxLength={500}
+                        />
+                        <div className="text-xs text-gray-400 mb-4">
+                            {declineReason.length}/500 characters
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                className="btn btn-ghost"
+                                onClick={cancelDecline}
+                                disabled={isSubmitting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-error"
+                                onClick={handleDeclineWithReason}
+                                disabled={!declineReason.trim() || isSubmitting}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-xs"></span>
+                                        Declining...
+                                    </>
+                                ) : (
+                                    'Decline Request'
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
                 </div>
             )}
 

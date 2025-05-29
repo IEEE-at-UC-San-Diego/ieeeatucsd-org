@@ -24,6 +24,8 @@ interface ExtendedEventRequest extends SchemaEventRequest {
     invoice_data?: any;
     invoice_files?: string[]; // Array of invoice file IDs
     status: "submitted" | "pending" | "completed" | "declined";
+    declined_reason?: string; // Reason for declining the event request
+    flyers_completed?: boolean; // Track if flyers have been completed by PR team
 }
 
 interface EventRequestManagementTableProps {
@@ -50,6 +52,10 @@ const EventRequestManagementTable = ({
     // Add state for update modal
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
     const [requestToUpdate, setRequestToUpdate] = useState<ExtendedEventRequest | null>(null);
+    // Add state for decline reason modal
+    const [isDeclineModalOpen, setIsDeclineModalOpen] = useState<boolean>(false);
+    const [declineReason, setDeclineReason] = useState<string>('');
+    const [requestToDecline, setRequestToDecline] = useState<ExtendedEventRequest | null>(null);
 
     // Refresh event requests
     const refreshEventRequests = async () => {
@@ -177,40 +183,125 @@ const EventRequestManagementTable = ({
     };
 
     // Update event request status
-    const updateEventRequestStatus = async (id: string, status: "submitted" | "pending" | "completed" | "declined"): Promise<void> => {
+    const updateEventRequestStatus = async (id: string, status: "submitted" | "pending" | "completed" | "declined", declineReason?: string): Promise<void> => {
         try {
-            await onStatusChange(id, status);
+            // Find the event request to get its current status and name
+            const eventRequest = eventRequests.find(req => req.id === id);
+            const eventName = eventRequest?.name || 'Event';
+            const previousStatus = eventRequest?.status;
 
-            // Find the event request to get its name
+            // If declining, update with decline reason
+            if (status === 'declined' && declineReason) {
+                const { Update } = await import('../../../scripts/pocketbase/Update');
+                const update = Update.getInstance();
+                await update.updateFields("event_request", id, {
+                    status: status,
+                    declined_reason: declineReason
+                });
+            } else {
+                await onStatusChange(id, status);
+            }
+
+            // Update local state
+            setEventRequests(prev =>
+                prev.map(request =>
+                    request.id === id ? { 
+                        ...request, 
+                        status, 
+                        ...(status === 'declined' && declineReason ? { declined_reason: declineReason } : {})
+                    } : request
+                )
+            );
+
+            setFilteredRequests(prev =>
+                prev.map(request =>
+                    request.id === id ? { 
+                        ...request, 
+                        status, 
+                        ...(status === 'declined' && declineReason ? { declined_reason: declineReason } : {})
+                    } : request
+                )
+            );
+
+            toast.success(`"${eventName}" status updated to ${status}`);
+
+            // Send email notification for status change
+            try {
+                const { EmailClient } = await import('../../../scripts/email/EmailClient');
+                const auth = Authentication.getInstance();
+                const changedByUserId = auth.getUserId();
+
+                if (previousStatus && previousStatus !== status) {
+                    await EmailClient.notifyEventRequestStatusChange(
+                        id,
+                        previousStatus,
+                        status,
+                        changedByUserId || undefined,
+                        status === 'declined' ? declineReason : undefined
+                    );
+                    console.log('Event request status change notification email sent successfully');
+                }
+
+                // Send design team notifications for PR-related actions
+                if (eventRequest?.flyers_needed) {
+                    if (status === 'declined') {
+                        await EmailClient.notifyDesignTeam(id, 'declined');
+                        console.log('Design team notified of declined PR request');
+                    }
+                }
+            } catch (emailError) {
+                console.error('Failed to send event request status change notification email:', emailError);
+                // Don't show error to user - email failure shouldn't disrupt the main operation
+            }
+
+        } catch (error) {
+            console.error('Error updating status:', error);
+            toast.error('Failed to update status');
+        }
+    };
+
+    // Update PR status (flyers_completed)
+    const updatePRStatus = async (id: string, completed: boolean): Promise<void> => {
+        try {
+            const { Update } = await import('../../../scripts/pocketbase/Update');
+            const update = Update.getInstance();
+            
+            await update.updateField("event_request", id, "flyers_completed", completed);
+
+            // Find the event request to get its details
             const eventRequest = eventRequests.find(req => req.id === id);
             const eventName = eventRequest?.name || 'Event';
 
             // Update local state
             setEventRequests(prev =>
                 prev.map(request =>
-                    request.id === id ? { ...request, status } : request
+                    request.id === id ? { ...request, flyers_completed: completed } : request
                 )
             );
 
             setFilteredRequests(prev =>
                 prev.map(request =>
-                    request.id === id ? { ...request, status } : request
+                    request.id === id ? { ...request, flyers_completed: completed } : request
                 )
             );
 
-            // Force sync to update IndexedDB
-            await dataSync.syncCollection<ExtendedEventRequest>(Collections.EVENT_REQUESTS);
+            toast.success(`"${eventName}" PR status updated to ${completed ? 'completed' : 'pending'}`);
 
-            // Show success toast with event name
-            toast.success(`"${eventName}" status updated to ${status}`);
+            // Send email notification if PR is completed
+            if (completed) {
+                try {
+                    const { EmailClient } = await import('../../../scripts/email/EmailClient');
+                    await EmailClient.notifyPRCompleted(id);
+                    console.log('PR completion notification email sent successfully');
+                } catch (emailError) {
+                    console.error('Failed to send PR completion notification email:', emailError);
+                    // Don't show error to user - email failure shouldn't disrupt the main operation
+                }
+            }
+
         } catch (error) {
-            // Find the event request to get its name
-            const eventRequest = eventRequests.find(req => req.id === id);
-            const eventName = eventRequest?.name || 'Event';
-
-            // console.error('Error updating status:', error);
-            toast.error(`Failed to update status for "${eventName}"`);
-            throw error; // Re-throw the error to be caught by the caller
+            console.error('Error updating PR status:', error);
+            toast.error('Failed to update PR status');
         }
     };
 
@@ -344,6 +435,38 @@ const EventRequestManagementTable = ({
             setSortField(field);
             setSortDirection('desc');
         }
+    };
+
+    // Handle decline action with reason prompt
+    const handleDeclineAction = (request: ExtendedEventRequest) => {
+        setRequestToDecline(request);
+        setDeclineReason('');
+        setIsDeclineModalOpen(true);
+    };
+
+    // Confirm decline with reason
+    const confirmDecline = async () => {
+        if (!requestToDecline || !declineReason.trim()) {
+            toast.error('Please provide a reason for declining');
+            return;
+        }
+
+        try {
+            await updateEventRequestStatus(requestToDecline.id, 'declined', declineReason);
+            setIsDeclineModalOpen(false);
+            setRequestToDecline(null);
+            setDeclineReason('');
+        } catch (error) {
+            console.error('Error declining request:', error);
+            toast.error('Failed to decline request');
+        }
+    };
+
+    // Cancel decline action
+    const cancelDecline = () => {
+        setIsDeclineModalOpen(false);
+        setRequestToDecline(null);
+        setDeclineReason('');
     };
 
     // Apply filters when filter state changes
@@ -576,6 +699,19 @@ const EventRequestManagementTable = ({
                                     </div>
                                 </th>
                                 <th className="hidden lg:table-cell">PR Materials</th>
+                                <th
+                                    className="cursor-pointer hover:bg-base-300 transition-colors hidden lg:table-cell"
+                                    onClick={() => handleSortChange('flyers_completed')}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        PR Status
+                                        {sortField === 'flyers_completed' && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sortDirection === 'asc' ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                                            </svg>
+                                        )}
+                                    </div>
+                                </th>
                                 <th className="hidden lg:table-cell">AS Funding</th>
                                 <th
                                     className="cursor-pointer hover:bg-base-300 transition-colors hidden md:table-cell"
@@ -638,6 +774,28 @@ const EventRequestManagementTable = ({
                                         )}
                                     </td>
                                     <td className="hidden lg:table-cell">
+                                        {request.flyers_needed ? (
+                                            <input
+                                                type="checkbox"
+                                                checked={request.flyers_completed || false}
+                                                onChange={(e) => {
+                                                    e.stopPropagation();
+                                                    updatePRStatus(request.id, e.target.checked);
+                                                }}
+                                                className="checkbox checkbox-primary"
+                                                title="Mark PR materials as completed"
+                                            />
+                                        ) : (
+                                            <input
+                                                type="checkbox"
+                                                checked={false}
+                                                disabled={true}
+                                                className="checkbox checkbox-disabled opacity-30"
+                                                title="PR materials not needed for this event"
+                                            />
+                                        )}
+                                    </td>
+                                    <td className="hidden lg:table-cell">
                                         {request.as_funding_required ? (
                                             <span className="badge badge-success badge-sm">Yes</span>
                                         ) : (
@@ -671,6 +829,50 @@ const EventRequestManagementTable = ({
                     </table>
                 </div>
             </motion.div>
+
+            {/* Decline Reason Modal */}
+            {isDeclineModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-base-200 rounded-lg p-6 w-full max-w-md shadow-xl"
+                    >
+                        <h3 className="text-lg font-semibold text-white mb-4">
+                            Decline Event Request
+                        </h3>
+                        <p className="text-gray-300 mb-4">
+                            Please provide a reason for declining "{requestToDecline?.name}". This will be sent to the submitter.
+                        </p>
+                        <textarea
+                            className="textarea textarea-bordered w-full h-32 bg-base-300 text-white border-base-300 focus:border-primary"
+                            placeholder="Enter decline reason (required)..."
+                            value={declineReason}
+                            onChange={(e) => setDeclineReason(e.target.value)}
+                            maxLength={500}
+                        />
+                        <div className="text-xs text-gray-400 mb-4">
+                            {declineReason.length}/500 characters
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                className="btn btn-ghost"
+                                onClick={cancelDecline}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-error"
+                                onClick={confirmDecline}
+                                disabled={!declineReason.trim()}
+                            >
+                                Decline Request
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </>
     );
 };

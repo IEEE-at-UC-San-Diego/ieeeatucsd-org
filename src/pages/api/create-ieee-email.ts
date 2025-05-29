@@ -292,7 +292,7 @@ async function sendCredentialsEmail(
     
     Please change your password after your first login.
     
-    If you have any questions, please contact webmaster@ieeeucsd.org.
+    If you have any questions, please contact webmaster@ieeeatucsd.org.
     
     Best regards,
     IEEE UCSD Web Team
@@ -311,7 +311,7 @@ async function sendWebmasterNotification(
 ) {
   // In a real implementation, you would use an email service
   console.log(`
-    To: webmaster@ieeeucsd.org
+    To: webmaster@ieeeatucsd.org
     Subject: New IEEE Email Account Created
     
     A new IEEE email account has been created:

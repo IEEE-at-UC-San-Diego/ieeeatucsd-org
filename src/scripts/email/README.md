@@ -1,6 +1,6 @@
 # Email Notification System
 
-This directory contains the email notification system for the IEEE UCSD reimbursement portal using Resend.
+This directory contains the email notification system for the IEEE UCSD reimbursement portal and event management system using Resend.
 
 ## Setup
 
@@ -34,10 +34,14 @@ REPLY_TO_EMAIL="treasurer@ieeeucsd.org"
 
 The system automatically sends emails for the following events:
 
+#### Reimbursement System
 1. **Reimbursement Submitted** - Confirmation email when a user submits a new reimbursement request
 2. **Status Changes** - Notification when reimbursement status is updated (submitted, under review, approved, rejected, in progress, paid)
 3. **Comments Added** - Notification when someone adds a public comment to a reimbursement
 4. **Rejections with Reasons** - Detailed rejection notification including the specific reason for rejection
+
+#### Event Management System
+1. **Event Request Submitted** - Notification to coordinators@ieeeatucsd.org when a new event request is submitted
 
 Note: Private comments are not sent via email to maintain privacy.
 
@@ -47,7 +51,7 @@ All emails include:
 - Professional IEEE UCSD branding
 - Responsive design for mobile and desktop
 - Clear status indicators with color coding
-- Reimbursement details summary
+- Detailed information summary
 - Next steps information
 - Contact information for support
 
@@ -55,6 +59,7 @@ All emails include:
 
 ### In React Components (Client-side)
 
+#### Reimbursement Notifications
 ```typescript
 import { EmailClient } from '../../../scripts/email/EmailClient';
 
@@ -83,10 +88,19 @@ await EmailClient.notifyStatusChange(
 );
 ```
 
+#### Event Request Notifications
+```typescript
+import { EmailClient } from '../../../scripts/email/EmailClient';
+
+// Send event request submission notification to coordinators
+await EmailClient.notifyEventRequestSubmission(eventRequestId);
+```
+
 ### API Route (Server-side)
 
 The API route at `/api/email/send-reimbursement-notification` accepts POST requests with the following structure:
 
+#### Reimbursement Notifications
 ```json
 {
   "type": "status_change" | "comment" | "submission" | "test",
@@ -98,6 +112,18 @@ The API route at `/api/email/send-reimbursement-notification` accepts POST reque
   "commentByUserId": "string", // for comment
   "isPrivate": boolean, // for comment
   "additionalContext": {}, // for additional data
+  "authData": { // Authentication data for PocketBase access
+    "token": "string",
+    "model": {}
+  }
+}
+```
+
+#### Event Request Notifications
+```json
+{
+  "type": "event_request_submission",
+  "eventRequestId": "string",
   "authData": { // Authentication data for PocketBase access
     "token": "string",
     "model": {}
@@ -128,9 +154,15 @@ This ensures that:
 - The server can access protected PocketBase collections
 - Email operations respect user permissions and data security
 
+## Email Recipients
+
+- **Reimbursement notifications**: Sent to the user who submitted the reimbursement
+- **Event request notifications**: Sent to coordinators@ieeeatucsd.org
+- **Test emails**: Sent to the specified email address
+
 ## Error Handling
 
-Email failures are logged but do not prevent the main operations from completing. This ensures that reimbursement processing continues even if email delivery fails.
+Email failures are logged but do not prevent the main operations from completing. This ensures that reimbursement processing and event request submissions continue even if email delivery fails.
 
 ## Security
 
@@ -139,4 +171,33 @@ Email failures are logged but do not prevent the main operations from completing
 - Email addresses are validated before sending
 - Private comments are not sent via email (configurable)
 - All emails include appropriate contact information
-- PocketBase collection access respects authentication and permissions 
+- PocketBase collection access respects authentication and permissions
+
+## Event Request Email Notifications
+
+### Event Request Submission
+When a new event request is submitted, an email is automatically sent to the coordinators team.
+
+```typescript
+await EmailClient.notifyEventRequestSubmission(eventRequestId);
+```
+
+### Event Request Status Change
+When an event request status is changed, an email is sent to coordinators.
+
+```typescript
+await EmailClient.notifyEventRequestStatusChange(eventRequestId, previousStatus, newStatus, changedByUserId);
+```
+
+### PR Completion Notification
+When PR materials are completed for an event request, an email is sent to the submitter notifying them to contact the internal team.
+
+```typescript
+await EmailClient.notifyPRCompleted(eventRequestId);
+```
+
+This email includes:
+- Confirmation that PR materials are completed
+- Event details and information
+- Instructions to contact the internal team for next steps
+- Contact information for internal@ieeeucsd.org 

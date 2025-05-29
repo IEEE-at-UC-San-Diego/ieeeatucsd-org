@@ -370,7 +370,7 @@ export default function EmailRequestSettings() {
 
                 <div className="p-4 bg-base-200 rounded-lg">
                     <p className="text-sm">
-                        If you have any questions or need help with your IEEE email, please contact <a href="mailto:webmaster@ieeeucsd.org" className="underline">webmaster@ieeeucsd.org</a>
+                        If you have any questions or need help with your IEEE email, please contact <a href="mailto:webmaster@ieeeatucsd.org" className="underline">webmaster@ieeeatucsd.org</a>
                     </p>
                 </div>
             </div>
