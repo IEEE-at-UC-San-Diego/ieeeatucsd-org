@@ -5,6 +5,7 @@ import { Get } from '../../../scripts/pocketbase/Get';
 import { Update } from '../../../scripts/pocketbase/Update';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { FileManager } from '../../../scripts/pocketbase/FileManager';
+import { EmailClient } from '../../../scripts/email/EmailClient';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Receipt as SchemaReceipt, User, Reimbursement } from '../../../schemas/pocketbase';
@@ -443,13 +444,24 @@ export default function ReimbursementManagementPortal() {
 
             if (!userId) throw new Error('User not authenticated');
 
+            // Store previous status for email notification
+            const previousStatus = selectedReimbursement?.status || 'unknown';
+
             await update.updateFields('reimbursement', id, { status });
 
             // Add audit log for status change
             await addAuditLog(id, 'status_change', {
-                from: selectedReimbursement?.status,
+                from: previousStatus,
                 to: status
             });
+
+            // Send email notification
+            try {
+                await EmailClient.notifyStatusChange(id, status, previousStatus, userId);
+            } catch (emailError) {
+                console.error('Failed to send email notification:', emailError);
+                // Don't fail the entire operation if email fails
+            }
 
             if (showToast) {
                 toast.success(`Reimbursement ${status} successfully`);
@@ -650,6 +662,21 @@ export default function ReimbursementManagementPortal() {
                 note_preview: auditNote.length > 50 ? `${auditNote.substring(0, 50)}...` : auditNote,
                 is_private: isPrivateNote
             });
+
+            // Send email notification for public comments
+            if (!isPrivateNote) {
+                try {
+                    await EmailClient.notifyComment(
+                        selectedReimbursement.id,
+                        auditNote.trim(),
+                        userId,
+                        isPrivateNote
+                    );
+                } catch (emailError) {
+                    console.error('Failed to send comment email notification:', emailError);
+                    // Don't fail the entire operation if email fails
+                }
+            }
 
             toast.success('Audit note saved successfully');
             setAuditNote('');

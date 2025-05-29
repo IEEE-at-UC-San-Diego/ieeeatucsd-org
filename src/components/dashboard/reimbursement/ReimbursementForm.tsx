@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { Authentication } from '../../../scripts/pocketbase/Authentication';
 import { DataSyncService } from '../../../scripts/database/DataSyncService';
 import { Collections } from '../../../schemas/pocketbase/schema';
+import { EmailClient } from '../../../scripts/email/EmailClient';
 import ReceiptForm from './ReceiptForm';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -330,6 +331,14 @@ export default function ReimbursementForm() {
                     borderRadius: '8px',
                 }
             });
+
+            // Send email notification
+            try {
+                await EmailClient.notifySubmission(newReimbursement.id);
+            } catch (emailError) {
+                console.error('Failed to send submission email notification:', emailError);
+                // Don't fail the entire operation if email fails
+            }
 
         } catch (error) {
             console.error('Error submitting reimbursement request:', error);
