@@ -6,9 +6,10 @@
 import { Authentication } from '../pocketbase/Authentication';
 
 interface EmailNotificationRequest {
-  type: 'status_change' | 'comment' | 'submission' | 'test' | 'event_request_submission' | 'event_request_status_change' | 'pr_completed' | 'design_pr_notification';
+  type: 'status_change' | 'comment' | 'submission' | 'test' | 'event_request_submission' | 'event_request_status_change' | 'pr_completed' | 'design_pr_notification' | 'officer_role_change';
   reimbursementId?: string;
   eventRequestId?: string;
+  officerId?: string;
   previousStatus?: string;
   newStatus?: string;
   changedByUserId?: string;
@@ -70,6 +71,36 @@ export class EmailClient {
       return result.success;
     } catch (error) {
       console.error('Failed to send email notification:', error);
+      return false;
+    }
+  }
+
+  private static async sendOfficerNotification(request: EmailNotificationRequest): Promise<boolean> {
+    try {
+      const authData = this.getAuthData();
+      const requestWithAuth = {
+        ...request,
+        authData
+      };
+
+      const response = await fetch('/api/email/send-officer-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestWithAuth),
+      });
+
+      const result: EmailNotificationResponse = await response.json();
+      
+      if (!response.ok) {
+        console.error('Officer notification API error:', result.error || result.message);
+        return false;
+      }
+
+      return result.success;
+    } catch (error) {
+      console.error('Failed to send officer notification:', error);
       return false;
     }
   }
@@ -202,6 +233,32 @@ export class EmailClient {
       type: 'design_pr_notification',
       eventRequestId,
       additionalContext: { action }
+    });
+  }
+
+  /**
+   * Send officer role change notification
+   */
+  static async notifyOfficerRoleChange(
+    officerId: string,
+    previousRole?: string,
+    previousType?: string,
+    newRole?: string,
+    newType?: string,
+    changedByUserId?: string,
+    isNewOfficer?: boolean
+  ): Promise<boolean> {
+    return this.sendOfficerNotification({
+      type: 'officer_role_change',
+      officerId,
+      additionalContext: {
+        previousRole,
+        previousType,
+        newRole,
+        newType,
+        changedByUserId,
+        isNewOfficer
+      }
     });
   }
 } 

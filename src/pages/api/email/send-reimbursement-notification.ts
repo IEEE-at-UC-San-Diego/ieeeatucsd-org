@@ -24,6 +24,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Determine which endpoint to redirect to based on email type
     const reimbursementTypes = ['status_change', 'comment', 'submission', 'test'];
     const eventRequestTypes = ['event_request_submission', 'event_request_status_change', 'pr_completed', 'design_pr_notification'];
+    const officerTypes = ['officer_role_change'];
 
     let targetEndpoint = '';
     
@@ -43,6 +44,15 @@ export const POST: APIRoute = async ({ request }) => {
         );
       }
       targetEndpoint = '/api/email/send-event-request-email';
+    } else if (officerTypes.includes(type)) {
+      const { officerId } = requestData;
+      if (!officerId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing officerId for officer notification' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      targetEndpoint = '/api/email/send-officer-notification';
     } else {
       console.error('❌ Unknown notification type:', type);
       return new Response(

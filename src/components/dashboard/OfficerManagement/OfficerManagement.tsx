@@ -5,6 +5,7 @@ import type { User, Officer } from '../../../schemas/pocketbase/schema';
 import { Button } from '../universal/Button';
 import toast from 'react-hot-toast';
 import { Toast } from '../universal/Toast';
+import { EmailClient } from '../../../scripts/email/EmailClient';
 
 // Interface for officer with expanded user data
 interface OfficerWithUser extends Officer {
@@ -252,11 +253,33 @@ export default function OfficerManagement() {
         try {
             const pb = auth.getPocketBase();
 
+            // Store previous values for the email notification
+            const previousRole = officerToReplace.existingOfficer.role;
+            const previousType = officerToReplace.existingOfficer.type;
+            const currentUserId = auth.getUserId();
+
             // Update the existing officer record
             await pb.collection(Collections.OFFICERS).update(officerToReplace.existingOfficer.id, {
                 role: officerToReplace.newRole,
                 type: officerToReplace.newType
             });
+
+            // Send email notification (non-blocking)
+            try {
+                await EmailClient.notifyOfficerRoleChange(
+                    officerToReplace.existingOfficer.id,
+                    previousRole,
+                    previousType,
+                    officerToReplace.newRole,
+                    officerToReplace.newType,
+                    currentUserId || undefined,
+                    false // This is an update, not a new officer
+                );
+                console.log('Officer role change notification email sent successfully');
+            } catch (emailError) {
+                console.error('Failed to send officer role change notification email:', emailError);
+                // Don't show error to user - email failure shouldn't disrupt the main operation
+            }
 
             // Show success message
             toast.success(`Officer role updated successfully for ${officerToReplace.existingOfficer.expand?.user.name}`);
@@ -427,8 +450,13 @@ export default function OfficerManagement() {
 
                     // Check if user is already an officer
                     const existingOfficer = officers.find(officer => officer.expand?.user.id === user.id);
+                    const currentUserId = auth.getUserId();
 
                     if (existingOfficer) {
+                        // Store previous values for the email notification
+                        const previousRole = existingOfficer.role;
+                        const previousType = existingOfficer.type;
+
                         // Update existing officer
                         const updatedOfficer = await pb.collection(Collections.OFFICERS).update(existingOfficer.id, {
                             role: newOfficerRole,
@@ -436,6 +464,23 @@ export default function OfficerManagement() {
                         });
 
                         successfulUpdates.push(updatedOfficer);
+
+                        // Send email notification for role update (non-blocking)
+                        try {
+                            await EmailClient.notifyOfficerRoleChange(
+                                existingOfficer.id,
+                                previousRole,
+                                previousType,
+                                newOfficerRole,
+                                validType,
+                                currentUserId || undefined,
+                                false // This is an update, not a new officer
+                            );
+                            console.log(`Officer role change notification sent for ${user.name}`);
+                        } catch (emailError) {
+                            console.error(`Failed to send officer role change notification for ${user.name}:`, emailError);
+                            // Don't show error to user - email failure shouldn't disrupt the main operation
+                        }
                     } else {
                         // Create new officer record
                         const createdOfficer = await pb.collection(Collections.OFFICERS).create({
@@ -445,6 +490,23 @@ export default function OfficerManagement() {
                         });
 
                         successfulCreations.push(createdOfficer);
+
+                        // Send email notification for new officer (non-blocking)
+                        try {
+                            await EmailClient.notifyOfficerRoleChange(
+                                createdOfficer.id,
+                                undefined, // No previous role for new officers
+                                undefined, // No previous type for new officers
+                                newOfficerRole,
+                                validType,
+                                currentUserId || undefined,
+                                true // This is a new officer
+                            );
+                            console.log(`New officer notification sent for ${user.name}`);
+                        } catch (emailError) {
+                            console.error(`Failed to send new officer notification for ${user.name}:`, emailError);
+                            // Don't show error to user - email failure shouldn't disrupt the main operation
+                        }
                     }
                 } catch (error) {
                     console.error(`Failed to process officer for user ${user.name}:`, error);
@@ -679,7 +741,27 @@ export default function OfficerManagement() {
         }
 
         try {
+            // Store previous values for the email notification
+            const previousType = officerToEdit.type;
+
             await updateService.updateField(Collections.OFFICERS, officerId, 'type', newType);
+
+            // Send email notification for role type change (non-blocking)
+            try {
+                await EmailClient.notifyOfficerRoleChange(
+                    officerId,
+                    officerToEdit.role, // Role stays the same
+                    previousType,
+                    officerToEdit.role, // Role stays the same
+                    newType,
+                    currentUserId || undefined,
+                    false // This is an update, not a new officer
+                );
+                console.log(`Officer type change notification sent for ${officerToEdit.expand?.user.name}`);
+            } catch (emailError) {
+                console.error(`Failed to send officer type change notification for ${officerToEdit.expand?.user.name}:`, emailError);
+                // Don't show error to user - email failure shouldn't disrupt the main operation
+            }
 
             toast.success('Officer updated successfully');
 
