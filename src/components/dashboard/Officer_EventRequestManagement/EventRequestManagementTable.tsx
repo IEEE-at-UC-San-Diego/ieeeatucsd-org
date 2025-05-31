@@ -68,13 +68,14 @@ const EventRequestManagementTable = ({
 
             // console.log("Fetching event requests...");
 
-            // Use DataSyncService to get data from IndexedDB with forced sync
+            // Use DataSyncService to get data from IndexedDB with forced sync and deletion detection
             const updatedRequests = await dataSync.getData<ExtendedEventRequest>(
                 Collections.EVENT_REQUESTS,
                 true, // Force sync
-                '', // No filter
+                '', // No filter - get all requests
                 '-created',
-                'requested_user' // This is correct but we need to ensure it's working in the DataSyncService
+                'requested_user', // Expand user data
+                true // Enable deletion detection for all event requests
             );
 
             // If we still have "Unknown" users, try to fetch them directly

@@ -269,9 +269,9 @@ const EventRequestModal: React.FC<EventRequestModalProps> = ({ eventRequests }) 
             const update = Update.getInstance();
             await update.updateField("event_request", id, "status", status);
 
-            // Force sync to update IndexedDB
+            // Force sync to update IndexedDB with deletion detection enabled
             const dataSync = DataSyncService.getInstance();
-            await dataSync.syncCollection(Collections.EVENT_REQUESTS);
+            await dataSync.syncCollection(Collections.EVENT_REQUESTS, "", "-created", {}, true);
 
             // Find the request to get its name and previous status
             const request = localEventRequests.find((req) => req.id === id);

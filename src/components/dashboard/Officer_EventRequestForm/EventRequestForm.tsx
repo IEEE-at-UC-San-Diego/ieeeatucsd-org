@@ -136,7 +136,8 @@ const EventRequestForm: React.FC = () => {
             other_logos: [],
             room_booking_files: [],
             invoice: null,
-            invoice_files: []
+            invoice_files: [],
+            savedAt: Date.now() // Add timestamp for stale data detection
         };
 
         localStorage.setItem('eventRequestFormData', JSON.stringify(dataToStore));
@@ -153,12 +154,27 @@ const EventRequestForm: React.FC = () => {
         if (savedData) {
             try {
                 const parsedData = JSON.parse(savedData);
-                setFormData(prevData => ({
-                    ...prevData,
-                    ...parsedData
-                }));
+                
+                // Check if the saved data is stale (older than 24 hours)
+                const now = Date.now();
+                const savedTime = parsedData.savedAt || 0;
+                const staleThreshold = 24 * 60 * 60 * 1000; // 24 hours
+                
+                if (now - savedTime > staleThreshold) {
+                    // Clear stale data
+                    localStorage.removeItem('eventRequestFormData');
+                    console.log('Cleared stale form data from localStorage');
+                } else {
+                    // Load the saved data
+                    setFormData(prevData => ({
+                        ...prevData,
+                        ...parsedData
+                    }));
+                }
             } catch (e) {
                 console.error('Error parsing saved form data:', e);
+                // Clear corrupted data
+                localStorage.removeItem('eventRequestFormData');
             }
         }
     }, []);
@@ -186,7 +202,8 @@ const EventRequestForm: React.FC = () => {
                     other_logos: [],
                     room_booking_files: [],
                     invoice: null,
-                    invoice_files: []
+                    invoice_files: [],
+                    savedAt: Date.now() // Add timestamp for stale data detection
                 };
                 localStorage.setItem('eventRequestFormData', JSON.stringify(dataToStore));
                 
@@ -355,8 +372,8 @@ const EventRequestForm: React.FC = () => {
             // This will send the data to the server
             const record = await update.create('event_request', submissionData);
 
-            // Force sync the event requests collection to update IndexedDB
-            await dataSync.syncCollection(Collections.EVENT_REQUESTS);
+            // Force sync the event requests collection to update IndexedDB with deletion detection
+            await dataSync.syncCollection(Collections.EVENT_REQUESTS, "", "-created", {}, true);
 
             console.log('Event request record created:', record.id);
 

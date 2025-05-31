@@ -258,12 +258,14 @@ const UserEventRequests: React.FC<UserEventRequestsProps> = ({ eventRequests: in
                 return;
             }
 
-            // Use DataSyncService to get data from IndexedDB with forced sync
+            // Use DataSyncService to get data from IndexedDB with forced sync and deletion detection
             const updatedRequests = await dataSync.getData<EventRequest>(
                 Collections.EVENT_REQUESTS,
                 true, // Force sync
                 `requested_user="${userId}"`,
-                '-created'
+                '-created',
+                {}, // expand
+                true // Enable deletion detection for user-specific requests
             );
 
             setEventRequests(updatedRequests);

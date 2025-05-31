@@ -106,6 +106,7 @@ export class DataSyncService {
     filter: string = "",
     sort: string = "-created",
     expand: Record<string, any> | string[] | string = {},
+    detectDeletions: boolean = true,
   ): Promise<T[]> {
     // Skip in non-browser environments
     if (!isBrowser) {
@@ -169,11 +170,14 @@ export class DataSyncService {
         return [];
       }
 
-      // Get existing items to handle conflicts
+      // Get existing items to handle conflicts and deletions
       const existingItems = await table.toArray();
       const existingItemsMap = new Map(
         existingItems.map((item) => [item.id, item]),
       );
+
+      // Create a set of server item IDs for efficient deletion detection
+      const serverItemIds = new Set(items.map(item => item.id));
 
       // Handle conflicts and merge changes
       const itemsToStore = await Promise.all(
@@ -206,7 +210,43 @@ export class DataSyncService {
         }),
       );
 
-      // Store in IndexedDB
+      // Handle deletions: find items that exist locally but not on server
+      // Only detect deletions when:
+      // 1. detectDeletions is true AND
+      // 2. No filter is applied (full collection sync) OR filter is a user-specific filter
+      const shouldDetectDeletions = detectDeletions && (!filter || filter.includes('requested_user=') || filter.includes('user='));
+      
+      if (shouldDetectDeletions) {
+        const itemsToDelete = existingItems.filter(localItem => {
+          // For user-specific filters, only delete items that match the filter criteria
+          // but don't exist on the server
+          if (filter && filter.includes('requested_user=')) {
+            // Extract user ID from filter
+            const userMatch = filter.match(/requested_user="([^"]+)"/);
+            const userId = userMatch ? userMatch[1] : null;
+            
+            // Only consider items for deletion if they belong to the same user
+            if (userId && (localItem as any).requested_user === userId) {
+              return !serverItemIds.has(localItem.id);
+            }
+            return false; // Don't delete items that don't match the user filter
+          }
+          
+          // For full collection syncs, delete any item not on the server
+          return !serverItemIds.has(localItem.id);
+        });
+
+        // Perform deletions
+        if (itemsToDelete.length > 0) {
+          // console.log(`Deleting ${itemsToDelete.length} items from ${collection} that no longer exist on server`);
+          
+          // Delete items that no longer exist on the server
+          const idsToDelete = itemsToDelete.map(item => item.id);
+          await table.bulkDelete(idsToDelete);
+        }
+      }
+
+      // Store/update items from the server
       await table.bulkPut(itemsToStore);
 
       // Update last sync timestamp
@@ -448,6 +488,7 @@ export class DataSyncService {
     filter: string = "",
     sort: string = "-created",
     expand: Record<string, any> | string[] | string = {},
+    detectDeletions: boolean = true,
   ): Promise<T[]> {
     const db = this.dexieService.getDB();
     const table = this.getTableForCollection(collection);
@@ -464,7 +505,7 @@ export class DataSyncService {
 
     if (!this.offlineMode && (forceSync || now - lastSync > syncThreshold)) {
       try {
-        await this.syncCollection<T>(collection, filter, sort, expand);
+        await this.syncCollection<T>(collection, filter, sort, expand, detectDeletions);
       } catch (error) {
         console.error(`Error syncing ${collection}, using cached data:`, error);
       }
