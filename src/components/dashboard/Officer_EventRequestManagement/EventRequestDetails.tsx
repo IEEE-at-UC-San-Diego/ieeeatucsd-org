@@ -29,7 +29,7 @@ interface ExtendedEventRequest extends SchemaEventRequest {
     flyer_files?: string[]; // Add this for PR-related files
     files?: string[]; // Generic files field
     will_or_have_room_booking?: boolean;
-    room_booking?: string; // Single file for room booking
+    room_booking_files?: string[]; // CHANGED: Multiple room booking files instead of single
     room_reservation_needed?: boolean; // Keep for backward compatibility
     additional_notes?: string;
     flyers_completed?: boolean; // Track if flyers have been completed by PR team
@@ -82,7 +82,7 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                 setFileUrl(secureUrl);
 
                 // Determine file type from extension
-                const extension = fileName.split('.').pop()?.toLowerCase() || '';
+                const extension = (typeof fileName === 'string' ? fileName.split('.').pop()?.toLowerCase() : '') || '';
                 setFileType(extension);
 
                 setIsLoading(false);
@@ -1125,6 +1125,7 @@ const PRMaterialsTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }
 
     // Use the same utility functions as in the ASFundingTab
     const getFileExtension = (filename: string): string => {
+        if (!filename || typeof filename !== 'string') return '';
         const parts = filename.split('.');
         return parts.length > 1 ? parts.pop()?.toLowerCase() || '' : '';
     };
@@ -1139,6 +1140,7 @@ const PRMaterialsTab: React.FC<{ request: ExtendedEventRequest }> = ({ request }
     };
 
     const getFriendlyFileName = (filename: string, maxLength: number = 20): string => {
+        if (!filename || typeof filename !== 'string') return 'Unknown File';
         const basename = filename.split('/').pop() || filename;
         if (basename.length <= maxLength) return basename;
         const extension = getFileExtension(basename);
@@ -1836,29 +1838,34 @@ const EventRequestDetails = ({
                                         <div className="bg-base-200/30 p-3 rounded-lg">
                                             <label className="text-xs text-gray-400 block mb-1">Confirmation Status</label>
                                             <div className="flex items-center gap-2">
-                                                <div className={`badge ${request.room_booking ? 'badge-success' : 'badge-warning'}`}>
-                                                    {request.room_booking ? 'Booking File Uploaded' : 'No Booking File'}
+                                                <div className={`badge ${request.room_booking_files && request.room_booking_files.length > 0 ? 'badge-success' : 'badge-warning'}`}>
+                                                    {request.room_booking_files && request.room_booking_files.length > 0 ? 'Booking Files Uploaded' : 'No Booking Files'}
                                                 </div>
-                                                {request.room_booking && (
-                                                    <button
-                                                        onClick={() => {
-                                                            // Dispatch event to update file preview modal
-                                                            const event = new CustomEvent('filePreviewStateChange', {
-                                                                detail: {
-                                                                    url: `https://pocketbase.ieeeucsd.org/api/files/event_request/${request.id}/${request.room_booking}`,
-                                                                    filename: request.room_booking
-                                                                }
-                                                            });
-                                                            window.dispatchEvent(event);
+                                                {request.room_booking_files && request.room_booking_files.length > 0 && (
+                                                    <div className="flex gap-2">
+                                                        {request.room_booking_files.map((fileId, index) => (
+                                                            <button
+                                                                key={index}
+                                                                onClick={() => {
+                                                                    // Dispatch event to update file preview modal
+                                                                    const event = new CustomEvent('filePreviewStateChange', {
+                                                                        detail: {
+                                                                            url: `https://pocketbase.ieeeucsd.org/api/files/event_request/${request.id}/${fileId}`,
+                                                                            filename: fileId
+                                                                        }
+                                                                    });
+                                                                    window.dispatchEvent(event);
 
-                                                            // Open the modal
-                                                            const modal = document.getElementById('file-preview-modal') as HTMLDialogElement;
-                                                            if (modal) modal.showModal();
-                                                        }}
-                                                        className="btn btn-xs btn-primary ml-2"
-                                                    >
-                                                        View File
-                                                    </button>
+                                                                    // Open the modal
+                                                                    const modal = document.getElementById('file-preview-modal') as HTMLDialogElement;
+                                                                    if (modal) modal.showModal();
+                                                                }}
+                                                                className="btn btn-xs btn-primary"
+                                                            >
+                                                                View File {index + 1}
+                                                            </button>
+                                                        ))}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>

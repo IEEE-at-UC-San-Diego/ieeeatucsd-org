@@ -86,9 +86,24 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
     const handleInvoiceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const newFiles = Array.from(e.target.files) as File[];
-            setInvoiceFiles(newFiles);
-            onDataChange({ invoice_files: newFiles });
+            // Combine existing files with new files instead of replacing
+            const combinedFiles = [...invoiceFiles, ...newFiles];
+            setInvoiceFiles(combinedFiles);
+            onDataChange({ invoice_files: combinedFiles });
         }
+    };
+
+    // Handle removing individual files
+    const handleRemoveFile = (indexToRemove: number) => {
+        const updatedFiles = invoiceFiles.filter((_, index) => index !== indexToRemove);
+        setInvoiceFiles(updatedFiles);
+        onDataChange({ invoice_files: updatedFiles });
+    };
+
+    // Handle clearing all files
+    const handleClearAllFiles = () => {
+        setInvoiceFiles([]);
+        onDataChange({ invoice_files: [] });
     };
 
     // Handle JSON input change
@@ -234,8 +249,10 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
 
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const newFiles = Array.from(e.dataTransfer.files) as File[];
-            setInvoiceFiles(newFiles);
-            onDataChange({ invoice_files: newFiles });
+            // Combine existing files with new files instead of replacing
+            const combinedFiles = [...invoiceFiles, ...newFiles];
+            setInvoiceFiles(combinedFiles);
+            onDataChange({ invoice_files: combinedFiles });
         }
     };
 
@@ -311,20 +328,44 @@ const ASFundingSection: React.FC<ASFundingSectionProps> = ({ formData, onDataCha
 
                         {invoiceFiles.length > 0 ? (
                             <>
-                                <p className="font-medium text-primary">{invoiceFiles.length} file(s) selected:</p>
-                                <div className="max-h-24 overflow-y-auto text-left w-full">
-                                    <ul className="list-disc list-inside text-sm">
-                                        {invoiceFiles.map((file, index) => (
-                                            <li key={index} className="truncate">{file.name}</li>
-                                        ))}
-                                    </ul>
+                                <div className="flex items-center justify-between w-full">
+                                    <p className="font-medium text-primary">{invoiceFiles.length} file(s) selected:</p>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleClearAllFiles();
+                                        }}
+                                        className="btn btn-xs btn-outline btn-error"
+                                        title="Clear all files"
+                                    >
+                                        Clear All
+                                    </button>
                                 </div>
-                                <p className="text-xs text-gray-500">Click or drag to replace</p>
+                                <div className="max-h-32 overflow-y-auto text-left w-full space-y-1">
+                                    {invoiceFiles.map((file, index) => (
+                                        <div key={index} className="flex items-center justify-between bg-base-100 p-2 rounded">
+                                            <span className="text-sm truncate flex-1">{file.name}</span>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRemoveFile(index);
+                                                }}
+                                                className="btn btn-xs btn-error ml-2"
+                                                title="Remove file"
+                                            >
+                                                <Icon icon="heroicons:x-mark" className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-gray-500">Click or drag to add more files</p>
                             </>
                         ) : (
                             <>
                                 <p className="font-medium">Drop your invoice files here or click to browse</p>
-                                <p className="text-xs text-gray-500">Supports PDF, JPG, JPEG, PNG</p>
+                                <p className="text-xs text-gray-500">Supports PDF, JPG, JPEG, PNG (multiple files allowed)</p>
                             </>
                         )}
                     </div>

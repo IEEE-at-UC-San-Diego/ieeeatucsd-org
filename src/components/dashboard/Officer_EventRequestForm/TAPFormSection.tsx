@@ -4,6 +4,7 @@ import type { EventRequestFormData } from './EventRequestForm';
 import type { EventRequest } from '../../../schemas/pocketbase';
 import CustomAlert from '../universal/CustomAlert';
 import FilePreview from '../universal/FilePreview';
+import { Icon } from '@iconify/react';
 
 // Enhanced animation variants
 const containerVariants = {
@@ -69,11 +70,12 @@ interface TAPFormSectionProps {
 }
 
 const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange }) => {
-    const [roomBookingFile, setRoomBookingFile] = useState<File | null>(formData.room_booking);
+    const [roomBookingFiles, setRoomBookingFiles] = useState<File[]>(formData.room_booking_files || []);
     const [isDragging, setIsDragging] = useState(false);
     const [fileError, setFileError] = useState<string | null>(null);
     const [showFilePreview, setShowFilePreview] = useState(false);
     const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+    const [selectedPreviewFile, setSelectedPreviewFile] = useState<File | null>(null);
 
     // Add style tag for hidden arrows
     useEffect(() => {
@@ -89,25 +91,56 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
     // Handle room booking file upload with size limit
     const handleRoomBookingFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-
-            // Check file size - 1MB limit
-            if (file.size > 1024 * 1024) {
-                setFileError("Room booking file size must be under 1MB");
+            const newFiles = Array.from(e.target.files) as File[];
+            
+            // Check file sizes - 1MB limit for each file
+            const oversizedFiles = newFiles.filter(file => file.size > 1024 * 1024);
+            if (oversizedFiles.length > 0) {
+                setFileError(`${oversizedFiles.length} file(s) exceed 1MB limit`);
                 return;
             }
 
             setFileError(null);
-            setRoomBookingFile(file);
-            onDataChange({ room_booking: file });
+            // Combine existing files with new files instead of replacing
+            const combinedFiles = [...roomBookingFiles, ...newFiles];
+            setRoomBookingFiles(combinedFiles);
+            onDataChange({ room_booking_files: combinedFiles });
 
-            // Create preview URL
+            // Create preview URL for the first new file
             if (filePreviewUrl) {
                 URL.revokeObjectURL(filePreviewUrl);
             }
-            const url = URL.createObjectURL(file);
+            const url = URL.createObjectURL(newFiles[0]);
             setFilePreviewUrl(url);
+            setSelectedPreviewFile(newFiles[0]);
         }
+    };
+
+    // Handle removing individual files
+    const handleRemoveFile = (indexToRemove: number) => {
+        const updatedFiles = roomBookingFiles.filter((_, index) => index !== indexToRemove);
+        setRoomBookingFiles(updatedFiles);
+        onDataChange({ room_booking_files: updatedFiles });
+        
+        // Clear preview if we removed the previewed file
+        if (selectedPreviewFile && updatedFiles.length === 0) {
+            if (filePreviewUrl) {
+                URL.revokeObjectURL(filePreviewUrl);
+                setFilePreviewUrl(null);
+            }
+            setSelectedPreviewFile(null);
+        }
+    };
+
+    // Handle clearing all files
+    const handleClearAllFiles = () => {
+        setRoomBookingFiles([]);
+        onDataChange({ room_booking_files: [] });
+        if (filePreviewUrl) {
+            URL.revokeObjectURL(filePreviewUrl);
+            setFilePreviewUrl(null);
+        }
+        setSelectedPreviewFile(null);
     };
 
     // Handle drag events for file upload
@@ -126,24 +159,28 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
         setIsDragging(false);
 
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
+            const newFiles = Array.from(e.dataTransfer.files) as File[];
 
-            // Check file size - 1MB limit
-            if (file.size > 1024 * 1024) {
-                setFileError("Room booking file size must be under 1MB");
+            // Check file sizes - 1MB limit for each file
+            const oversizedFiles = newFiles.filter(file => file.size > 1024 * 1024);
+            if (oversizedFiles.length > 0) {
+                setFileError(`${oversizedFiles.length} file(s) exceed 1MB limit`);
                 return;
             }
 
             setFileError(null);
-            setRoomBookingFile(file);
-            onDataChange({ room_booking: file });
+            // Combine existing files with new files instead of replacing
+            const combinedFiles = [...roomBookingFiles, ...newFiles];
+            setRoomBookingFiles(combinedFiles);
+            onDataChange({ room_booking_files: combinedFiles });
 
-            // Create preview URL
+            // Create preview URL for the first new file
             if (filePreviewUrl) {
                 URL.revokeObjectURL(filePreviewUrl);
             }
-            const url = URL.createObjectURL(file);
+            const url = URL.createObjectURL(newFiles[0]);
             setFilePreviewUrl(url);
+            setSelectedPreviewFile(newFiles[0]);
         }
     };
 
@@ -262,6 +299,11 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
                     <span className="label-text font-medium text-lg">Room Booking Confirmation</span>
                     {formData.will_or_have_room_booking && <span className="label-text-alt text-error">*</span>}
                 </label>
+                {formData.will_or_have_room_booking && (
+                    <p className="text-sm text-gray-500 mb-3">
+                        <strong>Required:</strong> Upload your room booking confirmation document.
+                    </p>
+                )}
 
                 {fileError && (
                     <div className="mt-2 mb-2">
@@ -292,6 +334,7 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
                             className="hidden"
                             onChange={handleRoomBookingFileChange}
                             accept=".pdf,.png,.jpg,.jpeg"
+                            multiple
                         />
 
                         <div className="flex flex-col items-center justify-center gap-3">
@@ -304,16 +347,46 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
                                 </svg>
                             </motion.div>
 
-                            {roomBookingFile ? (
+                            {roomBookingFiles.length > 0 ? (
                                 <>
-                                    <p className="font-medium text-primary">File selected:</p>
-                                    <p className="text-sm">{roomBookingFile.name}</p>
-                                    <p className="text-xs text-gray-500">Click or drag to replace (Max size: 1MB)</p>
+                                    <div className="flex items-center justify-between w-full">
+                                        <p className="font-medium text-primary">{roomBookingFiles.length} file(s) selected:</p>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleClearAllFiles();
+                                            }}
+                                            className="btn btn-xs btn-outline btn-error"
+                                            title="Clear all files"
+                                        >
+                                            Clear All
+                                        </button>
+                                    </div>
+                                    <div className="max-h-32 overflow-y-auto text-left w-full space-y-1">
+                                        {roomBookingFiles.map((file, index) => (
+                                            <div key={index} className="flex items-center justify-between bg-base-100 p-2 rounded">
+                                                <span className="text-sm truncate flex-1">{file.name}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleRemoveFile(index);
+                                                    }}
+                                                    className="btn btn-xs btn-error ml-2"
+                                                    title="Remove file"
+                                                >
+                                                    <Icon icon="heroicons:x-mark" className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500">Click or drag to add more files (Max size: 1MB each)</p>
                                 </>
                             ) : (
                                 <>
-                                    <p className="font-medium">Drop your file here or click to browse</p>
-                                    <p className="text-xs text-gray-500">Accepted formats: PDF, PNG, JPG (Max size: 1MB)</p>
+                                    <p className="font-medium">Drop your files here or click to browse</p>
+                                    <p className="text-xs text-gray-500">Accepted formats: PDF, PNG, JPG (Max size: 1MB each, multiple files allowed)</p>
                                 </>
                             )}
                         </div>
@@ -329,20 +402,20 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
                 )}
 
                 {/* Preview File Button - Outside the upload area */}
-                {formData.will_or_have_room_booking && roomBookingFile && (
+                {formData.will_or_have_room_booking && roomBookingFiles.length > 0 && (
                     <div className="mt-3 flex justify-end">
                         <button
                             type="button"
                             className="btn btn-primary btn-sm"
                             onClick={toggleFilePreview}
                         >
-                            {showFilePreview ? 'Hide Preview' : 'Preview File'}
+                            {showFilePreview ? 'Hide Preview' : `Preview Files (${roomBookingFiles.length})`}
                         </button>
                     </div>
                 )}
 
                 {/* File Preview Component */}
-                {showFilePreview && filePreviewUrl && roomBookingFile && (
+                {showFilePreview && roomBookingFiles.length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -350,7 +423,7 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
                         className="mt-4 p-4 bg-base-200 rounded-lg"
                     >
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-medium">File Preview</h3>
+                            <h3 className="font-medium">File Preview ({roomBookingFiles.length} files)</h3>
                             <button
                                 type="button"
                                 className="btn btn-sm btn-circle"
@@ -361,7 +434,17 @@ const TAPFormSection: React.FC<TAPFormSectionProps> = ({ formData, onDataChange 
                                 </svg>
                             </button>
                         </div>
-                        <FilePreview url={filePreviewUrl} filename={roomBookingFile.name} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {roomBookingFiles.map((file, index) => {
+                                const url = URL.createObjectURL(file);
+                                return (
+                                    <div key={index} className="border rounded-lg p-2">
+                                        <p className="text-sm font-medium mb-2 truncate">{file.name}</p>
+                                        <FilePreview url={url} filename={file.name} />
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </motion.div>
                 )}
             </motion.div>

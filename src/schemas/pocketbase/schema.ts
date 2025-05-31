@@ -119,7 +119,7 @@ export interface EventRequest extends BaseRecord {
   advertising_format?: string;
   will_or_have_room_booking?: boolean;
   expected_attendance?: number;
-  room_booking?: string; // signle file
+  room_booking_files?: string[]; // CHANGED: Multiple files instead of single file
   as_funding_required: boolean;
   food_drinks_being_served: boolean;
   itemized_invoice?: string; // JSON string

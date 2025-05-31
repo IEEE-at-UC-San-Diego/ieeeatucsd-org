@@ -70,13 +70,13 @@ export interface EventRequestFormData {
     flyer_advertising_start_date: string;
     flyer_additional_requests: string;
     required_logos: string[];
-    other_logos: File[]; // Form uses File objects, schema uses strings
+    other_logos: File[]; // Form uses File objects, schema uses strings - MULTIPLE FILES
     advertising_format: string;
     will_or_have_room_booking: boolean;
     expected_attendance: number;
-    room_booking: File | null;
+    room_booking_files: File[]; // CHANGED: Multiple room booking files instead of single
     invoice: File | null;
-    invoice_files: File[];
+    invoice_files: File[]; // MULTIPLE FILES
     invoiceData: InvoiceData;
     needs_graphics?: boolean | null;
     needs_as_funding?: boolean | null;
@@ -108,7 +108,7 @@ const EventRequestForm: React.FC = () => {
         advertising_format: '',
         will_or_have_room_booking: false,
         expected_attendance: 0,
-        room_booking: null,
+        room_booking_files: [],
         as_funding_required: false,
         food_drinks_being_served: false,
         itemized_invoice: '',
@@ -134,7 +134,7 @@ const EventRequestForm: React.FC = () => {
         const dataToStore = {
             ...formDataToSave,
             other_logos: [],
-            room_booking: null,
+            room_booking_files: [],
             invoice: null,
             invoice_files: []
         };
@@ -184,7 +184,7 @@ const EventRequestForm: React.FC = () => {
                     ...updatedData,
                     // Remove file objects before saving to localStorage
                     other_logos: [],
-                    room_booking: null,
+                    room_booking_files: [],
                     invoice: null,
                     invoice_files: []
                 };
@@ -221,7 +221,7 @@ const EventRequestForm: React.FC = () => {
             advertising_format: '',
             will_or_have_room_booking: false,
             expected_attendance: 0,
-            room_booking: null, // No room booking by default
+            room_booking_files: [],
             as_funding_required: false,
             food_drinks_being_served: false,
             itemized_invoice: '',
@@ -377,16 +377,28 @@ const EventRequestForm: React.FC = () => {
                 }
             }
 
-            // Upload room booking
-            if (formData.room_booking) {
+            // Upload room booking files
+            if (formData.room_booking_files && formData.room_booking_files.length > 0) {
                 try {
-                    console.log('Uploading room booking file:', { name: formData.room_booking.name, size: formData.room_booking.size, type: formData.room_booking.type });
-                    await fileManager.uploadFile('event_request', record.id, 'room_booking', formData.room_booking);
-                    console.log('Room booking file uploaded successfully');
+                    console.log('Uploading room booking files:', formData.room_booking_files.length, 'files');
+                    console.log('Room booking files:', formData.room_booking_files.map(f => ({ name: f.name, size: f.size, type: f.type })));
+                    console.log('Using collection:', 'event_request', 'record ID:', record.id, 'field:', 'room_booking');
+                    
+                    // Use the correct field name 'room_booking' instead of 'room_booking_files'
+                    await fileManager.uploadFiles('event_request', record.id, 'room_booking', formData.room_booking_files);
+                    console.log('Room booking files uploaded successfully');
                 } catch (error) {
-                    console.error('Failed to upload room booking:', error);
+                    console.error('Failed to upload room booking files:', error);
+                    console.error('Error details:', {
+                        message: error instanceof Error ? error.message : 'Unknown error',
+                        stack: error instanceof Error ? error.stack : undefined,
+                        collection: 'event_request',
+                        recordId: record.id,
+                        field: 'room_booking',
+                        fileCount: formData.room_booking_files.length
+                    });
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                    fileUploadErrors.push(`Failed to upload room booking file: ${errorMessage}`);
+                    fileUploadErrors.push(`Failed to upload room booking files: ${errorMessage}`);
                 }
             }
 
@@ -395,17 +407,21 @@ const EventRequestForm: React.FC = () => {
                 try {
                     console.log('Uploading invoice files:', formData.invoice_files.length, 'files');
                     console.log('Invoice files:', formData.invoice_files.map(f => ({ name: f.name, size: f.size, type: f.type })));
-                    await fileManager.appendFiles('event_request', record.id, 'invoice_files', formData.invoice_files);
-
-                    // For backward compatibility, also upload the first file as the main invoice
-                    if (formData.invoice || formData.invoice_files[0]) {
-                        const mainInvoice = formData.invoice || formData.invoice_files[0];
-                        console.log('Uploading main invoice file:', { name: mainInvoice.name, size: mainInvoice.size, type: mainInvoice.type });
-                        await fileManager.uploadFile('event_request', record.id, 'invoice', mainInvoice);
-                    }
+                    console.log('Using collection:', 'event_request', 'record ID:', record.id, 'field:', 'invoice');
+                    
+                    // Use the correct field name 'invoice' instead of 'invoice_files'
+                    await fileManager.uploadFiles('event_request', record.id, 'invoice', formData.invoice_files);
                     console.log('Invoice files uploaded successfully');
                 } catch (error) {
                     console.error('Failed to upload invoice files:', error);
+                    console.error('Error details:', {
+                        message: error instanceof Error ? error.message : 'Unknown error',
+                        stack: error instanceof Error ? error.stack : undefined,
+                        collection: 'event_request',
+                        recordId: record.id,
+                        field: 'invoice',
+                        fileCount: formData.invoice_files.length
+                    });
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                     fileUploadErrors.push(`Failed to upload invoice files: ${errorMessage}`);
                 }
@@ -416,6 +432,13 @@ const EventRequestForm: React.FC = () => {
                     console.log('Invoice file uploaded successfully');
                 } catch (error) {
                     console.error('Failed to upload invoice file:', error);
+                    console.error('Error details:', {
+                        message: error instanceof Error ? error.message : 'Unknown error',
+                        stack: error instanceof Error ? error.stack : undefined,
+                        collection: 'event_request',
+                        recordId: record.id,
+                        field: 'invoice'
+                    });
                     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                     fileUploadErrors.push(`Failed to upload invoice file: ${errorMessage}`);
                 }
@@ -601,9 +624,9 @@ const EventRequestForm: React.FC = () => {
             return false;
         }
 
-        // Only require room booking file if will_or_have_room_booking is true
-        if (formData.will_or_have_room_booking && !formData.room_booking) {
-            toast.error('Please upload your room booking confirmation');
+        // REQUIRED: Room booking files if will_or_have_room_booking is true
+        if (formData.will_or_have_room_booking && formData.room_booking_files.length === 0) {
+            toast.error('Room booking files are required when you need a room booking');
             return false;
         }
 
@@ -623,7 +646,13 @@ const EventRequestForm: React.FC = () => {
 
     // Validate AS Funding Section
     const validateASFundingSection = () => {
-        if (formData.as_funding_required) {
+        if (formData.as_funding_required || formData.needs_as_funding) {
+            // REQUIRED: Invoice files if AS funding is needed
+            if (!formData.invoice_files || formData.invoice_files.length === 0) {
+                toast.error('Invoice files are required when requesting AS funding');
+                return false;
+            }
+
             // Check if invoice data is present and has items
             if (!formData.invoiceData || !formData.invoiceData.items || formData.invoiceData.items.length === 0) {
                 toast.error('Please add at least one item to your invoice');
