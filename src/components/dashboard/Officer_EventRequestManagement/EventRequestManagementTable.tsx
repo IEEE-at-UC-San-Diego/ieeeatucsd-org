@@ -44,10 +44,10 @@ const EventRequestManagementTable = ({
     const [eventRequests, setEventRequests] = useState<ExtendedEventRequest[]>(initialEventRequests);
     const [filteredRequests, setFilteredRequests] = useState<ExtendedEventRequest[]>(initialEventRequests);
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [statusFilter, setStatusFilter] = useState<string>('active');
     const [searchTerm, setSearchTerm] = useState<string>('');
-    const [sortField, setSortField] = useState<string>('created');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [sortField, setSortField] = useState<string>('start_date_time');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const dataSync = DataSyncService.getInstance();
     // Add state for update modal
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
@@ -137,9 +137,19 @@ const EventRequestManagementTable = ({
 
         // Apply status filter
         if (statusFilter !== 'all') {
-            filtered = filtered.filter(request =>
-                request.status?.toLowerCase() === statusFilter.toLowerCase()
-            );
+            if (statusFilter === 'active') {
+                // Filter to show only submitted and pending events (hide completed and declined)
+                filtered = filtered.filter(request => {
+                    const status = request.status?.toLowerCase();
+                    return status === 'submitted' || status === 'pending' || !status; // Include requests without status (assume pending)
+                });
+            } else {
+                // For specific status filters, treat empty status as 'pending'
+                filtered = filtered.filter(request => {
+                    const status = request.status?.toLowerCase() || 'pending'; // Default empty status to 'pending'
+                    return status === statusFilter.toLowerCase();
+                });
+            }
         }
 
         // Apply search filter
@@ -473,7 +483,7 @@ const EventRequestManagementTable = ({
     // Apply filters when filter state changes
     useEffect(() => {
         applyFilters();
-    }, [statusFilter, searchTerm, sortField, sortDirection]);
+    }, [statusFilter, searchTerm, sortField, sortDirection, eventRequests]);
 
     // Check authentication and refresh token if needed
     useEffect(() => {
@@ -615,6 +625,7 @@ const EventRequestManagementTable = ({
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
                             >
+                                <option value="active">Active (Submitted & Pending)</option>
                                 <option value="all">All Statuses</option>
                                 <option value="pending">Pending</option>
                                 <option value="completed">Completed</option>
