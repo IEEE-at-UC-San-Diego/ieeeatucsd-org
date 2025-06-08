@@ -436,15 +436,16 @@ async function sendSubmissionEmail(pb: any, resend: any, fromEmail: string, repl
       return false;
     }
 
-    const subject = `Reimbursement Submitted: ${reimbursement.title}`;
+    // Send confirmation email to submitter
+    const submitterSubject = `Reimbursement Submitted: ${reimbursement.title}`;
     
-    const html = `
+    const submitterHtml = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${subject}</title>
+        <title>${submitterSubject}</title>
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 30px; border-radius: 10px; margin-bottom: 30px;">
@@ -509,18 +510,120 @@ async function sendSubmissionEmail(pb: any, resend: any, fromEmail: string, repl
       </html>
     `;
 
-    const result = await resend.emails.send({
+    // Send notification email to treasurer
+    const treasurerSubject = `New Reimbursement Request: ${reimbursement.title} - $${reimbursement.total_amount.toFixed(2)}`;
+    
+    const treasurerHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${treasurerSubject}</title>
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); padding: 30px; border-radius: 10px; margin-bottom: 30px;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">📋 New Reimbursement Request</h1>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
+          <h2 style="margin-top: 0; color: #2c3e50;">Action Required</h2>
+          <p>Hello Treasurer,</p>
+          <p>A new reimbursement request has been submitted and is awaiting review.</p>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #004085;">Reimbursement Details</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold; width: 30%;">Submitted by:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">${user.name} (${user.email})</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold;">Title:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">${reimbursement.title}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold;">Amount:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold; color: #28a745;">$${reimbursement.total_amount.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold;">Date of Purchase:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">${new Date(reimbursement.date_of_purchase).toLocaleDateString()}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold;">Department:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">${reimbursement.department.charAt(0).toUpperCase() + reimbursement.department.slice(1)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold;">Payment Method:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">${reimbursement.payment_method}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: bold;">Submitted:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">${new Date(reimbursement.created).toLocaleString()}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold;">Status:</td>
+                <td style="padding: 8px 0;">
+                  <span style="background: #ffc107; color: #212529; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">
+                    Submitted - Awaiting Review
+                  </span>
+                </td>
+              </tr>
+            </table>
+            
+            ${reimbursement.additional_info ? `
+              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                <h4 style="margin: 0 0 10px 0; color: #495057;">Additional Information:</h4>
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; font-style: italic;">
+                  ${reimbursement.additional_info}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+          
+          <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; margin: 20px 0;">
+            <h4 style="margin: 0 0 10px 0; color: #004085;">📋 Next Steps:</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #004085;">
+              <li>Review the submitted receipts and documentation</li>
+              <li>Log into the reimbursement portal to approve or request changes</li>
+              <li>The submitter will be notified of any status updates</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div style="text-align: center; padding: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
+          <p>This is an automated notification from IEEE UCSD Reimbursement System.</p>
+          <p>If you have any questions, please contact the submitter directly at <a href="mailto:${user.email}" style="color: #667eea;">${user.email}</a></p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Send both emails
+    const submitterResult = await resend.emails.send({
       from: fromEmail,
       to: [user.email],
       replyTo: replyToEmail,
-      subject,
-      html,
+      subject: submitterSubject,
+      html: submitterHtml,
     });
 
-    console.log('Submission confirmation email sent successfully:', result);
-    return true;
+    const treasurerResult = await resend.emails.send({
+      from: fromEmail,
+      to: ['treasurer@ieeeatucsd.org'],
+      replyTo: user.email, // Set reply-to as the submitter for treasurer's convenience
+      subject: treasurerSubject,
+      html: treasurerHtml,
+    });
+
+    console.log('Submission confirmation email sent successfully:', submitterResult);
+    console.log('Treasurer notification email sent successfully:', treasurerResult);
+    
+    // Return true if at least one email was sent successfully
+    return !!(submitterResult && treasurerResult);
   } catch (error) {
-    console.error('Failed to send submission confirmation email:', error);
+    console.error('Failed to send submission emails:', error);
     return false;
   }
 }
