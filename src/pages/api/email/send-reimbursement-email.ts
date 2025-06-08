@@ -177,6 +177,125 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
       status: data.newStatus
     });
 
+    // Helper function to generate status progress bar HTML
+    function generateStatusProgressBar(currentStatus: string): string {
+      const statusOrder = ['submitted', 'under_review', 'approved', 'in_progress', 'paid'];
+      const rejectedStatus = ['submitted', 'under_review', 'rejected'];
+      
+      const isRejected = currentStatus === 'rejected';
+      const statuses = isRejected ? rejectedStatus : statusOrder;
+      
+      const statusIcons: Record<string, string> = {
+        submitted: '→',
+        under_review: '○', 
+        approved: '✓',
+        rejected: '✗',
+        in_progress: '◐',
+        paid: '✓'
+      };
+      
+      const statusLabels: Record<string, string> = {
+        submitted: 'Submitted',
+        under_review: 'Under Review',
+        approved: 'Approved', 
+        rejected: 'Rejected',
+        in_progress: 'In Progress',
+        paid: 'Paid'
+      };
+      
+      const currentIndex = statuses.indexOf(currentStatus);
+      
+      let progressBarHtml = `
+        <div style="background: #f8fafc; padding: 30px 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+          <h3 style="margin: 0 0 30px 0; color: #1e293b; font-size: 16px; font-weight: 600; text-align: center;">Request Progress</h3>
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; position: relative; max-width: 400px; margin: 0 auto;">
+            <div style="position: absolute; left: 12px; right: 12px; top: 12px; height: 2px; background: #e2e8f0; z-index: 1;"></div>
+      `;
+      
+      statuses.forEach((status, index) => {
+        const isActive = index <= currentIndex;
+        const isCurrent = status === currentStatus;
+        
+        let backgroundColor, textColor, lineColor;
+        if (isCurrent) {
+          if (status === 'rejected') {
+            backgroundColor = '#ef4444';
+            textColor = 'white';
+            lineColor = '#ef4444';
+          } else if (status === 'paid') {
+            backgroundColor = '#10b981';
+            textColor = 'white';
+            lineColor = '#10b981';
+          } else if (status === 'in_progress') {
+            backgroundColor = '#f59e0b';
+            textColor = 'white';
+            lineColor = '#f59e0b';
+          } else {
+            backgroundColor = '#3b82f6';
+            textColor = 'white';
+            lineColor = '#3b82f6';
+          }
+        } else if (isActive) {
+          backgroundColor = '#e2e8f0';
+          textColor = '#475569';
+          lineColor = '#cbd5e1';
+        } else {
+          backgroundColor = '#f8fafc';
+          textColor = '#94a3b8';
+          lineColor = '#e2e8f0';
+        }
+        
+        progressBarHtml += `
+          <div style="display: flex; flex-direction: column; align-items: center; position: relative; z-index: 10;">
+            <div style="
+              width: 24px; 
+              height: 24px; 
+              border-radius: 50%; 
+              background: ${backgroundColor}; 
+              color: ${textColor}; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              font-size: 14px;
+              font-weight: 400;
+              border: 2px solid white;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+              line-height: 1;
+              text-align: center;
+            ">
+              ${statusIcons[status]}
+            </div>
+            <span style="
+              font-size: 9px; 
+              font-weight: 600; 
+              color: ${isCurrent ? (status === 'rejected' ? '#ef4444' : status === 'paid' ? '#10b981' : status === 'in_progress' ? '#f59e0b' : '#3b82f6') : isActive ? '#475569' : '#94a3b8'};
+              text-align: center;
+              white-space: nowrap;
+              margin-top: 8px;
+              max-width: 60px;
+              line-height: 1.2;
+            ">
+              ${statusLabels[status]}
+            </span>
+          </div>
+        `;
+        
+        // Add colored line segment for active states
+        if (index < statuses.length - 1 && isActive) {
+          progressBarHtml += `
+            <div style="position: absolute; left: ${12 + (index * (376 / (statuses.length - 1)))}px; width: ${376 / (statuses.length - 1)}px; top: 12px; height: 2px; background: ${lineColor}; z-index: 2;"></div>
+          `;
+        }
+      });
+      
+      progressBarHtml += `
+          </div>
+        </div>
+      `;
+      
+      return progressBarHtml;
+    }
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -194,6 +313,8 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
           <h2 style="margin-top: 0; color: #2c3e50;">Status Update</h2>
           <p>Hello ${user.name},</p>
           <p>Your reimbursement request "<strong>${reimbursement.title}</strong>" has been updated.</p>
+          
+          ${generateStatusProgressBar(data.newStatus)}
           
           <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid ${statusColor}; margin: 20px 0;">
             <div style="margin-bottom: 15px;">
@@ -259,7 +380,7 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
       </html>
     `;
 
-    console.log('📤 Attempting to send email via Resend...');
+    console.log('Attempting to send email via Resend...');
     const result = await resend.emails.send({
       from: fromEmail,
       to: [user.email],
@@ -268,11 +389,11 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
       html,
     });
 
-    console.log('✅ Resend response:', result);
-    console.log('🎉 Status change email sent successfully!');
+    console.log('Resend response:', result);
+    console.log('Status change email sent successfully!');
     return true;
   } catch (error) {
-    console.error('❌ Failed to send status change email:', error);
+    console.error('Failed to send status change email:', error);
     console.error('Error details:', {
       name: error instanceof Error ? error.name : 'Unknown',
       message: error instanceof Error ? error.message : String(error),
@@ -284,7 +405,7 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
 
 async function sendCommentEmail(pb: any, resend: any, fromEmail: string, replyToEmail: string, data: any): Promise<boolean> {
   try {
-    console.log('💬 Starting comment email process...');
+    console.log('Starting comment email process...');
     console.log('Comment data received:', {
       reimbursementId: data.reimbursementId,
       commentByUserId: data.commentByUserId,
@@ -294,49 +415,49 @@ async function sendCommentEmail(pb: any, resend: any, fromEmail: string, replyTo
 
     // Don't send emails for private comments
     if (data.isPrivate) {
-      console.log('🔒 Comment is private, skipping email notification');
+      console.log('Comment is private, skipping email notification');
       return true;
     }
 
     // Get reimbursement details
-    console.log('🔍 Fetching reimbursement details for:', data.reimbursementId);
+    console.log('Fetching reimbursement details for:', data.reimbursementId);
     const reimbursement = await pb.collection('reimbursement').getOne(data.reimbursementId);
-    console.log('✅ Reimbursement fetched:', { 
+    console.log('Reimbursement fetched:', { 
       id: reimbursement.id, 
       title: reimbursement.title,
       submitted_by: reimbursement.submitted_by 
     });
     
     // Get submitter user details
-    console.log('👤 Fetching submitter user details for:', reimbursement.submitted_by);
+    console.log('Fetching submitter user details for:', reimbursement.submitted_by);
     const user = await pb.collection('users').getOne(reimbursement.submitted_by);
     if (!user || !user.email) {
-      console.error('❌ User not found or no email:', reimbursement.submitted_by);
+      console.error('User not found or no email:', reimbursement.submitted_by);
       return false;
     }
-    console.log('✅ Submitter user fetched:', { 
+    console.log('Submitter user fetched:', { 
       id: user.id, 
       name: user.name, 
       email: user.email 
     });
 
     // Get commenter user name
-    console.log('👤 Fetching commenter user details for:', data.commentByUserId);
+    console.log('Fetching commenter user details for:', data.commentByUserId);
     let commentByName = 'Unknown User';
     try {
       const commentByUser = await pb.collection('users').getOne(data.commentByUserId);
       commentByName = commentByUser?.name || 'Unknown User';
-      console.log('✅ Commenter user fetched:', { 
+      console.log('Commenter user fetched:', { 
         id: commentByUser?.id, 
         name: commentByName 
       });
     } catch (error) {
-      console.warn('⚠️ Could not get commenter user name:', error);
+      console.warn('Could not get commenter user name:', error);
     }
 
     const subject = `New Comment on Reimbursement: ${reimbursement.title}`;
     
-    console.log('📝 Comment email details:', {
+    console.log('Comment email details:', {
       to: user.email,
       subject,
       commentBy: commentByName,
@@ -401,7 +522,7 @@ async function sendCommentEmail(pb: any, resend: any, fromEmail: string, replyTo
       </html>
     `;
 
-    console.log('📤 Attempting to send comment email via Resend...');
+    console.log('Attempting to send comment email via Resend...');
     const result = await resend.emails.send({
       from: fromEmail,
       to: [user.email],
@@ -410,11 +531,11 @@ async function sendCommentEmail(pb: any, resend: any, fromEmail: string, replyTo
       html,
     });
 
-    console.log('✅ Resend comment email response:', result);
-    console.log('🎉 Comment email sent successfully!');
+    console.log('Resend comment email response:', result);
+    console.log('Comment email sent successfully!');
     return true;
   } catch (error) {
-    console.error('❌ Failed to send comment email:', error);
+    console.error('Failed to send comment email:', error);
     console.error('Comment email error details:', {
       name: error instanceof Error ? error.name : 'Unknown',
       message: error instanceof Error ? error.message : String(error),
@@ -449,7 +570,7 @@ async function sendSubmissionEmail(pb: any, resend: any, fromEmail: string, repl
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 30px; border-radius: 10px; margin-bottom: 30px;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">✅ Reimbursement Submitted Successfully</h1>
+          <h1 style="color: white; margin: 0; font-size: 24px;">Reimbursement Submitted Successfully</h1>
         </div>
         
         <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
@@ -523,7 +644,7 @@ async function sendSubmissionEmail(pb: any, resend: any, fromEmail: string, repl
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); padding: 30px; border-radius: 10px; margin-bottom: 30px;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">📋 New Reimbursement Request</h1>
+          <h1 style="color: white; margin: 0; font-size: 24px;">New Reimbursement Request</h1>
         </div>
         
         <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
@@ -583,7 +704,7 @@ async function sendSubmissionEmail(pb: any, resend: any, fromEmail: string, repl
           </div>
           
           <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #007bff; margin: 20px 0;">
-            <h4 style="margin: 0 0 10px 0; color: #004085;">📋 Next Steps:</h4>
+            <h4 style="margin: 0 0 10px 0; color: #004085;">Next Steps:</h4>
             <ul style="margin: 0; padding-left: 20px; color: #004085;">
               <li>Review the submitted receipts and documentation</li>
               <li>Log into the reimbursement portal to approve or request changes</li>
@@ -630,7 +751,7 @@ async function sendSubmissionEmail(pb: any, resend: any, fromEmail: string, repl
 
 async function sendTestEmail(resend: any, fromEmail: string, replyToEmail: string, email: string): Promise<boolean> {
   try {
-    console.log('🧪 Starting test email process...');
+    console.log('Starting test email process...');
     console.log('Test email configuration:', {
       fromEmail,
       replyToEmail,
@@ -650,7 +771,7 @@ async function sendTestEmail(resend: any, fromEmail: string, replyToEmail: strin
       </head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; margin-bottom: 30px;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">🧪 Test Email</h1>
+          <h1 style="color: white; margin: 0; font-size: 24px;">Test Email</h1>
         </div>
         
         <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
@@ -659,7 +780,7 @@ async function sendTestEmail(resend: any, fromEmail: string, replyToEmail: strin
           <p>If you receive this email, the notification system is working correctly!</p>
           
           <div style="background: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745; margin: 20px 0;">
-            <p style="margin: 0; color: #155724;">✅ Email delivery successful</p>
+            <p style="margin: 0; color: #155724;">Email delivery successful</p>
           </div>
         </div>
         
@@ -671,7 +792,7 @@ async function sendTestEmail(resend: any, fromEmail: string, replyToEmail: strin
       </html>
     `;
 
-    console.log('📤 Sending test email via Resend...');
+    console.log('Sending test email via Resend...');
     const result = await resend.emails.send({
       from: fromEmail,
       to: [email],
@@ -680,11 +801,11 @@ async function sendTestEmail(resend: any, fromEmail: string, replyToEmail: strin
       html,
     });
 
-    console.log('✅ Resend test email response:', result);
-    console.log('🎉 Test email sent successfully!');
+    console.log('Resend test email response:', result);
+    console.log('Test email sent successfully!');
     return true;
   } catch (error) {
-    console.error('❌ Failed to send test email:', error);
+    console.error('Failed to send test email:', error);
     console.error('Test email error details:', {
       name: error instanceof Error ? error.name : 'Unknown',
       message: error instanceof Error ? error.message : String(error),
