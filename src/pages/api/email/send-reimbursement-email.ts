@@ -1,10 +1,9 @@
 import type { APIRoute } from 'astro';
 import { initializeEmailServices, authenticatePocketBase, getStatusColor, getStatusText, getNextStepsText } from '../../../scripts/email/EmailHelpers';
 
-// Add function to generate status image URL
-function getStatusImageUrl(status: string, baseUrl: string = '', emailOptimized: boolean = true): string {
-  const emailParam = emailOptimized ? '&email=true' : '';
-  return `${baseUrl}/api/generate-status-image?status=${status}&width=500&height=150${emailParam}`;
+// Add function to generate status image URL (now SVG-based)
+function getStatusImageUrl(status: string, baseUrl: string = ''): string {
+  return `${baseUrl}/api/generate-status-image?status=${status}&width=500&height=150`;
 }
 
 export const POST: APIRoute = async ({ request }) => {
