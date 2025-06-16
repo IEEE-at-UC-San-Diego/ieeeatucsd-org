@@ -1,0 +1,156 @@
+---
+// Status Images Display Page
+const statuses = [
+  'submitted',
+  'under_review', 
+  'approved',
+  'in_progress',
+  'paid',
+  'rejected'
+];
+
+const imageWidth = 500;
+const imageHeight = 150;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Reimbursement Status Images</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f8fafc;
+        margin: 0;
+        padding: 40px 20px;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #1e293b;
+        text-align: center;
+        margin-bottom: 40px;
+        font-size: 2rem;
+        font-weight: 700;
+      }
+      h2 {
+        color: #475569;
+        margin: 40px 0 20px 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 10px;
+      }
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 30px;
+        margin-bottom: 50px;
+      }
+      .status-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+        background: #f8fafc;
+      }
+      .status-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 15px;
+        text-transform: capitalize;
+      }
+      .status-image {
+        width: 100%;
+        height: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        background: white;
+      }
+      .image-url {
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: #f1f5f9;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: #64748b;
+        word-break: break-all;
+      }
+      .demo-section {
+        background: #f8f9fa;
+        padding: 30px;
+        border-radius: 12px;
+        margin: 30px 0;
+        border: 2px solid #e2e8f0;
+      }
+      .email-demo {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Reimbursement Status Progress Images</h1>
+      
+      <div class="demo-section">
+        <h2>🖼️ PNG Status Progress Images</h2>
+        <p>High-quality PNG images generated from SVG using Puppeteer with transparent backgrounds:</p>
+        
+        <div class="status-grid">
+          {statuses.map((status) => (
+            <div class="status-item">
+              <h3 class="status-title">
+                {status.replace('_', ' ')}
+              </h3>
+              <img 
+                src={`/api/generate-status-image?status=${status}&width=${imageWidth}&height=${imageHeight}`}
+                alt={`Status progress for ${status}`}
+                class="status-image"
+                loading="lazy"
+              />
+              <div class="image-url">
+                🖼️ PNG API: /api/generate-status-image?status={status}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>📨 Email Integration Demo</h2>
+        <p>Here's how the PNG images look when embedded in an email-like environment:</p>
+        
+        <div class="email-demo" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+          <h3 style="color: white; margin: 0 0 20px 0;">IEEE UCSD Reimbursement Update</h3>
+          <p style="color: #f1f5f9; margin-bottom: 20px;">Your reimbursement request has been updated:</p>
+          
+          <img 
+            src={`/api/generate-status-image?status=approved&width=500&height=150`}
+            alt="Status progress embedded in email"
+            style="width: 100%; max-width: 500px; height: auto; border-radius: 8px;"
+            loading="lazy"
+          />
+          
+          <p style="color: #f1f5f9; margin-top: 20px; font-size: 14px;">
+            ✨ PNG images with transparent backgrounds work perfectly in all email clients
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html> 
