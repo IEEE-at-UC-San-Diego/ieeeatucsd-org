@@ -40,8 +40,10 @@ export const POST: APIRoute = async ({ request }) => {
     // Initialize services
     const { pb, resend, fromEmail, replyToEmail } = await initializeEmailServices();
 
-    // Authenticate with PocketBase if auth data is provided
-    authenticatePocketBase(pb, authData);
+    // Authenticate with PocketBase if auth data is provided (skip for test emails)
+    if (type !== 'test') {
+      authenticatePocketBase(pb, authData);
+    }
 
     let success = false;
 
@@ -141,19 +143,51 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
       pocketbaseUrl: import.meta.env.POCKETBASE_URL
     });
 
-    // Get reimbursement details
-    console.log('🔍 Fetching reimbursement details for:', data.reimbursementId);
-    const reimbursement = await pb.collection('reimbursement').getOne(data.reimbursementId);
-    console.log('✅ Reimbursement fetched:', { id: reimbursement.id, title: reimbursement.title });
+    // Check if this is a test scenario
+    const isTestData = data.reimbursementId?.includes('test') || data.reimbursementId === 'test-id';
     
-    // Get submitter user details  
-    console.log('👤 Fetching user details for:', reimbursement.submitted_by);
-    const user = await pb.collection('users').getOne(reimbursement.submitted_by);
-    if (!user || !user.email) {
-      console.error('❌ User not found or no email:', reimbursement.submitted_by);
-      return false;
+    let reimbursement, user;
+    
+    if (isTestData) {
+      console.log('🧪 Using test data for demonstration');
+      // Use mock data for testing
+      reimbursement = {
+        id: data.reimbursementId,
+        title: 'Test Reimbursement Request',
+        total_amount: 125.50,
+        date_of_purchase: new Date().toISOString(),
+        department: 'general',
+        payment_method: 'Personal Card',
+        status: data.previousStatus || 'submitted',
+        submitted_by: 'test-user-id',
+        audit_notes: ''
+      };
+      
+      user = {
+        id: 'test-user-id',
+        name: 'Test User',
+        email: data.additionalContext?.testEmail || 'test@example.com'
+      };
+      
+      console.log('✅ Test data prepared:', { 
+        reimbursementTitle: reimbursement.title, 
+        userEmail: user.email 
+      });
+    } else {
+      // Get real reimbursement details
+      console.log('🔍 Fetching reimbursement details for:', data.reimbursementId);
+      reimbursement = await pb.collection('reimbursement').getOne(data.reimbursementId);
+      console.log('✅ Reimbursement fetched:', { id: reimbursement.id, title: reimbursement.title });
+      
+      // Get submitter user details  
+      console.log('👤 Fetching user details for:', reimbursement.submitted_by);
+      user = await pb.collection('users').getOne(reimbursement.submitted_by);
+      if (!user || !user.email) {
+        console.error('❌ User not found or no email:', reimbursement.submitted_by);
+        return false;
+      }
+      console.log('✅ User fetched:', { id: user.id, name: user.name, email: user.email });
     }
-    console.log('✅ User fetched:', { id: user.id, name: user.name, email: user.email });
 
     // Get changed by user name if provided
     let changedByName = 'System';
@@ -177,7 +211,39 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
       status: data.newStatus
     });
 
-    // Helper function to generate status progress bar HTML
+    // Add audit note when reimbursement is declined (skip for test data)
+    if (data.newStatus === 'rejected' && !isTestData) {
+      try {
+        console.log('📝 Adding audit note for declined reimbursement...');
+        
+        // Prepare audit note content
+        let auditNote = `Status changed to REJECTED by ${changedByName}`;
+        if (data.additionalContext?.rejectionReason) {
+          auditNote += `\nRejection Reason: ${data.additionalContext.rejectionReason}`;
+        }
+        auditNote += `\nDate: ${new Date().toLocaleString()}`;
+        
+        // Get existing audit notes or initialize empty string
+        const existingNotes = reimbursement.audit_notes || '';
+        const updatedNotes = existingNotes 
+          ? `${existingNotes}\n\n--- DECLINE RECORD ---\n${auditNote}`
+          : `--- DECLINE RECORD ---\n${auditNote}`;
+        
+        // Update the reimbursement record with the new audit notes
+        await pb.collection('reimbursement').update(data.reimbursementId, {
+          audit_notes: updatedNotes
+        });
+        
+        console.log('✅ Audit note added successfully for declined reimbursement');
+      } catch (auditError) {
+        console.error('❌ Failed to add audit note for declined reimbursement:', auditError);
+        // Don't fail the entire email process if audit note fails
+      }
+    } else if (data.newStatus === 'rejected' && isTestData) {
+      console.log('🧪 Skipping audit note update for test data');
+    }
+
+    // Helper function to generate status progress bar HTML (email-compatible)
     function generateStatusProgressBar(currentStatus: string): string {
       const statusOrder = ['submitted', 'under_review', 'approved', 'in_progress', 'paid'];
       const rejectedStatus = ['submitted', 'under_review', 'rejected'];
@@ -187,10 +253,10 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
       
       const statusIcons: Record<string, string> = {
         submitted: '→',
-        under_review: '○', 
+        under_review: '•', 
         approved: '✓',
         rejected: '✗',
-        in_progress: '◐',
+        in_progress: '○',
         paid: '✓'
       };
       
@@ -208,8 +274,11 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
       let progressBarHtml = `
         <div style="background: #f8fafc; padding: 30px 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
           <h3 style="margin: 0 0 30px 0; color: #1e293b; font-size: 16px; font-weight: 600; text-align: center;">Request Progress</h3>
-          <div style="display: flex; align-items: flex-start; justify-content: space-between; position: relative; max-width: 400px; margin: 0 auto;">
-            <div style="position: absolute; left: 12px; right: 12px; top: 12px; height: 2px; background: #e2e8f0; z-index: 1;"></div>
+          <table style="width: 100%; max-width: 500px; margin: 0 auto; border-collapse: collapse; position: relative;">
+            <tr style="position: relative;">
+              <td colspan="${statuses.length * 2 - 1}" style="height: 2px; background: #e2e8f0; position: absolute; top: 21px; left: 0; right: 0; z-index: 3;"></td>
+            </tr>
+            <tr style="position: relative; z-index: 1;">
       `;
       
       statuses.forEach((status, index) => {
@@ -245,51 +314,64 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
           lineColor = '#e2e8f0';
         }
         
+        // Status circle
         progressBarHtml += `
-          <div style="display: flex; flex-direction: column; align-items: center; position: relative; z-index: 10;">
-            <div style="
-              width: 24px; 
-              height: 24px; 
-              border-radius: 50%; 
-              background: ${backgroundColor}; 
-              color: ${textColor}; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
-              font-size: 14px;
-              font-weight: 400;
-              border: 2px solid white;
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-              line-height: 1;
-              text-align: center;
-            ">
-              ${statusIcons[status]}
-            </div>
-            <span style="
-              font-size: 9px; 
-              font-weight: 600; 
-              color: ${isCurrent ? (status === 'rejected' ? '#ef4444' : status === 'paid' ? '#10b981' : status === 'in_progress' ? '#f59e0b' : '#3b82f6') : isActive ? '#475569' : '#94a3b8'};
-              text-align: center;
-              white-space: nowrap;
-              margin-top: 8px;
-              max-width: 60px;
-              line-height: 1.2;
-            ">
-              ${statusLabels[status]}
-            </span>
-          </div>
+              <td style="text-align: center; padding: 0; vertical-align: top; position: relative; width: ${100/statuses.length}%;">
+                <div style="position: relative; z-index: 1; padding: 5px 0;">
+                  <div style="
+                    width: 32px; 
+                    height: 32px; 
+                    border-radius: 50%; 
+                    background: ${backgroundColor}; 
+                    color: ${textColor}; 
+                    text-align: center;
+                    line-height: 32px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    border: 3px solid #f8fafc;
+                    box-shadow: none;
+                    margin: 0 auto 8px auto;
+                  ">
+                    ${statusIcons[status]}
+                  </div>
+                  <div style="
+                    font-size: 11px; 
+                    font-weight: 600; 
+                    color: ${isCurrent ? (status === 'rejected' ? '#ef4444' : status === 'paid' ? '#10b981' : status === 'in_progress' ? '#f59e0b' : '#3b82f6') : isActive ? '#475569' : '#94a3b8'};
+                    text-align: center;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                  ">
+                    ${statusLabels[status]}
+                  </div>
+                </div>
+              </td>
         `;
         
-        // Add colored line segment for active states
-        if (index < statuses.length - 1 && isActive) {
+        // Connecting line (except for the last status)
+        if (index < statuses.length - 1) {
+          const nextIsActive = (index + 1) <= currentIndex;
+          const connectionColor = nextIsActive ? lineColor : '#e2e8f0';
+          
           progressBarHtml += `
-            <div style="position: absolute; left: ${12 + (index * (376 / (statuses.length - 1)))}px; width: ${376 / (statuses.length - 1)}px; top: 12px; height: 2px; background: ${lineColor}; z-index: 2;"></div>
+              <td style="padding: 0; vertical-align: top; position: relative; width: 20px;">
+                <div style="
+                  height: 2px; 
+                  background: ${connectionColor}; 
+                  position: absolute;
+                  top: 21px;
+                  left: 0;
+                  right: 0;
+                  z-index: 3;
+                "></div>
+              </td>
           `;
         }
       });
       
       progressBarHtml += `
-          </div>
+            </tr>
+          </table>
         </div>
       `;
       
