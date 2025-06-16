@@ -1,6 +1,12 @@
 import type { APIRoute } from 'astro';
 import { initializeEmailServices, authenticatePocketBase, getStatusColor, getStatusText, getNextStepsText } from '../../../scripts/email/EmailHelpers';
 
+// Add function to generate status image URL
+function getStatusImageUrl(status: string, baseUrl: string = '', emailOptimized: boolean = true): string {
+  const emailParam = emailOptimized ? '&email=true' : '';
+  return `${baseUrl}/api/generate-status-image?status=${status}&width=500&height=150${emailParam}`;
+}
+
 export const POST: APIRoute = async ({ request }) => {
   try {
     console.log('📨 Reimbursement email API called');
@@ -15,7 +21,8 @@ export const POST: APIRoute = async ({ request }) => {
       commentByUserId, 
       isPrivate,
       additionalContext,
-      authData
+      authData,
+      useImageProgress = true  // New option to use image instead of HTML progress (default: true for better email compatibility)
     } = await request.json();
 
     console.log('📋 Request data:', {
@@ -62,7 +69,8 @@ export const POST: APIRoute = async ({ request }) => {
           newStatus,
           previousStatus,
           changedByUserId,
-          additionalContext
+          additionalContext,
+          useImageProgress
         });
         break;
 
@@ -253,11 +261,11 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
       
       const statusIcons: Record<string, string> = {
         submitted: '→',
-        under_review: '•', 
+        under_review: '?', 
         approved: '✓',
         rejected: '✗',
         in_progress: '○',
-        paid: '✓'
+        paid: '$'
       };
       
       const statusLabels: Record<string, string> = {
@@ -396,7 +404,12 @@ async function sendStatusChangeEmail(pb: any, resend: any, fromEmail: string, re
           <p>Hello ${user.name},</p>
           <p>Your reimbursement request "<strong>${reimbursement.title}</strong>" has been updated.</p>
           
-          ${generateStatusProgressBar(data.newStatus)}
+          ${data.useImageProgress ? 
+            `<div style="text-align: center; margin: 20px 0;">
+              <img src="${getStatusImageUrl(data.newStatus, 'https://ieeeatucsd.org')}" alt="Request Progress" style="max-width: 100%; height: auto; border-radius: 8px;" />
+            </div>` : 
+            generateStatusProgressBar(data.newStatus)
+          }
           
           <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid ${statusColor}; margin: 20px 0;">
             <div style="margin-bottom: 15px;">
