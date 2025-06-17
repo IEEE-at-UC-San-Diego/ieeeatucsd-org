@@ -1,12 +1,12 @@
 version: "3.8"
 
 services:
-    web:
-        build: .
-        ports:
-            - "3000:3000"
-        environment:
-            - NODE_ENV=production
-            - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
-            - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-            - PUPPETEER_DISABLE_SANDBOX=true
+  web:
+    build: .
+    ports:
+      - "4321:4321"
+    environment:
+      - NODE_ENV=production
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_DISABLE_SANDBOX=true
