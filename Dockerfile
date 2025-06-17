@@ -29,7 +29,7 @@ RUN apt-get update && \
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY bun.lockb package.json ./
+COPY bun.lock package.json ./
 RUN bun install
 
 # Copy the rest of your app
