@@ -39,7 +39,7 @@ COPY . .
 RUN bun run build
 
 # Expose the port your app runs on (change if needed)
-EXPOSE 3000
+EXPOSE 4321
 
 # Start the server
 CMD ["bun", "run", "start"]
