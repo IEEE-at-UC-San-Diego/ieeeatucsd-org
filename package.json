@@ -66,6 +66,7 @@
     "date-fns": "^4.1.0",
     "dexie": "^4.0.11",
     "embla-carousel-react": "^8.6.0",
+    "firebase": "^11.10.0",
     "framer-motion": "^12.6.2",
     "highlight.js": "^11.11.1",
     "input-otp": "^1.4.2",
