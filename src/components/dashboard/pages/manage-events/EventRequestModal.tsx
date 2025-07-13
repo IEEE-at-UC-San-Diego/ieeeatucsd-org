@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar, MapPin, FileText, Image, DollarSign, Upload, AlertTriangle } from 'lucide-react';
-import { getFirestore, collection, addDoc, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, doc, setDoc, updateDoc, query, where, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { app } from '../../../../firebase/client';
 import { auth } from '../../../../firebase/client';
 
 interface EventRequestModalProps {
     onClose: () => void;
+    editingRequest?: any | null;
+    onSuccess?: () => void;
 }
 
 interface ItemizedInvoiceItem {
@@ -24,7 +26,7 @@ interface JsonInvoiceData {
     total?: number;
 }
 
-export default function EventRequestModal({ onClose }: EventRequestModalProps) {
+export default function EventRequestModal({ onClose, editingRequest, onSuccess }: EventRequestModalProps) {
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -41,6 +43,7 @@ export default function EventRequestModal({ onClose }: EventRequestModalProps) {
         startTime: '',
         endTime: '',
         eventDescription: '',
+        department: 'General',
         flyersNeeded: false,
         flyerType: [] as string[],
         otherFlyerType: '',
@@ -68,6 +71,44 @@ export default function EventRequestModal({ onClose }: EventRequestModalProps) {
 
     const db = getFirestore(app);
     const storage = getStorage(app);
+
+    // Populate form data when editing
+    useEffect(() => {
+        if (editingRequest) {
+            setFormData({
+                name: editingRequest.name || '',
+                location: editingRequest.location || '',
+                startDate: editingRequest.startDateTime?.toDate?.()?.toISOString().split('T')[0] || '',
+                startTime: editingRequest.startDateTime?.toDate?.()?.toTimeString().slice(0, 5) || '',
+                endTime: editingRequest.endDateTime?.toDate?.()?.toTimeString().slice(0, 5) || '',
+                eventDescription: editingRequest.eventDescription || '',
+                department: editingRequest.department || 'General',
+                flyersNeeded: editingRequest.needsGraphics || false,
+                flyerType: editingRequest.flyerType || [],
+                otherFlyerType: editingRequest.otherFlyerType || '',
+                flyerAdvertisingStartDate: editingRequest.flyerAdvertisingStartDate || '',
+                flyerAdditionalRequests: editingRequest.flyerAdditionalRequests || '',
+                flyersCompleted: editingRequest.flyersCompleted || false,
+                photographyNeeded: editingRequest.photographyNeeded || false,
+                requiredLogos: editingRequest.requiredLogos || [],
+                otherLogos: editingRequest.otherLogos || [],
+                otherLogoFiles: [],
+                advertisingFormat: editingRequest.advertisingFormat || '',
+                additionalSpecifications: editingRequest.additionalSpecifications || '',
+                hasRoomBooking: editingRequest.hasRoomBooking ?? true,
+                roomBookingFile: null,
+                expectedAttendance: editingRequest.expectedAttendance?.toString() || '',
+                servingFoodDrinks: editingRequest.servingFoodDrinks || false,
+                needsAsFunding: editingRequest.needsAsFunding || false,
+                itemizedInvoice: editingRequest.itemizedInvoice || [],
+                invoiceTax: editingRequest.invoiceTax || 0,
+                invoiceTip: editingRequest.invoiceTip || 0,
+                invoice: null,
+                invoiceFiles: [],
+                needsGraphics: editingRequest.needsGraphics || false
+            });
+        }
+    }, [editingRequest]);
 
     const flyerTypes = [
         'Digital flyer (with social media advertising: Facebook, Instagram, Discord)',
@@ -217,6 +258,13 @@ export default function EventRequestModal({ onClose }: EventRequestModalProps) {
         return await Promise.all(uploadPromises);
     };
 
+    const scrollToTop = () => {
+        const modalContent = document.querySelector('.overflow-y-auto');
+        if (modalContent) {
+            modalContent.scrollTop = 0;
+        }
+    };
+
     const validateStep = (step: number) => {
         setError(null);
         const errors: { [key: string]: boolean } = {};
@@ -260,10 +308,15 @@ export default function EventRequestModal({ onClose }: EventRequestModalProps) {
                     errors.eventDescription = true;
                     errorMessages.push('Event description is required');
                 }
+                if (!formData.department) {
+                    errors.department = true;
+                    errorMessages.push('Event department is required');
+                }
 
                 if (Object.keys(errors).length > 0) {
                     setFieldErrors(errors);
                     setError(errorMessages.join(', '));
+                    scrollToTop();
                     return false;
                 }
                 break;
@@ -272,26 +325,32 @@ export default function EventRequestModal({ onClose }: EventRequestModalProps) {
                 if (formData.needsGraphics) {
                     if (formData.flyerType.length === 0) {
                         setError('Please select at least one flyer type when graphics are needed');
+                        scrollToTop();
                         return false;
                     }
                     if (formData.flyerType.includes('Other') && !formData.otherFlyerType) {
                         setError('Please specify the other flyer type');
+                        scrollToTop();
                         return false;
                     }
                     if (formData.requiredLogos.length === 0) {
                         setError('Please select at least one logo when graphics are needed');
+                        scrollToTop();
                         return false;
                     }
                     if (formData.requiredLogos.includes('OTHER (please upload transparent logo files)') && formData.otherLogoFiles.length === 0) {
                         setError('Please upload logo files for "OTHER" selection');
+                        scrollToTop();
                         return false;
                     }
                     if (!formData.advertisingFormat) {
                         setError('Please select a format for the materials');
+                        scrollToTop();
                         return false;
                     }
                     if (formData.flyerType.length > 0 && !formData.flyerAdvertisingStartDate) {
                         setError('Flyer advertising start date is required');
+                        scrollToTop();
                         return false;
                     }
                 }
@@ -302,32 +361,38 @@ export default function EventRequestModal({ onClose }: EventRequestModalProps) {
                 // Room booking validation
                 if (formData.hasRoomBooking === undefined || formData.hasRoomBooking === null) {
                     setError('Please answer whether you have a room booking');
+                    scrollToTop();
                     return false;
                 }
                 if (formData.hasRoomBooking && !formData.roomBookingFile) {
                     setError('Please upload room booking confirmation');
+                    scrollToTop();
                     return false;
                 }
                 if (formData.roomBookingFile && formData.roomBookingFile.size > 1024 * 1024) {
                     setError('Room booking file must be under 1MB');
+                    scrollToTop();
                     return false;
                 }
 
                 // Attendance validation
                 if (!formData.expectedAttendance) {
                     setError('Expected attendance is required');
+                    scrollToTop();
                     return false;
                 }
 
                 // Food/drinks validation
                 if (formData.servingFoodDrinks === undefined || formData.servingFoodDrinks === null) {
                     setError('Please answer whether you will be serving food or drinks');
+                    scrollToTop();
                     return false;
                 }
 
                 // Only validate AS funding if they're serving food/drinks
                 if (formData.servingFoodDrinks && (formData.needsAsFunding === undefined || formData.needsAsFunding === null)) {
                     setError('Please answer whether you need AS funding');
+                    scrollToTop();
                     return false;
                 }
                 break;
@@ -346,6 +411,7 @@ export default function EventRequestModal({ onClose }: EventRequestModalProps) {
                     if (Object.keys(errors).length > 0) {
                         setFieldErrors(errors);
                         setError(fundingErrorMessages.join(', '));
+                        scrollToTop();
                         return false;
                     }
                 }
@@ -451,6 +517,7 @@ export default function EventRequestModal({ onClose }: EventRequestModalProps) {
                 startDateTime: startDateTime,
                 endDateTime: endDateTime,
                 eventDescription: formData.eventDescription,
+                department: formData.department,
                 flyersNeeded: formData.flyersNeeded,
                 flyerType: formData.flyerType,
                 otherFlyerType: formData.otherFlyerType,
@@ -473,32 +540,58 @@ export default function EventRequestModal({ onClose }: EventRequestModalProps) {
                 invoiceFiles: invoiceUrls,
                 needsGraphics: formData.needsGraphics,
                 needsAsFunding: formData.needsAsFunding,
-                status: 'submitted',
+                status: editingRequest ? editingRequest.status : 'submitted',
                 requestedUser: auth.currentUser?.uid,
-                createdAt: new Date()
+                ...(editingRequest ? { updatedAt: new Date() } : { createdAt: new Date() })
             };
 
-            const eventRequestRef = await addDoc(collection(db, 'event_requests'), eventRequestData);
+            let eventRequestRef;
+            if (editingRequest) {
+                // Update existing event request
+                eventRequestRef = doc(db, 'event_requests', editingRequest.id);
+                await updateDoc(eventRequestRef, eventRequestData);
+            } else {
+                // Create new event request
+                eventRequestRef = await addDoc(collection(db, 'event_requests'), eventRequestData);
+            }
 
-            // Create draft event
+            // Handle corresponding event in events collection
             const eventData = {
                 eventName: formData.name,
                 eventDescription: formData.eventDescription,
-                eventCode: `EVT-${Date.now()}`,
+                department: formData.department,
+                eventCode: editingRequest?.eventCode || `EVT-${Date.now()}`,
                 location: formData.location,
                 files: [],
                 pointsToReward: 0,
                 startDate: startDateTime,
                 endDate: endDateTime,
-                published: false,
+                published: editingRequest ? (editingRequest.status === 'approved') : false,
                 eventType: 'other' as const,
                 hasFood: formData.servingFoodDrinks,
-                createdFrom: eventRequestRef.id,
-                createdAt: new Date()
+                createdFrom: editingRequest ? editingRequest.id : (eventRequestRef as any).id,
+                ...(editingRequest ? { updatedAt: new Date() } : { createdAt: new Date() })
             };
 
-            await addDoc(collection(db, 'events'), eventData);
+            if (editingRequest) {
+                // Find and update corresponding event
+                const eventsQuery = query(collection(db, 'events'), where('createdFrom', '==', editingRequest.id));
+                const eventsSnapshot = await getDocs(eventsQuery);
 
+                if (!eventsSnapshot.empty) {
+                    // Update existing event
+                    const eventDoc = eventsSnapshot.docs[0];
+                    await updateDoc(doc(db, 'events', eventDoc.id), eventData);
+                } else {
+                    // Create new event if it doesn't exist
+                    await addDoc(collection(db, 'events'), eventData);
+                }
+            } else {
+                // Create new draft event
+                await addDoc(collection(db, 'events'), eventData);
+            }
+
+            onSuccess?.();
             onClose();
         } catch (err: any) {
             setError(err.message);
@@ -587,6 +680,47 @@ export default function EventRequestModal({ onClose }: EventRequestModalProps) {
                             }`}
                         placeholder="Enter event location"
                     />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Event Description <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                        value={formData.eventDescription}
+                        onChange={(e) => handleInputChange('eventDescription', e.target.value)}
+                        rows={4}
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.eventDescription ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                            }`}
+                        placeholder="Describe the event in detail..."
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Department <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                        <select
+                            value={formData.department}
+                            onChange={(e) => handleInputChange('department', e.target.value)}
+                            className={`appearance-none w-full px-4 py-3 pr-8 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors cursor-pointer ${fieldErrors.department ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                                }`}
+                        >
+                            <option value="General">General</option>
+                            <option value="Projects">Projects</option>
+                            <option value="Internal">Internal</option>
+                            <option value="External">External</option>
+                            <option value="Technical">Technical</option>
+                            <option value="Social">Social</option>
+                            <option value="Professional">Professional</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1332,7 +1466,7 @@ export default function EventRequestModal({ onClose }: EventRequestModalProps) {
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-900">Create Event Request</h2>
+                        <h2 className="text-xl font-bold text-gray-900">{editingRequest ? 'Edit Event Request' : 'Create Event Request'}</h2>
                         <p className="text-sm text-gray-600">Fill out the form to request a new event</p>
                     </div>
                     <button

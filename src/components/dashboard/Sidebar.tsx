@@ -63,7 +63,7 @@ export function Sidebar({ currentPath = '' }: SidebarComponentProps) {
                 <div className="flex items-center">
                     <div className="w-8 h-8 flex items-center justify-center">
                         <img
-                            src="/logos/white_logo_only.svg"
+                            src="/logos/blue_logo_only.svg"
                             alt="IEEE UCSD Logo"
                             className="w-8 h-8"
                         />

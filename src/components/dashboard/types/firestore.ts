@@ -1,5 +1,13 @@
 import type { Timestamp } from 'firebase/firestore';
 
+export type UserRole = 
+  | 'Member'
+  | 'General Officer'
+  | 'Executive Officer'
+  | 'Member at Large'
+  | 'Past Officer'
+  | 'Sponsor';
+
 export interface User {
   email: string;
   emailVisibility: boolean;
@@ -19,6 +27,14 @@ export interface User {
   resume?: string;
   signedUp: boolean;
   requestedEmail: boolean;
+  role: UserRole;
+  position?: string; // Specific position like "Webmaster", "President", etc.
+  status: 'active' | 'inactive' | 'suspended';
+  joinDate: Timestamp;
+  eventsAttended?: number;
+  points?: number;
+  invitedBy?: string; // uid of the user who invited them
+  inviteAccepted?: Timestamp; // when they accepted the invite
 }
 
 export interface PublicProfile {

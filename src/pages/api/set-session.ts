@@ -34,6 +34,11 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         accessibilitySettings: {},
         signedUp: false,
         requestedEmail: false,
+        role: 'Member', // Default role for new users
+        status: 'active',
+        joinDate: new Date(),
+        eventsAttended: 0,
+        points: 0,
       };
       await userRef.set(userData);
     }
@@ -50,7 +55,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       path: '/',
     });
 
-    const target = (userSnap.exists && userSnap.data()?.signedUp) ? '/dashboard/overview' : '/dashboard/get-started';
+    // Officers with roles should go to overview, others to get-started if not signed up
+    const userData = userSnap.exists ? userSnap.data() : null;
+    const isOfficer = userData?.role && ['General Officer', 'Executive Officer', 'Member at Large', 'Past Officer'].includes(userData.role);
+    const target = (userData?.signedUp || isOfficer) ? '/dashboard/overview' : '/dashboard/get-started';
     return redirect(target);
   } catch (error) {
     console.error('Error creating session cookie:', error);

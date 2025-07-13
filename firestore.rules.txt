@@ -1,0 +1,116 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection - allow users to read/write their own data, officers can read all users
+    match /users/{userId} {
+      // Users can read and write their own data
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Officers can read all user data
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['General Officer', 'Executive Officer'];
+      
+      // Officers can update user roles and status
+      allow update: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['General Officer', 'Executive Officer'];
+    }
+
+    // Invites collection - allow officers to create invites, invited users to read their invites
+    match /invites/{inviteId} {
+      // Officers can create and manage invites
+      allow create, read, write: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['General Officer', 'Executive Officer'];
+      
+      // Invited users can read invites sent to their email
+      allow read: if request.auth != null && 
+        request.auth.token.email == resource.data.email;
+      
+      // Invited users can update invite status when accepting
+      allow update: if request.auth != null && 
+        request.auth.token.email == resource.data.email &&
+        request.resource.data.status in ['accepted', 'declined'];
+    }
+
+    // Events collection - allow officers to manage, members to read published events and check in
+    match /events/{eventId} {
+      // All authenticated users can read published events
+      allow read: if request.auth != null && 
+        resource.data.published == true;
+      
+      // Officers can read all events (published or not)
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['General Officer', 'Executive Officer'];
+      
+      // Officers can create and manage events
+      allow create, write: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['General Officer', 'Executive Officer'];
+      
+      // Authenticated users can update events to add themselves to attendees list (for check-in)
+      allow update: if request.auth != null && 
+        resource.data.published == true &&
+        request.resource.data.keys().hasOnly(['attendees']) &&
+        request.auth.uid in request.resource.data.attendees &&
+        !(request.auth.uid in resource.data.get('attendees', []));
+    }
+
+    // Event requests collection - allow members to create, officers to manage
+    match /event_requests/{requestId} {
+      // Users can read their own event requests
+      allow read: if request.auth != null && 
+        request.auth.uid == resource.data.requestedUser;
+      
+      // Officers can read all event requests
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['General Officer', 'Executive Officer'];
+      
+      // Authenticated users can create event requests
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.requestedUser;
+      
+      // Officers can update event requests
+      allow update: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['General Officer', 'Executive Officer'];
+    }
+
+    // Reimbursements collection - similar access patterns
+    match /reimbursements/{reimbursementId} {
+      // Users can read their own reimbursements
+      allow read: if request.auth != null && 
+        request.auth.uid == resource.data.submittedBy;
+      
+      // Officers can read all reimbursements
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['General Officer', 'Executive Officer'];
+      
+      // Authenticated users can create reimbursements
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.submittedBy;
+      
+      // Officers can update reimbursements
+      allow update: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['General Officer', 'Executive Officer'];
+    }
+
+    // Logs collection - officers only
+    match /logs/{logId} {
+      allow read, write: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['General Officer', 'Executive Officer'];
+    }
+
+    // Default deny for any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 
