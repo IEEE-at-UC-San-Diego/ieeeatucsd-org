@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Search, Calendar, Bell, User, Plus, Filter } from 'lucide-react';
 import { EventManagementStats } from './manage-events/EventManagementStats';
 import type { EventStats } from './manage-events/types';
+import EventRequestModal from './manage-events/EventRequestModal';
 
 // Sample data
 const stats: EventStats = {
@@ -12,6 +13,8 @@ const stats: EventStats = {
 };
 
 export default function ManageEventsContent() {
+    const [showEventRequestModal, setShowEventRequestModal] = useState(false);
+
     return (
         <div className="flex-1 overflow-auto">
             {/* Header */}
@@ -59,7 +62,10 @@ export default function ManageEventsContent() {
                                 <Filter className="w-4 h-4" />
                                 <span>Filter</span>
                             </button>
-                            <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <button
+                                onClick={() => setShowEventRequestModal(true)}
+                                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
                                 <Plus className="w-4 h-4" />
                                 <span>Create Event</span>
                             </button>
@@ -82,7 +88,10 @@ export default function ManageEventsContent() {
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <button className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                            <button
+                                onClick={() => setShowEventRequestModal(true)}
+                                className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
                                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                                     <Plus className="w-5 h-5 text-blue-600" />
                                 </div>
@@ -113,6 +122,13 @@ export default function ManageEventsContent() {
                     </div>
                 </div>
             </main>
+
+            {/* Event Request Modal */}
+            {showEventRequestModal && (
+                <EventRequestModal
+                    onClose={() => setShowEventRequestModal(false)}
+                />
+            )}
         </div>
     );
 } 
