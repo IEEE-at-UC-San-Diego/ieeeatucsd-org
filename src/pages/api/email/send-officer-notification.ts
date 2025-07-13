@@ -2,8 +2,8 @@ import type { APIRoute } from 'astro';
 import { OfficerEmailNotifications } from '../../../scripts/email/OfficerEmailNotifications';
 import type { OfficerRoleChangeEmailData } from '../../../scripts/email/OfficerEmailNotifications';
 import { initializeEmailServices, authenticatePocketBase } from '../../../scripts/email/EmailHelpers';
-import { Collections } from '../../../schemas/pocketbase';
-import type { User, Officer } from '../../../schemas/pocketbase/schema';
+import { Collections } from '../../../components/old-dashboard/schemas/pocketbase';
+import type { User, Officer } from '../../../components/old-dashboard/schemas/pocketbase/schema';
 
 export const POST: APIRoute = async ({ request }) => {
   try {

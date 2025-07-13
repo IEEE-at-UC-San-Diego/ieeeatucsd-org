@@ -80,3 +80,8 @@ export const GET: APIRoute = async ({ request, redirect }) => {
     return redirect("/dashboard");
   }
 };
+
+export const POST: APIRoute = ({ cookies, redirect }) => {
+  cookies.delete('session', { path: '/' });
+  return redirect('/dashboard/signin');
+};

@@ -1,12 +1,26 @@
 import { initializeApp } from "firebase/app";
+import { firebaseEnv } from "../env";
+import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 
+// Firebase client configuration for web app
 const firebaseConfig = {
-  apiKey: import.meta.env.FIREBASE_API_KEY,
-  authDomain: import.meta.env.FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: "my-app-id",
+  apiKey: firebaseEnv.apiKey,
+  authDomain: firebaseEnv.authDomain || `${firebaseEnv.projectId}.firebaseapp.com`,
+  projectId: firebaseEnv.projectId,
+  storageBucket: firebaseEnv.storageBucket || `${firebaseEnv.projectId}.appspot.com`,
+  messagingSenderId: firebaseEnv.messagingSenderId,
+  appId: firebaseEnv.appId,
 };
 
+console.log('🔥 Firebase Client Config:', {
+  hasApiKey: !!firebaseConfig.apiKey,
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+  hasStorageBucket: !!firebaseConfig.storageBucket,
+  hasMessagingSenderId: !!firebaseConfig.messagingSenderId,
+  hasAppId: !!firebaseConfig.appId,
+});
+
 export const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider };
