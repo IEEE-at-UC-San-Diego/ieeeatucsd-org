@@ -8,7 +8,7 @@ export const db = getFirestore(app);
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   try {
-    const { idToken } = await request.json();
+    const { idToken, inviteId } = await request.json();
 
     if (!idToken) {
       return new Response(JSON.stringify({ error: 'No ID token provided' }), { status: 400 });
@@ -16,6 +16,44 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
     // Verify the ID token
     const decoded = await adminAuth.verifyIdToken(idToken);
+
+    // Process invite if provided
+    let inviteData = null;
+    if (inviteId) {
+      try {
+        console.log('Processing invite:', inviteId);
+        const inviteRef = db.doc(`invites/${inviteId}`);
+        const inviteSnap = await inviteRef.get();
+        
+        if (inviteSnap.exists) {
+          inviteData = inviteSnap.data();
+          console.log('Invite found:', { email: inviteData?.email, role: inviteData?.role });
+          
+          // Verify the invite is for this user's email
+          if (inviteData?.email === decoded.email && inviteData?.status === 'pending') {
+            // Mark invite as accepted
+            await inviteRef.update({
+              status: 'accepted',
+              acceptedAt: new Date(),
+              acceptedBy: decoded.uid
+            });
+            console.log('Invite accepted successfully');
+          } else {
+            console.warn('Invite validation failed:', {
+              inviteEmail: inviteData?.email,
+              userEmail: decoded.email,
+              inviteStatus: inviteData?.status
+            });
+            inviteData = null; // Reset if validation fails
+          }
+        } else {
+          console.warn('Invite not found:', inviteId);
+        }
+      } catch (error) {
+        console.error('Error processing invite:', error);
+        inviteData = null;
+      }
+    }
 
     // Create or ensure user document
     const userRef = db.doc(`users/${decoded.uid}`);
@@ -34,12 +72,16 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         accessibilitySettings: {},
         signedUp: false,
         requestedEmail: false,
-        role: 'Member', // Default role for new users
+        role: inviteData?.role || 'Member', // Use role from invite or default to Member
+        ...(inviteData?.position && { position: inviteData.position }),
+        ...(inviteData && { invitedBy: inviteData.createdBy || 'system' }),
+        ...(inviteData && { inviteAccepted: new Date() }),
         status: 'active',
         joinDate: new Date(),
         eventsAttended: 0,
         points: 0,
       };
+      console.log('Creating user with data:', { role: userData.role, position: userData.position });
       await userRef.set(userData);
     }
 

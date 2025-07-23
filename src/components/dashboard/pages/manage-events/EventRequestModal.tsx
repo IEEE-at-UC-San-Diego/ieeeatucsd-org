@@ -31,7 +31,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<{ [key: string]: boolean }>({});
-    const [skipForm, setSkipForm] = useState(false);
+
     const [invoiceView, setInvoiceView] = useState<'interactive' | 'json'>('interactive');
     const [jsonInput, setJsonInput] = useState('');
 
@@ -44,6 +44,8 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         endTime: '',
         eventDescription: '',
         department: 'General',
+        eventCode: '',
+        pointsToReward: 0,
         flyersNeeded: false,
         flyerType: [] as string[],
         otherFlyerType: '',
@@ -64,29 +66,73 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         itemizedInvoice: [] as ItemizedInvoiceItem[],
         invoiceTax: 0,
         invoiceTip: 0,
+        invoiceVendor: '',
         invoice: null as File | null,
         invoiceFiles: [] as File[],
-        needsGraphics: false
+        needsGraphics: false,
+        // Existing files for editing
+        existingRoomBookingFiles: [] as string[],
+        existingInvoiceFiles: [] as string[],
+        existingInvoiceFile: '',
+        existingOtherLogos: [] as string[]
     });
 
     const db = getFirestore(app);
     const storage = getStorage(app);
 
-    // Populate form data when editing
+    // Populate form data when editing or set defaults for new events
     useEffect(() => {
         if (editingRequest) {
+            const safeGetTimeString = (timestamp: any) => {
+                try {
+                    if (!timestamp) return '';
+                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                    if (isNaN(date.getTime())) return '';
+                    return date.toTimeString().slice(0, 5);
+                } catch (error) {
+                    console.warn('Error parsing time:', error);
+                    return '';
+                }
+            };
+
+            const safeGetDateString = (timestamp: any) => {
+                try {
+                    if (!timestamp) return '';
+                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                    if (isNaN(date.getTime())) return '';
+                    return date.toISOString().split('T')[0];
+                } catch (error) {
+                    console.warn('Error parsing date:', error);
+                    return '';
+                }
+            };
+
+            const safeGetDateTimeString = (timestamp: any) => {
+                try {
+                    if (!timestamp) return '';
+                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+                    if (isNaN(date.getTime())) return '';
+                    return date.toISOString().slice(0, 16); // Format for datetime-local input
+                } catch (error) {
+                    console.warn('Error parsing datetime:', error);
+                    return '';
+                }
+            };
+
             setFormData({
                 name: editingRequest.name || '',
                 location: editingRequest.location || '',
-                startDate: editingRequest.startDateTime?.toDate?.()?.toISOString().split('T')[0] || '',
-                startTime: editingRequest.startDateTime?.toDate?.()?.toTimeString().slice(0, 5) || '',
-                endTime: editingRequest.endDateTime?.toDate?.()?.toTimeString().slice(0, 5) || '',
+                startDate: safeGetDateString(editingRequest.startDateTime),
+                startTime: safeGetTimeString(editingRequest.startDateTime),
+                endTime: safeGetTimeString(editingRequest.endDateTime),
                 eventDescription: editingRequest.eventDescription || '',
                 department: editingRequest.department || 'General',
-                flyersNeeded: editingRequest.needsGraphics || false,
+                eventCode: editingRequest.eventCode || '',
+                pointsToReward: editingRequest.pointsToReward || 0,
+                flyersNeeded: editingRequest.needsGraphics || editingRequest.flyersNeeded || false,
                 flyerType: editingRequest.flyerType || [],
                 otherFlyerType: editingRequest.otherFlyerType || '',
-                flyerAdvertisingStartDate: editingRequest.flyerAdvertisingStartDate || '',
+                flyerAdvertisingStartDate: safeGetDateTimeString(editingRequest.flyerAdvertisingStartDate),
                 flyerAdditionalRequests: editingRequest.flyerAdditionalRequests || '',
                 flyersCompleted: editingRequest.flyersCompleted || false,
                 photographyNeeded: editingRequest.photographyNeeded || false,
@@ -95,18 +141,30 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 otherLogoFiles: [],
                 advertisingFormat: editingRequest.advertisingFormat || '',
                 additionalSpecifications: editingRequest.additionalSpecifications || '',
-                hasRoomBooking: editingRequest.hasRoomBooking ?? true,
+                hasRoomBooking: editingRequest.hasRoomBooking ?? editingRequest.willOrHaveRoomBooking ?? true,
                 roomBookingFile: null,
                 expectedAttendance: editingRequest.expectedAttendance?.toString() || '',
-                servingFoodDrinks: editingRequest.servingFoodDrinks || false,
-                needsAsFunding: editingRequest.needsAsFunding || false,
+                servingFoodDrinks: editingRequest.servingFoodDrinks || editingRequest.foodDrinksBeingServed || false,
+                needsAsFunding: editingRequest.needsAsFunding || editingRequest.asFundingRequired || false,
                 itemizedInvoice: editingRequest.itemizedInvoice || [],
                 invoiceTax: editingRequest.invoiceTax || 0,
                 invoiceTip: editingRequest.invoiceTip || 0,
+                invoiceVendor: editingRequest.invoiceVendor || '',
                 invoice: null,
                 invoiceFiles: [],
-                needsGraphics: editingRequest.needsGraphics || false
+                needsGraphics: editingRequest.needsGraphics || false,
+                // Existing files for editing
+                existingRoomBookingFiles: editingRequest.roomBookingFiles || [],
+                existingInvoiceFiles: editingRequest.invoiceFiles || [],
+                existingInvoiceFile: editingRequest.invoice || '',
+                existingOtherLogos: editingRequest.otherLogos || []
             });
+        } else {
+            // Set default event code for new events
+            setFormData(prev => ({
+                ...prev,
+                eventCode: generateEventCode()
+            }));
         }
     }, [editingRequest]);
 
@@ -145,6 +203,35 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         if (files) {
             setFormData(prev => ({ ...prev, [field]: Array.from(files) }));
         }
+    };
+
+    const handleRemoveExistingFile = (fileUrl: string, fileType: 'roomBooking' | 'invoice' | 'invoiceFiles' | 'otherLogos') => {
+        setFormData(prev => {
+            switch (fileType) {
+                case 'roomBooking':
+                    return {
+                        ...prev,
+                        existingRoomBookingFiles: prev.existingRoomBookingFiles.filter(url => url !== fileUrl)
+                    };
+                case 'invoice':
+                    return {
+                        ...prev,
+                        existingInvoiceFile: ''
+                    };
+                case 'invoiceFiles':
+                    return {
+                        ...prev,
+                        existingInvoiceFiles: prev.existingInvoiceFiles.filter(url => url !== fileUrl)
+                    };
+                case 'otherLogos':
+                    return {
+                        ...prev,
+                        existingOtherLogos: prev.existingOtherLogos.filter(url => url !== fileUrl)
+                    };
+                default:
+                    return prev;
+            }
+        });
     };
 
     const addInvoiceItem = () => {
@@ -265,6 +352,89 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         }
     };
 
+    const generateEventCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        let result = '';
+        for (let i = 0; i < 6; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    };
+
+    const formatTimeTo12H = (time24: string) => {
+        try {
+            if (!time24) return '';
+            const [hours, minutes] = time24.split(':');
+            if (!hours || !minutes) return time24; // Return original if parsing fails
+            const hour = parseInt(hours);
+            if (isNaN(hour)) return time24;
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const hour12 = hour % 12 || 12;
+            return `${hour12}:${minutes} ${ampm}`;
+        } catch (error) {
+            console.warn('Error formatting time to 12H:', error);
+            return time24 || ''; // Return original time or empty string
+        }
+    };
+
+    const getFileIcon = (filename: string) => {
+        const ext = filename.toLowerCase().split('.').pop();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '')) {
+            return <Image className="w-5 h-5 text-blue-500" />;
+        }
+        return <FileText className="w-5 h-5 text-gray-500" />;
+    };
+
+    const extractFileName = (url: string) => {
+        try {
+            const urlObj = new URL(url);
+            const pathname = urlObj.pathname;
+            const filename = pathname.split('/').pop();
+            if (filename && filename.includes('_')) {
+                return filename.substring(filename.indexOf('_') + 1);
+            }
+            return filename || 'File';
+        } catch {
+            return 'File';
+        }
+    };
+
+    const renderExistingFiles = (files: string[], title: string, onRemove: (url: string) => void) => {
+        if (!files || files.length === 0) return null;
+
+        return (
+            <div className="mt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">{title}</h4>
+                <div className="space-y-2">
+                    {files.map((fileUrl, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                            <div className="flex items-center space-x-2">
+                                {getFileIcon(fileUrl)}
+                                <span className="text-sm text-gray-700">{extractFileName(fileUrl)}</span>
+                            </div>
+                            <div className="flex space-x-2">
+                                <a
+                                    href={fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 text-sm"
+                                >
+                                    View
+                                </a>
+                                <button
+                                    onClick={() => onRemove(fileUrl)}
+                                    className="text-red-600 hover:text-red-800 text-sm"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     const validateStep = (step: number) => {
         setError(null);
         const errors: { [key: string]: boolean } = {};
@@ -308,6 +478,14 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                     errors.eventDescription = true;
                     errorMessages.push('Event description is required');
                 }
+                if (!formData.eventCode) {
+                    errors.eventCode = true;
+                    errorMessages.push('Event code is required');
+                }
+                if (formData.pointsToReward < 0) {
+                    errors.pointsToReward = true;
+                    errorMessages.push('Points to reward must be non-negative');
+                }
                 if (!formData.department) {
                     errors.department = true;
                     errorMessages.push('Event department is required');
@@ -349,7 +527,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         return false;
                     }
                     if (formData.flyerType.length > 0 && !formData.flyerAdvertisingStartDate) {
-                        setError('Flyer advertising start date is required');
+                        setError('Advertising start date is required when graphics are needed');
                         scrollToTop();
                         return false;
                     }
@@ -397,20 +575,20 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 }
                 break;
 
-            case 4: // Funding & Invoices (only if AS funding needed)
-                // This step only appears if AS funding is needed, so validate accordingly
+            case 4: // Funding (if step exists)
                 if (formData.needsAsFunding) {
-                    const fundingErrorMessages: string[] = [];
-
-                    if (!formData.invoice) {
-                        errors.invoice = true;
-                        fundingErrorMessages.push('Invoice upload is required for AS funding');
+                    if (!formData.invoice && !formData.existingInvoiceFile) {
+                        setError('Please upload an invoice for AS funding');
+                        scrollToTop();
+                        return false;
                     }
-                    // Could add validation for itemized invoice if needed
-
-                    if (Object.keys(errors).length > 0) {
-                        setFieldErrors(errors);
-                        setError(fundingErrorMessages.join(', '));
+                    if (!formData.invoiceVendor) {
+                        setError('Invoice vendor/location is required when AS funding is needed');
+                        scrollToTop();
+                        return false;
+                    }
+                    if (formData.itemizedInvoice.length === 0) {
+                        setError('Please add at least one item to the itemized invoice');
                         scrollToTop();
                         return false;
                     }
@@ -465,14 +643,20 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         }
 
         // Validate invoice upload if AS funding is needed
-        if (formData.needsAsFunding && !formData.invoice) {
+        if (formData.needsAsFunding && !formData.invoice && !formData.existingInvoiceFile) {
             setError('Please upload an invoice for AS funding');
+            return;
+        }
+
+        // Validate invoice vendor if AS funding is needed
+        if (formData.needsAsFunding && !formData.invoiceVendor) {
+            setError('Invoice vendor/location is required when AS funding is needed');
             return;
         }
 
         // Validate flyer advertising start date if graphics are needed
         if (formData.needsGraphics && formData.flyerType.length > 0 && !formData.flyerAdvertisingStartDate) {
-            setError('Please provide the flyer advertising start date');
+            setError('Advertising start date is required when graphics are needed');
             return;
         }
 
@@ -490,6 +674,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
             let invoiceUrl = '';
             let otherLogoUrls: string[] = [];
 
+            // Handle new file uploads
             if (formData.roomBookingFile) {
                 roomBookingUrls = await uploadFiles([formData.roomBookingFile], 'room_bookings');
             }
@@ -507,9 +692,48 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 otherLogoUrls = await uploadFiles(formData.otherLogoFiles, 'logos');
             }
 
+            // Merge existing files with new uploads (for editing)
+            const finalRoomBookingUrls = editingRequest
+                ? [...formData.existingRoomBookingFiles, ...roomBookingUrls]
+                : roomBookingUrls;
+
+            const finalInvoiceUrls = editingRequest
+                ? [...formData.existingInvoiceFiles, ...invoiceUrls]
+                : invoiceUrls;
+
+            const finalInvoiceUrl = editingRequest
+                ? (invoiceUrl || formData.existingInvoiceFile)
+                : invoiceUrl;
+
+            const finalOtherLogoUrls = editingRequest
+                ? [...formData.existingOtherLogos, ...otherLogoUrls]
+                : otherLogoUrls;
+
             // Create event request
-            const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
-            const endDateTime = new Date(`${formData.startDate}T${formData.endTime}`);
+            const createSafeDateTime = (date: string, time: string) => {
+                try {
+                    if (!date || !time) {
+                        throw new Error('Date or time is missing');
+                    }
+                    const dateTime = new Date(`${date}T${time}`);
+                    if (isNaN(dateTime.getTime())) {
+                        throw new Error('Invalid date/time combination');
+                    }
+                    return dateTime;
+                } catch (error) {
+                    console.error('Error creating date:', error);
+                    throw new Error(`Invalid date/time format: ${date}T${time}`);
+                }
+            };
+
+            let startDateTime, endDateTime;
+            try {
+                startDateTime = createSafeDateTime(formData.startDate, formData.startTime);
+                endDateTime = createSafeDateTime(formData.startDate, formData.endTime);
+            } catch (error) {
+                setError(`Date/time error: ${(error as Error).message}`);
+                return;
+            }
 
             const eventRequestData = {
                 name: formData.name,
@@ -518,6 +742,8 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 endDateTime: endDateTime,
                 eventDescription: formData.eventDescription,
                 department: formData.department,
+                eventCode: formData.eventCode,
+                pointsToReward: formData.pointsToReward,
                 flyersNeeded: formData.flyersNeeded,
                 flyerType: formData.flyerType,
                 otherFlyerType: formData.otherFlyerType,
@@ -526,18 +752,19 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 flyersCompleted: formData.flyersCompleted,
                 photographyNeeded: formData.photographyNeeded,
                 requiredLogos: formData.requiredLogos,
-                otherLogos: otherLogoUrls,
+                otherLogos: finalOtherLogoUrls,
                 advertisingFormat: formData.advertisingFormat,
                 additionalSpecifications: formData.additionalSpecifications,
                 hasRoomBooking: formData.hasRoomBooking,
                 expectedAttendance: formData.expectedAttendance ? parseInt(formData.expectedAttendance) : null,
-                roomBookingFiles: roomBookingUrls,
+                roomBookingFiles: finalRoomBookingUrls,
                 servingFoodDrinks: formData.servingFoodDrinks,
                 itemizedInvoice: formData.itemizedInvoice,
                 invoiceTax: formData.invoiceTax,
                 invoiceTip: formData.invoiceTip,
-                invoice: invoiceUrl,
-                invoiceFiles: invoiceUrls,
+                invoiceVendor: formData.invoiceVendor,
+                invoice: finalInvoiceUrl,
+                invoiceFiles: finalInvoiceUrls,
                 needsGraphics: formData.needsGraphics,
                 needsAsFunding: formData.needsAsFunding,
                 status: editingRequest ? editingRequest.status : 'submitted',
@@ -550,25 +777,30 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 // Update existing event request
                 eventRequestRef = doc(db, 'event_requests', editingRequest.id);
                 await updateDoc(eventRequestRef, eventRequestData);
+                console.log('Updated event request:', editingRequest.id);
             } else {
                 // Create new event request
                 eventRequestRef = await addDoc(collection(db, 'event_requests'), eventRequestData);
+                console.log('Created new event request:', (eventRequestRef as any).id);
             }
 
             // Handle corresponding event in events collection
+            const currentStatus = editingRequest ? editingRequest.status : 'submitted';
             const eventData = {
                 eventName: formData.name,
                 eventDescription: formData.eventDescription,
                 department: formData.department,
-                eventCode: editingRequest?.eventCode || `EVT-${Date.now()}`,
+                eventCode: formData.eventCode || generateEventCode(),
                 location: formData.location,
-                files: [],
-                pointsToReward: 0,
+                files: [], // Keep existing files, just update metadata
+                privateFiles: [], // Keep existing private files
+                pointsToReward: formData.pointsToReward,
                 startDate: startDateTime,
                 endDate: endDateTime,
-                published: editingRequest ? (editingRequest.status === 'approved') : false,
+                published: currentStatus === 'approved',
                 eventType: 'other' as const,
                 hasFood: formData.servingFoodDrinks,
+                capacity: formData.expectedAttendance ? parseInt(formData.expectedAttendance) : null,
                 createdFrom: editingRequest ? editingRequest.id : (eventRequestRef as any).id,
                 ...(editingRequest ? { updatedAt: new Date() } : { createdAt: new Date() })
             };
@@ -579,16 +811,27 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 const eventsSnapshot = await getDocs(eventsQuery);
 
                 if (!eventsSnapshot.empty) {
-                    // Update existing event
+                    // Update existing event, but preserve files
                     const eventDoc = eventsSnapshot.docs[0];
-                    await updateDoc(doc(db, 'events', eventDoc.id), eventData);
+                    const existingEventData = eventDoc.data();
+
+                    const updatedEventData = {
+                        ...eventData,
+                        files: existingEventData.files || [], // Preserve existing files
+                        privateFiles: existingEventData.privateFiles || [], // Preserve existing private files
+                    };
+
+                    await updateDoc(doc(db, 'events', eventDoc.id), updatedEventData);
+                    console.log('Updated existing event:', eventDoc.id, updatedEventData);
                 } else {
                     // Create new event if it doesn't exist
                     await addDoc(collection(db, 'events'), eventData);
+                    console.log('Created new event for existing request');
                 }
             } else {
                 // Create new draft event
                 await addDoc(collection(db, 'events'), eventData);
+                console.log('Created new event for new request');
             }
 
             onSuccess?.();
@@ -600,30 +843,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         }
     };
 
-    const handleSkipForm = async () => {
-        try {
-            // Create basic event directly
-            const eventData = {
-                eventName: 'New Event',
-                eventDescription: '',
-                eventCode: `EVT-${Date.now()}`,
-                location: '',
-                files: [],
-                pointsToReward: 0,
-                startDate: new Date(),
-                endDate: new Date(),
-                published: false,
-                eventType: 'other' as const,
-                hasFood: false,
-                createdAt: new Date()
-            };
 
-            await addDoc(collection(db, 'events'), eventData);
-            onClose();
-        } catch (err: any) {
-            setError(err.message);
-        }
-    };
 
     const renderDisclaimer = () => (
         <div className="space-y-4">
@@ -720,6 +940,37 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                         </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Event Code <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={formData.eventCode}
+                            onChange={(e) => handleInputChange('eventCode', e.target.value)}
+                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.eventCode ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                                }`}
+                            placeholder="Enter event code (e.g., HACK-2024)"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Points to Reward <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="number"
+                            min="0"
+                            value={formData.pointsToReward}
+                            onChange={(e) => handleInputChange('pointsToReward', parseInt(e.target.value) || 0)}
+                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.pointsToReward ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                                }`}
+                            placeholder="Enter points to reward"
+                        />
                     </div>
                 </div>
 
@@ -861,6 +1112,12 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                             />
                             <p className="text-xs text-gray-500 mt-1">Please upload transparent PNG or SVG files for best quality</p>
+
+                            {renderExistingFiles(
+                                formData.existingOtherLogos,
+                                "Existing Logo Files",
+                                (url) => handleRemoveExistingFile(url, 'otherLogos')
+                            )}
                         </div>
                     )}
 
@@ -897,12 +1154,15 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Advertising start date</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Flyer advertising start date {formData.needsGraphics && formData.flyerType.length > 0 && <span className="text-red-500">*</span>}
+                        </label>
                         <input
                             type="datetime-local"
                             value={formData.flyerAdvertisingStartDate}
                             onChange={(e) => handleInputChange('flyerAdvertisingStartDate', e.target.value)}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                            required={formData.needsGraphics && formData.flyerType.length > 0}
                         />
                     </div>
                 </div>
@@ -983,6 +1243,12 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                             onChange={(e) => handleInputChange('roomBookingFile', e.target.files?.[0] || null)}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         />
+
+                        {renderExistingFiles(
+                            formData.existingRoomBookingFiles,
+                            "Existing Room Booking Files",
+                            (url) => handleRemoveExistingFile(url, 'roomBooking')
+                        )}
                     </div>
                 )}
 
@@ -1109,6 +1375,34 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 ${fieldErrors.invoice ? 'border-red-500 bg-red-50' : 'border-gray-300'
                             }`}
                     />
+
+                    {formData.existingInvoiceFile && (
+                        <div className="mt-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Existing Invoice File</h4>
+                            <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                                <div className="flex items-center space-x-2">
+                                    {getFileIcon(formData.existingInvoiceFile)}
+                                    <span className="text-sm text-gray-700">{extractFileName(formData.existingInvoiceFile)}</span>
+                                </div>
+                                <div className="flex space-x-2">
+                                    <a
+                                        href={formData.existingInvoiceFile}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:text-blue-800 text-sm"
+                                    >
+                                        View
+                                    </a>
+                                    <button
+                                        onClick={() => handleRemoveExistingFile(formData.existingInvoiceFile, 'invoice')}
+                                        className="text-red-600 hover:text-red-800 text-sm"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -1261,6 +1555,20 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                             </div>
                         </div>
 
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Vendor/Restaurant {formData.needsAsFunding && <span className="text-red-500">*</span>}
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="e.g., Papa Johns, Subway, etc."
+                                value={formData.invoiceVendor}
+                                onChange={(e) => handleInputChange('invoiceVendor', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                required={formData.needsAsFunding}
+                            />
+                        </div>
+
                         <div className="bg-white border border-gray-300 rounded-lg p-3">
                             <div className="flex justify-between text-sm">
                                 <span>Subtotal:</span>
@@ -1291,16 +1599,32 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         onChange={(e) => handleFileChange('invoiceFiles', e.target.files)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                     />
+
+                    {renderExistingFiles(
+                        formData.existingInvoiceFiles,
+                        "Existing Additional Invoice Files",
+                        (url) => handleRemoveExistingFile(url, 'invoiceFiles')
+                    )}
                 </div>
             </div>
         );
     };
 
     const renderReviewSection = () => {
-        const startDateTime = formData.startDate && formData.startTime ?
-            new Date(`${formData.startDate}T${formData.startTime}`) : null;
-        const endDateTime = formData.startDate && formData.endTime ?
-            new Date(`${formData.startDate}T${formData.endTime}`) : null;
+        const createSafeDisplayDateTime = (date: string, time: string) => {
+            try {
+                if (!date || !time) return null;
+                const dateTime = new Date(`${date}T${time}`);
+                if (isNaN(dateTime.getTime())) return null;
+                return dateTime;
+            } catch (error) {
+                console.warn('Error creating display date:', error);
+                return null;
+            }
+        };
+
+        const startDateTime = createSafeDisplayDateTime(formData.startDate, formData.startTime);
+        const endDateTime = createSafeDisplayDateTime(formData.startDate, formData.endTime);
 
         return (
             <div className="space-y-6">
@@ -1325,14 +1649,34 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         </div>
                         <div>
                             <span className="font-medium text-gray-700">Date:</span>
-                            <p className="text-gray-900">{formData.startDate ? new Date(formData.startDate).toLocaleDateString() : 'Not specified'}</p>
+                            <p className="text-gray-900">{(() => {
+                                try {
+                                    return formData.startDate ? new Date(formData.startDate).toLocaleDateString() : 'Not specified';
+                                } catch (error) {
+                                    return 'Invalid date';
+                                }
+                            })()}</p>
                         </div>
                         <div>
                             <span className="font-medium text-gray-700">Time:</span>
                             <p className="text-gray-900">
-                                {formData.startTime && formData.endTime ?
-                                    `${formData.startTime} - ${formData.endTime}` : 'Not specified'}
+                                {(() => {
+                                    try {
+                                        return formData.startTime && formData.endTime ?
+                                            `${formatTimeTo12H(formData.startTime)} - ${formatTimeTo12H(formData.endTime)}` : 'Not specified';
+                                    } catch (error) {
+                                        return 'Invalid time';
+                                    }
+                                })()}
                             </p>
+                        </div>
+                        <div>
+                            <span className="font-medium text-gray-700">Event Code:</span>
+                            <p className="text-gray-900">{formData.eventCode || 'Not specified'}</p>
+                        </div>
+                        <div>
+                            <span className="font-medium text-gray-700">Points to Reward:</span>
+                            <p className="text-gray-900">{formData.pointsToReward} points</p>
                         </div>
                         <div className="md:col-span-2">
                             <span className="font-medium text-gray-700">Description:</span>
@@ -1414,6 +1758,22 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                                 <span className="font-medium text-gray-700">Invoice Uploaded:</span>
                                 <p className="text-gray-900">{formData.invoice ? 'Yes' : 'No'}</p>
                             </div>
+                            {formData.invoiceVendor && (
+                                <div>
+                                    <span className="font-medium text-gray-700">Vendor:</span>
+                                    <p className="text-gray-900">{formData.invoiceVendor}</p>
+                                </div>
+                            )}
+                            {(formData.invoiceTax > 0 || formData.invoiceTip > 0) && (
+                                <div>
+                                    <span className="font-medium text-gray-700">Additional Charges:</span>
+                                    <p className="text-gray-900">
+                                        {formData.invoiceTax > 0 && `Tax: $${formData.invoiceTax.toFixed(2)}`}
+                                        {formData.invoiceTax > 0 && formData.invoiceTip > 0 && ', '}
+                                        {formData.invoiceTip > 0 && `Tip: $${formData.invoiceTip.toFixed(2)}`}
+                                    </p>
+                                </div>
+                            )}
                             {formData.itemizedInvoice.length > 0 && (
                                 <div>
                                     <span className="font-medium text-gray-700">Itemized Invoice:</span>
@@ -1477,22 +1837,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                     </button>
                 </div>
 
-                {/* Skip Option */}
-                {currentStep > 0 && (
-                    <div className="px-6 py-3 bg-yellow-50 border-b border-yellow-200">
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm text-yellow-800">
-                                Want to skip the request form? You can create a basic event directly, but using the request form is recommended.
-                            </p>
-                            <button
-                                onClick={handleSkipForm}
-                                className="text-sm text-yellow-700 hover:text-yellow-800 underline font-medium"
-                            >
-                                Skip Form
-                            </button>
-                        </div>
-                    </div>
-                )}
+
 
                 {/* Progress */}
                 <div className="px-6 py-4 border-b border-gray-200">
@@ -1547,7 +1892,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                                 disabled={loading}
                                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                             >
-                                {loading ? 'Submitting...' : 'Submit Request'}
+                                {loading ? (editingRequest ? 'Updating...' : 'Submitting...') : (editingRequest ? 'Update Request' : 'Submit Request')}
                             </button>
                         ) : (
                             <button

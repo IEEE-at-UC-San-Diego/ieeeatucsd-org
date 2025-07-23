@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Bell, User, Filter, MapPin, Clock, Users, UserCheck, X, Award } from 'lucide-react';
-import { getFirestore, collection, getDocs, query, where, orderBy, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { Search, Calendar, Bell, User, Filter, MapPin, Clock, Users, UserCheck, X, Award, FileText, Eye, Download } from 'lucide-react';
+import { getFirestore, collection, getDocs, query, where, orderBy, doc, getDoc, updateDoc, arrayUnion, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { app } from '../../../firebase/client';
 
@@ -16,6 +16,8 @@ interface Event {
     published: boolean;
     capacity?: number;
     eventCode: string;
+    hasFood?: boolean;
+    files?: string[];
 }
 
 interface UserStats {
@@ -36,17 +38,33 @@ export default function EventsContent() {
     const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [checkingIn, setCheckingIn] = useState<string | null>(null);
+    const [checkedInEvents, setCheckedInEvents] = useState<Set<string>>(new Set());
 
     const db = getFirestore(app);
     const auth = getAuth(app);
-    const currentUser = auth.currentUser;
 
     useEffect(() => {
-        if (currentUser) {
-            fetchEvents();
-            fetchUserStats();
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            if (user) {
+                console.log('User authenticated, fetching events:', user.uid);
+                fetchEvents();
+                fetchUserStats();
+            } else {
+                console.log('No user authenticated, still fetching public events');
+                // Even without authentication, we can fetch public events
+                fetchEvents();
+                setLoading(false);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        if (auth.currentUser && events.length > 0) {
+            fetchUserCheckedInEvents();
         }
-    }, [currentUser]);
+    }, [auth.currentUser, events]);
 
     const fetchEvents = async () => {
         try {
@@ -54,19 +72,21 @@ export default function EventsContent() {
             setError(null);
 
             const eventsRef = collection(db, 'events');
-            // Try to fetch published events, but handle the case where there might be no published field
             let eventsSnapshot;
+
+            // First try to get only published events with simple query
             try {
-                const eventsQuery = query(
+                const publishedQuery = query(
                     eventsRef,
-                    where('published', '==', true),
-                    orderBy('startDate', 'asc')
+                    where('published', '==', true)
                 );
-                eventsSnapshot = await getDocs(eventsQuery);
+                eventsSnapshot = await getDocs(publishedQuery);
+                console.log('Successfully fetched published events:', eventsSnapshot.docs.length);
             } catch (queryError) {
-                console.warn('Failed to query with published filter, fetching all events:', queryError);
-                // Fallback: get all events if the published field doesn't exist
+                console.warn('Failed to query published events, trying all events:', queryError);
+                // Fallback: get all events and filter client-side
                 eventsSnapshot = await getDocs(eventsRef);
+                console.log('Fallback: fetched all events:', eventsSnapshot.docs.length);
             }
 
             const eventsData = eventsSnapshot.docs.map(doc => {
@@ -75,30 +95,64 @@ export default function EventsContent() {
                     id: doc.id,
                     ...data,
                     // Ensure all required fields have defaults
-                    published: data.published ?? true,
+                    published: data.published ?? false, // Default to false for safety
                     pointsToReward: data.pointsToReward ?? 0,
-                    attendees: data.attendees ?? []
+                    attendees: data.attendees ?? [],
+                    eventCode: data.eventCode ?? '',
+                    eventName: data.eventName ?? data.name ?? 'Untitled Event',
+                    hasFood: data.hasFood ?? false,
+                    files: data.files ?? []
                 };
             }) as Event[];
 
-            // Filter for published events if the field exists
-            const publishedEvents = eventsData.filter(event => event.published);
+            // Always filter for published events client-side
+            const publishedEvents = eventsData.filter(event => event.published === true);
 
-            console.log('Fetched published events:', publishedEvents.length, publishedEvents);
+            // Sort by start date
+            publishedEvents.sort((a, b) => {
+                const dateA = a.startDate?.toDate ? a.startDate.toDate() : new Date(a.startDate);
+                const dateB = b.startDate?.toDate ? b.startDate.toDate() : new Date(b.startDate);
+                return dateA.getTime() - dateB.getTime();
+            });
+
+            console.log('=== EVENT DEBUGGING ===');
+            console.log('Current user:', auth.currentUser?.uid || 'Not authenticated');
+            console.log('Total events fetched:', eventsData.length);
+            console.log('Events with published field:', eventsData.filter(e => e.published !== undefined).length);
+            console.log('Events where published = true:', publishedEvents.length);
+            console.log('All events data:', eventsData.map(e => ({
+                id: e.id,
+                name: e.eventName,
+                published: e.published,
+                startDate: e.startDate,
+                location: e.location
+            })));
+            console.log('Published events:', publishedEvents.map(e => ({
+                id: e.id,
+                name: e.eventName,
+                published: e.published,
+                startDate: e.startDate
+            })));
+            console.log('Final published events after filtering:', publishedEvents.length, publishedEvents);
             setEvents(publishedEvents);
+
+            if (publishedEvents.length === 0) {
+                console.warn('No published events found. Check that events are properly published.');
+                console.log('Debug: All events from database:', eventsData);
+            }
         } catch (error) {
             console.error('Error fetching events:', error);
-            setError('Failed to fetch events');
+            setError('Failed to fetch events: ' + (error as Error).message);
         } finally {
             setLoading(false);
         }
     };
 
     const fetchUserStats = async () => {
-        if (!currentUser) return;
+        if (!auth.currentUser) return;
 
         try {
-            const userRef = doc(db, 'users', currentUser.uid);
+            const userRef = doc(db, 'users', auth.currentUser.uid);
             const userSnap = await getDoc(userRef);
 
             if (userSnap.exists()) {
@@ -114,38 +168,94 @@ export default function EventsContent() {
         }
     };
 
-    const handleCheckIn = async (eventId: string, eventName: string, points: number) => {
-        if (!currentUser) {
+    const fetchUserCheckedInEvents = async () => {
+        if (!auth.currentUser) return;
+
+        try {
+            const checkedInSet = new Set<string>();
+
+            // For each event, check if user has checked in
+            for (const event of events) {
+                try {
+                    const attendeeRef = doc(db, 'events', event.id, 'attendees', auth.currentUser.uid);
+                    const attendeeSnap = await getDoc(attendeeRef);
+                    if (attendeeSnap.exists()) {
+                        checkedInSet.add(event.id);
+                    }
+                } catch (error) {
+                    // Continue if there's an error checking a specific event
+                    console.warn(`Error checking attendance for event ${event.id}:`, error);
+                }
+            }
+
+            setCheckedInEvents(checkedInSet);
+        } catch (error) {
+            console.error('Error fetching user checked-in events:', error);
+        }
+    };
+
+    const handleCheckIn = async (event: Event) => {
+        if (!auth.currentUser) {
             setError('Please log in to check in');
             return;
         }
 
         try {
-            setCheckingIn(eventId);
+            setCheckingIn(event.id);
 
-            // Update event with user check-in
-            const eventRef = doc(db, 'events', eventId);
-            await updateDoc(eventRef, {
-                attendees: arrayUnion(currentUser.uid)
+            // Ask for event code first
+            const enteredCode = prompt(`Please enter the event code for "${event.eventName}":`);
+            if (!enteredCode) {
+                setCheckingIn(null);
+                return; // User cancelled
+            }
+
+            // Validate event code
+            if (enteredCode.toUpperCase() !== event.eventCode?.toUpperCase()) {
+                alert('Incorrect event code. Please try again.');
+                setCheckingIn(null);
+                return;
+            }
+
+            // Ask for food preference if the event has food
+            let foodPreference = '';
+            if (event.hasFood) {
+                foodPreference = prompt('This event has food! What would you like? (e.g., Vegetarian, Vegan, No preference, etc.)') || 'No preference';
+            }
+
+            // Create check-in record in attendees subcollection
+            const attendeeRef = doc(db, 'events', event.id, 'attendees', auth.currentUser.uid);
+            await setDoc(attendeeRef, {
+                userId: auth.currentUser.uid,
+                timeCheckedIn: new Date(),
+                food: foodPreference,
+                pointsEarned: event.pointsToReward,
+                eventCode: enteredCode // Store the code they used to check in
             });
 
             // Update user with event attendance and points
-            const userRef = doc(db, 'users', currentUser.uid);
+            const userRef = doc(db, 'users', auth.currentUser.uid);
             await updateDoc(userRef, {
-                lastEventAttended: eventName,
-                points: userStats.totalPointsEarned + points,
+                lastEventAttended: event.eventName,
+                points: userStats.totalPointsEarned + event.pointsToReward,
                 eventsAttended: userStats.totalEventsAttended + 1
             });
+
+            // Add event to checked-in set
+            setCheckedInEvents(prev => new Set(prev).add(event.id));
 
             // Refresh user stats
             fetchUserStats();
 
-            // Show success message (you could add a toast notification here)
-            alert(`Successfully checked in to ${eventName}! You earned ${points} points.`);
+            // Show success message
+            const message = event.hasFood && foodPreference
+                ? `Successfully checked in to ${event.eventName}! You earned ${event.pointsToReward} points. Food preference: ${foodPreference}`
+                : `Successfully checked in to ${event.eventName}! You earned ${event.pointsToReward} points.`;
+            alert(message);
 
         } catch (error) {
             console.error('Error checking in:', error);
-            setError('Failed to check in to event');
+            setError('Failed to check in to event: ' + (error as Error).message);
         } finally {
             setCheckingIn(null);
         }
@@ -154,7 +264,7 @@ export default function EventsContent() {
     const getUpcomingEvents = () => {
         const now = new Date();
         return events.filter(event => {
-            const eventDate = event.startDate?.toDate?.() || new Date(event.startDate);
+            const eventDate = event.startDate?.toDate ? event.startDate.toDate() : new Date(event.startDate);
             return eventDate >= now;
         });
     };
@@ -162,7 +272,7 @@ export default function EventsContent() {
     const getPastEvents = () => {
         const now = new Date();
         return events.filter(event => {
-            const eventDate = event.endDate?.toDate?.() || event.startDate?.toDate?.() || new Date(event.startDate);
+            const eventDate = event.endDate?.toDate ? event.endDate.toDate() : new Date(event.startDate);
             return eventDate < now;
         });
     };
@@ -178,7 +288,7 @@ export default function EventsContent() {
     };
 
     const isUserCheckedIn = (event: Event) => {
-        return currentUser && event.attendees?.includes(currentUser.uid);
+        return auth.currentUser && checkedInEvents.has(event.id);
     };
 
     const upcomingEvents = getFilteredEvents(getUpcomingEvents());
@@ -226,9 +336,13 @@ export default function EventsContent() {
                             <p className="text-gray-600">View IEEE UCSD events and check in to earn points</p>
                         </div>
                         <div className="flex items-center space-x-3">
-                            <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                                <Filter className="w-4 h-4" />
-                                <span>Filter</span>
+                            <button
+                                onClick={() => fetchEvents()}
+                                disabled={loading}
+                                className="flex items-center space-x-2 px-4 py-2 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                            >
+                                <Calendar className="w-4 h-4" />
+                                <span>{loading ? 'Refreshing...' : 'Refresh Events'}</span>
                             </button>
                         </div>
                     </div>
@@ -237,6 +351,22 @@ export default function EventsContent() {
                     {error && (
                         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                             <p className="text-red-700">{error}</p>
+                        </div>
+                    )}
+
+                    {/* Debug Info - Show all events from database for debugging */}
+                    {process.env.NODE_ENV === 'development' && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <h3 className="font-medium text-yellow-800 mb-2">DEBUG: Database Events</h3>
+                            <p className="text-sm text-yellow-700">
+                                Total events in database: {loading ? 'Loading...' : 'Check console for details'}
+                            </p>
+                            <p className="text-sm text-yellow-700">
+                                Published events found: {events.length}
+                            </p>
+                            <p className="text-sm text-yellow-700">
+                                Open browser console to see detailed event data
+                            </p>
                         </div>
                     )}
 
@@ -275,6 +405,105 @@ export default function EventsContent() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Quick Check-in Section */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6 mb-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                                    <UserCheck className="w-5 h-5 mr-2 text-blue-600" />
+                                    Quick Check-in
+                                </h2>
+                                <p className="text-sm text-gray-600">Check into events happening today</p>
+                            </div>
+                        </div>
+
+                        {/* Today's Events for Check-in */}
+                        {(() => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const tomorrow = new Date(today);
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+
+                            const todaysEvents = events.filter(event => {
+                                const eventDate = event.startDate?.toDate ? event.startDate.toDate() : new Date(event.startDate);
+                                return eventDate >= today && eventDate < tomorrow;
+                            });
+
+                            if (todaysEvents.length === 0) {
+                                return (
+                                    <div className="text-center py-8">
+                                        <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                                        <p className="text-gray-500">No events happening today</p>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {todaysEvents.map(event => {
+                                        const eventDate = event.startDate?.toDate ? event.startDate.toDate() : new Date(event.startDate);
+                                        return (
+                                            <div key={event.id} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="font-medium text-gray-900 truncate">{event.eventName}</h3>
+                                                        <div className="flex items-center text-sm text-gray-500 mt-1">
+                                                            <Clock className="w-4 h-4 mr-1" />
+                                                            <span>{eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+                                                        </div>
+                                                        <div className="flex items-center text-sm text-gray-500 mt-1">
+                                                            <MapPin className="w-4 h-4 mr-1" />
+                                                            <span className="truncate">{event.location}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2 ml-2">
+                                                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                                            {event.pointsToReward} pts
+                                                        </span>
+                                                        {event.hasFood && (
+                                                            <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                                                                🍕 Food
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {isUserCheckedIn(event) ? (
+                                                    <button
+                                                        disabled={true}
+                                                        className="w-full bg-green-100 text-green-800 py-2 px-4 rounded-lg cursor-not-allowed flex items-center justify-center space-x-2"
+                                                    >
+                                                        <span>✓ Already Checked In</span>
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleCheckIn(event)}
+                                                        disabled={checkingIn === event.id}
+                                                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                                    >
+                                                        {checkingIn === event.id ? (
+                                                            <>
+                                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                                <span>Checking In...</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <span>Check In</span>
+                                                                <span className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                                                    +{event.pointsToReward} pts
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {loading ? (
@@ -333,7 +562,7 @@ export default function EventsContent() {
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleCheckIn(event.id, event.eventName, event.pointsToReward);
+                                                                handleCheckIn(event);
                                                             }}
                                                             disabled={checkingIn === event.id}
                                                             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
@@ -451,18 +680,79 @@ export default function EventsContent() {
                                         <p className="text-gray-900">{selectedEvent.pointsToReward} points</p>
                                     </div>
                                     <div>
-                                        <h3 className="text-sm font-medium text-gray-700 mb-2">Event Code</h3>
-                                        <p className="text-gray-900 font-mono">{selectedEvent.eventCode}</p>
+                                        <h3 className="text-sm font-medium text-gray-700 mb-2">Attendance</h3>
+                                        <p className="text-gray-900">
+                                            {selectedEvent.attendees?.length || 0} people checked in
+                                            {selectedEvent.capacity && ` (of ${selectedEvent.capacity} capacity)`}
+                                        </p>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <h3 className="text-sm font-medium text-gray-700 mb-2">Attendance</h3>
-                                    <p className="text-gray-900">
-                                        {selectedEvent.attendees?.length || 0} people checked in
-                                        {selectedEvent.capacity && ` (of ${selectedEvent.capacity} capacity)`}
-                                    </p>
-                                </div>
+                                {/* Public Files Section */}
+                                {selectedEvent.files && selectedEvent.files.length > 0 && (
+                                    <div>
+                                        <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                            <FileText className="w-4 h-4 mr-2" />
+                                            Event Files
+                                        </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {selectedEvent.files.map((fileUrl, index) => {
+                                                const fileName = `Event File ${index + 1}`;
+                                                const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileUrl);
+                                                const isPdf = /\.pdf$/i.test(fileUrl);
+
+                                                return (
+                                                    <div key={index} className="border rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-sm font-medium text-gray-700 truncate">{fileName}</span>
+                                                            <div className="flex space-x-2">
+                                                                <a
+                                                                    href={fileUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
+                                                                    title="View File"
+                                                                >
+                                                                    <Eye className="w-4 h-4" />
+                                                                </a>
+                                                                <a
+                                                                    href={fileUrl}
+                                                                    download={fileName}
+                                                                    className="text-green-600 hover:text-green-800 p-1 rounded transition-colors"
+                                                                    title="Download File"
+                                                                >
+                                                                    <Download className="w-4 h-4" />
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        {isImage && (
+                                                            <img
+                                                                src={fileUrl}
+                                                                alt={fileName}
+                                                                className="w-full h-20 object-cover rounded cursor-pointer"
+                                                                onClick={() => window.open(fileUrl, '_blank')}
+                                                            />
+                                                        )}
+                                                        {isPdf && (
+                                                            <div className="w-full h-20 bg-red-100 rounded flex items-center justify-center cursor-pointer"
+                                                                onClick={() => window.open(fileUrl, '_blank')}>
+                                                                <FileText className="w-6 h-6 text-red-600" />
+                                                                <span className="ml-2 text-red-600 text-sm font-medium">PDF</span>
+                                                            </div>
+                                                        )}
+                                                        {!isImage && !isPdf && (
+                                                            <div className="w-full h-20 bg-gray-200 rounded flex items-center justify-center cursor-pointer"
+                                                                onClick={() => window.open(fileUrl, '_blank')}>
+                                                                <FileText className="w-6 h-6 text-gray-600" />
+                                                                <span className="ml-2 text-gray-600 text-sm font-medium">File</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -476,7 +766,7 @@ export default function EventsContent() {
                             {!isUserCheckedIn(selectedEvent) && getUpcomingEvents().includes(selectedEvent) && (
                                 <button
                                     onClick={() => {
-                                        handleCheckIn(selectedEvent.id, selectedEvent.eventName, selectedEvent.pointsToReward);
+                                        handleCheckIn(selectedEvent);
                                         setSelectedEvent(null);
                                     }}
                                     disabled={checkingIn === selectedEvent.id}

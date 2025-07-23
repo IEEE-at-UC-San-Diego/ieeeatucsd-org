@@ -9,6 +9,12 @@ export default function SignInContent() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
+    // Extract invite ID from URL
+    const getInviteId = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('invite');
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -17,10 +23,11 @@ export default function SignInContent() {
         try {
             const credential = await signInWithEmailAndPassword(auth, email, password);
             const idToken = await credential.user.getIdToken();
+            const inviteId = getInviteId();
             const response = await fetch('/api/set-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }),
+                body: JSON.stringify({ idToken, inviteId }),
             });
 
             if (!response.ok) {
@@ -43,10 +50,11 @@ export default function SignInContent() {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
             const idToken = await result.user.getIdToken();
+            const inviteId = getInviteId();
             const response = await fetch('/api/set-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }),
+                body: JSON.stringify({ idToken, inviteId }),
             });
 
             if (!response.ok) {

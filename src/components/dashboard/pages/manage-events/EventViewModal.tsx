@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, MapPin, User, Clock, DollarSign, Image, FileText, Eye, Download, Users, Camera, Megaphone, AlertTriangle, Settings } from 'lucide-react';
+import { X, Calendar, MapPin, User, Clock, DollarSign, Image, FileText, Eye, Download, Users, Camera, Megaphone, AlertTriangle, Settings, Lock, Copy, Check, ExternalLink } from 'lucide-react';
 import { getFirestore, collection, doc, updateDoc, query, where, getDocs } from 'firebase/firestore';
 import { app } from '../../../../firebase/client';
 
@@ -14,6 +14,9 @@ interface EventViewModalProps {
         status: string;
         requestedUser: string;
         createdAt: any;
+        eventCode?: string;
+        pointsToReward?: number;
+        department?: string;
         needsGraphics?: boolean;
         needsAsFunding?: boolean;
         flyersNeeded?: boolean;
@@ -36,6 +39,9 @@ interface EventViewModalProps {
         invoiceFiles?: string[];
         declinedReason?: string;
         published?: boolean;
+        invoiceTax?: number;
+        invoiceTip?: number;
+        invoiceVendor?: string;
     } | null;
     users: Record<string, { name: string; email: string }>;
     onClose: () => void;
@@ -46,7 +52,15 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
     const [publishStatus, setPublishStatus] = useState(request?.published || false);
     const [updating, setUpdating] = useState(false);
     const [eventFiles, setEventFiles] = useState<string[]>([]);
+    const [privateFiles, setPrivateFiles] = useState<string[]>([]);
     const [loadingEventFiles, setLoadingEventFiles] = useState(true);
+    const [eventCode, setEventCode] = useState<string>('');
+    const [pointsToReward, setPointsToReward] = useState<number>(0);
+    const [attendees, setAttendees] = useState<any[]>([]);
+    const [loadingAttendees, setLoadingAttendees] = useState(true);
+    const [eventId, setEventId] = useState<string>('');
+    const [copiedInvoice, setCopiedInvoice] = useState(false);
+    const [attendeeSearch, setAttendeeSearch] = useState('');
 
     const db = getFirestore(app);
 
@@ -64,15 +78,38 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                     const eventDoc = eventsSnapshot.docs[0];
                     const eventData = eventDoc.data();
                     setEventFiles(eventData.files || []);
+                    setPrivateFiles(eventData.privateFiles || []);
+                    setEventCode(eventData.eventCode || '');
+                    setPointsToReward(eventData.pointsToReward || 0);
+                    setEventId(eventDoc.id);
                     // Sync the publish status with the actual event data
                     setPublishStatus(eventData.published || false);
+
+                    // Fetch attendees
+                    try {
+                        const attendeesQuery = query(collection(db, 'events', eventDoc.id, 'attendees'));
+                        const attendeesSnapshot = await getDocs(attendeesQuery);
+                        const attendeesData = attendeesSnapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+                        setAttendees(attendeesData);
+                    } catch (error) {
+                        console.error('Error fetching attendees:', error);
+                        setAttendees([]);
+                    }
                 } else {
                     console.log('No corresponding event found for request:', request.id);
+                    // Fallback to event request data if available
+                    setEventCode(request.eventCode || '');
+                    setPointsToReward(request.pointsToReward || 0);
+                    setAttendees([]);
                 }
             } catch (error) {
                 console.error('Error fetching event files:', error);
             } finally {
                 setLoadingEventFiles(false);
+                setLoadingAttendees(false);
             }
         };
 
@@ -86,6 +123,11 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
     };
 
     const handlePublishToggle = async () => {
+        if (request.status !== 'approved') {
+            alert('Events can only be published when their status is "Approved"');
+            return;
+        }
+
         try {
             setUpdating(true);
             const newStatus = !publishStatus;
@@ -149,55 +191,114 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
     };
 
     const formatInvoiceData = () => {
-        if (!request.itemizedInvoice || request.itemizedInvoice.length === 0) {
-            return 'No invoice data available';
+        if (!request || (!request.itemizedInvoice || request.itemizedInvoice.length === 0)) {
+            return 'No itemized invoice data available';
         }
 
         try {
             const items = request.itemizedInvoice;
-            let subtotal = 0;
-            let total = 0;
 
-            // Calculate subtotal from items
-            items.forEach(item => {
-                subtotal += item.quantity * item.unitPrice;
-            });
-
-            // Format items
+            // Format items: "N_1 {item_1} x{cost_1} each"
             const itemStrings = items.map(item => {
                 return `${item.quantity} ${item.description} x${item.unitPrice.toFixed(2)} each`;
             });
 
-            // Try to extract tax and tip from the total vs subtotal difference
-            // This is an approximation since we don't have explicit tax/tip fields
-            const extraCharges = items.reduce((acc, item) => acc + (item.total || 0), 0) - subtotal;
-            total = subtotal + extraCharges;
+            // Calculate subtotal
+            const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
 
-            // If no explicit total in items, use subtotal
-            if (total === subtotal) {
-                total = items.reduce((acc, item) => acc + (item.total || item.quantity * item.unitPrice), 0);
-            }
+            // Get tax and tip from request fields, default to 0 if not specified
+            const tax = request.invoiceTax || 0;
+            const tip = request.invoiceTip || 0;
 
-            const location = request.invoice || 'Unknown Location';
+            // Calculate total
+            const total = subtotal + tax + tip;
 
+            // Get vendor/location from invoiceVendor field or fallback
+            const vendor = request.invoiceVendor || 'Unknown Location';
+
+            // Build the formatted string: "N_1 {item_1} x{cost_1} each | N_2 {item_2} x{cost_2} each | Tax = {tax} | Tip = {tip} | Total = {total} from {location}"
             let invoiceString = itemStrings.join(' | ');
 
-            // Add tax and tip if there are extra charges
-            if (extraCharges > 0) {
-                // Assume some portion is tax (estimate 8% tax rate for calculation display)
-                const estimatedTax = subtotal * 0.08;
-                const estimatedTip = extraCharges - estimatedTax;
-
-                if (estimatedTax > 0) invoiceString += ` | Tax = ${estimatedTax.toFixed(2)}`;
-                if (estimatedTip > 0) invoiceString += ` | Tip = ${estimatedTip.toFixed(2)}`;
+            // Add tax if specified
+            if (tax > 0) {
+                invoiceString += ` | Tax = ${tax.toFixed(2)}`;
             }
 
-            invoiceString += ` | Total = ${total.toFixed(2)} from ${location}`;
+            // Add tip if specified
+            if (tip > 0) {
+                invoiceString += ` | Tip = ${tip.toFixed(2)}`;
+            }
+
+            // Add total and vendor
+            invoiceString += ` | Total = ${total.toFixed(2)} from ${vendor}`;
 
             return invoiceString;
         } catch (error) {
             console.error('Invoice formatting error:', error);
             return 'Error formatting invoice data';
+        }
+    };
+
+    const copyInvoiceData = async () => {
+        try {
+            const invoiceData = formatInvoiceData();
+            await navigator.clipboard.writeText(invoiceData);
+            setCopiedInvoice(true);
+            setTimeout(() => setCopiedInvoice(false), 2000);
+        } catch (error) {
+            console.error('Failed to copy invoice data:', error);
+            alert('Failed to copy invoice data to clipboard');
+        }
+    };
+
+    const handleStatusChange = async (newStatus: string) => {
+        try {
+            if (newStatus === 'declined') {
+                const reason = prompt('Please provide a reason for declining this event:');
+                if (!reason) {
+                    return; // Don't change status if no reason provided
+                }
+
+                // Update the event request with declined status and reason
+                const requestRef = doc(db, 'event_requests', request.id);
+                await updateDoc(requestRef, {
+                    status: newStatus,
+                    declinedReason: reason
+                });
+
+                // Find and unpublish the corresponding event
+                const eventsQuery = query(collection(db, 'events'), where('createdFrom', '==', request.id));
+                const eventsSnapshot = await getDocs(eventsQuery);
+
+                if (!eventsSnapshot.empty) {
+                    const eventDoc = eventsSnapshot.docs[0];
+                    await updateDoc(doc(db, 'events', eventDoc.id), { published: false });
+                    setPublishStatus(false);
+                }
+            } else {
+                // Update the event request status
+                const requestRef = doc(db, 'event_requests', request.id);
+                await updateDoc(requestRef, {
+                    status: newStatus,
+                    declinedReason: null // Clear declined reason if changing from declined
+                });
+
+                // Update the corresponding event's published status based on new status
+                const eventsQuery = query(collection(db, 'events'), where('createdFrom', '==', request.id));
+                const eventsSnapshot = await getDocs(eventsQuery);
+
+                if (!eventsSnapshot.empty) {
+                    const eventDoc = eventsSnapshot.docs[0];
+                    const shouldBePublished = newStatus === 'approved' ? publishStatus : false;
+                    await updateDoc(doc(db, 'events', eventDoc.id), { published: shouldBePublished });
+                }
+            }
+
+            // Refresh the page or update the request object
+            window.location.reload();
+        } catch (error) {
+            console.error('Error updating status:', error);
+            alert('Failed to update status: ' + (error as Error).message);
         }
     };
 
@@ -232,6 +333,15 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                         >
                             <Eye className="w-4 h-4" />
                         </button>
+                        <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-purple-600 hover:text-purple-800"
+                            title="Open in New Tab"
+                        >
+                            <ExternalLink className="w-4 h-4" />
+                        </a>
                         <a
                             href={url}
                             download={filename}
@@ -273,7 +383,7 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
                     {/* Header */}
-                    <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+                    <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-20">
                         <div>
                             <h2 className="text-2xl font-bold text-gray-900">{request.name}</h2>
                             <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border mt-2 ${getStatusColor(request.status)}`}>
@@ -307,6 +417,10 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                             <p className="text-gray-900">{request.eventDescription}</p>
                                         </div>
                                         <div>
+                                            <label className="text-sm font-medium text-gray-700">Department</label>
+                                            <p className="text-gray-900">{request.department || 'General'}</p>
+                                        </div>
+                                        <div>
                                             <label className="text-sm font-medium text-gray-700">Location</label>
                                             <p className="text-gray-900 flex items-center">
                                                 <MapPin className="w-4 h-4 mr-1 text-gray-500" />
@@ -318,6 +432,20 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                             <p className="text-gray-900 flex items-center">
                                                 <Users className="w-4 h-4 mr-1 text-gray-500" />
                                                 {request.expectedAttendance || 'Not specified'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-700 block">Event Code</label>
+                                            <p className="text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded mt-1 block">
+                                                {eventCode || 'Not specified'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-700">Points to Reward</label>
+                                            <p className="text-gray-900 flex items-center">
+                                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
+                                                    {pointsToReward} points
+                                                </span>
                                             </p>
                                         </div>
                                     </div>
@@ -357,9 +485,17 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                             <p className="text-gray-900">{formatDate(request.createdAt)}</p>
                                         </div>
                                         <div>
-                                            <label className="text-sm font-medium text-gray-700">Status</label>
-                                            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(request.status)}`}>
-                                                <span className="capitalize">{request.status}</span>
+                                            <label className="text-sm font-medium text-gray-700 block">Status</label>
+                                            <div className="mt-1">
+                                                <select
+                                                    value={request.status}
+                                                    onChange={(e) => handleStatusChange(e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                >
+                                                    <option value="submitted">Submitted</option>
+                                                    <option value="approved">Approved</option>
+                                                    <option value="declined">Declined</option>
+                                                </select>
                                             </div>
                                         </div>
                                         {request.declinedReason && (
@@ -383,12 +519,17 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                                 <p className="text-xs text-gray-500">
                                                     {publishStatus ? 'Event is visible to members' : 'Event is hidden from members'}
                                                 </p>
+                                                {request.status !== 'approved' && (
+                                                    <p className="text-xs text-amber-600 mt-1">
+                                                        ⚠️ Publishing is only available for approved events
+                                                    </p>
+                                                )}
                                             </div>
                                             <button
                                                 onClick={handlePublishToggle}
-                                                disabled={updating}
-                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${publishStatus ? 'bg-blue-600' : 'bg-gray-200'
-                                                    } ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                disabled={updating || request.status !== 'approved'}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 z-10 ${publishStatus ? 'bg-blue-600' : 'bg-gray-200'
+                                                    } ${(updating || request.status !== 'approved') ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <span
                                                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${publishStatus ? 'translate-x-6' : 'translate-x-1'
@@ -495,7 +636,7 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                         )}
 
                         {/* Funding & Invoice Information */}
-                        {request.asFundingRequired && (
+                        {(request.asFundingRequired || request.needsAsFunding || (request.itemizedInvoice?.length || 0) > 0 || request.invoice || (request.invoiceFiles?.length || 0) > 0) && (
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                                     <DollarSign className="w-5 h-5 mr-2 text-green-600" />
@@ -503,8 +644,27 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                 </h3>
                                 <div className="space-y-4">
                                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                        <h4 className="font-medium text-green-900 mb-2">Invoice Details</h4>
-                                        <p className="text-green-800 font-mono text-sm bg-white p-3 rounded border">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className="font-medium text-green-900">Formatted Invoice Data</h4>
+                                            <button
+                                                onClick={copyInvoiceData}
+                                                className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                                                title="Copy invoice data to clipboard"
+                                            >
+                                                {copiedInvoice ? (
+                                                    <>
+                                                        <Check className="w-4 h-4" />
+                                                        <span>Copied!</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Copy className="w-4 h-4" />
+                                                        <span>Copy</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                        <p className="text-green-800 font-mono text-sm bg-white p-3 rounded border break-words">
                                             {formatInvoiceData()}
                                         </p>
                                     </div>
@@ -527,7 +687,7 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                         <div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                                 <FileText className="w-5 h-5 mr-2 text-indigo-600" />
-                                Event Files
+                                Public Event Files
                             </h3>
                             {loadingEventFiles ? (
                                 <div className="text-center py-4">
@@ -536,12 +696,225 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                             ) : eventFiles.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {eventFiles.map((file, index) => (
-                                        <FileViewer key={index} url={file} filename={`Event File ${index + 1}`} />
+                                        <FileViewer key={index} url={file} filename={`Public File ${index + 1}`} />
                                     ))}
                                 </div>
                             ) : (
                                 <div className="text-center py-4 bg-gray-50 rounded-lg border border-gray-200">
-                                    <p className="text-gray-500">No additional event files available</p>
+                                    <p className="text-gray-500">No public event files available</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Private Files from Events Collection and Request */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                <Lock className="w-5 h-5 mr-2 text-red-600" />
+                                Private Event Files
+                            </h3>
+                            {loadingEventFiles ? (
+                                <div className="text-center py-4">
+                                    <p className="text-gray-500">Loading private files...</p>
+                                </div>
+                            ) : (() => {
+                                // Combine all private files from both events collection and request
+                                const allPrivateFiles = [
+                                    ...privateFiles.map((file, index) => ({ url: file, name: `Private File ${index + 1}`, type: 'events' })),
+                                    ...(request.invoiceFiles || []).map((file, index) => ({ url: file, name: `Invoice ${index + 1}`, type: 'invoice' })),
+                                    ...(request.roomBookingFiles || []).map((file, index) => ({ url: file, name: `Room Booking ${index + 1}`, type: 'room-booking' }))
+                                ];
+
+                                // Add main invoice file if it exists
+                                if (request.invoice) {
+                                    allPrivateFiles.push({ url: request.invoice, name: 'Main Invoice', type: 'main-invoice' });
+                                }
+
+                                return allPrivateFiles.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {/* Group files by type */}
+                                        {request.invoiceFiles && request.invoiceFiles.length > 0 && (
+                                            <div>
+                                                <h4 className="font-medium text-gray-900 mb-2">Invoice Files</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {request.invoiceFiles.map((file, index) => (
+                                                        <FileViewer key={`invoice-${index}`} url={file} filename={`Invoice ${index + 1}`} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {request.invoice && (
+                                            <div>
+                                                <h4 className="font-medium text-gray-900 mb-2">Main Invoice</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    <FileViewer url={request.invoice} filename={(() => {
+                                                        try {
+                                                            const urlObj = new URL(request.invoice);
+                                                            const pathname = urlObj.pathname;
+                                                            const filename = pathname.split('/').pop();
+                                                            if (filename && filename.includes('_')) {
+                                                                return filename.substring(filename.indexOf('_') + 1);
+                                                            }
+                                                            return filename || 'Main Invoice File';
+                                                        } catch {
+                                                            return 'Main Invoice File';
+                                                        }
+                                                    })()} />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {request.roomBookingFiles && request.roomBookingFiles.length > 0 && (
+                                            <div>
+                                                <h4 className="font-medium text-gray-900 mb-2">Room Booking Files</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {request.roomBookingFiles.map((file, index) => (
+                                                        <FileViewer key={`room-${index}`} url={file} filename={`Room Booking ${index + 1}`} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {privateFiles.length > 0 && (
+                                            <div>
+                                                <h4 className="font-medium text-gray-900 mb-2">Other Private Files</h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {privateFiles.map((file, index) => (
+                                                        <FileViewer key={`private-${index}`} url={file} filename={`Private File ${index + 1}`} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-4 bg-gray-50 rounded-lg border border-gray-200">
+                                        <p className="text-gray-500">No private event files available</p>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+
+                        {/* Attendees Section */}
+                        <div>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                                    <Users className="w-5 h-5 mr-2 text-purple-600" />
+                                    Event Attendees ({attendees.filter(attendee => {
+                                        if (!attendeeSearch) return true;
+                                        const searchTerm = attendeeSearch.toLowerCase();
+                                        const userId = (attendee.userId || attendee.id || '').toLowerCase();
+                                        const userName = (getUserName(attendee.userId || attendee.id) || '').toLowerCase();
+                                        const food = (attendee.food || '').toLowerCase();
+                                        return userId.includes(searchTerm) || userName.includes(searchTerm) || food.includes(searchTerm);
+                                    }).length})
+                                </h3>
+                                {attendees.length > 0 && (
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder="Search attendees..."
+                                            value={attendeeSearch}
+                                            onChange={(e) => setAttendeeSearch(e.target.value)}
+                                            className="pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                        />
+                                        <Users className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    </div>
+                                )}
+                            </div>
+                            {loadingAttendees ? (
+                                <div className="text-center py-4">
+                                    <p className="text-gray-500">Loading attendees...</p>
+                                </div>
+                            ) : attendees.length > 0 ? (
+                                <div className="space-y-4">
+                                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                            <div>
+                                                <span className="font-medium text-purple-800">Total Attendees:</span>
+                                                <p className="text-purple-700">{attendees.length}</p>
+                                            </div>
+                                            <div>
+                                                <span className="font-medium text-purple-800">Total Points Awarded:</span>
+                                                <p className="text-purple-700">{attendees.reduce((sum, attendee) => sum + (attendee.pointsEarned || 0), 0)}</p>
+                                            </div>
+                                            <div>
+                                                <span className="font-medium text-purple-800">Food Preferences:</span>
+                                                <p className="text-purple-700">
+                                                    {attendees.filter(a => a.food).length} specified
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {attendees.filter(attendee => {
+                                            if (!attendeeSearch) return true;
+                                            const searchTerm = attendeeSearch.toLowerCase();
+                                            const userId = (attendee.userId || attendee.id || '').toLowerCase();
+                                            const userName = (getUserName(attendee.userId || attendee.id) || '').toLowerCase();
+                                            const food = (attendee.food || '').toLowerCase();
+                                            return userId.includes(searchTerm) || userName.includes(searchTerm) || food.includes(searchTerm);
+                                        }).map((attendee, index) => (
+                                            <div key={attendee.id || index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                                <div className="space-y-2">
+                                                    <div>
+                                                        <span className="text-sm font-medium text-gray-700">Name:</span>
+                                                        <p className="text-gray-900 text-sm font-medium">{getUserName(attendee.userId || attendee.id)}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-sm font-medium text-gray-700">User ID:</span>
+                                                        <p className="text-gray-900 text-xs font-mono text-gray-600">{attendee.userId || attendee.id}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-sm font-medium text-gray-700">Check-in Time:</span>
+                                                        <p className="text-gray-900 text-sm">
+                                                            {attendee.timeCheckedIn ?
+                                                                new Date(attendee.timeCheckedIn.toDate ? attendee.timeCheckedIn.toDate() : attendee.timeCheckedIn).toLocaleString() :
+                                                                'Not specified'
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                    {attendee.food && (
+                                                        <div>
+                                                            <span className="text-sm font-medium text-gray-700">Food Preference:</span>
+                                                            <p className="text-gray-900 text-sm">{attendee.food}</p>
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <span className="text-sm font-medium text-gray-700">Points Earned:</span>
+                                                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium ml-2">
+                                                            {attendee.pointsEarned || 0} points
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {attendees.filter(attendee => {
+                                        if (!attendeeSearch) return true;
+                                        const searchTerm = attendeeSearch.toLowerCase();
+                                        const userId = (attendee.userId || attendee.id || '').toLowerCase();
+                                        const userName = (getUserName(attendee.userId || attendee.id) || '').toLowerCase();
+                                        const food = (attendee.food || '').toLowerCase();
+                                        return userId.includes(searchTerm) || userName.includes(searchTerm) || food.includes(searchTerm);
+                                    }).length === 0 && attendeeSearch && (
+                                            <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                                                <Users className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                                                <p className="text-gray-500">No attendees match your search</p>
+                                                <button
+                                                    onClick={() => setAttendeeSearch('')}
+                                                    className="mt-2 text-purple-600 hover:text-purple-800 underline text-sm"
+                                                >
+                                                    Clear search
+                                                </button>
+                                            </div>
+                                        )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                                    <p className="text-gray-500">No attendees have checked in yet</p>
                                 </div>
                             )}
                         </div>
@@ -576,7 +949,7 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
 
             {/* File Preview Modal */}
             {selectedFile && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-60 p-4">
+                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
                     <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto">
                         <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
                             <h3 className="text-lg font-semibold">File Preview</h3>

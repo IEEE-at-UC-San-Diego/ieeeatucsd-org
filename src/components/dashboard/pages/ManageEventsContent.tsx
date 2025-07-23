@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, Clock, CheckCircle, XCircle, Eye, FileText, EyeOff } from 'lucide-react';
+import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, Clock, CheckCircle, XCircle, Eye, FileText, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
 import { getFirestore, collection, getDocs, query, orderBy, where, doc, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { app } from '../../../firebase/client';
 import { EventManagementStats } from './manage-events/EventManagementStats';
@@ -7,6 +7,8 @@ import type { EventStats } from './manage-events/types';
 import EventRequestModal from './manage-events/EventRequestModal';
 import EventViewModal from './manage-events/EventViewModal';
 import FileManagementModal from './manage-events/FileManagementModal';
+import BulkActionsModal from './manage-events/BulkActionsModal';
+import EventTemplatesModal from './manage-events/EventTemplatesModal';
 
 interface EventRequest {
     id: string;
@@ -18,6 +20,7 @@ interface EventRequest {
     status: string;
     requestedUser: string;
     createdAt: any;
+    department?: string;
     needsGraphics?: boolean;
     needsAsFunding?: boolean;
     flyersNeeded?: boolean;
@@ -46,6 +49,8 @@ export default function ManageEventsContent() {
     const [showEventRequestModal, setShowEventRequestModal] = useState(false);
     const [showEventViewModal, setShowEventViewModal] = useState(false);
     const [showFileManagementModal, setShowFileManagementModal] = useState(false);
+    const [showBulkActionsModal, setShowBulkActionsModal] = useState(false);
+    const [showEventTemplatesModal, setShowEventTemplatesModal] = useState(false);
     const [eventRequests, setEventRequests] = useState<EventRequest[]>([]);
     const [users, setUsers] = useState<Record<string, { name: string; email: string }>>({});
     const [loading, setLoading] = useState(true);
@@ -54,6 +59,15 @@ export default function ManageEventsContent() {
     const [editingRequest, setEditingRequest] = useState<EventRequest | null>(null);
     const [viewingRequest, setViewingRequest] = useState<EventRequest | null>(null);
     const [managingFilesRequest, setManagingFilesRequest] = useState<EventRequest | null>(null);
+
+    // Filter state
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortBy, setSortBy] = useState<string>('date-desc');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const eventsPerPage = 10;
 
     const db = getFirestore(app);
 
@@ -172,6 +186,113 @@ export default function ManageEventsContent() {
         setShowFileManagementModal(true);
     };
 
+    const handleTemplateSelection = (template: any) => {
+        // Create a new event request with template data
+        const templateRequest: EventRequest = {
+            id: '', // New event, no ID yet
+            name: template.name,
+            location: template.defaultLocation,
+            startDateTime: null, // User will set this
+            endDateTime: null, // User will set this
+            eventDescription: template.eventDescription,
+            status: 'pending',
+            requestedUser: '', // Will be set when creating
+            createdAt: null, // Will be set when creating
+            needsGraphics: template.needsGraphics,
+            needsAsFunding: template.asFundingRequired,
+            asFundingRequired: template.asFundingRequired,
+            flyersNeeded: template.flyersNeeded,
+            photographyNeeded: template.photographyNeeded,
+            expectedAttendance: template.expectedAttendance,
+            foodDrinksBeingServed: template.foodDrinksBeingServed,
+            department: template.department
+        };
+
+        setEditingRequest(templateRequest);
+        setShowEventRequestModal(true);
+    };
+
+    // Filter functionality
+    const filteredEventRequests = eventRequests.filter(request => {
+        const matchesSearch = searchTerm === '' ||
+            request.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            request.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            getUserName(request.requestedUser).toLowerCase().includes(searchTerm.toLowerCase());
+
+        return matchesSearch;
+    });
+
+    // Sort functionality
+    const sortedEventRequests = [...filteredEventRequests].sort((a, b) => {
+        switch (sortBy) {
+            case 'date-desc':
+                const dateA = a.createdAt?.toDate?.() || new Date(0);
+                const dateB = b.createdAt?.toDate?.() || new Date(0);
+                return dateB.getTime() - dateA.getTime();
+            case 'date-asc':
+                const dateAsc_A = a.createdAt?.toDate?.() || new Date(0);
+                const dateAsc_B = b.createdAt?.toDate?.() || new Date(0);
+                return dateAsc_A.getTime() - dateAsc_B.getTime();
+            case 'name-asc':
+                return a.name.localeCompare(b.name);
+            case 'name-desc':
+                return b.name.localeCompare(a.name);
+            case 'status-asc':
+                return a.status.localeCompare(b.status);
+            case 'status-desc':
+                return b.status.localeCompare(a.status);
+            default:
+                return 0;
+        }
+    });
+
+    // Pagination logic
+    const totalPages = Math.ceil(sortedEventRequests.length / eventsPerPage);
+    const startIndex = (currentPage - 1) * eventsPerPage;
+    const endIndex = startIndex + eventsPerPage;
+    const paginatedEventRequests = sortedEventRequests.slice(startIndex, endIndex);
+
+    const handleSearch = (term: string) => {
+        setSearchTerm(term);
+        setCurrentPage(1); // Reset to first page on search
+    };
+
+    const handleClearFilters = () => {
+        setSearchTerm('');
+        setSortBy('date-desc');
+        setCurrentPage(1);
+    };
+
+    const handleSort = (column: string) => {
+        let newSortBy = '';
+
+        switch (column) {
+            case 'name':
+                newSortBy = sortBy === 'name-asc' ? 'name-desc' : 'name-asc';
+                break;
+            case 'date':
+                newSortBy = sortBy === 'date-asc' ? 'date-desc' : 'date-asc';
+                break;
+            case 'status':
+                newSortBy = sortBy === 'status-asc' ? 'status-desc' : 'status-asc';
+                break;
+            default:
+                newSortBy = 'date-desc';
+        }
+
+        setSortBy(newSortBy);
+        setCurrentPage(1); // Reset to first page when sorting
+    };
+
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [sortBy]);
+
     const getUserName = (userId: string) => {
         return users[userId]?.name || userId;
     };
@@ -216,8 +337,21 @@ export default function ManageEventsContent() {
                 updatedAt: new Date()
             });
 
-            setSuccess(`Event request status updated to ${newStatus}`);
-            fetchEventRequests(); // Refresh the list
+            // Automatically publish/unpublish corresponding event based on status
+            const eventsQuery = query(collection(db, 'events'), where('createdFrom', '==', requestId));
+            const eventsSnapshot = await getDocs(eventsQuery);
+
+            if (!eventsSnapshot.empty) {
+                const eventDoc = eventsSnapshot.docs[0];
+                const shouldPublish = newStatus === 'approved';
+                await updateDoc(doc(db, 'events', eventDoc.id), {
+                    published: shouldPublish,
+                    updatedAt: new Date()
+                });
+                console.log(`Auto ${shouldPublish ? 'published' : 'unpublished'} event for status: ${newStatus}`);
+            }
+
+            setSuccess(`Event request status updated to ${newStatus}${newStatus === 'approved' ? ' and published' : ''}`);
 
         } catch (error) {
             console.error('Error updating event status:', error);
@@ -225,11 +359,25 @@ export default function ManageEventsContent() {
         }
     };
 
-    const getStats = (): EventStats => {
+    const getStats = async (): Promise<EventStats> => {
         const total = eventRequests.length;
         const published = eventRequests.filter(req => req.status === 'approved').length;
         const drafts = eventRequests.filter(req => req.status === 'submitted' || req.status === 'pending').length;
-        const totalAttendees = 0; // This would need to be calculated from actual events
+
+        // Calculate total attendees from all events
+        let totalAttendees = 0;
+        try {
+            const eventsQuery = query(collection(db, 'events'));
+            const eventsSnapshot = await getDocs(eventsQuery);
+
+            for (const eventDoc of eventsSnapshot.docs) {
+                const attendeesQuery = query(collection(db, 'events', eventDoc.id, 'attendees'));
+                const attendeesSnapshot = await getDocs(attendeesQuery);
+                totalAttendees += attendeesSnapshot.docs.length;
+            }
+        } catch (error) {
+            console.error('Error calculating total attendees:', error);
+        }
 
         return { total, published, drafts, totalAttendees };
     };
@@ -262,7 +410,19 @@ export default function ManageEventsContent() {
         }
     };
 
-    const stats = getStats();
+    const [stats, setStats] = useState<EventStats>({ total: 0, published: 0, drafts: 0, totalAttendees: 0 });
+
+    // Update stats when event requests change
+    useEffect(() => {
+        const updateStats = async () => {
+            const newStats = await getStats();
+            setStats(newStats);
+        };
+
+        if (eventRequests.length > 0) {
+            updateStats();
+        }
+    }, [eventRequests]);
 
     return (
         <div className="flex-1 overflow-auto">
@@ -275,12 +435,19 @@ export default function ManageEventsContent() {
                             <input
                                 type="text"
                                 placeholder="Search events..."
+                                value={searchTerm}
+                                onChange={(e) => handleSearch(e.target.value)}
                                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                         </div>
-                        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                            Search
-                        </button>
+                        {searchTerm && (
+                            <button
+                                onClick={handleClearFilters}
+                                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                            >
+                                Clear
+                            </button>
+                        )}
                     </div>
 
                     <div className="flex items-center space-x-4">
@@ -307,41 +474,35 @@ export default function ManageEventsContent() {
                             <p className="text-gray-600">Create, edit, and manage IEEE UCSD events</p>
                         </div>
                         <div className="flex items-center space-x-3">
-                            <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                                <Filter className="w-4 h-4" />
-                                <span>Filter</span>
-                            </button>
                             <button
                                 onClick={() => setShowEventRequestModal(true)}
                                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                             >
                                 <Plus className="w-4 h-4" />
-                                <span>Create Event</span>
+                                <span>Request an Event</span>
                             </button>
                         </div>
                     </div>
 
-                    {/* Error/Success Messages */}
+                    {/* Stats Overview */}
+                    <EventManagementStats stats={stats} />
+
                     {error && (
                         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                             <p className="text-red-700">{error}</p>
-                            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700 ml-2">×</button>
-                        </div>
-                    )}
-                    {success && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                            <p className="text-green-700">{success}</p>
-                            <button onClick={() => setSuccess(null)} className="text-green-500 hover:text-green-700 ml-2">×</button>
                         </div>
                     )}
 
-                    {/* Event Management Stats */}
-                    <EventManagementStats stats={stats} />
+                    {success && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <p className="text-green-700">{success}</p>
+                        </div>
+                    )}
 
                     {/* Event Requests Table */}
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                         <div className="px-6 py-4 border-b border-gray-200">
-                            <h2 className="text-lg font-semibold text-gray-900">Event Requests ({eventRequests.length})</h2>
+                            <h2 className="text-lg font-semibold text-gray-900">Event Requests ({sortedEventRequests.length})</h2>
                         </div>
                         <div className="overflow-x-auto">
                             {loading ? (
@@ -352,22 +513,56 @@ export default function ManageEventsContent() {
                                 <div className="p-6 text-center">
                                     <p className="text-red-500">{error}</p>
                                 </div>
-                            ) : eventRequests.length === 0 ? (
+                            ) : paginatedEventRequests.length === 0 && sortedEventRequests.length === 0 ? (
                                 <div className="p-6 text-center">
-                                    <p className="text-gray-500">No event requests found</p>
+                                    <p className="text-gray-500">
+                                        {eventRequests.length === 0 ? 'No event requests found' : 'No events match the current filters'}
+                                    </p>
+                                    {eventRequests.length > 0 && (
+                                        <button
+                                            onClick={handleClearFilters}
+                                            className="mt-2 text-blue-600 hover:text-blue-800 underline"
+                                        >
+                                            Clear filters
+                                        </button>
+                                    )}
                                 </div>
                             ) : (
                                 <table className="w-full">
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Event
+                                            <th
+                                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                                                onClick={() => handleSort('name')}
+                                            >
+                                                <div className="flex items-center space-x-1">
+                                                    <span>Event</span>
+                                                    {(sortBy === 'name-asc' || sortBy === 'name-desc') && (
+                                                        sortBy === 'name-asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                                                    )}
+                                                </div>
                                             </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Date & Location
+                                            <th
+                                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                                                onClick={() => handleSort('date')}
+                                            >
+                                                <div className="flex items-center space-x-1">
+                                                    <span>Date & Location</span>
+                                                    {(sortBy === 'date-asc' || sortBy === 'date-desc') && (
+                                                        sortBy === 'date-asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                                                    )}
+                                                </div>
                                             </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Status
+                                            <th
+                                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                                                onClick={() => handleSort('status')}
+                                            >
+                                                <div className="flex items-center space-x-1">
+                                                    <span>Status</span>
+                                                    {(sortBy === 'status-asc' || sortBy === 'status-desc') && (
+                                                        sortBy === 'status-asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                                                    )}
+                                                </div>
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Requirements
@@ -381,7 +576,7 @@ export default function ManageEventsContent() {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {eventRequests.map((request) => (
+                                        {paginatedEventRequests.map((request) => (
                                             <tr key={request.id} className="hover:bg-gray-50">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div>
@@ -472,82 +667,118 @@ export default function ManageEventsContent() {
                         </div>
                     </div>
 
-                    {/* Quick Actions */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <button
-                                onClick={() => setShowEventRequestModal(true)}
-                                className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <Plus className="w-5 h-5 text-blue-600" />
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm text-gray-700">
+                                    Showing {startIndex + 1} to {Math.min(endIndex, sortedEventRequests.length)} of {sortedEventRequests.length} events
                                 </div>
-                                <div className="text-left">
-                                    <p className="font-medium text-gray-900">Create Event</p>
-                                    <p className="text-sm text-gray-500">Set up a new IEEE event</p>
+                                <div className="flex items-center space-x-2">
+                                    <button
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Previous
+                                    </button>
+
+                                    <div className="flex items-center space-x-1">
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                            <button
+                                                key={page}
+                                                onClick={() => handlePageChange(page)}
+                                                className={`px-3 py-2 text-sm font-medium rounded-lg ${currentPage === page
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'text-gray-700 hover:bg-gray-50 border border-gray-300'
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Next
+                                    </button>
                                 </div>
-                            </button>
-                            <button className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                    <Calendar className="w-5 h-5 text-green-600" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-medium text-gray-900">Event Templates</p>
-                                    <p className="text-sm text-gray-500">Use pre-built event templates</p>
-                                </div>
-                            </button>
-                            <button className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                    <User className="w-5 h-5 text-purple-600" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-medium text-gray-900">Bulk Actions</p>
-                                    <p className="text-sm text-gray-500">Manage multiple events</p>
-                                </div>
-                            </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
+
                 </div>
-            </main>
+            </main >
 
             {/* Event Request Modal */}
-            {showEventRequestModal && (
-                <EventRequestModal
-                    onClose={() => {
-                        setShowEventRequestModal(false);
-                        setEditingRequest(null);
-                    }}
-                    editingRequest={editingRequest}
-                    onSuccess={() => {
-                        // Real-time updates will handle the refresh automatically
-                        setSuccess(editingRequest ? 'Event request updated successfully' : 'Event request created successfully');
-                    }}
-                />
-            )}
+            {
+                showEventRequestModal && (
+                    <EventRequestModal
+                        onClose={() => {
+                            setShowEventRequestModal(false);
+                            setEditingRequest(null);
+                        }}
+                        editingRequest={editingRequest}
+                        onSuccess={() => {
+                            // Real-time updates will handle the refresh automatically
+                            setSuccess(editingRequest ? 'Event request updated successfully' : 'Event request created successfully');
+                        }}
+                    />
+                )
+            }
 
             {/* Event View Modal */}
-            {showEventViewModal && (
-                <EventViewModal
-                    request={viewingRequest}
-                    users={users}
-                    onClose={() => {
-                        setShowEventViewModal(false);
-                        setViewingRequest(null);
-                    }}
-                />
-            )}
+            {
+                showEventViewModal && (
+                    <EventViewModal
+                        request={viewingRequest}
+                        users={users}
+                        onClose={() => {
+                            setShowEventViewModal(false);
+                            setViewingRequest(null);
+                        }}
+                    />
+                )
+            }
 
             {/* File Management Modal */}
-            {showFileManagementModal && (
-                <FileManagementModal
-                    request={managingFilesRequest}
-                    onClose={() => {
-                        setShowFileManagementModal(false);
-                        setManagingFilesRequest(null);
-                    }}
-                />
-            )}
-        </div>
+            {
+                showFileManagementModal && (
+                    <FileManagementModal
+                        request={managingFilesRequest}
+                        onClose={() => {
+                            setShowFileManagementModal(false);
+                            setManagingFilesRequest(null);
+                        }}
+                    />
+                )
+            }
+
+            {/* Bulk Actions Modal */}
+            {
+                showBulkActionsModal && (
+                    <BulkActionsModal
+                        events={eventRequests}
+                        users={users}
+                        onClose={() => setShowBulkActionsModal(false)}
+                        onSuccess={(message) => setSuccess(message)}
+                        onError={(message) => setError(message)}
+                    />
+                )
+            }
+
+            {/* Event Templates Modal */}
+            {
+                showEventTemplatesModal && (
+                    <EventTemplatesModal
+                        onClose={() => setShowEventTemplatesModal(false)}
+                        onSelectTemplate={handleTemplateSelection}
+                    />
+                )
+            }
+        </div >
     );
 } 
