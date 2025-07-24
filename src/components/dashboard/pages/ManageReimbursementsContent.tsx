@@ -8,6 +8,7 @@ import DashboardHeader from '../DashboardHeader';
 import ReimbursementDetailModal from './ReimbursementDetailModal';
 import ReimbursementAuditModal from './ReimbursementAuditModal';
 import type { UserRole } from '../types/firestore';
+import { PublicProfileService } from '../services/publicProfile';
 
 interface Reimbursement {
     id: string;
@@ -133,19 +134,31 @@ export default function ManageReimbursementsContent() {
 
             setReimbursements(reimbursementData);
 
-            // Fetch user names for all submitters
+            // Fetch user names for all submitters from public profiles
             const userIds = [...new Set(reimbursementData.map(r => r.submittedBy))];
             const newUserNames: { [key: string]: string } = {};
 
             await Promise.all(userIds.map(async (userId) => {
                 if (userId && !userNames[userId]) {
                     try {
-                        const userDoc = await getDoc(doc(db, 'users', userId));
-                        if (userDoc.exists()) {
-                            const userData = userDoc.data();
-                            newUserNames[userId] = userData.name || userData.email || userId;
+                        // First try to get from public profile
+                        const publicProfile = await PublicProfileService.getPublicProfile(userId);
+                        if (publicProfile && publicProfile.name) {
+                            newUserNames[userId] = publicProfile.name;
                         } else {
-                            newUserNames[userId] = userId;
+                            // Fallback to users collection for officers (they have access)
+                            try {
+                                const userDoc = await getDoc(doc(db, 'users', userId));
+                                if (userDoc.exists()) {
+                                    const userData = userDoc.data();
+                                    newUserNames[userId] = userData.name || userData.email || userId;
+                                } else {
+                                    newUserNames[userId] = userId;
+                                }
+                            } catch (fallbackError) {
+                                console.warn(`Could not fetch user data for ${userId}, using ID as name`);
+                                newUserNames[userId] = userId;
+                            }
                         }
                     } catch (error) {
                         console.error(`Error fetching user ${userId}:`, error);

@@ -1,0 +1,24 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import TestPublicProfilesContent from '../../components/dashboard/pages/TestPublicProfilesContent';
+---
+
+<Layout title="Test Public Profiles - IEEE UCSD Dashboard">
+    <div id="test-root"></div>
+</Layout>
+
+<script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import TestPublicProfilesContent from '../../components/dashboard/pages/TestPublicProfilesContent';
+    import DashboardLayout from '../../components/dashboard/DashboardLayout';
+
+    const container = document.getElementById('test-root');
+    if (container) {
+        const root = createRoot(container);
+        root.render(createElement(DashboardLayout, { 
+            currentPath: '/dashboard/test-public-profiles',
+            children: createElement(TestPublicProfilesContent)
+        }));
+    }
+</script> 

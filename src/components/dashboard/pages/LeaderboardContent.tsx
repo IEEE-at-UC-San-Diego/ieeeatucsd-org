@@ -5,11 +5,11 @@ import { db } from '../../../firebase/client';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/client';
 import DashboardHeader from '../DashboardHeader';
+import { PublicProfileService, type PublicProfile } from '../services/publicProfile';
 
 interface LeaderboardUser {
     id: string;
     name: string;
-    email: string;
     points: number;
     major?: string;
     graduationYear?: number;
@@ -24,51 +24,75 @@ export default function LeaderboardContent() {
     const [currentUserRank, setCurrentUserRank] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debugInfo, setDebugInfo] = useState<string>('');
 
     useEffect(() => {
-        // Fetch leaderboard data - only get required fields for privacy
-        const usersQuery = query(
-            collection(db, 'users'),
-            orderBy('points', 'desc')
-        );
+        // Set up real-time listener for public profiles leaderboard
+        console.log('Setting up leaderboard listener...');
+        
+        try {
+            const publicProfilesQuery = query(
+                collection(db, 'public_profiles'),
+                orderBy('points', 'desc')
+            );
 
-        const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
-            const users = snapshot.docs.map((doc, index) => {
-                const data = doc.data();
-                // Only extract the fields we need for the leaderboard: name, points, major, graduationYear
-                return {
-                    id: doc.id,
-                    name: data.name || 'Unknown User',
-                    email: data.email || '',
-                    points: data.points || 0,
-                    major: data.major || '',
-                    graduationYear: data.graduationYear || null,
-                    eventsAttended: data.eventsAttended || 0,
-                    position: data.position || 'Member',
-                    rank: index + 1
-                };
-            }) as LeaderboardUser[];
+            const unsubscribe = onSnapshot(publicProfilesQuery, (snapshot) => {
+                console.log('Leaderboard snapshot received:', snapshot.size, 'documents');
+                setDebugInfo(`Found ${snapshot.size} documents in public_profiles collection`);
+                
+                const users = snapshot.docs.map((doc, index) => {
+                    const data = doc.data();
+                    console.log('Profile data:', doc.id, data);
+                    
+                    return {
+                        id: doc.id,
+                        name: data.name || 'Unknown User',
+                        points: data.points || 0,
+                        major: data.major || '',
+                        graduationYear: data.graduationYear || null,
+                        eventsAttended: data.eventsAttended || 0,
+                        position: data.position || 'Member',
+                        rank: index + 1
+                    };
+                }) as LeaderboardUser[];
 
-            // Filter out users with no points or invalid data
-            const validUsers = users.filter(u => u.points > 0 && u.name && u.name !== 'Unknown User');
+                console.log('Processed leaderboard users:', users.length, users);
 
-            setLeaderboardData(validUsers);
+                // Only filter out users with invalid names, but keep users with 0 points
+                const validUsers = users.filter(u => u.name && u.name !== 'Unknown User' && u.name.trim() !== '');
 
-            // Find current user's rank
-            if (user) {
-                const currentUser = validUsers.find(u => u.id === user.uid);
-                setCurrentUserRank(currentUser?.rank || 0);
-            }
+                console.log('Valid users after filtering:', validUsers.length, validUsers);
+                setDebugInfo(prev => `${prev}. After filtering: ${validUsers.length} valid users`);
 
+                setLeaderboardData(validUsers);
+
+                // Find current user's rank
+                if (user) {
+                    const currentUser = validUsers.find(u => u.id === user.uid);
+                    setCurrentUserRank(currentUser?.rank || 0);
+                    console.log('Current user rank:', currentUser?.rank || 0);
+                }
+
+                setLoading(false);
+            }, (error) => {
+                console.error('Error in leaderboard listener:', error);
+                setLoading(false);
+                // Don't clear data on error, keep showing what we have
+            });
+
+            return () => {
+                console.log('Cleaning up leaderboard listener');
+                unsubscribe();
+            };
+        } catch (error) {
+            console.error('Error setting up leaderboard listener:', error);
             setLoading(false);
-        });
-
-        return () => unsubscribe();
+        }
     }, [user]);
 
     const filteredData = leaderboardData.filter(userData =>
         userData.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        userData.email.toLowerCase().includes(searchTerm.toLowerCase())
+        (userData.major && userData.major.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     const topThree = filteredData.slice(0, 3);
@@ -135,6 +159,15 @@ export default function LeaderboardContent() {
             />
 
             <main className="p-6">
+                {/* Debug Info */}
+                {debugInfo && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <p className="text-sm text-blue-800">
+                            <strong>Debug:</strong> {debugInfo}
+                        </p>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 gap-6">
                     {/* Stats Overview */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -309,7 +342,7 @@ export default function LeaderboardContent() {
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <div className="text-sm text-gray-500">{member.email}</div>
+                                                            <div className="text-sm text-gray-500">{member.major || member.position}</div>
                                                         </div>
                                                     </div>
                                                 </td>

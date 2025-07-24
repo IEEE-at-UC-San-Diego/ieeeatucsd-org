@@ -8,6 +8,7 @@ import EventRequestModal from './manage-events/EventRequestModal';
 import EventViewModal from './manage-events/EventViewModal';
 import FileManagementModal from './manage-events/FileManagementModal';
 import BulkActionsModal from './manage-events/BulkActionsModal';
+import { PublicProfileService } from '../services/publicProfile';
 import { EmailClient } from '../../../scripts/email/EmailClient';
 
 interface EventRequest {
@@ -122,17 +123,36 @@ export default function ManageEventsContent() {
 
     const fetchUsers = async () => {
         try {
-            const usersRef = collection(db, 'users');
-            const usersSnapshot = await getDocs(usersRef);
-
+            // First try to get all public profiles for user names
+            const publicProfiles = await PublicProfileService.getLeaderboard();
             const usersMap: Record<string, { name: string; email: string }> = {};
-            usersSnapshot.docs.forEach(doc => {
-                const data = doc.data();
-                usersMap[doc.id] = {
-                    name: data.name || data.email || 'Unknown User',
-                    email: data.email || ''
+            
+            // Map public profiles to users
+            publicProfiles.forEach(profile => {
+                usersMap[profile.id] = {
+                    name: profile.name || 'Unknown User',
+                    email: '' // Email not available in public profiles for privacy
                 };
             });
+            
+            // For any users not in public profiles, try to get from users collection (officers have access)
+            try {
+                const usersRef = collection(db, 'users');
+                const usersSnapshot = await getDocs(usersRef);
+                
+                usersSnapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    // Only add if not already in public profiles map
+                    if (!usersMap[doc.id]) {
+                        usersMap[doc.id] = {
+                            name: data.name || data.email || 'Unknown User',
+                            email: data.email || ''
+                        };
+                    }
+                });
+            } catch (fallbackError) {
+                console.warn('Could not fetch additional user data from users collection:', fallbackError);
+            }
 
             setUsers(usersMap);
         } catch (error) {

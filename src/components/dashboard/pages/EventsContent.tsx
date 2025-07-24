@@ -4,6 +4,7 @@ import { getFirestore, collection, getDocs, query, where, orderBy, doc, getDoc, 
 import { getAuth } from 'firebase/auth';
 import { app } from '../../../firebase/client';
 import DashboardHeader from '../DashboardHeader';
+import { PublicProfileService } from '../services/publicProfile';
 
 interface Event {
     id: string;
@@ -265,11 +266,25 @@ export default function EventsContent() {
 
             // Update user with event attendance and points
             const userRef = doc(db, 'users', auth.currentUser.uid);
+            const newPoints = userStats.totalPointsEarned + event.pointsToReward;
+            const newEventsAttended = userStats.totalEventsAttended + 1;
+            
             await updateDoc(userRef, {
                 lastEventAttended: event.eventName,
-                points: userStats.totalPointsEarned + event.pointsToReward,
-                eventsAttended: userStats.totalEventsAttended + 1
+                points: newPoints,
+                eventsAttended: newEventsAttended
             });
+
+            // Sync to public profile
+            try {
+                await PublicProfileService.updateUserStats(auth.currentUser.uid, {
+                    points: newPoints,
+                    eventsAttended: newEventsAttended
+                });
+            } catch (error) {
+                console.error('Error syncing to public profile:', error);
+                // Don't fail the whole check-in process if public profile sync fails
+            }
 
             // Add event to checked-in set
             setCheckedInEvents(prev => new Set(prev).add(event.id));

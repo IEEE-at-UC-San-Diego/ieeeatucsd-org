@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { auth } from '../../../firebase/client';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { app } from '../../../firebase/client';
 import { User, GraduationCap, CreditCard, Upload, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { PublicProfileService } from '../services/publicProfile';
 
 interface Question {
     id: string;
@@ -157,15 +158,51 @@ export default function GetStartedContent() {
             }
 
             const userRef = doc(db, 'users', auth.currentUser?.uid || '');
-            await updateDoc(userRef, {
+            
+            // Prepare update data (avoid undefined values)
+            const updateData: any = {
                 pid: answers.pid,
-                memberId: answers.memberId || '',
                 major: answers.major,
                 graduationYear: answers.graduationYear,
-                zelleInformation: answers.zelle || '',
-                resume: resumeUrl,
                 signedUp: true,
-            });
+            };
+
+            // Only add optional fields if they have values
+            if (answers.memberId) {
+                updateData.memberId = answers.memberId;
+            }
+            if (answers.zelle) {
+                updateData.zelleInformation = answers.zelle;
+            }
+            if (resumeUrl) {
+                updateData.resume = resumeUrl;
+            }
+
+            // Update private user document
+            await updateDoc(userRef, updateData);
+
+            // Get current user data for public profile
+            const userSnap = await getDoc(userRef);
+            const userData = userSnap.data();
+
+            // Create public profile with the signup data
+            const publicProfileData: any = {
+                name: userData?.name || auth.currentUser?.displayName || 'New Member',
+                points: userData?.points || 0,
+                eventsAttended: userData?.eventsAttended || 0,
+                position: userData?.position || userData?.role || 'Member'
+            };
+
+            // Add optional fields if they exist
+            if (answers.major) {
+                publicProfileData.major = answers.major;
+            }
+            if (answers.graduationYear) {
+                publicProfileData.graduationYear = answers.graduationYear;
+            }
+
+            // Sync to public profile
+            await PublicProfileService.syncPublicProfile(auth.currentUser?.uid || '', publicProfileData);
 
             // Success animation
             setCurrentStep(questions.length);

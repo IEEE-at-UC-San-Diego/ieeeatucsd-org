@@ -5,6 +5,7 @@ import { getFirestore, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import type { User } from '../types/firestore';
+import { PublicProfileService } from '../services/publicProfile';
 
 export default function SettingsContent() {
     const [userData, setUserData] = useState<User | null>(null);
@@ -98,14 +99,46 @@ export default function SettingsContent() {
             const userRef = doc(db, 'users', auth.currentUser.uid);
             const updateData: Partial<User> = {
                 name: profileData.name,
-                pid: profileData.pid || undefined,
-                major: profileData.major || undefined,
-                graduationYear: profileData.graduationYear ? parseInt(profileData.graduationYear) : undefined,
-                memberId: profileData.memberId || undefined,
-                zelleInformation: profileData.zelleInformation || undefined
             };
 
+            // Only add fields that have values (avoid undefined)
+            if (profileData.pid) {
+                updateData.pid = profileData.pid;
+            }
+            if (profileData.major) {
+                updateData.major = profileData.major;
+            }
+            if (profileData.graduationYear) {
+                updateData.graduationYear = parseInt(profileData.graduationYear);
+            }
+            if (profileData.memberId) {
+                updateData.memberId = profileData.memberId;
+            }
+            if (profileData.zelleInformation) {
+                updateData.zelleInformation = profileData.zelleInformation;
+            }
+
+            // Update private user document
             await updateDoc(userRef, updateData);
+            
+            // Sync public profile data (only include fields with values)
+            const publicProfileData: any = {
+                name: profileData.name,
+                points: userData?.points || 0,
+                eventsAttended: userData?.eventsAttended || 0,
+                position: userData?.position || userData?.role || 'Member'
+            };
+
+            // Only add optional fields if they have values
+            if (profileData.major) {
+                publicProfileData.major = profileData.major;
+            }
+            if (profileData.graduationYear) {
+                publicProfileData.graduationYear = parseInt(profileData.graduationYear);
+            }
+
+            await PublicProfileService.syncPublicProfile(auth.currentUser.uid, publicProfileData);
+            
             setSuccess('Profile updated successfully!');
             
             // Update local state
