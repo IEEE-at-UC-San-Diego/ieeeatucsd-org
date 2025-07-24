@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { firebaseEnv } from "../env";
 import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 // Firebase client configuration for web app
 const firebaseConfig = {
@@ -25,4 +26,5 @@ console.log('🔥 Firebase Client Config:', {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 export { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider };

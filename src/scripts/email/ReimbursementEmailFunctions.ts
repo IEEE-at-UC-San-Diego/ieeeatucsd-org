@@ -1,15 +1,18 @@
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 import { app } from '../../firebase/client';
+import { app as adminApp } from '../../firebase/server';
 
 export async function sendReimbursementSubmissionEmail(resend: any, fromEmail: string, replyToEmail: string, data: any): Promise<boolean> {
   try {
     console.log('💰 Starting reimbursement submission email process...');
 
-    const db = getFirestore(app);
+    // Use Admin SDK for server-side operations
+    const db = getAdminFirestore(adminApp);
     
     // Get reimbursement details
-    const reimbursementDoc = await getDoc(doc(db, 'reimbursements', data.reimbursementId));
-    if (!reimbursementDoc.exists()) {
+    const reimbursementDoc = await db.collection('reimbursements').doc(data.reimbursementId).get();
+    if (!reimbursementDoc.exists) {
       console.error('❌ Reimbursement not found:', data.reimbursementId);
       return false;
     }
@@ -17,8 +20,8 @@ export async function sendReimbursementSubmissionEmail(resend: any, fromEmail: s
     const reimbursement = { id: reimbursementDoc.id, ...reimbursementDoc.data() } as any;
     
     // Get user details
-    const userDoc = await getDoc(doc(db, 'users', reimbursement.submittedBy));
-    if (!userDoc.exists()) {
+    const userDoc = await db.collection('users').doc(reimbursement.submittedBy).get();
+    if (!userDoc.exists) {
       console.error('❌ User not found:', reimbursement.submittedBy);
       return false;
     }
@@ -270,6 +273,188 @@ export async function sendReimbursementSubmissionEmail(resend: any, fromEmail: s
     return true;
   } catch (error) {
     console.error('❌ Failed to send reimbursement submission emails:', error);
+    return false;
+  }
+}
+
+export async function sendAuditRequestEmail(resend: any, fromEmail: string, replyToEmail: string, data: any): Promise<boolean> {
+  try {
+    console.log('🔍 Starting audit request email process with data:', data);
+
+    if (!data.reimbursementId || !data.auditorId) {
+      console.error('❌ Missing required data for audit request:', { reimbursementId: data.reimbursementId, auditorId: data.auditorId });
+      return false;
+    }
+
+    // Use Admin SDK for server-side operations
+    const db = getAdminFirestore(adminApp);
+    
+    // Get reimbursement details
+    const reimbursementDoc = await db.collection('reimbursements').doc(data.reimbursementId).get();
+    if (!reimbursementDoc.exists) {
+      console.error('❌ Reimbursement not found:', data.reimbursementId);
+      return false;
+    }
+    
+    const reimbursement = { id: reimbursementDoc.id, ...reimbursementDoc.data() } as any;
+    
+    // Get auditor details
+    const auditorDoc = await db.collection('users').doc(data.auditorId).get();
+    if (!auditorDoc.exists) {
+      console.error('❌ Auditor not found:', data.auditorId);
+      return false;
+    }
+    
+    const auditor = { id: auditorDoc.id, ...auditorDoc.data() } as any;
+
+    // Get submitter details
+    const submitterDoc = await db.collection('users').doc(reimbursement.submittedBy).get();
+    if (!submitterDoc.exists) {
+      console.error('❌ Submitter not found:', reimbursement.submittedBy);
+      return false;
+    }
+    
+    const submitter = { id: submitterDoc.id, ...submitterDoc.data() } as any;
+
+    const subject = `Audit Requested: ${reimbursement.title}`;
+
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(amount);
+    };
+
+    const formatDateTime = (timestamp: any) => {
+      if (!timestamp) return 'Not specified';
+      try {
+        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+        return date.toLocaleString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      } catch (error) {
+        return 'Invalid date';
+      }
+    };
+
+    const auditRequestHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${subject}</title>
+        <style>
+          .container { max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+          .header { background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+          .content { background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px; }
+          .expense-item { background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin: 10px 0; }
+          .footer { text-align: center; padding: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 8px 0; border-bottom: 1px solid #eee; }
+          .audit-badge { background: #8b5cf6; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="color: white; margin: 0; font-size: 24px;">🔍 Audit Request</h1>
+          </div>
+          
+          <div class="content">
+            <h2 style="margin-top: 0; color: #2c3e50;">Reimbursement Audit Requested</h2>
+            <p>Hello ${auditor.name || auditor.email},</p>
+            <p>A fellow executive officer has requested your review for the following reimbursement request:</p>
+            
+            <div style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #495057; border-bottom: 2px solid #8b5cf6; padding-bottom: 10px;">Reimbursement Details</h3>
+              
+              <table>
+                <tr>
+                  <td style="font-weight: bold; width: 140px;">Title</td>
+                  <td>${reimbursement.title}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: bold;">Submitted By</td>
+                  <td>${submitter.name || submitter.email}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: bold;">Department</td>
+                  <td style="text-transform: capitalize;">${reimbursement.department}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: bold;">Total Amount</td>
+                  <td style="color: #8b5cf6; font-weight: bold; font-size: 16px;">${formatCurrency(reimbursement.totalAmount)}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: bold;">Date of Purchase</td>
+                  <td>${reimbursement.dateOfPurchase}</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: bold;">Status</td>
+                  <td><span class="audit-badge">Under Review</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight: bold;">Submitted</td>
+                  <td>${formatDateTime(reimbursement.submittedAt)}</td>
+                </tr>
+              </table>
+            </div>
+            
+            ${data.requestNote ? `
+              <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                <h4 style="margin-top: 0; color: #856404;">Request Message</h4>
+                <p style="margin: 0; color: #856404;">${data.requestNote}</p>
+              </div>
+            ` : ''}
+            
+            <div style="background: #e7f3ff; border: 1px solid #b3d4fc; border-radius: 8px; padding: 15px; margin: 20px 0;">
+              <h4 style="margin-top: 0; color: #004085;">Next Steps</h4>
+              <ol style="margin: 0; padding-left: 20px; color: #004085;">
+                <li>Review the reimbursement details and supporting documentation</li>
+                <li>Log into the reimbursement management portal</li>
+                <li>Approve, decline, or request additional information</li>
+                <li>The system will automatically notify all relevant parties</li>
+              </ol>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://ieeeucsd.org/dashboard/manage-reimbursements" 
+                 style="background: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;">
+                Review Reimbursement
+              </a>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>This is an automated notification from IEEE UCSD Reimbursement System.</p>
+            <p>If you have any questions, please contact the requesting executive or <a href="mailto:treasurer@ieeeatucsd.org" style="color: #8b5cf6;">treasurer@ieeeatucsd.org</a></p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Send audit request email to the selected auditor
+    console.log('📧 Sending email to:', auditor.email);
+    const emailResult = await resend.emails.send({
+      from: fromEmail,
+      to: [auditor.email],
+      replyTo: replyToEmail,
+      subject: subject,
+      html: auditRequestHtml,
+    });
+
+    console.log('✅ Audit request email sent successfully!', emailResult);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send audit request email:', error);
     return false;
   }
 } 

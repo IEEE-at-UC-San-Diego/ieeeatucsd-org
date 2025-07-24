@@ -5,13 +5,15 @@ import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Textarea } from '../../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage, auth } from '../../../firebase/client';
 
 interface Expense {
     id: string;
     description: string;
     category: string;
     amount: number;
-    receipt?: File;
+    receipt?: { url: string; name: string; size: number; type: string };
 }
 
 interface ReimbursementRequestModalProps {
@@ -67,6 +69,7 @@ export default function ReimbursementRequestModal({ isOpen, onClose, onSubmit }:
     ]);
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const addExpense = () => {
@@ -91,8 +94,50 @@ export default function ReimbursementRequestModal({ isOpen, onClose, onSubmit }:
         ));
     };
 
-    const handleReceiptUpload = (expenseId: string, file: File) => {
-        updateExpense(expenseId, 'receipt', file);
+    const handleReceiptUpload = async (expenseId: string, file: File) => {
+        try {
+            setUploadingFiles(prev => new Set(prev).add(expenseId));
+
+            // Upload file to Firebase Storage
+            const fileName = `${Date.now()}_${file.name}`;
+            const storageRef = ref(storage, `reimbursements/${auth.currentUser?.uid}/${fileName}`);
+
+            const uploadTask = uploadBytesResumable(storageRef, file);
+            await new Promise((resolve, reject) => {
+                uploadTask.on('state_changed', null, reject, () => resolve(uploadTask.snapshot.ref));
+            });
+
+            const downloadURL = await getDownloadURL(storageRef);
+            console.log('Firebase Storage upload completed. Download URL:', downloadURL);
+
+            // Update expense with the download URL and original file info
+            const receiptData = {
+                url: downloadURL,
+                name: file.name,
+                size: file.size,
+                type: file.type
+            };
+            console.log('Updating expense receipt data:', receiptData);
+            updateExpense(expenseId, 'receipt', receiptData);
+
+            setUploadingFiles(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(expenseId);
+                return newSet;
+            });
+
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            setErrors(prev => ({
+                ...prev,
+                [`expense_${expenseId}_receipt`]: 'Failed to upload file. Please try again.'
+            }));
+            setUploadingFiles(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(expenseId);
+                return newSet;
+            });
+        }
     };
 
     const getTotalAmount = () => {
@@ -112,7 +157,7 @@ export default function ReimbursementRequestModal({ isOpen, onClose, onSubmit }:
             if (!expense.description.trim()) newErrors[`expense_${expense.id}_description`] = 'Description is required';
             if (!expense.category) newErrors[`expense_${expense.id}_category`] = 'Category is required';
             if (!expense.amount || expense.amount <= 0) newErrors[`expense_${expense.id}_amount`] = 'Valid amount is required';
-            if (!expense.receipt) newErrors[`expense_${expense.id}_receipt`] = 'Receipt is required';
+            if (!expense.receipt || !expense.receipt.url) newErrors[`expense_${expense.id}_receipt`] = 'Receipt is required';
         });
 
         setErrors(newErrors);
@@ -398,7 +443,14 @@ export default function ReimbursementRequestModal({ isOpen, onClose, onSubmit }:
                                                     }
                                                 }}
                                             >
-                                                {expense.receipt ? (
+                                                {uploadingFiles.has(expense.id) ? (
+                                                    <div className="h-full flex items-center justify-center">
+                                                        <div className="text-center">
+                                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                                                            <p className="text-sm text-blue-600">Uploading...</p>
+                                                        </div>
+                                                    </div>
+                                                ) : expense.receipt ? (
                                                     <div className="h-full flex items-center justify-center">
                                                         <div className="text-center">
                                                             <div className="flex items-center justify-center mb-2">
@@ -406,22 +458,32 @@ export default function ReimbursementRequestModal({ isOpen, onClose, onSubmit }:
                                                             </div>
                                                             <p className="text-sm font-medium text-green-700">{expense.receipt.name}</p>
                                                             <p className="text-xs text-green-600">Receipt uploaded successfully</p>
-                                                            <label
-                                                                htmlFor={`receipt-${expense.id}`}
-                                                                className="mt-2 inline-block text-xs text-blue-600 hover:text-blue-500 cursor-pointer underline"
-                                                            >
-                                                                Replace file
-                                                                <input
-                                                                    id={`receipt-${expense.id}`}
-                                                                    type="file"
-                                                                    className="sr-only"
-                                                                    accept="image/*,.pdf"
-                                                                    onChange={(e) => {
-                                                                        const file = e.target.files?.[0];
-                                                                        if (file) handleReceiptUpload(expense.id, file);
-                                                                    }}
-                                                                />
-                                                            </label>
+                                                            <p className="text-xs text-gray-500">{(expense.receipt.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                            <div className="mt-2 space-x-2">
+                                                                <label
+                                                                    htmlFor={`receipt-${expense.id}`}
+                                                                    className="inline-block text-xs text-blue-600 hover:text-blue-500 cursor-pointer underline"
+                                                                >
+                                                                    Replace file
+                                                                    <input
+                                                                        id={`receipt-${expense.id}`}
+                                                                        type="file"
+                                                                        className="sr-only"
+                                                                        accept="image/*,.pdf"
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            if (file) handleReceiptUpload(expense.id, file);
+                                                                        }}
+                                                                    />
+                                                                </label>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => updateExpense(expense.id, 'receipt', undefined)}
+                                                                    className="text-xs text-red-600 hover:text-red-800 underline"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 ) : (

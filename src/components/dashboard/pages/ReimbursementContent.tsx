@@ -5,7 +5,7 @@ import { db } from '../../../firebase/client';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/client';
 import ReimbursementRequestModal from './ReimbursementRequestModal';
-// import ReimbursementDetailModal from './ReimbursementDetailModal';
+import ReimbursementDetailModal from './ReimbursementDetailModal';
 
 interface Reimbursement {
     id: string;
@@ -17,7 +17,7 @@ interface Reimbursement {
     department: string;
     businessPurpose: string;
     expenses: any[];
-    submittedAt: string;
+    submittedAt: any;
     additionalInfo?: string;
 }
 
@@ -75,6 +75,7 @@ export default function ReimbursementContent() {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedReimbursement, setSelectedReimbursement] = useState<Reimbursement | null>(null);
+    const [viewReimbursement, setViewReimbursement] = useState<Reimbursement | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
@@ -104,11 +105,14 @@ export default function ReimbursementContent() {
         if (!user) return;
 
         try {
-            // Convert File objects to strings (file names) for Firestore storage
+            // Process expenses, ensuring receipt data is properly stored
             const processedExpenses = data.expenses.map((expense: any) => ({
                 ...expense,
-                receipt: expense.receipt ? expense.receipt.name : null // Store just the filename
+                // Store the full receipt object with URL, name, size, and type
+                receipt: expense.receipt || null
             }));
+
+            console.log('Processing reimbursement submission with expenses:', processedExpenses);
 
             const docRef = await addDoc(collection(db, 'reimbursements'), {
                 title: data.title,
@@ -321,7 +325,7 @@ export default function ReimbursementContent() {
                                                 <h3 className="font-medium text-gray-900">{reimbursement.title}</h3>
                                                 <p className="text-sm text-gray-500 mt-1">{reimbursement.businessPurpose}</p>
                                                 <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                                                    <span>Submitted: {new Date(reimbursement.submittedAt).toLocaleDateString()}</span>
+                                                    <span>Submitted: {reimbursement.submittedAt?.toDate ? reimbursement.submittedAt.toDate().toLocaleDateString() : new Date(reimbursement.submittedAt).toLocaleDateString()}</span>
                                                     <span>•</span>
                                                     <span className="capitalize">{reimbursement.department}</span>
                                                     <span>•</span>
@@ -338,7 +342,7 @@ export default function ReimbursementContent() {
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={() => setSelectedReimbursement(reimbursement)}
+                                                onClick={() => setViewReimbursement(reimbursement)}
                                                 className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                                             >
                                                 <Eye className="w-5 h-5" />
@@ -387,14 +391,12 @@ export default function ReimbursementContent() {
                 onSubmit={handleSubmitReimbursement}
             />
 
-            {/* TODO: Add back detail modal 
-            {selectedReimbursement && (
+            {viewReimbursement && (
                 <ReimbursementDetailModal
-                    reimbursement={selectedReimbursement}
-                    onClose={() => setSelectedReimbursement(null)}
+                    reimbursement={viewReimbursement}
+                    onClose={() => setViewReimbursement(null)}
                 />
             )}
-            */}
         </div>
     );
 } 

@@ -8,7 +8,6 @@ import EventRequestModal from './manage-events/EventRequestModal';
 import EventViewModal from './manage-events/EventViewModal';
 import FileManagementModal from './manage-events/FileManagementModal';
 import BulkActionsModal from './manage-events/BulkActionsModal';
-import EventTemplatesModal from './manage-events/EventTemplatesModal';
 import { EmailClient } from '../../../scripts/email/EmailClient';
 
 interface EventRequest {
@@ -827,15 +826,6 @@ export default function ManageEventsContent() {
                 )
             }
 
-            {/* Event Templates Modal */}
-            {
-                showEventTemplatesModal && (
-                    <EventTemplatesModal
-                        onClose={() => setShowEventTemplatesModal(false)}
-                        onSelectTemplate={handleTemplateSelection}
-                    />
-                )
-            }
         </div >
     );
 } 

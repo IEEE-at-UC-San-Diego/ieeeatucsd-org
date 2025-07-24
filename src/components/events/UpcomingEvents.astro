@@ -1,14 +1,14 @@
 ---
 import { LiaDotCircle } from "react-icons/lia";
-import EventList from "./EventList.jsx";
-const CALENDAR_API_KEY = import.meta.env.CALENDAR_API_KEY;
-const EVENT_CALENDAR_ID = import.meta.env.EVENT_CALENDAR_ID;
+import FirestoreEventList from "./FirestoreEventList.jsx";
 ---
 
 <div class="flex ml-[15%] md:my-[10%] my-[20%]">
     <div class="md:w-1/4 w-[30%] text-white pr-[5%] mr-[10%]">
         <div class="w-[6vw] h-[0.3vw] bg-ieee-yellow rounded-full"></div>
-        <div class="flex items-center md:text-[2vw] text-[4vw] font-bold my-[10%]">
+        <div
+            class="flex items-center md:text-[2vw] text-[4vw] font-bold my-[10%]"
+        >
             <LiaDotCircle className=" mr-[1vw] text-[2.5vw]" />
             <p>
                 Upcoming <br /> Events
@@ -19,10 +19,6 @@ const EVENT_CALENDAR_ID = import.meta.env.EVENT_CALENDAR_ID;
         </p>
     </div>
     <div>
-        <EventList
-            client:load
-            CALENDAR_API_KEY={CALENDAR_API_KEY}
-            EVENT_CALENDAR_ID={EVENT_CALENDAR_ID}
-        />
+        <FirestoreEventList client:load />
     </div>
 </div>

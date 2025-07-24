@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { X, Check, XCircle, CreditCard, MessageCircle, Upload, Calendar, Building } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Check, XCircle, CreditCard, MessageCircle, Upload, Calendar, Building, UserCheck } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Textarea } from '../../ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { db, auth } from '../../../firebase/client';
+import { useAuthState } from 'react-firebase-hooks/auth';
 
 interface ReimbursementAuditModalProps {
     reimbursement: any;
@@ -12,14 +16,48 @@ interface ReimbursementAuditModalProps {
 }
 
 export default function ReimbursementAuditModal({ reimbursement, onClose, onUpdate }: ReimbursementAuditModalProps) {
-    const [action, setAction] = useState<'review' | 'approve' | 'decline' | 'paid'>('review');
+    const [user] = useAuthState(auth);
+    const [action, setAction] = useState<'review' | 'approve' | 'approve_paid' | 'decline' | 'request_audit'>('review');
     const [auditNote, setAuditNote] = useState('');
     const [paymentInfo, setPaymentInfo] = useState({
         confirmationNumber: '',
         photoAttachment: null as File | null
     });
+    const [executives, setExecutives] = useState<any[]>([]);
+    const [selectedAuditor, setSelectedAuditor] = useState('');
+    const [currentUserName, setCurrentUserName] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch current user's name
+                if (user?.uid) {
+                    const userDoc = await getDoc(doc(db, 'users', user.uid));
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        setCurrentUserName(userData.name || userData.email || 'Unknown User');
+                    }
+                }
+
+                // Fetch executives for audit requests
+                if (action === 'request_audit') {
+                    const q = query(collection(db, 'users'), where('role', '==', 'Executive Officer'));
+                    const querySnapshot = await getDocs(q);
+                    const executivesList = querySnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    setExecutives(executivesList);
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        };
+
+        fetchData();
+    }, [action, user]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         let newStatus = reimbursement.status;
@@ -31,17 +69,58 @@ export default function ReimbursementAuditModal({ reimbursement, onClose, onUpda
                 newStatus = 'approved';
                 if (!note) note = 'Request approved for payment';
                 break;
-            case 'decline':
-                newStatus = 'declined';
-                if (!note) note = 'Request declined';
-                break;
-            case 'paid':
+            case 'approve_paid':
                 newStatus = 'paid';
-                if (!note) note = 'Payment processed';
+                if (!note) note = 'Request approved and marked as paid';
                 payment = {
                     confirmationNumber: paymentInfo.confirmationNumber,
                     photoAttachment: paymentInfo.photoAttachment ? paymentInfo.photoAttachment.name : null
                 };
+                break;
+            case 'decline':
+                newStatus = 'declined';
+                if (!note) note = 'Request declined';
+                break;
+            case 'request_audit':
+                if (selectedAuditor) {
+                    // Send audit request email
+                    try {
+                        console.log('Sending audit request email with data:', {
+                            type: 'audit_request',
+                            reimbursementId: reimbursement.id,
+                            auditorId: selectedAuditor,
+                            requestNote: note
+                        });
+
+                        const response = await fetch('/api/email/send-reimbursement-notification', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                type: 'audit_request',
+                                reimbursementId: reimbursement.id,
+                                auditorId: selectedAuditor,
+                                requestNote: note
+                            }),
+                        });
+
+                        const result = await response.json();
+                        console.log('Email API response:', result);
+
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.error || 'Failed to send audit request email');
+                        }
+
+                        // Update reimbursement with audit request
+                        newStatus = 'under_review';
+                        if (!note) note = 'Audit requested from another executive';
+                    } catch (error) {
+                        console.error('Failed to send audit request email:', error);
+                        alert(`Failed to send audit request: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`);
+                        return;
+                    }
+                }
                 break;
             case 'review':
                 if (note) {
@@ -115,7 +194,7 @@ export default function ReimbursementAuditModal({ reimbursement, onClose, onUpda
                     {/* Action Selection */}
                     <div>
                         <Label className="text-sm font-medium text-gray-700 mb-3 block">Choose Action</Label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                             <button
                                 type="button"
                                 onClick={() => setAction('review')}
@@ -131,6 +210,20 @@ export default function ReimbursementAuditModal({ reimbursement, onClose, onUpda
                             {(reimbursement.status === 'submitted' || reimbursement.status === 'under_review') && (
                                 <button
                                     type="button"
+                                    onClick={() => setAction('request_audit')}
+                                    className={`p-3 border-2 rounded-lg text-center transition-colors ${action === 'request_audit'
+                                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <UserCheck className="w-5 h-5 mx-auto mb-1" />
+                                    <span className="text-sm font-medium">Request Audit</span>
+                                </button>
+                            )}
+
+                            {(reimbursement.status === 'submitted' || reimbursement.status === 'under_review') && (
+                                <button
+                                    type="button"
                                     onClick={() => setAction('approve')}
                                     className={`p-3 border-2 rounded-lg text-center transition-colors ${action === 'approve'
                                         ? 'border-green-500 bg-green-50 text-green-700'
@@ -138,7 +231,21 @@ export default function ReimbursementAuditModal({ reimbursement, onClose, onUpda
                                         }`}
                                 >
                                     <Check className="w-5 h-5 mx-auto mb-1" />
-                                    <span className="text-sm font-medium">Approve</span>
+                                    <span className="text-sm font-medium">Approve (Not Paid)</span>
+                                </button>
+                            )}
+
+                            {(reimbursement.status === 'submitted' || reimbursement.status === 'under_review' || reimbursement.status === 'approved') && (
+                                <button
+                                    type="button"
+                                    onClick={() => setAction('approve_paid')}
+                                    className={`p-3 border-2 rounded-lg text-center transition-colors ${action === 'approve_paid'
+                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <CreditCard className="w-5 h-5 mx-auto mb-1" />
+                                    <span className="text-sm font-medium">Approve & Pay</span>
                                 </button>
                             )}
 
@@ -155,27 +262,40 @@ export default function ReimbursementAuditModal({ reimbursement, onClose, onUpda
                                     <span className="text-sm font-medium">Decline</span>
                                 </button>
                             )}
-
-                            {reimbursement.status === 'approved' && (
-                                <button
-                                    type="button"
-                                    onClick={() => setAction('paid')}
-                                    className={`p-3 border-2 rounded-lg text-center transition-colors ${action === 'paid'
-                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                        }`}
-                                >
-                                    <CreditCard className="w-5 h-5 mx-auto mb-1" />
-                                    <span className="text-sm font-medium">Mark Paid</span>
-                                </button>
-                            )}
                         </div>
                     </div>
+
+                    {/* Executive Selection for Audit Request */}
+                    {action === 'request_audit' && (
+                        <div>
+                            <Label className="text-sm font-medium text-gray-700">
+                                Select Executive for Audit *
+                            </Label>
+                            <Select value={selectedAuditor} onValueChange={setSelectedAuditor}>
+                                <SelectTrigger className="w-full mt-1">
+                                    <SelectValue placeholder="Choose an executive officer to audit this request" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {executives.map((exec) => (
+                                        <SelectItem key={exec.id} value={exec.id}>
+                                            {exec.name || exec.email} - {exec.position || 'Executive Officer'}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {action === 'request_audit' && !selectedAuditor && (
+                                <p className="mt-1 text-sm text-red-600">Please select an executive to audit this request</p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Audit Note */}
                     <div>
                         <Label htmlFor="auditNote" className="text-sm font-medium text-gray-700">
-                            {action === 'decline' ? 'Reason for Decline *' : action === 'approve' ? 'Approval Notes' : 'Audit Notes'}
+                            {action === 'decline' ? 'Reason for Decline *' :
+                                action === 'approve' ? 'Approval Notes' :
+                                    action === 'request_audit' ? 'Request Message' :
+                                        'Audit Notes'}
                         </Label>
                         <Textarea
                             id="auditNote"
@@ -186,7 +306,9 @@ export default function ReimbursementAuditModal({ reimbursement, onClose, onUpda
                                     ? 'Please provide a reason for declining this request...'
                                     : action === 'approve'
                                         ? 'Optional notes about the approval...'
-                                        : 'Add any notes about this reimbursement...'
+                                        : action === 'request_audit'
+                                            ? 'Optional message to include with the audit request...'
+                                            : 'Add any notes about this reimbursement...'
                             }
                             rows={4}
                             className={action === 'decline' && !auditNote.trim() ? 'border-red-500' : ''}
@@ -196,8 +318,8 @@ export default function ReimbursementAuditModal({ reimbursement, onClose, onUpda
                         )}
                     </div>
 
-                    {/* Payment Information (only for 'paid' action) */}
-                    {action === 'paid' && (
+                    {/* Payment Information (only for 'approve_paid' action) */}
+                    {action === 'approve_paid' && (
                         <div className="space-y-4 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
                             <h4 className="font-medium text-emerald-900">Payment Confirmation</h4>
 
@@ -281,21 +403,24 @@ export default function ReimbursementAuditModal({ reimbursement, onClose, onUpda
                         </Button>
                         <Button
                             type="submit"
-                            disabled={action === 'decline' && !auditNote.trim()}
+                            disabled={(action === 'decline' && !auditNote.trim()) || (action === 'request_audit' && !selectedAuditor)}
                             className={
                                 action === 'approve'
                                     ? 'bg-green-600 hover:bg-green-700'
                                     : action === 'decline'
                                         ? 'bg-red-600 hover:bg-red-700'
-                                        : action === 'paid'
+                                        : action === 'approve_paid'
                                             ? 'bg-emerald-600 hover:bg-emerald-700'
-                                            : 'bg-blue-600 hover:bg-blue-700'
+                                            : action === 'request_audit'
+                                                ? 'bg-purple-600 hover:bg-purple-700'
+                                                : 'bg-blue-600 hover:bg-blue-700'
                             }
                         >
                             {action === 'review' && 'Add Note'}
-                            {action === 'approve' && 'Approve Request'}
+                            {action === 'approve' && 'Approve (Not Paid)'}
                             {action === 'decline' && 'Decline Request'}
-                            {action === 'paid' && 'Mark as Paid'}
+                            {action === 'approve_paid' && 'Approve & Mark Paid'}
+                            {action === 'request_audit' && 'Send Audit Request'}
                         </Button>
                     </div>
                 </form>

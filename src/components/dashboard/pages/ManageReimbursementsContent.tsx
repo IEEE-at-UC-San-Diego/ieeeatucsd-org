@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Calendar, Bell, User, Filter, Edit, CheckCircle, XCircle, Clock, DollarSign, Receipt, AlertCircle, FileText, MessageCircle, Eye, CreditCard, Check, X } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, Timestamp, addDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, Timestamp, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/client';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/client';
@@ -92,6 +92,7 @@ export default function ManageReimbursementsContent() {
     const [auditReimbursement, setAuditReimbursement] = useState<Reimbursement | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [userNames, setUserNames] = useState<{ [key: string]: string }>({});
 
     useEffect(() => {
         const q = query(
@@ -99,13 +100,36 @@ export default function ManageReimbursementsContent() {
             orderBy('submittedAt', 'desc')
         );
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
             const reimbursementData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             })) as Reimbursement[];
 
             setReimbursements(reimbursementData);
+
+            // Fetch user names for all submitters
+            const userIds = [...new Set(reimbursementData.map(r => r.submittedBy))];
+            const newUserNames: { [key: string]: string } = {};
+
+            await Promise.all(userIds.map(async (userId) => {
+                if (userId && !userNames[userId]) {
+                    try {
+                        const userDoc = await getDoc(doc(db, 'users', userId));
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            newUserNames[userId] = userData.name || userData.email || userId;
+                        } else {
+                            newUserNames[userId] = userId;
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching user ${userId}:`, error);
+                        newUserNames[userId] = userId;
+                    }
+                }
+            }));
+
+            setUserNames(prev => ({ ...prev, ...newUserNames }));
             setLoading(false);
         });
 
@@ -116,6 +140,18 @@ export default function ManageReimbursementsContent() {
         if (!user) return;
 
         try {
+            // Get current user name
+            let currentUserName = 'Unknown User';
+            try {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    currentUserName = userData.name || userData.email || 'Unknown User';
+                }
+            } catch (error) {
+                console.error('Error fetching user name:', error);
+            }
+
             const updateData: any = {
                 status: newStatus,
                 auditLogs: [
@@ -123,6 +159,7 @@ export default function ManageReimbursementsContent() {
                     {
                         action: `Status changed to ${newStatus}`,
                         createdBy: user.uid,
+                        createdByName: currentUserName,
                         timestamp: Timestamp.now()
                     }
                 ]
@@ -134,6 +171,7 @@ export default function ManageReimbursementsContent() {
                     {
                         note: auditNote,
                         createdBy: user.uid,
+                        createdByName: currentUserName,
                         timestamp: Timestamp.now()
                     }
                 ];
@@ -143,6 +181,7 @@ export default function ManageReimbursementsContent() {
                 updateData.paymentConfirmation = {
                     ...paymentInfo,
                     paidBy: user.uid,
+                    paidByName: currentUserName,
                     paidAt: Timestamp.now()
                 };
             }
@@ -337,15 +376,15 @@ export default function ManageReimbursementsContent() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div>
-                                                        <div className="text-sm font-medium text-gray-900">{reimbursement.submittedBy}</div>
-                                                        <div className="text-sm text-gray-500">User ID</div>
+                                                        <div className="text-sm font-medium text-gray-900">{userNames[reimbursement.submittedBy] || 'Loading...'}</div>
+                                                        <div className="text-sm text-gray-500">Submitted by</div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm font-bold text-gray-900">${reimbursement.totalAmount.toFixed(2)}</div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900">{reimbursement.submittedAt?.toDate().toLocaleDateString()}</div>
+                                                    <div className="text-sm text-gray-900">{reimbursement.submittedAt?.toDate ? reimbursement.submittedAt.toDate().toLocaleDateString() : new Date(reimbursement.submittedAt).toLocaleDateString()}</div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className={`inline-flex items-center space-x-1 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(reimbursement.status)}`}>
