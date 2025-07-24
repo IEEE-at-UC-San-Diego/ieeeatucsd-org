@@ -4,6 +4,7 @@ import { getFirestore, collection, addDoc, doc, setDoc, updateDoc, query, where,
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { app } from '../../../../firebase/client';
 import { auth } from '../../../../firebase/client';
+import { EmailClient } from '../../../../scripts/email/EmailClient';
 
 interface EventRequestModalProps {
     onClose: () => void;
@@ -34,6 +35,9 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
 
     const [invoiceView, setInvoiceView] = useState<'interactive' | 'json'>('interactive');
     const [jsonInput, setJsonInput] = useState('');
+
+    // Track original data for comparison when editing
+    const [originalData, setOriginalData] = useState<any>(null);
 
     // Form data
     const [formData, setFormData] = useState({
@@ -118,6 +122,33 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                     return '';
                 }
             };
+
+            // Store original data for change comparison
+            const originalFormData = {
+                name: editingRequest.name || '',
+                location: editingRequest.location || '',
+                startDate: safeGetDateString(editingRequest.startDateTime),
+                startTime: safeGetTimeString(editingRequest.startDateTime),
+                endTime: safeGetTimeString(editingRequest.endDateTime),
+                eventDescription: editingRequest.eventDescription || '',
+                department: editingRequest.department || 'General',
+                eventCode: editingRequest.eventCode || '',
+                pointsToReward: editingRequest.pointsToReward || 0,
+                expectedAttendance: editingRequest.expectedAttendance?.toString() || '',
+                needsGraphics: editingRequest.needsGraphics || false,
+                needsAsFunding: editingRequest.needsAsFunding || editingRequest.asFundingRequired || false,
+                flyersNeeded: editingRequest.needsGraphics || editingRequest.flyersNeeded || false,
+                photographyNeeded: editingRequest.photographyNeeded || false,
+                servingFoodDrinks: editingRequest.servingFoodDrinks || editingRequest.foodDrinksBeingServed || false,
+                hasRoomBooking: editingRequest.hasRoomBooking ?? editingRequest.willOrHaveRoomBooking ?? true,
+                // Invoice data
+                itemizedInvoice: editingRequest.itemizedInvoice || [],
+                invoiceTax: editingRequest.invoiceTax || 0,
+                invoiceTip: editingRequest.invoiceTip || 0,
+                invoiceVendor: editingRequest.invoiceVendor || '',
+            };
+
+            setOriginalData(originalFormData);
 
             setFormData({
                 name: editingRequest.name || '',
@@ -774,10 +805,50 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
 
             let eventRequestRef;
             if (editingRequest) {
+                // Store original data for edit email comparison
+                const originalData = {
+                    name: editingRequest.name,
+                    location: editingRequest.location,
+                    startDateTime: editingRequest.startDateTime,
+                    endDateTime: editingRequest.endDateTime,
+                    eventDescription: editingRequest.eventDescription,
+                    department: editingRequest.department,
+                    expectedAttendance: editingRequest.expectedAttendance,
+                    needsGraphics: editingRequest.needsGraphics,
+                    needsAsFunding: editingRequest.needsAsFunding,
+                    flyersNeeded: editingRequest.flyersNeeded,
+                    photographyNeeded: editingRequest.photographyNeeded
+                };
+
                 // Update existing event request
                 eventRequestRef = doc(db, 'event_requests', editingRequest.id);
                 await updateDoc(eventRequestRef, eventRequestData);
                 console.log('Updated event request:', editingRequest.id);
+
+                // Send edit notification email
+                try {
+                    console.log('Sending edit notification email for event request:', editingRequest.id);
+                    await EmailClient.notifyFirebaseEventEdit(
+                        editingRequest.id,
+                        originalData,
+                        {
+                            name: formData.name,
+                            location: formData.location,
+                            startDateTime: startDateTime,
+                            endDateTime: endDateTime,
+                            eventDescription: formData.eventDescription,
+                            department: formData.department,
+                            expectedAttendance: formData.expectedAttendance ? parseInt(formData.expectedAttendance) : null,
+                            needsGraphics: formData.needsGraphics,
+                            needsAsFunding: formData.needsAsFunding,
+                            flyersNeeded: formData.flyersNeeded,
+                            photographyNeeded: formData.photographyNeeded
+                        }
+                    );
+                } catch (emailError) {
+                    console.error('Failed to send edit notification email:', emailError);
+                    // Don't block the main flow for email failures
+                }
             } else {
                 // Create new event request
                 eventRequestRef = await addDoc(collection(db, 'event_requests'), eventRequestData);
@@ -832,6 +903,17 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 // Create new draft event
                 await addDoc(collection(db, 'events'), eventData);
                 console.log('Created new event for new request');
+            }
+
+            // Send email notification for new submissions
+            if (!editingRequest) {
+                try {
+                    console.log('Sending submission email for event request:', (eventRequestRef as any).id);
+                    await EmailClient.notifyFirebaseEventRequestSubmission((eventRequestRef as any).id);
+                } catch (emailError) {
+                    console.error('Failed to send submission email:', emailError);
+                    // Don't block the main flow for email failures
+                }
             }
 
             onSuccess?.();
@@ -1016,19 +1098,6 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Event Description <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                        value={formData.eventDescription}
-                        onChange={(e) => handleInputChange('eventDescription', e.target.value)}
-                        rows={4}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.eventDescription ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                            }`}
-                        placeholder="Describe your event"
-                    />
-                </div>
             </div>
         </div>
     );
@@ -1610,6 +1679,64 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         );
     };
 
+    // Function to detect and display changes
+    const getChangedFields = () => {
+        if (!editingRequest || !originalData) return [];
+
+        const changes = [];
+        const fieldsToCheck = [
+            { key: 'name', label: 'Event Name' },
+            { key: 'location', label: 'Location' },
+            { key: 'startDate', label: 'Start Date' },
+            { key: 'startTime', label: 'Start Time' },
+            { key: 'endTime', label: 'End Time' },
+            { key: 'eventDescription', label: 'Event Description' },
+            { key: 'department', label: 'Department' },
+            { key: 'eventCode', label: 'Event Code' },
+            { key: 'pointsToReward', label: 'Points to Reward', format: (val: any) => `${val} points` },
+            { key: 'expectedAttendance', label: 'Expected Attendance' },
+            { key: 'needsGraphics', label: 'Needs Graphics', format: (val: any) => val ? 'Yes' : 'No' },
+            { key: 'needsAsFunding', label: 'Needs AS Funding', format: (val: any) => val ? 'Yes' : 'No' },
+            { key: 'flyersNeeded', label: 'Flyers Needed', format: (val: any) => val ? 'Yes' : 'No' },
+            { key: 'photographyNeeded', label: 'Photography Needed', format: (val: any) => val ? 'Yes' : 'No' },
+            { key: 'servingFoodDrinks', label: 'Serving Food/Drinks', format: (val: any) => val ? 'Yes' : 'No' },
+            { key: 'hasRoomBooking', label: 'Has Room Booking', format: (val: any) => val ? 'Yes' : 'No' },
+            { key: 'itemizedInvoice', label: 'Invoice Items', format: (val: any) => val?.length ? `${val.length} items` : 'None' },
+            { key: 'invoiceTax', label: 'Invoice Tax', format: (val: any) => val ? `$${val.toFixed(2)}` : '$0.00' },
+            { key: 'invoiceTip', label: 'Invoice Tip', format: (val: any) => val ? `$${val.toFixed(2)}` : '$0.00' },
+            { key: 'invoiceVendor', label: 'Invoice Vendor' },
+        ];
+
+        for (const field of fieldsToCheck) {
+            const originalValue = (originalData as any)[field.key];
+            const currentValue = (formData as any)[field.key];
+
+            if (originalValue !== currentValue) {
+                changes.push({
+                    field: field.label,
+                    original: field.format ? field.format(originalValue) : (originalValue || 'Not specified'),
+                    current: field.format ? field.format(currentValue) : (currentValue || 'Not specified')
+                });
+            }
+        }
+
+        return changes;
+    };
+
+    // Helper function to check if a specific field has changed
+    const hasFieldChanged = (fieldKey: string) => {
+        if (!editingRequest || !originalData) return false;
+        const originalValue = (originalData as any)[fieldKey];
+        const currentValue = (formData as any)[fieldKey];
+        return originalValue !== currentValue;
+    };
+
+    // Helper function to get the original value for display
+    const getOriginalValue = (fieldKey: string) => {
+        if (!editingRequest || !originalData) return null;
+        return (originalData as any)[fieldKey];
+    };
+
     const renderReviewSection = () => {
         const createSafeDisplayDateTime = (date: string, time: string) => {
             try {
@@ -1625,9 +1752,55 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
 
         const startDateTime = createSafeDisplayDateTime(formData.startDate, formData.startTime);
         const endDateTime = createSafeDisplayDateTime(formData.startDate, formData.endTime);
+        const changedFields = getChangedFields();
+
+        // Helper component for displaying field with change indicator
+        const FieldDisplay = ({ label, value, fieldKey, format }: { label: string; value: any; fieldKey: string; format?: (val: any) => string }) => {
+            const hasChanged = hasFieldChanged(fieldKey);
+            const originalValue = getOriginalValue(fieldKey);
+            const displayValue = format ? format(value) : (value || 'Not specified');
+            const originalDisplayValue = format ? format(originalValue) : (originalValue || 'Not specified');
+
+            return (
+                <div className={`${hasChanged ? 'bg-amber-50 border border-amber-200 rounded-lg p-3' : ''}`}>
+                    <div className="flex items-center space-x-2">
+                        <span className="font-medium text-gray-700">{label}:</span>
+                        {hasChanged && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                Modified
+                            </span>
+                        )}
+                    </div>
+                    {hasChanged ? (
+                        <div className="mt-1 space-y-1">
+                            <div className="text-sm text-red-600 line-through">
+                                <span className="font-medium">Before:</span> {originalDisplayValue}
+                            </div>
+                            <div className="text-sm text-green-600 font-medium">
+                                <span className="font-medium">After:</span> {displayValue}
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-gray-900 mt-1">{displayValue}</p>
+                    )}
+                </div>
+            );
+        };
 
         return (
             <div className="space-y-6">
+                {editingRequest && changedFields.length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-2">
+                            <AlertTriangle className="w-5 h-5 text-amber-600" />
+                            <h3 className="text-md font-medium text-amber-800">Changes Detected</h3>
+                        </div>
+                        <p className="text-sm text-amber-700">
+                            You've modified {changedFields.length} field{changedFields.length !== 1 ? 's' : ''}. Modified fields are highlighted below with before/after values. Both you and the events team will receive email notifications about these changes.
+                        </p>
+                    </div>
+                )}
+
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <h3 className="text-lg font-medium text-blue-900 mb-2">Review Your Event Request</h3>
                     <p className="text-sm text-blue-800">
@@ -1639,48 +1812,38 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="text-md font-semibold text-gray-900 mb-3">Basic Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <span className="font-medium text-gray-700">Event Name:</span>
-                            <p className="text-gray-900">{formData.name || 'Not specified'}</p>
-                        </div>
-                        <div>
-                            <span className="font-medium text-gray-700">Location:</span>
-                            <p className="text-gray-900">{formData.location || 'Not specified'}</p>
-                        </div>
-                        <div>
-                            <span className="font-medium text-gray-700">Date:</span>
-                            <p className="text-gray-900">{(() => {
+                        <FieldDisplay label="Event Name" value={formData.name} fieldKey="name" />
+                        <FieldDisplay label="Location" value={formData.location} fieldKey="location" />
+                        <FieldDisplay
+                            label="Date"
+                            value={formData.startDate}
+                            fieldKey="startDate"
+                            format={(val) => {
                                 try {
-                                    return formData.startDate ? new Date(formData.startDate).toLocaleDateString() : 'Not specified';
+                                    return val ? new Date(val).toLocaleDateString() : 'Not specified';
                                 } catch (error) {
                                     return 'Invalid date';
                                 }
-                            })()}</p>
-                        </div>
-                        <div>
-                            <span className="font-medium text-gray-700">Time:</span>
-                            <p className="text-gray-900">
-                                {(() => {
-                                    try {
-                                        return formData.startTime && formData.endTime ?
-                                            `${formatTimeTo12H(formData.startTime)} - ${formatTimeTo12H(formData.endTime)}` : 'Not specified';
-                                    } catch (error) {
-                                        return 'Invalid time';
-                                    }
-                                })()}
-                            </p>
-                        </div>
-                        <div>
-                            <span className="font-medium text-gray-700">Event Code:</span>
-                            <p className="text-gray-900">{formData.eventCode || 'Not specified'}</p>
-                        </div>
-                        <div>
-                            <span className="font-medium text-gray-700">Points to Reward:</span>
-                            <p className="text-gray-900">{formData.pointsToReward} points</p>
-                        </div>
+                            }}
+                        />
+                        <FieldDisplay
+                            label="Time"
+                            value={formData.startTime && formData.endTime ? `${formData.startTime} - ${formData.endTime}` : ''}
+                            fieldKey="startTime"
+                            format={(val) => {
+                                try {
+                                    return formData.startTime && formData.endTime ?
+                                        `${formatTimeTo12H(formData.startTime)} - ${formatTimeTo12H(formData.endTime)}` : 'Not specified';
+                                } catch (error) {
+                                    return 'Invalid time';
+                                }
+                            }}
+                        />
+                        <FieldDisplay label="Event Code" value={formData.eventCode} fieldKey="eventCode" />
+                        <FieldDisplay label="Points to Reward" value={formData.pointsToReward} fieldKey="pointsToReward" format={(val) => `${val} points`} />
+                        <FieldDisplay label="Department" value={formData.department} fieldKey="department" />
                         <div className="md:col-span-2">
-                            <span className="font-medium text-gray-700">Description:</span>
-                            <p className="text-gray-900 mt-1">{formData.eventDescription || 'Not specified'}</p>
+                            <FieldDisplay label="Description" value={formData.eventDescription} fieldKey="eventDescription" />
                         </div>
                     </div>
                 </div>
@@ -1690,10 +1853,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="text-md font-semibold text-gray-900 mb-3">Graphics & Marketing</h4>
                         <div className="space-y-3 text-sm">
-                            <div>
-                                <span className="font-medium text-gray-700">Graphics Needed:</span>
-                                <p className="text-gray-900">Yes</p>
-                            </div>
+                            <FieldDisplay label="Graphics Needed" value={formData.needsGraphics} fieldKey="needsGraphics" format={(val) => val ? 'Yes' : 'No'} />
                             {formData.flyerType.length > 0 && (
                                 <div>
                                     <span className="font-medium text-gray-700">Flyer Types:</span>
@@ -1732,19 +1892,10 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                             <span className="font-medium text-gray-700">Room Booking:</span>
                             <p className="text-gray-900">{formData.hasRoomBooking ? 'Yes' : 'No'}</p>
                         </div>
-                        <div>
-                            <span className="font-medium text-gray-700">Expected Attendance:</span>
-                            <p className="text-gray-900">{formData.expectedAttendance || 'Not specified'}</p>
-                        </div>
-                        <div>
-                            <span className="font-medium text-gray-700">Serving Food/Drinks:</span>
-                            <p className="text-gray-900">{formData.servingFoodDrinks ? 'Yes' : 'No'}</p>
-                        </div>
+                        <FieldDisplay label="Expected Attendance" value={formData.expectedAttendance} fieldKey="expectedAttendance" />
+                        <FieldDisplay label="Serving Food/Drinks" value={formData.servingFoodDrinks} fieldKey="servingFoodDrinks" format={(val) => val ? 'Yes' : 'No'} />
                         {formData.servingFoodDrinks && (
-                            <div>
-                                <span className="font-medium text-gray-700">AS Funding Needed:</span>
-                                <p className="text-gray-900">{formData.needsAsFunding ? 'Yes' : 'No'}</p>
-                            </div>
+                            <FieldDisplay label="AS Funding Needed" value={formData.needsAsFunding} fieldKey="needsAsFunding" format={(val) => val ? 'Yes' : 'No'} />
                         )}
                     </div>
                 </div>
@@ -1759,10 +1910,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                                 <p className="text-gray-900">{formData.invoice ? 'Yes' : 'No'}</p>
                             </div>
                             {formData.invoiceVendor && (
-                                <div>
-                                    <span className="font-medium text-gray-700">Vendor:</span>
-                                    <p className="text-gray-900">{formData.invoiceVendor}</p>
-                                </div>
+                                <FieldDisplay label="Vendor" value={formData.invoiceVendor} fieldKey="invoiceVendor" />
                             )}
                             {(formData.invoiceTax > 0 || formData.invoiceTip > 0) && (
                                 <div>

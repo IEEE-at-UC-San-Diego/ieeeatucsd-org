@@ -3,8 +3,6 @@
  * This runs in the browser and calls the server-side email API
  */
 
-import { Authentication } from '../pocketbase/Authentication';
-
 interface EmailNotificationRequest {
   type: 'status_change' | 'comment' | 'submission' | 'test' | 'event_request_submission' | 'event_request_status_change' | 'pr_completed' | 'design_pr_notification' | 'officer_role_change';
   reimbursementId?: string;
@@ -31,13 +29,9 @@ interface EmailNotificationResponse {
 export class EmailClient {
   private static getAuthData(): { token: string; model: any } | null {
     try {
-      const auth = Authentication.getInstance();
-      const token = auth.getAuthToken();
-      const model = auth.getCurrentUser();
-      
-      if (token && model) {
-        return { token, model };
-      }
+      // For PocketBase-based systems, we would get auth data here
+      // For Firebase-based event emails, auth is handled server-side
+      console.warn('PocketBase Authentication not available in Firebase system');
       return null;
     } catch (error) {
       console.warn('Could not get auth data:', error);
@@ -259,6 +253,101 @@ export class EmailClient {
         changedByUserId,
         isNewOfficer
       }
+    });
+  }
+
+  /**
+   * Send Firebase event email notifications
+   */
+  private static async sendFirebaseEventNotification(request: any): Promise<boolean> {
+    try {
+      const response = await fetch('/api/email/send-firebase-event-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        console.error('Firebase event email API error:', result.error || result.message);
+        return false;
+      }
+
+      return result.success;
+    } catch (error) {
+      console.error('Failed to send Firebase event email:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send Firebase event request submission notification
+   */
+  static async notifyFirebaseEventRequestSubmission(eventRequestId: string): Promise<boolean> {
+    return this.sendFirebaseEventNotification({
+      type: 'event_request_submission',
+      eventRequestId
+    });
+  }
+
+  /**
+   * Send Firebase event request status change notification
+   */
+  static async notifyFirebaseEventRequestStatusChange(
+    eventRequestId: string,
+    newStatus: string,
+    previousStatus?: string,
+    changedByUserId?: string,
+    declinedReason?: string
+  ): Promise<boolean> {
+    return this.sendFirebaseEventNotification({
+      type: 'event_request_status_change',
+      eventRequestId,
+      newStatus,
+      previousStatus,
+      changedByUserId,
+      declinedReason
+    });
+  }
+
+  /**
+   * Send Firebase event edit notification
+   */
+  static async notifyFirebaseEventEdit(
+    eventRequestId: string,
+    previousData: any,
+    newData: any
+  ): Promise<boolean> {
+    return this.sendFirebaseEventNotification({
+      type: 'event_edit',
+      eventRequestId,
+      previousData,
+      newData
+    });
+  }
+
+  /**
+   * Send Firebase event deletion notification
+   */
+  static async notifyFirebaseEventDelete(
+    eventRequestId: string,
+    eventName: string,
+    location: string,
+    userName: string,
+    userEmail: string,
+    status: string
+  ): Promise<boolean> {
+    return this.sendFirebaseEventNotification({
+      type: 'event_delete',
+      eventRequestId,
+      eventName,
+      location,
+      userName,
+      userEmail,
+      status
     });
   }
 } 

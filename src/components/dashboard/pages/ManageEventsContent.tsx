@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, Clock, CheckCircle, XCircle, Eye, FileText, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
-import { getFirestore, collection, getDocs, query, orderBy, where, doc, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, orderBy, where, doc, deleteDoc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { app } from '../../../firebase/client';
 import { EventManagementStats } from './manage-events/EventManagementStats';
 import type { EventStats } from './manage-events/types';
@@ -9,6 +9,7 @@ import EventViewModal from './manage-events/EventViewModal';
 import FileManagementModal from './manage-events/FileManagementModal';
 import BulkActionsModal from './manage-events/BulkActionsModal';
 import EventTemplatesModal from './manage-events/EventTemplatesModal';
+import { EmailClient } from '../../../scripts/email/EmailClient';
 
 interface EventRequest {
     id: string;
@@ -148,6 +149,17 @@ export default function ManageEventsContent() {
         try {
             setError(null);
 
+            // Get event request data for deletion email before deleting
+            const eventRequestDoc = await getDoc(doc(db, 'event_requests', requestId));
+            const eventRequestData = eventRequestDoc.exists() ? eventRequestDoc.data() : null;
+
+            // Get user data for deletion email
+            let userData = null;
+            if (eventRequestData?.requestedUser) {
+                const userDoc = await getDoc(doc(db, 'users', eventRequestData.requestedUser));
+                userData = userDoc.exists() ? userDoc.data() : null;
+            }
+
             // Delete from event_requests collection
             await deleteDoc(doc(db, 'event_requests', requestId));
 
@@ -161,6 +173,24 @@ export default function ManageEventsContent() {
                 deleteDoc(doc(db, 'events', eventDoc.id))
             );
             await Promise.all(deletePromises);
+
+            // Send deletion email notification
+            if (eventRequestData && userData) {
+                try {
+                    console.log(`Sending deletion email for event: ${eventName}`);
+                    await EmailClient.notifyFirebaseEventDelete(
+                        requestId,
+                        eventName,
+                        eventRequestData.location || '',
+                        userData.name || userData.email || 'Unknown User',
+                        userData.email || '',
+                        eventRequestData.status || 'unknown'
+                    );
+                } catch (emailError) {
+                    console.error('Failed to send deletion email:', emailError);
+                    // Don't block the main flow for email failures
+                }
+            }
 
             setSuccess(`Event request "${eventName}" deleted successfully`);
             fetchEventRequests(); // Refresh the list
@@ -327,15 +357,25 @@ export default function ManageEventsContent() {
         }
     };
 
-    const handleUpdateEventStatus = async (requestId: string, newStatus: string) => {
+    const handleUpdateEventStatus = async (requestId: string, newStatus: string, declinedReason?: string) => {
         try {
             setError(null);
 
+            // Get current event data for status change email
+            const currentEventRequest = eventRequests.find(req => req.id === requestId);
+            const previousStatus = currentEventRequest?.status;
+
             // Update status in event_requests collection
-            await updateDoc(doc(db, 'event_requests', requestId), {
+            const updateData: any = {
                 status: newStatus,
                 updatedAt: new Date()
-            });
+            };
+
+            if (declinedReason) {
+                updateData.declinedReason = declinedReason;
+            }
+
+            await updateDoc(doc(db, 'event_requests', requestId), updateData);
 
             // Automatically publish/unpublish corresponding event based on status
             const eventsQuery = query(collection(db, 'events'), where('createdFrom', '==', requestId));
@@ -349,6 +389,23 @@ export default function ManageEventsContent() {
                     updatedAt: new Date()
                 });
                 console.log(`Auto ${shouldPublish ? 'published' : 'unpublished'} event for status: ${newStatus}`);
+            }
+
+            // Send email notification for status change
+            if (previousStatus && previousStatus !== newStatus) {
+                try {
+                    console.log(`Sending status change email: ${previousStatus} -> ${newStatus}`);
+                    await EmailClient.notifyFirebaseEventRequestStatusChange(
+                        requestId,
+                        newStatus,
+                        previousStatus,
+                        undefined, // changedByUserId - could add current user if needed
+                        declinedReason
+                    );
+                } catch (emailError) {
+                    console.error('Failed to send status change email:', emailError);
+                    // Don't block the main flow for email failures
+                }
             }
 
             setSuccess(`Event request status updated to ${newStatus}${newStatus === 'approved' ? ' and published' : ''}`);

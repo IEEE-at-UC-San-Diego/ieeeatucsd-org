@@ -1,98 +1,50 @@
 import type { APIRoute } from 'astro';
+import { Resend } from 'resend';
+import { sendReimbursementSubmissionEmail } from '../../../scripts/email/ReimbursementEmailFunctions';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log('📨 Email notification API called (legacy endpoint)');
+    const data = await request.json();
     
-    const requestData = await request.json();
-    const { type, reimbursementId, eventRequestId } = requestData;
+    // Initialize Resend
+    const resend = new Resend(import.meta.env.RESEND_API_KEY);
+    const fromEmail = import.meta.env.FROM_EMAIL || 'IEEE UCSD <noreply@ieeeucsd.org>';
+    const replyToEmail = import.meta.env.REPLY_TO_EMAIL || 'treasurer@ieeeucsd.org';
 
-    console.log('📋 Request data:', {
-      type,
-      reimbursementId,
-      eventRequestId
-    });
+    let success = false;
 
-    if (!type) {
-      console.error('❌ Missing required parameter: type');
-      return new Response(
-        JSON.stringify({ error: 'Missing required parameter: type' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+    switch (data.type) {
+      case 'reimbursement_submission':
+        success = await sendReimbursementSubmissionEmail(resend, fromEmail, replyToEmail, data);
+        break;
+      
+      default:
+        return new Response(JSON.stringify({
+          success: false,
+          error: `Unknown notification type: ${data.type}`
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
     }
 
-    // Determine which endpoint to redirect to based on email type
-    const reimbursementTypes = ['status_change', 'comment', 'submission', 'test'];
-    const eventRequestTypes = ['event_request_submission', 'event_request_status_change', 'pr_completed', 'design_pr_notification'];
-    const officerTypes = ['officer_role_change'];
-
-    let targetEndpoint = '';
-    
-    if (reimbursementTypes.includes(type)) {
-      if (!reimbursementId && type !== 'test') {
-        return new Response(
-          JSON.stringify({ error: 'Missing reimbursementId for reimbursement notification' }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-      targetEndpoint = '/api/email/send-reimbursement-email';
-    } else if (eventRequestTypes.includes(type)) {
-      if (!eventRequestId) {
-        return new Response(
-          JSON.stringify({ error: 'Missing eventRequestId for event request notification' }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-      targetEndpoint = '/api/email/send-event-request-email';
-    } else if (officerTypes.includes(type)) {
-      const { officerId } = requestData;
-      if (!officerId) {
-        return new Response(
-          JSON.stringify({ error: 'Missing officerId for officer notification' }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-      targetEndpoint = '/api/email/send-officer-notification';
-    } else {
-      console.error('❌ Unknown notification type:', type);
-      return new Response(
-        JSON.stringify({ error: `Unknown notification type: ${type}` }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`🔄 Redirecting ${type} to ${targetEndpoint}`);
-
-    // Forward the request to the appropriate endpoint
-    const baseUrl = new URL(request.url).origin;
-    const response = await fetch(`${baseUrl}${targetEndpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestData),
+    return new Response(JSON.stringify({
+      success,
+      message: success ? 'Notification sent successfully' : 'Failed to send notification'
+    }), {
+      status: success ? 200 : 500,
+      headers: { 'Content-Type': 'application/json' }
     });
-
-    const result = await response.json();
-    
-    console.log(`📊 Forwarded request result: ${result.success ? 'SUCCESS' : 'FAILED'}`);
-
-    return new Response(
-      JSON.stringify(result),
-      {
-        status: response.status,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
 
   } catch (error) {
-    console.error('❌ Error in email notification API:', error);
-    return new Response(
-      JSON.stringify({
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    console.error('Email notification API error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 };

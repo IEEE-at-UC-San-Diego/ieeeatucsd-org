@@ -115,12 +115,22 @@ export interface Reimbursement {
   totalAmount: number;
   dateOfPurchase: Timestamp;
   paymentMethod: string;
-  status: 'submitted' | 'under_review' | 'approved' | 'rejected' | 'in_progress' | 'paid';
+  status: 'submitted' | 'declined' | 'approved' | 'paid';
   submittedBy: string;
   additionalInfo: string;
   department: 'internal' | 'external' | 'projects' | 'events' | 'other';
   auditNotes?: { note: string; createdBy: string; timestamp: Timestamp; }[];
   auditLogs?: { action: string; createdBy: string; timestamp: Timestamp; }[];
+  auditRequests?: { 
+    auditorId: string; 
+    requestedBy: string; 
+    requestedAt: Timestamp; 
+    status: 'pending' | 'completed' | 'declined';
+    auditResult?: 'approved' | 'needs_changes';
+    auditNotes?: string;
+    completedAt?: Timestamp;
+  }[];
+  requiresExecutiveOverride?: boolean;
 }
 
 export interface Receipt {
