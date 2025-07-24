@@ -1,3 +1,5 @@
+import type { UserRole } from './firestore';
+
 export interface NavigationItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -8,6 +10,7 @@ export interface NavigationItem {
 export interface NavigationCategory {
   title: string;
   items: NavigationItem[];
+  requiresRole?: UserRole[];
 }
 
 export interface DashboardUser {
@@ -17,8 +20,6 @@ export interface DashboardUser {
   role: UserRole;
   avatar?: string;
 }
-
-export type UserRole = 'Member' | 'Officer' | 'Executive' | 'Administrator';
 
 export interface DashboardState {
   user: DashboardUser | null;
@@ -37,6 +38,7 @@ export const NAVIGATION_PATHS = {
   OVERVIEW: '/dashboard/overview',
   EVENTS: '/dashboard/events',
   REIMBURSEMENT: '/dashboard/reimbursement',
+  LEADERBOARD: '/dashboard/leaderboard',
   MANAGE_EVENTS: '/dashboard/manage-events',
   MANAGE_REIMBURSEMENTS: '/dashboard/manage-reimbursements',
   MANAGE_USERS: '/dashboard/manage-users',

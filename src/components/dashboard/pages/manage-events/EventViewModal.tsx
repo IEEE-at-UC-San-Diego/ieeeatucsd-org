@@ -34,6 +34,19 @@ interface EventViewModalProps {
         roomBookingFiles?: string[];
         asFundingRequired?: boolean;
         foodDrinksBeingServed?: boolean;
+        // New multi-invoice format
+        invoices?: {
+            id: string;
+            vendor: string;
+            items: { description: string; quantity: number; unitPrice: number; total: number; }[];
+            tax: number;
+            tip: number;
+            invoiceFile?: string;
+            additionalFiles: string[];
+            subtotal: number;
+            total: number;
+        }[];
+        // Legacy single invoice format (for backward compatibility)
         itemizedInvoice?: { description: string; quantity: number; unitPrice: number; total: number; }[];
         invoice?: string;
         invoiceFiles?: string[];
@@ -190,21 +203,81 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
         }
     };
 
-    const formatInvoiceData = () => {
-        if (!request || (!request.itemizedInvoice || request.itemizedInvoice.length === 0)) {
-            return 'No itemized invoice data available';
+    const formatInvoiceData = (invoiceIndex?: number) => {
+        if (!request) {
+            return 'No invoice data available';
         }
 
         try {
+            // Check for new multi-invoice format first
+            if (request.invoices && request.invoices.length > 0) {
+                // If specific invoice index is provided, format only that invoice
+                if (invoiceIndex !== undefined && invoiceIndex >= 0 && invoiceIndex < request.invoices.length) {
+                    const invoice = request.invoices[invoiceIndex];
+                    const itemStrings = invoice.items.map((item: any) => {
+                        return `${item.quantity} ${item.description} x${item.unitPrice.toFixed(2)} each`;
+                    });
+
+                    const subtotal = invoice.items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
+                    const total = subtotal + (invoice.tax || 0) + (invoice.tip || 0);
+
+                    let invoiceString = itemStrings.join(' | ');
+
+                    if (invoice.tax > 0) {
+                        invoiceString += ` | Tax = ${invoice.tax.toFixed(2)}`;
+                    }
+
+                    if (invoice.tip > 0) {
+                        invoiceString += ` | Tip = ${invoice.tip.toFixed(2)}`;
+                    }
+
+                    invoiceString += ` | Total = ${total.toFixed(2)} from ${invoice.vendor}`;
+
+                    return invoiceString;
+                }
+
+                // Format all invoices separately
+                const invoiceStrings = request.invoices.map((invoice: any, index: number) => {
+                    const itemStrings = invoice.items.map((item: any) => {
+                        return `${item.quantity} ${item.description} x${item.unitPrice.toFixed(2)} each`;
+                    });
+
+                    const subtotal = invoice.items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
+                    const total = subtotal + (invoice.tax || 0) + (invoice.tip || 0);
+
+                    let invoiceString = `Invoice ${index + 1}: ${itemStrings.join(' | ')}`;
+
+                    if (invoice.tax > 0) {
+                        invoiceString += ` | Tax = ${invoice.tax.toFixed(2)}`;
+                    }
+
+                    if (invoice.tip > 0) {
+                        invoiceString += ` | Tip = ${invoice.tip.toFixed(2)}`;
+                    }
+
+                    invoiceString += ` | Total = ${total.toFixed(2)} from ${invoice.vendor}`;
+
+                    return invoiceString;
+                });
+
+                // Return all invoices as separate lines
+                return invoiceStrings.join('\n\n');
+            }
+
+            // Fallback to legacy single invoice format
+            if (!request.itemizedInvoice || request.itemizedInvoice.length === 0) {
+                return 'No itemized invoice data available';
+            }
+
             const items = request.itemizedInvoice;
 
             // Format items: "N_1 {item_1} x{cost_1} each"
-            const itemStrings = items.map(item => {
+            const itemStrings = items.map((item: any) => {
                 return `${item.quantity} ${item.description} x${item.unitPrice.toFixed(2)} each`;
             });
 
             // Calculate subtotal
-            const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+            const subtotal = items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
 
             // Get tax and tip from request fields, default to 0 if not specified
             const tax = request.invoiceTax || 0;
@@ -239,9 +312,9 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
         }
     };
 
-    const copyInvoiceData = async () => {
+    const copyInvoiceData = async (invoiceIndex?: number) => {
         try {
-            const invoiceData = formatInvoiceData();
+            const invoiceData = formatInvoiceData(invoiceIndex);
             await navigator.clipboard.writeText(invoiceData);
             setCopiedInvoice(true);
             setTimeout(() => setCopiedInvoice(false), 2000);
@@ -253,11 +326,14 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
 
     const handleStatusChange = async (newStatus: string) => {
         try {
+            let declinedReason: string | undefined;
+
             if (newStatus === 'declined') {
                 const reason = prompt('Please provide a reason for declining this event:');
                 if (!reason) {
                     return; // Don't change status if no reason provided
                 }
+                declinedReason = reason;
 
                 // Update the event request with declined status and reason
                 const requestRef = doc(db, 'event_requests', request.id);
@@ -292,6 +368,22 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                     const shouldBePublished = newStatus === 'approved' ? publishStatus : false;
                     await updateDoc(doc(db, 'events', eventDoc.id), { published: shouldBePublished });
                 }
+            }
+
+            // Send email notification for status change
+            try {
+                console.log(`Sending status change email: ${request.status} -> ${newStatus}`);
+                const { EmailClient } = await import('../../../../scripts/email/EmailClient');
+                await EmailClient.notifyFirebaseEventRequestStatusChange(
+                    request.id,
+                    newStatus,
+                    request.status,
+                    undefined, // changedByUserId - could add current user if needed
+                    declinedReason
+                );
+            } catch (emailError) {
+                console.error('Failed to send status change email:', emailError);
+                // Don't block the main flow for email failures
             }
 
             // Refresh the page or update the request object
@@ -636,42 +728,209 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                         )}
 
                         {/* Funding & Invoice Information */}
-                        {(request.asFundingRequired || request.needsAsFunding || (request.itemizedInvoice?.length || 0) > 0 || request.invoice || (request.invoiceFiles?.length || 0) > 0) && (
+                        {(request.asFundingRequired || request.needsAsFunding || (request.invoices?.length || 0) > 0 || (request.itemizedInvoice?.length || 0) > 0 || request.invoice || (request.invoiceFiles?.length || 0) > 0) && (
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                                     <DollarSign className="w-5 h-5 mr-2 text-green-600" />
                                     Funding & Invoice Information
                                 </h3>
                                 <div className="space-y-4">
-                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h4 className="font-medium text-green-900">Formatted Invoice Data</h4>
-                                            <button
-                                                onClick={copyInvoiceData}
-                                                className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
-                                                title="Copy invoice data to clipboard"
-                                            >
-                                                {copiedInvoice ? (
-                                                    <>
-                                                        <Check className="w-4 h-4" />
-                                                        <span>Copied!</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Copy className="w-4 h-4" />
-                                                        <span>Copy</span>
-                                                    </>
-                                                )}
-                                            </button>
+                                    {/* Formatted Invoice Data per invoice */}
+                                    {request.invoices && request.invoices.length > 0 ? (
+                                        <div className="space-y-3">
+                                            <h4 className="font-medium text-green-900">Formatted Invoice Data (Copyable)</h4>
+                                            {request.invoices.map((invoice, index) => (
+                                                <div key={invoice.id} className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <h5 className="font-medium text-green-800">Invoice #{index + 1} - {invoice.vendor}</h5>
+                                                        <button
+                                                            onClick={() => copyInvoiceData(index)}
+                                                            className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                                                            title="Copy this invoice data to clipboard"
+                                                        >
+                                                            {copiedInvoice ? (
+                                                                <>
+                                                                    <Check className="w-4 h-4" />
+                                                                    <span>Copied!</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Copy className="w-4 h-4" />
+                                                                    <span>Copy</span>
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-green-800 font-mono text-sm bg-white p-3 rounded border break-words">
+                                                        {formatInvoiceData(index)}
+                                                    </p>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <p className="text-green-800 font-mono text-sm bg-white p-3 rounded border break-words">
-                                            {formatInvoiceData()}
-                                        </p>
-                                    </div>
+                                    ) : (
+                                        /* Legacy single invoice format */
+                                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className="font-medium text-green-900">Formatted Invoice Data (Copyable)</h4>
+                                                <button
+                                                    onClick={() => copyInvoiceData()}
+                                                    className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                                                    title="Copy invoice data to clipboard"
+                                                >
+                                                    {copiedInvoice ? (
+                                                        <>
+                                                            <Check className="w-4 h-4" />
+                                                            <span>Copied!</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Copy className="w-4 h-4" />
+                                                            <span>Copy</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                            <p className="text-green-800 font-mono text-sm bg-white p-3 rounded border break-words">
+                                                {formatInvoiceData()}
+                                            </p>
+                                        </div>
+                                    )}
 
-                                    {request.invoiceFiles && request.invoiceFiles.length > 0 && (
+                                    {/* New multi-invoice display */}
+                                    {request.invoices && request.invoices.length > 0 && (
                                         <div>
-                                            <h4 className="font-medium text-gray-900 mb-3">Invoice Files</h4>
+                                            <h4 className="font-medium text-gray-900 mb-4 flex items-center">
+                                                <DollarSign className="w-5 h-5 mr-2 text-blue-600" />
+                                                Invoice Details ({request.invoices.length} invoice{request.invoices.length !== 1 ? 's' : ''})
+                                            </h4>
+                                            <div className="space-y-6">
+                                                {request.invoices.map((invoice, index) => (
+                                                    <div key={invoice.id} className="bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                                                        {/* Header */}
+                                                        <div className="flex justify-between items-start mb-4">
+                                                            <div className="flex items-center space-x-3">
+                                                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                                    <span className="text-blue-600 font-semibold">#{index + 1}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <h5 className="font-semibold text-gray-900 text-lg">{invoice.vendor}</h5>
+                                                                    <p className="text-sm text-gray-500">{invoice.items.length} item{invoice.items.length !== 1 ? 's' : ''}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className="text-2xl font-bold text-green-600">${invoice.total.toFixed(2)}</div>
+                                                                <div className="text-sm text-gray-500">Total</div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Items breakdown */}
+                                                        <div className="mb-4">
+                                                            <h6 className="font-medium text-gray-700 mb-3 flex items-center">
+                                                                <FileText className="w-4 h-4 mr-1" />
+                                                                Items Breakdown
+                                                            </h6>
+                                                            <div className="bg-white rounded-lg border border-gray-200">
+                                                                {invoice.items.map((item, itemIndex) => (
+                                                                    <div key={itemIndex} className={`flex justify-between items-center p-3 ${itemIndex !== invoice.items.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                                                                        <div className="flex items-center space-x-3">
+                                                                            <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center">
+                                                                                <span className="text-xs font-medium text-blue-600">{item.quantity}</span>
+                                                                            </div>
+                                                                            <div>
+                                                                                <p className="font-medium text-gray-900">{item.description}</p>
+                                                                                <p className="text-sm text-gray-500">${item.unitPrice.toFixed(2)} each</p>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="text-right">
+                                                                            <div className="font-semibold text-gray-900">${item.total.toFixed(2)}</div>
+                                                                            <div className="text-xs text-gray-500">{item.quantity} × ${item.unitPrice.toFixed(2)}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Invoice files */}
+                                                        {(invoice.invoiceFile || invoice.additionalFiles.length > 0) && (
+                                                            <div className="mb-4">
+                                                                <h6 className="font-medium text-gray-700 mb-3 flex items-center">
+                                                                    <FileText className="w-4 h-4 mr-1" />
+                                                                    Attached Files
+                                                                </h6>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                                    {invoice.invoiceFile && (
+                                                                        <div className="bg-white border border-gray-200 rounded-lg p-3">
+                                                                            <FileViewer url={invoice.invoiceFile} filename="Main Invoice" />
+                                                                        </div>
+                                                                    )}
+                                                                    {invoice.additionalFiles.map((file, fileIndex) => (
+                                                                        <div key={fileIndex} className="bg-white border border-gray-200 rounded-lg p-3">
+                                                                            <FileViewer url={file} filename={`Additional File ${fileIndex + 1}`} />
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Invoice totals */}
+                                                        <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                                            <h6 className="font-medium text-gray-700 mb-3">Cost Breakdown</h6>
+                                                            <div className="space-y-2">
+                                                                <div className="flex justify-between text-sm">
+                                                                    <span className="text-gray-600">Subtotal:</span>
+                                                                    <span className="font-medium">${invoice.subtotal.toFixed(2)}</span>
+                                                                </div>
+                                                                {invoice.tax > 0 && (
+                                                                    <div className="flex justify-between text-sm">
+                                                                        <span className="text-gray-600">Tax:</span>
+                                                                        <span className="font-medium">${invoice.tax.toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                                {invoice.tip > 0 && (
+                                                                    <div className="flex justify-between text-sm">
+                                                                        <span className="text-gray-600">Tip:</span>
+                                                                        <span className="font-medium">${invoice.tip.toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                                <div className="border-t border-gray-200 pt-2">
+                                                                    <div className="flex justify-between">
+                                                                        <span className="font-semibold text-gray-900">Invoice Total:</span>
+                                                                        <span className="font-bold text-lg text-green-600">${invoice.total.toFixed(2)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+
+                                                {/* Grand total */}
+                                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex items-center space-x-3">
+                                                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                                                <DollarSign className="w-6 h-6 text-blue-600" />
+                                                            </div>
+                                                            <div>
+                                                                <h5 className="font-bold text-blue-900 text-lg">Grand Total</h5>
+                                                                <p className="text-sm text-blue-700">All {request.invoices.length} invoice{request.invoices.length !== 1 ? 's' : ''} combined</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-3xl font-bold text-blue-900">
+                                                                ${request.invoices.reduce((total, invoice) => total + invoice.total, 0).toFixed(2)}
+                                                            </div>
+                                                            <div className="text-sm text-blue-600">Total Funding Request</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Legacy single invoice display (for backward compatibility) */}
+                                    {(!request.invoices || request.invoices.length === 0) && request.invoiceFiles && request.invoiceFiles.length > 0 && (
+                                        <div>
+                                            <h4 className="font-medium text-gray-900 mb-3">Invoice Files (Legacy)</h4>
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                 {request.invoiceFiles.map((file, index) => (
                                                     <FileViewer key={index} url={file} filename={`Invoice ${index + 1}`} />

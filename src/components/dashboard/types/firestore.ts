@@ -65,6 +65,25 @@ export interface Attendee {
   pointsEarned: number;
 }
 
+export interface InvoiceItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface Invoice {
+  id: string;
+  vendor: string;
+  items: InvoiceItem[];
+  tax: number;
+  tip: number;
+  invoiceFile?: string;
+  additionalFiles: string[];
+  subtotal: number;
+  total: number;
+}
+
 export interface EventRequest {
   name: string;
   location: string;
@@ -86,9 +105,12 @@ export interface EventRequest {
   roomBookingFiles: string[];
   asFundingRequired: boolean;
   foodDrinksBeingServed: boolean;
-  itemizedInvoice: { description: string; quantity: number; unitPrice: number; total: number; }[];
+  // Updated to support multiple invoices
+  invoices: Invoice[];
+  // Keep legacy fields for backward compatibility
+  itemizedInvoice?: { description: string; quantity: number; unitPrice: number; total: number; }[];
   invoice?: string;
-  invoiceFiles: string[];
+  invoiceFiles?: string[];
   needsGraphics: boolean;
   needsAsFunding: boolean;
   status: 'submitted' | 'pending' | 'completed' | 'declined';

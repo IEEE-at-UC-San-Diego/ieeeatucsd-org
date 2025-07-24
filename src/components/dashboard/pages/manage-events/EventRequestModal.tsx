@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, MapPin, FileText, Image, DollarSign, Upload, AlertTriangle } from 'lucide-react';
+import { X, Calendar, MapPin, FileText, Image, DollarSign, Upload, AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import { getFirestore, collection, addDoc, doc, setDoc, updateDoc, query, where, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { app } from '../../../../firebase/client';
@@ -19,13 +19,19 @@ interface ItemizedInvoiceItem {
     total: number;
 }
 
-interface JsonInvoiceData {
+interface InvoiceFormData {
+    id: string;
+    vendor: string;
     items: ItemizedInvoiceItem[];
-    tax?: number;
-    tip?: number;
-    subtotal?: number;
-    total?: number;
+    tax: number;
+    tip: number;
+    invoiceFile: File | null;
+    additionalFiles: File[];
+    existingInvoiceFile: string;
+    existingAdditionalFiles: string[];
 }
+
+// JsonInvoiceData interface removed - using simplified per-invoice management
 
 export default function EventRequestModal({ onClose, editingRequest, onSuccess }: EventRequestModalProps) {
     const [currentStep, setCurrentStep] = useState(0);
@@ -33,8 +39,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
     const [error, setError] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<{ [key: string]: boolean }>({});
 
-    const [invoiceView, setInvoiceView] = useState<'interactive' | 'json'>('interactive');
-    const [jsonInput, setJsonInput] = useState('');
+    // Removed JSON invoice import functionality - using simplified per-invoice management
 
     // Track original data for comparison when editing
     const [originalData, setOriginalData] = useState<any>(null);
@@ -67,22 +72,96 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         expectedAttendance: '',
         servingFoodDrinks: false,
         needsAsFunding: false,
+        invoices: [] as InvoiceFormData[],
+        needsGraphics: false,
+        // Existing files for editing
+        existingRoomBookingFiles: [] as string[],
+        existingOtherLogos: [] as string[],
+        // Legacy fields for backward compatibility
         itemizedInvoice: [] as ItemizedInvoiceItem[],
         invoiceTax: 0,
         invoiceTip: 0,
         invoiceVendor: '',
         invoice: null as File | null,
         invoiceFiles: [] as File[],
-        needsGraphics: false,
-        // Existing files for editing
-        existingRoomBookingFiles: [] as string[],
         existingInvoiceFiles: [] as string[],
-        existingInvoiceFile: '',
-        existingOtherLogos: [] as string[]
+        existingInvoiceFile: ''
     });
 
     const db = getFirestore(app);
     const storage = getStorage(app);
+
+    // Helper functions for managing invoices
+    const createNewInvoice = (): InvoiceFormData => ({
+        id: `invoice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        vendor: '',
+        items: [{ description: '', quantity: 1, unitPrice: 0, total: 0 }],
+        tax: 0,
+        tip: 0,
+        invoiceFile: null,
+        additionalFiles: [],
+        existingInvoiceFile: '',
+        existingAdditionalFiles: []
+    });
+
+    const addInvoice = () => {
+        setFormData(prev => ({
+            ...prev,
+            invoices: [...prev.invoices, createNewInvoice()]
+        }));
+    };
+
+    const removeInvoice = (invoiceId: string) => {
+        setFormData(prev => ({
+            ...prev,
+            invoices: prev.invoices.filter(invoice => invoice.id !== invoiceId)
+        }));
+    };
+
+    const updateInvoice = (invoiceId: string, updates: Partial<InvoiceFormData>) => {
+        console.log(`Updating invoice ${invoiceId}:`, updates);
+        setFormData(prev => ({
+            ...prev,
+            invoices: prev.invoices.map(invoice =>
+                invoice.id === invoiceId ? { ...invoice, ...updates } : invoice
+            )
+        }));
+    };
+
+    const addInvoiceItem = (invoiceId: string) => {
+        const newItem: ItemizedInvoiceItem = { description: '', quantity: 1, unitPrice: 0, total: 0 };
+        updateInvoice(invoiceId, {
+            items: [...(formData.invoices.find(inv => inv.id === invoiceId)?.items || []), newItem]
+        });
+    };
+
+    const removeInvoiceItem = (invoiceId: string, itemIndex: number) => {
+        const invoice = formData.invoices.find(inv => inv.id === invoiceId);
+        if (invoice && invoice.items.length > 1) {
+            updateInvoice(invoiceId, {
+                items: invoice.items.filter((_, index) => index !== itemIndex)
+            });
+        }
+    };
+
+    const updateInvoiceItem = (invoiceId: string, itemIndex: number, field: keyof ItemizedInvoiceItem, value: string | number) => {
+        const invoice = formData.invoices.find(inv => inv.id === invoiceId);
+        if (!invoice) return;
+
+        const updatedItems = invoice.items.map((item, index) => {
+            if (index === itemIndex) {
+                const updatedItem = { ...item, [field]: value };
+                // Auto-calculate total when quantity or unitPrice changes
+                if (field === 'quantity' || field === 'unitPrice') {
+                    updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
+                }
+                return updatedItem;
+            }
+            return item;
+        });
+
+        updateInvoice(invoiceId, { items: updatedItems });
+    };
 
     // Populate form data when editing or set defaults for new events
     useEffect(() => {
@@ -123,6 +202,45 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 }
             };
 
+            // Convert legacy invoice format to new multi-invoice format
+            const convertLegacyInvoices = () => {
+                const invoices: InvoiceFormData[] = [];
+
+                // Check if there's new format (multiple invoices)
+                if (editingRequest.invoices && editingRequest.invoices.length > 0) {
+                    return editingRequest.invoices.map((invoice: any) => ({
+                        id: invoice.id || `invoice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        vendor: invoice.vendor || '',
+                        items: invoice.items || [],
+                        tax: invoice.tax || 0,
+                        tip: invoice.tip || 0,
+                        invoiceFile: null,
+                        additionalFiles: [],
+                        existingInvoiceFile: invoice.invoiceFile || '',
+                        existingAdditionalFiles: invoice.additionalFiles || []
+                    }));
+                }
+
+                // Convert legacy format (single invoice)
+                if (editingRequest.itemizedInvoice && editingRequest.itemizedInvoice.length > 0) {
+                    invoices.push({
+                        id: `legacy_invoice_${Date.now()}`,
+                        vendor: editingRequest.invoiceVendor || '',
+                        items: editingRequest.itemizedInvoice || [],
+                        tax: editingRequest.invoiceTax || 0,
+                        tip: editingRequest.invoiceTip || 0,
+                        invoiceFile: null,
+                        additionalFiles: [],
+                        existingInvoiceFile: editingRequest.invoice || '',
+                        existingAdditionalFiles: editingRequest.invoiceFiles || []
+                    });
+                }
+
+                return invoices;
+            };
+
+            const invoicesData = convertLegacyInvoices();
+
             // Store original data for change comparison
             const originalFormData = {
                 name: editingRequest.name || '',
@@ -141,11 +259,8 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 photographyNeeded: editingRequest.photographyNeeded || false,
                 servingFoodDrinks: editingRequest.servingFoodDrinks || editingRequest.foodDrinksBeingServed || false,
                 hasRoomBooking: editingRequest.hasRoomBooking ?? editingRequest.willOrHaveRoomBooking ?? true,
-                // Invoice data
-                itemizedInvoice: editingRequest.itemizedInvoice || [],
-                invoiceTax: editingRequest.invoiceTax || 0,
-                invoiceTip: editingRequest.invoiceTip || 0,
-                invoiceVendor: editingRequest.invoiceVendor || '',
+                // Invoice data - use new format consistently
+                invoices: invoicesData
             };
 
             setOriginalData(originalFormData);
@@ -177,24 +292,27 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 expectedAttendance: editingRequest.expectedAttendance?.toString() || '',
                 servingFoodDrinks: editingRequest.servingFoodDrinks || editingRequest.foodDrinksBeingServed || false,
                 needsAsFunding: editingRequest.needsAsFunding || editingRequest.asFundingRequired || false,
+                invoices: invoicesData,
+                needsGraphics: editingRequest.needsGraphics || false,
+                // Existing files for editing
+                existingRoomBookingFiles: editingRequest.roomBookingFiles || [],
+                existingOtherLogos: editingRequest.otherLogos || [],
+                // Legacy fields for backward compatibility
                 itemizedInvoice: editingRequest.itemizedInvoice || [],
                 invoiceTax: editingRequest.invoiceTax || 0,
                 invoiceTip: editingRequest.invoiceTip || 0,
                 invoiceVendor: editingRequest.invoiceVendor || '',
                 invoice: null,
                 invoiceFiles: [],
-                needsGraphics: editingRequest.needsGraphics || false,
-                // Existing files for editing
-                existingRoomBookingFiles: editingRequest.roomBookingFiles || [],
                 existingInvoiceFiles: editingRequest.invoiceFiles || [],
-                existingInvoiceFile: editingRequest.invoice || '',
-                existingOtherLogos: editingRequest.otherLogos || []
+                existingInvoiceFile: editingRequest.invoice || ''
             });
         } else {
-            // Set default event code for new events
+            // Set default event code for new events and initialize with one empty invoice if needed
             setFormData(prev => ({
                 ...prev,
-                eventCode: generateEventCode()
+                eventCode: generateEventCode(),
+                invoices: [] // Start with no invoices - user can add as needed
             }));
         }
     }, [editingRequest]);
@@ -213,6 +331,9 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
     const eventTypes = ['social', 'technical', 'outreach', 'professional', 'projects', 'other'];
 
     const handleInputChange = (field: string, value: any) => {
+        if (field === 'roomBookingFile' && value) {
+            console.log(`Setting room booking file:`, value.name);
+        }
         setFormData(prev => ({ ...prev, [field]: value }));
         setError(null);
         // Clear field error when user starts typing
@@ -265,35 +386,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         });
     };
 
-    const addInvoiceItem = () => {
-        setFormData(prev => ({
-            ...prev,
-            itemizedInvoice: [...prev.itemizedInvoice, { description: '', quantity: 1, unitPrice: 0, total: 0 }]
-        }));
-    };
-
-    const updateInvoiceItem = (index: number, field: keyof ItemizedInvoiceItem, value: string | number) => {
-        setFormData(prev => ({
-            ...prev,
-            itemizedInvoice: prev.itemizedInvoice.map((item, i) => {
-                if (i === index) {
-                    const updated = { ...item, [field]: value };
-                    if (field === 'quantity' || field === 'unitPrice') {
-                        updated.total = updated.quantity * updated.unitPrice;
-                    }
-                    return updated;
-                }
-                return item;
-            })
-        }));
-    };
-
-    const removeInvoiceItem = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            itemizedInvoice: prev.itemizedInvoice.filter((_, i) => i !== index)
-        }));
-    };
+    // Legacy invoice item functions removed - using new multi-invoice functions instead
 
     const calculateBudget = (attendance: number) => {
         const perPersonCost = 10;
@@ -310,59 +403,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         };
     };
 
-    const importJsonInvoice = (jsonText: string) => {
-        try {
-            const jsonData: JsonInvoiceData = JSON.parse(jsonText);
-
-            if (jsonData.items && Array.isArray(jsonData.items)) {
-                setFormData(prev => ({
-                    ...prev,
-                    itemizedInvoice: jsonData.items.map(item => ({
-                        description: item.description || '',
-                        quantity: item.quantity || 1,
-                        unitPrice: item.unitPrice || 0,
-                        total: (item.quantity || 1) * (item.unitPrice || 0)
-                    })),
-                    invoiceTax: jsonData.tax || 0,
-                    invoiceTip: jsonData.tip || 0
-                }));
-                setJsonInput('');
-                setInvoiceView('interactive');
-                setError(null);
-            }
-        } catch (error) {
-            setError('Failed to import JSON data. Please check the file format.');
-        }
-    };
-
-    const getSampleJson = () => {
-        return JSON.stringify({
-            items: [
-                {
-                    description: "Pizza for event",
-                    quantity: 5,
-                    unitPrice: 15.99
-                },
-                {
-                    description: "Drinks",
-                    quantity: 20,
-                    unitPrice: 2.50
-                }
-            ],
-            tax: 8.75,
-            tip: 12.00
-        }, null, 2);
-    };
-
-    const handleJsonSubmit = () => {
-        if (formData.itemizedInvoice.length > 0) {
-            if (confirm('This will override any existing invoice data. Are you sure you want to continue?')) {
-                importJsonInvoice(jsonInput);
-            }
-        } else {
-            importJsonInvoice(jsonInput);
-        }
-    };
+    // Legacy JSON import functions removed - using simplified per-invoice management
 
     const uploadFiles = async (files: File[], path: string): Promise<string[]> => {
         const uploadPromises = files.map(async (file) => {
@@ -573,7 +614,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                     scrollToTop();
                     return false;
                 }
-                if (formData.hasRoomBooking && !formData.roomBookingFile) {
+                if (formData.hasRoomBooking && !formData.roomBookingFile && formData.existingRoomBookingFiles.length === 0) {
                     setError('Please upload room booking confirmation');
                     scrollToTop();
                     return false;
@@ -608,20 +649,52 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
 
             case 4: // Funding (if step exists)
                 if (formData.needsAsFunding) {
-                    if (!formData.invoice && !formData.existingInvoiceFile) {
-                        setError('Please upload an invoice for AS funding');
+                    if (formData.invoices.length === 0) {
+                        setError('Please add at least one invoice for AS funding');
                         scrollToTop();
                         return false;
                     }
-                    if (!formData.invoiceVendor) {
-                        setError('Invoice vendor/location is required when AS funding is needed');
-                        scrollToTop();
-                        return false;
-                    }
-                    if (formData.itemizedInvoice.length === 0) {
-                        setError('Please add at least one item to the itemized invoice');
-                        scrollToTop();
-                        return false;
+
+                    // Validate each invoice
+                    for (let i = 0; i < formData.invoices.length; i++) {
+                        const invoice = formData.invoices[i];
+                        const invoiceNum = i + 1;
+
+                        if (!invoice.vendor.trim()) {
+                            setError(`Invoice #${invoiceNum}: Vendor/Restaurant is required`);
+                            scrollToTop();
+                            return false;
+                        }
+
+                        if (invoice.items.length === 0) {
+                            setError(`Invoice #${invoiceNum}: Please add at least one item`);
+                            scrollToTop();
+                            return false;
+                        }
+
+                        // Validate each item has required data
+                        for (let j = 0; j < invoice.items.length; j++) {
+                            const item = invoice.items[j];
+                            const itemNum = j + 1;
+
+                            if (!item.description.trim()) {
+                                setError(`Invoice #${invoiceNum}, Item #${itemNum}: Description is required`);
+                                scrollToTop();
+                                return false;
+                            }
+
+                            if (item.quantity <= 0) {
+                                setError(`Invoice #${invoiceNum}, Item #${itemNum}: Quantity must be greater than 0`);
+                                scrollToTop();
+                                return false;
+                            }
+
+                            if (item.unitPrice < 0) {
+                                setError(`Invoice #${invoiceNum}, Item #${itemNum}: Unit price cannot be negative`);
+                                scrollToTop();
+                                return false;
+                            }
+                        }
                     }
                 }
                 break;
@@ -650,7 +723,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         }
 
         // Validate room booking file if required
-        if (formData.hasRoomBooking && !formData.roomBookingFile) {
+        if (formData.hasRoomBooking && !formData.roomBookingFile && formData.existingRoomBookingFiles.length === 0) {
             setError('Please upload room booking confirmation');
             return;
         }
@@ -673,16 +746,62 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
             return;
         }
 
-        // Validate invoice upload if AS funding is needed
-        if (formData.needsAsFunding && !formData.invoice && !formData.existingInvoiceFile) {
-            setError('Please upload an invoice for AS funding');
-            return;
-        }
+        // Validate invoices if AS funding is needed
+        if (formData.needsAsFunding) {
+            if (formData.invoices.length === 0) {
+                setError('Please add at least one invoice for AS funding');
+                return;
+            }
 
-        // Validate invoice vendor if AS funding is needed
-        if (formData.needsAsFunding && !formData.invoiceVendor) {
-            setError('Invoice vendor/location is required when AS funding is needed');
-            return;
+            // Validate each invoice
+            for (let i = 0; i < formData.invoices.length; i++) {
+                const invoice = formData.invoices[i];
+                const invoiceNum = i + 1;
+
+                // Validate vendor
+                if (!invoice.vendor.trim()) {
+                    setError(`Invoice #${invoiceNum}: Vendor/Restaurant is required`);
+                    return;
+                }
+
+                // Validate at least one item
+                if (invoice.items.length === 0) {
+                    setError(`Invoice #${invoiceNum}: Please add at least one item`);
+                    return;
+                }
+
+                // Validate each item
+                for (let j = 0; j < invoice.items.length; j++) {
+                    const item = invoice.items[j];
+                    const itemNum = j + 1;
+
+                    if (!item.description.trim()) {
+                        setError(`Invoice #${invoiceNum}, Item #${itemNum}: Description is required`);
+                        return;
+                    }
+
+                    if (item.quantity <= 0) {
+                        setError(`Invoice #${invoiceNum}, Item #${itemNum}: Quantity must be greater than 0`);
+                        return;
+                    }
+
+                    if (item.unitPrice < 0) {
+                        setError(`Invoice #${invoiceNum}, Item #${itemNum}: Unit price cannot be negative`);
+                        return;
+                    }
+                }
+
+                // Validate tax and tip are not negative
+                if (invoice.tax < 0) {
+                    setError(`Invoice #${invoiceNum}: Tax cannot be negative`);
+                    return;
+                }
+
+                if (invoice.tip < 0) {
+                    setError(`Invoice #${invoiceNum}: Tip cannot be negative`);
+                    return;
+                }
+            }
         }
 
         // Validate flyer advertising start date if graphics are needed
@@ -701,8 +820,6 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         try {
             // Upload files
             let roomBookingUrls: string[] = [];
-            let invoiceUrls: string[] = [];
-            let invoiceUrl = '';
             let otherLogoUrls: string[] = [];
 
             // Handle new file uploads
@@ -710,31 +827,50 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 roomBookingUrls = await uploadFiles([formData.roomBookingFile], 'room_bookings');
             }
 
-            if (formData.invoiceFiles.length > 0) {
-                invoiceUrls = await uploadFiles(formData.invoiceFiles, 'invoices');
-            }
-
-            if (formData.invoice) {
-                const [url] = await uploadFiles([formData.invoice], 'invoices');
-                invoiceUrl = url;
-            }
-
             if (formData.otherLogoFiles.length > 0) {
                 otherLogoUrls = await uploadFiles(formData.otherLogoFiles, 'logos');
             }
+
+            // Upload files for each invoice
+            const processedInvoices = await Promise.all(
+                formData.invoices.map(async (invoice) => {
+                    let invoiceFileUrl = invoice.existingInvoiceFile;
+                    let additionalFileUrls = [...invoice.existingAdditionalFiles];
+
+                    // Upload main invoice file if new file is provided
+                    if (invoice.invoiceFile) {
+                        const [url] = await uploadFiles([invoice.invoiceFile], 'invoices');
+                        invoiceFileUrl = url;
+                    }
+
+                    // Upload additional files if any
+                    if (invoice.additionalFiles.length > 0) {
+                        const uploadedAdditionalUrls = await uploadFiles(invoice.additionalFiles, 'invoices');
+                        additionalFileUrls = [...additionalFileUrls, ...uploadedAdditionalUrls];
+                    }
+
+                    // Calculate totals
+                    const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0);
+                    const total = subtotal + invoice.tax + invoice.tip;
+
+                    return {
+                        id: invoice.id,
+                        vendor: invoice.vendor,
+                        items: invoice.items,
+                        tax: invoice.tax,
+                        tip: invoice.tip,
+                        invoiceFile: invoiceFileUrl,
+                        additionalFiles: additionalFileUrls,
+                        subtotal,
+                        total
+                    };
+                })
+            );
 
             // Merge existing files with new uploads (for editing)
             const finalRoomBookingUrls = editingRequest
                 ? [...formData.existingRoomBookingFiles, ...roomBookingUrls]
                 : roomBookingUrls;
-
-            const finalInvoiceUrls = editingRequest
-                ? [...formData.existingInvoiceFiles, ...invoiceUrls]
-                : invoiceUrls;
-
-            const finalInvoiceUrl = editingRequest
-                ? (invoiceUrl || formData.existingInvoiceFile)
-                : invoiceUrl;
 
             const finalOtherLogoUrls = editingRequest
                 ? [...formData.existingOtherLogos, ...otherLogoUrls]
@@ -790,12 +926,15 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 expectedAttendance: formData.expectedAttendance ? parseInt(formData.expectedAttendance) : null,
                 roomBookingFiles: finalRoomBookingUrls,
                 servingFoodDrinks: formData.servingFoodDrinks,
-                itemizedInvoice: formData.itemizedInvoice,
-                invoiceTax: formData.invoiceTax,
-                invoiceTip: formData.invoiceTip,
-                invoiceVendor: formData.invoiceVendor,
-                invoice: finalInvoiceUrl,
-                invoiceFiles: finalInvoiceUrls,
+                // New multi-invoice format
+                invoices: processedInvoices,
+                // Legacy fields for backward compatibility
+                itemizedInvoice: processedInvoices.length > 0 ? processedInvoices[0].items : [],
+                invoiceTax: processedInvoices.length > 0 ? processedInvoices[0].tax : 0,
+                invoiceTip: processedInvoices.length > 0 ? processedInvoices[0].tip : 0,
+                invoiceVendor: processedInvoices.length > 0 ? processedInvoices[0].vendor : '',
+                invoice: processedInvoices.length > 0 ? processedInvoices[0].invoiceFile : '',
+                invoiceFiles: processedInvoices.length > 0 ? processedInvoices[0].additionalFiles : [],
                 needsGraphics: formData.needsGraphics,
                 needsAsFunding: formData.needsAsFunding,
                 status: editingRequest ? editingRequest.status : 'submitted',
@@ -1313,7 +1452,28 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                         />
 
-                        {renderExistingFiles(
+                        {/* Show selected new file */}
+                        {formData.roomBookingFile && (
+                            <div className="mt-2">
+                                <div className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
+                                    <div className="flex items-center space-x-2">
+                                        <FileText className="h-4 w-4 text-green-600" />
+                                        <span className="text-sm text-green-700">
+                                            {formData.roomBookingFile.name} (New file selected)
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => handleInputChange('roomBookingFile', null)}
+                                        className="text-red-600 hover:text-red-800 text-sm"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Show existing files when no new file is selected */}
+                        {!formData.roomBookingFile && renderExistingFiles(
                             formData.existingRoomBookingFiles,
                             "Existing Room Booking Files",
                             (url) => handleRemoveExistingFile(url, 'roomBooking')
@@ -1421,260 +1581,370 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
             );
         }
 
-        const subtotal = formData.itemizedInvoice.reduce((sum, item) => sum + item.total, 0);
-        const total = subtotal + formData.invoiceTax + formData.invoiceTip;
+        // Calculate totals across all invoices
+        const calculateGrandTotal = () => {
+            return formData.invoices.reduce((grandTotal, invoice) => {
+                const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0);
+                return grandTotal + subtotal + invoice.tax + invoice.tip;
+            }, 0);
+        };
+
+        const grandTotal = calculateGrandTotal();
 
         return (
             <div className="space-y-6">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <h3 className="text-lg font-medium text-blue-900 mb-2">AS Funding Details</h3>
                     <p className="text-sm text-blue-800">
-                        Please provide detailed invoice information for AS funding approval.
+                        Add multiple invoices with individual expenses for each vendor. Each invoice can have its own items, tax, tip, and files.
                     </p>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Upload Invoice <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="file"
-                        accept=".pdf,.doc,.docx,.jpg,.png"
-                        onChange={(e) => handleInputChange('invoice', e.target.files?.[0] || null)}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 ${fieldErrors.invoice ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                            }`}
-                    />
-
-                    {formData.existingInvoiceFile && (
-                        <div className="mt-4">
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Existing Invoice File</h4>
-                            <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                                <div className="flex items-center space-x-2">
-                                    {getFileIcon(formData.existingInvoiceFile)}
-                                    <span className="text-sm text-gray-700">{extractFileName(formData.existingInvoiceFile)}</span>
-                                </div>
-                                <div className="flex space-x-2">
-                                    <a
-                                        href={formData.existingInvoiceFile}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:text-blue-800 text-sm"
-                                    >
-                                        View
-                                    </a>
-                                    <button
-                                        onClick={() => handleRemoveExistingFile(formData.existingInvoiceFile, 'invoice')}
-                                        className="text-red-600 hover:text-red-800 text-sm"
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <label className="block text-sm font-medium text-gray-700">Itemized Invoice</label>
-                        <div className="flex space-x-3">
-                            <button
-                                type="button"
-                                onClick={() => setInvoiceView(invoiceView === 'interactive' ? 'json' : 'interactive')}
-                                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-                            >
-                                {invoiceView === 'interactive' ? '📝 JSON View' : '🔧 Interactive View'}
-                            </button>
-                            {invoiceView === 'interactive' && (
-                                <button
-                                    type="button"
-                                    onClick={addInvoiceItem}
-                                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                                >
-                                    + Add Item
-                                </button>
-                            )}
-                        </div>
+                {/* Invoice Management Section */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-lg font-medium text-gray-900">Invoices</h4>
+                        <button
+                            type="button"
+                            onClick={addInvoice}
+                            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                            <Plus className="h-4 w-4" />
+                            <span>Add Invoice</span>
+                        </button>
                     </div>
 
-                    {invoiceView === 'interactive' ? (
-                        <div className="space-y-3">
-                            {/* Column headers */}
-                            <div className="grid grid-cols-12 gap-3 p-3 bg-gray-100 border border-gray-300 rounded-lg">
-                                <div className="col-span-4">
-                                    <span className="text-sm font-medium text-gray-700">Description</span>
-                                </div>
-                                <div className="col-span-2">
-                                    <span className="text-sm font-medium text-gray-700">Quantity</span>
-                                </div>
-                                <div className="col-span-2">
-                                    <span className="text-sm font-medium text-gray-700">Unit Price</span>
-                                </div>
-                                <div className="col-span-2">
-                                    <span className="text-sm font-medium text-gray-700">Total</span>
-                                </div>
-                                <div className="col-span-2">
-                                    <span className="text-sm font-medium text-gray-700">Action</span>
-                                </div>
-                            </div>
-
-                            {formData.itemizedInvoice.map((item, index) => (
-                                <div key={index} className="grid grid-cols-12 gap-3 p-3 bg-white border border-gray-200 rounded-lg">
-                                    <div className="col-span-4">
-                                        <input
-                                            type="text"
-                                            placeholder="Description"
-                                            value={item.description}
-                                            onChange={(e) => updateInvoiceItem(index, 'description', e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <input
-                                            type="number"
-                                            placeholder="Qty"
-                                            value={item.quantity}
-                                            onChange={(e) => updateInvoiceItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            placeholder="Unit Price"
-                                            value={item.unitPrice}
-                                            onChange={(e) => updateInvoiceItem(index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            placeholder="Total"
-                                            value={item.total.toFixed(2)}
-                                            readOnly
-                                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50"
-                                        />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => removeInvoiceItem(index)}
-                                            className="w-full text-red-600 hover:text-red-700 text-sm font-medium"
-                                        >
-                                            Remove
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+                    {formData.invoices.length === 0 ? (
+                        <div className="text-center py-8 bg-gray-50 border border-gray-200 rounded-lg">
+                            <p className="text-gray-600 mb-4">No invoices added yet.</p>
+                            <button
+                                type="button"
+                                onClick={addInvoice}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                Add Your First Invoice
+                            </button>
                         </div>
                     ) : (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-gray-700">Paste JSON Data</span>
-                                <button
-                                    type="button"
-                                    onClick={() => setJsonInput(getSampleJson())}
-                                    className="text-sm text-green-600 hover:text-green-700 font-medium"
-                                >
-                                    📋 Paste Sample
-                                </button>
-                            </div>
-                            <textarea
-                                value={jsonInput}
-                                onChange={(e) => setJsonInput(e.target.value)}
-                                placeholder="Paste your JSON invoice data here..."
-                                rows={10}
-                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
-                            />
-                            <button
-                                type="button"
-                                onClick={handleJsonSubmit}
-                                disabled={!jsonInput.trim()}
-                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Import JSON Data
-                            </button>
+                        <div className="space-y-6">
+                            {formData.invoices.map((invoice, invoiceIndex) => {
+                                const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0);
+                                const total = subtotal + invoice.tax + invoice.tip;
+
+                                return (
+                                    <div key={invoice.id} className="bg-white border border-gray-300 rounded-lg p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h5 className="text-lg font-medium text-gray-900">
+                                                Invoice #{invoiceIndex + 1}
+                                            </h5>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeInvoice(invoice.id)}
+                                                className="flex items-center space-x-1 px-3 py-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                                <span className="text-sm">Remove</span>
+                                            </button>
+                                        </div>
+
+                                        {/* Vendor field */}
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Vendor/Restaurant <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g., Papa Johns, Subway, etc."
+                                                value={invoice.vendor}
+                                                onChange={(e) => updateInvoice(invoice.id, { vendor: e.target.value })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                required
+                                            />
+                                        </div>
+
+                                        {/* Invoice file upload */}
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Upload Invoice File
+                                            </label>
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.doc,.docx,.jpg,.png"
+                                                onChange={(e) => updateInvoice(invoice.id, { invoiceFile: e.target.files?.[0] || null })}
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                            />
+
+                                            {/* Show selected new file */}
+                                            {invoice.invoiceFile && (
+                                                <div className="mt-2">
+                                                    <div className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
+                                                        <div className="flex items-center space-x-2">
+                                                            <FileText className="h-4 w-4 text-green-600" />
+                                                            <span className="text-sm text-green-700">
+                                                                {invoice.invoiceFile.name} (New file selected)
+                                                            </span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => updateInvoice(invoice.id, { invoiceFile: null })}
+                                                            className="text-red-600 hover:text-red-800 text-sm"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Show existing file */}
+                                            {invoice.existingInvoiceFile && !invoice.invoiceFile && (
+                                                <div className="mt-2">
+                                                    <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                                                        <div className="flex items-center space-x-2">
+                                                            <FileText className="h-4 w-4 text-gray-500" />
+                                                            <span className="text-sm text-gray-700">{extractFileName(invoice.existingInvoiceFile)}</span>
+                                                        </div>
+                                                        <div className="flex space-x-2">
+                                                            <a
+                                                                href={invoice.existingInvoiceFile}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-blue-600 hover:text-blue-800 text-sm"
+                                                            >
+                                                                View
+                                                            </a>
+                                                            <button
+                                                                onClick={() => updateInvoice(invoice.id, { existingInvoiceFile: '' })}
+                                                                className="text-red-600 hover:text-red-800 text-sm"
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Invoice items */}
+                                        <div className="mb-4">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <label className="block text-sm font-medium text-gray-700">Invoice Items</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => addInvoiceItem(invoice.id)}
+                                                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                                >
+                                                    + Add Item
+                                                </button>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {/* Column headers */}
+                                                <div className="grid grid-cols-12 gap-3 p-3 bg-gray-100 border border-gray-300 rounded-lg">
+                                                    <div className="col-span-4">
+                                                        <span className="text-sm font-medium text-gray-700">Description</span>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <span className="text-sm font-medium text-gray-700">Quantity</span>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <span className="text-sm font-medium text-gray-700">Unit Price</span>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <span className="text-sm font-medium text-gray-700">Total</span>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <span className="text-sm font-medium text-gray-700">Action</span>
+                                                    </div>
+                                                </div>
+
+                                                {invoice.items.map((item, itemIndex) => (
+                                                    <div key={itemIndex} className="grid grid-cols-12 gap-3 p-3 bg-white border border-gray-200 rounded-lg">
+                                                        <div className="col-span-4">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Description"
+                                                                value={item.description}
+                                                                onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'description', e.target.value)}
+                                                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <input
+                                                                type="number"
+                                                                placeholder="Qty"
+                                                                value={item.quantity}
+                                                                onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'quantity', parseInt(e.target.value) || 0)}
+                                                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                placeholder="Unit Price"
+                                                                value={item.unitPrice}
+                                                                onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'unitPrice', parseFloat(e.target.value) || 0)}
+                                                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                placeholder="Total"
+                                                                value={item.total.toFixed(2)}
+                                                                readOnly
+                                                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50"
+                                                            />
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeInvoiceItem(invoice.id, itemIndex)}
+                                                                className="w-full text-red-600 hover:text-red-700 text-sm font-medium"
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Tax and tip */}
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Tax ($)</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={invoice.tax}
+                                                    onChange={(e) => updateInvoice(invoice.id, { tax: parseFloat(e.target.value) || 0 })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Tip ($)</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={invoice.tip}
+                                                    onChange={(e) => updateInvoice(invoice.id, { tip: parseFloat(e.target.value) || 0 })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Additional files */}
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Additional Files</label>
+                                            <input
+                                                type="file"
+                                                multiple
+                                                accept=".pdf,.doc,.docx,.jpg,.png"
+                                                onChange={(e) => {
+                                                    const files = Array.from(e.target.files || []);
+                                                    updateInvoice(invoice.id, { additionalFiles: [...invoice.additionalFiles, ...files] });
+                                                }}
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                            />
+
+                                            {/* Show newly selected files */}
+                                            {invoice.additionalFiles.length > 0 && (
+                                                <div className="mt-2 space-y-2">
+                                                    <h6 className="text-sm font-medium text-green-700">New Files Selected</h6>
+                                                    {invoice.additionalFiles.map((file, fileIndex) => (
+                                                        <div key={fileIndex} className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
+                                                            <div className="flex items-center space-x-2">
+                                                                <FileText className="h-4 w-4 text-green-600" />
+                                                                <span className="text-sm text-green-700">{file.name} (New)</span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const updatedFiles = invoice.additionalFiles.filter((_, index) => index !== fileIndex);
+                                                                    updateInvoice(invoice.id, { additionalFiles: updatedFiles });
+                                                                }}
+                                                                className="text-red-600 hover:text-red-800 text-sm"
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Show existing files */}
+                                            {invoice.existingAdditionalFiles.length > 0 && (
+                                                <div className="mt-2 space-y-2">
+                                                    <h6 className="text-sm font-medium text-gray-700">Existing Files</h6>
+                                                    {invoice.existingAdditionalFiles.map((fileUrl, fileIndex) => (
+                                                        <div key={fileIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                                                            <div className="flex items-center space-x-2">
+                                                                <FileText className="h-4 w-4 text-gray-500" />
+                                                                <span className="text-sm text-gray-700">{extractFileName(fileUrl)}</span>
+                                                            </div>
+                                                            <div className="flex space-x-2">
+                                                                <a
+                                                                    href={fileUrl}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-blue-600 hover:text-blue-800 text-sm"
+                                                                >
+                                                                    View
+                                                                </a>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const updatedFiles = invoice.existingAdditionalFiles.filter((_, index) => index !== fileIndex);
+                                                                        updateInvoice(invoice.id, { existingAdditionalFiles: updatedFiles });
+                                                                    }}
+                                                                    className="text-red-600 hover:text-red-800 text-sm"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Invoice total */}
+                                        <div className="bg-gray-50 border border-gray-300 rounded-lg p-3">
+                                            <div className="flex justify-between text-sm">
+                                                <span>Subtotal:</span>
+                                                <span>${subtotal.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span>Tax:</span>
+                                                <span>${invoice.tax.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span>Tip:</span>
+                                                <span>${invoice.tip.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2 mt-2">
+                                                <span>Invoice Total:</span>
+                                                <span>${total.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
+                </div>
 
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Tax ($)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    value={formData.invoiceTax}
-                                    onChange={(e) => handleInputChange('invoiceTax', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Tip ($)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    value={formData.invoiceTip}
-                                    onChange={(e) => handleInputChange('invoiceTip', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                />
-                            </div>
+                {/* Grand total */}
+                {formData.invoices.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
+                        <div className="flex justify-between items-center">
+                            <span className="text-lg font-semibold text-blue-900">Grand Total (All Invoices):</span>
+                            <span className="text-xl font-bold text-blue-900">${grandTotal.toFixed(2)}</span>
                         </div>
-
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Vendor/Restaurant {formData.needsAsFunding && <span className="text-red-500">*</span>}
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="e.g., Papa Johns, Subway, etc."
-                                value={formData.invoiceVendor}
-                                onChange={(e) => handleInputChange('invoiceVendor', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                required={formData.needsAsFunding}
-                            />
-                        </div>
-
-                        <div className="bg-white border border-gray-300 rounded-lg p-3">
-                            <div className="flex justify-between text-sm">
-                                <span>Subtotal:</span>
-                                <span>${subtotal.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span>Tax:</span>
-                                <span>${formData.invoiceTax.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span>Tip:</span>
-                                <span>${formData.invoiceTip.toFixed(2)}</span>
-                            </div>
-                            <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2 mt-2">
-                                <span>Total:</span>
-                                <span>${total.toFixed(2)}</span>
-                            </div>
-                        </div>
+                        <p className="text-sm text-blue-700 mt-1">
+                            Total funding request across {formData.invoices.length} invoice{formData.invoices.length !== 1 ? 's' : ''}
+                        </p>
                     </div>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Additional Files</label>
-                    <input
-                        type="file"
-                        multiple
-                        accept=".pdf,.doc,.docx,.jpg,.png"
-                        onChange={(e) => handleFileChange('invoiceFiles', e.target.files)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-
-                    {renderExistingFiles(
-                        formData.existingInvoiceFiles,
-                        "Existing Additional Invoice Files",
-                        (url) => handleRemoveExistingFile(url, 'invoiceFiles')
-                    )}
-                </div>
+                )}
             </div>
         );
     };
@@ -1701,10 +1971,13 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
             { key: 'photographyNeeded', label: 'Photography Needed', format: (val: any) => val ? 'Yes' : 'No' },
             { key: 'servingFoodDrinks', label: 'Serving Food/Drinks', format: (val: any) => val ? 'Yes' : 'No' },
             { key: 'hasRoomBooking', label: 'Has Room Booking', format: (val: any) => val ? 'Yes' : 'No' },
-            { key: 'itemizedInvoice', label: 'Invoice Items', format: (val: any) => val?.length ? `${val.length} items` : 'None' },
-            { key: 'invoiceTax', label: 'Invoice Tax', format: (val: any) => val ? `$${val.toFixed(2)}` : '$0.00' },
-            { key: 'invoiceTip', label: 'Invoice Tip', format: (val: any) => val ? `$${val.toFixed(2)}` : '$0.00' },
-            { key: 'invoiceVendor', label: 'Invoice Vendor' },
+            {
+                key: 'invoices', label: 'Invoices', format: (val: any) => {
+                    if (!val || val.length === 0) return 'None';
+                    const totalItems = val.reduce((sum: number, invoice: any) => sum + (invoice.items?.length || 0), 0);
+                    return `${val.length} invoice${val.length !== 1 ? 's' : ''} (${totalItems} items total)`;
+                }
+            },
         ];
 
         for (const field of fieldsToCheck) {
@@ -1904,41 +2177,104 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 {formData.needsAsFunding && (
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="text-md font-semibold text-gray-900 mb-3">Funding & Invoices</h4>
-                        <div className="space-y-3 text-sm">
+                        <div className="space-y-4 text-sm">
                             <div>
-                                <span className="font-medium text-gray-700">Invoice Uploaded:</span>
-                                <p className="text-gray-900">{formData.invoice ? 'Yes' : 'No'}</p>
+                                <span className="font-medium text-gray-700">AS Funding Required:</span>
+                                <p className="text-gray-900">Yes</p>
                             </div>
-                            {formData.invoiceVendor && (
-                                <FieldDisplay label="Vendor" value={formData.invoiceVendor} fieldKey="invoiceVendor" />
-                            )}
-                            {(formData.invoiceTax > 0 || formData.invoiceTip > 0) && (
+
+                            {formData.invoices.length > 0 ? (
                                 <div>
-                                    <span className="font-medium text-gray-700">Additional Charges:</span>
-                                    <p className="text-gray-900">
-                                        {formData.invoiceTax > 0 && `Tax: $${formData.invoiceTax.toFixed(2)}`}
-                                        {formData.invoiceTax > 0 && formData.invoiceTip > 0 && ', '}
-                                        {formData.invoiceTip > 0 && `Tip: $${formData.invoiceTip.toFixed(2)}`}
-                                    </p>
-                                </div>
-                            )}
-                            {formData.itemizedInvoice.length > 0 && (
-                                <div>
-                                    <span className="font-medium text-gray-700">Itemized Invoice:</span>
-                                    <div className="mt-2 bg-gray-50 rounded-lg p-3">
-                                        {formData.itemizedInvoice.map((item, index) => (
-                                            <div key={index} className="flex justify-between">
-                                                <span>{item.description}</span>
-                                                <span>{item.quantity} × ${item.unitPrice} = ${item.total.toFixed(2)}</span>
-                                            </div>
-                                        ))}
-                                        <div className="border-t border-gray-200 pt-2 mt-2 font-medium">
-                                            <div className="flex justify-between">
-                                                <span>Total:</span>
-                                                <span>${(formData.itemizedInvoice.reduce((sum, item) => sum + item.total, 0) + formData.invoiceTax + formData.invoiceTip).toFixed(2)}</span>
+                                    <span className="font-medium text-gray-700">Invoices ({formData.invoices.length}):</span>
+                                    <div className="mt-2 space-y-4">
+                                        {formData.invoices.map((invoice, invoiceIndex) => {
+                                            const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0);
+                                            const total = subtotal + invoice.tax + invoice.tip;
+
+                                            return (
+                                                <div key={invoice.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                                    <div className="flex justify-between items-center mb-3">
+                                                        <h5 className="font-medium text-gray-900">Invoice #{invoiceIndex + 1}</h5>
+                                                        <span className="text-lg font-semibold text-blue-600">${total.toFixed(2)}</span>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                        <div>
+                                                            <span className="font-medium text-gray-600">Vendor:</span>
+                                                            <p className="text-gray-900">{invoice.vendor}</p>
+                                                        </div>
+                                                        {invoice.invoiceFile && (
+                                                            <div>
+                                                                <span className="font-medium text-gray-600">File:</span>
+                                                                <p className="text-gray-900">{invoice.invoiceFile.name}</p>
+                                                            </div>
+                                                        )}
+                                                        {invoice.existingInvoiceFile && !invoice.invoiceFile && (
+                                                            <div>
+                                                                <span className="font-medium text-gray-600">File:</span>
+                                                                <p className="text-gray-900">Existing file uploaded</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {invoice.items.length > 0 && (
+                                                        <div className="mb-3">
+                                                            <span className="font-medium text-gray-600">Items:</span>
+                                                            <div className="mt-1 space-y-1">
+                                                                {invoice.items.map((item, itemIndex) => (
+                                                                    <div key={itemIndex} className="flex justify-between text-sm">
+                                                                        <span>{item.description}</span>
+                                                                        <span>{item.quantity} × ${item.unitPrice.toFixed(2)} = ${item.total.toFixed(2)}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="border-t border-gray-300 pt-2 space-y-1">
+                                                        <div className="flex justify-between text-sm">
+                                                            <span>Subtotal:</span>
+                                                            <span>${subtotal.toFixed(2)}</span>
+                                                        </div>
+                                                        {invoice.tax > 0 && (
+                                                            <div className="flex justify-between text-sm">
+                                                                <span>Tax:</span>
+                                                                <span>${invoice.tax.toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                        {invoice.tip > 0 && (
+                                                            <div className="flex justify-between text-sm">
+                                                                <span>Tip:</span>
+                                                                <span>${invoice.tip.toFixed(2)}</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex justify-between font-medium">
+                                                            <span>Invoice Total:</span>
+                                                            <span>${total.toFixed(2)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* Grand total */}
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-semibold text-blue-900">Grand Total (All Invoices):</span>
+                                                <span className="text-xl font-bold text-blue-900">
+                                                    ${formData.invoices.reduce((grandTotal, invoice) => {
+                                                        const invoiceTotal = invoice.items.reduce((sum, item) => sum + item.total, 0) + invoice.tax + invoice.tip;
+                                                        return grandTotal + invoiceTotal;
+                                                    }, 0).toFixed(2)}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <span className="font-medium text-gray-700">Invoices:</span>
+                                    <p className="text-gray-500">No invoices added yet</p>
                                 </div>
                             )}
                         </div>
@@ -2047,6 +2383,15 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                                 onClick={() => {
                                     // No validation needed for step 0 (requirements)
                                     if (currentStep === 0 || validateStep(currentStep)) {
+                                        console.log('Current form state before step change:', {
+                                            roomBookingFile: formData.roomBookingFile?.name,
+                                            invoices: formData.invoices.map(inv => ({
+                                                id: inv.id,
+                                                vendor: inv.vendor,
+                                                invoiceFile: inv.invoiceFile?.name,
+                                                additionalFiles: inv.additionalFiles.map(f => f.name)
+                                            }))
+                                        });
                                         setCurrentStep(Math.min(steps.length - 1, currentStep + 1));
                                     }
                                 }}

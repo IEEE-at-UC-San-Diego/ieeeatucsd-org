@@ -3,6 +3,7 @@ import { Search, Calendar, Bell, User, Filter, MapPin, Clock, Users, UserCheck, 
 import { getFirestore, collection, getDocs, query, where, orderBy, doc, getDoc, updateDoc, arrayUnion, setDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { app } from '../../../firebase/client';
+import DashboardHeader from '../DashboardHeader';
 
 interface Event {
     id: string;
@@ -42,6 +43,17 @@ export default function EventsContent() {
 
     const db = getFirestore(app);
     const auth = getAuth(app);
+
+    // Utility function to determine if an event is currently active
+    const isEventCurrentlyActive = (event: Event) => {
+        if (!event.published) return false;
+
+        const now = new Date();
+        const startDate = event.startDate?.toDate ? event.startDate.toDate() : new Date(event.startDate);
+        const endDate = event.endDate?.toDate ? event.endDate.toDate() : new Date(event.endDate);
+
+        return now >= startDate && now <= endDate;
+    };
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -200,6 +212,24 @@ export default function EventsContent() {
             return;
         }
 
+        // Check if event is currently active
+        if (!isEventCurrentlyActive(event)) {
+            const now = new Date();
+            const startDate = event.startDate?.toDate ? event.startDate.toDate() : new Date(event.startDate);
+            const endDate = event.endDate?.toDate ? event.endDate.toDate() : new Date(event.endDate);
+
+            if (now < startDate) {
+                alert(`This event hasn't started yet. Check-in opens on ${startDate.toLocaleDateString()} at ${startDate.toLocaleTimeString()}.`);
+                return;
+            } else if (now > endDate) {
+                alert('This event has already ended. Check-in is no longer available.');
+                return;
+            } else if (!event.published) {
+                alert('This event is not currently available for check-in.');
+                return;
+            }
+        }
+
         try {
             setCheckingIn(event.id);
 
@@ -297,56 +327,26 @@ export default function EventsContent() {
     return (
         <div className="flex-1 overflow-auto">
             {/* Header */}
-            <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Search events..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                            <Calendar className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                            <Bell className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                            <User className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-            </header>
+            <DashboardHeader
+                title="Events"
+                subtitle="View IEEE UCSD events and check in to earn points"
+                searchPlaceholder="Search events..."
+                searchValue={searchTerm}
+                onSearchChange={setSearchTerm}
+            >
+                <button
+                    onClick={() => fetchEvents()}
+                    disabled={loading}
+                    className="flex items-center space-x-2 px-4 py-2 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                >
+                    <Calendar className="w-4 h-4" />
+                    <span>{loading ? 'Refreshing...' : 'Refresh Events'}</span>
+                </button>
+            </DashboardHeader>
 
             {/* Events Content */}
             <main className="p-6">
                 <div className="grid grid-cols-1 gap-6">
-                    {/* Page Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900 mb-2">Events</h1>
-                            <p className="text-gray-600">View IEEE UCSD events and check in to earn points</p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            <button
-                                onClick={() => fetchEvents()}
-                                disabled={loading}
-                                className="flex items-center space-x-2 px-4 py-2 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
-                            >
-                                <Calendar className="w-4 h-4" />
-                                <span>{loading ? 'Refreshing...' : 'Refresh Events'}</span>
-                            </button>
-                        </div>
-                    </div>
-
                     {/* Error Message */}
                     {error && (
                         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -470,7 +470,14 @@ export default function EventsContent() {
                                                     </div>
                                                 </div>
 
-                                                {isUserCheckedIn(event) ? (
+                                                {!isEventCurrentlyActive(event) ? (
+                                                    <button
+                                                        disabled={true}
+                                                        className="w-full bg-gray-100 text-gray-600 py-2 px-4 rounded-lg cursor-not-allowed flex items-center justify-center space-x-2"
+                                                    >
+                                                        <span>Check-in Not Available</span>
+                                                    </button>
+                                                ) : isUserCheckedIn(event) ? (
                                                     <button
                                                         disabled={true}
                                                         className="w-full bg-green-100 text-green-800 py-2 px-4 rounded-lg cursor-not-allowed flex items-center justify-center space-x-2"
@@ -548,13 +555,19 @@ export default function EventsContent() {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center space-x-4">
-                                                    <div className="text-right">
-                                                        <p className="text-sm font-medium text-gray-900">
-                                                            {event.attendees?.length || 0}{event.capacity ? `/${event.capacity}` : ''}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500">Checked In</p>
-                                                    </div>
-                                                    {isUserCheckedIn(event) ? (
+                                                    {isEventCurrentlyActive(event) && (
+                                                        <div className="text-right">
+                                                            <p className="text-sm font-medium text-gray-900">
+                                                                {event.attendees?.length || 0}{event.capacity ? `/${event.capacity}` : ''}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">Checked In</p>
+                                                        </div>
+                                                    )}
+                                                    {!isEventCurrentlyActive(event) ? (
+                                                        <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm font-medium rounded-full">
+                                                            Check-in Not Available
+                                                        </span>
+                                                    ) : isUserCheckedIn(event) ? (
                                                         <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
                                                             ✓ Checked In
                                                         </span>
@@ -616,9 +629,9 @@ export default function EventsContent() {
                                                 <div className="flex items-center space-x-4">
                                                     <div className="text-right">
                                                         <p className="text-sm font-medium text-gray-900">
-                                                            {event.attendees?.length || 0}{event.capacity ? `/${event.capacity}` : ''}
+                                                            Past Event
                                                         </p>
-                                                        <p className="text-xs text-gray-500">Attended</p>
+                                                        <p className="text-xs text-gray-500">Ended</p>
                                                     </div>
                                                     {isUserCheckedIn(event) ? (
                                                         <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
@@ -679,13 +692,15 @@ export default function EventsContent() {
                                         <h3 className="text-sm font-medium text-gray-700 mb-2">Points Reward</h3>
                                         <p className="text-gray-900">{selectedEvent.pointsToReward} points</p>
                                     </div>
-                                    <div>
-                                        <h3 className="text-sm font-medium text-gray-700 mb-2">Attendance</h3>
-                                        <p className="text-gray-900">
-                                            {selectedEvent.attendees?.length || 0} people checked in
-                                            {selectedEvent.capacity && ` (of ${selectedEvent.capacity} capacity)`}
-                                        </p>
-                                    </div>
+                                    {isEventCurrentlyActive(selectedEvent) && (
+                                        <div>
+                                            <h3 className="text-sm font-medium text-gray-700 mb-2">Current Attendance</h3>
+                                            <p className="text-gray-900">
+                                                {selectedEvent.attendees?.length || 0} people checked in
+                                                {selectedEvent.capacity && ` (of ${selectedEvent.capacity} capacity)`}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Public Files Section */}
@@ -763,7 +778,7 @@ export default function EventsContent() {
                             >
                                 Close
                             </button>
-                            {!isUserCheckedIn(selectedEvent) && getUpcomingEvents().includes(selectedEvent) && (
+                            {!isUserCheckedIn(selectedEvent) && isEventCurrentlyActive(selectedEvent) && (
                                 <button
                                     onClick={() => {
                                         handleCheckIn(selectedEvent);

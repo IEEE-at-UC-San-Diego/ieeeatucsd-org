@@ -1,0 +1,35 @@
+---
+import DashboardLayout from "../../components/dashboard/DashboardLayout.tsx";
+import LeaderboardContent from "../../components/dashboard/pages/LeaderboardContent.tsx";
+import { NAVIGATION_PATHS } from "../../components/dashboard/types/navigation";
+
+const title = "Leaderboard - Dashboard";
+const currentPath = NAVIGATION_PATHS.SETTINGS;
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{title}</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="stylesheet" href="/src/styles/global.css" />
+        <style>
+            body {
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    sans-serif;
+                background: #f8fafc;
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <DashboardLayout currentPath={currentPath} client:load>
+            <LeaderboardContent client:load />
+        </DashboardLayout>
+    </body>
+</html>

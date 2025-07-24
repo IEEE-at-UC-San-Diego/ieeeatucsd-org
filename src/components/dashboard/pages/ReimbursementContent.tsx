@@ -4,6 +4,7 @@ import { collection, query, where, orderBy, onSnapshot, addDoc, Timestamp } from
 import { db } from '../../../firebase/client';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/client';
+import DashboardHeader from '../DashboardHeader';
 import ReimbursementRequestModal from './ReimbursementRequestModal';
 import ReimbursementDetailModal from './ReimbursementDetailModal';
 
@@ -182,61 +183,32 @@ export default function ReimbursementContent() {
     return (
         <div className="flex-1 overflow-auto">
             {/* Header */}
-            <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Search reimbursements..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                        </div>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="all">All Status</option>
-                            <option value="submitted">Submitted</option>
-
-                            <option value="approved">Approved</option>
-                            <option value="paid">Paid</option>
-                            <option value="declined">Declined</option>
-                        </select>
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                            <Calendar className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                            <Bell className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                            <User className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-            </header>
+            <DashboardHeader
+                title="Reimbursements"
+                subtitle="Submit and track your reimbursement requests"
+                searchPlaceholder="Search reimbursements..."
+                searchValue={searchTerm}
+                onSearchChange={setSearchTerm}
+            >
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value="all">All Status</option>
+                    <option value="submitted">Submitted</option>
+                    <option value="approved">Approved</option>
+                    <option value="paid">Paid</option>
+                    <option value="declined">Declined</option>
+                </select>
+            </DashboardHeader>
 
             {/* Reimbursement Content */}
             <main className="p-6">
                 <div className="grid grid-cols-1 gap-6">
                     {/* Page Header */}
                     <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900 mb-2">Reimbursements</h1>
-                            <p className="text-gray-600">Submit and track your reimbursement requests</p>
-                        </div>
                         <div className="flex items-center space-x-3">
-                            <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                                <Filter className="w-4 h-4" />
-                                <span>Export</span>
-                            </button>
                             <button
                                 onClick={() => setIsModalOpen(true)}
                                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -354,33 +326,7 @@ export default function ReimbursementContent() {
                         )}
                     </div>
 
-                    {/* Quick Actions */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <button
-                                onClick={() => setIsModalOpen(true)}
-                                className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <Plus className="w-5 h-5 text-blue-600" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-medium text-gray-900">Submit New Request</p>
-                                    <p className="text-sm text-gray-500">Upload receipts and request reimbursement</p>
-                                </div>
-                            </button>
-                            <button className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                    <FileText className="w-5 h-5 text-green-600" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-medium text-gray-900">View Guidelines</p>
-                                    <p className="text-sm text-gray-500">Check reimbursement policies and limits</p>
-                                </div>
-                            </button>
-                        </div>
-                    </div>
+
                 </div>
             </main>
 

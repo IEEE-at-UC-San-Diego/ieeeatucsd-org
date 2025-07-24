@@ -1,5 +1,5 @@
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { app } from '../../firebase/client';
+import { getFirestore, doc, getDoc } from 'firebase-admin/firestore';
+import { app } from '../../firebase/server';
 
 export async function sendFirebaseEventRequestSubmissionEmail(resend: any, fromEmail: string, replyToEmail: string, data: any): Promise<boolean> {
   try {

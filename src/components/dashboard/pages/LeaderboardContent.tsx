@@ -1,0 +1,346 @@
+import React, { useState, useEffect } from 'react';
+import { Trophy, Medal, Award, Crown, TrendingUp, Users, Star } from 'lucide-react';
+import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
+import { db } from '../../../firebase/client';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../../../firebase/client';
+import DashboardHeader from '../DashboardHeader';
+
+interface LeaderboardUser {
+    id: string;
+    name: string;
+    email: string;
+    points: number;
+    major?: string;
+    graduationYear?: number;
+    eventsAttended: number;
+    position: string;
+    rank: number;
+}
+
+export default function LeaderboardContent() {
+    const [user] = useAuthState(auth);
+    const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
+    const [currentUserRank, setCurrentUserRank] = useState<number>(0);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        // Fetch leaderboard data - only get required fields for privacy
+        const usersQuery = query(
+            collection(db, 'users'),
+            orderBy('points', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
+            const users = snapshot.docs.map((doc, index) => {
+                const data = doc.data();
+                // Only extract the fields we need for the leaderboard: name, points, major, graduationYear
+                return {
+                    id: doc.id,
+                    name: data.name || 'Unknown User',
+                    email: data.email || '',
+                    points: data.points || 0,
+                    major: data.major || '',
+                    graduationYear: data.graduationYear || null,
+                    eventsAttended: data.eventsAttended || 0,
+                    position: data.position || 'Member',
+                    rank: index + 1
+                };
+            }) as LeaderboardUser[];
+
+            // Filter out users with no points or invalid data
+            const validUsers = users.filter(u => u.points > 0 && u.name && u.name !== 'Unknown User');
+
+            setLeaderboardData(validUsers);
+
+            // Find current user's rank
+            if (user) {
+                const currentUser = validUsers.find(u => u.id === user.uid);
+                setCurrentUserRank(currentUser?.rank || 0);
+            }
+
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    const filteredData = leaderboardData.filter(userData =>
+        userData.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        userData.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const topThree = filteredData.slice(0, 3);
+    const restOfLeaderboard = filteredData.slice(3);
+
+    const getRankIcon = (rank: number) => {
+        switch (rank) {
+            case 1:
+                return <Crown className="w-6 h-6 text-yellow-500" />;
+            case 2:
+                return <Medal className="w-6 h-6 text-gray-400" />;
+            case 3:
+                return <Award className="w-6 h-6 text-amber-600" />;
+            default:
+                return <span className="text-lg font-bold text-gray-600">#{rank}</span>;
+        }
+    };
+
+    const getPodiumHeight = (rank: number) => {
+        switch (rank) {
+            case 1:
+                return 'h-32';
+            case 2:
+                return 'h-24';
+            case 3:
+                return 'h-20';
+            default:
+                return 'h-16';
+        }
+    };
+
+    const getPodiumColor = (rank: number) => {
+        switch (rank) {
+            case 1:
+                return 'bg-gradient-to-t from-yellow-400 to-yellow-300';
+            case 2:
+                return 'bg-gradient-to-t from-gray-400 to-gray-300';
+            case 3:
+                return 'bg-gradient-to-t from-amber-600 to-amber-500';
+            default:
+                return 'bg-gray-200';
+        }
+    };
+
+    const getTotalStats = () => {
+        const totalUsers = leaderboardData.length;
+        const totalPoints = leaderboardData.reduce((sum, user) => sum + user.points, 0);
+        const avgPoints = totalUsers > 0 ? Math.round(totalPoints / totalUsers) : 0;
+        const topPerformer = leaderboardData[0];
+
+        return { totalUsers, totalPoints, avgPoints, topPerformer };
+    };
+
+    const stats = getTotalStats();
+
+    return (
+        <div className="flex-1 overflow-auto">
+            <DashboardHeader
+                title="Leaderboard"
+                subtitle="See how you rank among IEEE UCSD members"
+                searchPlaceholder="Search members..."
+                searchValue={searchTerm}
+                onSearchChange={setSearchTerm}
+            />
+
+            <main className="p-6">
+                <div className="grid grid-cols-1 gap-6">
+                    {/* Stats Overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Total Members</p>
+                                    <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                                </div>
+                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <Users className="w-6 h-6 text-blue-600" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Total Points</p>
+                                    <p className="text-2xl font-bold text-gray-900">{stats.totalPoints.toLocaleString()}</p>
+                                </div>
+                                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                    <Star className="w-6 h-6 text-yellow-600" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Average Points</p>
+                                    <p className="text-2xl font-bold text-gray-900">{stats.avgPoints}</p>
+                                </div>
+                                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                    <TrendingUp className="w-6 h-6 text-green-600" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Your Rank</p>
+                                    <p className="text-2xl font-bold text-gray-900">#{currentUserRank || 'N/A'}</p>
+                                </div>
+                                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                    <Trophy className="w-6 h-6 text-purple-600" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Podium - Top 3 */}
+                    {topThree.length >= 3 && (
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <h2 className="text-lg font-semibold text-gray-900 mb-6 text-center">🏆 Top Performers 🏆</h2>
+                            <div className="flex justify-center items-end space-x-4 mb-6">
+                                {/* Second Place */}
+                                {topThree[1] && (
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-2">
+                                            <Medal className="w-8 h-8 text-gray-400" />
+                                        </div>
+                                        <p className="font-medium text-gray-900 text-sm text-center">{topThree[1].name.split(' ')[0]}</p>
+                                        <p className="text-xs text-gray-500 mb-2">{topThree[1].points} pts</p>
+                                        <div className={`w-20 ${getPodiumHeight(2)} ${getPodiumColor(2)} rounded-t-lg flex items-end justify-center pb-2`}>
+                                            <span className="text-white font-bold text-lg">2</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* First Place */}
+                                {topThree[0] && (
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mb-2 relative">
+                                            <Crown className="w-10 h-10 text-yellow-500" />
+                                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                                                <span className="text-xs font-bold text-white">👑</span>
+                                            </div>
+                                        </div>
+                                        <p className="font-bold text-gray-900 text-base text-center">{topThree[0].name.split(' ')[0]}</p>
+                                        <p className="text-sm text-yellow-600 font-medium mb-2">{topThree[0].points} pts</p>
+                                        <div className={`w-24 ${getPodiumHeight(1)} ${getPodiumColor(1)} rounded-t-lg flex items-end justify-center pb-2`}>
+                                            <span className="text-white font-bold text-xl">1</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Third Place */}
+                                {topThree[2] && (
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-2">
+                                            <Award className="w-8 h-8 text-amber-600" />
+                                        </div>
+                                        <p className="font-medium text-gray-900 text-sm text-center">{topThree[2].name.split(' ')[0]}</p>
+                                        <p className="text-xs text-gray-500 mb-2">{topThree[2].points} pts</p>
+                                        <div className={`w-20 ${getPodiumHeight(3)} ${getPodiumColor(3)} rounded-t-lg flex items-end justify-center pb-2`}>
+                                            <span className="text-white font-bold text-lg">3</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Full Leaderboard */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div className="px-6 py-4 border-b border-gray-200">
+                            <h2 className="text-lg font-semibold text-gray-900">Full Leaderboard</h2>
+                        </div>
+                        <div className="overflow-x-auto">
+                            {loading ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                </div>
+                            ) : (
+                                <table className="w-full">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Rank
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Member
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Points
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Major
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Graduation Year
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Events
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Position
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {filteredData.map((member) => (
+                                            <tr
+                                                key={member.id}
+                                                className={`hover:bg-gray-50 ${member.id === user?.uid ? 'bg-blue-50' : ''}`}
+                                            >
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center">
+                                                        {getRankIcon(member.rank)}
+                                                        {member.rank <= 3 && (
+                                                            <span className="ml-2 text-xs font-medium text-gray-500">
+                                                                {member.rank === 1 ? 'Champion' : member.rank === 2 ? 'Runner-up' : 'Third Place'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center">
+                                                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                            <span className="text-blue-600 font-medium text-sm">
+                                                                {member.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="ml-4">
+                                                            <div className="text-sm font-medium text-gray-900">
+                                                                {member.name}
+                                                                {member.id === user?.uid && (
+                                                                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                                                        You
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-sm text-gray-500">{member.email}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm font-bold text-gray-900">{member.points}</div>
+                                                    <div className="text-xs text-gray-500">points</div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm text-gray-900">{member.major || 'N/A'}</div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm text-gray-900">{member.graduationYear || 'N/A'}</div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm text-gray-900">{member.eventsAttended || 0}</div>
+                                                    <div className="text-xs text-gray-500">events</div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                                                        {member.position || 'Member'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
+} 
