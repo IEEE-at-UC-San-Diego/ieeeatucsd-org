@@ -9,7 +9,7 @@ const serviceAccount = {
   type: "service_account",
   project_id: firebaseEnv.projectId,
   private_key_id: firebaseEnv.privateKeyId,
-  private_key: firebaseEnv.privateKey, // dotenv auto-parses this
+  private_key: firebaseEnv.privateKey?.replace(/\\n/g, '\n'), // Fix escaped newlines from env vars
   client_email: firebaseEnv.clientEmail,
   client_id: firebaseEnv.clientId,
   auth_uri: firebaseEnv.authUri,

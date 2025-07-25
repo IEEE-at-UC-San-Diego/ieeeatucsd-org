@@ -74,8 +74,8 @@ export const firebaseEnv = {
   privateKey: getEnvVar('FIREBASE_PRIVATE_KEY'), // dotenv should auto-parse this
   clientEmail: getEnvVar('FIREBASE_CLIENT_EMAIL'),
   clientId: getEnvVar('FIREBASE_CLIENT_ID'),
-  authUri: getEnvVar('FIREBASE_AUTH_URI', 'https://accounts.google.com/o/oauth2/auth'),
-  tokenUri: getEnvVar('FIREBASE_TOKEN_URI', 'https://oauth2.googleapis.com/token'),
+  authUri: getEnvVar('FIREBASE_AUTH_URL', 'https://accounts.google.com/o/oauth2/auth'),
+  tokenUri: getEnvVar('FIREBASE_TOKEN_URL', 'https://oauth2.googleapis.com/token'),
   authCertUrl: getEnvVar('FIREBASE_AUTH_CERT_URL', 'https://www.googleapis.com/oauth2/v1/certs'),
   clientCertUrl: getEnvVar('FIREBASE_CLIENT_CERT_URL'),
 };
