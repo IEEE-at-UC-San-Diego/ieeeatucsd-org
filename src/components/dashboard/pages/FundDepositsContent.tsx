@@ -159,7 +159,7 @@ const FundDepositsContent: React.FC = () => {
             };
 
             await addDoc(collection(db, 'fundDeposits'), depositData);
-            
+
             setShowNewDepositModal(false);
             setNewDeposit({
                 title: '',
@@ -210,9 +210,9 @@ const FundDepositsContent: React.FC = () => {
     };
 
     const canModifyDeposit = (deposit: FundDeposit): boolean => {
-        return userRole === 'Executive Officer' || 
-               userRole === 'General Officer' || 
-               (deposit.depositedBy === user?.uid && deposit.status === 'pending');
+        return userRole === 'Executive Officer' ||
+            userRole === 'General Officer' ||
+            (deposit.depositedBy === user?.uid && deposit.status === 'pending');
     };
 
     const stats = {
@@ -409,7 +409,7 @@ const FundDepositsContent: React.FC = () => {
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </button>
-                                                    
+
                                                     {canModifyDeposit(deposit) && deposit.status === 'pending' && (
                                                         <>
                                                             <button
@@ -456,7 +456,7 @@ const FundDepositsContent: React.FC = () => {
                         <div className="p-6 border-b border-gray-200">
                             <h3 className="text-lg font-medium text-gray-900">New Fund Deposit</h3>
                         </div>
-                        
+
                         <div className="p-6 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -602,7 +602,7 @@ const FundDepositsContent: React.FC = () => {
                                 </button>
                             </div>
                         </div>
-                        
+
                         <div className="p-6 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
