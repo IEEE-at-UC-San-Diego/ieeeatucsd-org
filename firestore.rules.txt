@@ -214,6 +214,35 @@ service cloud.firestore {
         ];
     }
 
+    // Fund Deposits collection - officers can manage, users can create and read their own
+    match /fundDeposits/{depositId} {
+      // Users can create their own deposits
+      allow create: if request.auth != null && 
+        request.resource.data.depositedBy == request.auth.uid;
+      
+      // Users can read their own deposits
+      allow read: if request.auth != null && resource.data.depositedBy == request.auth.uid;
+      
+      // Officers can read and update all deposits
+      allow read, update: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'General Officer', 'Executive Officer'
+        ];
+      
+      // Users can update/delete their own deposits if status is pending
+      allow update, delete: if request.auth != null && 
+        resource.data.depositedBy == request.auth.uid &&
+        resource.data.status == 'pending';
+      
+      // Officers can delete any deposit
+      allow delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'General Officer', 'Executive Officer'
+        ];
+    }
+
     // Default deny for any other collections
     match /{document=**} {
       allow read, write, delete: if false;
