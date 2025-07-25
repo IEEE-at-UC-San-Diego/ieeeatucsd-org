@@ -64,6 +64,61 @@ export default function OverviewContent() {
         };
 
         fetchUserData();
+
+        // Set up real-time listener for leaderboard ranking with delay to ensure auth is ready
+        const timeoutId = setTimeout(() => {
+            if (!user?.uid) return;
+
+            console.log('Setting up ranking listener for user:', user.uid);
+
+            const publicProfilesQuery = query(
+                collection(db, 'public_profiles'),
+                orderBy('points', 'desc')
+            );
+
+            const unsubscribeRanking = onSnapshot(publicProfilesQuery, (snapshot) => {
+                console.log('Ranking snapshot received:', snapshot.size, 'documents');
+                const profiles = snapshot.docs.map((doc, index) => ({
+                    id: doc.id,
+                    rank: index + 1,
+                    name: doc.data().name,
+                    points: doc.data().points || 0
+                }));
+
+                // Filter out users with invalid names
+                const validProfiles = profiles.filter(p => p.name && p.name !== 'Unknown User' && p.name.trim() !== '');
+
+                // Find current user's rank
+                const currentUserProfile = validProfiles.find(p => p.id === user.uid);
+                const currentUserRank = currentUserProfile?.rank || 0;
+                const totalMembers = validProfiles.length;
+
+                setUserStats(prev => ({
+                    ...prev,
+                    rank: currentUserRank,
+                    totalMembers: totalMembers
+                }));
+            }, (error) => {
+                console.error('Error in ranking listener:', error);
+                // Don't break the component if ranking fails
+                setUserStats(prev => ({
+                    ...prev,
+                    rank: 0,
+                    totalMembers: 0
+                }));
+            });
+
+            // Store the unsubscribe function to clean up later
+            (window as any).__rankingUnsubscribe = unsubscribeRanking;
+        }, 1000); // 1 second delay to ensure auth is fully ready
+
+        return () => {
+            clearTimeout(timeoutId);
+            if ((window as any).__rankingUnsubscribe) {
+                (window as any).__rankingUnsubscribe();
+                delete (window as any).__rankingUnsubscribe;
+            }
+        };
     }, [user, db]);
 
     useEffect(() => {

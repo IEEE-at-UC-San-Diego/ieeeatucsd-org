@@ -4,18 +4,22 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Users collection - only Executive Officers can update/delete, users can create/read their own
     match /users/{userId} {
-      allow read: if request.auth != null && (
-        // User can read their own document (full access)
-        request.auth.uid == userId ||
-
-        // Officers can read all user documents (full access)
-        (
-          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-            'General Officer', 'Executive Officer'
-          ]
-        )
-      );
+      // User can always read their own document
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Officers can read all user documents (using simpler role check)
+      allow read: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'General Officer', 'Executive Officer'
+        ];
+        
+      // Officers can list all users for administrative purposes
+      allow list: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'General Officer', 'Executive Officer'
+        ];
       
       // Create a separate public_profiles subcollection for public data
       match /public_profile/{profileId} {
@@ -70,9 +74,20 @@ service cloud.firestore {
       // Members can read published events (including files for public files only)
       allow read: if request.auth != null &&
         resource.data.published == true;
+        
+      // Allow authenticated users to list/query published events
+      allow list: if request.auth != null &&
+        resource.data.published == true;
 
       // Officers can read, update, and delete all events
       allow read, update, delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'General Officer', 'Executive Officer'
+        ];
+        
+      // Officers can list all events
+      allow list: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
           'General Officer', 'Executive Officer'

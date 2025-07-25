@@ -29,7 +29,7 @@ export default function LeaderboardContent() {
     useEffect(() => {
         // Set up real-time listener for public profiles leaderboard
         console.log('Setting up leaderboard listener...');
-        
+
         try {
             const publicProfilesQuery = query(
                 collection(db, 'public_profiles'),
@@ -39,11 +39,11 @@ export default function LeaderboardContent() {
             const unsubscribe = onSnapshot(publicProfilesQuery, (snapshot) => {
                 console.log('Leaderboard snapshot received:', snapshot.size, 'documents');
                 setDebugInfo(`Found ${snapshot.size} documents in public_profiles collection`);
-                
+
                 const users = snapshot.docs.map((doc, index) => {
                     const data = doc.data();
                     console.log('Profile data:', doc.id, data);
-                    
+
                     return {
                         id: doc.id,
                         name: data.name || 'Unknown User',

@@ -1,0 +1,58 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Match any file path that starts with the user's UID
+    match /resumes/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Invoice files - users can upload their own, officers can read all
+    match /invoices/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && 
+        (request.auth.uid == userId || 
+         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+           'General Officer', 'Executive Officer'
+         ]);
+    }
+    
+    // Room booking files - users can upload their own, officers can read all
+    match /room_bookings/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && 
+        (request.auth.uid == userId || 
+         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+           'General Officer', 'Executive Officer'
+         ]);
+    }
+    
+    // Logo files - users can upload their own, officers can read all  
+    match /logos/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && 
+        (request.auth.uid == userId || 
+         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+           'General Officer', 'Executive Officer'
+         ]);
+    }
+    
+    // Reimbursement files - users can upload their own, officers can read all
+    match /reimbursements/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && 
+        (request.auth.uid == userId || 
+         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+           'General Officer', 'Executive Officer'
+         ]);
+    }
+    
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
