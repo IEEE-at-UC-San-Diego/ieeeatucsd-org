@@ -1,6 +1,14 @@
 import { Resend } from 'resend';
-import type { User, Officer } from '../../schemas/pocketbase/schema';
-import { OfficerTypes } from '../../schemas/pocketbase';
+import type { User, Officer } from '../../components/dashboard/types/firestore';
+
+// Officer Types constants (replacing PocketBase import)
+export const OfficerTypes = {
+  ADMINISTRATOR: "administrator",
+  EXECUTIVE: "executive", 
+  GENERAL: "general",
+  HONORARY: "honorary",
+  PAST: "past",
+} as const;
 
 // Email template data interfaces
 export interface OfficerRoleChangeEmailData {
