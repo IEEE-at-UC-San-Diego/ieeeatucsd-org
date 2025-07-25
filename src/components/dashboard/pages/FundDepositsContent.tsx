@@ -14,7 +14,7 @@ interface FundDeposit {
     title: string;
     amount: number;
     depositDate: string;
-    status: 'pending' | 'verified' | 'processed' | 'rejected';
+    status: 'pending' | 'verified' | 'rejected';
     depositedBy: string;
     depositedByName?: string;
     depositedByEmail?: string;
@@ -26,9 +26,7 @@ interface FundDeposit {
     verifiedBy?: string;
     verifiedByName?: string;
     verifiedAt?: any;
-    processedBy?: string;
-    processedByName?: string;
-    processedAt?: any;
+
     notes?: string;
     auditLogs?: { action: string; createdBy: string; createdByName?: string; timestamp: any; note?: string; previousData?: any; newData?: any; }[];
     referenceNumber?: string;
@@ -49,8 +47,7 @@ const getStatusColor = (status: string) => {
             return 'bg-yellow-100 text-yellow-800';
         case 'verified':
             return 'bg-blue-100 text-blue-800';
-        case 'processed':
-            return 'bg-green-100 text-green-800';
+
         case 'rejected':
             return 'bg-red-100 text-red-800';
         default:
@@ -64,8 +61,7 @@ const getStatusIcon = (status: string) => {
             return <Clock className="w-4 h-4" />;
         case 'verified':
             return <Eye className="w-4 h-4" />;
-        case 'processed':
-            return <CheckCircle className="w-4 h-4" />;
+
         case 'rejected':
             return <XCircle className="w-4 h-4" />;
         default:
@@ -98,7 +94,7 @@ const FundDepositsContent: React.FC = () => {
         description: '',
         referenceNumber: '',
         isIeeeDeposit: false,
-                        ieeeDepositSource: 'upp' as 'upp' | 'section' | 'region' | 'global' | 'society' | 'other',
+        ieeeDepositSource: 'upp' as 'upp' | 'section' | 'region' | 'global' | 'society' | 'other',
         needsBankTransfer: false,
         bankTransferInstructions: ''
     });
@@ -106,11 +102,11 @@ const FundDepositsContent: React.FC = () => {
     const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
     const [bankTransferFiles, setBankTransferFiles] = useState<File[]>([]);
     const [editBankTransferFiles, setEditBankTransferFiles] = useState<File[]>([]);
-    
+
     const addReceiptFile = (file: File) => {
         setReceiptFiles(prev => [...prev, file]);
     };
-    
+
     const addEditReceiptFile = (file: File) => {
         setEditReceiptFiles(prev => [...prev, file]);
     };
@@ -306,6 +302,10 @@ const FundDepositsContent: React.FC = () => {
         if (!user || !editingDeposit) return;
 
         try {
+            // Get original deposit data for comparison
+            const originalDeposit = deposits.find(d => d.id === editingDeposit.id);
+            if (!originalDeposit) return;
+
             // Upload new receipt files if any
             let newReceiptFileUrls: string[] = [];
             if (editReceiptFiles.length > 0) {
@@ -333,16 +333,74 @@ const FundDepositsContent: React.FC = () => {
                 receiptFiles: allReceiptFiles,
                 editedBy: user.uid,
                 editedByName: userName,
-                editedAt: Timestamp.now()
+                editedAt: Timestamp.now(),
+                isIeeeDeposit: editingDeposit.isIeeeDeposit,
+                ieeeDepositSource: editingDeposit.ieeeDepositSource
             };
 
-            // Create audit log for edit
+            // Create detailed audit log for changes
+            const changes: string[] = [];
+            if (originalDeposit.title !== editingDeposit.title) {
+                changes.push(`Title: "${originalDeposit.title}" → "${editingDeposit.title}"`);
+            }
+            if (originalDeposit.amount !== editingDeposit.amount) {
+                changes.push(`Amount: $${originalDeposit.amount} → $${editingDeposit.amount}`);
+            }
+            if (originalDeposit.depositDate !== editingDeposit.depositDate) {
+                changes.push(`Date: ${originalDeposit.depositDate} → ${editingDeposit.depositDate}`);
+            }
+            if (originalDeposit.depositMethod !== editingDeposit.depositMethod) {
+                changes.push(`Method: ${originalDeposit.depositMethod} → ${editingDeposit.depositMethod}`);
+            }
+            if (originalDeposit.purpose !== editingDeposit.purpose) {
+                changes.push(`Purpose: "${originalDeposit.purpose}" → "${editingDeposit.purpose}"`);
+            }
+            if (originalDeposit.description !== editingDeposit.description) {
+                changes.push(`Description: "${originalDeposit.description}" → "${editingDeposit.description}"`);
+            }
+            if (originalDeposit.referenceNumber !== editingDeposit.referenceNumber) {
+                changes.push(`Reference: "${originalDeposit.referenceNumber || 'None'}" → "${editingDeposit.referenceNumber || 'None'}"`);
+            }
+            if (newReceiptFileUrls.length > 0) {
+                changes.push(`Added ${newReceiptFileUrls.length} new receipt file(s)`);
+            }
+            if (originalDeposit.isIeeeDeposit !== editingDeposit.isIeeeDeposit) {
+                changes.push(`IEEE Deposit: ${originalDeposit.isIeeeDeposit ? 'Yes' : 'No'} → ${editingDeposit.isIeeeDeposit ? 'Yes' : 'No'}`);
+            }
+            if (originalDeposit.ieeeDepositSource !== editingDeposit.ieeeDepositSource) {
+                changes.push(`IEEE Source: ${originalDeposit.ieeeDepositSource || 'None'} → ${editingDeposit.ieeeDepositSource || 'None'}`);
+            }
+
             const newAuditLog = {
                 action: 'edited',
                 createdBy: user.uid,
                 createdByName: userName,
                 timestamp: Timestamp.now(),
-                note: 'Deposit details updated'
+                note: changes.length > 0 ? `Changes: ${changes.join('; ')}` : 'No significant changes made',
+                previousData: {
+                    title: originalDeposit.title,
+                    amount: originalDeposit.amount,
+                    depositDate: originalDeposit.depositDate,
+                    depositMethod: originalDeposit.depositMethod,
+                    purpose: originalDeposit.purpose,
+                    description: originalDeposit.description,
+                    referenceNumber: originalDeposit.referenceNumber,
+                    receiptFilesCount: originalDeposit.receiptFiles?.length || 0,
+                    isIeeeDeposit: originalDeposit.isIeeeDeposit,
+                    ieeeDepositSource: originalDeposit.ieeeDepositSource
+                },
+                newData: {
+                    title: editingDeposit.title,
+                    amount: editingDeposit.amount,
+                    depositDate: editingDeposit.depositDate,
+                    depositMethod: editingDeposit.depositMethod,
+                    purpose: editingDeposit.purpose,
+                    description: editingDeposit.description,
+                    referenceNumber: editingDeposit.referenceNumber,
+                    receiptFilesCount: allReceiptFiles.length,
+                    isIeeeDeposit: editingDeposit.isIeeeDeposit,
+                    ieeeDepositSource: editingDeposit.ieeeDepositSource
+                }
             };
 
             updateData.auditLogs = [...(editingDeposit.auditLogs || []), newAuditLog];
@@ -433,18 +491,36 @@ const FundDepositsContent: React.FC = () => {
     };
 
     const canModifyDeposit = (deposit: FundDeposit): boolean => {
-        return userRole === 'Executive Officer' ||
-            userRole === 'General Officer' ||
-            (deposit.depositedBy === user?.uid && deposit.status === 'pending');
+        // Officers can always modify (edit/delete)
+        if (userRole === 'Executive Officer' || userRole === 'General Officer') {
+            return true;
+        }
+        // Users can only edit their own pending deposits, but cannot delete
+        return deposit.depositedBy === user?.uid && deposit.status === 'pending';
+    };
+
+    const canEditDeposit = (deposit: FundDeposit): boolean => {
+        return canModifyDeposit(deposit);
+    };
+
+    const canDeleteDeposit = (deposit: FundDeposit): boolean => {
+        // Only officers can delete deposits, users cannot delete their own
+        return userRole === 'Executive Officer' || userRole === 'General Officer';
+    };
+
+    const canChangeStatus = (deposit: FundDeposit): boolean => {
+        // Only officers can change status, and they cannot approve their own deposits
+        return (userRole === 'Executive Officer' || userRole === 'General Officer') &&
+            deposit.depositedBy !== user?.uid;
     };
 
     const stats = {
         total: deposits.length,
         pending: deposits.filter(d => d.status === 'pending').length,
         verified: deposits.filter(d => d.status === 'verified').length,
-        processed: deposits.filter(d => d.status === 'processed').length,
+        rejected: deposits.filter(d => d.status === 'rejected').length,
         totalAmount: deposits
-            .filter(d => d.status === 'processed')
+            .filter(d => d.status === 'verified')
             .reduce((sum, d) => sum + d.amount, 0)
     };
 
@@ -490,10 +566,10 @@ const FundDepositsContent: React.FC = () => {
 
                     <div className="bg-white rounded-lg shadow p-6">
                         <div className="flex items-center">
-                            <CheckCircle className="h-8 w-8 text-green-600" />
+                            <XCircle className="h-8 w-8 text-red-600" />
                             <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-600">Processed</p>
-                                <p className="text-2xl font-bold text-gray-900">{stats.processed}</p>
+                                <p className="text-sm font-medium text-gray-600">Rejected</p>
+                                <p className="text-2xl font-bold text-gray-900">{stats.rejected}</p>
                             </div>
                         </div>
                     </div>
@@ -502,7 +578,7 @@ const FundDepositsContent: React.FC = () => {
                         <div className="flex items-center">
                             <Banknote className="h-8 w-8 text-green-600" />
                             <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-600">Total Processed</p>
+                                <p className="text-sm font-medium text-gray-600">Total Verified</p>
                                 <p className="text-2xl font-bold text-gray-900">${stats.totalAmount.toFixed(2)}</p>
                             </div>
                         </div>
@@ -535,7 +611,7 @@ const FundDepositsContent: React.FC = () => {
                                     <option value="all">All Status</option>
                                     <option value="pending">Pending</option>
                                     <option value="verified">Verified</option>
-                                    <option value="processed">Processed</option>
+
                                     <option value="rejected">Rejected</option>
                                 </select>
 
@@ -623,7 +699,7 @@ const FundDepositsContent: React.FC = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {new Date(deposit.depositDate).toLocaleDateString()}
                                             </td>
-                                                                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex gap-2">
                                                     <button
                                                         onClick={() => {
@@ -635,27 +711,28 @@ const FundDepositsContent: React.FC = () => {
                                                     >
                                                         <Eye className="w-4 h-4" />
                                                     </button>
-                                                    
-                                                    {canModifyDeposit(deposit) && (
-                                                        <>
-                                                            <button
-                                                                onClick={() => handleEditDeposit(deposit)}
-                                                                className="text-gray-600 hover:text-gray-900"
-                                                                title="Edit"
-                                                            >
-                                                                <Edit className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteDeposit(deposit.id)}
-                                                                className="text-red-600 hover:text-red-900"
-                                                                title="Delete"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </>
+
+                                                    {canEditDeposit(deposit) && (
+                                                        <button
+                                                            onClick={() => handleEditDeposit(deposit)}
+                                                            className="text-gray-600 hover:text-gray-900"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit className="w-4 h-4" />
+                                                        </button>
                                                     )}
-                                                    
-                                                    {canModifyDeposit(deposit) && deposit.status === 'pending' && (userRole === 'Executive Officer' || userRole === 'General Officer') && (
+
+                                                    {canDeleteDeposit(deposit) && (
+                                                        <button
+                                                            onClick={() => handleDeleteDeposit(deposit.id)}
+                                                            className="text-red-600 hover:text-red-900"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+
+                                                    {canChangeStatus(deposit) && deposit.status === 'pending' && (
                                                         <>
                                                             <button
                                                                 onClick={() => handleStatusUpdate(deposit.id, 'verified')}
@@ -674,15 +751,7 @@ const FundDepositsContent: React.FC = () => {
                                                         </>
                                                     )}
 
-                                                    {canModifyDeposit(deposit) && deposit.status === 'verified' && (userRole === 'Executive Officer' || userRole === 'General Officer') && (
-                                                        <button
-                                                            onClick={() => handleStatusUpdate(deposit.id, 'processed')}
-                                                            className="text-green-600 hover:text-green-900"
-                                                            title="Mark as Processed"
-                                                        >
-                                                            <CheckCircle className="w-4 h-4" />
-                                                        </button>
-                                                    )}
+
                                                 </div>
                                             </td>
                                         </tr>
@@ -795,7 +864,7 @@ const FundDepositsContent: React.FC = () => {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     value={newDeposit.referenceNumber}
                                     onChange={(e) => setNewDeposit({ ...newDeposit, referenceNumber: e.target.value })}
-                                    placeholder="Check number, transaction ID, etc."
+                                    placeholder="Check number, transaction ID, confirmation number for money sent to IEEE, etc."
                                 />
                             </div>
 
@@ -996,7 +1065,7 @@ const FundDepositsContent: React.FC = () => {
                                             <div key={index} className="text-sm border-l-2 border-gray-200 pl-3">
                                                 <div className="font-medium text-gray-900 capitalize">{log.action}</div>
                                                 <div className="text-gray-500">
-                                                    {log.timestamp?.toDate().toLocaleString()} 
+                                                    {log.timestamp?.toDate().toLocaleString()}
                                                     {log.createdByName && ` - by ${log.createdByName}`}
                                                 </div>
                                                 {log.note && <div className="text-gray-700 mt-1">{log.note}</div>}
@@ -1030,7 +1099,7 @@ const FundDepositsContent: React.FC = () => {
                                 </button>
                             </div>
                         </div>
-                        
+
                         <div className="p-6 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1124,7 +1193,7 @@ const FundDepositsContent: React.FC = () => {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     value={editingDeposit.referenceNumber || ''}
                                     onChange={(e) => setEditingDeposit({ ...editingDeposit, referenceNumber: e.target.value })}
-                                    placeholder="Check number, transaction ID, etc."
+                                    placeholder="Check number, transaction ID, confirmation number for money sent to IEEE, etc."
                                 />
                             </div>
 
