@@ -41,6 +41,7 @@ export const NAVIGATION_PATHS = {
   LEADERBOARD: '/dashboard/leaderboard',
   MANAGE_EVENTS: '/dashboard/manage-events',
   MANAGE_REIMBURSEMENTS: '/dashboard/manage-reimbursements',
+  FUND_DEPOSITS: '/dashboard/fund-deposits',
   MANAGE_USERS: '/dashboard/manage-users',
   FIREBASE_TEST: '/dashboard/firebase-test',
   SETTINGS: '/dashboard/settings',

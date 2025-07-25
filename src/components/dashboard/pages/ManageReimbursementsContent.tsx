@@ -331,19 +331,7 @@ export default function ManageReimbursementsContent() {
             {/* Manage Reimbursements Content */}
             <main className="p-6">
                 <div className="grid grid-cols-1 gap-6">
-                    {/* Page Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900 mb-2">Manage Reimbursements</h1>
-                            <p className="text-gray-600">Review and process member reimbursement requests</p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                <FileText className="w-4 h-4" />
-                                <span>Export Report</span>
-                            </button>
-                        </div>
-                    </div>
+
 
                     {/* Reimbursement Management Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">

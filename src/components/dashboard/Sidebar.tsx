@@ -8,7 +8,8 @@ import {
     Users,
     DollarSign,
     Database,
-    Trophy
+    Trophy,
+    Banknote
 } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
@@ -38,6 +39,7 @@ const navigationCategories: NavigationCategory[] = [
         items: [
             { icon: Calendar, label: 'Manage Events', href: NAVIGATION_PATHS.MANAGE_EVENTS },
             { icon: DollarSign, label: 'Manage Reimbursements', href: NAVIGATION_PATHS.MANAGE_REIMBURSEMENTS },
+            { icon: Banknote, label: 'Fund Deposits', href: NAVIGATION_PATHS.FUND_DEPOSITS },
             { icon: Users, label: 'Manage Users', href: NAVIGATION_PATHS.MANAGE_USERS },
         ]
     },

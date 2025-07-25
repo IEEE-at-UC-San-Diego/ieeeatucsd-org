@@ -7,171 +7,173 @@ import { Image } from "astro:assets";
 ---
 
 <div
-  class="flex flex-col md:flex-row md:gap-[1.5vw] md:h-[30vw] w-full max-w-[90vw] md:max-w-none mt-[10%] md:mt-0 mx-auto md:ml-0"
+    class="flex flex-col md:flex-row md:gap-[1.5vw] md:h-[30vw] w-full max-w-[90vw] md:max-w-none mt-[10%] md:mt-0 mx-auto md:ml-0"
 >
-  {
-    Object.entries(annualProjects).map(([title, project], index) => (
-      <a
-        href={project.url || "#"}
-        class={`project-card group relative flex-1 rounded-[1.5vw] overflow-hidden transition-all duration-500 ease-in-out md:hover:flex-[2] cursor-pointer mb-[5vw] md:mb-0 ${index === 0 ? "expanded" : ""}`}
-        data-project={index + 1}
-        target={title === "Supercomputing" ? "_blank" : "_self"}
-      >
-        <div class="skeleton absolute inset-0 rounded-[1.5vw] z-0" />
-        <Image
-          src={project.image}
-          alt={`${title} Project`}
-          width={668}
-          height={990}
-          class="opacity-70 w-full h-[50vw] md:h-full object-cover rounded-[1.5vw] aspect-[2/3] transition-transform duration-500 ease-in-out md:group-hover:scale-110"
-        />
-        <div class="absolute flex items-end bottom-0 left-0 px-[5%] pb-[5%] md:pt-[17%] bg-gradient-to-b from-transparent to-black via-black rounded-b-[1.5vw] text-white z-10 w-full transition-transform duration-300 md:[.expanded_&]:pb-[5%]">
-          <div class="w-full">
-            <p class="py-[1.5%] px-[8%] w-fit border-[0.1vw] border-white rounded-full text-nowrap md:text-[1.2vw] text-[3vw] font-light mb-[5%]">
-              {title}
-            </p>
-            <p class="text-[3vw] md:text-[1.3vw] block md:hidden md:[.expanded_&]:block transition-all duration-300 overflow-hidden mb-[3vw]">
-              {project.description}
-            </p>
-            <div class="w-full flex justify-end md:invisible visible md:[.expanded_&]:visible h-auto md:h-0 md:[.expanded_&]:h-auto">
-              <div class="flex items-center md:text-[1.3vw] text-[3vw] md:[.expanded_&]:mt-[5%]">
-                more details
-                <IoIosArrowDroprightCircle className="ml-[0.5vw] text-[3vw] md:text-[1.4vw]" />
-              </div>
-            </div>
-          </div>
-          <GoArrowDownRight className="text-[3.2vw] [.expanded_&]:text-[0px] pt-[2%] hidden md:block" />
-        </div>
+    {
+        Object.entries(annualProjects).map(([title, project], index) => (
+            <a
+                href={project.url || "#"}
+                class={`project-card group relative flex-1 rounded-[1.5vw] overflow-hidden transition-all duration-500 ease-in-out md:hover:flex-[2] cursor-pointer mb-[5vw] md:mb-0 ${index === 0 ? "expanded" : ""}`}
+                data-project={index + 1}
+                target={title === "Supercomputing" ? "_blank" : "_self"}
+            >
+                <div class="skeleton absolute inset-0 rounded-[1.5vw] z-0" />
+                <Image
+                    src={project.image}
+                    alt={`${title} Project`}
+                    width={668}
+                    height={990}
+                    class="opacity-70 w-full h-[50vw] md:h-full object-cover rounded-[1.5vw] aspect-[2/3] transition-transform duration-500 ease-in-out md:group-hover:scale-110"
+                />
+                <div class="absolute flex items-end bottom-0 left-0 px-[5%] pb-[5%] md:pt-[17%] bg-gradient-to-b from-transparent to-black via-black rounded-b-[1.5vw] text-white z-10 w-full transition-transform duration-300 md:[.expanded_&]:pb-[5%]">
+                    <div class="w-full">
+                        <p class="py-[1.5%] px-[8%] w-fit border-[0.1vw] border-white rounded-full text-nowrap md:text-[1.2vw] text-[3vw] font-light mb-[5%]">
+                            {title}
+                        </p>
+                        <p class="text-[3vw] md:text-[1.3vw] block md:hidden md:[.expanded_&]:block transition-all duration-300 overflow-hidden mb-[3vw]">
+                            {project.description}
+                        </p>
+                        <div class="w-full flex justify-end md:invisible visible md:[.expanded_&]:visible h-auto md:h-0 md:[.expanded_&]:h-auto">
+                            <div class="flex items-center md:text-[1.3vw] text-[3vw] md:[.expanded_&]:mt-[5%]">
+                                more details
+                                <IoIosArrowDroprightCircle className="ml-[0.5vw] text-[3vw] md:text-[1.4vw]" />
+                            </div>
+                        </div>
+                    </div>
+                    <GoArrowDownRight className="text-[3.2vw] [.expanded_&]:text-[0px] pt-[2%] hidden md:block" />
+                </div>
 
-        <div class="bg-white w-fit rounded-full aspect-square p-[0.5vw] text-ieee-black md:text-[2vw] text-[3vw] absolute top-[3%] right-[5%]">
-          <FaGear
-            data-inview
-            className="in-view:rotate-[500deg] duration-700 group-hover:rotate-[750deg]"
-          />
-        </div>
-      </a>
-    ))
-  }
+                <div class="bg-white w-fit rounded-full aspect-square p-[0.5vw] text-ieee-black md:text-[2vw] text-[3vw] absolute top-[3%] right-[5%]">
+                    <FaGear
+                        data-inview
+                        className="in-view:rotate-[500deg] duration-700 group-hover:rotate-[750deg]"
+                    />
+                </div>
+            </a>
+        ))
+    }
 </div>
 
 <style>
-  .project-card {
-    background-size: cover;
-    background-position: center;
-  }
-
-  .project-card img {
-    transition: transform 0.3s ease-in-out;
-  }
-
-  @media (min-width: 768px) {
-    .project-card.expanded {
-      flex: 2;
-    }
-
-    .project-card.expanded img {
-      transform: scale(1.1);
-    }
-
-    .project-card.expanded p {
-      opacity: 1;
-    }
-  }
-
-  @media (max-width: 767px) {
     .project-card {
-      height: auto;
-      margin-bottom: 5vw;
+        background-size: cover;
+        background-position: center;
     }
-  }
+
+    .project-card img {
+        transition: transform 0.3s ease-in-out;
+    }
+
+    @media (min-width: 768px) {
+        .project-card.expanded {
+            flex: 2;
+        }
+
+        .project-card.expanded img {
+            transform: scale(1.1);
+        }
+
+        .project-card.expanded p {
+            opacity: 1;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .project-card {
+            height: auto;
+            margin-bottom: 5vw;
+        }
+    }
 </style>
 
 <script>
-  function initializeProjectCards() {
-    const projectCards = document.querySelectorAll(".project-card");
-    const STORAGE_KEY = "lastExpandedCardIndex";
-    const isMobile = window.innerWidth < 768;
+    function initializeProjectCards() {
+        const projectCards = document.querySelectorAll(".project-card");
+        const STORAGE_KEY = "lastExpandedCardIndex";
+        const isMobile = window.innerWidth < 768;
 
-    // Function to remove expanded class from all cards
-    function removeExpandedFromAll() {
-      projectCards.forEach((card) => {
-        card.classList.remove("expanded");
-      });
-    }
+        // Function to remove expanded class from all cards
+        function removeExpandedFromAll() {
+            projectCards.forEach((card) => {
+                card.classList.remove("expanded");
+            });
+        }
 
-    // Function to expand a card by index
-    function expandCard(index: number) {
-      if (window.innerWidth >= 768) {
-        removeExpandedFromAll();
-        projectCards[index]?.classList.add("expanded");
-        localStorage.setItem(STORAGE_KEY, index.toString());
-      }
-    }
+        // Function to expand a card by index
+        function expandCard(index: number) {
+            if (window.innerWidth >= 768) {
+                removeExpandedFromAll();
+                projectCards[index]?.classList.add("expanded");
+                localStorage.setItem(STORAGE_KEY, index.toString());
+            }
+        }
 
-    // Get the last expanded card index from localStorage
-    // Prevents bug where the expanded card breaks upon page reload
-    const lastExpandedIndex = parseInt(
-      localStorage.getItem(STORAGE_KEY) || "0",
-    );
+        // Get the last expanded card index from localStorage
+        // Prevents bug where the expanded card breaks upon page reload
+        const lastExpandedIndex = parseInt(
+            localStorage.getItem(STORAGE_KEY) || "0"
+        );
 
-    // Only apply expanded state on desktop
-    if (!isMobile) {
-      expandCard(lastExpandedIndex);
-    }
-
-    // Add hover listeners to each card
-    projectCards.forEach((card, index) => {
-      card.addEventListener("mouseenter", () => {
+        // Only apply expanded state on desktop
         if (!isMobile) {
-          expandCard(index);
+            expandCard(lastExpandedIndex);
         }
-      });
-    });
 
-    // Handle window resize
-    window.addEventListener("resize", () => {
-      const currentIndex = parseInt(localStorage.getItem(STORAGE_KEY) || "0");
-      const isMobileNow = window.innerWidth < 768;
-
-      if (!isMobileNow) {
-        expandCard(currentIndex);
-      } else {
-        // On mobile, remove expanded class from all cards
-        removeExpandedFromAll();
-      }
-    });
-  }
-
-  initializeProjectCards();
-
-  document.addEventListener("astro:page-load", initializeProjectCards);
-
-  // Image loading handler
-  function handleImageLoading() {
-    const projectImages = document.querySelectorAll(".project-card img");
-
-    projectImages.forEach((image) => {
-      // Ensure the image is fully loaded, even if it's already in cache
-      if ((image as HTMLImageElement).complete) {
-        (image as HTMLImageElement).style.opacity = "1";
-        const skeleton = image.previousElementSibling;
-        if (skeleton && skeleton.classList.contains("skeleton")) {
-          (skeleton as HTMLElement).style.display = "none";
-        }
-      } else {
-        image.addEventListener("load", () => {
-          (image as HTMLImageElement).style.opacity = "1";
-          const skeleton = image.previousElementSibling;
-          if (skeleton && skeleton.classList.contains("skeleton")) {
-            (skeleton as HTMLElement).style.display = "none";
-          }
+        // Add hover listeners to each card
+        projectCards.forEach((card, index) => {
+            card.addEventListener("mouseenter", () => {
+                if (!isMobile) {
+                    expandCard(index);
+                }
+            });
         });
-      }
-    });
-  }
 
-  // Ensure images are loaded after a short delay
-  setTimeout(handleImageLoading, 100);
-  handleImageLoading();
-  document.addEventListener("astro:page-load", handleImageLoading);
+        // Handle window resize
+        window.addEventListener("resize", () => {
+            const currentIndex = parseInt(
+                localStorage.getItem(STORAGE_KEY) || "0"
+            );
+            const isMobileNow = window.innerWidth < 768;
+
+            if (!isMobileNow) {
+                expandCard(currentIndex);
+            } else {
+                // On mobile, remove expanded class from all cards
+                removeExpandedFromAll();
+            }
+        });
+    }
+
+    initializeProjectCards();
+
+    document.addEventListener("astro:page-load", initializeProjectCards);
+
+    // Image loading handler
+    function handleImageLoading() {
+        const projectImages = document.querySelectorAll(".project-card img");
+
+        projectImages.forEach((image) => {
+            // Ensure the image is fully loaded, even if it's already in cache
+            if ((image as HTMLImageElement).complete) {
+                (image as HTMLImageElement).style.opacity = "1";
+                const skeleton = image.previousElementSibling;
+                if (skeleton && skeleton.classList.contains("skeleton")) {
+                    (skeleton as HTMLElement).style.display = "none";
+                }
+            } else {
+                image.addEventListener("load", () => {
+                    (image as HTMLImageElement).style.opacity = "1";
+                    const skeleton = image.previousElementSibling;
+                    if (skeleton && skeleton.classList.contains("skeleton")) {
+                        (skeleton as HTMLElement).style.display = "none";
+                    }
+                });
+            }
+        });
+    }
+
+    // Ensure images are loaded after a short delay
+    setTimeout(handleImageLoading, 100);
+    handleImageLoading();
+    document.addEventListener("astro:page-load", handleImageLoading);
 </script>
