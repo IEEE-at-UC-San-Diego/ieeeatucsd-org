@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, Clock, CheckCircle, XCircle, Eye, FileText, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, Clock, CheckCircle, XCircle, Eye, FileText, EyeOff, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { getFirestore, collection, getDocs, query, orderBy, where, doc, deleteDoc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { app, auth } from '../../../firebase/client';
+import { useAuthState } from 'react-firebase-hooks/auth';
 import { EventManagementStats } from './manage-events/EventManagementStats';
 import type { EventStats } from './manage-events/types';
 import EventRequestModal from './manage-events/EventRequestModal';
@@ -48,6 +49,7 @@ interface EventRequest {
 }
 
 export default function ManageEventsContent() {
+    const [user, authLoading, authError] = useAuthState(auth);
     const [showEventRequestModal, setShowEventRequestModal] = useState(false);
     const [showEventViewModal, setShowEventViewModal] = useState(false);
     const [showFileManagementModal, setShowFileManagementModal] = useState(false);
@@ -63,6 +65,10 @@ export default function ManageEventsContent() {
     const [managingFilesRequest, setManagingFilesRequest] = useState<EventRequest | null>(null);
     const [currentUserRole, setCurrentUserRole] = useState<UserRole>('Member');
 
+    // Sorting state
+    const [sortField, setSortField] = useState<string>('startDateTime');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
     // Filter state
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<string>('date-desc');
@@ -75,20 +81,19 @@ export default function ManageEventsContent() {
     const db = getFirestore(app);
 
     useEffect(() => {
+        if (!user) return;
+
         fetchUsers();
 
         // Fetch current user's role
         const fetchUserRole = async () => {
             try {
-                const user = auth.currentUser;
-                if (user) {
-                    const userDoc = await getDoc(doc(db, 'users', user.uid));
-                    if (userDoc.exists()) {
-                        const userData = userDoc.data();
-                        setCurrentUserRole(userData.role || 'Member');
-                    } else {
-                        setCurrentUserRole('Member');
-                    }
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    setCurrentUserRole(userData.role || 'Member');
+                } else {
+                    setCurrentUserRole('Member');
                 }
             } catch (error) {
                 console.error('Error fetching user role:', error);
@@ -118,7 +123,7 @@ export default function ManageEventsContent() {
 
         // Cleanup listener on unmount
         return () => unsubscribe();
-    }, [db]);
+    }, [db, user]);
 
     const fetchEventRequests = async () => {
         try {
@@ -367,10 +372,78 @@ export default function ManageEventsContent() {
         return users[userId]?.name || userId;
     };
 
+    // Sortable header component
+    const SortableHeader = ({ field, children, className = "" }: { field: string; children: React.ReactNode; className?: string }) => (
+        <th
+            className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${className}`}
+            onClick={() => handleColumnSort(field)}
+        >
+            <div className="flex items-center gap-1">
+                {children}
+                {sortField === field ? (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                ) : (
+                    <ChevronsUpDown className="w-4 h-4 opacity-50" />
+                )}
+            </div>
+        </th>
+    );
+
+    // Sorting function
+    const handleColumnSort = (field: string) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+    };
+
+    // Sort events based on current sort field and direction
+    const sortedEvents = React.useMemo(() => {
+        return [...eventRequests].sort((a, b) => {
+            let aValue: any = '';
+            let bValue: any = '';
+
+            switch (sortField) {
+                case 'name':
+                    aValue = a.name || '';
+                    bValue = b.name || '';
+                    break;
+                case 'location':
+                    aValue = a.location || '';
+                    bValue = b.location || '';
+                    break;
+                case 'status':
+                    aValue = a.status || '';
+                    bValue = b.status || '';
+                    break;
+                case 'startDateTime':
+                    aValue = a.startDateTime ? (a.startDateTime.toMillis ? a.startDateTime.toMillis() : a.startDateTime.toDate ? a.startDateTime.toDate().getTime() : 0) : 0;
+                    bValue = b.startDateTime ? (b.startDateTime.toMillis ? b.startDateTime.toMillis() : b.startDateTime.toDate ? b.startDateTime.toDate().getTime() : 0) : 0;
+                    break;
+                case 'createdAt':
+                    aValue = a.createdAt ? (a.createdAt.toMillis ? a.createdAt.toMillis() : a.createdAt.toDate ? a.createdAt.toDate().getTime() : 0) : 0;
+                    bValue = b.createdAt ? (b.createdAt.toMillis ? b.createdAt.toMillis() : b.createdAt.toDate ? b.createdAt.toDate().getTime() : 0) : 0;
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                aValue = aValue.toLowerCase();
+                bValue = bValue.toLowerCase();
+            }
+
+            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [eventRequests, sortField, sortDirection]);
+
     // Permission helper functions
     const canEditEvent = (request: EventRequest) => {
-        const currentUser = auth.currentUser;
-        if (!currentUser) return false;
+        if (!user) return false;
 
         // Administrators can edit any event
         if (currentUserRole === 'Administrator') return true;
@@ -380,7 +453,7 @@ export default function ManageEventsContent() {
 
         // General Officers can only edit their own events if not approved yet
         if (currentUserRole === 'General Officer') {
-            return request.requestedUser === currentUser.uid &&
+            return request.requestedUser === user.uid &&
                 ['submitted', 'pending'].includes(request.status);
         }
 
@@ -388,8 +461,7 @@ export default function ManageEventsContent() {
     };
 
     const canDeleteEvent = (request: EventRequest) => {
-        const currentUser = auth.currentUser;
-        if (!currentUser) return false;
+        if (!user) return false;
 
         // Administrators can delete any event
         if (currentUserRole === 'Administrator') return true;
@@ -399,7 +471,7 @@ export default function ManageEventsContent() {
 
         // General Officers can only delete their own events if not approved yet
         if (currentUserRole === 'General Officer') {
-            return request.requestedUser === currentUser.uid &&
+            return request.requestedUser === user.uid &&
                 ['submitted', 'pending'].includes(request.status);
         }
 
@@ -685,10 +757,12 @@ export default function ManageEventsContent() {
                                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                                                 onClick={() => handleSort('name')}
                                             >
-                                                <div className="flex items-center space-x-1">
+                                                <div className="flex items-center gap-1">
                                                     <span>Event</span>
-                                                    {(sortBy === 'name-asc' || sortBy === 'name-desc') && (
+                                                    {(sortBy === 'name-asc' || sortBy === 'name-desc') ? (
                                                         sortBy === 'name-asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                                                    ) : (
+                                                        <ChevronsUpDown className="w-4 h-4 opacity-50" />
                                                     )}
                                                 </div>
                                             </th>
@@ -696,10 +770,12 @@ export default function ManageEventsContent() {
                                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                                                 onClick={() => handleSort('date')}
                                             >
-                                                <div className="flex items-center space-x-1">
+                                                <div className="flex items-center gap-1">
                                                     <span>Date & Location</span>
-                                                    {(sortBy === 'date-asc' || sortBy === 'date-desc') && (
+                                                    {(sortBy === 'date-asc' || sortBy === 'date-desc') ? (
                                                         sortBy === 'date-asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                                                    ) : (
+                                                        <ChevronsUpDown className="w-4 h-4 opacity-50" />
                                                     )}
                                                 </div>
                                             </th>
@@ -707,10 +783,12 @@ export default function ManageEventsContent() {
                                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                                                 onClick={() => handleSort('status')}
                                             >
-                                                <div className="flex items-center space-x-1">
+                                                <div className="flex items-center gap-1">
                                                     <span>Status</span>
-                                                    {(sortBy === 'status-asc' || sortBy === 'status-desc') && (
+                                                    {(sortBy === 'status-asc' || sortBy === 'status-desc') ? (
                                                         sortBy === 'status-asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                                                    ) : (
+                                                        <ChevronsUpDown className="w-4 h-4 opacity-50" />
                                                     )}
                                                 </div>
                                             </th>

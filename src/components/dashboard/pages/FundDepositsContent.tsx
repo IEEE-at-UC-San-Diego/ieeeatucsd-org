@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Bell, User, Filter, Edit, CheckCircle, XCircle, Clock, DollarSign, Receipt, AlertCircle, FileText, MessageCircle, Eye, CreditCard, Check, X, Plus, Upload, Banknote, Trash2, Save } from 'lucide-react';
+import { Search, Calendar, Bell, User, Filter, Edit, CheckCircle, XCircle, Clock, DollarSign, Receipt, AlertCircle, FileText, MessageCircle, Eye, CreditCard, Check, X, Plus, Upload, Banknote, Trash2, Save, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, Timestamp, addDoc, getDoc, deleteDoc, where } from 'firebase/firestore';
 import { db, storage } from '../../../firebase/client';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -103,6 +103,10 @@ const FundDepositsContent: React.FC = () => {
     const [bankTransferFiles, setBankTransferFiles] = useState<File[]>([]);
     const [editBankTransferFiles, setEditBankTransferFiles] = useState<File[]>([]);
 
+    // Sorting state
+    const [sortField, setSortField] = useState<string>('submittedAt');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
     const addReceiptFile = (file: File) => {
         setReceiptFiles(prev => [...prev, file]);
     };
@@ -110,6 +114,79 @@ const FundDepositsContent: React.FC = () => {
     const addEditReceiptFile = (file: File) => {
         setEditReceiptFiles(prev => [...prev, file]);
     };
+
+    // Sortable header component
+    const SortableHeader = ({ field, children, className = "" }: { field: string; children: React.ReactNode; className?: string }) => (
+        <th
+            className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${className}`}
+            onClick={() => handleSort(field)}
+        >
+            <div className="flex items-center gap-1">
+                {children}
+                {sortField === field ? (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                ) : (
+                    <ChevronsUpDown className="w-4 h-4 opacity-50" />
+                )}
+            </div>
+        </th>
+    );
+
+    // Sorting function
+    const handleSort = (field: string) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+    };
+
+    // Sort deposits based on current sort field and direction
+    const sortedDeposits = React.useMemo(() => {
+        return [...filteredDeposits].sort((a, b) => {
+            let aValue: any = '';
+            let bValue: any = '';
+
+            switch (sortField) {
+                case 'title':
+                    aValue = a.title || '';
+                    bValue = b.title || '';
+                    break;
+                case 'amount':
+                    aValue = a.amount || 0;
+                    bValue = b.amount || 0;
+                    break;
+                case 'depositMethod':
+                    aValue = a.depositMethod || '';
+                    bValue = b.depositMethod || '';
+                    break;
+                case 'status':
+                    aValue = a.status || '';
+                    bValue = b.status || '';
+                    break;
+                case 'depositDate':
+                    aValue = new Date(a.depositDate).getTime();
+                    bValue = new Date(b.depositDate).getTime();
+                    break;
+                case 'submittedAt':
+                    aValue = a.submittedAt ? (a.submittedAt.toMillis ? a.submittedAt.toMillis() : a.submittedAt.toDate ? a.submittedAt.toDate().getTime() : 0) : 0;
+                    bValue = b.submittedAt ? (b.submittedAt.toMillis ? b.submittedAt.toMillis() : b.submittedAt.toDate ? b.submittedAt.toDate().getTime() : 0) : 0;
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                aValue = aValue.toLowerCase();
+                bValue = bValue.toLowerCase();
+            }
+
+            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [filteredDeposits, sortField, sortDirection]);
 
     useEffect(() => {
         if (!user) return;
@@ -662,21 +739,21 @@ const FundDepositsContent: React.FC = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <SortableHeader field="title">
                                         Deposit Info
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    </SortableHeader>
+                                    <SortableHeader field="amount">
                                         Amount
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    </SortableHeader>
+                                    <SortableHeader field="depositMethod">
                                         Method
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    </SortableHeader>
+                                    <SortableHeader field="status">
                                         Status
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    </SortableHeader>
+                                    <SortableHeader field="depositDate">
                                         Date
-                                    </th>
+                                    </SortableHeader>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Actions
                                     </th>
@@ -698,7 +775,7 @@ const FundDepositsContent: React.FC = () => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredDeposits.map((deposit) => (
+                                    sortedDeposits.map((deposit) => (
                                         <tr key={deposit.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div>

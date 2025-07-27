@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Bell, User, Filter, Edit, CheckCircle, XCircle, Clock, DollarSign, Receipt, AlertCircle, FileText, MessageCircle, Eye, CreditCard, Check, X } from 'lucide-react';
+import { Search, Calendar, Bell, User, Filter, Edit, CheckCircle, XCircle, Clock, DollarSign, Receipt, AlertCircle, FileText, MessageCircle, Eye, CreditCard, Check, X, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, Timestamp, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebase/client';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -429,8 +429,10 @@ export default function ManageReimbursementsContent() {
                                                     className="flex items-center hover:text-gray-700 transition-colors"
                                                 >
                                                     Request
-                                                    {sortField === 'title' && (
-                                                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                                                    {sortField === 'title' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                                                    ) : (
+                                                        <ChevronsUpDown className="w-4 h-4 ml-1 opacity-50" />
                                                     )}
                                                 </button>
                                             </th>
@@ -440,8 +442,10 @@ export default function ManageReimbursementsContent() {
                                                     className="flex items-center hover:text-gray-700 transition-colors"
                                                 >
                                                     Submitted By
-                                                    {sortField === 'submittedBy' && (
-                                                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                                                    {sortField === 'submittedBy' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                                                    ) : (
+                                                        <ChevronsUpDown className="w-4 h-4 ml-1 opacity-50" />
                                                     )}
                                                 </button>
                                             </th>
@@ -451,8 +455,10 @@ export default function ManageReimbursementsContent() {
                                                     className="flex items-center hover:text-gray-700 transition-colors"
                                                 >
                                                     Amount
-                                                    {sortField === 'totalAmount' && (
-                                                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                                                    {sortField === 'totalAmount' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                                                    ) : (
+                                                        <ChevronsUpDown className="w-4 h-4 ml-1 opacity-50" />
                                                     )}
                                                 </button>
                                             </th>
@@ -462,8 +468,10 @@ export default function ManageReimbursementsContent() {
                                                     className="flex items-center hover:text-gray-700 transition-colors"
                                                 >
                                                     Date
-                                                    {sortField === 'submittedAt' && (
-                                                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                                                    {sortField === 'submittedAt' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                                                    ) : (
+                                                        <ChevronsUpDown className="w-4 h-4 ml-1 opacity-50" />
                                                     )}
                                                 </button>
                                             </th>
@@ -473,8 +481,10 @@ export default function ManageReimbursementsContent() {
                                                     className="flex items-center hover:text-gray-700 transition-colors"
                                                 >
                                                     Status
-                                                    {sortField === 'status' && (
-                                                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                                                    {sortField === 'status' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                                                    ) : (
+                                                        <ChevronsUpDown className="w-4 h-4 ml-1 opacity-50" />
                                                     )}
                                                 </button>
                                             </th>
@@ -484,8 +494,10 @@ export default function ManageReimbursementsContent() {
                                                     className="flex items-center hover:text-gray-700 transition-colors"
                                                 >
                                                     Department
-                                                    {sortField === 'department' && (
-                                                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                                                    {sortField === 'department' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />
+                                                    ) : (
+                                                        <ChevronsUpDown className="w-4 h-4 ml-1 opacity-50" />
                                                     )}
                                                 </button>
                                             </th>

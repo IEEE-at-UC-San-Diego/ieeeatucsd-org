@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, UserCheck, UserX, Mail, Shield, Users, GraduationCap, Send, X, CheckCircle, Clock, XCircle, AlertCircle, Check } from 'lucide-react';
+import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, UserCheck, UserX, Mail, Shield, Users, GraduationCap, Send, X, CheckCircle, Clock, XCircle, AlertCircle, Check, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { getFirestore, collection, getDocs, doc, updateDoc, addDoc, deleteDoc, query, where, orderBy, limit, getDoc } from 'firebase/firestore';
 import { app, auth } from '../../../firebase/client';
 import type { User as FirestoreUser, UserRole } from '../types/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import { PublicProfileService } from '../services/publicProfile';
 
 interface UserModalData {
     id?: string;
@@ -16,6 +17,7 @@ interface UserModalData {
     memberId?: string;
     major?: string;
     graduationYear?: number;
+    points?: number;
 }
 
 interface InviteModalData {
@@ -55,10 +57,101 @@ export default function ManageUsersContent() {
     const [memberSearchTerm, setMemberSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<(FirestoreUser & { id: string })[]>([]);
     const [selectedMember, setSelectedMember] = useState<(FirestoreUser & { id: string }) | null>(null);
+    const [newRole, setNewRole] = useState<UserRole>('General Officer');
+    const [newPosition, setNewPosition] = useState('');
+
+    // Sorting state
+    const [sortField, setSortField] = useState<string>('name');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
     const db = getFirestore(app);
 
     const roles: UserRole[] = ['Member', 'General Officer', 'Executive Officer', 'Member at Large', 'Past Officer', 'Sponsor', 'Administrator'];
+
+    // Sortable header component
+    const SortableHeader = ({ field, children, className = "" }: { field: string; children: React.ReactNode; className?: string }) => (
+        <th
+            className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${className}`}
+            onClick={() => handleSort(field)}
+        >
+            <div className="flex items-center gap-1">
+                {children}
+                {sortField === field ? (
+                    sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                ) : (
+                    <ChevronsUpDown className="w-4 h-4 opacity-50" />
+                )}
+            </div>
+        </th>
+    );
+
+    // Sorting function
+    const handleSort = (field: string) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+    };
+
+    // Sort users based on current sort field and direction
+    const sortedUsers = React.useMemo(() => {
+        return [...filteredUsers].sort((a, b) => {
+            let aValue: any = '';
+            let bValue: any = '';
+
+            switch (sortField) {
+                case 'name':
+                    aValue = a.name || a.email || '';
+                    bValue = b.name || b.email || '';
+                    break;
+                case 'email':
+                    aValue = a.email || '';
+                    bValue = b.email || '';
+                    break;
+                case 'role':
+                    aValue = a.role || '';
+                    bValue = b.role || '';
+                    break;
+                case 'status':
+                    aValue = a.status || '';
+                    bValue = b.status || '';
+                    break;
+                case 'major':
+                    aValue = a.major || '';
+                    bValue = b.major || '';
+                    break;
+                case 'graduationYear':
+                    aValue = a.graduationYear || 0;
+                    bValue = b.graduationYear || 0;
+                    break;
+                case 'points':
+                    aValue = a.points || 0;
+                    bValue = b.points || 0;
+                    break;
+                case 'joinDate':
+                    aValue = a.joinDate ? (a.joinDate.toMillis ? a.joinDate.toMillis() : a.joinDate.toDate ? a.joinDate.toDate().getTime() : 0) : 0;
+                    bValue = b.joinDate ? (b.joinDate.toMillis ? b.joinDate.toMillis() : b.joinDate.toDate ? b.joinDate.toDate().getTime() : 0) : 0;
+                    break;
+                case 'lastLogin':
+                    aValue = a.lastLogin ? (a.lastLogin.toMillis ? a.lastLogin.toMillis() : a.lastLogin.toDate ? a.lastLogin.toDate().getTime() : 0) : 0;
+                    bValue = b.lastLogin ? (b.lastLogin.toMillis ? b.lastLogin.toMillis() : b.lastLogin.toDate ? b.lastLogin.toDate().getTime() : 0) : 0;
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                aValue = aValue.toLowerCase();
+                bValue = bValue.toLowerCase();
+            }
+
+            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [filteredUsers, sortField, sortDirection]);
 
     useEffect(() => {
         console.log('User auth state:', { user: user?.uid, userLoading, userError });
@@ -243,9 +336,11 @@ export default function ManageUsersContent() {
         if (!selectedMember) return;
 
         try {
-            // Update the member's status or information as needed
+            // Update the member's role, position, and status
             const userRef = doc(db, 'users', selectedMember.id);
             const updateData: any = {
+                role: newRole,
+                position: newPosition,
                 lastUpdated: new Date(),
                 lastUpdatedBy: user?.uid || 'unknown'
             };
@@ -257,15 +352,17 @@ export default function ManageUsersContent() {
 
             await updateDoc(userRef, updateData);
 
-            setSuccess(`Member ${selectedMember.status === 'inactive' ? 'activated' : 'updated'} successfully`);
+            setSuccess(`${selectedMember.name || selectedMember.email} has been promoted to ${newRole}${newPosition ? ` as ${newPosition}` : ''}`);
             setShowAddMemberModal(false);
             setSelectedMember(null);
             setMemberSearchTerm('');
             setSearchResults([]);
+            setNewRole('General Officer');
+            setNewPosition('');
             fetchUsers();
         } catch (error) {
             console.error('Error updating member:', error);
-            setError('Failed to update member');
+            setError('Failed to promote member');
         }
     };
 
@@ -280,7 +377,8 @@ export default function ManageUsersContent() {
             pid: user.pid || '',
             memberId: user.memberId || '',
             major: user.major || '',
-            graduationYear: user.graduationYear || undefined
+            graduationYear: user.graduationYear || undefined,
+            points: user.points || 0
         });
         setShowUserModal(true);
     };
@@ -309,7 +407,7 @@ export default function ManageUsersContent() {
             }
 
             const userRef = doc(db, 'users', editingUser.id);
-            await updateDoc(userRef, {
+            const updateData: any = {
                 name: editingUser.name,
                 role: editingUser.role,
                 position: editingUser.position || '',
@@ -320,7 +418,25 @@ export default function ManageUsersContent() {
                 graduationYear: editingUser.graduationYear || null,
                 lastUpdated: new Date(),
                 lastUpdatedBy: user?.uid || 'unknown'
-            });
+            };
+
+            // Only administrators can modify points
+            if (currentUserRole === 'Administrator' && editingUser.points !== undefined) {
+                updateData.points = editingUser.points;
+            }
+
+            await updateDoc(userRef, updateData);
+
+            // Sync points to public profile if points were updated
+            if (currentUserRole === 'Administrator' && editingUser.points !== undefined) {
+                try {
+                    await PublicProfileService.updateUserStats(editingUser.id, {
+                        points: editingUser.points
+                    });
+                } catch (profileError) {
+                    console.warn('Failed to update public profile, but user update succeeded:', profileError);
+                }
+            }
 
             setSuccess('User updated successfully');
             setShowUserModal(false);
@@ -751,10 +867,10 @@ export default function ManageUsersContent() {
                             <button
                                 onClick={() => setShowAddMemberModal(true)}
                                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                title="Add an existing IEEE UCSD member to the digital system"
+                                title="Promote an existing member to officer with role and position"
                             >
                                 <Plus className="w-4 h-4" />
-                                <span>Add Existing Member</span>
+                                <span>Promote to Officer</span>
                             </button>
                         </div>
                     </div>
@@ -835,31 +951,31 @@ export default function ManageUsersContent() {
                                 <table className="w-full">
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <SortableHeader field="name">
                                                 Member
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            </SortableHeader>
+                                            <SortableHeader field="major">
                                                 Academic Info
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            </SortableHeader>
+                                            <SortableHeader field="role">
                                                 Role
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            </SortableHeader>
+                                            <SortableHeader field="status">
                                                 Status
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            </SortableHeader>
+                                            <SortableHeader field="points">
                                                 Activity
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Dates
-                                            </th>
+                                            </SortableHeader>
+                                            <SortableHeader field="joinDate">
+                                                Joined / Last Login
+                                            </SortableHeader>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Actions
                                             </th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {filteredUsers.map((user) => (
+                                        {sortedUsers.map((user) => (
                                             <tr key={user.id} className="hover:bg-gray-50">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
@@ -908,10 +1024,10 @@ export default function ManageUsersContent() {
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div>
                                                         <div className="text-sm text-gray-900">
-                                                            Joined: {user.joinDate ? user.joinDate.toDate().toLocaleDateString() : 'Unknown'}
+                                                            Joined: {user.joinDate ? user.joinDate.toDate().toLocaleDateString() : 'Not completed'}
                                                         </div>
                                                         <div className="text-sm text-gray-500">
-                                                            Updated: {user.lastUpdated ? user.lastUpdated.toDate().toLocaleDateString() : 'Never'}
+                                                            Last Login: {user.lastLogin ? user.lastLogin.toDate().toLocaleDateString() : 'Never'}
                                                         </div>
                                                     </div>
                                                 </td>
@@ -1119,6 +1235,25 @@ export default function ManageUsersContent() {
                                                 />
                                             </div>
                                         </div>
+
+                                        {/* Points field - only for administrators */}
+                                        {currentUserRole === 'Administrator' && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Points <span className="text-yellow-600">(Admin Only)</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={editingUser.points || 0}
+                                                    onChange={(e) => setEditingUser({ ...editingUser, points: parseInt(e.target.value) || 0 })}
+                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    placeholder="0"
+                                                />
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Manually adjust user points. Negative values are allowed for penalties.
+                                                </p>
+                                            </div>
+                                        )}
                                     </>
                                 )}
                             </div>
@@ -1262,9 +1397,9 @@ export default function ManageUsersContent() {
                     <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900">Search for Existing Member</h2>
+                                <h2 className="text-xl font-bold text-gray-900">Promote Member to Officer</h2>
                                 <p className="text-sm text-gray-600 mt-1">
-                                    Find and manage existing IEEE UCSD members in the system
+                                    Search for an existing member and promote them to an officer role with a position
                                 </p>
                             </div>
                             <button
@@ -1273,6 +1408,8 @@ export default function ManageUsersContent() {
                                     setMemberSearchTerm('');
                                     setSearchResults([]);
                                     setSelectedMember(null);
+                                    setNewRole('General Officer');
+                                    setNewPosition('');
                                 }}
                                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                             >
@@ -1389,33 +1526,70 @@ export default function ManageUsersContent() {
                                 )}
 
                                 {selectedMember && (
-                                    <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                        <h4 className="font-semibold text-blue-900 mb-2">Selected Member:</h4>
-                                        <div className="grid grid-cols-2 gap-4 text-sm">
-                                            <div>
-                                                <span className="font-medium text-blue-700">Name:</span> {selectedMember.name || selectedMember.email}
-                                            </div>
-                                            <div>
-                                                <span className="font-medium text-blue-700">Role:</span> {selectedMember.role}
-                                            </div>
-                                            <div>
-                                                <span className="font-medium text-blue-700">Status:</span> {selectedMember.status}
-                                            </div>
-                                            <div>
-                                                <span className="font-medium text-blue-700">Member ID:</span> {selectedMember.memberId || selectedMember.pid || 'Not set'}
-                                            </div>
-                                            <div>
-                                                <span className="font-medium text-blue-700">Major:</span> {selectedMember.major || 'Not specified'}
-                                            </div>
-                                            <div>
-                                                <span className="font-medium text-blue-700">Graduation Year:</span> {selectedMember.graduationYear || 'Not specified'}
+                                    <div className="mt-6 space-y-4">
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                            <h4 className="font-semibold text-blue-900 mb-2">Selected Member:</h4>
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                    <span className="font-medium text-blue-700">Name:</span> {selectedMember.name || selectedMember.email}
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium text-blue-700">Current Role:</span> {selectedMember.role}
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium text-blue-700">Status:</span> {selectedMember.status}
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium text-blue-700">Member ID:</span> {selectedMember.memberId || selectedMember.pid || 'Not set'}
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium text-blue-700">Major:</span> {selectedMember.major || 'Not specified'}
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium text-blue-700">Graduation Year:</span> {selectedMember.graduationYear || 'Not specified'}
+                                                </div>
                                             </div>
                                         </div>
-                                        {selectedMember.status === 'inactive' && (
-                                            <div className="mt-2 text-sm text-blue-700">
-                                                <strong>Action:</strong> This member will be activated when you confirm.
+
+                                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                            <h4 className="font-semibold text-green-900 mb-4">Promote to Officer:</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        New Role <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <select
+                                                        value={newRole}
+                                                        onChange={(e) => setNewRole(e.target.value as UserRole)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    >
+                                                        <option value="General Officer">General Officer</option>
+                                                        <option value="Executive Officer">Executive Officer</option>
+                                                        <option value="Member at Large">Member at Large</option>
+                                                        <option value="Past Officer">Past Officer</option>
+                                                        <option value="Administrator">Administrator</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Position <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={newPosition}
+                                                        onChange={(e) => setNewPosition(e.target.value)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        placeholder="e.g., Vice President, Secretary, Events Chair..."
+                                                        required
+                                                    />
+                                                </div>
                                             </div>
-                                        )}
+                                            <div className="mt-3 text-sm text-green-700">
+                                                <strong>Action:</strong> {selectedMember.name || selectedMember.email} will be promoted to {newRole}
+                                                {newPosition && ` as ${newPosition}`}
+                                                {selectedMember.status === 'inactive' && ' and activated'}
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1428,6 +1602,8 @@ export default function ManageUsersContent() {
                                     setMemberSearchTerm('');
                                     setSearchResults([]);
                                     setSelectedMember(null);
+                                    setNewRole('General Officer');
+                                    setNewPosition('');
                                 }}
                                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                             >
@@ -1435,10 +1611,10 @@ export default function ManageUsersContent() {
                             </button>
                             <button
                                 onClick={handleAddExistingMember}
-                                disabled={!selectedMember || loading}
+                                disabled={!selectedMember || !newPosition.trim() || loading}
                                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                             >
-                                {loading ? 'Processing...' : selectedMember?.status === 'inactive' ? 'Activate Member' : 'Update Member'}
+                                {loading ? 'Processing...' : 'Promote to Officer'}
                             </button>
                         </div>
                     </div>

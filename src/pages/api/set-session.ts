@@ -77,7 +77,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         ...(inviteData && { invitedBy: inviteData.createdBy || 'system' }),
         ...(inviteData && { inviteAccepted: new Date() }),
         status: 'active',
-        joinDate: new Date(),
         eventsAttended: 0,
         points: 0,
         signInMethod: signInMethod || 'email', // Record the sign-in method

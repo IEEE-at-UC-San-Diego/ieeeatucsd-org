@@ -158,13 +158,14 @@ export default function GetStartedContent() {
             }
 
             const userRef = doc(db, 'users', auth.currentUser?.uid || '');
-            
+
             // Prepare update data (avoid undefined values)
             const updateData: any = {
                 pid: answers.pid,
                 major: answers.major,
                 graduationYear: answers.graduationYear,
                 signedUp: true,
+                joinDate: new Date(), // Set join date when completing getting started
             };
 
             // Only add optional fields if they have values
@@ -190,7 +191,8 @@ export default function GetStartedContent() {
                 name: userData?.name || auth.currentUser?.displayName || 'New Member',
                 points: userData?.points || 0,
                 eventsAttended: userData?.eventsAttended || 0,
-                position: userData?.position || userData?.role || 'Member'
+                position: userData?.position || userData?.role || 'Member',
+                joinDate: new Date() // Also set join date in public profile
             };
 
             // Add optional fields if they exist
