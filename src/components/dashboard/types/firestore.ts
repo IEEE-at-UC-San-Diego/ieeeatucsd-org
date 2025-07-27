@@ -175,3 +175,58 @@ export interface Sponsor {
   userId: string;
   company: string;
 } 
+
+export interface ConstitutionSection {
+  id: string;
+  type: 'preamble' | 'article' | 'section' | 'subsection' | 'amendment';
+  title: string;
+  content: string;
+  order: number;
+  parentId?: string; // For nested sections
+  articleNumber?: number; // For articles (auto-generated based on order)
+  sectionNumber?: number; // For sections within articles (auto-generated based on order)
+  subsectionLetter?: string; // For subsections (a, b, c, etc.)
+  amendmentNumber?: number; // For amendments
+  createdAt: Timestamp;
+  lastModified: Timestamp;
+  lastModifiedBy: string; // User ID
+}
+
+export interface Constitution {
+  id: string;
+  title: string;
+  organizationName: string;
+  sections: ConstitutionSection[];
+  version: number;
+  status: 'draft' | 'published' | 'archived';
+  createdAt: Timestamp;
+  lastModified: Timestamp;
+  lastModifiedBy: string;
+  collaborators: string[]; // Array of user IDs who can edit
+  isTemplate?: boolean;
+}
+
+export interface ConstitutionCollaborationSession {
+  id: string;
+  constitutionId: string;
+  activeUsers: {
+    userId: string;
+    userName: string;
+    lastSeen: Timestamp;
+    currentSection?: string; // Section ID being edited
+  }[];
+  locks: {
+    sectionId: string;
+    lockedBy: string;
+    lockedAt: Timestamp;
+  }[];
+  changes: {
+    id: string;
+    sectionId: string;
+    changeType: 'create' | 'update' | 'delete' | 'reorder';
+    beforeValue?: any;
+    afterValue?: any;
+    userId: string;
+    timestamp: Timestamp;
+  }[];
+} 

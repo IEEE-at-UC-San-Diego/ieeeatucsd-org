@@ -300,6 +300,53 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Administrator';
     }
 
+    // Constitution Builder Rules
+    match /constitutions/{constitutionId} {
+      // All authenticated users can read constitutions
+      allow read: if request.auth != null;
+      
+      // Only Executive Officers and Administrators can create/update constitutions
+      allow create, update: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'Executive Officer', 'Administrator'
+        ];
+      
+      // Only Administrators can delete entire constitutions
+      allow delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Administrator';
+      
+      // Constitution sections (nested collection)
+      match /sections/{sectionId} {
+        // All authenticated users can read sections
+        allow read: if request.auth != null;
+        
+        // Only Executive Officers and Administrators can manage sections
+        allow create, update, delete: if request.auth != null &&
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+            'Executive Officer', 'Administrator'
+          ];
+      }
+    }
+
+    // Constitution Collaboration Sessions
+    match /collaborationSessions/{sessionId} {
+      // All authenticated users can read collaboration sessions to see active users
+      allow read: if request.auth != null;
+      
+      // Only Executive Officers and Administrators can write to collaboration sessions
+      allow create, update: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'Executive Officer', 'Administrator'
+        ];
+      
+                    // Prevent deletion of collaboration sessions to maintain history
+       allow delete: if false;
+     }
+
     // Default deny for any other collections
     match /{document=**} {
       allow read, write, delete: if false;

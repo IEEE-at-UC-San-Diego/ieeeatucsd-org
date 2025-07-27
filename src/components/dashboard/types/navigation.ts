@@ -43,6 +43,7 @@ export const NAVIGATION_PATHS = {
   MANAGE_REIMBURSEMENTS: '/dashboard/manage-reimbursements',
   FUND_DEPOSITS: '/dashboard/fund-deposits',
   MANAGE_USERS: '/dashboard/manage-users',
+  CONSTITUTION_BUILDER: '/dashboard/constitution-builder',
   SETTINGS: '/dashboard/settings',
   SIGNOUT: '/dashboard/signout',
   GET_STARTED: '/dashboard/get-started',
