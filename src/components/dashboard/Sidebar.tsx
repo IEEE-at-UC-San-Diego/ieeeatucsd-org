@@ -34,19 +34,19 @@ const navigationCategories: NavigationCategory[] = [
         ]
     },
     {
-        title: "Officer Actions",
-        requiresRole: ['General Officer', 'Executive Officer'],
+        title: "General Officers",
+        requiresRole: ['General Officer', 'Executive Officer', 'Administrator'],
         items: [
             { icon: Calendar, label: 'Manage Events', href: NAVIGATION_PATHS.MANAGE_EVENTS },
-            { icon: DollarSign, label: 'Manage Reimbursements', href: NAVIGATION_PATHS.MANAGE_REIMBURSEMENTS },
             { icon: Banknote, label: 'Fund Deposits', href: NAVIGATION_PATHS.FUND_DEPOSITS },
-            { icon: Users, label: 'Manage Users', href: NAVIGATION_PATHS.MANAGE_USERS },
         ]
     },
     {
-        title: "Development",
+        title: "Executive Officers",
+        requiresRole: ['Executive Officer', 'Administrator'],
         items: [
-            { icon: Database, label: 'Firebase Test', href: NAVIGATION_PATHS.FIREBASE_TEST },
+            { icon: DollarSign, label: 'Manage Reimbursements', href: NAVIGATION_PATHS.MANAGE_REIMBURSEMENTS },
+            { icon: Users, label: 'Manage Users', href: NAVIGATION_PATHS.MANAGE_USERS },
         ]
     },
     {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Calendar, Bell, User, Filter, Edit, CheckCircle, XCircle, Clock, DollarSign, Receipt, AlertCircle, FileText, MessageCircle, Eye, CreditCard, Check, X, Plus, Upload, Banknote, Trash2, Save } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, Timestamp, addDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, Timestamp, addDoc, getDoc, deleteDoc, where } from 'firebase/firestore';
 import { db, storage } from '../../../firebase/client';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/client';
@@ -118,34 +118,54 @@ const FundDepositsContent: React.FC = () => {
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
                 if (userDoc.exists()) {
-                    setUserRole(userDoc.data().role || 'Member');
+                    const role = userDoc.data().role || 'Member';
+                    setUserRole(role);
+
+                    // Set up query based on user role
+                    let depositsQuery;
+                    if (role === 'Administrator') {
+                        // Only Administrators can see all deposits
+                        depositsQuery = query(
+                            collection(db, 'fundDeposits'),
+                            orderBy('submittedAt', 'desc')
+                        );
+                    } else {
+                        // All other users (including General/Executive Officers) can only see their own deposits
+                        depositsQuery = query(
+                            collection(db, 'fundDeposits'),
+                            where('depositedBy', '==', user.uid),
+                            orderBy('submittedAt', 'desc')
+                        );
+                    }
+
+                    const unsubscribe = onSnapshot(depositsQuery, (snapshot) => {
+                        const depositsData = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        })) as FundDeposit[];
+                        setDeposits(depositsData);
+                        setIsLoading(false);
+                    }, (error) => {
+                        console.error('Error fetching deposits:', error);
+                        setIsLoading(false);
+                    });
+
+                    return () => unsubscribe();
                 }
             } catch (error) {
                 console.error('Error fetching user role:', error);
+                setIsLoading(false);
             }
         };
 
         fetchUserRole();
-
-        const depositsQuery = query(
-            collection(db, 'fundDeposits'),
-            orderBy('submittedAt', 'desc')
-        );
-
-        const unsubscribe = onSnapshot(depositsQuery, (snapshot) => {
-            const depositsData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as FundDeposit[];
-            setDeposits(depositsData);
-            setIsLoading(false);
-        });
-
-        return () => unsubscribe();
     }, [user]);
 
     useEffect(() => {
         let filtered = deposits;
+
+        // Remove the visibility filter since we're already querying the correct deposits
+        // filtered = filtered.filter(deposit => canViewDeposit(deposit));
 
         if (searchTerm) {
             filtered = filtered.filter(deposit =>
@@ -160,7 +180,7 @@ const FundDepositsContent: React.FC = () => {
         }
 
         setFilteredDeposits(filtered);
-    }, [deposits, searchTerm, statusFilter]);
+    }, [deposits, searchTerm, statusFilter, userRole, user]);
 
     const uploadFiles = async (files: File[], path: string): Promise<string[]> => {
         const uploadPromises = files.map(async (file) => {
@@ -491,27 +511,36 @@ const FundDepositsContent: React.FC = () => {
     };
 
     const canModifyDeposit = (deposit: FundDeposit): boolean => {
-        // Officers can always modify (edit/delete)
-        if (userRole === 'Executive Officer' || userRole === 'General Officer') {
-            return true;
-        }
-        // Users can only edit their own pending deposits, but cannot delete
-        return deposit.depositedBy === user?.uid && deposit.status === 'pending';
+        // No one can edit deposits after submission (edit functionality removed)
+        return false;
     };
 
     const canEditDeposit = (deposit: FundDeposit): boolean => {
-        return canModifyDeposit(deposit);
+        // Edit functionality completely removed per requirements
+        return false;
     };
 
     const canDeleteDeposit = (deposit: FundDeposit): boolean => {
-        // Only officers can delete deposits, users cannot delete their own
-        return userRole === 'Executive Officer' || userRole === 'General Officer';
+        // Users can only delete their own pending deposits
+        if (deposit.depositedBy === user?.uid && deposit.status === 'pending') {
+            return true;
+        }
+        // Administrators can delete any deposit
+        return userRole === 'Administrator';
     };
 
     const canChangeStatus = (deposit: FundDeposit): boolean => {
-        // Only officers can change status, and they cannot approve their own deposits
-        return (userRole === 'Executive Officer' || userRole === 'General Officer') &&
-            deposit.depositedBy !== user?.uid;
+        // Only Administrators can verify or decline deposits (including their own)
+        return userRole === 'Administrator';
+    };
+
+    const canViewDeposit = (deposit: FundDeposit): boolean => {
+        // Users can always view their own deposits
+        if (deposit.depositedBy === user?.uid) {
+            return true;
+        }
+        // Only Administrators can view all deposits
+        return userRole === 'Administrator';
     };
 
     const stats = {
@@ -701,24 +730,16 @@ const FundDepositsContent: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedDeposit(deposit);
-                                                            setShowDetailModal(true);
-                                                        }}
-                                                        className="text-blue-600 hover:text-blue-900"
-                                                        title="View Details"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                    </button>
-
-                                                    {canEditDeposit(deposit) && (
+                                                    {canViewDeposit(deposit) && (
                                                         <button
-                                                            onClick={() => handleEditDeposit(deposit)}
-                                                            className="text-gray-600 hover:text-gray-900"
-                                                            title="Edit"
+                                                            onClick={() => {
+                                                                setSelectedDeposit(deposit);
+                                                                setShowDetailModal(true);
+                                                            }}
+                                                            className="text-blue-600 hover:text-blue-900"
+                                                            title="View Details"
                                                         >
-                                                            <Edit className="w-4 h-4" />
+                                                            <Eye className="w-4 h-4" />
                                                         </button>
                                                     )}
 
@@ -1124,7 +1145,7 @@ const FundDepositsContent: React.FC = () => {
                                         step="0.01"
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         value={editingDeposit.amount}
-                                        onChange={(e) => setEditingDeposit({ ...editingDeposit, amount: e.target.value === '' ? '' : parseFloat(e.target.value) || 0 })}
+                                        onChange={(e) => setEditingDeposit({ ...editingDeposit, amount: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
                                         placeholder="0.00"
                                     />
                                 </div>

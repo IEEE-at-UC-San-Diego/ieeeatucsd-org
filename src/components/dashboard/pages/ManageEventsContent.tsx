@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, Clock, CheckCircle, XCircle, Eye, FileText, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
 import { getFirestore, collection, getDocs, query, orderBy, where, doc, deleteDoc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
-import { app } from '../../../firebase/client';
+import { app, auth } from '../../../firebase/client';
 import { EventManagementStats } from './manage-events/EventManagementStats';
 import type { EventStats } from './manage-events/types';
 import EventRequestModal from './manage-events/EventRequestModal';
@@ -10,6 +10,7 @@ import FileManagementModal from './manage-events/FileManagementModal';
 import BulkActionsModal from './manage-events/BulkActionsModal';
 import { PublicProfileService } from '../services/publicProfile';
 import { EmailClient } from '../../../scripts/email/EmailClient';
+import type { UserRole } from '../types/firestore';
 
 interface EventRequest {
     id: string;
@@ -60,6 +61,7 @@ export default function ManageEventsContent() {
     const [editingRequest, setEditingRequest] = useState<EventRequest | null>(null);
     const [viewingRequest, setViewingRequest] = useState<EventRequest | null>(null);
     const [managingFilesRequest, setManagingFilesRequest] = useState<EventRequest | null>(null);
+    const [currentUserRole, setCurrentUserRole] = useState<UserRole>('Member');
 
     // Filter state
     const [searchTerm, setSearchTerm] = useState('');
@@ -75,6 +77,27 @@ export default function ManageEventsContent() {
     useEffect(() => {
         fetchUsers();
 
+        // Fetch current user's role
+        const fetchUserRole = async () => {
+            try {
+                const user = auth.currentUser;
+                if (user) {
+                    const userDoc = await getDoc(doc(db, 'users', user.uid));
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        setCurrentUserRole(userData.role || 'Member');
+                    } else {
+                        setCurrentUserRole('Member');
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching user role:', error);
+                setCurrentUserRole('Member');
+            }
+        };
+
+        fetchUserRole();
+
         // Set up real-time listener for event requests
         const eventRequestsRef = collection(db, 'event_requests');
         const q = query(eventRequestsRef, orderBy('createdAt', 'desc'));
@@ -85,7 +108,6 @@ export default function ManageEventsContent() {
                 ...doc.data()
             })) as EventRequest[];
 
-            console.log('Real-time update: Fetched event requests:', eventRequestsData.length);
             setEventRequests(eventRequestsData);
             setLoading(false);
         }, (error) => {
@@ -126,7 +148,7 @@ export default function ManageEventsContent() {
             // First try to get all public profiles for user names
             const publicProfiles = await PublicProfileService.getLeaderboard();
             const usersMap: Record<string, { name: string; email: string }> = {};
-            
+
             // Map public profiles to users
             publicProfiles.forEach(profile => {
                 usersMap[profile.id] = {
@@ -134,12 +156,12 @@ export default function ManageEventsContent() {
                     email: '' // Email not available in public profiles for privacy
                 };
             });
-            
+
             // For any users not in public profiles, try to get from users collection (officers have access)
             try {
                 const usersRef = collection(db, 'users');
                 const usersSnapshot = await getDocs(usersRef);
-                
+
                 usersSnapshot.docs.forEach(doc => {
                     const data = doc.data();
                     // Only add if not already in public profiles map
@@ -196,7 +218,6 @@ export default function ManageEventsContent() {
             // Send deletion email notification
             if (eventRequestData && userData) {
                 try {
-                    console.log(`Sending deletion email for event: ${eventName}`);
                     await EmailClient.notifyFirebaseEventDelete(
                         requestId,
                         eventName,
@@ -344,6 +365,55 @@ export default function ManageEventsContent() {
 
     const getUserName = (userId: string) => {
         return users[userId]?.name || userId;
+    };
+
+    // Permission helper functions
+    const canEditEvent = (request: EventRequest) => {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return false;
+
+        // Administrators can edit any event
+        if (currentUserRole === 'Administrator') return true;
+
+        // Executive Officers can edit any event
+        if (currentUserRole === 'Executive Officer') return true;
+
+        // General Officers can only edit their own events if not approved yet
+        if (currentUserRole === 'General Officer') {
+            return request.requestedUser === currentUser.uid &&
+                ['submitted', 'pending'].includes(request.status);
+        }
+
+        return false;
+    };
+
+    const canDeleteEvent = (request: EventRequest) => {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return false;
+
+        // Administrators can delete any event
+        if (currentUserRole === 'Administrator') return true;
+
+        // Executive Officers can delete any event
+        if (currentUserRole === 'Executive Officer') return true;
+
+        // General Officers can only delete their own events if not approved yet
+        if (currentUserRole === 'General Officer') {
+            return request.requestedUser === currentUser.uid &&
+                ['submitted', 'pending'].includes(request.status);
+        }
+
+        return false;
+    };
+
+    const canApproveOrPublish = () => {
+        // Only Executive Officers and Administrators can approve, decline, or publish events
+        return ['Executive Officer', 'Administrator'].includes(currentUserRole);
+    };
+
+    const canCreateEvent = () => {
+        // General Officers, Executive Officers, and Administrators can create events
+        return ['General Officer', 'Executive Officer', 'Administrator'].includes(currentUserRole);
     };
 
     const handlePublishToggle = async (requestId: string, currentStatus: boolean) => {
@@ -498,7 +568,9 @@ export default function ManageEventsContent() {
         if (eventRequests.length > 0) {
             updateStats();
         }
-    }, [eventRequests]);
+    }, [eventRequests, currentUserRole]); // Added currentUserRole dependency
+
+
 
     return (
         <div className="flex-1 overflow-auto">
@@ -550,13 +622,15 @@ export default function ManageEventsContent() {
                             <p className="text-gray-600">Create, edit, and manage IEEE UCSD events</p>
                         </div>
                         <div className="flex items-center space-x-3">
-                            <button
-                                onClick={() => setShowEventRequestModal(true)}
-                                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                                <Plus className="w-4 h-4" />
-                                <span>Request an Event</span>
-                            </button>
+                            {canCreateEvent() && (
+                                <button
+                                    onClick={() => setShowEventRequestModal(true)}
+                                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    <span>Request an Event</span>
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -576,7 +650,7 @@ export default function ManageEventsContent() {
                     )}
 
                     {/* Event Requests Table */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div key={currentUserRole} className="bg-white rounded-lg shadow-sm border border-gray-200">
                         <div className="px-6 py-4 border-b border-gray-200">
                             <h2 className="text-lg font-semibold text-gray-900">Event Requests ({sortedEventRequests.length})</h2>
                         </div>
@@ -712,27 +786,52 @@ export default function ManageEventsContent() {
                                                         >
                                                             <Eye className="w-4 h-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleFileManagement(request)}
-                                                            className="text-purple-600 hover:text-purple-900"
-                                                            title="Manage Files"
-                                                        >
-                                                            <FileText className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleEditRequest(request)}
-                                                            className="text-blue-600 hover:text-blue-900"
-                                                            title="Edit Request"
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteRequest(request.id, request.name)}
-                                                            className="text-red-600 hover:text-red-900"
-                                                            title="Delete Request"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                        {canEditEvent(request) && (
+                                                            <button
+                                                                onClick={() => handleFileManagement(request)}
+                                                                className="text-purple-600 hover:text-purple-900"
+                                                                title="Manage Files"
+                                                            >
+                                                                <FileText className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {canEditEvent(request) && (
+                                                            <button
+                                                                onClick={() => handleEditRequest(request)}
+                                                                className="text-blue-600 hover:text-blue-900"
+                                                                title="Edit Request"
+                                                            >
+                                                                <Edit className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {canDeleteEvent(request) && (
+                                                            <button
+                                                                onClick={() => handleDeleteRequest(request.id, request.name)}
+                                                                className="text-red-600 hover:text-red-900"
+                                                                title="Delete Request"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {canApproveOrPublish() && request.status === 'submitted' && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleUpdateEventStatus(request.id, 'approved')}
+                                                                    className="text-green-600 hover:text-green-900"
+                                                                    title="Approve Event"
+                                                                >
+                                                                    <CheckCircle className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleUpdateEventStatus(request.id, 'rejected')}
+                                                                    className="text-red-600 hover:text-red-900"
+                                                                    title="Reject Event"
+                                                                >
+                                                                    <XCircle className="w-4 h-4" />
+                                                                </button>
+                                                            </>
+                                                        )}
+
                                                     </div>
                                                 </td>
                                             </tr>

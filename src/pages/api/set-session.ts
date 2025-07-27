@@ -8,7 +8,7 @@ export const db = getFirestore(app);
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   try {
-    const { idToken, inviteId } = await request.json();
+    const { idToken, inviteId, signInMethod } = await request.json();
 
     if (!idToken) {
       return new Response(JSON.stringify({ error: 'No ID token provided' }), { status: 400 });
@@ -80,9 +80,16 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         joinDate: new Date(),
         eventsAttended: 0,
         points: 0,
+        signInMethod: signInMethod || 'email', // Record the sign-in method
       };
       console.log('Creating user with data:', { role: userData.role, position: userData.position });
       await userRef.set(userData);
+    } else {
+      // Update existing user's last login and sign-in method
+      await userRef.update({
+        lastLogin: new Date(),
+        ...(signInMethod && { signInMethod })
+      });
     }
 
     // Create session cookie

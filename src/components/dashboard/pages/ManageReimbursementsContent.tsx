@@ -120,6 +120,34 @@ export default function ManageReimbursementsContent() {
         fetchUserRole();
     }, [user]);
 
+    // Check if user has permission to access reimbursement management
+    const hasReimbursementAccess = () => {
+        return currentUserRole === 'Executive Officer' || currentUserRole === 'Administrator';
+    };
+
+    // If user doesn't have access, show access denied message
+    if (currentUserRole && !hasReimbursementAccess()) {
+        return (
+            <div className="flex-1 overflow-auto">
+                <DashboardHeader
+                    title="Access Denied"
+                    subtitle="You don't have permission to access this page"
+                />
+                <div className="p-6">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                        <div className="flex items-center">
+                            <AlertCircle className="h-8 w-8 text-red-600" />
+                            <div className="ml-4">
+                                <h3 className="text-lg font-semibold text-red-800">Access Restricted</h3>
+                                <p className="text-red-700">Only Executive Officers and Administrators can access reimbursement management.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     useEffect(() => {
         const q = query(
             collection(db, 'reimbursements'),

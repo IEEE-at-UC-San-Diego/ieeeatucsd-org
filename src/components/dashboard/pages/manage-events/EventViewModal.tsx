@@ -654,11 +654,10 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                             <span className="text-sm">Photography Needed</span>
                                         </div>
                                         <div className="flex items-center space-x-2">
-                                            <div className={`w-3 h-3 rounded-full ${
-                                                (request.hasRoomBooking ?? request.willOrHaveRoomBooking) && 
-                                                (request.roomBookingFiles && request.roomBookingFiles.length > 0) 
+                                            <div className={`w-3 h-3 rounded-full ${(request.hasRoomBooking ?? request.willOrHaveRoomBooking) &&
+                                                (request.roomBookingFiles && request.roomBookingFiles.length > 0)
                                                 ? 'bg-green-500' : 'bg-gray-300'
-                                            }`}></div>
+                                                }`}></div>
                                             <span className="text-sm">Room Booking</span>
                                         </div>
                                         <div className="flex items-center space-x-2">
@@ -1192,8 +1191,8 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                         <div>
                                             <span className="font-medium text-blue-800">Invoice Files:</span>
                                             <p className="text-blue-700">{
-                                                ((request.invoiceFiles?.length || 0) + 
-                                                (request.invoices?.filter(inv => inv.invoiceFile).length || 0))
+                                                ((request.invoiceFiles?.length || 0) +
+                                                    (request.invoices?.filter(inv => inv.invoiceFile).length || 0))
                                             } files</p>
                                         </div>
                                         <div>

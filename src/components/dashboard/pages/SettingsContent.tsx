@@ -14,7 +14,7 @@ export default function SettingsContent() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [isGoogleUser, setIsGoogleUser] = useState(false);
-    
+
     // Profile form state
     const [profileData, setProfileData] = useState({
         name: '',
@@ -24,7 +24,7 @@ export default function SettingsContent() {
         memberId: '',
         zelleInformation: ''
     });
-    
+
     // Password form state
     const [passwordData, setPasswordData] = useState({
         currentPassword: '',
@@ -36,7 +36,7 @@ export default function SettingsContent() {
         new: false,
         confirm: false
     });
-    
+
     // Resume state
     const [resumeFile, setResumeFile] = useState<File | null>(null);
     const [uploadingResume, setUploadingResume] = useState(false);
@@ -60,7 +60,7 @@ export default function SettingsContent() {
     const loadUserData = async (user: any) => {
         try {
             // Check if user logged in with Google
-            const isGoogle = user.providerData.some((provider: any) => 
+            const isGoogle = user.providerData.some((provider: any) =>
                 provider.providerId === 'google.com'
             );
             setIsGoogleUser(isGoogle);
@@ -68,7 +68,7 @@ export default function SettingsContent() {
             // Load user data from Firestore
             const userRef = doc(db, 'users', user.uid);
             const userSnap = await getDoc(userRef);
-            
+
             if (userSnap.exists()) {
                 const data = userSnap.data() as User;
                 setUserData(data);
@@ -90,7 +90,7 @@ export default function SettingsContent() {
 
     const handleProfileUpdate = async () => {
         if (!auth.currentUser) return;
-        
+
         setSaving(true);
         setError(null);
         setSuccess(null);
@@ -120,7 +120,7 @@ export default function SettingsContent() {
 
             // Update private user document
             await updateDoc(userRef, updateData);
-            
+
             // Sync public profile data (only include fields with values)
             const publicProfileData: any = {
                 name: profileData.name,
@@ -138,9 +138,9 @@ export default function SettingsContent() {
             }
 
             await PublicProfileService.syncPublicProfile(auth.currentUser.uid, publicProfileData);
-            
+
             setSuccess('Profile updated successfully!');
-            
+
             // Update local state
             setUserData(prev => prev ? { ...prev, ...updateData } : null);
         } catch (err: any) {
@@ -152,12 +152,12 @@ export default function SettingsContent() {
 
     const handlePasswordChange = async () => {
         if (!auth.currentUser || isGoogleUser) return;
-        
+
         if (passwordData.newPassword !== passwordData.confirmPassword) {
             setError('New passwords do not match');
             return;
         }
-        
+
         if (passwordData.newPassword.length < 6) {
             setError('New password must be at least 6 characters');
             return;
@@ -174,10 +174,10 @@ export default function SettingsContent() {
                 passwordData.currentPassword
             );
             await reauthenticateWithCredential(auth.currentUser, credential);
-            
+
             // Update password
             await updatePassword(auth.currentUser, passwordData.newPassword);
-            
+
             setSuccess('Password updated successfully!');
             setPasswordData({
                 currentPassword: '',
@@ -222,7 +222,7 @@ export default function SettingsContent() {
             // Upload new resume
             const fileName = `${Date.now()}_${resumeFile.name}`;
             const storageRef = ref(storage, `resumes/${auth.currentUser.uid}/${fileName}`);
-            
+
             const uploadTask = uploadBytesResumable(storageRef, resumeFile);
             await new Promise((resolve, reject) => {
                 uploadTask.on('state_changed', null, reject, () => resolve(uploadTask.snapshot.ref));
@@ -281,6 +281,23 @@ export default function SettingsContent() {
         }
     };
 
+    // Helper function to detect if current user is OAuth user
+    const isCurrentUserOAuth = () => {
+        if (userData?.signInMethod) {
+            return userData.signInMethod !== 'email';
+        }
+
+        // Fallback: check auth providers
+        if (auth.currentUser) {
+            return auth.currentUser.providerData.some(provider =>
+                provider.providerId !== 'password' &&
+                provider.providerId !== 'email'
+            );
+        }
+
+        return false;
+    };
+
     if (loading) {
         return (
             <div className="flex-1 overflow-auto p-6">
@@ -313,7 +330,7 @@ export default function SettingsContent() {
                             <span>{error}</span>
                         </div>
                     )}
-                    
+
                     {success && (
                         <div className="flex items-center space-x-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
                             <CheckCircle className="w-5 h-5" />
@@ -349,7 +366,12 @@ export default function SettingsContent() {
                                     value={userData?.email || ''}
                                     disabled
                                 />
-                                <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {isCurrentUserOAuth()
+                                        ? 'Email cannot be changed for users who signed in with OAuth providers'
+                                        : 'Email cannot be changed'
+                                    }
+                                </p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Student ID (PID)</label>
@@ -454,7 +476,7 @@ export default function SettingsContent() {
                                         </button>
                                     </div>
                                 </div>
-                                
+
                                 <div className="border-t pt-4">
                                     <h3 className="font-medium text-gray-900 mb-2">Replace Resume</h3>
                                     <div className="flex items-center space-x-4">
@@ -567,7 +589,7 @@ export default function SettingsContent() {
                                         </button>
                                     </div>
                                 </div>
-                                
+
                                 <div className="flex justify-end mt-6">
                                     <button
                                         onClick={handlePasswordChange}

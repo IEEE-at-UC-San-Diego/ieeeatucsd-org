@@ -11,14 +11,14 @@ service cloud.firestore {
       allow read: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
+          'General Officer', 'Executive Officer', 'Administrator'
         ];
         
       // Officers can list all users for administrative purposes
       allow list: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
+          'General Officer', 'Executive Officer', 'Administrator'
         ];
       
       // Create a separate public_profiles subcollection for public data
@@ -35,17 +35,23 @@ service cloud.firestore {
         allow create, update, delete: if request.auth != null &&
           exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-            'General Officer', 'Executive Officer'
+            'General Officer', 'Executive Officer', 'Administrator'
           ];
       }
 
       // Users can create their own user document
       allow create: if request.auth != null && request.auth.uid == userId;
 
-      // Only Executive Officers can update and delete users
+      // Only Executive Officers and Administrators can update and delete users
       allow update, delete: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Executive Officer';
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Executive Officer', 'Administrator'];
+
+      // Additional restriction: Only Administrators can delete Executive Officers or Administrators
+      allow delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Administrator' &&
+        resource.data.role in ['Executive Officer', 'Administrator'];
 
       // Users can update their own profile and attendance/points
       allow update: if request.auth != null && 
@@ -58,7 +64,7 @@ service cloud.firestore {
       allow create, read, update, delete: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
+          'General Officer', 'Executive Officer', 'Administrator'
         ];
 
       allow read: if request.auth != null &&
@@ -69,7 +75,7 @@ service cloud.firestore {
         request.resource.data.status in ['accepted', 'declined'];
     }
 
-    // Events collection - allow officers to manage, members to read published events and check in
+    // Events collection - officers can manage their own events, only Executive Officers and Administrators can approve/publish
     match /events/{eventId} {
       // Members can read published events (including files for public files only)
       allow read: if request.auth != null &&
@@ -79,25 +85,39 @@ service cloud.firestore {
       allow list: if request.auth != null &&
         resource.data.published == true;
 
-      // Officers can read, update, and delete all events
-      allow read, update, delete: if request.auth != null &&
+      // General Officers can read all events but cannot edit others' events
+      allow read: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
+          'General Officer', 'Executive Officer', 'Administrator'
         ];
         
-      // Officers can list all events
-      allow list: if request.auth != null &&
+      // Executive Officers and Administrators can read and list all events
+      allow read, list: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
+          'Executive Officer', 'Administrator'
         ];
 
-      // Officers can create events
+      // General Officers can create events
       allow create: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
+          'General Officer', 'Executive Officer', 'Administrator'
+        ];
+
+      // General Officers can update and delete their own events if not approved yet
+      allow update, delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'General Officer' &&
+        resource.data.createdBy == request.auth.uid &&
+        resource.data.status in ['submitted', 'pending'];
+
+      // Executive Officers and Administrators can update and delete all events
+      allow update, delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'Executive Officer', 'Administrator'
         ];
 
       // Allow members to update their own attendance (legacy attendees array)
@@ -122,12 +142,12 @@ service cloud.firestore {
         allow read, update, delete: if request.auth != null &&
           exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-            'General Officer', 'Executive Officer'
+            'General Officer', 'Executive Officer', 'Administrator'
           ];
       }
     }
 
-    // Event requests collection - allow members to create/read/delete their own, officers to manage all
+    // Event requests collection - officers can manage their own, only Executive Officers and Administrators can approve/publish
     match /event_requests/{requestId} {
       // Users can read and delete their own requests
       allow read, delete: if request.auth != null &&
@@ -138,11 +158,33 @@ service cloud.firestore {
         request.auth.uid == resource.data.requestedUser &&
         resource.data.status == 'submitted';
 
-      // Officers can read, update, and delete all requests
+      // General Officers can read all requests but can only edit/delete their own non-approved requests
+      allow read: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'General Officer', 'Executive Officer', 'Administrator'
+        ];
+
+      // General Officers can update and delete their own requests if not approved yet
+      allow update, delete: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'General Officer' &&
+        resource.data.requestedUser == request.auth.uid &&
+        resource.data.status in ['submitted', 'pending'];
+
+      // Only Executive Officers and Administrators can approve, decline, and publish events
+      allow update: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'Executive Officer', 'Administrator'
+        ] &&
+        request.resource.data.status in ['approved', 'declined', 'published'];
+
+      // Executive Officers and Administrators can read, update, and delete all requests
       allow read, update, delete: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
+          'Executive Officer', 'Administrator'
         ];
 
       // Users can create their own requests
@@ -150,7 +192,7 @@ service cloud.firestore {
         request.auth.uid == request.resource.data.requestedUser;
     }
 
-    // Reimbursements collection - allow members to create/read/delete their own, officers to manage all
+    // Reimbursements collection - only Executive Officers and Administrators can manage
     match /reimbursements/{reimbursementId} {
       // Users can read and delete their own reimbursements
       allow read, delete: if request.auth != null &&
@@ -161,11 +203,11 @@ service cloud.firestore {
         request.auth.uid == resource.data.submittedBy &&
         resource.data.status == 'submitted';
 
-      // Officers can read, update, and delete all reimbursements
+      // Only Executive Officers and Administrators can read, update, and delete all reimbursements
       allow read, update, delete: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
+          'Executive Officer', 'Administrator'
         ];
 
       // Users can create their own reimbursements
@@ -184,7 +226,7 @@ service cloud.firestore {
       allow read, write, delete: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
+          'General Officer', 'Executive Officer', 'Administrator'
         ];
     }
 
@@ -193,7 +235,7 @@ service cloud.firestore {
       allow read, write, delete: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
+          'General Officer', 'Executive Officer', 'Administrator'
         ];
     }
 
@@ -210,11 +252,11 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
+          'General Officer', 'Executive Officer', 'Administrator'
         ];
     }
 
-    // Fund Deposits collection - officers can manage, users can create and read their own
+    // Fund Deposits collection - restricted permissions for verification
     match /fundDeposits/{depositId} {
       // Users can create their own deposits
       allow create: if request.auth != null && 
@@ -223,24 +265,30 @@ service cloud.firestore {
       // Users can read their own deposits
       allow read: if request.auth != null && resource.data.depositedBy == request.auth.uid;
       
-      // Officers can read and update all deposits
-      allow read, update: if request.auth != null &&
+      // General and Executive officers can only read their own deposits
+      allow read: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
           'General Officer', 'Executive Officer'
-        ];
+        ] &&
+        resource.data.depositedBy == request.auth.uid;
       
-      // Users can update/delete their own deposits if status is pending
-      allow update, delete: if request.auth != null && 
+      // Only Administrators can read and update all deposits (including verification)
+      allow read, update: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Administrator';
+      
+      // Users cannot edit their deposits (no edit allowed after submission)
+      
+      // Users can delete their own deposits only if status is pending
+      allow delete: if request.auth != null && 
         resource.data.depositedBy == request.auth.uid &&
         resource.data.status == 'pending';
       
-      // Officers can delete any deposit
+      // Administrators can delete any deposit
       allow delete: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'General Officer', 'Executive Officer'
-        ];
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Administrator';
     }
 
     // Default deny for any other collections

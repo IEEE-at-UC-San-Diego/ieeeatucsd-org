@@ -6,7 +6,8 @@ export type UserRole =
   | 'Executive Officer'
   | 'Member at Large'
   | 'Past Officer'
-  | 'Sponsor';
+  | 'Sponsor'
+  | 'Administrator';
 
 export interface User {
   email: string;
@@ -35,6 +36,9 @@ export interface User {
   points?: number;
   invitedBy?: string; // uid of the user who invited them
   inviteAccepted?: Timestamp; // when they accepted the invite
+  lastUpdated?: Timestamp; // when the user data was last updated
+  lastUpdatedBy?: string; // uid of the user who last updated this user's data
+  signInMethod?: 'email' | 'google' | 'microsoft' | 'github' | 'facebook' | 'twitter' | 'apple' | 'other'; // how the user signed in
 }
 
 export interface PublicProfile {

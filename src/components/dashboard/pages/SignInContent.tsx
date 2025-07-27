@@ -27,7 +27,7 @@ export default function SignInContent() {
             const response = await fetch('/api/set-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken, inviteId }),
+                body: JSON.stringify({ idToken, inviteId, signInMethod: 'email' }),
             });
 
             if (!response.ok) {
@@ -54,7 +54,7 @@ export default function SignInContent() {
             const response = await fetch('/api/set-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken, inviteId }),
+                body: JSON.stringify({ idToken, inviteId, signInMethod: 'google' }),
             });
 
             if (!response.ok) {

@@ -17,6 +17,15 @@ export default function SignOutContent() {
         }
     };
 
+    const handleCancel = () => {
+        // Go back to previous page, or dashboard overview as fallback
+        if (document.referrer && !document.referrer.includes('/dashboard/signin') && !document.referrer.includes('/dashboard/signout')) {
+            window.history.back();
+        } else {
+            window.location.href = '/dashboard/overview';
+        }
+    };
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8">
@@ -64,6 +73,7 @@ export default function SignOutContent() {
 
                             <button
                                 type="button"
+                                onClick={handleCancel}
                                 className="w-full flex justify-center items-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                             >
                                 Cancel

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, UserCheck, UserX, Mail, Shield, Users, GraduationCap, Send, X } from 'lucide-react';
-import { getFirestore, collection, getDocs, doc, updateDoc, addDoc, deleteDoc, query, where, orderBy, limit } from 'firebase/firestore';
-import { app } from '../../../firebase/client';
+import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, UserCheck, UserX, Mail, Shield, Users, GraduationCap, Send, X, CheckCircle, Clock, XCircle, AlertCircle, Check } from 'lucide-react';
+import { getFirestore, collection, getDocs, doc, updateDoc, addDoc, deleteDoc, query, where, orderBy, limit, getDoc } from 'firebase/firestore';
+import { app, auth } from '../../../firebase/client';
 import type { User as FirestoreUser, UserRole } from '../types/firestore';
+import { useAuthState } from 'react-firebase-hooks/auth';
 
 interface UserModalData {
     id?: string;
@@ -26,6 +27,7 @@ interface InviteModalData {
 }
 
 export default function ManageUsersContent() {
+    const [user, userLoading, userError] = useAuthState(auth);
     const [users, setUsers] = useState<(FirestoreUser & { id: string })[]>([]);
     const [filteredUsers, setFilteredUsers] = useState<(FirestoreUser & { id: string })[]>([]);
     const [loading, setLoading] = useState(true);
@@ -44,14 +46,65 @@ export default function ManageUsersContent() {
     });
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [currentUser, setCurrentUser] = useState<(FirestoreUser & { id: string }) | null>(null);
+    const [currentUserRole, setCurrentUserRole] = useState<UserRole>('Member');
+    const [roleLoading, setRoleLoading] = useState(false);
+
+    // Add Member Search state
+    const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+    const [memberSearchTerm, setMemberSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState<(FirestoreUser & { id: string })[]>([]);
+    const [selectedMember, setSelectedMember] = useState<(FirestoreUser & { id: string }) | null>(null);
 
     const db = getFirestore(app);
 
-    const roles: UserRole[] = ['Member', 'General Officer', 'Executive Officer', 'Member at Large', 'Past Officer', 'Sponsor'];
+    const roles: UserRole[] = ['Member', 'General Officer', 'Executive Officer', 'Member at Large', 'Past Officer', 'Sponsor', 'Administrator'];
 
     useEffect(() => {
+        console.log('User auth state:', { user: user?.uid, userLoading, userError });
+
+        if (userLoading) return; // Wait for auth to resolve
+
+        if (!user) {
+            setCurrentUserRole('Member');
+            setCurrentUser(null);
+            return;
+        }
+
+        // Get current user info
+        const getCurrentUser = async () => {
+            try {
+                setRoleLoading(true);
+                console.log('Fetching user role for:', user.uid);
+
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const currentUserData = {
+                        id: user.uid,
+                        ...userData
+                    } as FirestoreUser & { id: string };
+
+                    console.log('User data found:', { role: userData.role, name: userData.name });
+                    setCurrentUser(currentUserData);
+                    setCurrentUserRole(userData.role || 'Member');
+                } else {
+                    console.log('No user document found for:', user.uid);
+                    setCurrentUserRole('Member');
+                    setCurrentUser(null);
+                }
+            } catch (error) {
+                console.error('Error fetching current user:', error);
+                setCurrentUserRole('Member');
+                setCurrentUser(null);
+            } finally {
+                setRoleLoading(false);
+            }
+        };
+
+        getCurrentUser();
         fetchUsers();
-    }, []);
+    }, [user, userLoading]);
 
     useEffect(() => {
         filterUsers();
@@ -108,7 +161,10 @@ export default function ManageUsersContent() {
                     eventsAttended: data.eventsAttended || 0,
                     points: data.points || 0,
                     invitedBy: data.invitedBy,
-                    inviteAccepted: data.inviteAccepted
+                    inviteAccepted: data.inviteAccepted,
+                    lastUpdated: data.lastUpdated || data.joinDate || { toDate: () => new Date() },
+                    lastUpdatedBy: data.lastUpdatedBy,
+                    signInMethod: data.signInMethod || 'email'
                 };
             }) as (FirestoreUser & { id: string })[];
 
@@ -150,6 +206,69 @@ export default function ManageUsersContent() {
         setFilteredUsers(filtered);
     };
 
+    // Search for members to add (could be enhanced to search external databases)
+    const searchMembers = () => {
+        if (!memberSearchTerm || memberSearchTerm.length < 2) {
+            setSearchResults([]);
+            return;
+        }
+
+        const term = memberSearchTerm.toLowerCase();
+        // Search all users, not just inactive ones
+        const results = users.filter(user =>
+            user.name?.toLowerCase().includes(term) ||
+            user.email?.toLowerCase().includes(term) ||
+            user.major?.toLowerCase().includes(term) ||
+            user.memberId?.toLowerCase().includes(term) ||
+            user.pid?.toLowerCase().includes(term)
+        );
+
+        console.log('Search term:', term);
+        console.log('Total users:', users.length);
+        console.log('Search results:', results.length);
+
+        setSearchResults(results);
+    };
+
+    // Auto-search when search term changes
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            searchMembers();
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(timeoutId);
+    }, [memberSearchTerm, users]);
+
+    const handleAddExistingMember = async () => {
+        if (!selectedMember) return;
+
+        try {
+            // Update the member's status or information as needed
+            const userRef = doc(db, 'users', selectedMember.id);
+            const updateData: any = {
+                lastUpdated: new Date(),
+                lastUpdatedBy: user?.uid || 'unknown'
+            };
+
+            // If the member is inactive, activate them
+            if (selectedMember.status === 'inactive') {
+                updateData.status = 'active';
+            }
+
+            await updateDoc(userRef, updateData);
+
+            setSuccess(`Member ${selectedMember.status === 'inactive' ? 'activated' : 'updated'} successfully`);
+            setShowAddMemberModal(false);
+            setSelectedMember(null);
+            setMemberSearchTerm('');
+            setSearchResults([]);
+            fetchUsers();
+        } catch (error) {
+            console.error('Error updating member:', error);
+            setError('Failed to update member');
+        }
+    };
+
     const handleEditUser = (user: FirestoreUser & { id: string }) => {
         setEditingUser({
             id: user.id,
@@ -170,6 +289,25 @@ export default function ManageUsersContent() {
         if (!editingUser || !editingUser.id) return;
 
         try {
+            // Find the target user to check permissions
+            const targetUser = users.find(u => u.id === editingUser.id);
+            if (!targetUser) {
+                setError('User not found');
+                return;
+            }
+
+            // Check role edit permission
+            if (!canEditUserRole(targetUser)) {
+                setError('You do not have permission to change this user\'s role');
+                return;
+            }
+
+            // Check position edit permission 
+            if (!canEditUserPosition(targetUser)) {
+                setError('You do not have permission to change this user\'s position');
+                return;
+            }
+
             const userRef = doc(db, 'users', editingUser.id);
             await updateDoc(userRef, {
                 name: editingUser.name,
@@ -179,7 +317,9 @@ export default function ManageUsersContent() {
                 pid: editingUser.pid || '',
                 memberId: editingUser.memberId || '',
                 major: editingUser.major || '',
-                graduationYear: editingUser.graduationYear || null
+                graduationYear: editingUser.graduationYear || null,
+                lastUpdated: new Date(),
+                lastUpdatedBy: user?.uid || 'unknown'
             });
 
             setSuccess('User updated successfully');
@@ -192,14 +332,45 @@ export default function ManageUsersContent() {
         }
     };
 
+    const canDeleteUser = (targetUser: FirestoreUser & { id: string }): boolean => {
+        // Only Administrators can delete other Administrators or Executive Officers
+        if (['Administrator', 'Executive Officer'].includes(targetUser.role)) {
+            return currentUserRole === 'Administrator';
+        }
+
+        // Both Administrators and Executive Officers can delete other roles
+        return hasUserManagementAccess();
+    };
+
     const handleDeleteUser = async (userId: string) => {
+        const targetUser = users.find(u => u.id === userId);
+        if (!targetUser) {
+            setError('User not found');
+            return;
+        }
+
+        if (!canDeleteUser(targetUser)) {
+            setError('You do not have permission to delete this user');
+            return;
+        }
+
         if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
             return;
         }
 
         try {
+            // Delete the user document
             await deleteDoc(doc(db, 'users', userId));
-            setSuccess('User deleted successfully');
+
+            // Also delete the user's public profile if it exists
+            try {
+                await deleteDoc(doc(db, 'public_profiles', userId));
+            } catch (profileError) {
+                console.warn('Failed to delete public profile or profile does not exist:', profileError);
+                // Don't fail the whole operation if public profile deletion fails
+            }
+
+            setSuccess('User and public profile deleted successfully');
             fetchUsers();
         } catch (error) {
             console.error('Error deleting user:', error);
@@ -209,6 +380,12 @@ export default function ManageUsersContent() {
 
     const handleSendInvite = async () => {
         try {
+            // Check permission before sending invite
+            if (!canInviteWithRole(inviteData.role)) {
+                setError('You do not have permission to invite users with this role');
+                return;
+            }
+
             setLoading(true);
 
             // Create invite record in Firebase
@@ -273,6 +450,19 @@ export default function ManageUsersContent() {
         }
     };
 
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'active':
+                return <CheckCircle className="w-3 h-3" />;
+            case 'inactive':
+                return <Clock className="w-3 h-3" />;
+            case 'suspended':
+                return <XCircle className="w-3 h-3" />;
+            default:
+                return <AlertCircle className="w-3 h-3" />;
+        }
+    };
+
     const getRoleColor = (role: UserRole) => {
         switch (role) {
             case 'Executive Officer':
@@ -291,19 +481,6 @@ export default function ManageUsersContent() {
         }
     };
 
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'active':
-                return <UserCheck className="w-4 h-4" />;
-            case 'inactive':
-                return <UserX className="w-4 h-4" />;
-            case 'suspended':
-                return <UserX className="w-4 h-4" />;
-            default:
-                return <User className="w-4 h-4" />;
-        }
-    };
-
     const getStats = () => {
         const totalMembers = users.length;
         const activeMembers = users.filter(u => u.status === 'active').length;
@@ -316,6 +493,177 @@ export default function ManageUsersContent() {
     };
 
     const stats = getStats();
+
+    // Permission checks
+    const hasUserManagementAccess = () => {
+        return currentUserRole === 'Executive Officer' || currentUserRole === 'Administrator';
+    };
+
+    const canEditUserRole = (targetUser: FirestoreUser & { id: string }) => {
+        // Executive Officers cannot change Administrator users
+        if (currentUserRole === 'Executive Officer' && targetUser.role === 'Administrator') {
+            return false;
+        }
+
+        // Administrators can change anyone's role including their own
+        if (currentUserRole === 'Administrator') {
+            return true;
+        }
+
+        // Executive Officers cannot change their own role
+        if (currentUserRole === 'Executive Officer' && currentUser && targetUser.id === currentUser.id) {
+            return false;
+        }
+
+        // Executive Officers can change other users' roles except Administrators
+        if (currentUserRole === 'Executive Officer' && targetUser.role !== 'Administrator') {
+            return true;
+        }
+
+        return false;
+    };
+
+    const canEditUserPosition = (targetUser: FirestoreUser & { id: string }) => {
+        // Administrators can change anyone's position including their own
+        if (currentUserRole === 'Administrator') {
+            return true;
+        }
+
+        // Executive Officers cannot change their own position
+        if (currentUserRole === 'Executive Officer' && currentUser && targetUser.id === currentUser.id) {
+            return false;
+        }
+
+        // Executive Officers cannot change Administrator positions
+        if (currentUserRole === 'Executive Officer' && targetUser.role === 'Administrator') {
+            return false;
+        }
+
+        return hasUserManagementAccess();
+    };
+
+    const canInviteWithRole = (role: UserRole) => {
+        // Only administrators can invite executive officers or administrators
+        if (['Executive Officer', 'Administrator'].includes(role)) {
+            return currentUserRole === 'Administrator';
+        }
+        return hasUserManagementAccess();
+    };
+
+    const getAvailableRoles = (isCurrentUser: boolean = false): UserRole[] => {
+        if (currentUserRole === 'Administrator') {
+            // Administrators can assign any role to anyone including themselves
+            return roles;
+        } else if (currentUserRole === 'Executive Officer') {
+            if (isCurrentUser) {
+                // Executive Officers cannot change their own role - return only their current role
+                return [currentUserRole];
+            }
+            // Executive Officers can assign any role except Administrator to others
+            return roles.filter(role => role !== 'Administrator');
+        }
+
+        return ['Member'];
+    };
+
+    // Helper function to detect if user is OAuth user  
+    const isOAuthUser = (targetUserId: string) => {
+        // Find the user in our users list and check their signInMethod
+        const targetUser = users.find(u => u.id === targetUserId);
+        if (targetUser && targetUser.signInMethod) {
+            // Consider anything other than 'email' as OAuth
+            return targetUser.signInMethod !== 'email';
+        }
+
+        // Fallback: if we can't find the sign-in method and this is the current user,
+        // check the auth providers
+        if (user && user.uid === targetUserId) {
+            return user.providerData.some(provider =>
+                provider.providerId !== 'password' &&
+                provider.providerId !== 'email'
+            );
+        }
+
+        return false;
+    };
+
+    // Show loading while we're fetching the user auth or role
+    if (userLoading || roleLoading) {
+        return (
+            <div className="flex-1 overflow-auto">
+                <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">Loading...</h1>
+                            <p className="text-gray-600">Checking permissions...</p>
+                        </div>
+                    </div>
+                </header>
+                <main className="p-6">
+                    <div className="flex justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    // If user doesn't have access, show access denied message
+    if (user && !hasUserManagementAccess()) {
+        return (
+            <div className="flex-1 overflow-auto">
+                {/* Header */}
+                <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
+                            <p className="text-gray-600">You don't have permission to access this page</p>
+                        </div>
+                    </div>
+                </header>
+                <main className="p-6">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                        <div className="flex items-center">
+                            <Shield className="h-8 w-8 text-red-600" />
+                            <div className="ml-4">
+                                <h3 className="text-lg font-semibold text-red-800">Access Restricted</h3>
+                                <p className="text-red-700">Only Executive Officers and Administrators can access user management.</p>
+                                <p className="text-red-600 text-sm mt-2">Current role: {currentUserRole}</p>
+                                <p className="text-red-600 text-sm">User ID: {user?.uid}</p>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    // Show access denied if no user is logged in
+    if (!user) {
+        return (
+            <div className="flex-1 overflow-auto">
+                <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
+                            <p className="text-gray-600">Please log in to access this page</p>
+                        </div>
+                    </div>
+                </header>
+                <main className="p-6">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                        <div className="flex items-center">
+                            <Shield className="h-8 w-8 text-red-600" />
+                            <div className="ml-4">
+                                <h3 className="text-lg font-semibold text-red-800">Authentication Required</h3>
+                                <p className="text-red-700">You must be logged in to access user management.</p>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 overflow-auto">
@@ -401,20 +749,12 @@ export default function ManageUsersContent() {
                                 <span>Send Invite</span>
                             </button>
                             <button
-                                onClick={() => {
-                                    setEditingUser({
-                                        name: '',
-                                        email: '',
-                                        role: 'Member',
-                                        position: '',
-                                        status: 'active'
-                                    });
-                                    setShowUserModal(true);
-                                }}
+                                onClick={() => setShowAddMemberModal(true)}
                                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                title="Add an existing IEEE UCSD member to the digital system"
                             >
                                 <Plus className="w-4 h-4" />
-                                <span>Add Member</span>
+                                <span>Add Existing Member</span>
                             </button>
                         </div>
                     </div>
@@ -511,7 +851,7 @@ export default function ManageUsersContent() {
                                                 Activity
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Join Date
+                                                Dates
                                             </th>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Actions
@@ -565,8 +905,15 @@ export default function ManageUsersContent() {
                                                         <div className="text-sm text-gray-500">{user.points || 0} points</div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {user.joinDate ? user.joinDate.toDate().toLocaleDateString() : 'Unknown'}
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div>
+                                                        <div className="text-sm text-gray-900">
+                                                            Joined: {user.joinDate ? user.joinDate.toDate().toLocaleDateString() : 'Unknown'}
+                                                        </div>
+                                                        <div className="text-sm text-gray-500">
+                                                            Updated: {user.lastUpdated ? user.lastUpdated.toDate().toLocaleDateString() : 'Never'}
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <div className="flex items-center justify-end space-x-2">
@@ -580,13 +927,15 @@ export default function ManageUsersContent() {
                                                         <button className="text-green-600 hover:text-green-900" title="Send Email">
                                                             <Mail className="w-4 h-4" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleDeleteUser(user.id)}
-                                                            className="text-red-600 hover:text-red-900"
-                                                            title="Remove Member"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
+                                                        {canDeleteUser(user) && (
+                                                            <button
+                                                                onClick={() => handleDeleteUser(user.id)}
+                                                                className="text-red-600 hover:text-red-900"
+                                                                title="Remove Member"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -604,9 +953,16 @@ export default function ManageUsersContent() {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
                         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                            <h2 className="text-xl font-bold text-gray-900">
-                                {editingUser.id ? 'Edit Member' : 'Add Member'}
-                            </h2>
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    {editingUser.id ? 'Edit Member' : 'Add Existing Member'}
+                                </h2>
+                                {!editingUser.id && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        Add an existing IEEE UCSD member to the digital system. For new people, use "Send Invite" instead.
+                                    </p>
+                                )}
+                            </div>
                             <button
                                 onClick={() => {
                                     setShowUserModal(false);
@@ -641,9 +997,13 @@ export default function ManageUsersContent() {
                                             type="email"
                                             value={editingUser.email}
                                             onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            disabled={!!(editingUser.id && isOAuthUser(editingUser.id))}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                                             placeholder="email@ucsd.edu"
                                         />
+                                        {editingUser.id && isOAuthUser(editingUser.id) && (
+                                            <p className="text-xs text-gray-500 mt-1">Email cannot be changed for users who signed in with OAuth providers</p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -654,9 +1014,10 @@ export default function ManageUsersContent() {
                                             <select
                                                 value={editingUser.role}
                                                 onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as UserRole })}
-                                                className="appearance-none w-full px-4 py-3 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                                disabled={!!(editingUser.id && currentUser && editingUser.id === currentUser.id && currentUserRole === 'Executive Officer')}
+                                                className="appearance-none w-full px-4 py-3 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                {roles.map(role => (
+                                                {getAvailableRoles(editingUser.id === currentUser?.id).map(role => (
                                                     <option key={role} value={role}>{role}</option>
                                                 ))}
                                             </select>
@@ -666,6 +1027,9 @@ export default function ManageUsersContent() {
                                                 </svg>
                                             </div>
                                         </div>
+                                        {editingUser.id && currentUser && editingUser.id === currentUser.id && currentUserRole === 'Executive Officer' && (
+                                            <p className="text-xs text-gray-500 mt-1">Executive Officers cannot change their own role</p>
+                                        )}
                                     </div>
                                     {editingUser.id && (
                                         <div>
@@ -696,9 +1060,13 @@ export default function ManageUsersContent() {
                                         type="text"
                                         value={editingUser.position || ''}
                                         onChange={(e) => setEditingUser({ ...editingUser, position: e.target.value })}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        disabled={!!(editingUser.id && currentUser && editingUser.id === currentUser.id && currentUserRole === 'Executive Officer')}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         placeholder="e.g. Webmaster, President, Vice President"
                                     />
+                                    {editingUser.id && currentUser && editingUser.id === currentUser.id && currentUserRole === 'Executive Officer' && (
+                                        <p className="text-xs text-gray-500 mt-1">Executive Officers cannot change their own position</p>
+                                    )}
                                 </div>
 
                                 {editingUser.id && (
@@ -830,7 +1198,7 @@ export default function ManageUsersContent() {
                                                 onChange={(e) => setInviteData({ ...inviteData, role: e.target.value as UserRole })}
                                                 className="appearance-none w-full px-4 py-3 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
                                             >
-                                                {roles.map(role => (
+                                                {getAvailableRoles().map(role => (
                                                     <option key={role} value={role}>{role}</option>
                                                 ))}
                                             </select>
@@ -840,6 +1208,9 @@ export default function ManageUsersContent() {
                                                 </svg>
                                             </div>
                                         </div>
+                                        {!canInviteWithRole(inviteData.role) && (
+                                            <p className="text-xs text-red-500 mt-1">You cannot invite users with this role</p>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Position</label>
@@ -879,6 +1250,195 @@ export default function ManageUsersContent() {
                                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                             >
                                 {loading ? 'Sending...' : 'Send Invitation'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Existing Member Modal */}
+            {showAddMemberModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">Search for Existing Member</h2>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    Find and manage existing IEEE UCSD members in the system
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowAddMemberModal(false);
+                                    setMemberSearchTerm('');
+                                    setSearchResults([]);
+                                    setSelectedMember(null);
+                                }}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto" style={{ maxHeight: '60vh' }}>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Search for Member
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={memberSearchTerm}
+                                            onChange={(e) => setMemberSearchTerm(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Search by name, email, major, Student ID (PID), or Member ID..."
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Type at least 2 characters to search. Results update automatically.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {memberSearchTerm && memberSearchTerm.length >= 2 && (
+                                    <div className="mt-4 text-sm text-gray-600">
+                                        {searchResults.length > 0 ? (
+                                            `Found ${searchResults.length} member${searchResults.length !== 1 ? 's' : ''}`
+                                        ) : (
+                                            users.length > 0 ? 'No members found matching your search criteria' : 'Loading members...'
+                                        )}
+                                    </div>
+                                )}
+
+                                {searchResults.length > 0 && (
+                                    <div className="mt-6 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
+                                        <div className="px-4 py-3 border-b border-gray-200">
+                                            <h3 className="text-lg font-semibold text-gray-900">Search Results ({searchResults.length})</h3>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Member
+                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Academic Info
+                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Role
+                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Actions
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                    {searchResults.map((user) => (
+                                                        <tr key={user.id} className={`hover:bg-gray-50 ${selectedMember?.id === user.id ? 'bg-blue-50 border-blue-200' : ''}`}>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <div className="flex items-center">
+                                                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                                        <span className="text-blue-600 font-medium text-sm">
+                                                                            {user.name ? user.name.split(' ').map((n: string) => n[0]).join('') : 'U'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="ml-4">
+                                                                        <div className="text-sm font-medium text-gray-900">{user.name || 'No name'}</div>
+                                                                        <div className="text-sm text-gray-500">{user.email}</div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <div>
+                                                                    <div className="text-sm text-gray-900">{user.major || 'Not specified'}</div>
+                                                                    <div className="text-sm text-gray-500">
+                                                                        {user.graduationYear ? `Class of ${user.graduationYear}` : 'Year not specified'}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-400">
+                                                                        {user.memberId && `Member ID: ${user.memberId}`}
+                                                                        {user.pid && `${user.memberId ? ' | ' : ''}PID: ${user.pid}`}
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                <div>
+                                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
+                                                                        {user.role}
+                                                                    </span>
+                                                                    {user.position && (
+                                                                        <div className="text-xs text-gray-500 mt-1">{user.position}</div>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                                <button
+                                                                    onClick={() => setSelectedMember(selectedMember?.id === user.id ? null : user)}
+                                                                    className={`${selectedMember?.id === user.id ? 'text-blue-600 hover:text-blue-900' : 'text-green-600 hover:text-green-900'}`}
+                                                                    title={selectedMember?.id === user.id ? 'Deselect' : 'Select Member'}
+                                                                >
+                                                                    {selectedMember?.id === user.id ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedMember && (
+                                    <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <h4 className="font-semibold text-blue-900 mb-2">Selected Member:</h4>
+                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                            <div>
+                                                <span className="font-medium text-blue-700">Name:</span> {selectedMember.name || selectedMember.email}
+                                            </div>
+                                            <div>
+                                                <span className="font-medium text-blue-700">Role:</span> {selectedMember.role}
+                                            </div>
+                                            <div>
+                                                <span className="font-medium text-blue-700">Status:</span> {selectedMember.status}
+                                            </div>
+                                            <div>
+                                                <span className="font-medium text-blue-700">Member ID:</span> {selectedMember.memberId || selectedMember.pid || 'Not set'}
+                                            </div>
+                                            <div>
+                                                <span className="font-medium text-blue-700">Major:</span> {selectedMember.major || 'Not specified'}
+                                            </div>
+                                            <div>
+                                                <span className="font-medium text-blue-700">Graduation Year:</span> {selectedMember.graduationYear || 'Not specified'}
+                                            </div>
+                                        </div>
+                                        {selectedMember.status === 'inactive' && (
+                                            <div className="mt-2 text-sm text-blue-700">
+                                                <strong>Action:</strong> This member will be activated when you confirm.
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between p-6 border-t border-gray-200">
+                            <button
+                                onClick={() => {
+                                    setShowAddMemberModal(false);
+                                    setMemberSearchTerm('');
+                                    setSearchResults([]);
+                                    setSelectedMember(null);
+                                }}
+                                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAddExistingMember}
+                                disabled={!selectedMember || loading}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            >
+                                {loading ? 'Processing...' : selectedMember?.status === 'inactive' ? 'Activate Member' : 'Update Member'}
                             </button>
                         </div>
                     </div>
