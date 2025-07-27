@@ -121,7 +121,7 @@ export default function ReimbursementManagementPortal() {
 
             // When searching, don't auto-hide paid/rejected unless explicitly filtered
             const isSearching = filters.search.trim().length > 0;
-            
+
             // Auto-hide paid reimbursements if the option is enabled and not searching
             if (filters.hidePaid && !isSearching) {
                 const hidePaidFilter = 'status != "paid"';
@@ -245,14 +245,14 @@ export default function ReimbursementManagementPortal() {
             let filteredRecords = enrichedRecords;
             if (isSearching) {
                 const searchTerm = filters.search.toLowerCase().trim();
-                
+
                 filteredRecords = enrichedRecords.filter(record => {
                     // Search in title
                     if (record.title.toLowerCase().includes(searchTerm)) return true;
-                    
+
                     // Search in submitter name
                     if (record.submitter?.name?.toLowerCase().includes(searchTerm)) return true;
-                    
+
                     // Search in date (multiple formats)
                     const date = new Date(record.date_of_purchase);
                     const dateFormats = [
@@ -264,23 +264,23 @@ export default function ReimbursementManagementPortal() {
                         `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` // YYYY-MM-DD
                     ];
                     if (dateFormats.some(format => format.toLowerCase().includes(searchTerm))) return true;
-                    
+
                     // Search in receipt location names
                     const reimbursementReceipts = record.receipts?.map(id => receiptMap[id]).filter(Boolean) || [];
-                    if (reimbursementReceipts.some(receipt => 
+                    if (reimbursementReceipts.some(receipt =>
                         receipt.location_name?.toLowerCase().includes(searchTerm) ||
                         receipt.location_address?.toLowerCase().includes(searchTerm)
                     )) return true;
-                    
+
                     // Search in department
                     if (record.department.toLowerCase().includes(searchTerm)) return true;
-                    
+
                     // Search in status
                     if (record.status.toLowerCase().replace('_', ' ').includes(searchTerm)) return true;
-                    
+
                     // Search in additional info
                     if (record.additional_info?.toLowerCase().includes(searchTerm)) return true;
-                    
+
                     return false;
                 });
             }
@@ -1427,9 +1427,9 @@ export default function ReimbursementManagementPortal() {
                                                                                             : receipt.itemized_expenses;
                                                                                         return expenses.map((expense, index) => (
                                                                                             <div key={index} className="flex justify-between items-start gap-2 text-sm">
-                                                                                                <div>
-                                                                                                    <p className="font-medium">{expense.description}</p>
-                                                                                                    <p className="text-base-content/70">{expense.category}</p>
+                                                                                                <div className="min-w-0 flex-1">
+                                                                                                    <p className="font-medium break-words">{expense.description}</p>
+                                                                                                    <p className="text-base-content/70 break-words">{expense.category}</p>
                                                                                                 </div>
                                                                                                 <span className="font-mono font-medium whitespace-nowrap">
                                                                                                     ${expense.amount.toFixed(2)}

@@ -478,7 +478,7 @@ export default function ManageReimbursementsContent() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div>
-                                                        <div className="text-sm font-medium text-gray-900">{userNames[reimbursement.submittedBy] || 'Loading...'}</div>
+                                                        <div className="text-sm font-medium text-gray-900">{userNames[reimbursement.submittedBy] || (loading ? 'Loading...' : 'Unknown User')}</div>
                                                         <div className="text-sm text-gray-500">Submitted by</div>
                                                     </div>
                                                 </td>

@@ -387,8 +387,8 @@ export default function ReimbursementRequestModal({ isOpen, onClose, onSubmit }:
                                                     <Input
                                                         type="number"
                                                         step="0.01"
-                                                        value={expense.amount}
-                                                        onChange={(e) => updateExpense(expense.id, 'amount', parseFloat(e.target.value) || 0)}
+                                                        value={expense.amount === 0 ? '' : expense.amount}
+                                                        onChange={(e) => updateExpense(expense.id, 'amount', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                                                         placeholder="0.00"
                                                         className={`pl-10 ${errors[`expense_${expense.id}_amount`] ? 'border-red-500' : ''}`}
                                                     />

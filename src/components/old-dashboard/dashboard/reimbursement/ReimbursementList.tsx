@@ -797,11 +797,11 @@ export default function ReimbursementList() {
                                                         <div className="grid grid-cols-3 gap-4">
                                                             <div>
                                                                 <label className="text-xs font-medium">Description</label>
-                                                                <p>{item.description}</p>
+                                                                <p className="break-words">{item.description}</p>
                                                             </div>
                                                             <div>
                                                                 <label className="text-xs font-medium">Category</label>
-                                                                <p>{item.category}</p>
+                                                                <p className="break-words">{item.category}</p>
                                                             </div>
                                                             <div>
                                                                 <label className="text-xs font-medium">Amount</label>

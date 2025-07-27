@@ -30,10 +30,12 @@ interface EventViewModalProps {
         otherLogos?: string[];
         advertisingFormat?: string;
         willOrHaveRoomBooking?: boolean;
+        hasRoomBooking?: boolean;
         expectedAttendance?: number;
         roomBookingFiles?: string[];
         asFundingRequired?: boolean;
         foodDrinksBeingServed?: boolean;
+        servingFoodDrinks?: boolean;
         // New multi-invoice format
         invoices?: {
             id: string;
@@ -42,7 +44,7 @@ interface EventViewModalProps {
             tax: number;
             tip: number;
             invoiceFile?: string;
-            additionalFiles: string[];
+
             subtotal: number;
             total: number;
         }[];
@@ -644,7 +646,7 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                             <span className="text-sm">AS Funding Required</span>
                                         </div>
                                         <div className="flex items-center space-x-2">
-                                            <div className={`w-3 h-3 rounded-full ${request.flyersNeeded ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                            <div className={`w-3 h-3 rounded-full ${request.flyersNeeded || (request.flyerType && request.flyerType.length > 0) ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                                             <span className="text-sm">Flyers Needed</span>
                                         </div>
                                         <div className="flex items-center space-x-2">
@@ -652,11 +654,15 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                             <span className="text-sm">Photography Needed</span>
                                         </div>
                                         <div className="flex items-center space-x-2">
-                                            <div className={`w-3 h-3 rounded-full ${request.willOrHaveRoomBooking ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                            <div className={`w-3 h-3 rounded-full ${
+                                                (request.hasRoomBooking ?? request.willOrHaveRoomBooking) && 
+                                                (request.roomBookingFiles && request.roomBookingFiles.length > 0) 
+                                                ? 'bg-green-500' : 'bg-gray-300'
+                                            }`}></div>
                                             <span className="text-sm">Room Booking</span>
                                         </div>
                                         <div className="flex items-center space-x-2">
-                                            <div className={`w-3 h-3 rounded-full ${request.foodDrinksBeingServed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                            <div className={`w-3 h-3 rounded-full ${request.servingFoodDrinks ?? request.foodDrinksBeingServed ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                                             <span className="text-sm">Food & Drinks Served</span>
                                         </div>
                                     </div>
@@ -701,7 +707,7 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                         )}
 
                         {/* Room Booking Warning */}
-                        {!request.willOrHaveRoomBooking && (
+                        {!(request.hasRoomBooking ?? request.willOrHaveRoomBooking) && (
                             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                                 <div className="flex items-start">
                                     <AlertTriangle className="w-5 h-5 text-amber-600 mr-2 mt-0.5" />
@@ -831,43 +837,34 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                                             </h6>
                                                             <div className="bg-white rounded-lg border border-gray-200">
                                                                 {invoice.items.map((item, itemIndex) => (
-                                                                    <div key={itemIndex} className={`flex justify-between items-center p-3 ${itemIndex !== invoice.items.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                                                                        <div className="flex items-center space-x-3">
-                                                                            <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center">
+                                                                    <div key={itemIndex} className={`flex justify-between items-start p-3 gap-4 ${itemIndex !== invoice.items.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                                                                        <div className="flex items-start space-x-3 flex-1 min-w-0">
+                                                                            <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
                                                                                 <span className="text-xs font-medium text-blue-600">{item.quantity}</span>
                                                                             </div>
-                                                                            <div>
-                                                                                <p className="font-medium text-gray-900">{item.description}</p>
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <p className="font-medium text-gray-900 break-words">{item.description}</p>
                                                                                 <p className="text-sm text-gray-500">${item.unitPrice.toFixed(2)} each</p>
                                                                             </div>
                                                                         </div>
-                                                                        <div className="text-right">
+                                                                        <div className="text-right flex-shrink-0">
                                                                             <div className="font-semibold text-gray-900">${item.total.toFixed(2)}</div>
-                                                                            <div className="text-xs text-gray-500">{item.quantity} × ${item.unitPrice.toFixed(2)}</div>
+                                                                            <div className="text-xs text-gray-500 whitespace-nowrap">{item.quantity} × ${item.unitPrice.toFixed(2)}</div>
                                                                         </div>
                                                                     </div>
                                                                 ))}
                                                             </div>
                                                         </div>
 
-                                                        {/* Invoice files */}
-                                                        {(invoice.invoiceFile || invoice.additionalFiles.length > 0) && (
+                                                        {/* Invoice file */}
+                                                        {invoice.invoiceFile && (
                                                             <div className="mb-4">
                                                                 <h6 className="font-medium text-gray-700 mb-3 flex items-center">
                                                                     <FileText className="w-4 h-4 mr-1" />
-                                                                    Attached Files
+                                                                    Invoice File
                                                                 </h6>
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                                    {invoice.invoiceFile && (
-                                                                        <div className="bg-white border border-gray-200 rounded-lg p-3">
-                                                                            <FileViewer url={invoice.invoiceFile} filename="Main Invoice" />
-                                                                        </div>
-                                                                    )}
-                                                                    {invoice.additionalFiles.map((file, fileIndex) => (
-                                                                        <div key={fileIndex} className="bg-white border border-gray-200 rounded-lg p-3">
-                                                                            <FileViewer url={file} filename={`Additional File ${fileIndex + 1}`} />
-                                                                        </div>
-                                                                    ))}
+                                                                <div className="bg-white border border-gray-200 rounded-lg p-3">
+                                                                    <FileViewer url={invoice.invoiceFile} filename="Invoice" />
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1182,6 +1179,7 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                         {(
                             (request.roomBookingFiles && request.roomBookingFiles.length > 0) ||
                             (request.invoiceFiles && request.invoiceFiles.length > 0) ||
+                            (request.invoices && request.invoices.some(inv => inv.invoiceFile)) ||
                             eventFiles.length > 0
                         ) && (
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -1193,7 +1191,10 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                         </div>
                                         <div>
                                             <span className="font-medium text-blue-800">Invoice Files:</span>
-                                            <p className="text-blue-700">{request.invoiceFiles?.length || 0} files</p>
+                                            <p className="text-blue-700">{
+                                                ((request.invoiceFiles?.length || 0) + 
+                                                (request.invoices?.filter(inv => inv.invoiceFile).length || 0))
+                                            } files</p>
                                         </div>
                                         <div>
                                             <span className="font-medium text-blue-800">Event Files:</span>
@@ -1204,39 +1205,41 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                             )}
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* File Preview Modal */}
-            {selectedFile && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
-                    <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto">
-                        <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
-                            <h3 className="text-lg font-semibold">File Preview</h3>
-                            <button
-                                onClick={() => setSelectedFile(null)}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            {selectedFile.toLowerCase().includes('.pdf') ? (
-                                <iframe
-                                    src={selectedFile}
-                                    className="w-full h-96"
-                                    title="PDF Preview"
-                                />
-                            ) : (
-                                <img
-                                    src={selectedFile}
-                                    alt="File preview"
-                                    className="max-w-full h-auto"
-                                />
-                            )}
+            {
+                selectedFile && (
+                    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
+                        <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto">
+                            <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
+                                <h3 className="text-lg font-semibold">File Preview</h3>
+                                <button
+                                    onClick={() => setSelectedFile(null)}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+                            <div className="p-4">
+                                {selectedFile.toLowerCase().includes('.pdf') ? (
+                                    <iframe
+                                        src={selectedFile}
+                                        className="w-full h-96"
+                                        title="PDF Preview"
+                                    />
+                                ) : (
+                                    <img
+                                        src={selectedFile}
+                                        alt="File preview"
+                                        className="max-w-full h-auto"
+                                    />
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </>
     );
 } 

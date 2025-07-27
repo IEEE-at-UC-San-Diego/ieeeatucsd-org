@@ -1,4 +1,4 @@
-import { getFirestore, doc, getDoc } from 'firebase-admin/firestore';
+import { getFirestore } from 'firebase-admin/firestore';
 import { app } from '../../firebase/server';
 
 export async function sendFirebaseEventRequestSubmissionEmail(resend: any, fromEmail: string, replyToEmail: string, data: any): Promise<boolean> {
@@ -8,8 +8,8 @@ export async function sendFirebaseEventRequestSubmissionEmail(resend: any, fromE
     const db = getFirestore(app);
     
     // Get event request details
-    const eventRequestDoc = await getDoc(doc(db, 'event_requests', data.eventRequestId));
-    if (!eventRequestDoc.exists()) {
+    const eventRequestDoc = await db.collection('event_requests').doc(data.eventRequestId).get();
+    if (!eventRequestDoc.exists) {
       console.error('❌ Event request not found:', data.eventRequestId);
       return false;
     }
@@ -17,8 +17,8 @@ export async function sendFirebaseEventRequestSubmissionEmail(resend: any, fromE
     const eventRequest = { id: eventRequestDoc.id, ...eventRequestDoc.data() } as any;
     
     // Get user details
-    const userDoc = await getDoc(doc(db, 'users', eventRequest.requestedUser));
-    if (!userDoc.exists()) {
+    const userDoc = await db.collection('users').doc(eventRequest.requestedUser).get();
+    if (!userDoc.exists) {
       console.error('❌ User not found:', eventRequest.requestedUser);
       return false;
     }
@@ -270,8 +270,8 @@ export async function sendFirebaseEventRequestStatusChangeEmail(resend: any, fro
     const db = getFirestore(app);
     
     // Get event request details
-    const eventRequestDoc = await getDoc(doc(db, 'event_requests', data.eventRequestId));
-    if (!eventRequestDoc.exists()) {
+    const eventRequestDoc = await db.collection('event_requests').doc(data.eventRequestId).get();
+    if (!eventRequestDoc.exists) {
       console.error('❌ Event request not found:', data.eventRequestId);
       return false;
     }
@@ -279,8 +279,8 @@ export async function sendFirebaseEventRequestStatusChangeEmail(resend: any, fro
     const eventRequest = { id: eventRequestDoc.id, ...eventRequestDoc.data() } as any;
     
     // Get user details
-    const userDoc = await getDoc(doc(db, 'users', eventRequest.requestedUser));
-    if (!userDoc.exists()) {
+    const userDoc = await db.collection('users').doc(eventRequest.requestedUser).get();
+    if (!userDoc.exists) {
       console.error('❌ User not found:', eventRequest.requestedUser);
       return false;
     }
@@ -435,8 +435,8 @@ export async function sendFirebaseEventEditEmail(resend: any, fromEmail: string,
     const db = getFirestore(app);
     
     // Get event request details
-    const eventRequestDoc = await getDoc(doc(db, 'event_requests', data.eventRequestId));
-    if (!eventRequestDoc.exists()) {
+    const eventRequestDoc = await db.collection('event_requests').doc(data.eventRequestId).get();
+    if (!eventRequestDoc.exists) {
       console.error('❌ Event request not found:', data.eventRequestId);
       return false;
     }
@@ -444,8 +444,8 @@ export async function sendFirebaseEventEditEmail(resend: any, fromEmail: string,
     const eventRequest = { id: eventRequestDoc.id, ...eventRequestDoc.data() } as any;
     
     // Get user details
-    const userDoc = await getDoc(doc(db, 'users', eventRequest.requestedUser));
-    if (!userDoc.exists()) {
+    const userDoc = await db.collection('users').doc(eventRequest.requestedUser).get();
+    if (!userDoc.exists) {
       console.error('❌ User not found:', eventRequest.requestedUser);
       return false;
     }

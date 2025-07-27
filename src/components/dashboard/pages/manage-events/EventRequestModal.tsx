@@ -5,6 +5,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/
 import { app } from '../../../../firebase/client';
 import { auth } from '../../../../firebase/client';
 import { EmailClient } from '../../../../scripts/email/EmailClient';
+import { toast } from 'react-hot-toast';
 
 interface EventRequestModalProps {
     onClose: () => void;
@@ -26,9 +27,7 @@ interface InvoiceFormData {
     tax: number;
     tip: number;
     invoiceFile: File | null;
-    additionalFiles: File[];
     existingInvoiceFile: string;
-    existingAdditionalFiles: string[];
 }
 
 // JsonInvoiceData interface removed - using simplified per-invoice management
@@ -88,6 +87,44 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         existingInvoiceFile: ''
     });
 
+    // State for managing invoice tabs (Details vs Import JSON)
+    const [invoiceTabState, setInvoiceTabState] = useState<{ [key: string]: 'details' | 'import' }>({});
+
+    // State for JSON import data for each invoice
+    const [jsonImportData, setJsonImportData] = useState<{ [key: string]: string }>({});
+
+    // State for active invoice tab
+    const [activeInvoiceTab, setActiveInvoiceTab] = useState<string>('');
+
+    // Initialize tab states for existing invoices
+    useEffect(() => {
+        if (formData.invoices.length > 0) {
+            const newTabStates: { [key: string]: 'details' | 'import' } = {};
+            const newJsonData: { [key: string]: string } = {};
+
+            formData.invoices.forEach(invoice => {
+                if (!invoiceTabState[invoice.id]) {
+                    newTabStates[invoice.id] = 'details';
+                }
+                if (!jsonImportData[invoice.id]) {
+                    newJsonData[invoice.id] = '';
+                }
+            });
+
+            if (Object.keys(newTabStates).length > 0) {
+                setInvoiceTabState(prev => ({ ...prev, ...newTabStates }));
+            }
+            if (Object.keys(newJsonData).length > 0) {
+                setJsonImportData(prev => ({ ...prev, ...newJsonData }));
+            }
+
+            // Set active tab if none is selected
+            if (!activeInvoiceTab && formData.invoices.length > 0) {
+                setActiveInvoiceTab(formData.invoices[0].id);
+            }
+        }
+    }, [formData.invoices.length]);
+
     const db = getFirestore(app);
     const storage = getStorage(app);
 
@@ -99,16 +136,28 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         tax: 0,
         tip: 0,
         invoiceFile: null,
-        additionalFiles: [],
-        existingInvoiceFile: '',
-        existingAdditionalFiles: []
+        existingInvoiceFile: ''
     });
 
     const addInvoice = () => {
+        const newInvoice = createNewInvoice();
         setFormData(prev => ({
             ...prev,
-            invoices: [...prev.invoices, createNewInvoice()]
+            invoices: [...prev.invoices, newInvoice]
         }));
+        // Initialize tab state for new invoice
+        setInvoiceTabState(prev => ({
+            ...prev,
+            [newInvoice.id]: 'details'
+        }));
+        setJsonImportData(prev => ({
+            ...prev,
+            [newInvoice.id]: ''
+        }));
+        // Set as active tab if it's the first invoice
+        if (formData.invoices.length === 0) {
+            setActiveInvoiceTab(newInvoice.id);
+        }
     };
 
     const removeInvoice = (invoiceId: string) => {
@@ -116,6 +165,66 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
             ...prev,
             invoices: prev.invoices.filter(invoice => invoice.id !== invoiceId)
         }));
+        // Clean up tab state for removed invoice
+        setInvoiceTabState(prev => {
+            const newState = { ...prev };
+            delete newState[invoiceId];
+            return newState;
+        });
+        setJsonImportData(prev => {
+            const newState = { ...prev };
+            delete newState[invoiceId];
+            return newState;
+        });
+    };
+
+    // Function to handle JSON import submission
+    const handleJsonImport = (invoiceId: string) => {
+        const jsonText = jsonImportData[invoiceId]?.trim();
+        if (!jsonText) {
+            toast.error('Please enter JSON data to import');
+            return;
+        }
+
+        try {
+            const jsonData = JSON.parse(jsonText);
+            const updates: Partial<InvoiceFormData> = {};
+
+            if (jsonData.vendor) {
+                updates.vendor = jsonData.vendor;
+            }
+            if (jsonData.tax !== undefined) {
+                updates.tax = parseFloat(jsonData.tax) || 0;
+            }
+            if (jsonData.tip !== undefined) {
+                updates.tip = parseFloat(jsonData.tip) || 0;
+            }
+            if (jsonData.items && Array.isArray(jsonData.items)) {
+                const validItems = jsonData.items.map((item: any) => ({
+                    description: item.description || '',
+                    quantity: parseInt(item.quantity) || 1,
+                    unitPrice: parseFloat(item.unitPrice) || 0,
+                    total: parseFloat(item.total) || (parseInt(item.quantity) || 1) * (parseFloat(item.unitPrice) || 0)
+                }));
+                updates.items = validItems;
+            }
+
+            updateInvoice(invoiceId, updates);
+
+            // Clear the JSON input and switch to details tab
+            setJsonImportData(prev => ({
+                ...prev,
+                [invoiceId]: ''
+            }));
+            setInvoiceTabState(prev => ({
+                ...prev,
+                [invoiceId]: 'details'
+            }));
+
+            toast.success('Invoice data imported successfully!');
+        } catch (err) {
+            toast.error('Invalid JSON format. Please check your data and try again.');
+        }
     };
 
     const updateInvoice = (invoiceId: string, updates: Partial<InvoiceFormData>) => {
@@ -215,9 +324,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         tax: invoice.tax || 0,
                         tip: invoice.tip || 0,
                         invoiceFile: null,
-                        additionalFiles: [],
-                        existingInvoiceFile: invoice.invoiceFile || '',
-                        existingAdditionalFiles: invoice.additionalFiles || []
+                        existingInvoiceFile: invoice.invoiceFile || ''
                     }));
                 }
 
@@ -230,9 +337,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         tax: editingRequest.invoiceTax || 0,
                         tip: editingRequest.invoiceTip || 0,
                         invoiceFile: null,
-                        additionalFiles: [],
-                        existingInvoiceFile: editingRequest.invoice || '',
-                        existingAdditionalFiles: editingRequest.invoiceFiles || []
+                        existingInvoiceFile: editingRequest.invoice || ''
                     });
                 }
 
@@ -835,18 +940,11 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
             const processedInvoices = await Promise.all(
                 formData.invoices.map(async (invoice) => {
                     let invoiceFileUrl = invoice.existingInvoiceFile;
-                    let additionalFileUrls = [...invoice.existingAdditionalFiles];
 
                     // Upload main invoice file if new file is provided
                     if (invoice.invoiceFile) {
                         const [url] = await uploadFiles([invoice.invoiceFile], 'invoices');
                         invoiceFileUrl = url;
-                    }
-
-                    // Upload additional files if any
-                    if (invoice.additionalFiles.length > 0) {
-                        const uploadedAdditionalUrls = await uploadFiles(invoice.additionalFiles, 'invoices');
-                        additionalFileUrls = [...additionalFileUrls, ...uploadedAdditionalUrls];
                     }
 
                     // Calculate totals
@@ -860,7 +958,6 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         tax: invoice.tax,
                         tip: invoice.tip,
                         invoiceFile: invoiceFileUrl,
-                        additionalFiles: additionalFileUrls,
                         subtotal,
                         total
                     };
@@ -934,7 +1031,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 invoiceTip: processedInvoices.length > 0 ? processedInvoices[0].tip : 0,
                 invoiceVendor: processedInvoices.length > 0 ? processedInvoices[0].vendor : '',
                 invoice: processedInvoices.length > 0 ? processedInvoices[0].invoiceFile : '',
-                invoiceFiles: processedInvoices.length > 0 ? processedInvoices[0].additionalFiles : [],
+                invoiceFiles: [],
                 needsGraphics: formData.needsGraphics,
                 needsAsFunding: formData.needsAsFunding,
                 status: editingRequest ? editingRequest.status : 'submitted',
@@ -1627,9 +1724,31 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         </div>
                     ) : (
                         <div className="space-y-6">
+                            {/* Invoice Tab Navigation */}
+                            <div className="border-b border-gray-200">
+                                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                                    {formData.invoices.map((invoice, invoiceIndex) => (
+                                        <button
+                                            key={invoice.id}
+                                            onClick={() => setActiveInvoiceTab(invoice.id)}
+                                            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeInvoiceTab === invoice.id
+                                                ? 'border-blue-500 text-blue-600'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            Invoice #{invoiceIndex + 1}
+                                        </button>
+                                    ))}
+                                </nav>
+                            </div>
+
+                            {/* Active Invoice Content */}
                             {formData.invoices.map((invoice, invoiceIndex) => {
+                                if (activeInvoiceTab !== invoice.id) return null;
+
                                 const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0);
                                 const total = subtotal + invoice.tax + invoice.tip;
+                                const currentTab = invoiceTabState[invoice.id] || 'details';
 
                                 return (
                                     <div key={invoice.id} className="bg-white border border-gray-300 rounded-lg p-6">
@@ -1647,285 +1766,283 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                                             </button>
                                         </div>
 
-                                        {/* Vendor field */}
-                                        <div className="mb-4">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Vendor/Restaurant <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g., Papa Johns, Subway, etc."
-                                                value={invoice.vendor}
-                                                onChange={(e) => updateInvoice(invoice.id, { vendor: e.target.value })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                required
-                                            />
-                                        </div>
-
-                                        {/* Invoice file upload */}
-                                        <div className="mb-4">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Upload Invoice File
-                                            </label>
-                                            <input
-                                                type="file"
-                                                accept=".pdf,.doc,.docx,.jpg,.png"
-                                                onChange={(e) => updateInvoice(invoice.id, { invoiceFile: e.target.files?.[0] || null })}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                            />
-
-                                            {/* Show selected new file */}
-                                            {invoice.invoiceFile && (
-                                                <div className="mt-2">
-                                                    <div className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
-                                                        <div className="flex items-center space-x-2">
-                                                            <FileText className="h-4 w-4 text-green-600" />
-                                                            <span className="text-sm text-green-700">
-                                                                {invoice.invoiceFile.name} (New file selected)
-                                                            </span>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => updateInvoice(invoice.id, { invoiceFile: null })}
-                                                            className="text-red-600 hover:text-red-800 text-sm"
-                                                        >
-                                                            Remove
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Show existing file */}
-                                            {invoice.existingInvoiceFile && !invoice.invoiceFile && (
-                                                <div className="mt-2">
-                                                    <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                                                        <div className="flex items-center space-x-2">
-                                                            <FileText className="h-4 w-4 text-gray-500" />
-                                                            <span className="text-sm text-gray-700">{extractFileName(invoice.existingInvoiceFile)}</span>
-                                                        </div>
-                                                        <div className="flex space-x-2">
-                                                            <a
-                                                                href={invoice.existingInvoiceFile}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="text-blue-600 hover:text-blue-800 text-sm"
-                                                            >
-                                                                View
-                                                            </a>
-                                                            <button
-                                                                onClick={() => updateInvoice(invoice.id, { existingInvoiceFile: '' })}
-                                                                className="text-red-600 hover:text-red-800 text-sm"
-                                                            >
-                                                                Remove
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Invoice items */}
-                                        <div className="mb-4">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <label className="block text-sm font-medium text-gray-700">Invoice Items</label>
+                                        {/* Sub-tabs for Details vs Import JSON */}
+                                        <div className="border-b border-gray-200 mb-4">
+                                            <nav className="-mb-px flex space-x-8" aria-label="Sub tabs">
                                                 <button
-                                                    type="button"
-                                                    onClick={() => addInvoiceItem(invoice.id)}
-                                                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                                    onClick={() => setInvoiceTabState(prev => ({ ...prev, [invoice.id]: 'details' }))}
+                                                    className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${currentTab === 'details'
+                                                        ? 'border-blue-500 text-blue-600'
+                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                                        }`}
                                                 >
-                                                    + Add Item
+                                                    Details
                                                 </button>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                {/* Column headers */}
-                                                <div className="grid grid-cols-12 gap-3 p-3 bg-gray-100 border border-gray-300 rounded-lg">
-                                                    <div className="col-span-4">
-                                                        <span className="text-sm font-medium text-gray-700">Description</span>
-                                                    </div>
-                                                    <div className="col-span-2">
-                                                        <span className="text-sm font-medium text-gray-700">Quantity</span>
-                                                    </div>
-                                                    <div className="col-span-2">
-                                                        <span className="text-sm font-medium text-gray-700">Unit Price</span>
-                                                    </div>
-                                                    <div className="col-span-2">
-                                                        <span className="text-sm font-medium text-gray-700">Total</span>
-                                                    </div>
-                                                    <div className="col-span-2">
-                                                        <span className="text-sm font-medium text-gray-700">Action</span>
-                                                    </div>
-                                                </div>
-
-                                                {invoice.items.map((item, itemIndex) => (
-                                                    <div key={itemIndex} className="grid grid-cols-12 gap-3 p-3 bg-white border border-gray-200 rounded-lg">
-                                                        <div className="col-span-4">
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Description"
-                                                                value={item.description}
-                                                                onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'description', e.target.value)}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                            />
-                                                        </div>
-                                                        <div className="col-span-2">
-                                                            <input
-                                                                type="number"
-                                                                placeholder="Qty"
-                                                                value={item.quantity}
-                                                                onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'quantity', parseInt(e.target.value) || 0)}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                            />
-                                                        </div>
-                                                        <div className="col-span-2">
-                                                            <input
-                                                                type="number"
-                                                                step="0.01"
-                                                                placeholder="Unit Price"
-                                                                value={item.unitPrice}
-                                                                onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'unitPrice', parseFloat(e.target.value) || 0)}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                            />
-                                                        </div>
-                                                        <div className="col-span-2">
-                                                            <input
-                                                                type="number"
-                                                                step="0.01"
-                                                                placeholder="Total"
-                                                                value={item.total.toFixed(2)}
-                                                                readOnly
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50"
-                                                            />
-                                                        </div>
-                                                        <div className="col-span-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeInvoiceItem(invoice.id, itemIndex)}
-                                                                className="w-full text-red-600 hover:text-red-700 text-sm font-medium"
-                                                            >
-                                                                Remove
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                                <button
+                                                    onClick={() => setInvoiceTabState(prev => ({ ...prev, [invoice.id]: 'import' }))}
+                                                    className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${currentTab === 'import'
+                                                        ? 'border-blue-500 text-blue-600'
+                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                                        }`}
+                                                >
+                                                    Import JSON
+                                                </button>
+                                            </nav>
                                         </div>
 
-                                        {/* Tax and tip */}
-                                        <div className="grid grid-cols-2 gap-4 mb-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Tax ($)</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={invoice.tax}
-                                                    onChange={(e) => updateInvoice(invoice.id, { tax: parseFloat(e.target.value) || 0 })}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">Tip ($)</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={invoice.tip}
-                                                    onChange={(e) => updateInvoice(invoice.id, { tip: parseFloat(e.target.value) || 0 })}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Additional files */}
-                                        <div className="mb-4">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Additional Files</label>
-                                            <input
-                                                type="file"
-                                                multiple
-                                                accept=".pdf,.doc,.docx,.jpg,.png"
-                                                onChange={(e) => {
-                                                    const files = Array.from(e.target.files || []);
-                                                    updateInvoice(invoice.id, { additionalFiles: [...invoice.additionalFiles, ...files] });
-                                                }}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                            />
-
-                                            {/* Show newly selected files */}
-                                            {invoice.additionalFiles.length > 0 && (
-                                                <div className="mt-2 space-y-2">
-                                                    <h6 className="text-sm font-medium text-green-700">New Files Selected</h6>
-                                                    {invoice.additionalFiles.map((file, fileIndex) => (
-                                                        <div key={fileIndex} className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
-                                                            <div className="flex items-center space-x-2">
-                                                                <FileText className="h-4 w-4 text-green-600" />
-                                                                <span className="text-sm text-green-700">{file.name} (New)</span>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => {
-                                                                    const updatedFiles = invoice.additionalFiles.filter((_, index) => index !== fileIndex);
-                                                                    updateInvoice(invoice.id, { additionalFiles: updatedFiles });
-                                                                }}
-                                                                className="text-red-600 hover:text-red-800 text-sm"
-                                                            >
-                                                                Remove
-                                                            </button>
-                                                        </div>
-                                                    ))}
+                                        {/* Details Tab Content */}
+                                        {currentTab === 'details' && (
+                                            <>
+                                                {/* Vendor field */}
+                                                <div className="mb-4">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Vendor/Restaurant <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="e.g., Papa Johns, Subway, etc."
+                                                        value={invoice.vendor}
+                                                        onChange={(e) => updateInvoice(invoice.id, { vendor: e.target.value })}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        required
+                                                    />
                                                 </div>
-                                            )}
 
-                                            {/* Show existing files */}
-                                            {invoice.existingAdditionalFiles.length > 0 && (
-                                                <div className="mt-2 space-y-2">
-                                                    <h6 className="text-sm font-medium text-gray-700">Existing Files</h6>
-                                                    {invoice.existingAdditionalFiles.map((fileUrl, fileIndex) => (
-                                                        <div key={fileIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                                                            <div className="flex items-center space-x-2">
-                                                                <FileText className="h-4 w-4 text-gray-500" />
-                                                                <span className="text-sm text-gray-700">{extractFileName(fileUrl)}</span>
-                                                            </div>
-                                                            <div className="flex space-x-2">
-                                                                <a
-                                                                    href={fileUrl}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-blue-600 hover:text-blue-800 text-sm"
-                                                                >
-                                                                    View
-                                                                </a>
+                                                {/* Invoice file upload */}
+                                                <div className="mb-4">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Upload Invoice File
+                                                    </label>
+                                                    <input
+                                                        type="file"
+                                                        accept=".pdf,.doc,.docx,.jpg,.png"
+                                                        onChange={(e) => updateInvoice(invoice.id, { invoiceFile: e.target.files?.[0] || null })}
+                                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                                    />
+
+                                                    {/* Show selected new file */}
+                                                    {invoice.invoiceFile && (
+                                                        <div className="mt-2">
+                                                            <div className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
+                                                                <div className="flex items-center space-x-2">
+                                                                    <FileText className="h-4 w-4 text-green-600" />
+                                                                    <span className="text-sm text-green-700">
+                                                                        {invoice.invoiceFile.name} (New file selected)
+                                                                    </span>
+                                                                </div>
                                                                 <button
-                                                                    onClick={() => {
-                                                                        const updatedFiles = invoice.existingAdditionalFiles.filter((_, index) => index !== fileIndex);
-                                                                        updateInvoice(invoice.id, { existingAdditionalFiles: updatedFiles });
-                                                                    }}
+                                                                    onClick={() => updateInvoice(invoice.id, { invoiceFile: null })}
                                                                     className="text-red-600 hover:text-red-800 text-sm"
                                                                 >
                                                                     Remove
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
+                                                    )}
 
-                                        {/* Invoice total */}
-                                        <div className="bg-gray-50 border border-gray-300 rounded-lg p-3">
-                                            <div className="flex justify-between text-sm">
-                                                <span>Subtotal:</span>
-                                                <span>${subtotal.toFixed(2)}</span>
+                                                    {/* Show existing file */}
+                                                    {invoice.existingInvoiceFile && !invoice.invoiceFile && (
+                                                        <div className="mt-2">
+                                                            <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                                                                <div className="flex items-center space-x-2">
+                                                                    <FileText className="h-4 w-4 text-gray-500" />
+                                                                    <span className="text-sm text-gray-700">{extractFileName(invoice.existingInvoiceFile)}</span>
+                                                                </div>
+                                                                <div className="flex space-x-2">
+                                                                    <a
+                                                                        href={invoice.existingInvoiceFile}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-blue-600 hover:text-blue-800 text-sm"
+                                                                    >
+                                                                        View
+                                                                    </a>
+                                                                    <button
+                                                                        onClick={() => updateInvoice(invoice.id, { existingInvoiceFile: '' })}
+                                                                        className="text-red-600 hover:text-red-800 text-sm"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Itemized items */}
+                                                <div className="mb-4">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <label className="block text-sm font-medium text-gray-700">Itemized Items</label>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addInvoiceItem(invoice.id)}
+                                                            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                                        >
+                                                            + Add Item
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="space-y-3">
+                                                        {invoice.items.map((item, itemIndex) => (
+                                                            <div key={itemIndex} className="grid grid-cols-12 gap-2 items-center">
+                                                                <div className="col-span-4">
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder="Item description"
+                                                                        value={item.description}
+                                                                        onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'description', e.target.value)}
+                                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                    />
+                                                                </div>
+                                                                <div className="col-span-2">
+                                                                    <input
+                                                                        type="number"
+                                                                        placeholder="Qty"
+                                                                        value={item.quantity === 1 ? '' : item.quantity}
+                                                                        onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'quantity', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
+                                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                    />
+                                                                </div>
+                                                                <div className="col-span-2">
+                                                                    <input
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        placeholder="Price"
+                                                                        value={item.unitPrice === 0 ? '' : item.unitPrice}
+                                                                        onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'unitPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                    />
+                                                                </div>
+                                                                <div className="col-span-2">
+                                                                    <span className="text-sm font-medium text-gray-700">${item.total.toFixed(2)}</span>
+                                                                </div>
+                                                                <div className="col-span-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeInvoiceItem(invoice.id, itemIndex)}
+                                                                        className="text-red-600 hover:text-red-700 text-sm"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Tax and Tip */}
+                                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Tax ($)</label>
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={invoice.tax === 0 ? '' : invoice.tax}
+                                                            onChange={(e) => updateInvoice(invoice.id, { tax: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Tip ($)</label>
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={invoice.tip === 0 ? '' : invoice.tip}
+                                                            onChange={(e) => updateInvoice(invoice.id, { tip: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Invoice total */}
+                                                <div className="bg-gray-50 border border-gray-300 rounded-lg p-3">
+                                                    <div className="flex justify-between text-sm">
+                                                        <span>Subtotal:</span>
+                                                        <span>${subtotal.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-sm">
+                                                        <span>Tax:</span>
+                                                        <span>${invoice.tax.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-sm">
+                                                        <span>Tip:</span>
+                                                        <span>${invoice.tip.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2 mt-2">
+                                                        <span>Invoice Total:</span>
+                                                        <span>${total.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* Import JSON Tab Content */}
+                                        {currentTab === 'import' && (
+                                            <div className="space-y-4">
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                                    <h6 className="text-sm font-medium text-blue-900 mb-2">Import Invoice Data from JSON</h6>
+                                                    <p className="text-xs text-blue-800">
+                                                        Paste JSON data below and click "Import Data" to populate this invoice. This will replace existing data.
+                                                    </p>
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        JSON Data
+                                                    </label>
+                                                    <textarea
+                                                        rows={8}
+                                                        placeholder="Paste JSON here..."
+                                                        value={jsonImportData[invoice.id] || ''}
+                                                        onChange={(e) => setJsonImportData(prev => ({ ...prev, [invoice.id]: e.target.value }))}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                                                    />
+                                                </div>
+
+                                                <div className="flex space-x-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleJsonImport(invoice.id)}
+                                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                                    >
+                                                        Import Data
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setJsonImportData(prev => ({ ...prev, [invoice.id]: '' }))}
+                                                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                </div>
+
+                                                {/* Sample JSON Format */}
+                                                <div className="mt-4 p-3 bg-gray-50 rounded text-xs">
+                                                    <div className="text-gray-700 font-medium mb-1">Sample JSON format:</div>
+                                                    <pre className="text-gray-600 whitespace-pre-wrap">
+                                                        {`{
+  "vendor": "Restaurant Name",
+  "tax": 8.50,
+  "tip": 12.00,
+  "items": [
+    {
+      "description": "Pizza",
+      "quantity": 2,
+      "unitPrice": 15.99,
+      "total": 31.98
+    },
+    {
+      "description": "Drinks",
+      "quantity": 4,
+      "unitPrice": 2.50,
+      "total": 10.00
+    }
+  ]
+}`}
+                                                    </pre>
+                                                </div>
                                             </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span>Tax:</span>
-                                                <span>${invoice.tax.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span>Tip:</span>
-                                                <span>${invoice.tip.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2 mt-2">
-                                                <span>Invoice Total:</span>
-                                                <span>${total.toFixed(2)}</span>
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -2222,9 +2339,9 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                                                             <span className="font-medium text-gray-600">Items:</span>
                                                             <div className="mt-1 space-y-1">
                                                                 {invoice.items.map((item, itemIndex) => (
-                                                                    <div key={itemIndex} className="flex justify-between text-sm">
-                                                                        <span>{item.description}</span>
-                                                                        <span>{item.quantity} × ${item.unitPrice.toFixed(2)} = ${item.total.toFixed(2)}</span>
+                                                                    <div key={itemIndex} className="flex justify-between items-start gap-2 text-sm">
+                                                                        <span className="break-words flex-1 min-w-0">{item.description}</span>
+                                                                        <span className="whitespace-nowrap flex-shrink-0">{item.quantity} × ${item.unitPrice.toFixed(2)} = ${item.total.toFixed(2)}</span>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -2388,8 +2505,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                                             invoices: formData.invoices.map(inv => ({
                                                 id: inv.id,
                                                 vendor: inv.vendor,
-                                                invoiceFile: inv.invoiceFile?.name,
-                                                additionalFiles: inv.additionalFiles.map(f => f.name)
+                                                invoiceFile: inv.invoiceFile?.name
                                             }))
                                         });
                                         setCurrentStep(Math.min(steps.length - 1, currentStep + 1));

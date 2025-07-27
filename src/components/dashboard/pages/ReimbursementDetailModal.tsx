@@ -107,9 +107,9 @@ export default function ReimbursementDetailModal({ reimbursement, onClose }: Rei
                         <div className="space-y-3">
                             {reimbursement.expenses?.map((expense: any, index: number) => (
                                 <div key={expense.id || index} className="border border-gray-200 rounded-lg p-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h5 className="font-medium text-gray-900">{expense.description}</h5>
-                                        <span className="text-lg font-bold text-gray-900">${expense.amount?.toFixed(2)}</span>
+                                    <div className="flex items-start justify-between mb-2 gap-4">
+                                        <h5 className="font-medium text-gray-900 break-words flex-1 min-w-0">{expense.description}</h5>
+                                        <span className="text-lg font-bold text-gray-900 flex-shrink-0">${expense.amount?.toFixed(2)}</span>
                                     </div>
                                     <div className="text-sm text-gray-600 mb-3">
                                         <span>Category: {expense.category}</span>
