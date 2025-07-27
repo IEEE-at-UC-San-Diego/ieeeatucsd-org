@@ -172,6 +172,15 @@ service cloud.firestore {
         resource.data.requestedUser == request.auth.uid &&
         resource.data.status in ['submitted', 'pending'];
 
+      // All officers can update graphics completion status and files
+      allow update: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'General Officer', 'Executive Officer', 'Administrator'
+        ] &&
+        // Only allow updates to graphics-related fields
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['graphicsCompleted', 'graphicsFiles', 'updatedAt']);
+
       // Only Executive Officers and Administrators can approve, decline, and publish events
       allow update: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&

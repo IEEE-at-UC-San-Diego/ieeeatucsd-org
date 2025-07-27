@@ -1418,7 +1418,38 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                             />
                             <p className="text-xs text-gray-500 mt-1">Please upload transparent PNG or SVG files for best quality</p>
 
-                            {renderExistingFiles(
+                            {/* Show newly selected files */}
+                            {formData.otherLogoFiles && formData.otherLogoFiles.length > 0 && (
+                                <div className="mt-4">
+                                    <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Files</h4>
+                                    <div className="space-y-2">
+                                        {formData.otherLogoFiles.map((file, index) => (
+                                            <div key={index} className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
+                                                <div className="flex items-center space-x-2">
+                                                    <Image className="h-4 w-4 text-green-600" />
+                                                    <span className="text-sm text-green-700">
+                                                        {file.name} (New file selected)
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            otherLogoFiles: prev.otherLogoFiles.filter((_, i) => i !== index)
+                                                        }));
+                                                    }}
+                                                    className="text-red-600 hover:text-red-800 text-sm"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Show existing files when no new files are selected */}
+                            {(!formData.otherLogoFiles || formData.otherLogoFiles.length === 0) && renderExistingFiles(
                                 formData.existingOtherLogos,
                                 "Existing Logo Files",
                                 (url) => handleRemoveExistingFile(url, 'otherLogos')

@@ -61,6 +61,20 @@ service firebase.storage {
          ]);
     }
     
+    // Graphics files - officers can upload and read all graphics files
+    match /graphics/{userId}/{allPaths=**} {
+      allow write: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'General Officer', 'Executive Officer', 'Administrator'
+        ];
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'General Officer', 'Executive Officer', 'Administrator'
+        ];
+    }
+    
     // Default deny all other paths
     match /{allPaths=**} {
       allow read, write: if false;

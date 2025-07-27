@@ -9,6 +9,7 @@ import EventRequestModal from './manage-events/EventRequestModal';
 import EventViewModal from './manage-events/EventViewModal';
 import FileManagementModal from './manage-events/FileManagementModal';
 import BulkActionsModal from './manage-events/BulkActionsModal';
+import GraphicsUploadModal from './manage-events/GraphicsUploadModal';
 import { PublicProfileService } from '../services/publicProfile';
 import { EmailClient } from '../../../scripts/email/EmailClient';
 import type { UserRole } from '../types/firestore';
@@ -46,6 +47,8 @@ interface EventRequest {
     invoiceFiles?: string[];
     declinedReason?: string;
     published?: boolean;
+    graphicsCompleted?: boolean;
+    graphicsFiles?: string[];
 }
 
 export default function ManageEventsContent() {
@@ -55,6 +58,8 @@ export default function ManageEventsContent() {
     const [showFileManagementModal, setShowFileManagementModal] = useState(false);
     const [showBulkActionsModal, setShowBulkActionsModal] = useState(false);
     const [showEventTemplatesModal, setShowEventTemplatesModal] = useState(false);
+    const [showGraphicsUploadModal, setShowGraphicsUploadModal] = useState(false);
+    const [graphicsUploadRequest, setGraphicsUploadRequest] = useState<EventRequest | null>(null);
     const [eventRequests, setEventRequests] = useState<EventRequest[]>([]);
     const [users, setUsers] = useState<Record<string, { name: string; email: string }>>({});
     const [loading, setLoading] = useState(true);
@@ -259,6 +264,20 @@ export default function ManageEventsContent() {
     const handleFileManagement = (request: EventRequest) => {
         setManagingFilesRequest(request);
         setShowFileManagementModal(true);
+    };
+
+    const handleGraphicsToggle = async (requestId: string, isCompleted: boolean) => {
+        // Any officer can toggle graphics completion and upload files
+        if (['General Officer', 'Executive Officer', 'Administrator'].includes(currentUserRole)) {
+            // Always show upload modal for any toggle (check or uncheck)
+            const request = eventRequests.find(req => req.id === requestId);
+            if (request) {
+                setGraphicsUploadRequest(request);
+                setShowGraphicsUploadModal(true);
+            }
+        } else {
+            setError('You do not have permission to manage graphics');
+        }
     };
 
     const handleTemplateSelection = (template: any) => {
@@ -796,6 +815,9 @@ export default function ManageEventsContent() {
                                                 Requirements
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Graphics Status
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Submitted By & Date
                                             </th>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -844,6 +866,41 @@ export default function ManageEventsContent() {
                                                             <span className="text-xs text-gray-400">None</span>
                                                         )}
                                                     </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    {request.needsGraphics ? (
+                                                        <div className="flex items-center space-x-2">
+                                                            {['General Officer', 'Executive Officer', 'Administrator'].includes(currentUserRole) ? (
+                                                                <label className="flex items-center space-x-2 cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={request.graphicsCompleted || false}
+                                                                        onChange={(e) => handleGraphicsToggle(request.id, e.target.checked)}
+                                                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <span className="text-sm text-gray-700">
+                                                                        {request.graphicsCompleted ? 'Completed' : 'Mark Complete'}
+                                                                    </span>
+                                                                </label>
+                                                            ) : (
+                                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${request.graphicsCompleted
+                                                                    ? 'bg-green-100 text-green-800'
+                                                                    : 'bg-yellow-100 text-yellow-800'
+                                                                    }`}>
+                                                                    {request.graphicsCompleted ? 'Completed' : 'Pending'}
+                                                                </span>
+                                                            )}
+                                                            {request.graphicsFiles && request.graphicsFiles.length > 0 && (
+                                                                <span className="text-xs text-blue-600">
+                                                                    {request.graphicsFiles.length} file(s)
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="bg-gray-100 px-2 py-1 rounded">
+                                                            <span className="text-xs text-gray-500">No graphics needed</span>
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div>
@@ -1019,6 +1076,24 @@ export default function ManageEventsContent() {
                         onClose={() => setShowBulkActionsModal(false)}
                         onSuccess={(message) => setSuccess(message)}
                         onError={(message) => setError(message)}
+                    />
+                )
+            }
+
+            {/* Graphics Upload Modal */}
+            {
+                showGraphicsUploadModal && graphicsUploadRequest && (
+                    <GraphicsUploadModal
+                        request={graphicsUploadRequest}
+                        onClose={() => {
+                            setShowGraphicsUploadModal(false);
+                            setGraphicsUploadRequest(null);
+                        }}
+                        onSuccess={() => {
+                            setSuccess('Graphics files uploaded and marked as completed');
+                            // Refresh the event requests to show updated status
+                            fetchEventRequests();
+                        }}
                     />
                 )
             }
