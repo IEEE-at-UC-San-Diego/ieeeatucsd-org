@@ -16,6 +16,7 @@ import {
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/client';
 import type { Constitution, ConstitutionSection, ConstitutionCollaborationSession } from '../types/firestore';
+import { useConstitutionAudit } from './useConstitutionAudit';
 
 export const useConstitutionData = () => {
     const [user] = useAuthState(auth);
@@ -23,14 +24,16 @@ export const useConstitutionData = () => {
     const [sections, setSections] = useState<ConstitutionSection[]>([]);
     const [collaborationSession, setCollaborationSession] = useState<ConstitutionCollaborationSession | null>(null);
     const [activeCollaborators, setActiveCollaborators] = useState<Array<{ userId: string, userName: string, currentSection?: string }>>([]);
-    const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
-    const [unsavedChanges, setUnsavedChanges] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     const db = getFirestore();
     const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const constitutionId = 'ieee-ucsd-constitution'; // Single shared constitution
+    const constitutionId = 'ieee-ucsd-constitution';
+    
+    // Initialize audit functionality
+    const { createAuditEntry } = useConstitutionAudit(constitutionId); // Single shared constitution
 
     // Initialize or load constitution
     useEffect(() => {
@@ -207,7 +210,10 @@ export const useConstitutionData = () => {
 
         try {
             const sectionsRef = collection(db, 'constitutions', constitutionId, 'sections');
-            await addDoc(sectionsRef, newSection);
+            const docRef = await addDoc(sectionsRef, newSection);
+            
+            // Create audit entry for section creation
+            await createAuditEntry('create', docRef.id, undefined, newSection as ConstitutionSection);
         } catch (error) {
             console.error('Error adding section:', error);
         }
@@ -217,33 +223,34 @@ export const useConstitutionData = () => {
         if (!user) return;
 
         try {
-            setAutoSaveStatus('saving');
+            setSaveStatus('saving');
+            
+            // Get the current section data for audit logging
             const sectionRef = doc(db, 'constitutions', constitutionId, 'sections', sectionId);
-            await updateDoc(sectionRef, {
+            const currentSectionDoc = await getDoc(sectionRef);
+            const beforeState = currentSectionDoc.exists() ? currentSectionDoc.data() as ConstitutionSection : undefined;
+            
+            const finalUpdates = {
                 ...updates,
                 lastModified: Timestamp.now(),
                 lastModifiedBy: user.uid
-            });
-            setAutoSaveStatus('saved');
+            };
+            
+            await updateDoc(sectionRef, finalUpdates);
+            
+            // Create audit entry for section update
+            if (beforeState) {
+                const afterState = { ...beforeState, ...finalUpdates };
+                await createAuditEntry('update', sectionId, beforeState, afterState);
+            }
+            
+            setSaveStatus('saved');
             setLastSaved(new Date());
-            setUnsavedChanges(false);
         } catch (error) {
             console.error('Error updating section:', error);
-            setAutoSaveStatus('error');
+            setSaveStatus('error');
         }
     };
-
-    // Auto-save functionality with improved debouncing
-    const debouncedAutoSave = useCallback((sectionId: string, updates: Partial<ConstitutionSection>) => {
-        if (autoSaveTimeoutRef.current) {
-            clearTimeout(autoSaveTimeoutRef.current);
-        }
-
-        setUnsavedChanges(true);
-        autoSaveTimeoutRef.current = setTimeout(() => {
-            updateSection(sectionId, updates);
-        }, 3000);
-    }, [updateSection]);
 
     // Cleanup timeouts on unmount
     useEffect(() => {
@@ -258,8 +265,17 @@ export const useConstitutionData = () => {
         if (!user) return;
 
         try {
+            // Get the section data before deletion for audit logging
             const sectionRef = doc(db, 'constitutions', constitutionId, 'sections', sectionId);
+            const sectionDoc = await getDoc(sectionRef);
+            const sectionData = sectionDoc.exists() ? sectionDoc.data() as ConstitutionSection : undefined;
+            
             await deleteDoc(sectionRef);
+            
+            // Create audit entry for section deletion
+            if (sectionData) {
+                await createAuditEntry('delete', sectionId, sectionData, undefined);
+            }
         } catch (error) {
             console.error('Error deleting section:', error);
         }
@@ -271,15 +287,13 @@ export const useConstitutionData = () => {
         sections,
         collaborationSession,
         activeCollaborators,
-        autoSaveStatus,
+        saveStatus,
         lastSaved,
-        unsavedChanges,
         isLoading,
         
         // Functions
         addSection,
         updateSection,
-        debouncedAutoSave,
         deleteSection,
         updateUserPresence,
         

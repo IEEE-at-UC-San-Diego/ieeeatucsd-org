@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     ChevronLeft,
     ChevronRight
 } from 'lucide-react';
 import type { Constitution, ConstitutionSection } from '../types/firestore';
-import { calculateTotalPages, generateContentPages, generateTableOfContents } from '../utils/printUtils';
+import { generateContentPages, generateTableOfContents } from '../utils/printUtils';
 import { getSectionDisplayTitle, toRomanNumeral } from '../utils/constitutionUtils';
 import SectionRenderer from './SectionRenderer';
+import PageNavigationHandler from './PageNavigationHandler';
 
 interface ConstitutionPreviewProps {
     constitution: Constitution | null;
@@ -14,6 +15,8 @@ interface ConstitutionPreviewProps {
     onPrint: () => void;
     currentPage: number;
     onPageChange: (page: number) => void;
+    pdfCaptureMode?: boolean;
+    enableExportOptimizations?: boolean;
 }
 
 const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
@@ -21,9 +24,30 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     sections,
     onPrint,
     currentPage,
-    onPageChange
+    onPageChange,
+    pdfCaptureMode = false,
+    enableExportOptimizations = false
 }) => {
     const [showTableOfContents, setShowTableOfContents] = useState(true);
+    const previewRef = useRef<HTMLDivElement>(null);
+
+    // Local implementation of calculateTotalPages as fallback
+    const calculateTotalPages = (sections: ConstitutionSection[], showTOC: boolean) => {
+        let pageCount = 1; // Cover page
+        if (showTOC) pageCount++; // TOC page
+
+        // Content pages
+        const preamble = sections.find(s => s.type === 'preamble');
+        if (preamble) pageCount++;
+
+        const articles = sections.filter(s => s.type === 'article');
+        pageCount += articles.length;
+
+        const amendments = sections.filter(s => s.type === 'amendment');
+        pageCount += amendments.length;
+
+        return pageCount;
+    };
 
     const totalPages = calculateTotalPages(sections, showTableOfContents);
 
@@ -181,12 +205,12 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     };
 
     return (
-        <div className="bg-white shadow-lg constitution-document" style={{
+        <div className={`bg-white constitution-document ${pdfCaptureMode ? 'pdf-capture-mode' : 'shadow-lg'}`} style={{
             fontFamily: 'Arial, sans-serif',
             fontSize: '12pt',
             lineHeight: '1.6',
             width: '8.5in',
-            margin: '0 auto'
+            margin: pdfCaptureMode ? '0' : '0 auto'
         }}>
             {/* Print Styles */}
             <style dangerouslySetInnerHTML={{
@@ -196,15 +220,23 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                         min-height: 11in;
                         height: 11in;
                         padding: 1in;
-                        margin: 0 auto 20px auto;
+                        margin: ${pdfCaptureMode ? '0' : '0 auto 20px auto'};
                         background: white;
-                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        box-shadow: ${pdfCaptureMode ? 'none' : '0 4px 6px rgba(0, 0, 0, 0.1)'};
                         position: relative;
                         font-family: Arial, sans-serif;
                         font-size: 12pt;
                         line-height: 1.6;
                         box-sizing: border-box;
                         page-break-inside: avoid;
+                    }
+                    
+                    .pdf-capture-mode .no-print {
+                        display: none !important;
+                    }
+                    
+                    .pdf-capture-mode .page-indicator {
+                        display: none !important;
                     }
                     
                     .constitution-section {
@@ -327,70 +359,59 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
             }} />
 
             {/* Page Navigation Header */}
-            <div className="no-print bg-gray-50 border-b border-gray-200 p-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                        disabled={currentPage === 1}
-                        className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Previous
-                    </button>
+            {!pdfCaptureMode && (
+                <div className="no-print bg-gray-50 border-b border-gray-200 p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
+                            className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <ChevronLeft className="h-4 w-4 mr-1" />
+                            Previous
+                        </button>
 
-                    <span className="text-sm text-gray-600">
-                        Page {currentPage} of {totalPages}
-                    </span>
+                        <span className="text-sm text-gray-600">
+                            Page {currentPage} of {totalPages}
+                        </span>
 
-                    <button
-                        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-                        disabled={currentPage === totalPages}
-                        className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                    </button>
+                        <button
+                            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages}
+                            className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Next
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                        </button>
+                    </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setShowTableOfContents(!showTableOfContents)}
-                        className="px-3 py-2 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
-                    >
-                        {showTableOfContents ? 'Hide' : 'Show'} TOC
-                    </button>
-                    <button
-                        onClick={onPrint}
-                        className="px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
-                    >
-                        Print/PDF
-                    </button>
-                </div>
-            </div>
+            )}
 
             {/* Current Page Content */}
             <div className="relative">
-                <div className="page-indicator no-print">Page {currentPage}</div>
+                {!pdfCaptureMode && <div className="page-indicator no-print">Page {currentPage}</div>}
                 {renderCurrentPage()}
             </div>
 
             {/* Page Navigation Footer */}
-            <div className="no-print bg-gray-50 border-t border-gray-200 p-4 flex items-center justify-center">
-                <div className="flex items-center gap-2">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                        <button
-                            key={pageNum}
-                            onClick={() => onPageChange(pageNum)}
-                            className={`w-8 h-8 rounded text-sm font-medium transition-colors ${pageNum === currentPage
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                }`}
-                        >
-                            {pageNum}
-                        </button>
-                    ))}
+            {!pdfCaptureMode && (
+                <div className="no-print bg-gray-50 border-t border-gray-200 p-4 flex items-center justify-center">
+                    <div className="flex items-center gap-2">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                            <button
+                                key={pageNum}
+                                onClick={() => onPageChange(pageNum)}
+                                className={`w-8 h-8 rounded text-sm font-medium transition-colors ${pageNum === currentPage
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    }`}
+                            >
+                                {pageNum}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

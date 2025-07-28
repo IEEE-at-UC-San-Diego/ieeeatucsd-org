@@ -329,6 +329,25 @@ service cloud.firestore {
             'Executive Officer', 'Administrator'
           ];
       }
+      
+      // Constitution audit log (nested collection) - READ ONLY
+      match /auditLog/{auditEntryId} {
+        // All authenticated users can read audit entries (transparency)
+        allow read: if request.auth != null;
+        
+        // Only the system can create audit entries (through server-side functions)
+        // Executive Officers and Administrators can create audit entries through the app
+        allow create: if request.auth != null &&
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+            'Executive Officer', 'Administrator'
+          ] &&
+          // Ensure the audit entry is created by the authenticated user
+          request.resource.data.userId == request.auth.uid;
+        
+        // Audit entries cannot be updated or deleted (immutable audit trail)
+        allow update, delete: if false;
+      }
     }
 
     // Constitution Collaboration Sessions

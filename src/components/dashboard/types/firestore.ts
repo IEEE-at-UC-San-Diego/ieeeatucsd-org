@@ -230,3 +230,47 @@ export interface ConstitutionCollaborationSession {
     timestamp: Timestamp;
   }[];
 } 
+
+export interface ConstitutionAuditEntry {
+  id: string;
+  constitutionId: string;
+  sectionId?: string; // null for constitution-level changes
+  changeType: 'create' | 'update' | 'delete' | 'reorder';
+  changeDescription: string; // Human-readable description of what changed
+  beforeValue?: {
+    title?: string;
+    content?: string;
+    type?: ConstitutionSection['type'];
+    order?: number;
+    parentId?: string;
+    articleNumber?: number;
+    sectionNumber?: number;
+    subsectionLetter?: string;
+    amendmentNumber?: number;
+  };
+  afterValue?: {
+    title?: string;
+    content?: string;
+    type?: ConstitutionSection['type'];
+    order?: number;
+    parentId?: string;
+    articleNumber?: number;
+    sectionNumber?: number;
+    subsectionLetter?: string;
+    amendmentNumber?: number;
+  };
+  userId: string;
+  userName: string;
+  timestamp: Timestamp;
+  ipAddress?: string; // For additional security tracking
+  userAgent?: string; // For additional security tracking
+}
+
+export interface ConstitutionAuditLog {
+  id: string;
+  constitutionId: string;
+  entries: ConstitutionAuditEntry[];
+  totalEntries: number;
+  createdAt: Timestamp;
+  lastUpdated: Timestamp;
+} 

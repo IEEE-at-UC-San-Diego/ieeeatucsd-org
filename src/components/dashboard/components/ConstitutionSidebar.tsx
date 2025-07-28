@@ -23,6 +23,7 @@ interface ConstitutionSidebarProps {
     onAddSection: (type: ConstitutionSection['type'], parentId?: string) => void;
     updateSection: (sectionId: string, updates: Partial<ConstitutionSection>) => void;
     currentUserId?: string;
+    constitutionVersion?: number;
 }
 
 const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
@@ -34,7 +35,8 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
     onToggleExpand,
     onAddSection,
     updateSection,
-    currentUserId
+    currentUserId,
+    constitutionVersion
 }) => {
     const [showAddSection, setShowAddSection] = useState(false);
 
@@ -105,7 +107,10 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
         <div className="col-span-3">
             <div className="bg-white rounded-lg border border-gray-200 p-4">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold text-gray-900">Document Structure</h2>
+                    <div>
+                        <h2 className="font-semibold text-gray-900">Document Structure</h2>
+                        <p className="text-xs text-gray-500">Version {constitutionVersion || 1}</p>
+                    </div>
                     <button
                         onClick={() => setShowAddSection(true)}
                         className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm shadow-sm"

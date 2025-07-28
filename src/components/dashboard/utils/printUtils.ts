@@ -190,7 +190,7 @@ export const getSectionPrintTitle = (section: ConstitutionSection, index: number
     }
 };
 
-export const generatePrintContent = (constitution: Constitution | null, sections: ConstitutionSection[]) => {
+export const generatePrintContent = (constitution: Constitution | null, sections: ConstitutionSection[], baseUrl?: string) => {
     const preamble = sections.find(s => s.type === 'preamble');
     const articles = sections.filter(s => s.type === 'article').sort((a, b) => (a.order || 0) - (b.order || 0));
     const amendments = sections.filter(s => s.type === 'amendment').sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -233,7 +233,7 @@ export const generatePrintContent = (constitution: Constitution | null, sections
     content += `
     <div class="constitution-page">
         <div class="logo-container">
-            <img src="/logos/blue_logo_only.png" alt="IEEE Logo" style="width: 120px; height: 120px; display: block; margin: 0 auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';" />
+            <img src="${baseUrl ? baseUrl + '/logos/blue_logo_only.png' : '/logos/blue_logo_only.png'}" alt="IEEE Logo" style="width: 120px; height: 120px; display: block; margin: 0 auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';" />
             <div class="logo-fallback" style="display: none;">IEEE</div>
         </div>
         <h1 style="font-size: 28pt; line-height: 1.1; margin-bottom: 24px;">IEEE at UC San Diego</h1>
@@ -308,8 +308,8 @@ export const generatePrintContent = (constitution: Constitution | null, sections
     return content;
 };
 
-export const generatePrintHTML = (constitution: Constitution | null, sections: ConstitutionSection[]) => {
-    const printContent = generatePrintContent(constitution, sections);
+export const generatePrintHTML = (constitution: Constitution | null, sections: ConstitutionSection[], baseUrl?: string) => {
+    const printContent = generatePrintContent(constitution, sections, baseUrl);
 
     return `
         <!DOCTYPE html>

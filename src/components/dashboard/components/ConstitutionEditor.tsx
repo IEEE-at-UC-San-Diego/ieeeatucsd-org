@@ -9,6 +9,7 @@ import {
     Plus
 } from 'lucide-react';
 import type { ConstitutionSection } from '../types/firestore';
+import { Button } from '../../ui/button';
 
 interface ConstitutionEditorProps {
     sections: ConstitutionSection[];
@@ -20,7 +21,6 @@ interface ConstitutionEditorProps {
     onDeleteSection: (id: string) => void;
     onAddSection: (type: ConstitutionSection['type'], parentId?: string) => void;
     activeCollaborators: Array<{ userId: string, userName: string, currentSection?: string }>;
-    debouncedAutoSave: (sectionId: string, updates: Partial<ConstitutionSection>) => void;
     currentUserId?: string;
 }
 
@@ -34,11 +34,13 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
     onDeleteSection,
     onAddSection,
     activeCollaborators,
-    debouncedAutoSave,
     currentUserId
 }) => {
     const [editTitle, setEditTitle] = useState('');
     const [editContent, setEditContent] = useState('');
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [originalTitle, setOriginalTitle] = useState('');
+    const [originalContent, setOriginalContent] = useState('');
 
     const currentSection = sections.find(s => s.id === selectedSection);
 
@@ -46,8 +48,18 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
         if (currentSection && editingSection === currentSection.id) {
             setEditTitle(currentSection.title);
             setEditContent(currentSection.content);
+            setOriginalTitle(currentSection.title);
+            setOriginalContent(currentSection.content);
+            setHasUnsavedChanges(false);
         }
     }, [currentSection, editingSection]);
+
+    // Track if there are unsaved changes
+    useEffect(() => {
+        const titleChanged = editTitle !== originalTitle;
+        const contentChanged = editContent !== originalContent;
+        setHasUnsavedChanges(titleChanged || contentChanged);
+    }, [editTitle, editContent, originalTitle, originalContent]);
 
     const handleSave = () => {
         if (!selectedSection || !editingSection) return;
@@ -56,10 +68,19 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
             title: editTitle,
             content: editContent
         });
+
+        // Update original values to new saved values
+        setOriginalTitle(editTitle);
+        setOriginalContent(editContent);
+        setHasUnsavedChanges(false);
         onEditSection(null);
     };
 
     const handleCancel = () => {
+        // Revert to original values
+        setEditTitle(originalTitle);
+        setEditContent(originalContent);
+        setHasUnsavedChanges(false);
         onEditSection(null);
         if (currentSection) {
             setEditTitle(currentSection.title);
@@ -151,17 +172,26 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
                             <>
                                 <button
                                     onClick={handleSave}
-                                    className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                                    disabled={!hasUnsavedChanges}
+                                    className={`inline-flex items-center px-3 py-2 rounded-md transition-colors ${hasUnsavedChanges
+                                        ? 'bg-green-600 text-white hover:bg-green-700'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        }`}
                                 >
                                     <Save className="h-4 w-4 mr-2" />
-                                    Save
+                                    {hasUnsavedChanges ? 'Save Changes' : 'No Changes'}
                                 </button>
                                 <button
                                     onClick={handleCancel}
                                     className="inline-flex items-center px-3 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
                                 >
-                                    Cancel
+                                    {hasUnsavedChanges ? 'Discard Changes' : 'Cancel'}
                                 </button>
+                                {hasUnsavedChanges && (
+                                    <span className="text-sm text-orange-600 font-medium ml-2">
+                                        You have unsaved changes
+                                    </span>
+                                )}
                             </>
                         )}
                     </div>
@@ -181,9 +211,6 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
                                 value={editTitle}
                                 onChange={(e) => {
                                     setEditTitle(e.target.value);
-                                    if (selectedSection) {
-                                        debouncedAutoSave(selectedSection, { title: e.target.value });
-                                    }
                                 }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                                 placeholder="Enter section title..."
@@ -204,9 +231,6 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
                                     value={editContent}
                                     onChange={(e) => {
                                         setEditContent(e.target.value);
-                                        if (selectedSection) {
-                                            debouncedAutoSave(selectedSection, { content: e.target.value });
-                                        }
                                     }}
                                     rows={15}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-serif text-sm leading-relaxed transition-colors"
@@ -223,9 +247,6 @@ To add an image: [IMAGE:description]"
                                             const imageText = "[IMAGE:Add image description here]";
                                             const newContent = editContent + (editContent ? "\n\n" : "") + imageText;
                                             setEditContent(newContent);
-                                            if (selectedSection) {
-                                                debouncedAutoSave(selectedSection, { content: newContent });
-                                            }
                                         }}
                                     >
                                         <Image className="h-4 w-4 mr-2" />
