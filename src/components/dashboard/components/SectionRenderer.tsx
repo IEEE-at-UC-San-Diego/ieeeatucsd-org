@@ -117,7 +117,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
             fontFamily: 'Arial, sans-serif',
             fontWeight: 'bold' as const,
             pageBreakAfter: 'avoid' as const,
-            color: '#333'  // Softer dark gray instead of pure black
+            color: '#333'  // Default color for articles and main sections
         };
 
         switch (section.type) {
@@ -145,7 +145,8 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
                     fontSize: '12pt',     // Reduced from 14pt to 12pt
                     textAlign: 'left' as const,
                     marginBottom: '8px',
-                    marginTop: '12px'     // Reduced spacing before section
+                    marginTop: '12px',    // Reduced spacing before section
+                    color: '#555'         // Lighter color for sections
                 };
             case 'subsection':
                 return {
@@ -153,7 +154,8 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
                     fontSize: '11pt',     // Reduced from 12pt to 11pt
                     fontWeight: '600' as const,
                     marginBottom: '6px',
-                    marginTop: '10px'
+                    marginTop: '10px',
+                    color: '#666'         // Even lighter color for subsections
                 };
             case 'amendment':
                 return {

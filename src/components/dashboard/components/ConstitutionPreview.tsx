@@ -18,6 +18,7 @@ interface ConstitutionPreviewProps {
     onPageChange: (page: number) => void;
     pdfCaptureMode?: boolean;
     enableExportOptimizations?: boolean;
+    printMode?: boolean;
 }
 
 const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
@@ -27,7 +28,8 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     currentPage,
     onPageChange,
     pdfCaptureMode = false,
-    enableExportOptimizations = false
+    enableExportOptimizations = false,
+    printMode = false
 }) => {
     const [showTableOfContents, setShowTableOfContents] = useState(true);
     const [internalPdfCaptureMode, setInternalPdfCaptureMode] = useState(pdfCaptureMode);
@@ -65,6 +67,46 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
             const contentPageIndex = showTableOfContents ? currentPage - 3 : currentPage - 2;
             return renderContentPage(contentPageIndex);
         }
+    };
+
+    const renderAllPages = () => {
+        const pages = [];
+
+        // Cover page
+        pages.push(
+            <div key="cover-page">
+                {renderCoverPage()}
+            </div>
+        );
+
+        // Table of contents page
+        if (showTableOfContents) {
+            pages.push(
+                <div key="toc-page">
+                    {renderTableOfContentsPage()}
+                </div>
+            );
+        }
+
+        // Content pages
+        const contentPages = generateContentPages(sections);
+        contentPages.forEach((page, index) => {
+            pages.push(
+                <div key={`content-page-${index}`}>
+                    <div className="constitution-page" style={{ position: 'relative' }}>
+                        {page.map((section) => (
+                            <SectionRenderer
+                                key={section.id}
+                                section={section}
+                                allSections={sections}
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        });
+
+        return pages;
     };
 
     const renderCoverPage = () => (
@@ -109,12 +151,12 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                 lineHeight: '1.3',
                 fontWeight: '600',
                 color: '#000',
-                marginBottom: '48px'
+                marginBottom: '24px'
             }}>
                 The Institute of Electrical and Electronics Engineers at UC San Diego Constitution
             </h2>
 
-            <div style={{ textAlign: 'center', marginTop: '48px' }}>
+            <div style={{ textAlign: 'center', marginTop: '24px' }}>
                 <p style={{
                     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                     fontSize: '14pt',
@@ -151,7 +193,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                     Table of Contents
                 </h2>
 
-                <div className="space-y-2" style={{ fontSize: '14pt' }}>
+                <div className="space-y-2" style={{ fontSize: '12pt' }}>
                     {tableOfContents.map(({ section, pageNum }, index) => {
                         const getIndentClass = (section: ConstitutionSection) => {
                             if (section.type === 'section') return 'ml-6';
@@ -396,8 +438,39 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                     }
                     
                     @media print {
+                        /* Hide all page elements except constitution content when in print mode */
+                        body.constitution-print-mode * {
+                            visibility: hidden !important;
+                        }
+
+                        body.constitution-print-mode .constitution-document,
+                        body.constitution-print-mode .constitution-document *,
+                        body.constitution-print-mode .print-only,
+                        body.constitution-print-mode .print-only * {
+                            visibility: visible !important;
+                        }
+
+                        body.constitution-print-mode {
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: white !important;
+                        }
+
+                        body.constitution-print-mode .constitution-document {
+                            position: absolute !important;
+                            top: 0 !important;
+                            left: 0 !important;
+                            width: 100% !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: white !important;
+                        }
+
                         .no-print { display: none !important; }
                         .page-indicator { display: none !important; }
+                        .print-only { display: block !important; }
+                        .screen-only { display: none !important; }
+
                         .constitution-page {
                             page-break-after: always;
                             margin: 0 !important;
@@ -409,7 +482,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                             box-sizing: border-box !important;
                         }
                         .constitution-page:last-child { page-break-after: avoid; }
-                        
+
                         body {
                             font-family: Arial, sans-serif !important;
                             font-size: 12pt !important;
@@ -417,12 +490,15 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                             -webkit-print-color-adjust: exact !important;
                             color-adjust: exact !important;
                         }
-                        
+
                         h1 { font-size: 28pt !important; font-family: Arial, sans-serif !important; }
                         h2 { font-size: 18pt !important; font-family: Arial, sans-serif !important; }
                         h3 { font-size: 14pt !important; font-family: Arial, sans-serif !important; }
                         p { font-size: 12pt !important; font-family: Arial, sans-serif !important; }
                     }
+
+                    .print-only { display: none; }
+                    .screen-only { display: block; }
                 `
             }} />
 
@@ -463,10 +539,15 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                 </div>
             )}
 
-            {/* Current Page Content */}
-            <div className="relative">
+            {/* Screen Content - Current Page Only */}
+            <div className="relative screen-only">
                 {!pdfCaptureMode && <div className="page-indicator no-print">Page {currentPage}</div>}
                 {renderCurrentPage()}
+            </div>
+
+            {/* Print Content - All Pages */}
+            <div className="print-only">
+                {renderAllPages()}
             </div>
 
             {/* Page Navigation Footer */}

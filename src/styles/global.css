@@ -27,8 +27,7 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem
-  ;
+    --radius: 0.5rem;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -36,7 +35,8 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%}
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -61,8 +61,7 @@
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%
-  ;
+    --chart-5: 340 75% 55%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -70,7 +69,8 @@
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%}
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
 }
 @layer base {
   * {
@@ -78,5 +78,49 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Constitution Print Styles - Hide everything except constitution content when printing */
+@media print {
+  /* When in constitution print mode, hide all elements by default */
+  body.constitution-print-mode * {
+    visibility: hidden !important;
+  }
+
+  /* Show only the constitution document and its children */
+  body.constitution-print-mode .constitution-document,
+  body.constitution-print-mode .constitution-document * {
+    visibility: visible !important;
+  }
+
+  /* Ensure the constitution document takes full page */
+  body.constitution-print-mode {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    overflow: visible !important;
+  }
+
+  body.constitution-print-mode .constitution-document {
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+  }
+
+  /* Hide common UI elements that might interfere */
+  body.constitution-print-mode nav,
+  body.constitution-print-mode header,
+  body.constitution-print-mode footer,
+  body.constitution-print-mode aside,
+  body.constitution-print-mode .sidebar,
+  body.constitution-print-mode .navigation,
+  body.constitution-print-mode .header,
+  body.constitution-print-mode .footer {
+    display: none !important;
+    visibility: hidden !important;
   }
 }

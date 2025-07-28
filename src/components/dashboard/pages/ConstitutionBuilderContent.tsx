@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { ConstitutionSection } from '../types/firestore';
 import { useConstitutionData } from '../hooks/useConstitutionData';
-import { exportConstitutionToPDF } from '../utils/pdfExportUtils';
-import {
-    exportWithEnhancedPDF,
-    exportWithHighResScreenshots,
-    exportWithProgressiveEnhancement,
-    PDFQualityPresets,
-    type EnhancedPDFOptions
-} from '../utils/enhancedPdfExport';
 import { getSectionHierarchy } from '../utils/constitutionUtils';
 import ConstitutionHeader from '../components/ConstitutionHeader';
 import ConstitutionSidebar from '../components/ConstitutionSidebar';
@@ -41,8 +33,6 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
     const [editingSection, setEditingSection] = useState<string | null>(null);
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [currentPage, setCurrentPage] = useState(1);
-    const [exportProgress, setExportProgress] = useState<{ progress: number; status: string } | null>(null);
-    const [exportMethod, setExportMethod] = useState<'standard' | 'enhanced'>('enhanced');
 
     // Update user presence when selected section changes
     useEffect(() => {
@@ -65,69 +55,24 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
         setExpandedSections(newExpanded);
     };
 
-    const handlePrint = async () => {
-        try {
-            setExportProgress({ progress: 0, status: 'Preparing enhanced PDF export...' });
+    const handlePrint = () => {
+        // Set the preview to PDF capture mode for optimal printing
+        setCurrentView('preview');
 
-            const progressCallback = (progress: number, status: string) => {
-                setExportProgress({ progress, status });
-            };
+        // Add print class to body to trigger print-only styles
+        document.body.classList.add('constitution-print-mode');
 
-            if (exportMethod === 'enhanced') {
-                // Use the new Puppeteer-based enhanced PDF export with high-resolution screenshots
-                setExportProgress({ progress: 5, status: 'Launching high-resolution browser...' });
+        // Small delay to ensure the preview is rendered properly
+        setTimeout(() => {
+            // Trigger the browser's native print dialog
+            window.print();
 
-                await exportWithHighResScreenshots(
-                    constitution,
-                    sections,
-                    {
-                        ...PDFQualityPresets.premium,
-                        format: 'Letter',
-                        margin: {
-                            top: '1in',
-                            right: '1in',
-                            bottom: '1in',
-                            left: '1in'
-                        },
-                        printBackground: true
-                    },
-                    progressCallback
-                );
-            } else {
-                // Use the new Puppeteer-based native PDF export
-                await exportWithEnhancedPDF(
-                    constitution,
-                    sections,
-                    {
-                        ...PDFQualityPresets.high,
-                        format: 'Letter',
-                        margin: {
-                            top: '1in',
-                            right: '1in',
-                            bottom: '1in',
-                            left: '1in'
-                        },
-                        printBackground: true
-                    },
-                    progressCallback
-                );
-            }
-
-            // Clear progress after successful export
+            // Remove print class after printing (when dialog closes)
+            // Use a longer timeout to ensure print dialog has time to capture the styles
             setTimeout(() => {
-                setExportProgress(null);
-            }, 2000);
-
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error('PDF export failed:', error);
-            setExportProgress({ progress: 0, status: `Export failed: ${errorMessage}` });
-
-            // Clear error message after delay
-            setTimeout(() => {
-                setExportProgress(null);
-            }, 3000);
-        }
+                document.body.classList.remove('constitution-print-mode');
+            }, 1000);
+        }, 100);
     };
 
     const handleDeleteSection = async (sectionId: string) => {
@@ -157,8 +102,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                 activeCollaborators={activeCollaborators}
                 currentView={currentView}
                 onViewChange={setCurrentView}
-                onExport={handlePrint}
-                exportProgress={exportProgress}
+                onPrint={handlePrint}
             />
 
             {/* Version Editor */}

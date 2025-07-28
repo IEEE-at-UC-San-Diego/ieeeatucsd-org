@@ -64,10 +64,17 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
     const handleSave = () => {
         if (!selectedSection || !editingSection) return;
 
-        onUpdateSection(selectedSection, {
-            title: editTitle,
-            content: editContent
-        });
+        // For articles, only save the title (no content)
+        const updates: Partial<ConstitutionSection> = {
+            title: editTitle
+        };
+
+        // Only include content for non-article sections
+        if (currentSection?.type !== 'article') {
+            updates.content = editContent;
+        }
+
+        onUpdateSection(selectedSection, updates);
 
         // Update original values to new saved values
         setOriginalTitle(editTitle);
@@ -217,53 +224,61 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
                             />
                         </div>
 
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-gray-700">
-                                    Content
-                                </label>
-                                <div className="text-xs text-gray-500">
-                                    {editContent.length} characters
+                        {/* Only show content editing for non-article sections */}
+                        {currentSection.type !== 'article' && (
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-sm font-medium text-gray-700">
+                                        Content
+                                    </label>
+                                    <div className="text-xs text-gray-500">
+                                        {editContent.length} characters
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="space-y-3">
-                                <textarea
-                                    value={editContent}
-                                    onChange={(e) => {
-                                        setEditContent(e.target.value);
-                                    }}
-                                    rows={15}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-serif text-sm leading-relaxed transition-colors"
-                                    placeholder="Enter the section content... 
+                                <div className="space-y-3">
+                                    <textarea
+                                        value={editContent}
+                                        onChange={(e) => {
+                                            setEditContent(e.target.value);
+                                        }}
+                                        rows={15}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-serif text-sm leading-relaxed transition-colors"
+                                        placeholder="Enter the section content...
 
 Tip: Use double line breaks to separate paragraphs.
 To add an image: [IMAGE:description]"
-                                />
-                                <div className="flex gap-2">
-                                    <button
-                                        type="button"
-                                        className="inline-flex items-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                                        onClick={() => {
-                                            const imageText = "[IMAGE:Add image description here]";
-                                            const newContent = editContent + (editContent ? "\n\n" : "") + imageText;
-                                            setEditContent(newContent);
-                                        }}
-                                    >
-                                        <Image className="h-4 w-4 mr-2" />
-                                        Add Image Placeholder
-                                    </button>
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            className="inline-flex items-center px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                                            onClick={() => {
+                                                const imageText = "[IMAGE:Add image description here]";
+                                                const newContent = editContent + (editContent ? "\n\n" : "") + imageText;
+                                                setEditContent(newContent);
+                                            }}
+                                        >
+                                            <Image className="h-4 w-4 mr-2" />
+                                            Add Image Placeholder
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500">
+                                        Changes are automatically saved as you type. Use formal constitutional language for professional results.
+                                        <br />
+                                        <strong>Image syntax:</strong> [IMAGE:description] - Replace "description" with your image description.
+                                    </p>
                                 </div>
-                                <p className="text-xs text-gray-500">
-                                    Changes are automatically saved as you type. Use formal constitutional language for professional results.
-                                    <br />
-                                    <strong>Image syntax:</strong> [IMAGE:description] - Replace "description" with your image description.
-                                </p>
                             </div>
-                        </div>
+                        )}
                     </div>
                 ) : (
                     <div className="prose max-w-none">
-                        {currentSection.content ? (
+                        {currentSection.type === 'article' ? (
+                            <div className="text-gray-600 italic bg-blue-50 p-4 rounded-md">
+                                Articles serve as organizational containers and only require a title.
+                                Content should be added to sections within this article.
+                            </div>
+                        ) : currentSection.content ? (
                             <div className="whitespace-pre-wrap text-gray-900 leading-relaxed">
                                 {renderContentWithImages(currentSection.content)}
                             </div>

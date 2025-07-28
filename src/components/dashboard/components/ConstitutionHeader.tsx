@@ -6,24 +6,24 @@ import {
     AlertCircle,
     Edit3,
     Eye,
-    Download,
+    Printer,
     History
 } from 'lucide-react';
 import type { Constitution, ConstitutionSection } from '../types/firestore';
 
-// Simple Export Button Component
-interface ExportButtonProps {
-    onExport: () => void;
+// Simple Print Button Component
+interface PrintButtonProps {
+    onPrint: () => void;
 }
 
-const ExportButton: React.FC<ExportButtonProps> = ({ onExport }) => {
+const PrintButton: React.FC<PrintButtonProps> = ({ onPrint }) => {
     return (
         <button
-            onClick={onExport}
+            onClick={onPrint}
             className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
         >
-            <Download className="h-4 w-4 mr-2" />
-            Export PDF
+            <Printer className="h-4 w-4 mr-2" />
+            Print PDF
         </button>
     );
 };
@@ -34,8 +34,7 @@ interface ConstitutionHeaderProps {
     activeCollaborators: Array<{ userId: string, userName: string, currentSection?: string }>;
     currentView: 'editor' | 'preview' | 'audit';
     onViewChange: (view: 'editor' | 'preview' | 'audit') => void;
-    onExport: () => void;
-    exportProgress?: { progress: number; status: string } | null;
+    onPrint: () => void;
 }
 
 const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
@@ -44,8 +43,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
     activeCollaborators,
     currentView,
     onViewChange,
-    onExport,
-    exportProgress
+    onPrint
 }) => {
     return (
         <div className="mb-8">
@@ -130,17 +128,8 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         </button>
                     </div>
 
-                    {/* Export Section */}
-                    {exportProgress ? (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-md">
-                            <div className="flex items-center gap-2 text-blue-700">
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-                                <span className="text-sm font-medium">Exporting PDF...</span>
-                            </div>
-                        </div>
-                    ) : (
-                        <ExportButton onExport={onExport} />
-                    )}
+                    {/* Print Section */}
+                    <PrintButton onPrint={onPrint} />
                 </div>
             </div>
 
