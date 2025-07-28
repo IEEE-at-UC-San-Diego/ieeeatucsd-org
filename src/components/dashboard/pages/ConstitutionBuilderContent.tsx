@@ -15,6 +15,7 @@ import ConstitutionSidebar from '../components/ConstitutionSidebar';
 import ConstitutionEditor from '../components/ConstitutionEditor';
 import ConstitutionPreview from '../components/ConstitutionPreview';
 import { ConstitutionAuditLog } from '../components/ConstitutionAuditLog';
+import VersionEditor from '../components/VersionEditor';
 
 interface ConstitutionBuilderContentProps { }
 
@@ -29,6 +30,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
         addSection,
         updateSection,
         deleteSection,
+        updateConstitutionVersion,
         updateUserPresence,
         constitutionId,
         user
@@ -157,9 +159,15 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                 onViewChange={setCurrentView}
                 onExport={handlePrint}
                 exportProgress={exportProgress}
-                exportMethod={exportMethod}
-                onExportMethodChange={setExportMethod}
             />
+
+            {/* Version Editor */}
+            <div className="mb-4 flex justify-end">
+                <VersionEditor
+                    constitution={constitution}
+                    onUpdateVersion={updateConstitutionVersion}
+                />
+            </div>
 
             <div className="grid grid-cols-12 gap-6">
                 <ConstitutionSidebar

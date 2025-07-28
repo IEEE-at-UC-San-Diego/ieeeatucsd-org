@@ -185,11 +185,12 @@ export class PixelPerfectPDFExporter {
       };
 
       images.forEach((img) => {
-        if (img.complete) {
+        const imageElement = img as HTMLImageElement;
+        if (imageElement.complete) {
           checkImageLoad();
         } else {
-          img.addEventListener('load', checkImageLoad);
-          img.addEventListener('error', checkImageLoad);
+          imageElement.addEventListener('load', checkImageLoad);
+          imageElement.addEventListener('error', checkImageLoad);
         }
       });
     });

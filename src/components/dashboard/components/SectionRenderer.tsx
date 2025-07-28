@@ -1,50 +1,187 @@
 import React from 'react';
-import { Image } from 'lucide-react';
 import type { ConstitutionSection } from '../types/firestore';
-import { getSectionDisplayTitle, getSubsectionIndentLevel } from '../utils/constitutionUtils';
+import { getSectionDisplayTitle, getSubsectionIndentLevel, toRomanNumeral } from '../utils/constitutionUtils';
 
 interface SectionRendererProps {
     section: ConstitutionSection;
     allSections: ConstitutionSection[];
 }
 
+// Enhanced content parsing function to handle markdown-like formatting
+const parseContent = (content: string) => {
+    // Split content by image markers first
+    const parts = content.split(/(\[IMAGE:[^\]]*\])/g);
+
+    return parts.map((part, partIndex) => {
+        if (part.match(/^\[IMAGE:[^\]]*\]$/)) {
+            const description = part.replace(/^\[IMAGE:/, '').replace(/\]$/, '');
+            return {
+                type: 'image',
+                content: description || 'Add image description',
+                key: `image-${partIndex}`
+            };
+        } else if (part.trim()) {
+            // Split by double newlines to get paragraphs/list groups
+            const paragraphs = part.split('\n\n').filter(p => p.trim());
+
+            return paragraphs.map((paragraph, pIndex) => {
+                const trimmed = paragraph.trim();
+
+                // Check if this is a numbered list
+                if (/^\d+\.\s/.test(trimmed)) {
+                    const listItems = trimmed.split('\n').filter(line => line.trim());
+                    return {
+                        type: 'numbered-list',
+                        items: listItems.map(item => {
+                            const match = item.match(/^(\d+)\.\s(.+)$/);
+                            if (match) {
+                                return {
+                                    number: match[1],
+                                    content: formatInlineText(match[2])
+                                };
+                            }
+                            return { number: '', content: formatInlineText(item) };
+                        }),
+                        key: `list-${partIndex}-${pIndex}`
+                    };
+                }
+
+                // Check if this is a bullet list
+                if (/^[-*]\s/.test(trimmed)) {
+                    const listItems = trimmed.split('\n').filter(line => line.trim());
+                    return {
+                        type: 'bullet-list',
+                        items: listItems.map(item => {
+                            const match = item.match(/^[-*]\s(.+)$/);
+                            if (match) {
+                                return formatInlineText(match[1]);
+                            }
+                            return formatInlineText(item);
+                        }),
+                        key: `bullet-${partIndex}-${pIndex}`
+                    };
+                }
+
+                // Regular paragraph
+                return {
+                    type: 'paragraph',
+                    content: formatInlineText(trimmed),
+                    key: `para-${partIndex}-${pIndex}`
+                };
+            });
+        }
+        return null;
+    }).filter(Boolean).flat();
+};
+
+// Format inline text with bold, italics, etc.
+const formatInlineText = (text: string) => {
+    // Handle bold text **text**
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    // Handle italic text *text* (but not if it's part of **)
+    text = text.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
+
+    return text;
+};
+
 const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections }) => {
     const getDisplayTitle = () => {
-        return getSectionDisplayTitle(section, allSections);
-    };
-
-    const getTextClass = () => {
+        // Use the same title generation logic as PDF for consistency
         switch (section.type) {
             case 'preamble':
-                return 'text-lg font-bold text-center mb-4 uppercase tracking-wide';
+                return 'PREAMBLE';
             case 'article':
-                return 'text-xl font-bold mb-4 text-center';
+                const articles = allSections.filter(s => s.type === 'article').sort((a, b) => (a.order || 0) - (b.order || 0));
+                const articleIndex = articles.findIndex(a => a.id === section.id) + 1;
+                return section.title ? `Article ${toRomanNumeral(articleIndex)}: ${section.title}` : `Article ${toRomanNumeral(articleIndex)}`;
             case 'section':
-                return 'text-base font-bold mb-3 mt-6';
+                const siblingSections = allSections
+                    .filter(s => s.parentId === section.parentId && s.type === 'section')
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+                const sectionIndex = siblingSections.findIndex(s => s.id === section.id) + 1;
+                return section.title ? `Section ${sectionIndex}: ${section.title}` : `Section ${sectionIndex}`;
             case 'subsection':
-                return 'text-base font-semibold mb-2';
+                return getSectionDisplayTitle(section, allSections);
             case 'amendment':
-                return 'text-xl font-bold text-center mb-4';
+                const amendments = allSections.filter(s => s.type === 'amendment').sort((a, b) => (a.order || 0) - (b.order || 0));
+                const amendmentIndex = amendments.findIndex(a => a.id === section.id) + 1;
+                return section.title ? `AMENDMENT ${amendmentIndex}: ${section.title.toUpperCase()}` : `AMENDMENT ${amendmentIndex}`;
             default:
-                return 'text-base font-semibold mb-3';
+                return section.title || 'Untitled Section';
         }
     };
 
-    const getContentClass = () => {
+    const getTitleStyle = () => {
+        const baseStyle = {
+            fontFamily: 'Arial, sans-serif',
+            fontWeight: 'bold' as const,
+            pageBreakAfter: 'avoid' as const,
+            color: '#333'  // Softer dark gray instead of pure black
+        };
+
         switch (section.type) {
             case 'preamble':
-                return 'text-base leading-relaxed text-justify mb-8';
+                return {
+                    ...baseStyle,
+                    fontSize: '16pt',
+                    textAlign: 'center' as const,
+                    marginBottom: '12px',
+                    marginTop: '20px',
+                    textTransform: 'uppercase' as const,
+                    letterSpacing: '1px'
+                };
             case 'article':
-                return 'text-base leading-relaxed mb-6';
+                return {
+                    ...baseStyle,
+                    fontSize: '16pt',
+                    textAlign: 'left' as const,
+                    marginBottom: '8px',  // Reduced spacing after article title
+                    marginTop: '20px'
+                };
             case 'section':
-                return 'text-base leading-relaxed mb-4 text-justify';
+                return {
+                    ...baseStyle,
+                    fontSize: '12pt',     // Reduced from 14pt to 12pt
+                    textAlign: 'left' as const,
+                    marginBottom: '8px',
+                    marginTop: '12px'     // Reduced spacing before section
+                };
             case 'subsection':
-                return 'text-base leading-relaxed mb-3 text-justify';
+                return {
+                    ...baseStyle,
+                    fontSize: '11pt',     // Reduced from 12pt to 11pt
+                    fontWeight: '600' as const,
+                    marginBottom: '6px',
+                    marginTop: '10px'
+                };
             case 'amendment':
-                return 'text-base leading-relaxed mb-6 text-justify';
+                return {
+                    ...baseStyle,
+                    fontSize: '16pt',
+                    textAlign: 'center' as const,
+                    marginBottom: '12px',
+                    marginTop: '20px'
+                };
             default:
-                return 'text-base leading-relaxed mb-4 text-justify';
+                return {
+                    ...baseStyle,
+                    fontSize: '11pt',
+                    fontWeight: '600' as const,
+                    marginBottom: '6px',
+                    marginTop: '10px'
+                };
         }
+    };
+
+    const getContentStyle = () => {
+        return {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '11pt',     // Reduced from 12pt to 11pt
+            lineHeight: '1.5',    // Slightly tighter line height
+            color: '#444',        // Softer dark gray for body text
+            textAlign: 'justify' as const
+        };
     };
 
     const getIndentStyle = () => {
@@ -55,56 +192,106 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
         return {};
     };
 
-    const renderContentWithImages = (content: string) => {
-        // Split content by image markers and render accordingly
-        const parts = content.split(/(\[IMAGE:[^\]]*\])/g);
+    const renderParsedContent = (content: string) => {
+        const parsedContent = parseContent(content);
 
-        return parts.map((part, index) => {
-            if (part.match(/^\[IMAGE:[^\]]*\]$/)) {
-                const description = part.replace(/^\[IMAGE:/, '').replace(/\]$/, '');
-                return (
-                    <div key={index} className="my-6 text-center">
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 bg-gray-50">
-                            <Image className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-500 italic">
-                                Image: {description || 'Add image description'}
-                            </p>
+        return parsedContent.map((item: any) => {
+            switch (item.type) {
+                case 'image':
+                    return (
+                        <div key={item.key} style={{
+                            border: '2px dashed #ccc',
+                            padding: '24px',
+                            textAlign: 'center',
+                            margin: '16px 0',
+                            background: '#f9f9f9',
+                            pageBreakInside: 'avoid',
+                            fontFamily: 'Arial, sans-serif'
+                        }}>
+                            <strong>Image:</strong> {item.content}
                         </div>
-                    </div>
-                );
-            } else if (part.trim()) {
-                return part.split('\n\n').map((paragraph, pIndex) => (
-                    paragraph.trim() && (
-                        <p key={`${index}-${pIndex}`} className="mb-4" style={{ textIndent: '0.5in' }}>
-                            {paragraph.trim()}
+                    );
+
+                case 'numbered-list':
+                    return (
+                        <ol key={item.key} style={{
+                            fontFamily: 'Arial, sans-serif',
+                            fontSize: '11pt',     // Reduced from 12pt to 11pt
+                            lineHeight: '1.5',    // Slightly tighter
+                            marginBottom: '10px',
+                            paddingLeft: '20px',  // Slightly less padding
+                            color: '#444'         // Softer dark gray
+                        }}>
+                            {item.items.map((listItem: any, idx: number) => (
+                                <li key={idx} style={{
+                                    marginBottom: '4px',  // Reduced spacing
+                                    textAlign: 'justify'
+                                }}>
+                                    <span dangerouslySetInnerHTML={{ __html: listItem.content }} />
+                                </li>
+                            ))}
+                        </ol>
+                    );
+
+                case 'bullet-list':
+                    return (
+                        <ul key={item.key} style={{
+                            fontFamily: 'Arial, sans-serif',
+                            fontSize: '11pt',     // Reduced from 12pt to 11pt
+                            lineHeight: '1.5',    // Slightly tighter
+                            marginBottom: '10px',
+                            paddingLeft: '20px',  // Slightly less padding
+                            color: '#444'         // Softer dark gray
+                        }}>
+                            {item.items.map((listItem: any, idx: number) => (
+                                <li key={idx} style={{
+                                    marginBottom: '4px',  // Reduced spacing
+                                    textAlign: 'justify'
+                                }}>
+                                    <span dangerouslySetInnerHTML={{ __html: listItem }} />
+                                </li>
+                            ))}
+                        </ul>
+                    );
+
+                case 'paragraph':
+                default:
+                    return (
+                        <p key={item.key} style={{
+                            fontFamily: 'Arial, sans-serif',
+                            fontSize: '11pt',     // Reduced from 12pt to 11pt
+                            lineHeight: '1.5',    // Slightly tighter
+                            marginBottom: '10px', // Reduced spacing
+                            textAlign: 'justify',
+                            textIndent: '0.4in',  // Slightly smaller indent
+                            orphans: 2,
+                            widows: 2,
+                            color: '#444'         // Softer dark gray
+                        }}>
+                            <span dangerouslySetInnerHTML={{ __html: item.content }} />
                         </p>
-                    )
-                ));
+                    );
             }
-            return null;
-        }).filter(Boolean);
+        });
     };
 
     return (
-        <div className="constitution-section mb-8" style={getIndentStyle()}>
-            <h3 className={getTextClass()} style={{
-                fontFamily: 'Arial, sans-serif',
-                fontSize: section.type === 'article' ? '18pt' : section.type === 'section' ? '14pt' : '12pt'
-            }}>
+        <div style={{
+            marginBottom: section.type === 'article' ? '12px' : '20px',  // Less spacing after articles
+            ...getIndentStyle()
+        }}>
+            <h3 style={getTitleStyle()}>
                 {getDisplayTitle()}
             </h3>
 
-            {section.content && (
-                <div className={getContentClass()} style={{
-                    fontFamily: 'Arial, sans-serif',
-                    fontSize: '12pt',
-                    lineHeight: '1.6'
-                }}>
-                    {renderContentWithImages(section.content)}
+            {/* Articles should not render content, only title */}
+            {section.content && section.type !== 'article' && (
+                <div style={getContentStyle()}>
+                    {renderParsedContent(section.content)}
                 </div>
             )}
         </div>
     );
 };
 
-export default SectionRenderer; 
+export default SectionRenderer;

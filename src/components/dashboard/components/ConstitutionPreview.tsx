@@ -8,6 +8,7 @@ import { generateContentPages, generateTableOfContents } from '../utils/printUti
 import { getSectionDisplayTitle, toRomanNumeral } from '../utils/constitutionUtils';
 import SectionRenderer from './SectionRenderer';
 import PageNavigationHandler from './PageNavigationHandler';
+import PreviewModeToggle from './PreviewModeToggle';
 
 interface ConstitutionPreviewProps {
     constitution: Constitution | null;
@@ -29,7 +30,11 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     enableExportOptimizations = false
 }) => {
     const [showTableOfContents, setShowTableOfContents] = useState(true);
+    const [internalPdfCaptureMode, setInternalPdfCaptureMode] = useState(pdfCaptureMode);
     const previewRef = useRef<HTMLDivElement>(null);
+
+    // Use internal state if pdfCaptureMode prop is not controlled externally
+    const effectivePdfCaptureMode = pdfCaptureMode !== undefined ? pdfCaptureMode : internalPdfCaptureMode;
 
     // Local implementation of calculateTotalPages as fallback
     const calculateTotalPages = (sections: ConstitutionSection[], showTOC: boolean) => {
@@ -63,41 +68,74 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     };
 
     const renderCoverPage = () => (
-        <div className="constitution-page min-h-screen p-12 text-center flex flex-col justify-center relative">
+        <div className="constitution-page" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            textAlign: 'center',
+            position: 'relative'
+        }}>
             {/* Logo */}
-            <div className="mb-12">
+            <div style={{ margin: '48px 0', textAlign: 'center', display: 'flex', justifyContent: 'center' }}>
                 <img
-                    src="/logos/blue_logo_only.png"
+                    src="/blue_logo_only.png"
                     alt="IEEE Logo"
-                    className="w-32 h-32 mx-auto"
-                    onError={(e) => {
-                        const target = e.target as HTMLElement;
-                        target.style.display = 'none';
-                        target.nextElementSibling?.classList.remove('hidden');
+                    style={{
+                        width: '120px',
+                        height: '120px',
+                        objectFit: 'contain',
+                        display: 'block',
+                        margin: '0 auto'
                     }}
                 />
-                <div className="w-32 h-32 mx-auto bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center hidden">
-                    <span className="text-white font-bold text-2xl">IEEE</span>
-                </div>
             </div>
 
-            <h1 className="text-5xl font-bold text-gray-900 mb-4" style={{ fontFamily: 'Arial, sans-serif', fontSize: '28pt', textAlign: 'center', lineHeight: '1.1' }}>
+            <h1 style={{
+                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontSize: '28pt',
+                textAlign: 'center',
+                lineHeight: '1.1',
+                fontWeight: 'bold',
+                color: '#000',
+                marginBottom: '24px'
+            }}>
                 IEEE at UC San Diego
             </h1>
 
-            <h2 className="text-2xl font-semibold text-gray-700 mb-8" style={{ fontFamily: 'Arial, sans-serif', fontSize: '16pt', textAlign: 'center', lineHeight: '1.3' }}>
+            <h2 style={{
+                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontSize: '16pt',
+                textAlign: 'center',
+                lineHeight: '1.3',
+                fontWeight: '600',
+                color: '#000',
+                marginBottom: '48px'
+            }}>
                 The Institute of Electrical and Electronics Engineers at UC San Diego Constitution
             </h2>
 
-            <div className="mt-8" style={{ textAlign: 'center' }}>
-                <p className="text-lg text-gray-600 mb-2" style={{ fontFamily: 'Arial, sans-serif', fontSize: '14pt', textAlign: 'center', textIndent: '0' }}>
+            <div style={{ textAlign: 'center', marginTop: '48px' }}>
+                <p style={{
+                    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontSize: '14pt',
+                    textAlign: 'center',
+                    textIndent: '0',
+                    marginBottom: '12px',
+                    color: '#000'
+                }}>
                     Last Updated: {new Date().toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
                     })}
                 </p>
-                <p className="text-sm text-gray-500" style={{ fontFamily: 'Arial, sans-serif', fontSize: '12pt', textAlign: 'center', textIndent: '0' }}>
+                <p style={{
+                    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontSize: '12pt',
+                    textAlign: 'center',
+                    textIndent: '0',
+                    color: '#666'
+                }}>
                     Version {constitution?.version || 1}
                 </p>
             </div>
@@ -185,14 +223,21 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 
         if (!page) {
             return (
-                <div className="constitution-page p-12 text-center">
-                    <div className="text-gray-500">Page not found</div>
+                <div className="constitution-page" style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center'
+                }}>
+                    <div style={{ color: '#666', fontFamily: 'Arial, sans-serif', fontSize: '12pt' }}>
+                        Page not found
+                    </div>
                 </div>
             );
         }
 
         return (
-            <div className="constitution-page p-12 relative">
+            <div className="constitution-page" style={{ position: 'relative' }}>
                 {page.map((section, index) => (
                     <SectionRenderer
                         key={section.id}
@@ -205,30 +250,39 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     };
 
     return (
-        <div className={`bg-white constitution-document ${pdfCaptureMode ? 'pdf-capture-mode' : 'shadow-lg'}`} style={{
+        <div className={`bg-white constitution-document ${effectivePdfCaptureMode ? 'pdf-capture-mode' : 'shadow-lg'}`} style={{
             fontFamily: 'Arial, sans-serif',
-            fontSize: '12pt',
-            lineHeight: '1.6',
+            fontSize: '11pt',
+            lineHeight: '1.5',
             width: '8.5in',
-            margin: pdfCaptureMode ? '0' : '0 auto'
+            margin: effectivePdfCaptureMode ? '0' : '0 auto'
         }}>
             {/* Print Styles */}
             <style dangerouslySetInnerHTML={{
                 __html: `
+                    * {
+                        box-sizing: border-box;
+                    }
+                    
                     .constitution-page {
+                        page-break-after: always;
                         width: 8.5in;
-                        min-height: 11in;
                         height: 11in;
+                        min-height: 11in;
                         padding: 1in;
-                        margin: ${pdfCaptureMode ? '0' : '0 auto 20px auto'};
+                        margin: ${effectivePdfCaptureMode ? '0' : '0 auto 20px auto'};
                         background: white;
-                        box-shadow: ${pdfCaptureMode ? 'none' : '0 4px 6px rgba(0, 0, 0, 0.1)'};
+                        box-shadow: ${effectivePdfCaptureMode ? 'none' : '0 4px 6px rgba(0, 0, 0, 0.1)'};
                         position: relative;
                         font-family: Arial, sans-serif;
-                        font-size: 12pt;
-                        line-height: 1.6;
+                        font-size: 11pt;
+                        line-height: 1.5;
+                        color: #444;  /* Softer dark gray */
                         box-sizing: border-box;
-                        page-break-inside: avoid;
+                    }
+                    
+                    .constitution-page:last-child {
+                        page-break-after: avoid;
                     }
                     
                     .pdf-capture-mode .no-print {
@@ -245,7 +299,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                     
                     .constitution-page h1 {
                         font-family: Arial, sans-serif;
-                        font-size: 24pt;
+                        font-size: 28pt;
                         font-weight: bold;
                         text-align: center;
                         margin-bottom: 24px;
@@ -271,6 +325,15 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                         page-break-after: avoid;
                     }
                     
+                    .constitution-page h4, .constitution-page h5, .constitution-page h6 {
+                        font-family: Arial, sans-serif;
+                        font-size: 12pt;
+                        font-weight: bold;
+                        margin-top: 12px;
+                        margin-bottom: 8px;
+                        page-break-after: avoid;
+                    }
+                    
                     .constitution-page p {
                         font-family: Arial, sans-serif;
                         font-size: 12pt;
@@ -290,23 +353,13 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                         font-family: Arial, sans-serif;
                     }
                     
-                    .toc-entry.indent-1 {
-                        margin-left: 24px;
-                    }
-                    
-                    .toc-dots {
-                        flex: 1;
-                        border-bottom: 1px dotted #333;
-                        margin: 0 8px;
-                        height: 1em;
-                    }
-                    
                     .image-placeholder {
                         border: 2px dashed #ccc;
                         padding: 24px;
                         text-align: center;
                         margin: 16px 0;
                         background: #f9f9f9;
+                        page-break-inside: avoid;
                         font-family: Arial, sans-serif;
                     }
                     
@@ -330,16 +383,6 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                         font-family: Arial, sans-serif;
                     }
                     
-                    @media print {
-                        .no-print { display: none !important; }
-                        .constitution-page { 
-                            page-break-after: always; 
-                            margin: 0;
-                            box-shadow: none;
-                        }
-                        .constitution-page:last-child { page-break-after: avoid; }
-                    }
-                    
                     .page-indicator {
                         position: absolute;
                         top: 10px;
@@ -353,13 +396,38 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                     }
                     
                     @media print {
-                        .page-indicator { display: none; }
+                        .no-print { display: none !important; }
+                        .page-indicator { display: none !important; }
+                        .constitution-page {
+                            page-break-after: always;
+                            margin: 0 !important;
+                            box-shadow: none !important;
+                            width: 8.5in !important;
+                            height: 11in !important;
+                            min-height: 11in !important;
+                            padding: 1in !important;
+                            box-sizing: border-box !important;
+                        }
+                        .constitution-page:last-child { page-break-after: avoid; }
+                        
+                        body {
+                            font-family: Arial, sans-serif !important;
+                            font-size: 12pt !important;
+                            line-height: 1.6 !important;
+                            -webkit-print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                        }
+                        
+                        h1 { font-size: 28pt !important; font-family: Arial, sans-serif !important; }
+                        h2 { font-size: 18pt !important; font-family: Arial, sans-serif !important; }
+                        h3 { font-size: 14pt !important; font-family: Arial, sans-serif !important; }
+                        p { font-size: 12pt !important; font-family: Arial, sans-serif !important; }
                     }
                 `
             }} />
 
             {/* Page Navigation Header */}
-            {!pdfCaptureMode && (
+            {!effectivePdfCaptureMode && (
                 <div className="no-print bg-gray-50 border-b border-gray-200 p-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
@@ -384,6 +452,14 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                             <ChevronRight className="h-4 w-4 ml-1" />
                         </button>
                     </div>
+
+                    {/* Preview Mode Toggle - only show if not externally controlled */}
+                    {pdfCaptureMode === undefined && (
+                        <PreviewModeToggle
+                            pdfCaptureMode={internalPdfCaptureMode}
+                            onToggle={setInternalPdfCaptureMode}
+                        />
+                    )}
                 </div>
             )}
 
