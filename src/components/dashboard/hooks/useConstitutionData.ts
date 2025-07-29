@@ -15,22 +15,13 @@ import {
 } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "../../../firebase/client";
-import type {
-  Constitution,
-  ConstitutionSection,
-  ConstitutionCollaborationSession,
-} from "../types/firestore";
+import type { Constitution, ConstitutionSection } from "../types/firestore";
 import { useConstitutionAudit } from "./useConstitutionAudit";
 
 export const useConstitutionData = () => {
   const [user] = useAuthState(auth);
   const [constitution, setConstitution] = useState<Constitution | null>(null);
   const [sections, setSections] = useState<ConstitutionSection[]>([]);
-  const [collaborationSession, setCollaborationSession] =
-    useState<ConstitutionCollaborationSession | null>(null);
-  const [activeCollaborators, setActiveCollaborators] = useState<
-    Array<{ userId: string; userName: string; currentSection?: string }>
-  >([]);
   const [saveStatus, setSaveStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -90,39 +81,11 @@ export const useConstitutionData = () => {
           setSections(sectionsData);
         });
 
-        // Initialize collaboration session
-        const sessionRef = doc(db, "collaborationSessions", constitutionId);
-        const sessionDoc = await getDoc(sessionRef);
-
-        if (!sessionDoc.exists()) {
-          await setDoc(sessionRef, {
-            constitutionId,
-            activeUsers: [],
-            locks: [],
-            changes: [],
-          });
-        }
-
-        const unsubscribeSession = onSnapshot(sessionRef, (doc) => {
-          if (doc.exists()) {
-            const session = {
-              id: doc.id,
-              ...doc.data(),
-            } as ConstitutionCollaborationSession;
-            setCollaborationSession(session);
-            setActiveCollaborators(session.activeUsers || []);
-          }
-        });
-
-        // Add current user to active users
-        await updateUserPresence();
-
         setIsLoading(false);
 
         return () => {
           unsubscribeConstitution();
           unsubscribeSections();
-          unsubscribeSession();
         };
       } catch (error) {
         console.error("Error initializing constitution:", error);
@@ -133,62 +96,25 @@ export const useConstitutionData = () => {
     initializeConstitution();
   }, [user, db]);
 
-  // Update user presence
-  const updateUserPresence = async (selectedSection?: string | null) => {
-    if (!user || !collaborationSession) return;
-
-    const sessionRef = doc(db, "collaborationSessions", constitutionId);
-    const currentActiveUsers = collaborationSession.activeUsers || [];
-
-    const updatedUsers = currentActiveUsers.filter(
-      (u) => u.userId !== user.uid,
-    );
-    const userUpdate: any = {
-      userId: user.uid,
-      userName: user.displayName || user.email || "Anonymous",
-      lastSeen: Timestamp.now(),
-    };
-
-    // Only add currentSection if it's not null/undefined
-    if (selectedSection) {
-      userUpdate.currentSection = selectedSection;
-    }
-
-    updatedUsers.push(userUpdate);
-
-    await updateDoc(sessionRef, {
-      activeUsers: updatedUsers,
-    });
-  };
-
-  // Clean up user presence on unmount
-  useEffect(() => {
-    return () => {
-      if (user && collaborationSession) {
-        const sessionRef = doc(db, "collaborationSessions", constitutionId);
-        const updatedUsers = (collaborationSession.activeUsers || []).filter(
-          (u) => u.userId !== user.uid,
-        );
-        updateDoc(sessionRef, { activeUsers: updatedUsers });
-      }
-    };
-  }, [user, collaborationSession]);
+  // Removed collaboration functionality
 
   const addSection = async (
     type: ConstitutionSection["type"],
     parentId?: string,
+    customTitle?: string,
+    customContent?: string,
   ) => {
     if (!user) return;
 
     const newOrder =
       sections.length > 0 ? Math.max(...sections.map((s) => s.order)) + 1 : 1;
 
-    let title = "";
+    let title = customTitle || "";
     let articleNumber: number | undefined;
     let sectionNumber: number | undefined;
     let amendmentNumber: number | undefined;
 
-    // Auto-generate numbers based on existing sections
+    // Calculate numbers for ordering regardless of whether custom title is provided
     const existingArticles = sections.filter(
       (s) => s.type === "article",
     ).length;
@@ -197,12 +123,8 @@ export const useConstitutionData = () => {
     ).length;
 
     switch (type) {
-      case "preamble":
-        title = "Preamble";
-        break;
       case "article":
         articleNumber = existingArticles + 1;
-        title = `General Provisions`;
         break;
       case "section":
         if (parentId) {
@@ -210,19 +132,17 @@ export const useConstitutionData = () => {
             (s) => s.parentId === parentId && s.type === "section",
           ).length;
           sectionNumber = parentSections + 1;
-          title = `Name of Student Organization`;
         }
         break;
       case "amendment":
         amendmentNumber = existingAmendments + 1;
-        title = `Amendment ${amendmentNumber}`;
         break;
     }
 
     const newSection: Omit<ConstitutionSection, "id"> = {
       type,
       title,
-      content: "",
+      content: customContent || "",
       order: newOrder,
       ...(parentId && { parentId }),
       ...(articleNumber && { articleNumber }),
@@ -358,8 +278,6 @@ export const useConstitutionData = () => {
     // State
     constitution,
     sections,
-    collaborationSession,
-    activeCollaborators,
     saveStatus,
     lastSaved,
     isLoading,
@@ -369,7 +287,6 @@ export const useConstitutionData = () => {
     updateSection,
     deleteSection,
     updateConstitutionVersion,
-    updateUserPresence,
 
     // Constants
     constitutionId,

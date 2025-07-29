@@ -10,56 +10,67 @@ export const generateTableOfContents = (
   sections: ConstitutionSection[],
 ): TableOfContentsEntry[] => {
   const toc: TableOfContentsEntry[] = [];
-  let currentPageNum = 3; // Start after title page and TOC
 
-  // Helper function to calculate content length for a section and all its children
-  const getTotalContentLength = (sectionId: string): number => {
-    const section = sections.find((s) => s.id === sectionId);
-    if (!section) return 0;
+  // Generate the actual content pages to get accurate page numbers
+  const contentPages = generateContentPages(sections);
 
-    let totalLength = section.content?.length || 0;
+  let tocStartPage = 2; // TOC starts on page 2 (after cover page)
 
-    // Add length of all child sections recursively
-    const children = sections.filter((s) => s.parentId === sectionId);
-    children.forEach((child) => {
-      totalLength += getTotalContentLength(child.id);
+  // Calculate how many TOC pages we need
+  const estimatedTocEntries = sections.filter(
+    (s) =>
+      s.type === "preamble" ||
+      s.type === "article" ||
+      s.type === "section" ||
+      s.type === "subsection" ||
+      s.type === "amendment",
+  ).length;
+  const tocPagesNeeded = Math.ceil(estimatedTocEntries / 25); // ~25 entries per page
+
+  let contentStartPage = tocStartPage + tocPagesNeeded; // Content starts after TOC pages
+
+  // Map sections to their actual page numbers
+  const sectionToPageMap = new Map<string, number>();
+
+  contentPages.forEach((page, pageIndex) => {
+    const actualPageNum = contentStartPage + pageIndex;
+    page.forEach((section) => {
+      if (!sectionToPageMap.has(section.id)) {
+        sectionToPageMap.set(section.id, actualPageNum);
+      }
     });
-
-    return totalLength;
-  };
+  });
 
   // Helper function to add subsections recursively to TOC
-  const addSubsectionsToTOC = (
-    parentId: string,
-    currentPage: number,
-  ): number => {
+  const addSubsectionsToTOC = (parentId: string): void => {
     const subsections = sections
       .filter((s) => s.parentId === parentId && s.type === "subsection")
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
     subsections.forEach((subsection) => {
-      toc.push({ section: subsection, pageNum: currentPage });
+      const pageNum = sectionToPageMap.get(subsection.id) || contentStartPage;
+      toc.push({ section: subsection, pageNum });
 
       // Recursively add nested subsections
-      currentPage = addSubsectionsToTOC(subsection.id, currentPage);
+      addSubsectionsToTOC(subsection.id);
     });
-
-    return currentPage;
   };
 
   // Preamble
   const preamble = sections.find((s) => s.type === "preamble");
   if (preamble) {
-    toc.push({ section: preamble, pageNum: currentPageNum });
-    currentPageNum++;
+    const pageNum = sectionToPageMap.get(preamble.id) || contentStartPage;
+    toc.push({ section: preamble, pageNum });
   }
 
-  // Articles (each starts on new page)
+  // Articles
   const articles = sections
     .filter((s) => s.type === "article")
     .sort((a, b) => (a.order || 0) - (b.order || 0));
+
   articles.forEach((article) => {
-    toc.push({ section: article, pageNum: currentPageNum });
+    const pageNum = sectionToPageMap.get(article.id) || contentStartPage;
+    toc.push({ section: article, pageNum });
 
     // Sections within this article
     const articleSections = sections
@@ -67,29 +78,22 @@ export const generateTableOfContents = (
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
     articleSections.forEach((section) => {
-      toc.push({ section, pageNum: currentPageNum });
+      const sectionPageNum = sectionToPageMap.get(section.id) || pageNum;
+      toc.push({ section, pageNum: sectionPageNum });
 
       // Add all subsections for this section
-      addSubsectionsToTOC(section.id, currentPageNum);
+      addSubsectionsToTOC(section.id);
     });
-
-    // Calculate if this article needs multiple pages based on total content
-    const totalArticleContent = getTotalContentLength(article.id);
-    const estimatedPages = Math.ceil(totalArticleContent / 2000); // ~2000 chars per page
-    currentPageNum += Math.max(1, estimatedPages);
   });
 
   // Amendments
   const amendments = sections
     .filter((s) => s.type === "amendment")
     .sort((a, b) => (a.order || 0) - (b.order || 0));
-  amendments.forEach((amendment) => {
-    toc.push({ section: amendment, pageNum: currentPageNum });
 
-    // Each amendment gets its own page, but check if it needs multiple pages
-    const contentLength = amendment.content?.length || 0;
-    const estimatedPages = Math.ceil(contentLength / 2000);
-    currentPageNum += Math.max(1, estimatedPages);
+  amendments.forEach((amendment) => {
+    const pageNum = sectionToPageMap.get(amendment.id) || contentStartPage;
+    toc.push({ section: amendment, pageNum });
   });
 
   return toc;
@@ -100,25 +104,71 @@ export const calculateTotalPages = (
   showTOC: boolean,
 ) => {
   let pageCount = 1; // Cover page
-  if (showTOC) pageCount++; // TOC page
 
-  // Content pages
-  const preamble = sections.find((s) => s.type === "preamble");
-  if (preamble) pageCount++;
+  if (showTOC) {
+    // Calculate TOC pages needed
+    const estimatedTocEntries = sections.filter(
+      (s) =>
+        s.type === "preamble" ||
+        s.type === "article" ||
+        s.type === "section" ||
+        s.type === "subsection" ||
+        s.type === "amendment",
+    ).length;
+    const tocPagesNeeded = Math.ceil(estimatedTocEntries / 25); // ~25 entries per page
+    pageCount += tocPagesNeeded;
+  }
 
-  const articles = sections.filter((s) => s.type === "article");
-  pageCount += articles.length;
-
-  const amendments = sections.filter((s) => s.type === "amendment");
-  pageCount += amendments.length;
+  // Content pages - use the actual page generation logic
+  const contentPages = generateContentPages(sections);
+  pageCount += contentPages.length;
 
   return pageCount;
+};
+
+// Estimate content height in points (approximate)
+const estimateContentHeight = (section: ConstitutionSection): number => {
+  let height = 0;
+
+  // Title height based on section type
+  switch (section.type) {
+    case "preamble":
+    case "article":
+    case "amendment":
+      height += 30; // h2 title + margins (18pt + margins)
+      break;
+    case "section":
+      height += 24; // h3 title + margins (12pt + margins)
+      break;
+    case "subsection":
+      height += 20; // h4 title + margins (11pt + margins)
+      break;
+  }
+
+  // Content height (if any)
+  if (section.content && section.type !== "article") {
+    const contentLines = section.content.split("\n").length;
+    const wordsPerLine = 12; // Approximate words per line at 11pt
+    const words = section.content.split(/\s+/).length;
+    const estimatedLines = Math.max(
+      contentLines,
+      Math.ceil(words / wordsPerLine),
+    );
+    height += estimatedLines * 16.5; // 11pt font with 1.5 line height
+  }
+
+  // Add bottom margin
+  height += section.type === "article" ? 12 : 20;
+
+  return height;
 };
 
 export const generateContentPages = (
   sections: ConstitutionSection[],
 ): ConstitutionSection[][] => {
   const pages: ConstitutionSection[][] = [];
+  const PAGE_HEIGHT = 648; // 11in - 2in margins = 9in * 72pt/in = 648pt
+  const SECTION_BREAK_THRESHOLD = 100; // Don't break if less than this space left
 
   // Group sections by type for proper page breaks
   const preamble = sections.find((s) => s.type === "preamble");
@@ -134,13 +184,13 @@ export const generateContentPages = (
     pages.push([preamble]);
   }
 
-  // Article pages (each article starts new page)
+  // Process articles with dynamic page breaks
   articles.forEach((article) => {
     const articleSections = sections
       .filter((s) => s.parentId === article.id && s.type === "section")
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    // Collect all subsections for each section
+    // Collect all sections and subsections in order
     const allSectionsAndSubsections = [article];
     articleSections.forEach((section) => {
       allSectionsAndSubsections.push(section);
@@ -161,10 +211,38 @@ export const generateContentPages = (
       allSectionsAndSubsections.push(...getSubsections(section.id));
     });
 
-    pages.push(allSectionsAndSubsections);
+    // Split into pages based on estimated height
+    let currentPage: ConstitutionSection[] = [];
+    let currentPageHeight = 0;
+
+    allSectionsAndSubsections.forEach((section) => {
+      const sectionHeight = estimateContentHeight(section);
+
+      // Check if we need a new page
+      if (
+        currentPage.length > 0 &&
+        (currentPageHeight + sectionHeight > PAGE_HEIGHT ||
+          (section.type === "section" &&
+            currentPageHeight > PAGE_HEIGHT - SECTION_BREAK_THRESHOLD))
+      ) {
+        // Start new page
+        pages.push(currentPage);
+        currentPage = [section];
+        currentPageHeight = sectionHeight;
+      } else {
+        // Add to current page
+        currentPage.push(section);
+        currentPageHeight += sectionHeight;
+      }
+    });
+
+    // Add the last page if it has content
+    if (currentPage.length > 0) {
+      pages.push(currentPage);
+    }
   });
 
-  // Amendment pages
+  // Amendment pages (each amendment on its own page for now)
   amendments.forEach((amendment) => {
     pages.push([amendment]);
   });
@@ -370,6 +448,9 @@ export const generatePrintContent = (
             <p style="font-size: 12pt; text-indent: 0; color: #666; text-align: center;">
                 Version ${constitution?.version || 1}
             </p>
+            <p style="font-size: 11pt; text-indent: 0; color: #888; text-align: center; margin-top: 8px;">
+                Adopted since September 2006
+            </p>
         </div>
     </div>`;
 
@@ -385,7 +466,7 @@ export const generatePrintContent = (
     content += `
         <div class="constitution-page">
             <div class="constitution-section">
-                <h2>${getSectionPrintTitle(preamble, 0, sections)}</h2>
+                <h2 class="article-title">${getSectionPrintTitle(preamble, 0, sections)}</h2>
                 ${renderSectionContent(preamble)}
             </div>
         </div>`;
@@ -400,15 +481,37 @@ export const generatePrintContent = (
     content += `
         <div class="constitution-page">
             <div class="constitution-section">
-                <h2>${getSectionPrintTitle(article, index, sections)}</h2>
+                <h2 class="article-title">${getSectionPrintTitle(article, index, sections)}</h2>
             </div>`;
 
     articleSections.forEach((section, secIndex) => {
       content += `
             <div class="constitution-section">
-                <h3>${getSectionPrintTitle(section, secIndex, sections)}</h3>
+                <h3 class="section-title">${getSectionPrintTitle(section, secIndex, sections)}</h3>
                 ${renderSectionContent(section)}
             </div>`;
+
+      // Add subsections for this section
+      const renderSubsections = (parentId: string, indentLevel: number = 0) => {
+        const subsections = sections
+          .filter((s) => s.parentId === parentId && s.type === "subsection")
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        subsections.forEach((subsection) => {
+          const indentStyle =
+            indentLevel > 0 ? `margin-left: ${indentLevel * 24}px;` : "";
+          content += `
+            <div class="constitution-section" style="${indentStyle}">
+                <h4 class="subsection-title">${getSectionPrintTitle(subsection, 0, sections)}</h4>
+                ${renderSectionContent(subsection)}
+            </div>`;
+
+          // Recursively render nested subsections
+          renderSubsections(subsection.id, indentLevel + 1);
+        });
+      };
+
+      renderSubsections(section.id, 1);
     });
 
     content += `</div>`;
@@ -419,7 +522,7 @@ export const generatePrintContent = (
     content += `
         <div class="constitution-page">
             <div class="constitution-section">
-                <h2>${getSectionPrintTitle(amendment, index, sections)}</h2>
+                <h2 class="article-title">${getSectionPrintTitle(amendment, index, sections)}</h2>
                 ${renderSectionContent(amendment)}
             </div>
         </div>`;
@@ -462,11 +565,13 @@ export const generatePrintHTML = (
                     width: 8.5in;
                     height: 11in;
                     min-height: 11in;
+                    max-height: 11in;
                     padding: 1in;
                     background: white;
                     position: relative;
                     margin: 0 auto;
                     box-sizing: border-box;
+                    overflow: hidden; /* Prevent content overflow */
                 }
                 
                 .constitution-page:last-child {
@@ -487,36 +592,84 @@ export const generatePrintHTML = (
                     color: #333;  // Softer dark gray for headings
                 }
 
-                h2 {
-                    font-family: Arial, sans-serif;
-                    font-size: 16pt;
-                    font-weight: bold;
-                    text-align: left;
-                    margin-top: 20px;
-                    margin-bottom: 8px;
-                    page-break-after: avoid;
-                    color: #333;  // Softer dark gray for headings
+                /* Article titles (h2) - larger font size - FORCE OVERRIDE */
+                h2, h2.article-title {
+                    font-family: Arial, sans-serif !important;
+                    font-size: 18pt !important;
+                    font-weight: bold !important;
+                    text-align: left !important;
+                    margin-top: 20px !important;
+                    margin-bottom: 8px !important;
+                    page-break-after: avoid !important;
+                    color: #333 !important;  /* Softer dark gray for headings */
                 }
 
-                h3 {
-                    font-family: Arial, sans-serif;
-                    font-size: 12pt;
-                    font-weight: bold;
-                    text-align: left;
-                    margin-top: 12px;
-                    margin-bottom: 8px;
-                    page-break-after: avoid;
-                    color: #333;  // Softer dark gray for headings
+                /* Section titles (h3) - smaller font size - FORCE OVERRIDE */
+                h3, h3.section-title {
+                    font-family: Arial, sans-serif !important;
+                    font-size: 12pt !important;
+                    font-weight: bold !important;
+                    text-align: left !important;
+                    margin-top: 12px !important;
+                    margin-bottom: 8px !important;
+                    page-break-after: avoid !important;
+                    color: #555 !important;  /* Lighter color for sections to differentiate */
                 }
 
-                h4, h5, h6 {
+                /* Specific classes for better control */
+                .article-title {
+                    font-family: Arial, sans-serif !important;
+                    font-size: 18pt !important;
+                    font-weight: bold !important;
+                    text-align: left !important;
+                    margin-top: 20px !important;
+                    margin-bottom: 8px !important;
+                    page-break-after: avoid !important;
+                    color: #333 !important;
+                }
+
+                .section-title {
+                    font-family: Arial, sans-serif !important;
+                    font-size: 12pt !important;
+                    font-weight: bold !important;
+                    text-align: left !important;
+                    margin-top: 12px !important;
+                    margin-bottom: 8px !important;
+                    page-break-after: avoid !important;
+                    color: #555 !important;
+                }
+
+                .subsection-title {
+                    font-family: Arial, sans-serif !important;
+                    font-size: 11pt !important;
+                    font-weight: 600 !important;
+                    text-align: left !important;
+                    margin-top: 10px !important;
+                    margin-bottom: 6px !important;
+                    page-break-after: avoid !important;
+                    color: #666 !important;
+                }
+
+                /* Subsection titles (h4) - smallest font size */
+                h4 {
                     font-family: Arial, sans-serif;
                     font-size: 11pt;
-                    font-weight: bold;
+                    font-weight: 600;
+                    text-align: left;
                     margin-top: 10px;
                     margin-bottom: 6px;
                     page-break-after: avoid;
-                    color: #333;  // Softer dark gray for headings
+                    color: #666;  /* Even lighter color for subsections */
+                }
+
+                h5, h6 {
+                    font-family: Arial, sans-serif;
+                    font-size: 10pt;
+                    font-weight: 600;
+                    margin-top: 8px;
+                    margin-bottom: 4px;
+                    page-break-after: avoid;
+                    color: #777;  /* Lightest color for deeper nesting */
                 }
 
                 p {
@@ -525,10 +678,10 @@ export const generatePrintHTML = (
                     line-height: 1.5;
                     margin-bottom: 10px;
                     text-align: justify;
-                    text-indent: 0.4in;
+                    text-indent: 0;      /* Remove text indentation */
                     orphans: 2;
                     widows: 2;
-                    color: #444;  // Softer dark gray for body text
+                    color: #444;  /* Softer dark gray for body text */
                 }
 
                 ol.numbered-list, ul.bullet-list {
@@ -596,7 +749,8 @@ export const generatePrintHTML = (
                     margin: 1in;
                 }
                 
-                @media print {
+                /* Force print styles to apply in all contexts, including PDF generation */
+                /* Apply styles universally - no media query restrictions */
                     body {
                         font-family: Arial, sans-serif !important;
                         font-size: 12pt !important;
@@ -604,25 +758,123 @@ export const generatePrintHTML = (
                         -webkit-print-color-adjust: exact !important;
                         color-adjust: exact !important;
                     }
-                    
+
                     .constitution-page {
                         page-break-after: always;
                         width: 8.5in !important;
                         height: 11in !important;
                         min-height: 11in !important;
+                        max-height: 11in !important;
                         padding: 1in !important;
                         margin: 0 !important;
                         box-sizing: border-box !important;
+                        overflow: hidden !important; /* Prevent content overflow */
                     }
-                    
+
                     .constitution-page:last-child {
                         page-break-after: avoid;
                     }
-                    
-                    h1 { font-size: 28pt !important; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
-                    h2 { font-size: 18pt !important; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
-                    h3 { font-size: 14pt !important; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
-                    p { font-size: 12pt !important; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
+
+                    /* Article titles (h2) - larger font size */
+                    h1 {
+                        font-size: 28pt !important;
+                        font-family: Arial, sans-serif !important;
+                        font-weight: bold !important;
+                        text-align: center !important;
+                        margin-bottom: 24px !important;
+                        page-break-after: avoid !important;
+                        color: #333 !important;
+                    }
+
+                    /* Article titles (h2) - larger font size */
+                    h2 {
+                        font-size: 18pt !important;
+                        font-family: Arial, sans-serif !important;
+                        font-weight: bold !important;
+                        text-align: left !important;
+                        margin-top: 20px !important;
+                        margin-bottom: 8px !important;
+                        page-break-after: avoid !important;
+                        color: #333 !important;
+                    }
+
+                    /* Section titles (h3) - smaller font size */
+                    h3 {
+                        font-size: 12pt !important;
+                        font-family: Arial, sans-serif !important;
+                        font-weight: bold !important;
+                        text-align: left !important;
+                        margin-top: 12px !important;
+                        margin-bottom: 8px !important;
+                        page-break-after: avoid !important;
+                        color: #555 !important;
+                    }
+
+                    /* Subsection titles (h4) - smallest font size */
+                    h4 {
+                        font-size: 11pt !important;
+                        font-family: Arial, sans-serif !important;
+                        font-weight: 600 !important;
+                        text-align: left !important;
+                        margin-top: 10px !important;
+                        margin-bottom: 6px !important;
+                        page-break-after: avoid !important;
+                        color: #666 !important;
+                    }
+
+                    /* Body text */
+                    p {
+                        font-size: 11pt !important;
+                        font-family: Arial, sans-serif !important;
+                        line-height: 1.5 !important;
+                        margin-bottom: 10px !important;
+                        text-align: justify !important;
+                        text-indent: 0 !important;      /* Remove text indentation */
+                        orphans: 2 !important;
+                        widows: 2 !important;
+                        color: #444 !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+
+                    /* Section break rules */
+                    .constitution-section {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+
+                    /* Prevent orphaned headings */
+                    h1, h2, h3, h4, h5, h6 {
+                        page-break-after: avoid !important;
+                        break-after: avoid !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+                }
+
+                /* Additional universal font size enforcement */
+                body h2.article-title,
+                body .constitution-page h2.article-title,
+                body .constitution-section h2.article-title {
+                    font-size: 18pt !important;
+                    font-weight: bold !important;
+                    color: #333 !important;
+                }
+
+                body h3.section-title,
+                body .constitution-page h3.section-title,
+                body .constitution-section h3.section-title {
+                    font-size: 12pt !important;
+                    font-weight: bold !important;
+                    color: #555 !important;
+                }
+
+                body h4.subsection-title,
+                body .constitution-page h4.subsection-title,
+                body .constitution-section h4.subsection-title {
+                    font-size: 11pt !important;
+                    font-weight: 600 !important;
+                    color: #666 !important;
                 }
             </style>
             
@@ -668,9 +920,14 @@ export const exportToPDF = (
                 
                 .constitution-page:last-child { page-break-after: avoid; }
                 h1 { font-size: 28pt !important; text-align: center !important; margin-bottom: 24px !important; }
-                h2 { font-size: 18pt !important; text-align: center !important; margin: 24px 0 16px 0 !important; }
-                h3 { font-size: 14pt !important; margin: 16px 0 12px 0 !important; }
-                p { font-size: 12pt !important; margin-bottom: 12px !important; text-align: justify !important; text-indent: 0.5in !important; }
+                /* Article titles (h2) - larger font size */
+                h2 { font-size: 18pt !important; text-align: left !important; margin: 24px 0 16px 0 !important; }
+                /* Section titles (h3) - smaller font size */
+                h3 { font-size: 12pt !important; margin: 16px 0 12px 0 !important; }
+                /* Subsection titles (h4) - smallest font size */
+                h4 { font-size: 11pt !important; margin: 12px 0 8px 0 !important; }
+                /* Body text */
+                p { font-size: 11pt !important; margin-bottom: 12px !important; text-align: justify !important; text-indent: 0 !important; }
                 
                 .toc-entry {
                     display: flex !important;

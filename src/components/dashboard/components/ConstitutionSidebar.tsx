@@ -4,7 +4,6 @@ import {
     FileText,
     ChevronDown,
     ChevronRight,
-    Lock,
     ChevronUp,
     ArrowUp,
     ArrowDown
@@ -17,10 +16,9 @@ interface ConstitutionSidebarProps {
     sections: ConstitutionSection[];
     selectedSection: string | null;
     expandedSections: Set<string>;
-    activeCollaborators: Array<{ userId: string, userName: string, currentSection?: string }>;
     onSelectSection: (id: string) => void;
     onToggleExpand: (id: string) => void;
-    onAddSection: (type: ConstitutionSection['type'], parentId?: string) => void;
+    onAddSection: (type: ConstitutionSection['type'], parentId?: string, title?: string, content?: string) => void;
     updateSection: (sectionId: string, updates: Partial<ConstitutionSection>) => void;
     currentUserId?: string;
     constitutionVersion?: number;
@@ -30,7 +28,6 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
     sections,
     selectedSection,
     expandedSections,
-    activeCollaborators,
     onSelectSection,
     onToggleExpand,
     onAddSection,
@@ -83,7 +80,6 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
                                 isExpanded={isExpanded}
                                 onSelect={onSelectSection}
                                 onToggleExpand={onToggleExpand}
-                                collaborators={activeCollaborators}
                                 allSections={sections}
                                 currentUserId={currentUserId}
                                 onMoveUp={() => moveSection(section.id, 'up')}
@@ -104,12 +100,14 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
     };
 
     return (
-        <div className="col-span-3">
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex items-center justify-between mb-4">
+        <div className="col-span-3 flex flex-col">
+            <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-[calc(100vh-12rem)]">
+                {/* Fixed header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
                     <div>
                         <h2 className="font-semibold text-gray-900">Document Structure</h2>
                         <p className="text-xs text-gray-500">Version {constitutionVersion || 1}</p>
+                        <p className="text-xs text-gray-400">Adopted since September 2006</p>
                     </div>
                     <button
                         onClick={() => setShowAddSection(true)}
@@ -121,36 +119,39 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
                     </button>
                 </div>
 
-                {sections.length === 0 ? (
-                    <div className="text-center py-8">
-                        <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-sm font-medium text-gray-900 mb-2">
-                            No sections yet
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                            Start building your constitution by adding a preamble or first article.
-                        </p>
-                        <button
-                            onClick={() => setShowAddSection(true)}
-                            className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add First Section
-                        </button>
-                    </div>
-                ) : (
-                    <div className="space-y-1">
-                        {renderSectionHierarchy(sections, null, 0)}
-                    </div>
-                )}
+                {/* Scrollable content area */}
+                <div className="flex-1 overflow-y-auto p-4 constitution-sidebar-scroll">
+                    {sections.length === 0 ? (
+                        <div className="text-center py-8">
+                            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">
+                                No sections yet
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Start building your constitution by adding a preamble or first article.
+                            </p>
+                            <button
+                                onClick={() => setShowAddSection(true)}
+                                className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                            >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add First Section
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-1">
+                            {renderSectionHierarchy(sections, null, 0)}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Add Section Modal */}
             {showAddSection && (
                 <AddSectionModal
                     onClose={() => setShowAddSection(false)}
-                    onAddSection={(type, parentId) => {
-                        onAddSection(type, parentId);
+                    onAddSection={(type, parentId, title, content) => {
+                        onAddSection(type, parentId, title, content);
                         setShowAddSection(false);
                     }}
                     sections={sections}
@@ -167,7 +168,6 @@ const SectionNavigationItem: React.FC<{
     isExpanded: boolean;
     onSelect: (id: string) => void;
     onToggleExpand: (id: string) => void;
-    collaborators: Array<{ userId: string, userName: string, currentSection?: string }>;
     allSections: ConstitutionSection[];
     currentUserId?: string;
     onMoveUp: () => void;
@@ -180,7 +180,6 @@ const SectionNavigationItem: React.FC<{
     isExpanded,
     onSelect,
     onToggleExpand,
-    collaborators,
     allSections,
     currentUserId,
     onMoveUp,
@@ -189,7 +188,6 @@ const SectionNavigationItem: React.FC<{
     canMoveDown
 }) => {
         const hasChildren = allSections.some(s => s.parentId === section.id);
-        const isBeingEdited = collaborators.some(c => c.currentSection === section.id && c.userId !== currentUserId);
 
         // Indentation is now handled by parent component nesting
 
@@ -247,13 +245,6 @@ const SectionNavigationItem: React.FC<{
                     <div className="text-sm font-medium truncate">{getDisplayTitle()}</div>
                     <div className="text-xs text-gray-500 capitalize">{section.type}</div>
                 </div>
-
-                {isBeingEdited && (
-                    <div className="flex items-center gap-1">
-                        <Lock className="h-3 w-3 text-orange-500" />
-                        <div className="h-2 w-2 bg-orange-500 rounded-full" title="Being edited by someone else" />
-                    </div>
-                )}
             </div>
         );
     };

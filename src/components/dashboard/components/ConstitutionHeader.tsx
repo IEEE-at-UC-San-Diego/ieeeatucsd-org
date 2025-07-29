@@ -31,7 +31,6 @@ const PrintButton: React.FC<PrintButtonProps> = ({ onPrint }) => {
 interface ConstitutionHeaderProps {
     saveStatus: 'idle' | 'saving' | 'saved' | 'error';
     lastSaved: Date | null;
-    activeCollaborators: Array<{ userId: string, userName: string, currentSection?: string }>;
     currentView: 'editor' | 'preview' | 'audit';
     onViewChange: (view: 'editor' | 'preview' | 'audit') => void;
     onPrint: () => void;
@@ -40,7 +39,6 @@ interface ConstitutionHeaderProps {
 const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
     saveStatus,
     lastSaved,
-    activeCollaborators,
     currentView,
     onViewChange,
     onPrint

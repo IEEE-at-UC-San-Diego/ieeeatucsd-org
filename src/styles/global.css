@@ -123,4 +123,92 @@
     display: none !important;
     visibility: hidden !important;
   }
+
+  /* Font size rules for constitution print mode */
+  body.constitution-print-mode h1 {
+    font-size: 28pt !important;
+    font-family: Arial, sans-serif !important;
+  }
+
+  /* Article titles (h2) - larger font size */
+  body.constitution-print-mode h2 {
+    font-size: 18pt !important;
+    font-family: Arial, sans-serif !important;
+    font-weight: bold !important;
+  }
+
+  /* Section titles (h3) - smaller font size */
+  body.constitution-print-mode h3 {
+    font-size: 12pt !important;
+    font-family: Arial, sans-serif !important;
+    font-weight: bold !important;
+  }
+
+  /* Subsection titles (h4) - smallest font size */
+  body.constitution-print-mode h4 {
+    font-size: 11pt !important;
+    font-family: Arial, sans-serif !important;
+    font-weight: 600 !important;
+  }
+
+  /* Body text */
+  body.constitution-print-mode p {
+    font-size: 11pt !important;
+    font-family: Arial, sans-serif !important;
+    orphans: 2 !important;
+    widows: 2 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Page break rules for print */
+  body.constitution-print-mode .constitution-page {
+    page-break-after: always !important;
+    max-height: 11in !important;
+    overflow: hidden !important;
+  }
+
+  body.constitution-print-mode .constitution-page:last-child {
+    page-break-after: avoid !important;
+  }
+
+  body.constitution-print-mode .constitution-section {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Prevent orphaned headings */
+  body.constitution-print-mode h1,
+  body.constitution-print-mode h2,
+  body.constitution-print-mode h3,
+  body.constitution-print-mode h4 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+
+/* Custom scrollbar styles for document structure */
+.constitution-sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}
+
+.constitution-sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.constitution-sidebar-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 3px;
+}
+
+.constitution-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.constitution-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }

@@ -43,15 +43,9 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
         let pageCount = 1; // Cover page
         if (showTOC) pageCount++; // TOC page
 
-        // Content pages
-        const preamble = sections.find(s => s.type === 'preamble');
-        if (preamble) pageCount++;
-
-        const articles = sections.filter(s => s.type === 'article');
-        pageCount += articles.length;
-
-        const amendments = sections.filter(s => s.type === 'amendment');
-        pageCount += amendments.length;
+        // Content pages - use the actual page generation logic
+        const contentPages = generateContentPages(sections);
+        pageCount += contentPages.length;
 
         return pageCount;
     };
@@ -61,10 +55,23 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     const renderCurrentPage = () => {
         if (currentPage === 1) {
             return renderCoverPage();
-        } else if (currentPage === 2 && showTableOfContents) {
-            return renderTableOfContentsPage();
+        } else if (showTableOfContents) {
+            // Calculate TOC pages needed
+            const tableOfContents = generateTableOfContents(sections);
+            const tocPagesNeeded = Math.ceil(tableOfContents.length / 25);
+
+            if (currentPage >= 2 && currentPage <= 1 + tocPagesNeeded) {
+                // This is a TOC page
+                const tocPages = renderTableOfContentsPages();
+                const tocPageIndex = currentPage - 2;
+                return tocPages[tocPageIndex] || <div>TOC Page not found</div>;
+            } else {
+                // This is a content page
+                const contentPageIndex = currentPage - 2 - tocPagesNeeded;
+                return renderContentPage(contentPageIndex);
+            }
         } else {
-            const contentPageIndex = showTableOfContents ? currentPage - 3 : currentPage - 2;
+            const contentPageIndex = currentPage - 2;
             return renderContentPage(contentPageIndex);
         }
     };
@@ -79,13 +86,16 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
             </div>
         );
 
-        // Table of contents page
+        // Table of contents pages
         if (showTableOfContents) {
-            pages.push(
-                <div key="toc-page">
-                    {renderTableOfContentsPage()}
-                </div>
-            );
+            const tocPages = renderTableOfContentsPages();
+            tocPages.forEach((tocPage, index) => {
+                pages.push(
+                    <div key={`toc-page-${index}`}>
+                        {tocPage}
+                    </div>
+                );
+            });
         }
 
         // Content pages
@@ -180,83 +190,111 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                 }}>
                     Version {constitution?.version || 1}
                 </p>
+                <p style={{
+                    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontSize: '11pt',
+                    textAlign: 'center',
+                    textIndent: '0',
+                    color: '#888',
+                    marginTop: '8px'
+                }}>
+                    Adopted since September 2006
+                </p>
             </div>
         </div>
     );
 
-    const renderTableOfContentsPage = () => {
+    const renderTableOfContentsPages = () => {
         const tableOfContents = generateTableOfContents(sections);
+        const entriesPerPage = 25;
+        const tocPages = [];
 
-        return (
-            <div className="constitution-page p-12 relative">
-                <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center" style={{ fontFamily: 'Arial, sans-serif', fontSize: '18pt' }}>
-                    Table of Contents
-                </h2>
+        for (let i = 0; i < tableOfContents.length; i += entriesPerPage) {
+            const pageEntries = tableOfContents.slice(i, i + entriesPerPage);
+            const pageNumber = Math.floor(i / entriesPerPage) + 1;
+            const isFirstPage = pageNumber === 1;
 
-                <div className="space-y-2" style={{ fontSize: '12pt' }}>
-                    {tableOfContents.map(({ section, pageNum }, index) => {
-                        const getIndentClass = (section: ConstitutionSection) => {
-                            if (section.type === 'section') return 'ml-6';
-                            if (section.type === 'subsection') {
-                                // Calculate nesting depth for subsections
-                                let depth = 1; // Start at 1 for first level subsections
-                                let currentParentId = section.parentId;
+            tocPages.push(
+                <div key={`toc-page-${pageNumber}`} className="constitution-page p-12 relative">
+                    {isFirstPage && (
+                        <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center" style={{ fontFamily: 'Arial, sans-serif', fontSize: '18pt' }}>
+                            Table of Contents
+                        </h2>
+                    )}
 
-                                while (currentParentId) {
-                                    const parent = sections.find(s => s.id === currentParentId);
-                                    if (parent && parent.type === 'subsection') {
-                                        depth++;
-                                        currentParentId = parent.parentId;
-                                    } else if (parent && parent.type === 'section') {
-                                        depth++; // Add one more for being under a section
-                                        break;
-                                    } else {
-                                        break;
+                    {!isFirstPage && (
+                        <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center" style={{ fontFamily: 'Arial, sans-serif', fontSize: '18pt' }}>
+                            Table of Contents (continued)
+                        </h2>
+                    )}
+
+                    <div className="space-y-2" style={{ fontSize: '12pt' }}>
+                        {pageEntries.map(({ section, pageNum }, index) => {
+                            const getIndentClass = (section: ConstitutionSection) => {
+                                if (section.type === 'section') return 'ml-6';
+                                if (section.type === 'subsection') {
+                                    // Calculate nesting depth for subsections
+                                    let depth = 1; // Start at 1 for first level subsections
+                                    let currentParentId = section.parentId;
+
+                                    while (currentParentId) {
+                                        const parent = sections.find(s => s.id === currentParentId);
+                                        if (parent && parent.type === 'subsection') {
+                                            depth++;
+                                            currentParentId = parent.parentId;
+                                        } else if (parent && parent.type === 'section') {
+                                            depth++; // Add one more for being under a section
+                                            break;
+                                        } else {
+                                            break;
+                                        }
                                     }
+                                    // Use predefined Tailwind classes based on depth
+                                    const indentClasses = ['ml-6', 'ml-12', 'ml-16', 'ml-20', 'ml-24'];
+                                    return indentClasses[Math.min(depth, indentClasses.length - 1)] || 'ml-24';
                                 }
-                                // Use predefined Tailwind classes based on depth
-                                const indentClasses = ['ml-6', 'ml-12', 'ml-16', 'ml-20', 'ml-24'];
-                                return indentClasses[Math.min(depth, indentClasses.length - 1)] || 'ml-24';
-                            }
-                            return '';
-                        };
+                                return '';
+                            };
 
-                        const getDisplayTitle = (section: ConstitutionSection) => {
-                            if (section.type === 'preamble') return 'Preamble';
-                            if (section.type === 'article') {
-                                const articles = sections.filter(s => s.type === 'article').sort((a, b) => (a.order || 0) - (b.order || 0));
-                                const articleIndex = articles.findIndex(a => a.id === section.id) + 1;
-                                return `Article ${toRomanNumeral(articleIndex)} - ${section.title}`;
-                            }
-                            if (section.type === 'section') {
-                                const siblingSections = sections.filter(s => s.parentId === section.parentId && s.type === 'section').sort((a, b) => (a.order || 0) - (b.order || 0));
-                                const sectionIndex = siblingSections.findIndex(s => s.id === section.id) + 1;
-                                return `Section ${sectionIndex} - ${section.title}`;
-                            }
-                            if (section.type === 'amendment') {
-                                const amendments = sections.filter(s => s.type === 'amendment').sort((a, b) => (a.order || 0) - (b.order || 0));
-                                const amendmentIndex = amendments.findIndex(a => a.id === section.id) + 1;
-                                return `Amendment ${amendmentIndex}`;
-                            }
-                            return getSectionDisplayTitle(section, sections);
-                        };
+                            const getDisplayTitle = (section: ConstitutionSection) => {
+                                if (section.type === 'preamble') return 'Preamble';
+                                if (section.type === 'article') {
+                                    const articles = sections.filter(s => s.type === 'article').sort((a, b) => (a.order || 0) - (b.order || 0));
+                                    const articleIndex = articles.findIndex(a => a.id === section.id) + 1;
+                                    return `Article ${toRomanNumeral(articleIndex)} - ${section.title}`;
+                                }
+                                if (section.type === 'section') {
+                                    const siblingSections = sections.filter(s => s.parentId === section.parentId && s.type === 'section').sort((a, b) => (a.order || 0) - (b.order || 0));
+                                    const sectionIndex = siblingSections.findIndex(s => s.id === section.id) + 1;
+                                    return `Section ${sectionIndex} - ${section.title}`;
+                                }
+                                if (section.type === 'amendment') {
+                                    const amendments = sections.filter(s => s.type === 'amendment').sort((a, b) => (a.order || 0) - (b.order || 0));
+                                    const amendmentIndex = amendments.findIndex(a => a.id === section.id) + 1;
+                                    return `Amendment ${amendmentIndex}`;
+                                }
+                                return getSectionDisplayTitle(section, sections);
+                            };
 
-                        return (
-                            <div key={section.id} className="flex justify-between items-start">
-                                <div className={`flex-1 ${getIndentClass(section)}`}>
-                                    <span className="text-gray-900">
-                                        {getDisplayTitle(section)}
-                                    </span>
+                            return (
+                                <div key={section.id} className="flex justify-between items-start">
+                                    <div className={`flex-1 ${getIndentClass(section)}`}>
+                                        <span className="text-gray-900">
+                                            {getDisplayTitle(section)}
+                                        </span>
+                                    </div>
+                                    <div className="flex-shrink-0 ml-4">
+                                        <span className="text-gray-700">{pageNum}</span>
+                                    </div>
                                 </div>
-                                <div className="flex-shrink-0 ml-4">
-                                    <span className="text-gray-700">{pageNum}</span>
-                                </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        }
+
+        return tocPages;
     };
 
     const renderContentPage = (pageIndex: number) => {
@@ -311,6 +349,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                         width: 8.5in;
                         height: 11in;
                         min-height: 11in;
+                        max-height: 11in;
                         padding: 1in;
                         margin: ${effectivePdfCaptureMode ? '0' : '0 auto 20px auto'};
                         background: white;
@@ -321,6 +360,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                         line-height: 1.5;
                         color: #444;  /* Softer dark gray */
                         box-sizing: border-box;
+                        overflow: hidden; /* Prevent content overflow */
                     }
                     
                     .constitution-page:last-child {
@@ -337,6 +377,24 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                     
                     .constitution-section {
                         margin-bottom: 24px;
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                    }
+
+                    /* Prevent orphaned headings */
+                    h1, h2, h3, h4, h5, h6 {
+                        page-break-after: avoid;
+                        break-after: avoid;
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                    }
+
+                    /* Ensure paragraphs don't break awkwardly */
+                    p {
+                        orphans: 2;
+                        widows: 2;
+                        page-break-inside: avoid;
+                        break-inside: avoid;
                     }
                     
                     .constitution-page h1 {
@@ -382,7 +440,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                         line-height: 1.6;
                         margin-bottom: 12px;
                         text-align: justify;
-                        text-indent: 0.5in;
+                        text-indent: 0;      /* Remove text indentation */
                         orphans: 2;
                         widows: 2;
                     }
@@ -491,10 +549,18 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                             color-adjust: exact !important;
                         }
 
+                        /* Article titles (h2) - larger font size */
                         h1 { font-size: 28pt !important; font-family: Arial, sans-serif !important; }
                         h2 { font-size: 18pt !important; font-family: Arial, sans-serif !important; }
-                        h3 { font-size: 14pt !important; font-family: Arial, sans-serif !important; }
-                        p { font-size: 12pt !important; font-family: Arial, sans-serif !important; }
+
+                        /* Section titles (h3) - smaller font size */
+                        h3 { font-size: 12pt !important; font-family: Arial, sans-serif !important; }
+
+                        /* Subsection titles (h4) - smallest font size */
+                        h4 { font-size: 11pt !important; font-family: Arial, sans-serif !important; }
+
+                        /* Body text */
+                        p { font-size: 11pt !important; font-family: Arial, sans-serif !important; }
                     }
 
                     .print-only { display: none; }
@@ -554,18 +620,82 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
             {!pdfCaptureMode && (
                 <div className="no-print bg-gray-50 border-t border-gray-200 p-4 flex items-center justify-center">
                     <div className="flex items-center gap-2">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                            <button
-                                key={pageNum}
-                                onClick={() => onPageChange(pageNum)}
-                                className={`w-8 h-8 rounded text-sm font-medium transition-colors ${pageNum === currentPage
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                    }`}
-                            >
-                                {pageNum}
-                            </button>
-                        ))}
+                        {/* Previous button */}
+                        <button
+                            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        >
+                            ‹
+                        </button>
+
+                        {/* Page numbers with smart truncation */}
+                        {(() => {
+                            const maxVisiblePages = 10;
+                            const pages = [];
+
+                            if (totalPages <= maxVisiblePages) {
+                                // Show all pages if total is small
+                                for (let i = 1; i <= totalPages; i++) {
+                                    pages.push(i);
+                                }
+                            } else {
+                                // Smart pagination with ellipsis
+                                const startPage = Math.max(1, currentPage - 4);
+                                const endPage = Math.min(totalPages, currentPage + 4);
+
+                                if (startPage > 1) {
+                                    pages.push(1);
+                                    if (startPage > 2) pages.push('...');
+                                }
+
+                                for (let i = startPage; i <= endPage; i++) {
+                                    pages.push(i);
+                                }
+
+                                if (endPage < totalPages) {
+                                    if (endPage < totalPages - 1) pages.push('...');
+                                    pages.push(totalPages);
+                                }
+                            }
+
+                            return pages.map((pageNum, index) => {
+                                if (pageNum === '...') {
+                                    return (
+                                        <span key={`ellipsis-${index}`} className="px-2 py-1 text-gray-500">
+                                            ...
+                                        </span>
+                                    );
+                                }
+
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => onPageChange(pageNum as number)}
+                                        className={`w-8 h-8 rounded text-sm font-medium transition-colors ${pageNum === currentPage
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                            }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            });
+                        })()}
+
+                        {/* Next button */}
+                        <button
+                            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        >
+                            ›
+                        </button>
+
+                        {/* Page info */}
+                        <span className="ml-4 text-sm text-gray-600">
+                            Page {currentPage} of {totalPages}
+                        </span>
                     </div>
                 </div>
             )}

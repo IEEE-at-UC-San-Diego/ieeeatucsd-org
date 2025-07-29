@@ -95,6 +95,9 @@ export const POST: APIRoute = async ({ request }) => {
         timeout: 30000,
       });
 
+      // Ensure print media styles are applied
+      await page.emulateMediaType("print");
+
       // Wait for fonts and images to load with extended timeout for logo
       await waitForContentLoad(page);
 
@@ -220,6 +223,9 @@ export const PUT: APIRoute = async ({ request }) => {
         waitUntil: ["networkidle0", "domcontentloaded"],
         timeout: 30000,
       });
+
+      // Ensure print media styles are applied
+      await page.emulateMediaType("print");
 
       await waitForContentLoad(page);
 

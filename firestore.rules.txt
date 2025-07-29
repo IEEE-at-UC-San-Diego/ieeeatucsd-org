@@ -350,21 +350,7 @@ service cloud.firestore {
       }
     }
 
-    // Constitution Collaboration Sessions
-    match /collaborationSessions/{sessionId} {
-      // All authenticated users can read collaboration sessions to see active users
-      allow read: if request.auth != null;
-      
-      // Only Executive Officers and Administrators can write to collaboration sessions
-      allow create, update: if request.auth != null &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
-          'Executive Officer', 'Administrator'
-        ];
-      
-                    // Prevent deletion of collaboration sessions to maintain history
-       allow delete: if false;
-     }
+    // Removed collaboration sessions
 
     // Default deny for any other collections
     match /{document=**} {

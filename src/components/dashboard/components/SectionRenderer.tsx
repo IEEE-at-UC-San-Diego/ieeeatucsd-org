@@ -124,7 +124,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
             case 'preamble':
                 return {
                     ...baseStyle,
-                    fontSize: '16pt',
+                    fontSize: '18pt',     // Increased from 16pt to 18pt to match articles
                     textAlign: 'center' as const,
                     marginBottom: '12px',
                     marginTop: '20px',
@@ -134,7 +134,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
             case 'article':
                 return {
                     ...baseStyle,
-                    fontSize: '16pt',
+                    fontSize: '18pt',     // Increased from 16pt to 18pt for proper article size
                     textAlign: 'left' as const,
                     marginBottom: '8px',  // Reduced spacing after article title
                     marginTop: '20px'
@@ -160,7 +160,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
             case 'amendment':
                 return {
                     ...baseStyle,
-                    fontSize: '16pt',
+                    fontSize: '18pt',     // Increased from 16pt to 18pt to match articles
                     textAlign: 'center' as const,
                     marginBottom: '12px',
                     marginTop: '20px'
@@ -265,7 +265,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
                             lineHeight: '1.5',    // Slightly tighter
                             marginBottom: '10px', // Reduced spacing
                             textAlign: 'justify',
-                            textIndent: '0.4in',  // Slightly smaller indent
+                            textIndent: '0',      // Remove text indentation
                             orphans: 2,
                             widows: 2,
                             color: '#444'         // Softer dark gray
@@ -277,14 +277,32 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
         });
     };
 
+    // Determine the correct HTML tag based on section type
+    const getHeadingTag = () => {
+        switch (section.type) {
+            case 'preamble':
+            case 'article':
+            case 'amendment':
+                return 'h2';  // Articles, preambles, and amendments use h2
+            case 'section':
+                return 'h3';  // Sections use h3
+            case 'subsection':
+                return 'h4';  // Subsections use h4
+            default:
+                return 'h4';  // Default to h4 for other types
+        }
+    };
+
+    const HeadingTag = getHeadingTag() as keyof JSX.IntrinsicElements;
+
     return (
         <div style={{
             marginBottom: section.type === 'article' ? '12px' : '20px',  // Less spacing after articles
             ...getIndentStyle()
         }}>
-            <h3 style={getTitleStyle()}>
+            <HeadingTag style={getTitleStyle()}>
                 {getDisplayTitle()}
-            </h3>
+            </HeadingTag>
 
             {/* Articles should not render content, only title */}
             {section.content && section.type !== 'article' && (

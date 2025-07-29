@@ -5,7 +5,6 @@ import {
     Save,
     BookOpen,
     Image,
-    Lock,
     Plus
 } from 'lucide-react';
 import type { ConstitutionSection } from '../types/firestore';
@@ -19,8 +18,7 @@ interface ConstitutionEditorProps {
     onEditSection: (id: string | null) => void;
     onUpdateSection: (id: string, updates: Partial<ConstitutionSection>) => void;
     onDeleteSection: (id: string) => void;
-    onAddSection: (type: ConstitutionSection['type'], parentId?: string) => void;
-    activeCollaborators: Array<{ userId: string, userName: string, currentSection?: string }>;
+    onAddSection: (type: ConstitutionSection['type'], parentId?: string, title?: string, content?: string) => void;
     currentUserId?: string;
 }
 
@@ -33,7 +31,6 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
     onUpdateSection,
     onDeleteSection,
     onAddSection,
-    activeCollaborators,
     currentUserId
 }) => {
     const [editTitle, setEditTitle] = useState('');
@@ -131,8 +128,6 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
     }
 
     const isCurrentlyEditing = editingSection === selectedSection;
-    const editingCollaborator = activeCollaborators.find(c => c.currentSection === selectedSection);
-    const isLockedByOtherUser = editingCollaborator && editingCollaborator.userId !== currentUserId;
 
     return (
         <div className="bg-white rounded-lg border border-gray-200">
@@ -145,12 +140,6 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
                         </h2>
                         <p className="text-sm text-gray-600 capitalize">
                             {currentSection.type}
-                            {isLockedByOtherUser && (
-                                <span className="ml-2 inline-flex items-center gap-1 text-yellow-600">
-                                    <Lock className="h-3 w-3" />
-                                    Being edited by {editingCollaborator.userName}
-                                </span>
-                            )}
                         </p>
                     </div>
 
@@ -159,8 +148,7 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
                             <>
                                 <button
                                     onClick={() => onEditSection(selectedSection)}
-                                    disabled={isLockedByOtherUser}
-                                    className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                                 >
                                     <Edit3 className="h-4 w-4 mr-2" />
                                     Edit

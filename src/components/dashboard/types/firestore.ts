@@ -1,13 +1,13 @@
-import type { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from "firebase/firestore";
 
-export type UserRole = 
-  | 'Member'
-  | 'General Officer'
-  | 'Executive Officer'
-  | 'Member at Large'
-  | 'Past Officer'
-  | 'Sponsor'
-  | 'Administrator';
+export type UserRole =
+  | "Member"
+  | "General Officer"
+  | "Executive Officer"
+  | "Member at Large"
+  | "Past Officer"
+  | "Sponsor"
+  | "Administrator";
 
 export interface User {
   email: string;
@@ -30,7 +30,7 @@ export interface User {
   requestedEmail: boolean;
   role: UserRole;
   position?: string; // Specific position like "Webmaster", "President", etc.
-  status: 'active' | 'inactive' | 'suspended';
+  status: "active" | "inactive" | "suspended";
   joinDate: Timestamp;
   eventsAttended?: number;
   points?: number;
@@ -38,7 +38,15 @@ export interface User {
   inviteAccepted?: Timestamp; // when they accepted the invite
   lastUpdated?: Timestamp; // when the user data was last updated
   lastUpdatedBy?: string; // uid of the user who last updated this user's data
-  signInMethod?: 'email' | 'google' | 'microsoft' | 'github' | 'facebook' | 'twitter' | 'apple' | 'other'; // how the user signed in
+  signInMethod?:
+    | "email"
+    | "google"
+    | "microsoft"
+    | "github"
+    | "facebook"
+    | "twitter"
+    | "apple"
+    | "other"; // how the user signed in
 }
 
 export interface PublicProfile {
@@ -58,7 +66,13 @@ export interface Event {
   startDate: Timestamp;
   endDate: Timestamp;
   published: boolean;
-  eventType: 'social' | 'technical' | 'outreach' | 'professional' | 'projects' | 'other';
+  eventType:
+    | "social"
+    | "technical"
+    | "outreach"
+    | "professional"
+    | "projects"
+    | "other";
   hasFood: boolean;
 }
 
@@ -112,19 +126,24 @@ export interface EventRequest {
   // Updated to support multiple invoices
   invoices: Invoice[];
   // Keep legacy fields for backward compatibility
-  itemizedInvoice?: { description: string; quantity: number; unitPrice: number; total: number; }[];
+  itemizedInvoice?: {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }[];
   invoice?: string;
   invoiceFiles?: string[];
   needsGraphics: boolean;
   needsAsFunding: boolean;
-  status: 'submitted' | 'pending' | 'completed' | 'declined';
+  status: "submitted" | "pending" | "completed" | "declined";
   declinedReason?: string;
   requestedUser: string;
 }
 
 export interface Log {
   userId: string;
-  type: 'error' | 'update' | 'delete' | 'create' | 'login' | 'logout';
+  type: "error" | "update" | "delete" | "create" | "login" | "logout";
   part: string;
   message: string;
   created: Timestamp;
@@ -133,7 +152,7 @@ export interface Log {
 export interface Officer {
   userId: string;
   role: string;
-  type: 'administrator' | 'executive' | 'general' | 'honorary' | 'past';
+  type: "administrator" | "executive" | "general" | "honorary" | "past";
 }
 
 export interface Reimbursement {
@@ -141,18 +160,18 @@ export interface Reimbursement {
   totalAmount: number;
   dateOfPurchase: Timestamp;
   paymentMethod: string;
-  status: 'submitted' | 'declined' | 'approved' | 'paid';
+  status: "submitted" | "declined" | "approved" | "paid";
   submittedBy: string;
   additionalInfo: string;
-  department: 'internal' | 'external' | 'projects' | 'events' | 'other';
-  auditNotes?: { note: string; createdBy: string; timestamp: Timestamp; }[];
-  auditLogs?: { action: string; createdBy: string; timestamp: Timestamp; }[];
-  auditRequests?: { 
-    auditorId: string; 
-    requestedBy: string; 
-    requestedAt: Timestamp; 
-    status: 'pending' | 'completed' | 'declined';
-    auditResult?: 'approved' | 'needs_changes';
+  department: "internal" | "external" | "projects" | "events" | "other";
+  auditNotes?: { note: string; createdBy: string; timestamp: Timestamp }[];
+  auditLogs?: { action: string; createdBy: string; timestamp: Timestamp }[];
+  auditRequests?: {
+    auditorId: string;
+    requestedBy: string;
+    requestedAt: Timestamp;
+    status: "pending" | "completed" | "declined";
+    auditResult?: "approved" | "needs_changes";
     auditNotes?: string;
     completedAt?: Timestamp;
   }[];
@@ -162,7 +181,7 @@ export interface Reimbursement {
 export interface Receipt {
   file: string;
   createdBy: string;
-  itemizedExpenses: { description: string; category: string; amount: number; }[];
+  itemizedExpenses: { description: string; category: string; amount: number }[];
   tax: number;
   date: Timestamp;
   locationName: string;
@@ -174,11 +193,11 @@ export interface Receipt {
 export interface Sponsor {
   userId: string;
   company: string;
-} 
+}
 
 export interface ConstitutionSection {
   id: string;
-  type: 'preamble' | 'article' | 'section' | 'subsection' | 'amendment';
+  type: "preamble" | "article" | "section" | "subsection" | "amendment";
   title: string;
   content: string;
   order: number;
@@ -198,7 +217,7 @@ export interface Constitution {
   organizationName: string;
   sections: ConstitutionSection[];
   version: number;
-  status: 'draft' | 'published' | 'archived';
+  status: "draft" | "published" | "archived";
   createdAt: Timestamp;
   lastModified: Timestamp;
   lastModifiedBy: string;
@@ -206,41 +225,18 @@ export interface Constitution {
   isTemplate?: boolean;
 }
 
-export interface ConstitutionCollaborationSession {
-  id: string;
-  constitutionId: string;
-  activeUsers: {
-    userId: string;
-    userName: string;
-    lastSeen: Timestamp;
-    currentSection?: string; // Section ID being edited
-  }[];
-  locks: {
-    sectionId: string;
-    lockedBy: string;
-    lockedAt: Timestamp;
-  }[];
-  changes: {
-    id: string;
-    sectionId: string;
-    changeType: 'create' | 'update' | 'delete' | 'reorder';
-    beforeValue?: any;
-    afterValue?: any;
-    userId: string;
-    timestamp: Timestamp;
-  }[];
-} 
+// Removed collaboration session interface
 
 export interface ConstitutionAuditEntry {
   id: string;
   constitutionId: string;
   sectionId?: string; // null for constitution-level changes
-  changeType: 'create' | 'update' | 'delete' | 'reorder';
+  changeType: "create" | "update" | "delete" | "reorder";
   changeDescription: string; // Human-readable description of what changed
   beforeValue?: {
     title?: string;
     content?: string;
-    type?: ConstitutionSection['type'];
+    type?: ConstitutionSection["type"];
     order?: number;
     parentId?: string;
     articleNumber?: number;
@@ -251,7 +247,7 @@ export interface ConstitutionAuditEntry {
   afterValue?: {
     title?: string;
     content?: string;
-    type?: ConstitutionSection['type'];
+    type?: ConstitutionSection["type"];
     order?: number;
     parentId?: string;
     articleNumber?: number;
@@ -273,4 +269,4 @@ export interface ConstitutionAuditLog {
   totalEntries: number;
   createdAt: Timestamp;
   lastUpdated: Timestamp;
-} 
+}

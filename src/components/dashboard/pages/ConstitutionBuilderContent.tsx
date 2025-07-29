@@ -15,7 +15,6 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
     const {
         constitution,
         sections,
-        activeCollaborators,
         saveStatus,
         lastSaved,
         isLoading,
@@ -23,7 +22,6 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
         updateSection,
         deleteSection,
         updateConstitutionVersion,
-        updateUserPresence,
         constitutionId,
         user
     } = useConstitutionData();
@@ -34,16 +32,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [currentPage, setCurrentPage] = useState(1);
 
-    // Update user presence when selected section changes
-    useEffect(() => {
-        if (user) {
-            const presenceTimeout = setTimeout(() => {
-                updateUserPresence(selectedSection);
-            }, 1000); // Debounce presence updates
-
-            return () => clearTimeout(presenceTimeout);
-        }
-    }, [selectedSection, user, updateUserPresence]);
+    // Removed collaboration functionality
 
     const toggleSectionExpansion = (sectionId: string) => {
         const newExpanded = new Set(expandedSections);
@@ -99,7 +88,6 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
             <ConstitutionHeader
                 saveStatus={saveStatus}
                 lastSaved={lastSaved}
-                activeCollaborators={activeCollaborators}
                 currentView={currentView}
                 onViewChange={setCurrentView}
                 onPrint={handlePrint}
@@ -118,7 +106,6 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                     sections={sections}
                     selectedSection={selectedSection}
                     expandedSections={expandedSections}
-                    activeCollaborators={activeCollaborators}
                     onSelectSection={setSelectedSection}
                     onToggleExpand={toggleSectionExpansion}
                     onAddSection={addSection}
@@ -139,7 +126,6 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                             onUpdateSection={updateSection}
                             onDeleteSection={handleDeleteSection}
                             onAddSection={addSection}
-                            activeCollaborators={activeCollaborators}
                             currentUserId={user?.uid}
                         />
                     ) : currentView === 'preview' ? (
