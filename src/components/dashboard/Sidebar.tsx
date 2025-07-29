@@ -10,7 +10,9 @@ import {
     Database,
     Trophy,
     Banknote,
-    FileText
+    FileText,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
@@ -64,6 +66,7 @@ export function Sidebar({ currentPath = '' }: SidebarComponentProps) {
     const [user, userLoading] = useAuthState(auth);
     const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(null);
     const [isLoadingRole, setIsLoadingRole] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const db = getFirestore();
 
     useEffect(() => {
@@ -120,16 +123,16 @@ export function Sidebar({ currentPath = '' }: SidebarComponentProps) {
     const isLoading = userLoading || isLoadingRole;
 
     const NavigationSkeleton = () => (
-        <nav className="mt-6 px-4 pb-6 overflow-y-auto">
+        <nav className={`mt-6 pb-6 overflow-y-auto ${isCollapsed ? 'px-2' : 'px-4'}`}>
             {/* Member Actions skeleton */}
             <div className="mb-8">
-                <Skeleton className="h-3 w-24 mb-3 ml-3" />
+                {!isCollapsed && <Skeleton className="h-3 w-24 mb-3 ml-3" />}
                 <ul className="space-y-1">
                     {[1, 2, 3].map((itemIndex) => (
                         <li key={itemIndex}>
-                            <div className="flex items-center px-3 py-2">
-                                <Skeleton className="w-5 h-5 mr-3" />
-                                <Skeleton className="h-4 w-20" />
+                            <div className={`flex items-center ${isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2'}`}>
+                                <Skeleton className="w-5 h-5" />
+                                {!isCollapsed && <Skeleton className="h-4 w-20 ml-3" />}
                             </div>
                         </li>
                     ))}
@@ -138,12 +141,12 @@ export function Sidebar({ currentPath = '' }: SidebarComponentProps) {
 
             {/* Generic loading section */}
             <div className="mb-8">
-                <Skeleton className="h-3 w-16 mb-3 ml-3" />
+                {!isCollapsed && <Skeleton className="h-3 w-16 mb-3 ml-3" />}
                 <ul className="space-y-1">
                     <li>
-                        <div className="flex items-center px-3 py-2">
-                            <Skeleton className="w-5 h-5 mr-3" />
-                            <Skeleton className="h-4 w-16" />
+                        <div className={`flex items-center ${isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2'}`}>
+                            <Skeleton className="w-5 h-5" />
+                            {!isCollapsed && <Skeleton className="h-4 w-16 ml-3" />}
                         </div>
                     </li>
                 </ul>
@@ -151,13 +154,13 @@ export function Sidebar({ currentPath = '' }: SidebarComponentProps) {
 
             {/* Account actions skeleton */}
             <div className="mb-8">
-                <Skeleton className="h-3 w-16 mb-3 ml-3" />
+                {!isCollapsed && <Skeleton className="h-3 w-16 mb-3 ml-3" />}
                 <ul className="space-y-1">
                     {[1, 2].map((itemIndex) => (
                         <li key={itemIndex}>
-                            <div className="flex items-center px-3 py-2">
-                                <Skeleton className="w-5 h-5 mr-3" />
-                                <Skeleton className="h-4 w-16" />
+                            <div className={`flex items-center ${isCollapsed ? 'justify-center px-2 py-3' : 'px-3 py-2'}`}>
+                                <Skeleton className="w-5 h-5" />
+                                {!isCollapsed && <Skeleton className="h-4 w-16 ml-3" />}
                             </div>
                         </li>
                     ))}
@@ -167,47 +170,97 @@ export function Sidebar({ currentPath = '' }: SidebarComponentProps) {
     );
 
     return (
-        <div className="hidden md:block w-64 bg-white shadow-lg h-full">
-            {/* Logo */}
-            <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center">
-                    <div className="w-8 h-8 flex items-center justify-center">
-                        <img
-                            src="/logos/blue_logo_only.svg"
-                            alt="IEEE UCSD Logo"
-                            className="w-8 h-8"
-                        />
+        <div className={`hidden lg:block bg-white shadow-lg h-full transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'}`}>
+            {/* Logo and Collapse Button */}
+            <div className={`border-b border-gray-200 ${isCollapsed ? 'p-3' : 'p-6'}`}>
+                {isCollapsed ? (
+                    /* Collapsed state - stacked layout for better spacing */
+                    <div className="flex flex-col items-center space-y-3">
+                        <div className="w-8 h-8 flex items-center justify-center">
+                            <img
+                                src="/logos/blue_logo_only.svg"
+                                alt="IEEE UCSD Logo"
+                                className="w-8 h-8"
+                            />
+                        </div>
+                        <button
+                            onClick={() => setIsCollapsed(!isCollapsed)}
+                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Expand sidebar"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </button>
                     </div>
-                    <span className="ml-3 text-xl font-bold text-gray-800">IEEE UCSD</span>
-                </div>
+                ) : (
+                    /* Expanded state - horizontal layout */
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center min-w-0">
+                            <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                                <img
+                                    src="/logos/blue_logo_only.svg"
+                                    alt="IEEE UCSD Logo"
+                                    className="w-8 h-8"
+                                />
+                            </div>
+                            <span className="ml-3 text-xl font-bold text-gray-800 truncate">IEEE UCSD</span>
+                        </div>
+
+                        {/* Collapse Button */}
+                        <button
+                            onClick={() => setIsCollapsed(!isCollapsed)}
+                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                            title="Collapse sidebar"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Navigation */}
             {isLoading ? (
                 <NavigationSkeleton />
             ) : (
-                <nav className="mt-6 px-4 pb-6 overflow-y-auto">
+                <nav className={`mt-6 pb-6 overflow-y-auto ${isCollapsed ? 'px-2' : 'px-4'}`}>
                     {filteredCategories.map((category, categoryIndex) => (
                         <div key={categoryIndex} className="mb-8">
-                            <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                                {category.title}
-                            </h3>
+                            {!isCollapsed && (
+                                <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                                    {category.title}
+                                </h3>
+                            )}
                             <ul className="space-y-1">
                                 {category.items.map((item, index) => {
                                     const isActive = isActiveRoute(item.href);
                                     return (
                                         <li key={index}>
-                                            <a
-                                                href={item.href}
-                                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive
-                                                    ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                                    }`}
-                                            >
-                                                <item.icon className={`w-5 h-5 mr-3 ${isActive ? 'text-blue-600' : 'text-gray-400'
-                                                    }`} />
-                                                {item.label}
-                                            </a>
+                                            <div className="relative group">
+                                                <a
+                                                    href={item.href}
+                                                    className={`flex items-center text-sm font-medium rounded-lg transition-colors ${isCollapsed
+                                                        ? 'justify-center px-2 py-3'
+                                                        : 'px-3 py-2'
+                                                        } ${isActive
+                                                            ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
+                                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                        }`}
+                                                    title={isCollapsed ? item.label : undefined}
+                                                >
+                                                    <item.icon className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'
+                                                        } ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                                                    {!isCollapsed && (
+                                                        <span className="truncate">{item.label}</span>
+                                                    )}
+                                                </a>
+
+                                                {/* Tooltip for collapsed state */}
+                                                {isCollapsed && (
+                                                    <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
+                                                        {item.label}
+                                                        <div className="absolute right-full top-1/2 transform -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </li>
                                     );
                                 })}

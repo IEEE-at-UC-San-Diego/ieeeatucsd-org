@@ -95,7 +95,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                 />
 
                 {/* Version Editor */}
-                <div className="mb-4 flex justify-end">
+                <div className="mb-4 flex justify-center md:justify-end">
                     <VersionEditor
                         constitution={constitution}
                         onUpdateVersion={updateConstitutionVersion}
@@ -106,9 +106,9 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
             <div className="max-w-7xl mx-auto">
                 {/* Conditional layout based on current view */}
                 {currentView === 'editor' ? (
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
                         {/* Document Structure Sidebar - Only shown in editor view */}
-                        <div className="xl:col-span-3">
+                        <div className="lg:col-span-3">
                             <ConstitutionSidebar
                                 sections={sections}
                                 selectedSection={selectedSection}
@@ -123,7 +123,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                         </div>
 
                         {/* Editor Content */}
-                        <div className="xl:col-span-9">
+                        <div className="lg:col-span-9">
                             <ConstitutionEditor
                                 sections={sections}
                                 selectedSection={selectedSection}

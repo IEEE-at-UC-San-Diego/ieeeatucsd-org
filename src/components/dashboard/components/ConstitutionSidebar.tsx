@@ -101,39 +101,54 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 
     return (
         <div className="flex flex-col">
-            <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-[calc(100vh-12rem)] min-h-[400px]">
+            <div className="bg-white rounded-lg border border-gray-200 flex flex-col max-h-[500px] md:max-h-[450px] lg:max-h-[600px] min-h-[350px]">
                 {/* Fixed header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-gray-200 flex-shrink-0">
-                    <div className="min-w-0 flex-1">
-                        <h2 className="font-semibold text-gray-900 text-sm md:text-base">Document Structure</h2>
-                        <p className="text-xs text-gray-500">Version {constitutionVersion || 1}</p>
-                        <p className="text-xs text-gray-400">Adopted since September 2006</p>
+                <div className="flex flex-col gap-3 p-3 md:p-4 border-b border-gray-200 flex-shrink-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-3">
+                        <div className="min-w-0 flex-1">
+                            <h2 className="font-semibold text-gray-900 text-sm md:text-base">Document Structure</h2>
+                            <p className="text-xs text-gray-500">Version {constitutionVersion || 1}</p>
+                            <p className="text-xs text-gray-400 hidden md:block">Adopted since September 2006</p>
+                        </div>
+                        {/* Add Section button - hidden on desktop (lg+), shown on mobile/tablet */}
+                        <button
+                            onClick={() => setShowAddSection(true)}
+                            className="lg:hidden inline-flex items-center justify-center px-2 md:px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm shadow-sm min-h-[40px] md:min-h-[44px] w-full sm:w-auto"
+                            title="Add new section"
+                        >
+                            <Plus className="h-4 w-4 mr-1" />
+                            <span className="hidden sm:inline">Add Section</span>
+                            <span className="sm:hidden">Add</span>
+                        </button>
                     </div>
-                    <button
-                        onClick={() => setShowAddSection(true)}
-                        className="inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm shadow-sm min-h-[44px] w-full sm:w-auto"
-                        title="Add new section"
-                    >
-                        <Plus className="h-4 w-4 mr-1" />
-                        <span className="hidden sm:inline">Add Section</span>
-                        <span className="sm:hidden">Add</span>
-                    </button>
+
+                    {/* Add Block button - shown only on desktop (lg+) below the title */}
+                    <div className="hidden lg:block">
+                        <button
+                            onClick={() => setShowAddSection(true)}
+                            className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm min-h-[44px]"
+                            title="Add new block"
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Block
+                        </button>
+                    </div>
                 </div>
 
                 {/* Scrollable content area */}
-                <div className="flex-1 overflow-y-auto p-4 constitution-sidebar-scroll">
+                <div className="flex-1 overflow-y-auto p-3 md:p-4 constitution-sidebar-scroll">
                     {sections.length === 0 ? (
-                        <div className="text-center py-8">
-                            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <div className="text-center py-6 md:py-8">
+                            <FileText className="h-10 w-10 md:h-12 md:w-12 text-gray-300 mx-auto mb-3 md:mb-4" />
                             <h3 className="text-sm font-medium text-gray-900 mb-2">
                                 No sections yet
                             </h3>
-                            <p className="text-sm text-gray-600 mb-4">
+                            <p className="text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
                                 Start building your constitution by adding a preamble or first article.
                             </p>
                             <button
                                 onClick={() => setShowAddSection(true)}
-                                className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                                className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm min-h-[40px]"
                             >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Add First Section
@@ -145,6 +160,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
                         </div>
                     )}
                 </div>
+
             </div>
 
             {/* Add Section Modal */}
@@ -198,7 +214,7 @@ const SectionNavigationItem: React.FC<{
 
         return (
             <div
-                className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}`}
+                className={`flex items-center gap-1 md:gap-2 p-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}`}
                 onClick={() => onSelect(section.id)}
             >
                 <div className="flex flex-col">
@@ -208,7 +224,7 @@ const SectionNavigationItem: React.FC<{
                             onMoveUp();
                         }}
                         disabled={!canMoveUp}
-                        className="p-1 hover:bg-gray-200 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-0.5 md:p-1 hover:bg-gray-200 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[24px] min-w-[24px] flex items-center justify-center"
                         title="Move up"
                     >
                         <ArrowUp className="h-3 w-3 text-gray-600" />
@@ -219,7 +235,7 @@ const SectionNavigationItem: React.FC<{
                             onMoveDown();
                         }}
                         disabled={!canMoveDown}
-                        className="p-1 hover:bg-gray-200 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-0.5 md:p-1 hover:bg-gray-200 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[24px] min-w-[24px] flex items-center justify-center"
                         title="Move down"
                     >
                         <ArrowDown className="h-3 w-3 text-gray-600" />
@@ -232,7 +248,7 @@ const SectionNavigationItem: React.FC<{
                             e.stopPropagation();
                             onToggleExpand(section.id);
                         }}
-                        className="p-1 hover:bg-gray-200 rounded"
+                        className="p-0.5 md:p-1 hover:bg-gray-200 rounded min-h-[24px] min-w-[24px] flex items-center justify-center"
                     >
                         {isExpanded ? (
                             <ChevronDown className="h-3 w-3" />
@@ -243,7 +259,7 @@ const SectionNavigationItem: React.FC<{
                 )}
 
                 <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{getDisplayTitle()}</div>
+                    <div className="text-xs md:text-sm font-medium truncate">{getDisplayTitle()}</div>
                     <div className="text-xs text-gray-500 capitalize">{section.type}</div>
                 </div>
             </div>

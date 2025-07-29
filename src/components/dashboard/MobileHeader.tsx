@@ -155,7 +155,7 @@ export default function MobileHeader({ title, onMenuToggle, isMenuOpen }: Mobile
     }, []);
 
     return (
-        <header className="md:hidden sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
+        <header className="lg:hidden sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
             <div className="flex items-center justify-between px-4 py-3">
                 {/* Left side - Hamburger menu and logo */}
                 <div className="flex items-center space-x-3">
@@ -171,7 +171,7 @@ export default function MobileHeader({ title, onMenuToggle, isMenuOpen }: Mobile
                             <Menu className="w-6 h-6" />
                         )}
                     </button>
-                    
+
                     <div className="flex items-center space-x-2">
                         <img
                             src="/logos/blue_logo_only.svg"

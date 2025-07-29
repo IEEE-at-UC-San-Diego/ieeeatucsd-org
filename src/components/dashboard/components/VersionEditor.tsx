@@ -43,42 +43,42 @@ const VersionEditor: React.FC<VersionEditorProps> = ({
 
     return (
         <div className={`flex items-center gap-2 ${className}`}>
-            <span className="text-sm text-gray-600 font-medium">Version:</span>
-            
+            <span className="text-xs md:text-sm text-gray-600 font-medium">Version:</span>
+
             {isEditing ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 md:gap-2">
                     <input
                         type="number"
                         min="1"
                         value={editVersion}
                         onChange={(e) => setEditVersion(parseInt(e.target.value) || 1)}
                         onKeyDown={handleKeyPress}
-                        className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-14 md:w-16 px-2 py-1 text-xs md:text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         autoFocus
                     />
                     <button
                         onClick={handleSave}
-                        className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors"
+                        className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
                         title="Save version"
                     >
-                        <Check className="h-4 w-4" />
+                        <Check className="h-3 w-3 md:h-4 md:w-4" />
                     </button>
                     <button
                         onClick={handleCancel}
-                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded transition-colors"
+                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
                         title="Cancel"
                     >
-                        <X className="h-4 w-4" />
+                        <X className="h-3 w-3 md:h-4 md:w-4" />
                     </button>
                 </div>
             ) : (
-                <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900">
+                <div className="flex items-center gap-1 md:gap-2">
+                    <span className="text-xs md:text-sm font-medium text-gray-900">
                         {constitution?.version || 1}
                     </span>
                     <button
                         onClick={handleStartEdit}
-                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors"
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors min-h-[28px] min-w-[28px] flex items-center justify-center"
                         title="Edit version number"
                     >
                         <Edit3 className="h-3 w-3" />
