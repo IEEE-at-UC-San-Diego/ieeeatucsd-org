@@ -167,7 +167,7 @@ export function Sidebar({ currentPath = '' }: SidebarComponentProps) {
     );
 
     return (
-        <div className="w-64 bg-white shadow-lg h-full">
+        <div className="hidden md:block w-64 bg-white shadow-lg h-full">
             {/* Logo */}
             <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center">

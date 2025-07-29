@@ -1,5 +1,7 @@
-import React, { type ReactNode, useEffect } from 'react';
+import React, { type ReactNode, useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar.tsx';
+import { MobileSidebar } from './MobileSidebar.tsx';
+import MobileHeader from './MobileHeader.tsx';
 import { auth } from '../../firebase/client';
 
 interface DashboardLayoutProps {
@@ -8,6 +10,8 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, currentPath }: DashboardLayoutProps) {
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
     useEffect(() => {
         const unsubscribeAuth = auth.onAuthStateChanged(user => {
             if (!user) {
@@ -18,11 +22,57 @@ export default function DashboardLayout({ children, currentPath }: DashboardLayo
         return () => unsubscribeAuth();
     }, []);
 
+    const handleMobileMenuToggle = () => {
+        setIsMobileMenuOpen(!isMobileMenuOpen);
+    };
+
+    const handleMobileMenuClose = () => {
+        setIsMobileMenuOpen(false);
+    };
+
+    // Get page title from current path for mobile header
+    const getPageTitle = (path: string): string => {
+        const pathMap: { [key: string]: string } = {
+            '/dashboard/overview': 'Overview',
+            '/dashboard/events': 'Events',
+            '/dashboard/reimbursement': 'Reimbursement',
+            '/dashboard/leaderboard': 'Leaderboard',
+            '/dashboard/manage-events': 'Manage Events',
+            '/dashboard/manage-reimbursements': 'Manage Reimbursements',
+            '/dashboard/fund-deposits': 'Fund Deposits',
+            '/dashboard/manage-users': 'Manage Users',
+            '/dashboard/constitution-builder': 'Constitution Builder',
+            '/dashboard/settings': 'Settings',
+            '/dashboard': 'Dashboard',
+        };
+        return pathMap[path] || 'IEEE UCSD';
+    };
+
     return (
         <div className="flex h-screen bg-gray-50">
+            {/* Desktop Sidebar */}
             <Sidebar currentPath={currentPath} />
-            <div className="flex-1 overflow-auto">
-                {children || <DefaultContent />}
+
+            {/* Mobile Sidebar */}
+            <MobileSidebar
+                currentPath={currentPath}
+                isOpen={isMobileMenuOpen}
+                onClose={handleMobileMenuClose}
+            />
+
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Mobile Header */}
+                <MobileHeader
+                    title={getPageTitle(currentPath || '')}
+                    onMenuToggle={handleMobileMenuToggle}
+                    isMenuOpen={isMobileMenuOpen}
+                />
+
+                {/* Page Content */}
+                <div className="flex-1 overflow-auto">
+                    {children || <DefaultContent />}
+                </div>
             </div>
         </div>
     );

@@ -158,39 +158,39 @@ export default function LeaderboardContent() {
                 onSearchChange={setSearchTerm}
             />
 
-            <main className="p-6">
+            <main className="p-4 md:p-6">
                 {/* Debug Info */}
                 {debugInfo && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 md:mb-6">
                         <p className="text-sm text-blue-800">
                             <strong>Debug:</strong> {debugInfo}
                         </p>
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-4 md:gap-6">
                     {/* Stats Overview */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                             <div className="flex items-center justify-between">
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-600">Total Members</p>
-                                    <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                                    <p className="text-xl md:text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
                                 </div>
-                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <Users className="w-6 h-6 text-blue-600" />
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Users className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                             <div className="flex items-center justify-between">
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-600">Total Points</p>
-                                    <p className="text-2xl font-bold text-gray-900">{stats.totalPoints.toLocaleString()}</p>
+                                    <p className="text-xl md:text-2xl font-bold text-gray-900">{stats.totalPoints.toLocaleString()}</p>
                                 </div>
-                                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                                    <Star className="w-6 h-6 text-yellow-600" />
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Star className="w-5 h-5 md:w-6 md:h-6 text-yellow-600" />
                                 </div>
                             </div>
                         </div>

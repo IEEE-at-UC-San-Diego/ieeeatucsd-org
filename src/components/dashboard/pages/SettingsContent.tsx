@@ -321,38 +321,38 @@ export default function SettingsContent() {
             </header>
 
             {/* Settings Content */}
-            <main className="p-6">
-                <div className="max-w-4xl mx-auto space-y-6">
+            <main className="p-4 md:p-6">
+                <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
                     {/* Status Messages */}
                     {error && (
                         <div className="flex items-center space-x-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                            <AlertCircle className="w-5 h-5" />
-                            <span>{error}</span>
+                            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                            <span className="text-sm md:text-base">{error}</span>
                         </div>
                     )}
 
                     {success && (
                         <div className="flex items-center space-x-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-                            <CheckCircle className="w-5 h-5" />
-                            <span>{success}</span>
+                            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                            <span className="text-sm md:text-base">{success}</span>
                         </div>
                     )}
 
                     {/* Profile Settings */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                        <div className="flex items-center space-x-3 mb-6">
-                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                        <div className="flex items-center space-x-3 mb-4 md:mb-6">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                 <UserCircle className="w-5 h-5 text-blue-600" />
                             </div>
-                            <h2 className="text-lg font-semibold text-gray-900">Profile Settings</h2>
+                            <h2 className="text-base md:text-lg font-semibold text-gray-900">Profile Settings</h2>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                                 <input
                                     type="text"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[44px]"
                                     placeholder="John Doe"
                                     value={profileData.name}
                                     onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
@@ -362,7 +362,7 @@ export default function SettingsContent() {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                                 <input
                                     type="email"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed text-base min-h-[44px]"
                                     value={userData?.email || ''}
                                     disabled
                                 />

@@ -44,8 +44,98 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
     onPrint
 }) => {
     return (
-        <div className="mb-8">
-            <div className="flex items-center justify-between">
+        <div className="mb-6 md:mb-8">
+            {/* Mobile Layout - Stack vertically */}
+            <div className="md:hidden space-y-4">
+                <div>
+                    <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <FileText className="h-6 w-6 text-blue-600" />
+                        Constitution Builder
+                    </h1>
+                    <p className="text-sm text-gray-600 mt-1">
+                        Build and manage the organization's constitution
+                    </p>
+                </div>
+
+                {/* Save Status - Mobile */}
+                <div className="flex items-center gap-2 text-sm">
+                    {saveStatus === 'saving' && (
+                        <>
+                            <Clock className="h-4 w-4 text-yellow-500" />
+                            <span className="text-yellow-600">Saving...</span>
+                        </>
+                    )}
+                    {saveStatus === 'saved' && lastSaved && (
+                        <>
+                            <Check className="h-4 w-4 text-green-500" />
+                            <span className="text-green-600">
+                                Saved {new Intl.DateTimeFormat('en-US', {
+                                    hour: 'numeric',
+                                    minute: '2-digit'
+                                }).format(lastSaved)}
+                            </span>
+                        </>
+                    )}
+                    {saveStatus === 'error' && (
+                        <>
+                            <AlertCircle className="h-4 w-4 text-red-500" />
+                            <span className="text-red-600">Save failed</span>
+                        </>
+                    )}
+                    {saveStatus === 'idle' && (
+                        <>
+                            <FileText className="h-4 w-4 text-gray-500" />
+                            <span className="text-gray-600">Ready to edit</span>
+                        </>
+                    )}
+                </div>
+
+                {/* View Toggle - Mobile */}
+                <div className="flex bg-gray-100 rounded-lg p-1 w-full">
+                    <button
+                        onClick={() => onViewChange('editor')}
+                        className={`flex-1 px-2 py-2 rounded-md text-xs font-medium transition-colors ${currentView === 'editor'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                    >
+                        <Edit3 className="h-3 w-3 inline mr-1" />
+                        Editor
+                    </button>
+                    <button
+                        onClick={() => onViewChange('preview')}
+                        className={`flex-1 px-2 py-2 rounded-md text-xs font-medium transition-colors ${currentView === 'preview'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                    >
+                        <Eye className="h-3 w-3 inline mr-1" />
+                        Preview
+                    </button>
+                    <button
+                        onClick={() => onViewChange('audit')}
+                        className={`flex-1 px-2 py-2 rounded-md text-xs font-medium transition-colors ${currentView === 'audit'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                    >
+                        <History className="h-3 w-3 inline mr-1" />
+                        Audit
+                    </button>
+                </div>
+
+                {/* Print Button - Mobile */}
+                <button
+                    onClick={onPrint}
+                    className="w-full inline-flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[44px]"
+                >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print PDF
+                </button>
+            </div>
+
+            {/* Desktop Layout - Original horizontal layout */}
+            <div className="hidden md:flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                         <FileText className="h-8 w-8 text-blue-600" />
@@ -57,7 +147,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* Save Status */}
+                    {/* Save Status - Desktop */}
                     <div className="flex items-center gap-2 text-sm">
                         {saveStatus === 'saving' && (
                             <>
@@ -92,11 +182,11 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
 
 
 
-                    {/* View Toggle */}
+                    {/* View Toggle - Desktop */}
                     <div className="flex bg-gray-100 rounded-lg p-1">
                         <button
                             onClick={() => onViewChange('editor')}
-                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentView === 'editor'
+                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px] ${currentView === 'editor'
                                 ? 'bg-white text-gray-900 shadow-sm'
                                 : 'text-gray-600 hover:text-gray-900'
                                 }`}
@@ -106,7 +196,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         </button>
                         <button
                             onClick={() => onViewChange('preview')}
-                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentView === 'preview'
+                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px] ${currentView === 'preview'
                                 ? 'bg-white text-gray-900 shadow-sm'
                                 : 'text-gray-600 hover:text-gray-900'
                                 }`}
@@ -116,7 +206,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         </button>
                         <button
                             onClick={() => onViewChange('audit')}
-                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${currentView === 'audit'
+                            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px] ${currentView === 'audit'
                                 ? 'bg-white text-gray-900 shadow-sm'
                                 : 'text-gray-600 hover:text-gray-900'
                                 }`}
@@ -126,8 +216,14 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         </button>
                     </div>
 
-                    {/* Print Section */}
-                    <PrintButton onPrint={onPrint} />
+                    {/* Print Section - Desktop */}
+                    <button
+                        onClick={onPrint}
+                        className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[44px]"
+                    >
+                        <Printer className="h-4 w-4 mr-2" />
+                        Print PDF
+                    </button>
                 </div>
             </div>
 

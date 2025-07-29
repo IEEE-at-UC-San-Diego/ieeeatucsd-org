@@ -100,22 +100,23 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
     };
 
     return (
-        <div className="col-span-3 flex flex-col">
-            <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-[calc(100vh-12rem)]">
+        <div className="flex flex-col">
+            <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-[calc(100vh-12rem)] min-h-[400px]">
                 {/* Fixed header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-                    <div>
-                        <h2 className="font-semibold text-gray-900">Document Structure</h2>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-gray-200 flex-shrink-0">
+                    <div className="min-w-0 flex-1">
+                        <h2 className="font-semibold text-gray-900 text-sm md:text-base">Document Structure</h2>
                         <p className="text-xs text-gray-500">Version {constitutionVersion || 1}</p>
                         <p className="text-xs text-gray-400">Adopted since September 2006</p>
                     </div>
                     <button
                         onClick={() => setShowAddSection(true)}
-                        className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm shadow-sm"
+                        className="inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm shadow-sm min-h-[44px] w-full sm:w-auto"
                         title="Add new section"
                     >
                         <Plus className="h-4 w-4 mr-1" />
-                        Add Section
+                        <span className="hidden sm:inline">Add Section</span>
+                        <span className="sm:hidden">Add</span>
                     </button>
                 </div>
 

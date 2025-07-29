@@ -637,45 +637,45 @@ const FundDepositsContent: React.FC = () => {
                 subtitle="Track and manage funds deposited into the IEEE account"
             />
 
-            <div className="p-6">
+            <div className="p-4 md:p-6">
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
-                    <div className="bg-white rounded-lg shadow p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-4 md:mb-6">
+                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
                         <div className="flex items-center">
-                            <Receipt className="h-8 w-8 text-blue-600" />
-                            <div className="ml-4">
+                            <Receipt className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
+                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
                                 <p className="text-sm font-medium text-gray-600">Total Deposits</p>
-                                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.total}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
                         <div className="flex items-center">
-                            <Clock className="h-8 w-8 text-yellow-600" />
-                            <div className="ml-4">
+                            <Clock className="h-6 w-6 md:h-8 md:w-8 text-yellow-600 flex-shrink-0" />
+                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
                                 <p className="text-sm font-medium text-gray-600">Pending</p>
-                                <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
+                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.pending}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
                         <div className="flex items-center">
-                            <Eye className="h-8 w-8 text-blue-600" />
-                            <div className="ml-4">
+                            <Eye className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
+                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
                                 <p className="text-sm font-medium text-gray-600">Verified</p>
-                                <p className="text-2xl font-bold text-gray-900">{stats.verified}</p>
+                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.verified}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
                         <div className="flex items-center">
-                            <XCircle className="h-8 w-8 text-red-600" />
-                            <div className="ml-4">
+                            <XCircle className="h-6 w-6 md:h-8 md:w-8 text-red-600 flex-shrink-0" />
+                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
                                 <p className="text-sm font-medium text-gray-600">Rejected</p>
-                                <p className="text-2xl font-bold text-gray-900">{stats.rejected}</p>
+                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.rejected}</p>
                             </div>
                         </div>
                     </div>

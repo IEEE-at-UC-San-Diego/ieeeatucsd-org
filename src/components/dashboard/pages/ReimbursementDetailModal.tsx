@@ -42,19 +42,20 @@ export default function ReimbursementDetailModal({ reimbursement, onClose }: Rei
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-900">Reimbursement Details</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[calc(100vh-1rem)] md:max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200">
+                    <h2 className="text-lg md:text-xl font-semibold text-gray-900 truncate pr-4">Reimbursement Details</h2>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors p-2 min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0"
+                        aria-label="Close modal"
                     >
-                        <X className="w-6 h-6" />
+                        <X className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
                 </div>
 
-                <div className="p-6 space-y-6">
+                <div className="p-4 md:p-6 space-y-4 md:space-y-6">
                     {/* Header Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -122,15 +123,15 @@ export default function ReimbursementDetailModal({ reimbursement, onClose }: Rei
                                         expense.receipt
                                     ) && (
                                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center space-x-2">
-                                                        <File className="w-4 h-4 text-blue-600" />
+                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                                                        <File className="w-4 h-4 text-blue-600 flex-shrink-0" />
                                                         <span className="text-sm font-medium text-blue-900">Receipt Available</span>
                                                         {expense.receipt.name && (
-                                                            <span className="text-xs text-blue-600">({expense.receipt.name})</span>
+                                                            <span className="text-xs text-blue-600 truncate">({expense.receipt.name})</span>
                                                         )}
                                                     </div>
-                                                    <div className="flex space-x-2">
+                                                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
                                                         <button
                                                             onClick={async () => {
                                                                 try {
@@ -188,10 +189,10 @@ export default function ReimbursementDetailModal({ reimbursement, onClose }: Rei
                                                                     alert('An error occurred while trying to open the receipt. Please try again.');
                                                                 }
                                                             }}
-                                                            className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                                                            className="flex items-center justify-center space-x-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors min-h-[44px] flex-1 sm:flex-initial"
                                                             title="View receipt"
                                                         >
-                                                            <Eye className="w-3 h-3" />
+                                                            <Eye className="w-4 h-4" />
                                                             <span>View</span>
                                                         </button>
                                                         <a
@@ -200,10 +201,10 @@ export default function ReimbursementDetailModal({ reimbursement, onClose }: Rei
                                                                 (typeof expense.receipt === 'string' && expense.receipt.startsWith('http') ? expense.receipt : null) ||
                                                                 expense.receipt}
                                                             download={expense.receipt.name || 'receipt'}
-                                                            className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                                                            className="flex items-center justify-center space-x-1 px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors min-h-[44px] flex-1 sm:flex-initial"
                                                             title="Download receipt"
                                                         >
-                                                            <Download className="w-3 h-3" />
+                                                            <Download className="w-4 h-4" />
                                                             <span>Download</span>
                                                         </a>
                                                     </div>

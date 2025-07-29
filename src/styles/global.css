@@ -81,6 +81,114 @@
   }
 }
 
+/* Mobile-Specific Utilities */
+@layer utilities {
+  /* Touch-friendly interactions */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Minimum touch target sizes */
+  .min-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mobile-optimized text truncation */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Mobile-friendly table scrolling */
+  .table-mobile-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Mobile-optimized spacing */
+  .mobile-padding {
+    @apply p-4 md:p-6;
+  }
+
+  .mobile-margin {
+    @apply m-4 md:m-6;
+  }
+
+  .mobile-gap {
+    @apply gap-4 md:gap-6;
+  }
+
+  /* Mobile-friendly button styles */
+  .btn-mobile {
+    @apply min-h-[44px] px-4 py-2 text-base touch-manipulation;
+  }
+
+  /* Mobile-optimized form inputs */
+  .input-mobile {
+    @apply min-h-[44px] px-3 py-2 text-base touch-manipulation;
+  }
+
+  /* Mobile-friendly dropdown positioning */
+  .dropdown-mobile {
+    @apply max-w-[calc(100vw-2rem)];
+  }
+}
+
+/* Mobile-specific responsive breakpoints */
+@media (max-width: 320px) {
+  /* Extra small mobile devices */
+  .text-responsive {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 375px) {
+  /* Small mobile devices */
+  .container-mobile {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@media (max-width: 414px) {
+  /* Medium mobile devices */
+  .grid-mobile-stack {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Large mobile devices and tablets */
+  .hide-mobile {
+    display: none;
+  }
+
+  .show-mobile {
+    display: block;
+  }
+
+  /* Ensure proper touch scrolling on mobile */
+  .overflow-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Mobile-optimized modal positioning */
+  .modal-mobile {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+  }
+}
+
 /* Constitution Print Styles - Hide everything except constitution content when printing */
 @media print {
   /* When in constitution print mode, hide all elements by default */

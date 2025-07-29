@@ -233,92 +233,92 @@ export default function OverviewContent() {
                 showSearch={false}
             />
 
-            <main className="p-6">
-                <div className="grid grid-cols-1 gap-6">
+            <main className="p-4 md:p-6">
+                <div className="grid grid-cols-1 gap-4 md:gap-6">
                     {/* Welcome Banner */}
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
+                    <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-4 md:p-6 text-white">
                         <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-2xl font-bold mb-2">Welcome back, {userData?.name?.split(' ')[0] || 'Member'}!</h2>
-                                <p className="text-blue-100">You have {userStats.totalPoints} points and have attended {userStats.eventsAttended} events.</p>
+                            <div className="flex-1 min-w-0">
+                                <h2 className="text-lg md:text-2xl font-bold mb-2">Welcome back, {userData?.name?.split(' ')[0] || 'Member'}!</h2>
+                                <p className="text-sm md:text-base text-blue-100">You have {userStats.totalPoints} points and have attended {userStats.eventsAttended} events.</p>
                             </div>
-                            <div className="hidden md:block">
-                                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
-                                    <Award className="w-10 h-10 text-white" />
+                            <div className="hidden md:block ml-4">
+                                <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 rounded-full flex items-center justify-center">
+                                    <Award className="w-8 h-8 md:w-10 md:h-10 text-white" />
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                             <div className="flex items-center justify-between">
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-600">Total Points</p>
-                                    <p className="text-2xl font-bold text-gray-900">{userStats.totalPoints}</p>
+                                    <p className="text-xl md:text-2xl font-bold text-gray-900">{userStats.totalPoints}</p>
                                 </div>
-                                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                                    <Award className="w-6 h-6 text-yellow-600" />
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                    <Award className="w-5 h-5 md:w-6 md:h-6 text-yellow-600" />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                             <div className="flex items-center justify-between">
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-600">Events Attended</p>
-                                    <p className="text-2xl font-bold text-gray-900">{userStats.eventsAttended}</p>
+                                    <p className="text-xl md:text-2xl font-bold text-gray-900">{userStats.eventsAttended}</p>
                                 </div>
-                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <Calendar className="w-6 h-6 text-blue-600" />
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <Calendar className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                             <div className="flex items-center justify-between">
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-600">Reimbursements</p>
-                                    <p className="text-2xl font-bold text-gray-900">{userStats.reimbursementsSubmitted}</p>
+                                    <p className="text-xl md:text-2xl font-bold text-gray-900">{userStats.reimbursementsSubmitted}</p>
                                     <p className="text-xs text-gray-500">{userStats.reimbursementsApproved} approved</p>
                                 </div>
-                                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                    <DollarSign className="w-6 h-6 text-green-600" />
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                    <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                             <div className="flex items-center justify-between">
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-600">Member Rank</p>
-                                    <p className="text-2xl font-bold text-gray-900">#{userStats.rank || 'N/A'}</p>
+                                    <p className="text-xl md:text-2xl font-bold text-gray-900">#{userStats.rank || 'N/A'}</p>
                                     <p className="text-xs text-gray-500">of {userStats.totalMembers} members</p>
                                 </div>
-                                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                                    <TrendingUp className="w-6 h-6 text-purple-600" />
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                    <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                        <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                             {quickActions.map((action, index) => (
                                 <a
                                     key={index}
                                     href={action.href}
-                                    className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors min-h-[60px] touch-manipulation"
                                 >
-                                    <div className={`w-10 h-10 ${action.color} rounded-lg flex items-center justify-center`}>
+                                    <div className={`w-10 h-10 ${action.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
                                         <action.icon className="w-5 h-5" />
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="font-medium text-gray-900 text-sm">{action.title}</p>
-                                        <p className="text-xs text-gray-500">{action.description}</p>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-gray-900 text-sm md:text-base">{action.title}</p>
+                                        <p className="text-xs md:text-sm text-gray-500 truncate">{action.description}</p>
                                     </div>
                                 </a>
                             ))}
@@ -326,35 +326,35 @@ export default function OverviewContent() {
                     </div>
 
                     {/* Two Column Layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                         {/* Upcoming Events */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-semibold text-gray-900">Upcoming Events</h2>
-                                <a href="/dashboard/events" className="text-sm text-blue-600 hover:text-blue-800">
+                                <h2 className="text-base md:text-lg font-semibold text-gray-900">Upcoming Events</h2>
+                                <a href="/dashboard/events" className="text-sm text-blue-600 hover:text-blue-800 min-h-[44px] flex items-center">
                                     View all →
                                 </a>
                             </div>
                             {upcomingEvents.length === 0 ? (
-                                <div className="text-center py-8">
-                                    <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                                    <p className="text-gray-500">No upcoming events</p>
+                                <div className="text-center py-6 md:py-8">
+                                    <Calendar className="mx-auto h-10 w-10 md:h-12 md:w-12 text-gray-400 mb-3 md:mb-4" />
+                                    <p className="text-sm md:text-base text-gray-500">No upcoming events</p>
                                 </div>
                             ) : (
                                 <div className="space-y-3">
                                     {upcomingEvents.slice(0, 3).map((event: any) => (
                                         <div key={event.id} className="flex items-center space-x-3 p-3 border border-gray-100 rounded-lg">
-                                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                                 <Calendar className="w-5 h-5 text-blue-600" />
                                             </div>
-                                            <div className="flex-1">
-                                                <p className="font-medium text-gray-900 text-sm">{event.eventName}</p>
-                                                <p className="text-xs text-gray-500">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-gray-900 text-sm md:text-base truncate">{event.eventName}</p>
+                                                <p className="text-xs md:text-sm text-gray-500">
                                                     {event.startDate?.toDate ? event.startDate.toDate().toLocaleDateString() : 'TBD'}
                                                 </p>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-xs text-green-600 font-medium">+{event.pointsToReward || 0} pts</p>
+                                            <div className="text-right flex-shrink-0">
+                                                <p className="text-xs md:text-sm text-green-600 font-medium">+{event.pointsToReward || 0} pts</p>
                                             </div>
                                         </div>
                                     ))}
@@ -363,18 +363,18 @@ export default function OverviewContent() {
                         </div>
 
                         {/* Recent Activity */}
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                            <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
                             {recentActivity.length === 0 ? (
-                                <div className="text-center py-8">
-                                    <Clock className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                                    <p className="text-gray-500">No recent activity</p>
+                                <div className="text-center py-6 md:py-8">
+                                    <Clock className="mx-auto h-10 w-10 md:h-12 md:w-12 text-gray-400 mb-3 md:mb-4" />
+                                    <p className="text-sm md:text-base text-gray-500">No recent activity</p>
                                 </div>
                             ) : (
                                 <div className="space-y-3">
                                     {recentActivity.map((activity) => (
                                         <div key={activity.id} className="flex items-center space-x-3 p-3 border border-gray-100 rounded-lg">
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${activity.type === 'event' ? 'bg-blue-100' :
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${activity.type === 'event' ? 'bg-blue-100' :
                                                 activity.type === 'reimbursement' ? 'bg-green-100' :
                                                     'bg-yellow-100'
                                                 }`}>
@@ -382,16 +382,16 @@ export default function OverviewContent() {
                                                 {activity.type === 'reimbursement' && <DollarSign className="w-4 h-4 text-green-600" />}
                                                 {activity.type === 'achievement' && <Award className="w-4 h-4 text-yellow-600" />}
                                             </div>
-                                            <div className="flex-1">
-                                                <p className="font-medium text-gray-900 text-sm">{activity.title}</p>
-                                                <p className="text-xs text-gray-500">{activity.description}</p>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-gray-900 text-sm md:text-base truncate">{activity.title}</p>
+                                                <p className="text-xs md:text-sm text-gray-500 truncate">{activity.description}</p>
                                                 <p className="text-xs text-gray-400">
                                                     {activity.date?.toDate ? activity.date.toDate().toLocaleDateString() : 'Recently'}
                                                 </p>
                                             </div>
                                             {activity.points && (
-                                                <div className="text-right">
-                                                    <p className="text-xs text-green-600 font-medium">+{activity.points} pts</p>
+                                                <div className="text-right flex-shrink-0">
+                                                    <p className="text-xs md:text-sm text-green-600 font-medium">+{activity.points} pts</p>
                                                 </div>
                                             )}
                                         </div>

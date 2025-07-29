@@ -84,64 +84,81 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
     }
 
     return (
-        <div className="max-w-7xl mx-auto p-6">
-            <ConstitutionHeader
-                saveStatus={saveStatus}
-                lastSaved={lastSaved}
-                currentView={currentView}
-                onViewChange={setCurrentView}
-                onPrint={handlePrint}
-            />
-
-            {/* Version Editor */}
-            <div className="mb-4 flex justify-end">
-                <VersionEditor
-                    constitution={constitution}
-                    onUpdateVersion={updateConstitutionVersion}
+        <div className="w-full max-w-none p-4 md:p-6">
+            <div className="max-w-7xl mx-auto">
+                <ConstitutionHeader
+                    saveStatus={saveStatus}
+                    lastSaved={lastSaved}
+                    currentView={currentView}
+                    onViewChange={setCurrentView}
+                    onPrint={handlePrint}
                 />
+
+                {/* Version Editor */}
+                <div className="mb-4 flex justify-end">
+                    <VersionEditor
+                        constitution={constitution}
+                        onUpdateVersion={updateConstitutionVersion}
+                    />
+                </div>
             </div>
 
-            <div className="grid grid-cols-12 gap-6">
-                <ConstitutionSidebar
-                    sections={sections}
-                    selectedSection={selectedSection}
-                    expandedSections={expandedSections}
-                    onSelectSection={setSelectedSection}
-                    onToggleExpand={toggleSectionExpansion}
-                    onAddSection={addSection}
-                    updateSection={updateSection}
-                    currentUserId={user?.uid}
-                    constitutionVersion={constitution?.version}
-                />
+            <div className="max-w-7xl mx-auto">
+                {/* Conditional layout based on current view */}
+                {currentView === 'editor' ? (
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6">
+                        {/* Document Structure Sidebar - Only shown in editor view */}
+                        <div className="xl:col-span-3">
+                            <ConstitutionSidebar
+                                sections={sections}
+                                selectedSection={selectedSection}
+                                expandedSections={expandedSections}
+                                onSelectSection={setSelectedSection}
+                                onToggleExpand={toggleSectionExpansion}
+                                onAddSection={addSection}
+                                updateSection={updateSection}
+                                currentUserId={user?.uid}
+                                constitutionVersion={constitution?.version}
+                            />
+                        </div>
 
-                {/* Main Content */}
-                <div className="col-span-9">
-                    {currentView === 'editor' ? (
-                        <ConstitutionEditor
-                            sections={sections}
-                            selectedSection={selectedSection}
-                            editingSection={editingSection}
-                            onSelectSection={setSelectedSection}
-                            onEditSection={setEditingSection}
-                            onUpdateSection={updateSection}
-                            onDeleteSection={handleDeleteSection}
-                            onAddSection={addSection}
-                            currentUserId={user?.uid}
-                        />
-                    ) : currentView === 'preview' ? (
-                        <ConstitutionPreview
-                            constitution={constitution}
-                            sections={getSectionHierarchy(sections)}
-                            onPrint={handlePrint}
-                            currentPage={currentPage}
-                            onPageChange={setCurrentPage}
-                        />
-                    ) : (
-                        <ConstitutionAuditLog
-                            constitutionId={constitutionId}
-                        />
-                    )}
-                </div>
+                        {/* Editor Content */}
+                        <div className="xl:col-span-9">
+                            <ConstitutionEditor
+                                sections={sections}
+                                selectedSection={selectedSection}
+                                editingSection={editingSection}
+                                onSelectSection={setSelectedSection}
+                                onEditSection={setEditingSection}
+                                onUpdateSection={updateSection}
+                                onDeleteSection={handleDeleteSection}
+                                onAddSection={addSection}
+                                currentUserId={user?.uid}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    /* Full-width layout for preview and audit views - better spacing on larger screens */
+                    <div className="w-full">
+                        {currentView === 'preview' ? (
+                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                                <ConstitutionPreview
+                                    constitution={constitution}
+                                    sections={getSectionHierarchy(sections)}
+                                    onPrint={handlePrint}
+                                    currentPage={currentPage}
+                                    onPageChange={setCurrentPage}
+                                />
+                            </div>
+                        ) : (
+                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                                <ConstitutionAuditLog
+                                    constitutionId={constitutionId}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

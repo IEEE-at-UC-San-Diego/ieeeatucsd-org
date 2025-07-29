@@ -665,38 +665,39 @@ export default function ManageEventsContent() {
 
     return (
         <div className="flex-1 overflow-auto">
-            {/* Header */}
-            <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+            {/* Header - Hidden on mobile, using DashboardHeader pattern */}
+            <header className="hidden md:block bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                        <div className="relative">
+                    <div className="flex items-center space-x-2 md:space-x-4 flex-1 min-w-0">
+                        <div className="relative flex-1 max-w-md">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
                                 type="text"
                                 placeholder="Search events..."
                                 value={searchTerm}
                                 onChange={(e) => handleSearch(e.target.value)}
-                                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[44px]"
                             />
                         </div>
                         {searchTerm && (
                             <button
                                 onClick={handleClearFilters}
-                                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                                className="bg-gray-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors min-h-[44px] text-sm md:text-base"
                             >
-                                Clear
+                                <span className="hidden sm:inline">Clear</span>
+                                <span className="sm:hidden">✕</span>
                             </button>
                         )}
                     </div>
 
-                    <div className="flex items-center space-x-4">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                    <div className="flex items-center space-x-2 md:space-x-4">
+                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
                             <Calendar className="w-5 h-5" />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
                             <Bell className="w-5 h-5" />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
                             <User className="w-5 h-5" />
                         </button>
                     </div>
@@ -704,22 +705,45 @@ export default function ManageEventsContent() {
             </header>
 
             {/* Manage Events Content */}
-            <main className="p-6">
-                <div className="grid grid-cols-1 gap-6">
+            <main className="p-4 md:p-6">
+                <div className="grid grid-cols-1 gap-4 md:gap-6">
+                    {/* Mobile Search Bar */}
+                    <div className="md:hidden bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <input
+                                type="text"
+                                placeholder="Search events..."
+                                value={searchTerm}
+                                onChange={(e) => handleSearch(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[44px]"
+                            />
+                        </div>
+                        {searchTerm && (
+                            <button
+                                onClick={handleClearFilters}
+                                className="mt-3 w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors min-h-[44px]"
+                            >
+                                Clear Search
+                            </button>
+                        )}
+                    </div>
+
                     {/* Page Header */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 md:mb-6">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900 mb-2">Manage Events</h1>
-                            <p className="text-gray-600">Create, edit, and manage IEEE UCSD events</p>
+                            <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Manage Events</h1>
+                            <p className="text-sm md:text-base text-gray-600">Create, edit, and manage IEEE UCSD events</p>
                         </div>
                         <div className="flex items-center space-x-3">
                             {canCreateEvent() && (
                                 <button
                                     onClick={() => setShowEventRequestModal(true)}
-                                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    className="flex items-center space-x-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] text-sm md:text-base"
                                 >
                                     <Plus className="w-4 h-4" />
-                                    <span>Request an Event</span>
+                                    <span className="hidden sm:inline">Request an Event</span>
+                                    <span className="sm:hidden">Request</span>
                                 </button>
                             )}
                         </div>
@@ -742,10 +766,10 @@ export default function ManageEventsContent() {
 
                     {/* Event Requests Table */}
                     <div key={currentUserRole} className="bg-white rounded-lg shadow-sm border border-gray-200">
-                        <div className="px-6 py-4 border-b border-gray-200">
-                            <h2 className="text-lg font-semibold text-gray-900">Event Requests ({sortedEventRequests.length})</h2>
+                        <div className="px-4 md:px-6 py-4 border-b border-gray-200">
+                            <h2 className="text-base md:text-lg font-semibold text-gray-900">Event Requests ({sortedEventRequests.length})</h2>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto table-mobile-scroll">
                             {loading ? (
                                 <div className="p-6 text-center">
                                     <p className="text-gray-500">Loading event requests...</p>

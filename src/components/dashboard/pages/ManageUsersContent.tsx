@@ -783,25 +783,25 @@ export default function ManageUsersContent() {
 
     return (
         <div className="flex-1 overflow-auto">
-            {/* Header */}
-            <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+            {/* Header - Hidden on mobile, using DashboardHeader pattern */}
+            <header className="hidden md:block bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                        <div className="relative">
+                    <div className="flex items-center space-x-2 md:space-x-4 flex-1 min-w-0">
+                        <div className="relative flex-1 max-w-xs">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
                                 type="text"
                                 placeholder="Search members..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[44px]"
                             />
                         </div>
                         <div className="relative">
                             <select
                                 value={roleFilter}
                                 onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
-                                className="appearance-none bg-white px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                className="appearance-none bg-white px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer min-h-[44px] text-base"
                             >
                                 <option value="all">🎭 All Roles</option>
                                 {roles.map(role => (
@@ -818,7 +818,7 @@ export default function ManageUsersContent() {
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive' | 'suspended')}
-                                className="appearance-none bg-white px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+                                className="appearance-none bg-white px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer min-h-[44px] text-base"
                             >
                                 <option value="all">📊 All Status</option>
                                 <option value="active">✅ Active</option>
@@ -833,14 +833,14 @@ export default function ManageUsersContent() {
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-4">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                    <div className="flex items-center space-x-2 md:space-x-4">
+                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
                             <Calendar className="w-5 h-5" />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
                             <Bell className="w-5 h-5" />
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
                             <User className="w-5 h-5" />
                         </button>
                     </div>
@@ -848,29 +848,31 @@ export default function ManageUsersContent() {
             </header>
 
             {/* Manage Users Content */}
-            <main className="p-6">
-                <div className="grid grid-cols-1 gap-6">
+            <main className="p-4 md:p-6">
+                <div className="grid grid-cols-1 gap-4 md:gap-6">
                     {/* Page Header */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 md:mb-6">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900 mb-2">Manage Users</h1>
-                            <p className="text-gray-600">Manage IEEE UCSD member accounts and permissions</p>
+                            <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Manage Users</h1>
+                            <p className="text-sm md:text-base text-gray-600">Manage IEEE UCSD member accounts and permissions</p>
                         </div>
-                        <div className="flex items-center space-x-3">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                             <button
                                 onClick={() => setShowInviteModal(true)}
-                                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                className="flex items-center justify-center space-x-2 px-3 md:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] text-sm md:text-base"
                             >
                                 <Send className="w-4 h-4" />
-                                <span>Send Invite</span>
+                                <span className="hidden sm:inline">Send Invite</span>
+                                <span className="sm:hidden">Invite</span>
                             </button>
                             <button
                                 onClick={() => setShowAddMemberModal(true)}
-                                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                className="flex items-center justify-center space-x-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] text-sm md:text-base"
                                 title="Promote an existing member to officer with role and position"
                             >
                                 <Plus className="w-4 h-4" />
-                                <span>Promote to Officer</span>
+                                <span className="hidden sm:inline">Promote to Officer</span>
+                                <span className="sm:hidden">Promote</span>
                             </button>
                         </div>
                     </div>
@@ -889,15 +891,68 @@ export default function ManageUsersContent() {
                         </div>
                     )}
 
-                    {/* User Management Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Members</p>
-                                    <p className="text-2xl font-bold text-gray-900">{stats.totalMembers}</p>
+                    {/* Mobile Filters */}
+                    <div className="md:hidden bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+                        <h3 className="text-sm font-medium text-gray-700 mb-3">Search & Filters</h3>
+                        <div className="space-y-3">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                <input
+                                    type="text"
+                                    placeholder="Search members..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[44px]"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="relative">
+                                    <select
+                                        value={roleFilter}
+                                        onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
+                                        className="w-full appearance-none bg-white px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer min-h-[44px] text-sm"
+                                    >
+                                        <option value="all">🎭 All Roles</option>
+                                        {roles.map(role => (
+                                            <option key={role} value={role}>{role}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
                                 </div>
-                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <div className="relative">
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive' | 'suspended')}
+                                        className="w-full appearance-none bg-white px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer min-h-[44px] text-sm"
+                                    >
+                                        <option value="all">📊 All Status</option>
+                                        <option value="active">✅ Active</option>
+                                        <option value="inactive">⏸️ Inactive</option>
+                                        <option value="suspended">🚫 Suspended</option>
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* User Management Stats */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-4 md:mb-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-600">Total Members</p>
+                                    <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.totalMembers}</p>
+                                </div>
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                                     <Users className="w-6 h-6 text-blue-600" />
                                 </div>
                             </div>

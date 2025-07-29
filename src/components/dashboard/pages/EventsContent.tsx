@@ -268,7 +268,7 @@ export default function EventsContent() {
             const userRef = doc(db, 'users', auth.currentUser.uid);
             const newPoints = userStats.totalPointsEarned + event.pointsToReward;
             const newEventsAttended = userStats.totalEventsAttended + 1;
-            
+
             await updateDoc(userRef, {
                 lastEventAttended: event.eventName,
                 points: newPoints,
@@ -352,20 +352,21 @@ export default function EventsContent() {
                 <button
                     onClick={() => fetchEvents()}
                     disabled={loading}
-                    className="flex items-center space-x-2 px-4 py-2 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                    className="flex items-center space-x-2 px-3 md:px-4 py-2 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 min-h-[44px] text-sm md:text-base"
                 >
                     <Calendar className="w-4 h-4" />
-                    <span>{loading ? 'Refreshing...' : 'Refresh Events'}</span>
+                    <span className="hidden sm:inline">{loading ? 'Refreshing...' : 'Refresh Events'}</span>
+                    <span className="sm:hidden">{loading ? 'Refresh...' : 'Refresh'}</span>
                 </button>
             </DashboardHeader>
 
             {/* Events Content */}
-            <main className="p-6">
-                <div className="grid grid-cols-1 gap-6">
+            <main className="p-4 md:p-6">
+                <div className="grid grid-cols-1 gap-4 md:gap-6">
                     {/* Error Message */}
                     {error && (
                         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                            <p className="text-red-700">{error}</p>
+                            <p className="text-sm md:text-base text-red-700">{error}</p>
                         </div>
                     )}
 
@@ -386,47 +387,47 @@ export default function EventsContent() {
                     )}
 
                     {/* User Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                             <div className="flex items-center justify-between">
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-600">Last Event Attended</p>
-                                    <p className="text-lg font-bold text-gray-900 truncate">{userStats.lastEventAttended}</p>
+                                    <p className="text-base md:text-lg font-bold text-gray-900 truncate">{userStats.lastEventAttended}</p>
                                 </div>
-                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <Calendar className="w-6 h-6 text-blue-600" />
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Calendar className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                             <div className="flex items-center justify-between">
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-600">Total Points Earned</p>
-                                    <p className="text-2xl font-bold text-green-600">{userStats.totalPointsEarned}</p>
+                                    <p className="text-xl md:text-2xl font-bold text-green-600">{userStats.totalPointsEarned}</p>
                                 </div>
-                                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                    <Award className="w-6 h-6 text-green-600" />
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Award className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 sm:col-span-2 lg:col-span-1">
                             <div className="flex items-center justify-between">
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-600">Total Events Attended</p>
-                                    <p className="text-2xl font-bold text-purple-600">{userStats.totalEventsAttended}</p>
+                                    <p className="text-xl md:text-2xl font-bold text-purple-600">{userStats.totalEventsAttended}</p>
                                 </div>
-                                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                                    <Users className="w-6 h-6 text-purple-600" />
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <Users className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Quick Check-in Section */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6 mb-6">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-4 md:p-6 mb-4 md:mb-6">
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                                <h2 className="text-base md:text-lg font-semibold text-gray-900 flex items-center">
                                     <UserCheck className="w-5 h-5 mr-2 text-blue-600" />
                                     Quick Check-in
                                 </h2>
