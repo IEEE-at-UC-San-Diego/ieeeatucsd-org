@@ -8,10 +8,13 @@ import ConstitutionEditor from '../components/ConstitutionEditor';
 import ConstitutionPreview from '../components/ConstitutionPreview';
 import { ConstitutionAuditLog } from '../components/ConstitutionAuditLog';
 import VersionEditor from '../components/VersionEditor';
+import SafariBrowserBlock from '../components/SafariBrowserBlock';
+import { useSafariDetection } from '../hooks/useBrowserDetection';
 
 interface ConstitutionBuilderContentProps { }
 
 const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = () => {
+    const { isSafari, isLoading: browserLoading } = useSafariDetection();
     const {
         constitution,
         sections,
@@ -79,6 +82,15 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
         return (
             <div className="flex items-center justify-center h-64">
                 <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
+
+    // Block Safari users completely
+    if (!browserLoading && isSafari) {
+        return (
+            <div className="w-full max-w-none p-4 md:p-6">
+                <SafariBrowserBlock />
             </div>
         );
     }
