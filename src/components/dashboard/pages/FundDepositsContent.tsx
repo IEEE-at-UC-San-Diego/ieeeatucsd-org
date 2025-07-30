@@ -8,6 +8,7 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebas
 import DashboardHeader from '../DashboardHeader';
 import type { UserRole } from '../types/firestore';
 import { PublicProfileService } from '../services/publicProfile';
+import { TableSkeleton, MetricCardSkeleton } from '../../ui/loading';
 
 interface FundDeposit {
     id: string;
@@ -716,55 +717,67 @@ const FundDepositsContent: React.FC = () => {
             <div className="p-4 md:p-6">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-4 md:mb-6">
-                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
-                        <div className="flex items-center">
-                            <Receipt className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
-                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-600">Total Deposits</p>
-                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.total}</p>
+                    {isLoading ? (
+                        <>
+                            <MetricCardSkeleton />
+                            <MetricCardSkeleton />
+                            <MetricCardSkeleton />
+                            <MetricCardSkeleton />
+                            <MetricCardSkeleton />
+                        </>
+                    ) : (
+                        <>
+                            <div className="bg-white rounded-lg shadow p-4 md:p-6">
+                                <div className="flex items-center">
+                                    <Receipt className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
+                                    <div className="ml-3 md:ml-4 min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-gray-600">Total Deposits</p>
+                                        <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.total}</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
-                        <div className="flex items-center">
-                            <Clock className="h-6 w-6 md:h-8 md:w-8 text-yellow-600 flex-shrink-0" />
-                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-600">Pending</p>
-                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.pending}</p>
+                            <div className="bg-white rounded-lg shadow p-4 md:p-6">
+                                <div className="flex items-center">
+                                    <Clock className="h-6 w-6 md:h-8 md:w-8 text-yellow-600 flex-shrink-0" />
+                                    <div className="ml-3 md:ml-4 min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-gray-600">Pending</p>
+                                        <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.pending}</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
-                        <div className="flex items-center">
-                            <Eye className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
-                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-600">Verified</p>
-                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.verified}</p>
+                            <div className="bg-white rounded-lg shadow p-4 md:p-6">
+                                <div className="flex items-center">
+                                    <Eye className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
+                                    <div className="ml-3 md:ml-4 min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-gray-600">Verified</p>
+                                        <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.verified}</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
-                        <div className="flex items-center">
-                            <XCircle className="h-6 w-6 md:h-8 md:w-8 text-red-600 flex-shrink-0" />
-                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-600">Rejected</p>
-                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.rejected}</p>
+                            <div className="bg-white rounded-lg shadow p-4 md:p-6">
+                                <div className="flex items-center">
+                                    <XCircle className="h-6 w-6 md:h-8 md:w-8 text-red-600 flex-shrink-0" />
+                                    <div className="ml-3 md:ml-4 min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-gray-600">Rejected</p>
+                                        <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.rejected}</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <div className="flex items-center">
-                            <Banknote className="h-8 w-8 text-green-600" />
-                            <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-600">Total Verified</p>
-                                <p className="text-2xl font-bold text-gray-900">${stats.totalAmount.toFixed(2)}</p>
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <div className="flex items-center">
+                                    <Banknote className="h-8 w-8 text-green-600" />
+                                    <div className="ml-4">
+                                        <p className="text-sm font-medium text-gray-600">Total Verified</p>
+                                        <p className="text-2xl font-bold text-gray-900">${stats.totalAmount.toFixed(2)}</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Filters and Search */}
@@ -838,10 +851,8 @@ const FundDepositsContent: React.FC = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {isLoading ? (
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center">
-                                            <div className="flex justify-center">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                            </div>
+                                        <td colSpan={6} className="p-0">
+                                            <TableSkeleton rows={6} columns={6} showHeader={false} />
                                         </td>
                                     </tr>
                                 ) : filteredDeposits.length === 0 ? (

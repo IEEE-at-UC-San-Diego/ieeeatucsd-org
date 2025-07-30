@@ -5,6 +5,7 @@ import { getAuth } from 'firebase/auth';
 import { app } from '../../../firebase/client';
 import DashboardHeader from '../DashboardHeader';
 import { PublicProfileService } from '../services/publicProfile';
+import { EventCardSkeleton, MetricCardSkeleton } from '../../ui/loading';
 
 interface Event {
     id: string;
@@ -388,39 +389,49 @@ export default function EventsContent() {
 
                     {/* User Stats */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-600">Last Event Attended</p>
-                                    <p className="text-base md:text-lg font-bold text-gray-900 truncate">{userStats.lastEventAttended}</p>
+                        {loading ? (
+                            <>
+                                <MetricCardSkeleton />
+                                <MetricCardSkeleton />
+                                <MetricCardSkeleton />
+                            </>
+                        ) : (
+                            <>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-600">Last Event Attended</p>
+                                            <p className="text-base md:text-lg font-bold text-gray-900 truncate">{userStats.lastEventAttended}</p>
+                                        </div>
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <Calendar className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <Calendar className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-600">Total Points Earned</p>
+                                            <p className="text-xl md:text-2xl font-bold text-green-600">{userStats.totalPointsEarned}</p>
+                                        </div>
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <Award className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-600">Total Points Earned</p>
-                                    <p className="text-xl md:text-2xl font-bold text-green-600">{userStats.totalPointsEarned}</p>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 sm:col-span-2 lg:col-span-1">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-600">Total Events Attended</p>
+                                            <p className="text-xl md:text-2xl font-bold text-purple-600">{userStats.totalEventsAttended}</p>
+                                        </div>
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <Users className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <Award className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 sm:col-span-2 lg:col-span-1">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-600">Total Events Attended</p>
-                                    <p className="text-xl md:text-2xl font-bold text-purple-600">{userStats.totalEventsAttended}</p>
-                                </div>
-                                <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <Users className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
-                                </div>
-                            </div>
-                        </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Quick Check-in Section */}
@@ -530,8 +541,10 @@ export default function EventsContent() {
                     </div>
 
                     {loading ? (
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
-                            <p className="text-gray-500">Loading events...</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                            <EventCardSkeleton />
+                            <EventCardSkeleton />
+                            <EventCardSkeleton />
                         </div>
                     ) : (
                         <>

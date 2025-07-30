@@ -1,12 +1,25 @@
 import React from 'react';
 import { Calendar, Edit, Eye, Users } from 'lucide-react';
 import type { EventStats } from './types';
+import { MetricCardSkeleton } from '../../../ui/loading';
 
 interface EventManagementStatsProps {
     stats: EventStats;
+    loading?: boolean;
 }
 
-export function EventManagementStats({ stats }: EventManagementStatsProps) {
+export function EventManagementStats({ stats, loading = false }: EventManagementStatsProps) {
+    if (loading) {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <MetricCardSkeleton />
+                <MetricCardSkeleton />
+                <MetricCardSkeleton />
+                <MetricCardSkeleton />
+            </div>
+        );
+    }
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

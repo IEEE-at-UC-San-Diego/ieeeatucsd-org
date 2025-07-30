@@ -9,6 +9,7 @@ import ReimbursementDetailModal from './ReimbursementDetailModal';
 import ReimbursementAuditModal from './ReimbursementAuditModal';
 import type { UserRole } from '../types/firestore';
 import { PublicProfileService } from '../services/publicProfile';
+import { MetricCardSkeleton, TableSkeleton } from '../../ui/loading';
 
 interface Reimbursement {
     id: string;
@@ -363,50 +364,61 @@ export default function ManageReimbursementsContent() {
 
                     {/* Reimbursement Management Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Requests</p>
-                                    <p className="text-2xl font-bold text-gray-900">{stats.totalRequests}</p>
+                        {loading ? (
+                            <>
+                                <MetricCardSkeleton />
+                                <MetricCardSkeleton />
+                                <MetricCardSkeleton />
+                                <MetricCardSkeleton />
+                            </>
+                        ) : (
+                            <>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-600">Total Requests</p>
+                                            <p className="text-2xl font-bold text-gray-900">{stats.totalRequests}</p>
+                                        </div>
+                                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <Receipt className="w-6 h-6 text-blue-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <Receipt className="w-6 h-6 text-blue-600" />
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-600">Pending Review</p>
+                                            <p className="text-2xl font-bold text-yellow-600">{stats.pendingReview}</p>
+                                        </div>
+                                        <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                            <Clock className="w-6 h-6 text-yellow-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                                    <p className="text-2xl font-bold text-yellow-600">{stats.pendingReview}</p>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-600">Total Amount</p>
+                                            <p className="text-2xl font-bold text-green-600">${stats.totalAmount.toFixed(2)}</p>
+                                        </div>
+                                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                            <DollarSign className="w-6 h-6 text-green-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                                    <Clock className="w-6 h-6 text-yellow-600" />
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-600">This Month</p>
+                                            <p className="text-2xl font-bold text-purple-600">{stats.thisMonth}</p>
+                                        </div>
+                                        <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                            <Calendar className="w-6 h-6 text-purple-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Amount</p>
-                                    <p className="text-2xl font-bold text-green-600">${stats.totalAmount.toFixed(2)}</p>
-                                </div>
-                                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                    <DollarSign className="w-6 h-6 text-green-600" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">This Month</p>
-                                    <p className="text-2xl font-bold text-purple-600">{stats.thisMonth}</p>
-                                </div>
-                                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                                    <Calendar className="w-6 h-6 text-purple-600" />
-                                </div>
-                            </div>
-                        </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Reimbursement Requests Table */}
@@ -416,9 +428,7 @@ export default function ManageReimbursementsContent() {
                         </div>
                         <div className="overflow-x-auto">
                             {loading ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                </div>
+                                <TableSkeleton rows={5} columns={7} />
                             ) : (
                                 <table className="w-full">
                                     <thead className="bg-gray-50">
@@ -607,23 +617,27 @@ export default function ManageReimbursementsContent() {
 
 
                 </div>
-            </main>
+            </main >
 
             {/* Modals */}
-            {selectedReimbursement && (
-                <ReimbursementDetailModal
-                    reimbursement={selectedReimbursement}
-                    onClose={() => setSelectedReimbursement(null)}
-                />
-            )}
+            {
+                selectedReimbursement && (
+                    <ReimbursementDetailModal
+                        reimbursement={selectedReimbursement}
+                        onClose={() => setSelectedReimbursement(null)}
+                    />
+                )
+            }
 
-            {auditReimbursement && (
-                <ReimbursementAuditModal
-                    reimbursement={auditReimbursement}
-                    onClose={() => setAuditReimbursement(null)}
-                    onUpdate={updateReimbursementStatus}
-                />
-            )}
-        </div>
+            {
+                auditReimbursement && (
+                    <ReimbursementAuditModal
+                        reimbursement={auditReimbursement}
+                        onClose={() => setAuditReimbursement(null)}
+                        onUpdate={updateReimbursementStatus}
+                    />
+                )
+            }
+        </div >
     );
 } 

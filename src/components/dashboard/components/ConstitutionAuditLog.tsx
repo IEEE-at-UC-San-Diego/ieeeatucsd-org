@@ -3,6 +3,7 @@ import { Clock, User, Search, Filter, FileText, Plus, Minus, Edit3, Move } from 
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Input } from '../../ui/input';
+import { AuditLogSkeleton } from '../../ui/loading';
 import { Badge } from '../../ui/badge';
 import { Button } from '../../ui/button';
 import {
@@ -210,9 +211,7 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({ cons
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    </div>
+                    <AuditLogSkeleton items={5} />
                 </CardContent>
             </Card>
         );

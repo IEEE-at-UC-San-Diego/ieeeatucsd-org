@@ -6,6 +6,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } f
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import type { User } from '../types/firestore';
 import { PublicProfileService } from '../services/publicProfile';
+import { Skeleton } from '../../ui/skeleton';
 
 export default function SettingsContent() {
     const [userData, setUserData] = useState<User | null>(null);
@@ -301,8 +302,85 @@ export default function SettingsContent() {
     if (loading) {
         return (
             <div className="flex-1 overflow-auto p-6">
-                <div className="flex justify-center items-center h-64">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="max-w-4xl mx-auto space-y-6">
+                    {/* Header */}
+                    <div className="mb-8">
+                        <Skeleton className="h-8 w-48 mb-2" />
+                        <Skeleton className="h-4 w-96" />
+                    </div>
+
+                    {/* Profile Settings Card */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <Skeleton className="h-6 w-32 mb-6" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <Skeleton className="h-4 w-16 mb-2" />
+                                    <Skeleton className="h-10 w-full" />
+                                </div>
+                                <div>
+                                    <Skeleton className="h-4 w-16 mb-2" />
+                                    <Skeleton className="h-10 w-full" />
+                                </div>
+                                <div>
+                                    <Skeleton className="h-4 w-20 mb-2" />
+                                    <Skeleton className="h-10 w-full" />
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <Skeleton className="h-4 w-24 mb-2" />
+                                    <Skeleton className="h-10 w-full" />
+                                </div>
+                                <div>
+                                    <Skeleton className="h-4 w-20 mb-2" />
+                                    <Skeleton className="h-10 w-full" />
+                                </div>
+                                <div>
+                                    <Skeleton className="h-4 w-16 mb-2" />
+                                    <Skeleton className="h-24 w-full" />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mt-6 flex justify-end">
+                            <Skeleton className="h-10 w-32" />
+                        </div>
+                    </div>
+
+                    {/* Resume Upload Card */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <Skeleton className="h-6 w-24 mb-6" />
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8">
+                            <div className="text-center space-y-4">
+                                <Skeleton className="h-12 w-12 mx-auto rounded" />
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-48 mx-auto" />
+                                    <Skeleton className="h-3 w-32 mx-auto" />
+                                </div>
+                                <Skeleton className="h-10 w-24 mx-auto" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Password Change Card */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <Skeleton className="h-6 w-32 mb-6" />
+                        <div className="space-y-4 max-w-md">
+                            <div>
+                                <Skeleton className="h-4 w-28 mb-2" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                            <div>
+                                <Skeleton className="h-4 w-24 mb-2" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                            <div>
+                                <Skeleton className="h-4 w-32 mb-2" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                            <Skeleton className="h-10 w-32" />
+                        </div>
+                    </div>
                 </div>
             </div>
         );
