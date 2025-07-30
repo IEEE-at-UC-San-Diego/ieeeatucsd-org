@@ -352,6 +352,16 @@ export default function ManageUsersContent() {
 
             await updateDoc(userRef, updateData);
 
+            // Sync position to public profile
+            try {
+                await PublicProfileService.syncPublicProfile(selectedMember.id, {
+                    name: selectedMember.name || selectedMember.email || 'Unknown User',
+                    position: newPosition || ''
+                });
+            } catch (profileError) {
+                console.warn('Failed to update public profile, but user update succeeded:', profileError);
+            }
+
             setSuccess(`${selectedMember.name || selectedMember.email} has been promoted to ${newRole}${newPosition ? ` as ${newPosition}` : ''}`);
             setShowAddMemberModal(false);
             setSelectedMember(null);
@@ -427,15 +437,23 @@ export default function ManageUsersContent() {
 
             await updateDoc(userRef, updateData);
 
-            // Sync points to public profile if points were updated
-            if (currentUserRole === 'Administrator' && editingUser.points !== undefined) {
-                try {
-                    await PublicProfileService.updateUserStats(editingUser.id, {
-                        points: editingUser.points
-                    });
-                } catch (profileError) {
-                    console.warn('Failed to update public profile, but user update succeeded:', profileError);
+            // Sync relevant fields to public profile
+            try {
+                const publicProfileData: any = {
+                    name: editingUser.name,
+                    position: editingUser.position || '',
+                    major: editingUser.major || '',
+                    graduationYear: editingUser.graduationYear || null
+                };
+
+                // Only administrators can modify points
+                if (currentUserRole === 'Administrator' && editingUser.points !== undefined) {
+                    publicProfileData.points = editingUser.points;
                 }
+
+                await PublicProfileService.syncPublicProfile(editingUser.id, publicProfileData);
+            } catch (profileError) {
+                console.warn('Failed to update public profile, but user update succeeded:', profileError);
             }
 
             setSuccess('User updated successfully');

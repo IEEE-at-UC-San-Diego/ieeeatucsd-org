@@ -41,7 +41,13 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     // Local implementation of calculateTotalPages as fallback
     const calculateTotalPages = (sections: ConstitutionSection[], showTOC: boolean) => {
         let pageCount = 1; // Cover page
-        if (showTOC) pageCount++; // TOC page
+
+        if (showTOC) {
+            // Calculate actual TOC pages needed
+            const tableOfContents = generateTableOfContents(sections);
+            const tocPagesNeeded = Math.ceil(tableOfContents.length / 25);
+            pageCount += tocPagesNeeded;
+        }
 
         // Content pages - use the actual page generation logic
         const contentPages = generateContentPages(sections);
