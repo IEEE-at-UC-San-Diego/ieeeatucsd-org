@@ -1,38 +1,41 @@
 import React, { useEffect, useState } from "react";
 
 const UpcomingEvent = ({ name, location, date, time, delay, description }) => (
-  <div className="text-white w-[40vw] pl-[8%] md:border-l-[0.3vw] border-l-[0.5vw] border-white/70 md:pb-[5%] pb-[10%] relative">
+  <div className="text-white w-full max-w-lg pl-4 md:pl-8 border-l-2 md:border-l-4 border-white/70 pb-8 md:pb-12 relative">
     <p
       data-inview
-      className={`animate-duration-500 animate-delay-${delay * 200} in-view:animate-fade-left py-[0.2%] pl-[8%] md:pl-[2%] md:pr-[2%] w-fit border-[0.1vw] font-light rounded-full md:text-[1.3vw] text-[2.3vw]`}
+      className={`animate-duration-500 animate-delay-${delay * 200} in-view:animate-fade-left py-2 px-4 md:px-6 w-fit border border-white/30 font-light rounded-full text-sm md:text-lg lg:text-xl`}
     >
       {name}
     </p>
     <div
       data-inview
-      className={`animate-duration-500 animate-delay-${delay * 200 + 100} in-view:animate-fade-left md:flex justify-between items-center min-w-[70%] w-fit md:text-[1.2vw] text-[2vw] my-[2%]`}
+      className={`animate-duration-500 animate-delay-${delay * 200 + 100} in-view:animate-fade-left space-y-2 md:space-y-0 md:flex md:flex-wrap md:gap-4 text-sm md:text-base lg:text-lg my-4`}
     >
-      Location: {location}
+      <div className="flex items-center flex-wrap">
+        <span className="font-medium mr-2">Location:</span>
+        <span className="break-words">{location}</span>
+      </div>
       {date && (
-        <>
-          <div className="md:visible invisible bg-white h-[0.5vw] w-[0.5vw] rounded-full mx-[0.5vw]" />
-          <p>{date}</p>
-        </>
+        <div className="flex items-center">
+          <span className="font-medium mr-2">Date:</span>
+          <span>{date}</span>
+        </div>
       )}
       {time && (
-        <>
-          <div className="md:visible invisible bg-white h-[0.5vw] w-[0.5vw] rounded-full mx-[0.5vw]" />
-          <p>{time}</p>
-        </>
+        <div className="flex items-center">
+          <span className="font-medium mr-2">Time:</span>
+          <span>{time}</span>
+        </div>
       )}
     </div>
     <p
       data-inview
-      className={`animate-duration-500 animate-delay-${delay * 200 + 200} in-view:animate-fade-left md:text-[1vw] text-[1.8vw] text-white/60`}
+      className={`animate-duration-500 animate-delay-${delay * 200 + 200} in-view:animate-fade-left text-xs md:text-sm lg:text-base text-white/60 break-words`}
     >
       {description}
     </p>
-    <div className="bg-ieee-yellow md:h-[1.2vw] h-[1.5vw] md:w-[1.2vw] w-[1.5vw] rounded-full absolute -top-[1.5%] -left-[2%]" />
+    <div className="bg-ieee-yellow w-3 h-3 md:w-4 md:h-4 rounded-full absolute -top-1.5 -left-1.5" />
   </div>
 );
 

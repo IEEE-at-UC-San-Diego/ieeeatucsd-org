@@ -545,61 +545,125 @@ export default function EventsContent() {
                                         {upcomingEvents.map((event) => (
                                             <div
                                                 key={event.id}
-                                                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                                                className="border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
                                                 onClick={() => setSelectedEvent(event)}
                                             >
-                                                <div className="flex items-center space-x-4">
-                                                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                        <Calendar className="w-6 h-6 text-blue-600" />
+                                                {/* Mobile Layout */}
+                                                <div className="block md:hidden p-4">
+                                                    <div className="flex items-start space-x-3 mb-3">
+                                                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                            <Calendar className="w-5 h-5 text-blue-600" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <h3 className="font-medium text-gray-900 break-words pr-2">{event.eventName}</h3>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h3 className="font-medium text-gray-900">{event.eventName}</h3>
-                                                        <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                                                            <div className="flex items-center space-x-1">
-                                                                <Clock className="w-4 h-4" />
-                                                                <span>{event.startDate?.toDate?.()?.toLocaleDateString() || 'TBD'}</span>
+
+                                                    <div className="grid grid-cols-1 gap-2 text-sm text-gray-500 mb-4">
+                                                        <div className="flex items-center space-x-1">
+                                                            <Clock className="w-4 h-4 flex-shrink-0" />
+                                                            <span className="break-words">{event.startDate?.toDate?.()?.toLocaleDateString() || 'TBD'}</span>
+                                                        </div>
+                                                        <div className="flex items-center space-x-1">
+                                                            <MapPin className="w-4 h-4 flex-shrink-0" />
+                                                            <span className="break-words">{event.location}</span>
+                                                        </div>
+                                                        <div className="flex items-center space-x-1">
+                                                            <Award className="w-4 h-4 flex-shrink-0" />
+                                                            <span>{event.pointsToReward} points</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between">
+                                                        {isEventCurrentlyActive(event) && (
+                                                            <div className="text-left">
+                                                                <p className="text-sm font-medium text-gray-900">
+                                                                    {event.attendees?.length || 0}{event.capacity ? `/${event.capacity}` : ''}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500">Checked In</p>
                                                             </div>
-                                                            <div className="flex items-center space-x-1">
-                                                                <MapPin className="w-4 h-4" />
-                                                                <span>{event.location}</span>
-                                                            </div>
-                                                            <div className="flex items-center space-x-1">
-                                                                <Award className="w-4 h-4" />
-                                                                <span>{event.pointsToReward} points</span>
-                                                            </div>
+                                                        )}
+                                                        <div className="flex-shrink-0">
+                                                            {!isEventCurrentlyActive(event) ? (
+                                                                <span className="px-2 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full break-words">
+                                                                    Check-in Not Available
+                                                                </span>
+                                                            ) : isUserCheckedIn(event) ? (
+                                                                <span className="px-3 py-1.5 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                                                    ✓ Checked In
+                                                                </span>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleCheckIn(event);
+                                                                    }}
+                                                                    disabled={checkingIn === event.id}
+                                                                    className="flex items-center space-x-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm min-h-[44px]"
+                                                                >
+                                                                    <UserCheck className="w-4 h-4" />
+                                                                    <span className="break-words">{checkingIn === event.id ? 'Checking In...' : 'Check In'}</span>
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center space-x-4">
-                                                    {isEventCurrentlyActive(event) && (
-                                                        <div className="text-right">
-                                                            <p className="text-sm font-medium text-gray-900">
-                                                                {event.attendees?.length || 0}{event.capacity ? `/${event.capacity}` : ''}
-                                                            </p>
-                                                            <p className="text-xs text-gray-500">Checked In</p>
+
+                                                {/* Desktop Layout */}
+                                                <div className="hidden md:flex items-center justify-between p-4">
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                            <Calendar className="w-6 h-6 text-blue-600" />
                                                         </div>
-                                                    )}
-                                                    {!isEventCurrentlyActive(event) ? (
-                                                        <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm font-medium rounded-full">
-                                                            Check-in Not Available
-                                                        </span>
-                                                    ) : isUserCheckedIn(event) ? (
-                                                        <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                                                            ✓ Checked In
-                                                        </span>
-                                                    ) : (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleCheckIn(event);
-                                                            }}
-                                                            disabled={checkingIn === event.id}
-                                                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                                                        >
-                                                            <UserCheck className="w-4 h-4" />
-                                                            <span>{checkingIn === event.id ? 'Checking In...' : 'Check In'}</span>
-                                                        </button>
-                                                    )}
+                                                        <div>
+                                                            <h3 className="font-medium text-gray-900">{event.eventName}</h3>
+                                                            <div className="flex flex-col space-y-1 md:flex-row md:items-center md:space-y-0 md:space-x-4 text-sm text-gray-500 mt-1">
+                                                                <div className="flex items-center space-x-1">
+                                                                    <Clock className="w-4 h-4 flex-shrink-0" />
+                                                                    <span className="truncate">{event.startDate?.toDate?.()?.toLocaleDateString() || 'TBD'}</span>
+                                                                </div>
+                                                                <div className="flex items-center space-x-1">
+                                                                    <MapPin className="w-4 h-4 flex-shrink-0" />
+                                                                    <span className="truncate">{event.location}</span>
+                                                                </div>
+                                                                <div className="flex items-center space-x-1">
+                                                                    <Award className="w-4 h-4 flex-shrink-0" />
+                                                                    <span>{event.pointsToReward} points</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center space-x-4">
+                                                        {isEventCurrentlyActive(event) && (
+                                                            <div className="text-right">
+                                                                <p className="text-sm font-medium text-gray-900">
+                                                                    {event.attendees?.length || 0}{event.capacity ? `/${event.capacity}` : ''}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500">Checked In</p>
+                                                            </div>
+                                                        )}
+                                                        {!isEventCurrentlyActive(event) ? (
+                                                            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm font-medium rounded-full">
+                                                                Check-in Not Available
+                                                            </span>
+                                                        ) : isUserCheckedIn(event) ? (
+                                                            <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                                                                ✓ Checked In
+                                                            </span>
+                                                        ) : (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleCheckIn(event);
+                                                                }}
+                                                                disabled={checkingIn === event.id}
+                                                                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                                            >
+                                                                <UserCheck className="w-4 h-4" />
+                                                                <span>{checkingIn === event.id ? 'Checking In...' : 'Check In'}</span>
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -617,47 +681,95 @@ export default function EventsContent() {
                                         {pastEvents.map((event) => (
                                             <div
                                                 key={event.id}
-                                                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg opacity-75 cursor-pointer hover:opacity-100 transition-opacity"
+                                                className="border border-gray-200 rounded-lg opacity-75 cursor-pointer hover:opacity-100 transition-opacity"
                                                 onClick={() => setSelectedEvent(event)}
                                             >
-                                                <div className="flex items-center space-x-4">
-                                                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                                                        <Calendar className="w-6 h-6 text-gray-400" />
+                                                {/* Mobile Layout */}
+                                                <div className="block md:hidden p-4">
+                                                    <div className="flex items-start space-x-3 mb-3">
+                                                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                            <Calendar className="w-5 h-5 text-gray-400" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <h3 className="font-medium text-gray-900 break-words pr-2">{event.eventName}</h3>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h3 className="font-medium text-gray-900">{event.eventName}</h3>
-                                                        <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                                                            <div className="flex items-center space-x-1">
-                                                                <Clock className="w-4 h-4" />
-                                                                <span>{event.startDate?.toDate?.()?.toLocaleDateString() || 'TBD'}</span>
-                                                            </div>
-                                                            <div className="flex items-center space-x-1">
-                                                                <MapPin className="w-4 h-4" />
-                                                                <span>{event.location}</span>
-                                                            </div>
-                                                            <div className="flex items-center space-x-1">
-                                                                <Award className="w-4 h-4" />
-                                                                <span>{event.pointsToReward} points</span>
-                                                            </div>
+
+                                                    <div className="grid grid-cols-1 gap-2 text-sm text-gray-500 mb-4">
+                                                        <div className="flex items-center space-x-1">
+                                                            <Clock className="w-4 h-4 flex-shrink-0" />
+                                                            <span className="break-words">{event.startDate?.toDate?.()?.toLocaleDateString() || 'TBD'}</span>
+                                                        </div>
+                                                        <div className="flex items-center space-x-1">
+                                                            <MapPin className="w-4 h-4 flex-shrink-0" />
+                                                            <span className="break-words">{event.location}</span>
+                                                        </div>
+                                                        <div className="flex items-center space-x-1">
+                                                            <Award className="w-4 h-4 flex-shrink-0" />
+                                                            <span>{event.pointsToReward} points</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="text-left">
+                                                            <p className="text-sm font-medium text-gray-900">Past Event</p>
+                                                            <p className="text-xs text-gray-500">Ended</p>
+                                                        </div>
+                                                        <div className="flex-shrink-0">
+                                                            {isUserCheckedIn(event) ? (
+                                                                <span className="px-3 py-1.5 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                                                    ✓ Attended
+                                                                </span>
+                                                            ) : (
+                                                                <span className="px-3 py-1.5 bg-gray-100 text-gray-800 text-xs font-medium rounded-full">
+                                                                    Not Attended
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center space-x-4">
-                                                    <div className="text-right">
-                                                        <p className="text-sm font-medium text-gray-900">
-                                                            Past Event
-                                                        </p>
-                                                        <p className="text-xs text-gray-500">Ended</p>
+
+                                                {/* Desktop Layout */}
+                                                <div className="hidden md:flex items-center justify-between p-4">
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                                                            <Calendar className="w-6 h-6 text-gray-400" />
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="font-medium text-gray-900">{event.eventName}</h3>
+                                                            <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
+                                                                <div className="flex items-center space-x-1">
+                                                                    <Clock className="w-4 h-4" />
+                                                                    <span>{event.startDate?.toDate?.()?.toLocaleDateString() || 'TBD'}</span>
+                                                                </div>
+                                                                <div className="flex items-center space-x-1">
+                                                                    <MapPin className="w-4 h-4" />
+                                                                    <span>{event.location}</span>
+                                                                </div>
+                                                                <div className="flex items-center space-x-1">
+                                                                    <Award className="w-4 h-4" />
+                                                                    <span>{event.pointsToReward} points</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    {isUserCheckedIn(event) ? (
-                                                        <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                                                            ✓ Attended
-                                                        </span>
-                                                    ) : (
-                                                        <span className="px-3 py-1 bg-gray-100 text-gray-800 text-sm font-medium rounded-full">
-                                                            Not Attended
-                                                        </span>
-                                                    )}
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className="text-right">
+                                                            <p className="text-sm font-medium text-gray-900">
+                                                                Past Event
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">Ended</p>
+                                                        </div>
+                                                        {isUserCheckedIn(event) ? (
+                                                            <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                                                                ✓ Attended
+                                                            </span>
+                                                        ) : (
+                                                            <span className="px-3 py-1 bg-gray-100 text-gray-800 text-sm font-medium rounded-full">
+                                                                Not Attended
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}

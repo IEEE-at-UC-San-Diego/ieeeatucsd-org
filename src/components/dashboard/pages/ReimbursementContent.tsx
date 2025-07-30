@@ -289,37 +289,77 @@ export default function ReimbursementContent() {
                         ) : (
                             <div className="space-y-4">
                                 {filteredReimbursements.map((reimbursement) => (
-                                    <div key={reimbursement.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                        <div className="flex items-center space-x-4">
-                                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                                                <Receipt className="w-6 h-6 text-green-600" />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-medium text-gray-900">{reimbursement.title}</h3>
-                                                <p className="text-sm text-gray-500 mt-1">{reimbursement.businessPurpose}</p>
-                                                <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                                                    <span>Submitted: {reimbursement.submittedAt?.toDate ? reimbursement.submittedAt.toDate().toLocaleDateString() : new Date(reimbursement.submittedAt).toLocaleDateString()}</span>
-                                                    <span>•</span>
-                                                    <span className="capitalize">{reimbursement.department}</span>
-                                                    <span>•</span>
-                                                    <span>{reimbursement.expenses.length} expense{reimbursement.expenses.length > 1 ? 's' : ''}</span>
+                                    <div key={reimbursement.id} className="border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                        {/* Mobile Layout */}
+                                        <div className="block md:hidden p-4">
+                                            <div className="flex items-start space-x-3 mb-3">
+                                                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                    <Receipt className="w-5 h-5 text-green-600" />
                                                 </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className="font-medium text-gray-900 break-words pr-2">{reimbursement.title}</h3>
+                                                    <div className="text-lg font-bold text-gray-900 mt-1">${reimbursement.totalAmount.toFixed(2)}</div>
+                                                </div>
+                                            </div>
+
+                                            <div className="mb-3">
+                                                <p className="text-sm text-gray-500 break-words leading-relaxed">{reimbursement.businessPurpose}</p>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-2 text-sm text-gray-500 mb-4">
+                                                <div className="break-words">Submitted: {reimbursement.submittedAt?.toDate ? reimbursement.submittedAt.toDate().toLocaleDateString() : new Date(reimbursement.submittedAt).toLocaleDateString()}</div>
+                                                <div className="capitalize break-words">Department: {reimbursement.department}</div>
+                                                <div>{reimbursement.expenses.length} expense{reimbursement.expenses.length > 1 ? 's' : ''}</div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between">
+                                                <div className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(reimbursement.status)}`}>
+                                                    {getStatusIcon(reimbursement.status)}
+                                                    <span className="break-words">{getStatusDisplayName(reimbursement.status)}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => setViewReimbursement(reimbursement)}
+                                                    className="p-3 text-gray-400 hover:text-blue-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="w-5 h-5" />
+                                                </button>
                                             </div>
                                         </div>
-                                        <div className="flex items-center space-x-4">
-                                            <div className="text-right">
-                                                <p className="text-lg font-bold text-gray-900">${reimbursement.totalAmount.toFixed(2)}</p>
-                                                <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(reimbursement.status)}`}>
-                                                    {getStatusIcon(reimbursement.status)}
-                                                    <span>{getStatusDisplayName(reimbursement.status)}</span>
+
+                                        {/* Desktop Layout */}
+                                        <div className="hidden md:flex items-center justify-between p-4">
+                                            <div className="flex items-center space-x-4">
+                                                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                                    <Receipt className="w-6 h-6 text-green-600" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-medium text-gray-900">{reimbursement.title}</h3>
+                                                    <p className="text-sm text-gray-500 mt-1">{reimbursement.businessPurpose}</p>
+                                                    <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
+                                                        <span>Submitted: {reimbursement.submittedAt?.toDate ? reimbursement.submittedAt.toDate().toLocaleDateString() : new Date(reimbursement.submittedAt).toLocaleDateString()}</span>
+                                                        <span>•</span>
+                                                        <span className="capitalize">{reimbursement.department}</span>
+                                                        <span>•</span>
+                                                        <span>{reimbursement.expenses.length} expense{reimbursement.expenses.length > 1 ? 's' : ''}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => setViewReimbursement(reimbursement)}
-                                                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                                            >
-                                                <Eye className="w-5 h-5" />
-                                            </button>
+                                            <div className="flex items-center space-x-4">
+                                                <div className="text-right">
+                                                    <p className="text-lg font-bold text-gray-900">${reimbursement.totalAmount.toFixed(2)}</p>
+                                                    <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(reimbursement.status)}`}>
+                                                        {getStatusIcon(reimbursement.status)}
+                                                        <span>{getStatusDisplayName(reimbursement.status)}</span>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => setViewReimbursement(reimbursement)}
+                                                    className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                                                >
+                                                    <Eye className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
