@@ -36,7 +36,8 @@ interface ConstitutionHeaderProps {
     onViewChange: (view: 'editor' | 'preview' | 'audit') => void;
     onPrint: () => void;
     sections: ConstitutionSection[];
-    onSelectSection: (sectionId: string) => void;
+    onSelectSection: (sectionId: string, pageNumber?: number) => void;
+    onSearchTermChange?: (term: string) => void;
 }
 
 const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
@@ -46,7 +47,8 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
     onViewChange,
     onPrint,
     sections,
-    onSelectSection
+    onSelectSection,
+    onSearchTermChange
 }) => {
     return (
         <div className="mb-4 md:mb-6 lg:mb-8">
@@ -63,6 +65,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                     <ConstitutionSearch
                         sections={sections}
                         onSelectSection={onSelectSection}
+                        onSearchTermChange={onSearchTermChange}
                     />
                 </div>
 
@@ -195,6 +198,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                     <ConstitutionSearch
                         sections={sections}
                         onSelectSection={onSelectSection}
+                        onSearchTermChange={onSearchTermChange}
                     />
                 </div>
 
@@ -258,6 +262,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         <ConstitutionSearch
                             sections={sections}
                             onSelectSection={onSelectSection}
+                            onSearchTermChange={onSearchTermChange}
                         />
                     </div>
                 </div>

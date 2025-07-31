@@ -35,6 +35,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
     const [editingSection, setEditingSection] = useState<string | null>(null);
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [currentPage, setCurrentPage] = useState(1);
+    const [highlightedSectionId, setHighlightedSectionId] = useState<string>('');
 
     // Removed collaboration functionality
 
@@ -152,6 +153,9 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                         if (pageNumber && currentView === 'preview') {
                             // If we're in preview mode and have a page number, navigate to that page
                             setCurrentPage(pageNumber);
+                            // Highlight the selected section temporarily
+                            setHighlightedSectionId(sectionId);
+                            setTimeout(() => setHighlightedSectionId(''), 3000); // Clear after 3 seconds
                         } else {
                             // Otherwise, switch to editor view
                             setCurrentView('editor');
@@ -173,6 +177,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                             }
                         }
                     }}
+                    onSearchTermChange={() => { }} // No longer need to track search term
                 />
 
                 {/* Version Editor */}
@@ -229,6 +234,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                                     onPrint={handlePrint}
                                     currentPage={currentPage}
                                     onPageChange={setCurrentPage}
+                                    highlightedSectionId={highlightedSectionId}
                                 />
                             </div>
                         ) : (

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { ConstitutionSection } from "../types/firestore";
 import { getSectionDisplayTitle } from "../utils/constitutionUtils";
 import {
@@ -14,47 +14,60 @@ export interface SearchResult {
   pageNumber?: number;
 }
 
-// Function to find which page a section appears on
-const findSectionPage = (
-  sectionId: string,
+// Memoized function to create section-to-page mapping
+const createSectionPageMap = (
   sections: ConstitutionSection[],
-  showTOC: boolean = true,
-): number | null => {
+): Map<string, number> => {
   const contentPages = generateContentPages(sections);
-
-  // Calculate TOC pages
   const tableOfContents = generateTableOfContents(sections);
   const tocPagesNeeded = Math.ceil(tableOfContents.length / 25);
+  const contentStartPage = 2 + tocPagesNeeded; // Content starts after cover page (1) and TOC pages
 
-  // Content starts after cover page (1) and TOC pages
-  const contentStartPage = showTOC ? 2 + tocPagesNeeded : 2;
+  const sectionPageMap = new Map<string, number>();
 
-  // Find which content page contains the section
-  for (let pageIndex = 0; pageIndex < contentPages.length; pageIndex++) {
-    const page = contentPages[pageIndex];
-    if (page.some((section) => section.id === sectionId)) {
-      return contentStartPage + pageIndex;
-    }
-  }
+  contentPages.forEach((page, pageIndex) => {
+    const actualPageNum = contentStartPage + pageIndex;
+    page.forEach((section) => {
+      if (!sectionPageMap.has(section.id)) {
+        sectionPageMap.set(section.id, actualPageNum);
+      }
+    });
+  });
 
-  return null;
+  return sectionPageMap;
 };
 
 export const useConstitutionSearch = (sections: ConstitutionSection[]) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
+  // Debounce search query for results calculation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 150); // 150ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Memoize the section page map to avoid recalculating on every search
+  const sectionPageMap = useMemo(
+    () => createSectionPageMap(sections),
+    [sections],
+  );
+
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim() || searchQuery.length < 2) {
+    if (!debouncedQuery.trim() || debouncedQuery.length < 2) {
       return [];
     }
 
-    const query = searchQuery.toLowerCase().trim();
+    const query = debouncedQuery.toLowerCase().trim();
     const results: SearchResult[] = [];
 
     sections.forEach((section) => {
       const displayTitle = getSectionDisplayTitle(section, sections);
-      const pageNumber = findSectionPage(section.id, sections);
+      const pageNumber = sectionPageMap.get(section.id) || null;
 
       // Search in title
       if (section.title.toLowerCase().includes(query)) {
@@ -102,7 +115,7 @@ export const useConstitutionSearch = (sections: ConstitutionSection[]) => {
       }
       return a.section.order - b.section.order;
     });
-  }, [searchQuery, sections]);
+  }, [debouncedQuery, sections]);
 
   const clearSearch = () => {
     setSearchQuery("");

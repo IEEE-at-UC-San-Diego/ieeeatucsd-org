@@ -6,12 +6,14 @@ import { useConstitutionSearch, type SearchResult } from '../hooks/useConstituti
 interface ConstitutionSearchProps {
   sections: ConstitutionSection[];
   onSelectSection: (sectionId: string, pageNumber?: number) => void;
+  onSearchTermChange?: (term: string) => void;
   className?: string;
 }
 
 const ConstitutionSearch: React.FC<ConstitutionSearchProps> = ({
   sections,
   onSelectSection,
+  onSearchTermChange,
   className = '',
 }) => {
   const {
@@ -133,7 +135,7 @@ const ConstitutionSearch: React.FC<ConstitutionSearchProps> = ({
                           {result.displayTitle}
                         </div>
                         {result.pageNumber && (
-                          <div className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                          <div className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded flex items-center justify-center min-w-[60px]">
                             Page {result.pageNumber}
                           </div>
                         )}

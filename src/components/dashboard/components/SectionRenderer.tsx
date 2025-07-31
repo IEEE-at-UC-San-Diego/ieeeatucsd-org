@@ -5,6 +5,7 @@ import { getSectionDisplayTitle, getSubsectionIndentLevel, toRomanNumeral } from
 interface SectionRendererProps {
     section: ConstitutionSection;
     allSections: ConstitutionSection[];
+    highlightedSectionId?: string;
 }
 
 // Enhanced content parsing function to handle markdown-like formatting
@@ -21,18 +22,19 @@ const parseContent = (content: string) => {
                 key: `image-${partIndex}`
             };
         } else if (part.trim()) {
-            // Split by double newlines to get paragraphs/list groups
+            // Split by double newlines to get paragraphs/list groups, but preserve spacing
             const paragraphs = part.split('\n\n').filter(p => p.trim());
 
             return paragraphs.map((paragraph, pIndex) => {
-                const trimmed = paragraph.trim();
+                // Don't trim here to preserve leading/trailing whitespace
+                const content = paragraph;
 
                 // Check if this is a numbered list
-                if (/^\d+\.\s/.test(trimmed)) {
-                    const listItems = trimmed.split('\n').filter(line => line.trim());
+                if (/^\d+\.\s/.test(content.trim())) {
+                    const listItems = content.split('\n').filter((line: string) => line.trim());
                     return {
                         type: 'numbered-list',
-                        items: listItems.map(item => {
+                        items: listItems.map((item: string) => {
                             const match = item.match(/^(\d+)\.\s(.+)$/);
                             if (match) {
                                 return {
@@ -47,11 +49,11 @@ const parseContent = (content: string) => {
                 }
 
                 // Check if this is a bullet list
-                if (/^[-*]\s/.test(trimmed)) {
-                    const listItems = trimmed.split('\n').filter(line => line.trim());
+                if (/^[-*]\s/.test(content.trim())) {
+                    const listItems = content.split('\n').filter((line: string) => line.trim());
                     return {
                         type: 'bullet-list',
-                        items: listItems.map(item => {
+                        items: listItems.map((item: string) => {
                             const match = item.match(/^[-*]\s(.+)$/);
                             if (match) {
                                 return formatInlineText(match[1]);
@@ -62,10 +64,20 @@ const parseContent = (content: string) => {
                     };
                 }
 
+                // Check if this looks like a tree structure (contains tree characters)
+                const treeChars = /[├└│┌┐┘┌┬┴┼─]/;
+                if (treeChars.test(content)) {
+                    return {
+                        type: 'tree-structure',
+                        content: formatInlineText(content),
+                        key: `tree-${partIndex}-${pIndex}`
+                    };
+                }
+
                 // Regular paragraph
                 return {
                     type: 'paragraph',
-                    content: formatInlineText(trimmed),
+                    content: formatInlineText(content),
                     key: `para-${partIndex}-${pIndex}`
                 };
             });
@@ -85,7 +97,7 @@ const formatInlineText = (text: string) => {
     return text;
 };
 
-const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections }) => {
+const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections, highlightedSectionId = '' }) => {
     const getDisplayTitle = () => {
         // Use the same title generation logic as PDF for consistency
         switch (section.type) {
@@ -227,7 +239,8 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
                             {item.items.map((listItem: any, idx: number) => (
                                 <li key={idx} style={{
                                     marginBottom: '4px',  // Reduced spacing
-                                    textAlign: 'justify'
+                                    textAlign: 'justify',
+                                    whiteSpace: 'pre-wrap' // Preserve whitespace
                                 }}>
                                     <span dangerouslySetInnerHTML={{ __html: listItem.content }} />
                                 </li>
@@ -248,12 +261,36 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
                             {item.items.map((listItem: any, idx: number) => (
                                 <li key={idx} style={{
                                     marginBottom: '4px',  // Reduced spacing
-                                    textAlign: 'justify'
+                                    textAlign: 'justify',
+                                    whiteSpace: 'pre-wrap' // Preserve whitespace
                                 }}>
                                     <span dangerouslySetInnerHTML={{ __html: listItem }} />
                                 </li>
                             ))}
                         </ul>
+                    );
+
+                case 'tree-structure':
+                    return (
+                        <pre key={item.key} style={{
+                            fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                            fontSize: '10pt',     // Slightly smaller for better alignment
+                            lineHeight: '1.4',    // Tighter for tree structures
+                            marginBottom: '10px',
+                            textAlign: 'left',    // Left align for tree structures
+                            textIndent: '0',
+                            orphans: 2,
+                            widows: 2,
+                            color: '#444',
+                            whiteSpace: 'pre',    // Preserve exact spacing
+                            overflow: 'auto',     // Handle long lines
+                            background: '#f8f9fa', // Light background for distinction
+                            padding: '8px',
+                            borderRadius: '4px',
+                            border: '1px solid #e9ecef'
+                        }}>
+                            <span dangerouslySetInnerHTML={{ __html: item.content }} />
+                        </pre>
                     );
 
                 case 'paragraph':
@@ -268,7 +305,8 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
                             textIndent: '0',      // Remove text indentation
                             orphans: 2,
                             widows: 2,
-                            color: '#444'         // Softer dark gray
+                            color: '#444',        // Softer dark gray
+                            whiteSpace: 'pre-wrap' // Preserve whitespace and line breaks
                         }}>
                             <span dangerouslySetInnerHTML={{ __html: item.content }} />
                         </p>
@@ -293,12 +331,22 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections 
         }
     };
 
-    const HeadingTag = getHeadingTag() as keyof JSX.IntrinsicElements;
+    const HeadingTag = getHeadingTag() as keyof React.JSX.IntrinsicElements;
+
+    // Check if this section should be highlighted
+    const isHighlighted = highlightedSectionId === section.id;
 
     return (
         <div style={{
             marginBottom: section.type === 'article' ? '12px' : '20px',  // Less spacing after articles
-            ...getIndentStyle()
+            ...getIndentStyle(),
+            ...(isHighlighted && {
+                backgroundColor: '#fef08a',
+                padding: '8px',
+                borderRadius: '4px',
+                border: '2px solid #f59e0b',
+                animation: 'section-highlight-fade 3s ease-out'
+            })
         }}>
             <HeadingTag style={getTitleStyle()}>
                 {getDisplayTitle()}

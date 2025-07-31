@@ -244,11 +244,12 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
                                             setEditContent(e.target.value);
                                         }}
                                         rows={14}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-serif text-sm leading-relaxed transition-colors resize-y min-h-[300px]"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm leading-relaxed transition-colors resize-y min-h-[300px]"
                                         placeholder="Enter the section content...
 
 Tip: Use double line breaks to separate paragraphs.
-To add an image: [IMAGE:description]"
+To add an image: [IMAGE:description]
+For tree structures, use characters like ├── └── │ for proper alignment."
                                     />
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                         <button
@@ -342,13 +343,26 @@ const renderContentWithImages = (content: string) => {
                 </div>
             );
         } else if (part.trim()) {
-            return part.split('\n\n').map((paragraph, pIndex) => (
-                paragraph.trim() && (
-                    <p key={`${index}-${pIndex}`} className="mb-6 text-base leading-relaxed">
-                        {paragraph.trim()}
-                    </p>
-                )
-            ));
+            return part.split('\n\n').map((paragraph, pIndex) => {
+                if (paragraph.trim()) {
+                    // Check if this looks like a tree structure
+                    const treeChars = /[├└│┌┐┘┌┬┴┼─]/;
+                    if (treeChars.test(paragraph)) {
+                        return (
+                            <pre key={`${index}-${pIndex}`} className="mb-6 text-sm leading-tight font-mono bg-gray-50 p-4 rounded-lg border overflow-auto">
+                                {paragraph}
+                            </pre>
+                        );
+                    } else {
+                        return (
+                            <p key={`${index}-${pIndex}`} className="mb-6 text-base leading-relaxed whitespace-pre-wrap">
+                                {paragraph}
+                            </p>
+                        );
+                    }
+                }
+                return null;
+            });
         }
         return null;
     }).filter(Boolean);

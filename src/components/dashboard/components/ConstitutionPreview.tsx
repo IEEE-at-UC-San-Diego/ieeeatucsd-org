@@ -19,6 +19,7 @@ interface ConstitutionPreviewProps {
     pdfCaptureMode?: boolean;
     enableExportOptimizations?: boolean;
     printMode?: boolean;
+    highlightedSectionId?: string;
 }
 
 const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
@@ -29,7 +30,8 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     onPageChange,
     pdfCaptureMode = false,
     enableExportOptimizations = false,
-    printMode = false
+    printMode = false,
+    highlightedSectionId = ''
 }) => {
     const [showTableOfContents, setShowTableOfContents] = useState(true);
     const [internalPdfCaptureMode, setInternalPdfCaptureMode] = useState(pdfCaptureMode);
@@ -115,6 +117,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                                 key={section.id}
                                 section={section}
                                 allSections={sections}
+                                highlightedSectionId={highlightedSectionId}
                             />
                         ))}
                     </div>
@@ -329,6 +332,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                         key={section.id}
                         section={section}
                         allSections={sections}
+                        highlightedSectionId={highlightedSectionId}
                     />
                 ))}
             </div>
@@ -571,6 +575,17 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 
                     .print-only { display: none; }
                     .screen-only { display: block; }
+
+                    @keyframes section-highlight-fade {
+                        0% {
+                            background-color: #fef08a;
+                            border-color: #f59e0b;
+                        }
+                        100% {
+                            background-color: transparent;
+                            border-color: transparent;
+                        }
+                    }
                 `
             }} />
 
