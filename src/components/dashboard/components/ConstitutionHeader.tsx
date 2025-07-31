@@ -10,6 +10,7 @@ import {
     History
 } from 'lucide-react';
 import type { Constitution, ConstitutionSection } from '../types/firestore';
+import ConstitutionSearch from './ConstitutionSearch';
 
 // Simple Print Button Component
 interface PrintButtonProps {
@@ -34,6 +35,8 @@ interface ConstitutionHeaderProps {
     currentView: 'editor' | 'preview' | 'audit';
     onViewChange: (view: 'editor' | 'preview' | 'audit') => void;
     onPrint: () => void;
+    sections: ConstitutionSection[];
+    onSelectSection: (sectionId: string) => void;
 }
 
 const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
@@ -41,7 +44,9 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
     lastSaved,
     currentView,
     onViewChange,
-    onPrint
+    onPrint,
+    sections,
+    onSelectSection
 }) => {
     return (
         <div className="mb-4 md:mb-6 lg:mb-8">
@@ -52,9 +57,13 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         <FileText className="h-6 w-6 text-blue-600" />
                         Constitution Builder
                     </h1>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-gray-600 mt-1 mb-3">
                         Build and manage the organization's constitution
                     </p>
+                    <ConstitutionSearch
+                        sections={sections}
+                        onSelectSection={onSelectSection}
+                    />
                 </div>
 
                 {/* Save Status - Mobile */}
@@ -181,6 +190,14 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                     </div>
                 </div>
 
+                {/* Search - Tablet */}
+                <div className="max-w-md">
+                    <ConstitutionSearch
+                        sections={sections}
+                        onSelectSection={onSelectSection}
+                    />
+                </div>
+
                 <div className="flex items-center justify-between gap-4">
                     {/* View Toggle - Tablet */}
                     <div className="flex bg-gray-100 rounded-lg p-1">
@@ -229,14 +246,20 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
 
             {/* Desktop Layout - Original horizontal layout */}
             <div className="hidden lg:flex items-center justify-between">
-                <div>
+                <div className="flex-1 mr-8">
                     <h1 className="text-2xl xl:text-3xl font-bold text-gray-900 flex items-center gap-3">
                         <FileText className="h-7 w-7 xl:h-8 xl:w-8 text-blue-600" />
                         Constitution Builder
                     </h1>
-                    <p className="text-gray-600 mt-2">
+                    <p className="text-gray-600 mt-2 mb-4">
                         Collaboratively build and manage the organization's constitution
                     </p>
+                    <div className="max-w-md">
+                        <ConstitutionSearch
+                            sections={sections}
+                            onSelectSection={onSelectSection}
+                        />
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-4">

@@ -145,6 +145,34 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                     currentView={currentView}
                     onViewChange={setCurrentView}
                     onPrint={handlePrint}
+                    sections={sections}
+                    onSelectSection={(sectionId, pageNumber) => {
+                        setSelectedSection(sectionId);
+
+                        if (pageNumber && currentView === 'preview') {
+                            // If we're in preview mode and have a page number, navigate to that page
+                            setCurrentPage(pageNumber);
+                        } else {
+                            // Otherwise, switch to editor view
+                            setCurrentView('editor');
+
+                            // Auto-expand parent sections in sidebar
+                            const section = sections.find(s => s.id === sectionId);
+                            if (section) {
+                                const newExpandedSections = new Set(expandedSections);
+
+                                // Find all parent sections and expand them
+                                let currentParentId = section.parentId;
+                                while (currentParentId) {
+                                    newExpandedSections.add(currentParentId);
+                                    const parentSection = sections.find(s => s.id === currentParentId);
+                                    currentParentId = parentSection?.parentId;
+                                }
+
+                                setExpandedSections(newExpandedSections);
+                            }
+                        }
+                    }}
                 />
 
                 {/* Version Editor */}

@@ -27,6 +27,8 @@ export const useConstitutionData = () => {
   >("idle");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [constitutionLoaded, setConstitutionLoaded] = useState(false);
+  const [sectionsLoaded, setSectionsLoaded] = useState(false);
 
   const db = getFirestore();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -39,6 +41,11 @@ export const useConstitutionData = () => {
   useEffect(() => {
     const initializeConstitution = async () => {
       if (!user) return;
+
+      // Reset loading flags when starting initialization
+      setConstitutionLoaded(false);
+      setSectionsLoaded(false);
+      setIsLoading(true);
 
       try {
         const constitutionRef = doc(db, "constitutions", constitutionId);
@@ -66,6 +73,7 @@ export const useConstitutionData = () => {
           if (doc.exists()) {
             setConstitution({ id: doc.id, ...doc.data() } as Constitution);
           }
+          setConstitutionLoaded(true);
         });
 
         const sectionsQuery = query(
@@ -79,9 +87,8 @@ export const useConstitutionData = () => {
             ...doc.data(),
           })) as ConstitutionSection[];
           setSections(sectionsData);
+          setSectionsLoaded(true);
         });
-
-        setIsLoading(false);
 
         return () => {
           unsubscribeConstitution();
@@ -89,12 +96,20 @@ export const useConstitutionData = () => {
         };
       } catch (error) {
         console.error("Error initializing constitution:", error);
-        setIsLoading(false);
+        setConstitutionLoaded(true);
+        setSectionsLoaded(true);
       }
     };
 
     initializeConstitution();
   }, [user, db]);
+
+  // Update loading state when both constitution and sections are loaded
+  useEffect(() => {
+    if (constitutionLoaded && sectionsLoaded) {
+      setIsLoading(false);
+    }
+  }, [constitutionLoaded, sectionsLoaded]);
 
   // Removed collaboration functionality
 
