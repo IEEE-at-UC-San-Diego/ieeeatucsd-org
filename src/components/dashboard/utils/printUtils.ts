@@ -416,8 +416,10 @@ export const generatePrintContent = (
         }
 
         return `<div class="toc-entry ${getIndentClass(section)}">
-                <span>${title}</span>
-                <span style="margin-left: auto;">${pageNum}</span>
+                <a href="#section-${section.id}" style="text-decoration: none; color: inherit; display: flex; justify-content: space-between; width: 100%;">
+                    <span>${title}</span>
+                    <span style="margin-left: auto;">${pageNum}</span>
+                </a>
             </div>`;
       })
       .join("");
@@ -463,7 +465,7 @@ export const generatePrintContent = (
   if (preamble) {
     content += `
         <div class="constitution-page">
-            <div class="constitution-section">
+            <div class="constitution-section" id="section-${preamble.id}">
                 <h2 class="article-title">${getSectionPrintTitle(preamble, 0, sections)}</h2>
                 ${renderSectionContent(preamble)}
             </div>
@@ -478,13 +480,13 @@ export const generatePrintContent = (
 
     content += `
         <div class="constitution-page">
-            <div class="constitution-section">
+            <div class="constitution-section" id="section-${article.id}">
                 <h2 class="article-title">${getSectionPrintTitle(article, index, sections)}</h2>
             </div>`;
 
     articleSections.forEach((section, secIndex) => {
       content += `
-            <div class="constitution-section">
+            <div class="constitution-section" id="section-${section.id}">
                 <h3 class="section-title">${getSectionPrintTitle(section, secIndex, sections)}</h3>
                 ${renderSectionContent(section)}
             </div>`;
@@ -499,7 +501,7 @@ export const generatePrintContent = (
           const indentStyle =
             indentLevel > 0 ? `margin-left: ${indentLevel * 24}px;` : "";
           content += `
-            <div class="constitution-section" style="${indentStyle}">
+            <div class="constitution-section" id="section-${subsection.id}" style="${indentStyle}">
                 <h4 class="subsection-title">${getSectionPrintTitle(subsection, 0, sections)}</h4>
                 ${renderSectionContent(subsection)}
             </div>`;
@@ -519,7 +521,7 @@ export const generatePrintContent = (
   amendments.forEach((amendment, index) => {
     content += `
         <div class="constitution-page">
-            <div class="constitution-section">
+            <div class="constitution-section" id="section-${amendment.id}">
                 <h2 class="article-title">${getSectionPrintTitle(amendment, index, sections)}</h2>
                 ${renderSectionContent(amendment)}
             </div>

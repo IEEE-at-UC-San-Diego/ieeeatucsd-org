@@ -280,12 +280,22 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                             return (
                                 <div key={section.id} className="flex justify-between items-start">
                                     <div className={`flex-1 ${getIndentClass(section)}`}>
-                                        <span className="text-gray-900">
+                                        <button
+                                            onClick={() => onPageChange(pageNum)}
+                                            className="text-left text-gray-900 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
+                                            style={{ fontSize: 'inherit', fontFamily: 'inherit' }}
+                                        >
                                             {getDisplayTitle(section)}
-                                        </span>
+                                        </button>
                                     </div>
                                     <div className="flex-shrink-0 ml-4">
-                                        <span className="text-gray-700">{pageNum}</span>
+                                        <button
+                                            onClick={() => onPageChange(pageNum)}
+                                            className="text-gray-700 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
+                                            style={{ fontSize: 'inherit', fontFamily: 'inherit' }}
+                                        >
+                                            {pageNum}
+                                        </button>
                                     </div>
                                 </div>
                             );

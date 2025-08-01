@@ -337,17 +337,20 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections,
     const isHighlighted = highlightedSectionId === section.id;
 
     return (
-        <div style={{
-            marginBottom: section.type === 'article' ? '12px' : '20px',  // Less spacing after articles
-            ...getIndentStyle(),
-            ...(isHighlighted && {
-                backgroundColor: '#fef08a',
-                padding: '8px',
-                borderRadius: '4px',
-                border: '2px solid #f59e0b',
-                animation: 'section-highlight-fade 3s ease-out'
-            })
-        }}>
+        <div
+            id={`section-${section.id}`}
+            style={{
+                marginBottom: section.type === 'article' ? '12px' : '20px',  // Less spacing after articles
+                ...getIndentStyle(),
+                ...(isHighlighted && {
+                    backgroundColor: '#fef08a',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    border: '2px solid #f59e0b',
+                    animation: 'section-highlight-fade 3s ease-out'
+                })
+            }}
+        >
             <HeadingTag style={getTitleStyle()}>
                 {getDisplayTitle()}
             </HeadingTag>
