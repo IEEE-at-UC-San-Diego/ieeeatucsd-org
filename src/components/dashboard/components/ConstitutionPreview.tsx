@@ -190,15 +190,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                         day: 'numeric'
                     })}
                 </p>
-                <p style={{
-                    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                    fontSize: '12pt',
-                    textAlign: 'center',
-                    textIndent: '0',
-                    color: '#666'
-                }}>
-                    Version {constitution?.version || 1}
-                </p>
+
                 <p style={{
                     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                     fontSize: '11pt',

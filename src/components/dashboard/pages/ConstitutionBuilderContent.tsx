@@ -7,7 +7,7 @@ import ConstitutionSidebar from '../components/ConstitutionSidebar';
 import ConstitutionEditor from '../components/ConstitutionEditor';
 import ConstitutionPreview from '../components/ConstitutionPreview';
 import { ConstitutionAuditLog } from '../components/ConstitutionAuditLog';
-import VersionEditor from '../components/VersionEditor';
+
 import SafariBrowserBlock from '../components/SafariBrowserBlock';
 import { useSafariDetection } from '../hooks/useBrowserDetection';
 import { Skeleton } from '../../ui/skeleton';
@@ -25,7 +25,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
         addSection,
         updateSection,
         deleteSection,
-        updateConstitutionVersion,
+
         constitutionId,
         user
     } = useConstitutionData();
@@ -180,13 +180,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                     onSearchTermChange={() => { }} // No longer need to track search term
                 />
 
-                {/* Version Editor */}
-                <div className="mb-4 flex justify-center md:justify-end">
-                    <VersionEditor
-                        constitution={constitution}
-                        onUpdateVersion={updateConstitutionVersion}
-                    />
-                </div>
+
             </div>
 
             <div className="max-w-7xl mx-auto">
@@ -204,7 +198,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                                 onAddSection={addSection}
                                 updateSection={updateSection}
                                 currentUserId={user?.uid}
-                                constitutionVersion={constitution?.version}
+
                             />
                         </div>
 

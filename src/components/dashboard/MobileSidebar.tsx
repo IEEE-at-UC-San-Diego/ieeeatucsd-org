@@ -196,7 +196,7 @@ export function MobileSidebar({ currentPath = '', isOpen, onClose }: MobileSideb
     if (!isOpen) return null;
 
     return (
-        <div className="md:hidden fixed inset-0 z-50 flex">
+        <div className="lg:hidden fixed inset-0 z-50 flex">
             {/* Backdrop */}
             <div
                 className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
@@ -248,8 +248,8 @@ export function MobileSidebar({ currentPath = '', isOpen, onClose }: MobileSideb
                                                         href={item.href}
                                                         onClick={handleNavClick}
                                                         className={`flex items-center p-4 text-base font-medium rounded-lg transition-colors min-h-[44px] ${isActive
-                                                                ? 'bg-blue-50 text-blue-700 border-r-4 border-blue-600'
-                                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                            ? 'bg-blue-50 text-blue-700 border-r-4 border-blue-600'
+                                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                                             }`}
                                                     >
                                                         <item.icon className={`w-6 h-6 mr-4 ${isActive ? 'text-blue-600' : 'text-gray-400'

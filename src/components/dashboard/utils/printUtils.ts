@@ -445,9 +445,7 @@ export const generatePrintContent = (
                   day: "numeric",
                 })}
             </p>
-            <p style="font-size: 12pt; text-indent: 0; color: #666; text-align: center;">
-                Version ${constitution?.version || 1}
-            </p>
+
             <p style="font-size: 11pt; text-indent: 0; color: #888; text-align: center; margin-top: 8px;">
                 Adopted since September 2006
             </p>

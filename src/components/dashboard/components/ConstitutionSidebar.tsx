@@ -21,7 +21,7 @@ interface ConstitutionSidebarProps {
     onAddSection: (type: ConstitutionSection['type'], parentId?: string, title?: string, content?: string) => void;
     updateSection: (sectionId: string, updates: Partial<ConstitutionSection>) => void;
     currentUserId?: string;
-    constitutionVersion?: number;
+
 }
 
 const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
@@ -32,8 +32,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
     onToggleExpand,
     onAddSection,
     updateSection,
-    currentUserId,
-    constitutionVersion
+    currentUserId
 }) => {
     const [showAddSection, setShowAddSection] = useState(false);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -123,7 +122,6 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-3">
                         <div className="min-w-0 flex-1">
                             <h2 className="font-semibold text-gray-900 text-sm md:text-base">Document Structure</h2>
-                            <p className="text-xs text-gray-500">Version {constitutionVersion || 1}</p>
                             <p className="text-xs text-gray-400 hidden md:block">Adopted since September 2006</p>
                         </div>
                         {/* Add Section button - hidden on desktop (lg+), shown on mobile/tablet */}

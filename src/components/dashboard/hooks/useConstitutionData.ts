@@ -57,7 +57,7 @@ export const useConstitutionData = () => {
             title: "IEEE at UC San Diego Constitution",
             organizationName: "IEEE at UC San Diego",
             sections: [],
-            version: 1,
+            version: 1, // Keep for backward compatibility but don't display
             status: "draft",
             createdAt: Timestamp.now(),
             lastModified: Timestamp.now(),
@@ -270,25 +270,6 @@ export const useConstitutionData = () => {
     }
   };
 
-  const updateConstitutionVersion = async (version: number) => {
-    if (!user || !constitutionId) return;
-
-    try {
-      setSaveStatus("saving");
-      const constitutionRef = doc(db, "constitutions", constitutionId);
-      await updateDoc(constitutionRef, {
-        version,
-        lastModified: Timestamp.now(),
-        lastModifiedBy: user.uid,
-      });
-      setSaveStatus("saved");
-      setLastSaved(new Date());
-    } catch (error) {
-      console.error("Error updating constitution version:", error);
-      setSaveStatus("error");
-    }
-  };
-
   return {
     // State
     constitution,
@@ -301,7 +282,6 @@ export const useConstitutionData = () => {
     addSection,
     updateSection,
     deleteSection,
-    updateConstitutionVersion,
 
     // Constants
     constitutionId,
