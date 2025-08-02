@@ -1930,7 +1930,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                                                                     <input
                                                                         type="number"
                                                                         placeholder="Qty"
-                                                                        value={item.quantity === 1 ? '' : item.quantity}
+                                                                        value={item.quantity}
                                                                         onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'quantity', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
                                                                         className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                     />
