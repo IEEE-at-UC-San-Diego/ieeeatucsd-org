@@ -7,11 +7,15 @@ import ConstitutionSidebar from '../components/ConstitutionSidebar';
 import ConstitutionEditor from '../components/ConstitutionEditor';
 import ConstitutionPreview from '../components/ConstitutionPreview';
 import { ConstitutionAuditLog } from '../components/ConstitutionAuditLog';
-import VersionEditor from '../components/VersionEditor';
+
+import SafariBrowserBlock from '../components/SafariBrowserBlock';
+import { useSafariDetection } from '../hooks/useBrowserDetection';
+import { Skeleton } from '../../ui/skeleton';
 
 interface ConstitutionBuilderContentProps { }
 
 const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = () => {
+    const { isSafari, isLoading: browserLoading } = useSafariDetection();
     const {
         constitution,
         sections,
@@ -21,7 +25,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
         addSection,
         updateSection,
         deleteSection,
-        updateConstitutionVersion,
+
         constitutionId,
         user
     } = useConstitutionData();
@@ -31,6 +35,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
     const [editingSection, setEditingSection] = useState<string | null>(null);
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [currentPage, setCurrentPage] = useState(1);
+    const [highlightedSectionId, setHighlightedSectionId] = useState<string>('');
 
     // Removed collaboration functionality
 
@@ -77,8 +82,57 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+            <div className="flex h-screen bg-gray-50">
+                {/* Sidebar Skeleton */}
+                <div className="w-80 bg-white border-r border-gray-200 p-6">
+                    <Skeleton className="h-8 w-48 mb-6" />
+                    <div className="space-y-4">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <div key={i} className="space-y-2">
+                                <Skeleton className="h-6 w-full" />
+                                <div className="ml-4 space-y-1">
+                                    <Skeleton className="h-4 w-3/4" />
+                                    <Skeleton className="h-4 w-1/2" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Main Content Skeleton */}
+                <div className="flex-1 flex flex-col">
+                    {/* Header */}
+                    <div className="bg-white border-b border-gray-200 p-6">
+                        <Skeleton className="h-8 w-64 mb-2" />
+                        <Skeleton className="h-4 w-96" />
+                    </div>
+
+                    {/* Editor Area */}
+                    <div className="flex-1 p-6">
+                        <div className="bg-white rounded-lg border border-gray-200 p-6 h-full">
+                            <Skeleton className="h-6 w-48 mb-4" />
+                            <div className="space-y-4">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-5/6" />
+                                <Skeleton className="h-4 w-4/5" />
+                                <Skeleton className="h-32 w-full" />
+                                <div className="flex space-x-2">
+                                    <Skeleton className="h-10 w-20" />
+                                    <Skeleton className="h-10 w-20" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Block Safari users completely
+    if (!browserLoading && isSafari) {
+        return (
+            <div className="w-full max-w-none p-4 md:p-6">
+                <SafariBrowserBlock />
             </div>
         );
     }
@@ -92,15 +146,41 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                     currentView={currentView}
                     onViewChange={setCurrentView}
                     onPrint={handlePrint}
+                    sections={sections}
+                    onSelectSection={(sectionId, pageNumber) => {
+                        setSelectedSection(sectionId);
+
+                        if (pageNumber && currentView === 'preview') {
+                            // If we're in preview mode and have a page number, navigate to that page
+                            setCurrentPage(pageNumber);
+                            // Highlight the selected section temporarily
+                            setHighlightedSectionId(sectionId);
+                            setTimeout(() => setHighlightedSectionId(''), 3000); // Clear after 3 seconds
+                        } else {
+                            // Otherwise, switch to editor view
+                            setCurrentView('editor');
+
+                            // Auto-expand parent sections in sidebar
+                            const section = sections.find(s => s.id === sectionId);
+                            if (section) {
+                                const newExpandedSections = new Set(expandedSections);
+
+                                // Find all parent sections and expand them
+                                let currentParentId = section.parentId;
+                                while (currentParentId) {
+                                    newExpandedSections.add(currentParentId);
+                                    const parentSection = sections.find(s => s.id === currentParentId);
+                                    currentParentId = parentSection?.parentId;
+                                }
+
+                                setExpandedSections(newExpandedSections);
+                            }
+                        }
+                    }}
+                    onSearchTermChange={() => { }} // No longer need to track search term
                 />
 
-                {/* Version Editor */}
-                <div className="mb-4 flex justify-center md:justify-end">
-                    <VersionEditor
-                        constitution={constitution}
-                        onUpdateVersion={updateConstitutionVersion}
-                    />
-                </div>
+
             </div>
 
             <div className="max-w-7xl mx-auto">
@@ -118,7 +198,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                                 onAddSection={addSection}
                                 updateSection={updateSection}
                                 currentUserId={user?.uid}
-                                constitutionVersion={constitution?.version}
+
                             />
                         </div>
 
@@ -148,6 +228,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                                     onPrint={handlePrint}
                                     currentPage={currentPage}
                                     onPageChange={setCurrentPage}
+                                    highlightedSectionId={highlightedSectionId}
                                 />
                             </div>
                         ) : (

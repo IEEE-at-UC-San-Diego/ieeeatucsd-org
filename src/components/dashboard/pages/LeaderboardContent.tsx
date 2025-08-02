@@ -6,6 +6,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/client';
 import DashboardHeader from '../DashboardHeader';
 import { PublicProfileService, type PublicProfile } from '../services/publicProfile';
+import { LeaderboardTableSkeleton, MetricCardSkeleton, CardSkeleton } from '../../ui/loading';
 
 interface LeaderboardUser {
     id: string;
@@ -171,57 +172,70 @@ export default function LeaderboardContent() {
                 <div className="grid grid-cols-1 gap-4 md:gap-6">
                     {/* Stats Overview */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-600">Total Members</p>
-                                    <p className="text-xl md:text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                        {loading ? (
+                            <>
+                                <MetricCardSkeleton />
+                                <MetricCardSkeleton />
+                                <MetricCardSkeleton />
+                                <MetricCardSkeleton />
+                            </>
+                        ) : (
+                            <>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-600">Total Members</p>
+                                            <p className="text-xl md:text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                                        </div>
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <Users className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <Users className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
-                                </div>
-                            </div>
-                        </div>
 
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-600">Total Points</p>
-                                    <p className="text-xl md:text-2xl font-bold text-gray-900">{stats.totalPoints.toLocaleString()}</p>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-600">Total Points</p>
+                                            <p className="text-xl md:text-2xl font-bold text-gray-900">{stats.totalPoints.toLocaleString()}</p>
+                                        </div>
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <Star className="w-5 h-5 md:w-6 md:h-6 text-yellow-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <Star className="w-5 h-5 md:w-6 md:h-6 text-yellow-600" />
-                                </div>
-                            </div>
-                        </div>
 
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Average Points</p>
-                                    <p className="text-2xl font-bold text-gray-900">{stats.avgPoints}</p>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-600">Average Points</p>
+                                            <p className="text-2xl font-bold text-gray-900">{stats.avgPoints}</p>
+                                        </div>
+                                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                            <TrendingUp className="w-6 h-6 text-green-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                    <TrendingUp className="w-6 h-6 text-green-600" />
-                                </div>
-                            </div>
-                        </div>
 
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Your Rank</p>
-                                    <p className="text-2xl font-bold text-gray-900">#{currentUserRank || 'N/A'}</p>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-600">Your Rank</p>
+                                            <p className="text-2xl font-bold text-gray-900">#{currentUserRank || 'N/A'}</p>
+                                        </div>
+                                        <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                            <Trophy className="w-6 h-6 text-purple-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                                    <Trophy className="w-6 h-6 text-purple-600" />
-                                </div>
-                            </div>
-                        </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Podium - Top 3 */}
-                    {topThree.length >= 3 && (
+                    {loading ? (
+                        <CardSkeleton variant="content" size="lg" className="h-64" />
+                    ) : topThree.length >= 3 && (
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                             <h2 className="text-lg font-semibold text-gray-900 mb-6 text-center">🏆 Top Performers 🏆</h2>
                             <div className="flex justify-center items-end space-x-4 mb-6">
@@ -280,9 +294,7 @@ export default function LeaderboardContent() {
                         </div>
                         <div className="overflow-x-auto">
                             {loading ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                </div>
+                                <LeaderboardTableSkeleton rows={10} />
                             ) : (
                                 <table className="w-full">
                                     <thead className="bg-gray-50">

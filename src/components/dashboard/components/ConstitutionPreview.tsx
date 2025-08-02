@@ -19,6 +19,7 @@ interface ConstitutionPreviewProps {
     pdfCaptureMode?: boolean;
     enableExportOptimizations?: boolean;
     printMode?: boolean;
+    highlightedSectionId?: string;
 }
 
 const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
@@ -29,7 +30,8 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     onPageChange,
     pdfCaptureMode = false,
     enableExportOptimizations = false,
-    printMode = false
+    printMode = false,
+    highlightedSectionId = ''
 }) => {
     const [showTableOfContents, setShowTableOfContents] = useState(true);
     const [internalPdfCaptureMode, setInternalPdfCaptureMode] = useState(pdfCaptureMode);
@@ -41,7 +43,13 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     // Local implementation of calculateTotalPages as fallback
     const calculateTotalPages = (sections: ConstitutionSection[], showTOC: boolean) => {
         let pageCount = 1; // Cover page
-        if (showTOC) pageCount++; // TOC page
+
+        if (showTOC) {
+            // Calculate actual TOC pages needed
+            const tableOfContents = generateTableOfContents(sections);
+            const tocPagesNeeded = Math.ceil(tableOfContents.length / 25);
+            pageCount += tocPagesNeeded;
+        }
 
         // Content pages - use the actual page generation logic
         const contentPages = generateContentPages(sections);
@@ -109,6 +117,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                                 key={section.id}
                                 section={section}
                                 allSections={sections}
+                                highlightedSectionId={highlightedSectionId}
                             />
                         ))}
                     </div>
@@ -181,15 +190,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                         day: 'numeric'
                     })}
                 </p>
-                <p style={{
-                    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                    fontSize: '12pt',
-                    textAlign: 'center',
-                    textIndent: '0',
-                    color: '#666'
-                }}>
-                    Version {constitution?.version || 1}
-                </p>
+
                 <p style={{
                     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                     fontSize: '11pt',
@@ -279,12 +280,22 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                             return (
                                 <div key={section.id} className="flex justify-between items-start">
                                     <div className={`flex-1 ${getIndentClass(section)}`}>
-                                        <span className="text-gray-900">
+                                        <button
+                                            onClick={() => onPageChange(pageNum)}
+                                            className="text-left text-gray-900 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
+                                            style={{ fontSize: 'inherit', fontFamily: 'inherit' }}
+                                        >
                                             {getDisplayTitle(section)}
-                                        </span>
+                                        </button>
                                     </div>
                                     <div className="flex-shrink-0 ml-4">
-                                        <span className="text-gray-700">{pageNum}</span>
+                                        <button
+                                            onClick={() => onPageChange(pageNum)}
+                                            className="text-gray-700 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
+                                            style={{ fontSize: 'inherit', fontFamily: 'inherit' }}
+                                        >
+                                            {pageNum}
+                                        </button>
                                     </div>
                                 </div>
                             );
@@ -323,6 +334,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                         key={section.id}
                         section={section}
                         allSections={sections}
+                        highlightedSectionId={highlightedSectionId}
                     />
                 ))}
             </div>
@@ -565,6 +577,17 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 
                     .print-only { display: none; }
                     .screen-only { display: block; }
+
+                    @keyframes section-highlight-fade {
+                        0% {
+                            background-color: #fef08a;
+                            border-color: #f59e0b;
+                        }
+                        100% {
+                            background-color: transparent;
+                            border-color: transparent;
+                        }
+                    }
                 `
             }} />
 

@@ -115,12 +115,11 @@ export function Sidebar({ currentPath = '' }: SidebarComponentProps) {
         return category.requiresRole.includes(currentUserRole);
     };
 
-    // Always filter categories based on current role, even during loading we use the default role
-    const filteredCategories = currentUserRole ? navigationCategories.filter(canAccessCategory) :
-        navigationCategories.filter(cat => !cat.requiresRole); // Show only non-restricted categories if no role yet
+    // Show skeleton if user auth is loading OR role is loading OR role hasn't been determined yet
+    const isLoading = userLoading || isLoadingRole || currentUserRole === null;
 
-    // Show skeleton if user auth is loading OR role is loading
-    const isLoading = userLoading || isLoadingRole;
+    // Only filter categories when we have a confirmed role
+    const filteredCategories = currentUserRole ? navigationCategories.filter(canAccessCategory) : [];
 
     const NavigationSkeleton = () => (
         <nav className={`mt-6 pb-6 overflow-y-auto ${isCollapsed ? 'px-2' : 'px-4'}`}>

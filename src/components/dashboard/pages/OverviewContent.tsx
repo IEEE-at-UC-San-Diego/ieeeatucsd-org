@@ -6,6 +6,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../../firebase/client';
 import DashboardHeader from '../DashboardHeader';
 import type { User as UserType } from '../types/firestore';
+import { MetricCardSkeleton, EventCardSkeleton, ListSkeleton, EventListSkeleton } from '../../ui/loading';
 
 interface UserStats {
     totalPoints: number;
@@ -252,55 +253,66 @@ export default function OverviewContent() {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-600">Total Points</p>
-                                    <p className="text-xl md:text-2xl font-bold text-gray-900">{userStats.totalPoints}</p>
+                        {loading ? (
+                            <>
+                                <MetricCardSkeleton />
+                                <MetricCardSkeleton />
+                                <MetricCardSkeleton />
+                                <MetricCardSkeleton />
+                            </>
+                        ) : (
+                            <>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-600">Total Points</p>
+                                            <p className="text-xl md:text-2xl font-bold text-gray-900">{userStats.totalPoints}</p>
+                                        </div>
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                            <Award className="w-5 h-5 md:w-6 md:h-6 text-yellow-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                                    <Award className="w-5 h-5 md:w-6 md:h-6 text-yellow-600" />
-                                </div>
-                            </div>
-                        </div>
 
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-600">Events Attended</p>
-                                    <p className="text-xl md:text-2xl font-bold text-gray-900">{userStats.eventsAttended}</p>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-600">Events Attended</p>
+                                            <p className="text-xl md:text-2xl font-bold text-gray-900">{userStats.eventsAttended}</p>
+                                        </div>
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <Calendar className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <Calendar className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
-                                </div>
-                            </div>
-                        </div>
 
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-600">Reimbursements</p>
-                                    <p className="text-xl md:text-2xl font-bold text-gray-900">{userStats.reimbursementsSubmitted}</p>
-                                    <p className="text-xs text-gray-500">{userStats.reimbursementsApproved} approved</p>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-600">Reimbursements</p>
+                                            <p className="text-xl md:text-2xl font-bold text-gray-900">{userStats.reimbursementsSubmitted}</p>
+                                            <p className="text-xs text-gray-500">{userStats.reimbursementsApproved} approved</p>
+                                        </div>
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                            <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                    <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
-                                </div>
-                            </div>
-                        </div>
 
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-600">Member Rank</p>
-                                    <p className="text-xl md:text-2xl font-bold text-gray-900">#{userStats.rank || 'N/A'}</p>
-                                    <p className="text-xs text-gray-500">of {userStats.totalMembers} members</p>
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-gray-600">Member Rank</p>
+                                            <p className="text-xl md:text-2xl font-bold text-gray-900">#{userStats.rank || 'N/A'}</p>
+                                            <p className="text-xs text-gray-500">of {userStats.totalMembers} members</p>
+                                        </div>
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                            <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                                    <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
-                                </div>
-                            </div>
-                        </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Quick Actions */}
@@ -335,7 +347,9 @@ export default function OverviewContent() {
                                     View all →
                                 </a>
                             </div>
-                            {upcomingEvents.length === 0 ? (
+                            {loading ? (
+                                <EventListSkeleton items={3} />
+                            ) : upcomingEvents.length === 0 ? (
                                 <div className="text-center py-6 md:py-8">
                                     <Calendar className="mx-auto h-10 w-10 md:h-12 md:w-12 text-gray-400 mb-3 md:mb-4" />
                                     <p className="text-sm md:text-base text-gray-500">No upcoming events</p>
@@ -365,7 +379,9 @@ export default function OverviewContent() {
                         {/* Recent Activity */}
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                             <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-                            {recentActivity.length === 0 ? (
+                            {loading ? (
+                                <ListSkeleton items={3} variant="detailed" showIcon={true} showMetadata={true} />
+                            ) : recentActivity.length === 0 ? (
                                 <div className="text-center py-6 md:py-8">
                                     <Clock className="mx-auto h-10 w-10 md:h-12 md:w-12 text-gray-400 mb-3 md:mb-4" />
                                     <p className="text-sm md:text-base text-gray-500">No recent activity</p>

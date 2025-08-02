@@ -236,7 +236,14 @@ export default function DashboardHeader({
 
     return (
         <header className="hidden md:block bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+                {/* Title Section */}
+                <div className="flex-shrink-0">
+                    <h1 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h1>
+                    <p className="text-sm md:text-base text-gray-600">{subtitle}</p>
+                </div>
+
+                {/* Search and Controls Section */}
                 <div className="flex items-center space-x-2 md:space-x-4 flex-1 min-w-0">
                     {showSearch && (
                         <div className="relative flex-1 max-w-md">
@@ -246,16 +253,19 @@ export default function DashboardHeader({
                                 placeholder={searchPlaceholder}
                                 value={searchValue}
                                 onChange={(e) => onSearchChange?.(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[44px]"
                             />
                         </div>
                     )}
-                    <div className="flex items-center space-x-2 md:space-x-4">
-                        {children}
-                    </div>
+                    {children && (
+                        <div className="flex items-center space-x-2 md:space-x-3">
+                            {children}
+                        </div>
+                    )}
                 </div>
 
-                <div className="flex items-center space-x-2 md:space-x-4">
+                {/* Icons Section */}
+                <div className="flex items-center space-x-2 md:space-x-3 flex-shrink-0">
                     {/* Calendar Icon */}
                     <div className="relative" data-dropdown>
                         <button
@@ -309,12 +319,6 @@ export default function DashboardHeader({
                         {showProfileDropdown && <ProfileDropdown />}
                     </div>
                 </div>
-            </div>
-
-            {/* Page Title Section */}
-            <div className="mt-4">
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{title}</h1>
-                <p className="text-sm md:text-base text-gray-600">{subtitle}</p>
             </div>
         </header>
     );

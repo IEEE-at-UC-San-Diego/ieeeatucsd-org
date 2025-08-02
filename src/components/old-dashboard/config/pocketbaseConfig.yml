@@ -1,5 +1,0 @@
-api:
-  baseUrl: https://pocketbase.ieeeucsd.org
-  oauth2:
-    redirectPath: /oauth2-redirect
-    providerName: oidc

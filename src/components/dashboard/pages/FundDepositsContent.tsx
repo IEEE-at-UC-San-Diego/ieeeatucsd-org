@@ -8,6 +8,7 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebas
 import DashboardHeader from '../DashboardHeader';
 import type { UserRole } from '../types/firestore';
 import { PublicProfileService } from '../services/publicProfile';
+import { TableSkeleton, MetricCardSkeleton } from '../../ui/loading';
 
 interface FundDeposit {
     id: string;
@@ -19,6 +20,7 @@ interface FundDeposit {
     depositedByName?: string;
     depositedByEmail?: string;
     depositMethod: 'cash' | 'check' | 'bank_transfer' | 'other';
+    otherDepositMethod?: string; // Specification when depositMethod is 'other'
     purpose: string;
     receiptFiles?: string[];
     description: string;
@@ -28,6 +30,7 @@ interface FundDeposit {
     verifiedAt?: any;
 
     notes?: string;
+    rejectionReason?: string; // Reason for rejection when status is 'rejected'
     auditLogs?: { action: string; createdBy: string; createdByName?: string; timestamp: any; note?: string; previousData?: any; newData?: any; }[];
     referenceNumber?: string;
     editedAt?: any;
@@ -69,6 +72,27 @@ const getStatusIcon = (status: string) => {
     }
 };
 
+const getStatusLabel = (status: string) => {
+    switch (status) {
+        case 'pending':
+            return 'Pending Review';
+        case 'verified':
+            return 'Verified';
+        case 'approved':
+            return 'Approved';
+        case 'rejected':
+            return 'Rejected';
+        case 'submitted':
+            return 'Submitted';
+        case 'under_review':
+            return 'Under Review';
+        case 'processed':
+            return 'Processed';
+        default:
+            return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
+    }
+};
+
 const FundDepositsContent: React.FC = () => {
     const [user, loading, error] = useAuthState(auth);
     const [deposits, setDeposits] = useState<FundDeposit[]>([]);
@@ -90,6 +114,7 @@ const FundDepositsContent: React.FC = () => {
         amount: '',
         depositDate: new Date().toISOString().split('T')[0],
         depositMethod: 'cash' as 'cash' | 'check' | 'bank_transfer' | 'other',
+        otherDepositMethod: '', // Add field for "other" specification
         purpose: '',
         description: '',
         referenceNumber: '',
@@ -106,6 +131,14 @@ const FundDepositsContent: React.FC = () => {
     // Sorting state
     const [sortField, setSortField] = useState<string>('submittedAt');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+    // Validation state
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+    // Rejection modal state
+    const [showRejectionModal, setShowRejectionModal] = useState(false);
+    const [rejectionDepositId, setRejectionDepositId] = useState<string | null>(null);
+    const [rejectionReason, setRejectionReason] = useState('');
 
     const addReceiptFile = (file: File) => {
         setReceiptFiles(prev => [...prev, file]);
@@ -272,7 +305,28 @@ const FundDepositsContent: React.FC = () => {
     };
 
     const handleSubmitDeposit = async () => {
-        if (!user || !newDeposit.title || !newDeposit.amount || !newDeposit.purpose) return;
+        // Clear previous validation errors
+        setValidationErrors({});
+
+        // Validate required fields
+        const errors: Record<string, string> = {};
+
+        if (!user || !newDeposit.title || !newDeposit.amount || !newDeposit.purpose) {
+            if (!newDeposit.title) errors.title = 'Title is required';
+            if (!newDeposit.amount) errors.amount = 'Amount is required';
+            if (!newDeposit.purpose) errors.purpose = 'Purpose is required';
+        }
+
+        // Validate "other" deposit method specification
+        if (newDeposit.depositMethod === 'other' && !newDeposit.otherDepositMethod.trim()) {
+            errors.otherDepositMethod = 'Please specify the deposit method when "Other" is selected';
+        }
+
+        // If there are validation errors, show them and return
+        if (Object.keys(errors).length > 0) {
+            setValidationErrors(errors);
+            return;
+        }
 
         try {
             // Upload receipt files if any
@@ -301,6 +355,7 @@ const FundDepositsContent: React.FC = () => {
                 depositedByName: userName,
                 depositedByEmail: user.email,
                 depositMethod: newDeposit.depositMethod,
+                otherDepositMethod: newDeposit.depositMethod === 'other' ? newDeposit.otherDepositMethod : null,
                 purpose: newDeposit.purpose,
                 description: newDeposit.description,
                 receiptFiles: receiptFileUrls,
@@ -332,6 +387,7 @@ const FundDepositsContent: React.FC = () => {
                 amount: '',
                 depositDate: new Date().toISOString().split('T')[0],
                 depositMethod: 'cash' as 'cash' | 'check' | 'bank_transfer' | 'other',
+                otherDepositMethod: '',
                 purpose: '',
                 description: '',
                 referenceNumber: '',
@@ -342,12 +398,13 @@ const FundDepositsContent: React.FC = () => {
             });
             setReceiptFiles([]);
             setBankTransferFiles([]);
+            setValidationErrors({});
         } catch (error) {
             console.error('Error submitting deposit:', error);
         }
     };
 
-    const handleStatusUpdate = async (depositId: string, newStatus: string, note?: string) => {
+    const handleStatusUpdate = async (depositId: string, newStatus: string, note?: string, rejectionReason?: string) => {
         if (!user) return;
 
         try {
@@ -368,6 +425,11 @@ const FundDepositsContent: React.FC = () => {
                 updateData.notes = note;
             }
 
+            // Add rejection reason if status is rejected
+            if (newStatus === 'rejected' && rejectionReason) {
+                updateData.rejectionReason = rejectionReason;
+            }
+
             // Add audit log
             const deposit = deposits.find(d => d.id === depositId);
             if (deposit) {
@@ -376,7 +438,7 @@ const FundDepositsContent: React.FC = () => {
                     createdBy: user.uid,
                     createdByName: userName,
                     timestamp: Timestamp.now(),
-                    note: note || `Status changed to ${newStatus}`,
+                    note: rejectionReason || note || `Status changed to ${newStatus}`,
                     previousData: { status: deposit.status },
                     newData: { status: newStatus }
                 };
@@ -387,6 +449,21 @@ const FundDepositsContent: React.FC = () => {
         } catch (error) {
             console.error('Error updating deposit status:', error);
         }
+    };
+
+    const handleRejectDeposit = (depositId: string) => {
+        setRejectionDepositId(depositId);
+        setRejectionReason('');
+        setShowRejectionModal(true);
+    };
+
+    const handleConfirmRejection = async () => {
+        if (!rejectionDepositId || !rejectionReason.trim()) return;
+
+        await handleStatusUpdate(rejectionDepositId, 'rejected', rejectionReason, rejectionReason);
+        setShowRejectionModal(false);
+        setRejectionDepositId(null);
+        setRejectionReason('');
     };
 
     const handleEditDeposit = (deposit: FundDeposit) => {
@@ -640,55 +717,67 @@ const FundDepositsContent: React.FC = () => {
             <div className="p-4 md:p-6">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-4 md:mb-6">
-                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
-                        <div className="flex items-center">
-                            <Receipt className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
-                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-600">Total Deposits</p>
-                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.total}</p>
+                    {isLoading ? (
+                        <>
+                            <MetricCardSkeleton />
+                            <MetricCardSkeleton />
+                            <MetricCardSkeleton />
+                            <MetricCardSkeleton />
+                            <MetricCardSkeleton />
+                        </>
+                    ) : (
+                        <>
+                            <div className="bg-white rounded-lg shadow p-4 md:p-6">
+                                <div className="flex items-center">
+                                    <Receipt className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
+                                    <div className="ml-3 md:ml-4 min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-gray-600">Total Deposits</p>
+                                        <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.total}</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
-                        <div className="flex items-center">
-                            <Clock className="h-6 w-6 md:h-8 md:w-8 text-yellow-600 flex-shrink-0" />
-                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-600">Pending</p>
-                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.pending}</p>
+                            <div className="bg-white rounded-lg shadow p-4 md:p-6">
+                                <div className="flex items-center">
+                                    <Clock className="h-6 w-6 md:h-8 md:w-8 text-yellow-600 flex-shrink-0" />
+                                    <div className="ml-3 md:ml-4 min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-gray-600">Pending</p>
+                                        <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.pending}</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
-                        <div className="flex items-center">
-                            <Eye className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
-                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-600">Verified</p>
-                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.verified}</p>
+                            <div className="bg-white rounded-lg shadow p-4 md:p-6">
+                                <div className="flex items-center">
+                                    <Eye className="h-6 w-6 md:h-8 md:w-8 text-blue-600 flex-shrink-0" />
+                                    <div className="ml-3 md:ml-4 min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-gray-600">Verified</p>
+                                        <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.verified}</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg shadow p-4 md:p-6">
-                        <div className="flex items-center">
-                            <XCircle className="h-6 w-6 md:h-8 md:w-8 text-red-600 flex-shrink-0" />
-                            <div className="ml-3 md:ml-4 min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-600">Rejected</p>
-                                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.rejected}</p>
+                            <div className="bg-white rounded-lg shadow p-4 md:p-6">
+                                <div className="flex items-center">
+                                    <XCircle className="h-6 w-6 md:h-8 md:w-8 text-red-600 flex-shrink-0" />
+                                    <div className="ml-3 md:ml-4 min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-gray-600">Rejected</p>
+                                        <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.rejected}</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <div className="flex items-center">
-                            <Banknote className="h-8 w-8 text-green-600" />
-                            <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-600">Total Verified</p>
-                                <p className="text-2xl font-bold text-gray-900">${stats.totalAmount.toFixed(2)}</p>
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <div className="flex items-center">
+                                    <Banknote className="h-8 w-8 text-green-600" />
+                                    <div className="ml-4">
+                                        <p className="text-sm font-medium text-gray-600">Total Verified</p>
+                                        <p className="text-2xl font-bold text-gray-900">${stats.totalAmount.toFixed(2)}</p>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Filters and Search */}
@@ -762,10 +851,8 @@ const FundDepositsContent: React.FC = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {isLoading ? (
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center">
-                                            <div className="flex justify-center">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                            </div>
+                                        <td colSpan={6} className="p-0">
+                                            <TableSkeleton rows={6} columns={6} showHeader={false} />
                                         </td>
                                     </tr>
                                 ) : filteredDeposits.length === 0 ? (
@@ -799,7 +886,7 @@ const FundDepositsContent: React.FC = () => {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(deposit.status)}`}>
                                                     {getStatusIcon(deposit.status)}
-                                                    <span className="ml-1 capitalize">{deposit.status}</span>
+                                                    <span className="ml-1">{getStatusLabel(deposit.status)}</span>
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -840,7 +927,7 @@ const FundDepositsContent: React.FC = () => {
                                                                 <Check className="w-4 h-4" />
                                                             </button>
                                                             <button
-                                                                onClick={() => handleStatusUpdate(deposit.id, 'rejected')}
+                                                                onClick={() => handleRejectDeposit(deposit.id)}
                                                                 className="text-red-600 hover:text-red-900"
                                                                 title="Reject"
                                                             >
@@ -876,11 +963,14 @@ const FundDepositsContent: React.FC = () => {
                                 </label>
                                 <input
                                     type="text"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${validationErrors.title ? 'border-red-500' : 'border-gray-300'}`}
                                     value={newDeposit.title}
                                     onChange={(e) => setNewDeposit({ ...newDeposit, title: e.target.value })}
                                     placeholder="e.g., Membership Dues Collection"
                                 />
+                                {validationErrors.title && (
+                                    <p className="mt-1 text-sm text-red-600">{validationErrors.title}</p>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -891,11 +981,14 @@ const FundDepositsContent: React.FC = () => {
                                     <input
                                         type="number"
                                         step="0.01"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${validationErrors.amount ? 'border-red-500' : 'border-gray-300'}`}
                                         value={newDeposit.amount}
                                         onChange={(e) => setNewDeposit({ ...newDeposit, amount: e.target.value })}
                                         placeholder="0.00"
                                     />
+                                    {validationErrors.amount && (
+                                        <p className="mt-1 text-sm text-red-600">{validationErrors.amount}</p>
+                                    )}
                                 </div>
 
                                 <div>
@@ -916,7 +1009,7 @@ const FundDepositsContent: React.FC = () => {
                                     Deposit Method *
                                 </label>
                                 <select
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${validationErrors.depositMethod ? 'border-red-500' : 'border-gray-300'}`}
                                     value={newDeposit.depositMethod}
                                     onChange={(e) => setNewDeposit({ ...newDeposit, depositMethod: e.target.value as any })}
                                 >
@@ -925,7 +1018,29 @@ const FundDepositsContent: React.FC = () => {
                                     <option value="bank_transfer">Bank Transfer</option>
                                     <option value="other">Other</option>
                                 </select>
+                                {validationErrors.depositMethod && (
+                                    <p className="mt-1 text-sm text-red-600">{validationErrors.depositMethod}</p>
+                                )}
                             </div>
+
+                            {/* Show "Other" specification field when "Other" is selected */}
+                            {newDeposit.depositMethod === 'other' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Specify Deposit Method *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${validationErrors.otherDepositMethod ? 'border-red-500' : 'border-gray-300'}`}
+                                        value={newDeposit.otherDepositMethod}
+                                        onChange={(e) => setNewDeposit({ ...newDeposit, otherDepositMethod: e.target.value })}
+                                        placeholder="e.g., Venmo, PayPal, Wire Transfer, etc."
+                                    />
+                                    {validationErrors.otherDepositMethod && (
+                                        <p className="mt-1 text-sm text-red-600">{validationErrors.otherDepositMethod}</p>
+                                    )}
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -933,11 +1048,14 @@ const FundDepositsContent: React.FC = () => {
                                 </label>
                                 <input
                                     type="text"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${validationErrors.purpose ? 'border-red-500' : 'border-gray-300'}`}
                                     value={newDeposit.purpose}
                                     onChange={(e) => setNewDeposit({ ...newDeposit, purpose: e.target.value })}
                                     placeholder="e.g., Membership Dues, Event Revenue, Sponsorship"
                                 />
+                                {validationErrors.purpose && (
+                                    <p className="mt-1 text-sm text-red-600">{validationErrors.purpose}</p>
+                                )}
                             </div>
 
                             <div>
@@ -1094,7 +1212,12 @@ const FundDepositsContent: React.FC = () => {
                                         </div>
                                         <div>
                                             <dt className="text-sm font-medium text-gray-500">Method</dt>
-                                            <dd className="text-sm text-gray-900 capitalize">{selectedDeposit.depositMethod.replace('_', ' ')}</dd>
+                                            <dd className="text-sm text-gray-900 capitalize">
+                                                {selectedDeposit.depositMethod === 'other' && selectedDeposit.otherDepositMethod
+                                                    ? selectedDeposit.otherDepositMethod
+                                                    : selectedDeposit.depositMethod.replace('_', ' ')
+                                                }
+                                            </dd>
                                         </div>
                                         {selectedDeposit.referenceNumber && (
                                             <div>
@@ -1113,7 +1236,7 @@ const FundDepositsContent: React.FC = () => {
                                             <dd>
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedDeposit.status)}`}>
                                                     {getStatusIcon(selectedDeposit.status)}
-                                                    <span className="ml-1 capitalize">{selectedDeposit.status}</span>
+                                                    <span className="ml-1">{getStatusLabel(selectedDeposit.status)}</span>
                                                 </span>
                                             </dd>
                                         </div>
@@ -1125,6 +1248,12 @@ const FundDepositsContent: React.FC = () => {
                                             <dt className="text-sm font-medium text-gray-500">Submitted</dt>
                                             <dd className="text-sm text-gray-900">{selectedDeposit.submittedAt?.toDate().toLocaleString()}</dd>
                                         </div>
+                                        {selectedDeposit.status === 'rejected' && selectedDeposit.rejectionReason && (
+                                            <div>
+                                                <dt className="text-sm font-medium text-gray-500">Rejection Reason</dt>
+                                                <dd className="text-sm text-red-700 bg-red-50 p-2 rounded-md mt-1">{selectedDeposit.rejectionReason}</dd>
+                                            </div>
+                                        )}
                                     </dl>
                                 </div>
                             </div>
@@ -1381,6 +1510,56 @@ const FundDepositsContent: React.FC = () => {
                                 <Save className="w-4 h-4" />
                                 Update Deposit
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Rejection Modal */}
+            {showRejectionModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                            <h3 className="text-lg font-semibold text-gray-900">Reject Deposit</h3>
+                            <button
+                                onClick={() => setShowRejectionModal(false)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="p-6">
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Rejection Reason <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    rows={4}
+                                    placeholder="Please provide a clear reason for rejecting this deposit..."
+                                    required
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-end space-x-3">
+                                <button
+                                    onClick={() => setShowRejectionModal(false)}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleConfirmRejection}
+                                    disabled={!rejectionReason.trim()}
+                                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    <X className="w-4 h-4" />
+                                    Reject Deposit
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

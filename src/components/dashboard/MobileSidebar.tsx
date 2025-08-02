@@ -115,12 +115,11 @@ export function MobileSidebar({ currentPath = '', isOpen, onClose }: MobileSideb
         return category.requiresRole.includes(currentUserRole);
     };
 
-    // Always filter categories based on current role, even during loading we use the default role
-    const filteredCategories = currentUserRole ? navigationCategories.filter(canAccessCategory) :
-        navigationCategories.filter(cat => !cat.requiresRole); // Show only non-restricted categories if no role yet
+    // Show skeleton if user auth is loading OR role is loading OR role hasn't been determined yet
+    const isLoading = userLoading || isLoadingRole || currentUserRole === null;
 
-    // Show skeleton if user auth is loading OR role is loading
-    const isLoading = userLoading || isLoadingRole;
+    // Only filter categories when we have a confirmed role
+    const filteredCategories = currentUserRole ? navigationCategories.filter(canAccessCategory) : [];
 
     // Handle click on navigation item
     const handleNavClick = () => {
@@ -197,18 +196,17 @@ export function MobileSidebar({ currentPath = '', isOpen, onClose }: MobileSideb
     if (!isOpen) return null;
 
     return (
-        <div className="md:hidden fixed inset-0 z-50 flex">
+        <div className="lg:hidden fixed inset-0 z-50 flex">
             {/* Backdrop */}
-            <div 
+            <div
                 className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
                 onClick={handleBackdropClick}
                 aria-hidden="true"
             />
-            
+
             {/* Sidebar */}
-            <div className={`relative flex flex-col w-80 max-w-[85vw] bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${
-                isOpen ? 'translate-x-0' : '-translate-x-full'
-            }`}>
+            <div className={`relative flex flex-col w-80 max-w-[85vw] bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}>
                 {/* Header with close button */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
                     <div className="flex items-center">
@@ -249,15 +247,13 @@ export function MobileSidebar({ currentPath = '', isOpen, onClose }: MobileSideb
                                                     <a
                                                         href={item.href}
                                                         onClick={handleNavClick}
-                                                        className={`flex items-center p-4 text-base font-medium rounded-lg transition-colors min-h-[44px] ${
-                                                            isActive
-                                                                ? 'bg-blue-50 text-blue-700 border-r-4 border-blue-600'
-                                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                                        }`}
+                                                        className={`flex items-center p-4 text-base font-medium rounded-lg transition-colors min-h-[44px] ${isActive
+                                                            ? 'bg-blue-50 text-blue-700 border-r-4 border-blue-600'
+                                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                            }`}
                                                     >
-                                                        <item.icon className={`w-6 h-6 mr-4 ${
-                                                            isActive ? 'text-blue-600' : 'text-gray-400'
-                                                        }`} />
+                                                        <item.icon className={`w-6 h-6 mr-4 ${isActive ? 'text-blue-600' : 'text-gray-400'
+                                                            }`} />
                                                         {item.label}
                                                     </a>
                                                 </li>

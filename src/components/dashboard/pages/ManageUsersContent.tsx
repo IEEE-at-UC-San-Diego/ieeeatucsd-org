@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, UserCheck, UserX, Mail, Shield, Users, GraduationCap, Send, X, CheckCircle, Clock, XCircle, AlertCircle, Check, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Search, Plus, Filter, Edit, Trash2, UserCheck, UserX, Mail, Shield, Users, GraduationCap, Send, X, CheckCircle, Clock, XCircle, AlertCircle, Check, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { getFirestore, collection, getDocs, doc, updateDoc, addDoc, deleteDoc, query, where, orderBy, limit, getDoc } from 'firebase/firestore';
 import { app, auth } from '../../../firebase/client';
 import type { User as FirestoreUser, UserRole } from '../types/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { PublicProfileService } from '../services/publicProfile';
+import { UserManagementTableSkeleton, MetricCardSkeleton } from '../../ui/loading';
+import DashboardHeader from '../DashboardHeader';
 
 interface UserModalData {
     id?: string;
@@ -352,6 +354,16 @@ export default function ManageUsersContent() {
 
             await updateDoc(userRef, updateData);
 
+            // Sync position to public profile
+            try {
+                await PublicProfileService.syncPublicProfile(selectedMember.id, {
+                    name: selectedMember.name || selectedMember.email || 'Unknown User',
+                    position: newPosition || ''
+                });
+            } catch (profileError) {
+                console.warn('Failed to update public profile, but user update succeeded:', profileError);
+            }
+
             setSuccess(`${selectedMember.name || selectedMember.email} has been promoted to ${newRole}${newPosition ? ` as ${newPosition}` : ''}`);
             setShowAddMemberModal(false);
             setSelectedMember(null);
@@ -427,15 +439,23 @@ export default function ManageUsersContent() {
 
             await updateDoc(userRef, updateData);
 
-            // Sync points to public profile if points were updated
-            if (currentUserRole === 'Administrator' && editingUser.points !== undefined) {
-                try {
-                    await PublicProfileService.updateUserStats(editingUser.id, {
-                        points: editingUser.points
-                    });
-                } catch (profileError) {
-                    console.warn('Failed to update public profile, but user update succeeded:', profileError);
+            // Sync relevant fields to public profile
+            try {
+                const publicProfileData: any = {
+                    name: editingUser.name,
+                    position: editingUser.position || '',
+                    major: editingUser.major || '',
+                    graduationYear: editingUser.graduationYear || null
+                };
+
+                // Only administrators can modify points
+                if (currentUserRole === 'Administrator' && editingUser.points !== undefined) {
+                    publicProfileData.points = editingUser.points;
                 }
+
+                await PublicProfileService.syncPublicProfile(editingUser.id, publicProfileData);
+            } catch (profileError) {
+                console.warn('Failed to update public profile, but user update succeeded:', profileError);
             }
 
             setSuccess('User updated successfully');
@@ -703,21 +723,35 @@ export default function ManageUsersContent() {
         return false;
     };
 
-    // Show loading while we're fetching the user auth or role
-    if (userLoading || roleLoading) {
+    // Show loading while we're fetching the user auth, role, or data
+    const isFullyLoading = userLoading || roleLoading || loading;
+
+    if (isFullyLoading) {
         return (
-            <div className="flex-1 overflow-auto">
-                <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Loading...</h1>
-                            <p className="text-gray-600">Checking permissions...</p>
-                        </div>
+            <div className="flex-1 overflow-auto bg-gray-50">
+                <DashboardHeader
+                    title="Manage Users"
+                    subtitle="Manage user roles and permissions"
+                    searchPlaceholder="Search members..."
+                    searchValue=""
+                    onSearchChange={() => { }}
+                    showSearch={false}
+                />
+                <main className="p-6 bg-gray-50">
+                    {/* Stats Cards Skeleton */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                        <MetricCardSkeleton />
+                        <MetricCardSkeleton />
+                        <MetricCardSkeleton />
+                        <MetricCardSkeleton />
                     </div>
-                </header>
-                <main className="p-6">
-                    <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+
+                    {/* Table Skeleton */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <div className="px-6 py-4 border-b border-gray-200">
+                            <div className="h-6 w-48 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                        <UserManagementTableSkeleton rows={8} />
                     </div>
                 </main>
             </div>
@@ -728,15 +762,11 @@ export default function ManageUsersContent() {
     if (user && !hasUserManagementAccess()) {
         return (
             <div className="flex-1 overflow-auto">
-                {/* Header */}
-                <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
-                            <p className="text-gray-600">You don't have permission to access this page</p>
-                        </div>
-                    </div>
-                </header>
+                <DashboardHeader
+                    title="Access Denied"
+                    subtitle="You don't have permission to access this page"
+                    showSearch={false}
+                />
                 <main className="p-6">
                     <div className="bg-red-50 border border-red-200 rounded-lg p-6">
                         <div className="flex items-center">
@@ -758,14 +788,11 @@ export default function ManageUsersContent() {
     if (!user) {
         return (
             <div className="flex-1 overflow-auto">
-                <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
-                            <p className="text-gray-600">Please log in to access this page</p>
-                        </div>
-                    </div>
-                </header>
+                <DashboardHeader
+                    title="Access Denied"
+                    subtitle="Please log in to access this page"
+                    showSearch={false}
+                />
                 <main className="p-6">
                     <div className="bg-red-50 border border-red-200 rounded-lg p-6">
                         <div className="flex items-center">
@@ -782,99 +809,59 @@ export default function ManageUsersContent() {
     }
 
     return (
-        <div className="flex-1 overflow-auto">
-            {/* Header - Hidden on mobile, using DashboardHeader pattern */}
-            <header className="hidden md:block bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 md:space-x-4 flex-1 min-w-0">
-                        <div className="relative flex-1 max-w-xs">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Search members..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[44px]"
-                            />
-                        </div>
-                        <div className="relative">
-                            <select
-                                value={roleFilter}
-                                onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
-                                className="appearance-none bg-white px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer min-h-[44px] text-base"
-                            >
-                                <option value="all">🎭 All Roles</option>
-                                {roles.map(role => (
-                                    <option key={role} value={role}>{role}</option>
-                                ))}
-                            </select>
-                            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
-                        </div>
-                        <div className="relative">
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive' | 'suspended')}
-                                className="appearance-none bg-white px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer min-h-[44px] text-base"
-                            >
-                                <option value="all">📊 All Status</option>
-                                <option value="active">✅ Active</option>
-                                <option value="inactive">⏸️ Inactive</option>
-                                <option value="suspended">🚫 Suspended</option>
-                            </select>
-                            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2 md:space-x-4">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
-                            <Calendar className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
-                            <Bell className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
-                            <User className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-            </header>
+        <div className="flex-1 overflow-auto bg-gray-50">
+            {/* Header */}
+            <DashboardHeader
+                title="Manage Users"
+                subtitle="Manage user roles and permissions"
+                searchPlaceholder="Search members..."
+                searchValue={searchTerm}
+                onSearchChange={setSearchTerm}
+            >
+                <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px] text-sm md:text-base"
+                >
+                    <option value="all">🎭 All Roles</option>
+                    {roles.map(role => (
+                        <option key={role} value={role}>{role}</option>
+                    ))}
+                </select>
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive' | 'suspended')}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px] text-sm md:text-base"
+                >
+                    <option value="all">📊 All Status</option>
+                    <option value="active">✅ Active</option>
+                    <option value="inactive">⏸️ Inactive</option>
+                    <option value="suspended">🚫 Suspended</option>
+                </select>
+            </DashboardHeader>
 
             {/* Manage Users Content */}
             <main className="p-4 md:p-6">
                 <div className="grid grid-cols-1 gap-4 md:gap-6">
-                    {/* Page Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 md:mb-6">
-                        <div>
-                            <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Manage Users</h1>
-                            <p className="text-sm md:text-base text-gray-600">Manage IEEE UCSD member accounts and permissions</p>
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                            <button
-                                onClick={() => setShowInviteModal(true)}
-                                className="flex items-center justify-center space-x-2 px-3 md:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] text-sm md:text-base"
-                            >
-                                <Send className="w-4 h-4" />
-                                <span className="hidden sm:inline">Send Invite</span>
-                                <span className="sm:hidden">Invite</span>
-                            </button>
-                            <button
-                                onClick={() => setShowAddMemberModal(true)}
-                                className="flex items-center justify-center space-x-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] text-sm md:text-base"
-                                title="Promote an existing member to officer with role and position"
-                            >
-                                <Plus className="w-4 h-4" />
-                                <span className="hidden sm:inline">Promote to Officer</span>
-                                <span className="sm:hidden">Promote</span>
-                            </button>
-                        </div>
+                    {/* Action Buttons */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 mb-4 md:mb-6">
+                        <button
+                            onClick={() => setShowInviteModal(true)}
+                            className="flex items-center justify-center space-x-2 px-3 md:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-h-[44px] text-sm md:text-base"
+                        >
+                            <Send className="w-4 h-4" />
+                            <span className="hidden sm:inline">Send Invite</span>
+                            <span className="sm:hidden">Invite</span>
+                        </button>
+                        <button
+                            onClick={() => setShowAddMemberModal(true)}
+                            className="flex items-center justify-center space-x-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] text-sm md:text-base"
+                            title="Promote an existing member to officer with role and position"
+                        >
+                            <Plus className="w-4 h-4" />
+                            <span className="hidden sm:inline">Promote to Officer</span>
+                            <span className="sm:hidden">Promote</span>
+                        </button>
                     </div>
 
                     {/* Error/Success Messages */}
@@ -998,122 +985,116 @@ export default function ManageUsersContent() {
                             <h2 className="text-lg font-semibold text-gray-900">All Members ({filteredUsers.length})</h2>
                         </div>
                         <div className="overflow-x-auto">
-                            {loading ? (
-                                <div className="p-6 text-center">
-                                    <p className="text-gray-500">Loading users...</p>
-                                </div>
-                            ) : (
-                                <table className="w-full">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <SortableHeader field="name">
-                                                Member
-                                            </SortableHeader>
-                                            <SortableHeader field="major">
-                                                Academic Info
-                                            </SortableHeader>
-                                            <SortableHeader field="role">
-                                                Role
-                                            </SortableHeader>
-                                            <SortableHeader field="status">
-                                                Status
-                                            </SortableHeader>
-                                            <SortableHeader field="points">
-                                                Activity
-                                            </SortableHeader>
-                                            <SortableHeader field="joinDate">
-                                                Joined / Last Login
-                                            </SortableHeader>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {sortedUsers.map((user) => (
-                                            <tr key={user.id} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center">
-                                                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                                            <span className="text-blue-600 font-medium text-sm">
-                                                                {user.name ? user.name.split(' ').map((n: string) => n[0]).join('') : 'U'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="ml-4">
-                                                            <div className="text-sm font-medium text-gray-900">{user.name || 'No name'}</div>
-                                                            <div className="text-sm text-gray-500">{user.email}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div>
-                                                        <div className="text-sm text-gray-900">{user.major || 'Not specified'}</div>
-                                                        <div className="text-sm text-gray-500">
-                                                            {user.graduationYear ? `Class of ${user.graduationYear}` : 'Year not specified'}
-                                                        </div>
-                                                        <div className="text-xs text-gray-400">{user.memberId || user.pid || 'No ID'}</div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div>
-                                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
-                                                            {user.role}
+                            <table className="w-full">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <SortableHeader field="name">
+                                            Member
+                                        </SortableHeader>
+                                        <SortableHeader field="major">
+                                            Academic Info
+                                        </SortableHeader>
+                                        <SortableHeader field="role">
+                                            Role
+                                        </SortableHeader>
+                                        <SortableHeader field="status">
+                                            Status
+                                        </SortableHeader>
+                                        <SortableHeader field="points">
+                                            Activity
+                                        </SortableHeader>
+                                        <SortableHeader field="joinDate">
+                                            Joined / Last Login
+                                        </SortableHeader>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {sortedUsers.map((user) => (
+                                        <tr key={user.id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                        <span className="text-blue-600 font-medium text-sm">
+                                                            {user.name ? user.name.split(' ').map((n: string) => n[0]).join('') : 'U'}
                                                         </span>
-                                                        {user.position && (
-                                                            <div className="text-xs text-gray-500 mt-1">{user.position}</div>
-                                                        )}
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className={`inline-flex items-center space-x-1 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.status)}`}>
-                                                        {getStatusIcon(user.status)}
-                                                        <span className="capitalize">{user.status}</span>
+                                                    <div className="ml-4">
+                                                        <div className="text-sm font-medium text-gray-900">{user.name || 'No name'}</div>
+                                                        <div className="text-sm text-gray-500">{user.email}</div>
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div>
-                                                        <div className="text-sm text-gray-900">{user.eventsAttended || 0} events</div>
-                                                        <div className="text-sm text-gray-500">{user.points || 0} points</div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div>
+                                                    <div className="text-sm text-gray-900">{user.major || 'Not specified'}</div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {user.graduationYear ? `Class of ${user.graduationYear}` : 'Year not specified'}
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div>
-                                                        <div className="text-sm text-gray-900">
-                                                            Joined: {user.joinDate ? user.joinDate.toDate().toLocaleDateString() : 'Not completed'}
-                                                        </div>
-                                                        <div className="text-sm text-gray-500">
-                                                            Last Login: {user.lastLogin ? user.lastLogin.toDate().toLocaleDateString() : 'Never'}
-                                                        </div>
+                                                    <div className="text-xs text-gray-400">{user.memberId || user.pid || 'No ID'}</div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div>
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
+                                                        {user.role}
+                                                    </span>
+                                                    {user.position && (
+                                                        <div className="text-xs text-gray-500 mt-1">{user.position}</div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className={`inline-flex items-center space-x-1 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.status)}`}>
+                                                    {getStatusIcon(user.status)}
+                                                    <span className="capitalize">{user.status}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div>
+                                                    <div className="text-sm text-gray-900">{user.eventsAttended || 0} events</div>
+                                                    <div className="text-sm text-gray-500">{user.points || 0} points</div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div>
+                                                    <div className="text-sm text-gray-900">
+                                                        Joined: {user.joinDate ? user.joinDate.toDate().toLocaleDateString() : 'Not completed'}
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    <div className="flex items-center justify-end space-x-2">
+                                                    <div className="text-sm text-gray-500">
+                                                        Last Login: {user.lastLogin ? user.lastLogin.toDate().toLocaleDateString() : 'Never'}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <div className="flex items-center justify-end space-x-2">
+                                                    <button
+                                                        onClick={() => handleEditUser(user)}
+                                                        className="text-blue-600 hover:text-blue-900"
+                                                        title="Edit Member"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                    <button className="text-green-600 hover:text-green-900" title="Send Email">
+                                                        <Mail className="w-4 h-4" />
+                                                    </button>
+                                                    {canDeleteUser(user) && (
                                                         <button
-                                                            onClick={() => handleEditUser(user)}
-                                                            className="text-blue-600 hover:text-blue-900"
-                                                            title="Edit Member"
+                                                            onClick={() => handleDeleteUser(user.id)}
+                                                            className="text-red-600 hover:text-red-900"
+                                                            title="Remove Member"
                                                         >
-                                                            <Edit className="w-4 h-4" />
+                                                            <Trash2 className="w-4 h-4" />
                                                         </button>
-                                                        <button className="text-green-600 hover:text-green-900" title="Send Email">
-                                                            <Mail className="w-4 h-4" />
-                                                        </button>
-                                                        {canDeleteUser(user) && (
-                                                            <button
-                                                                onClick={() => handleDeleteUser(user.id)}
-                                                                className="text-red-600 hover:text-red-900"
-                                                                title="Remove Member"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

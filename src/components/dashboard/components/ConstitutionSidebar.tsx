@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Plus,
     FileText,
@@ -21,7 +21,7 @@ interface ConstitutionSidebarProps {
     onAddSection: (type: ConstitutionSection['type'], parentId?: string, title?: string, content?: string) => void;
     updateSection: (sectionId: string, updates: Partial<ConstitutionSection>) => void;
     currentUserId?: string;
-    constitutionVersion?: number;
+
 }
 
 const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
@@ -32,10 +32,24 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
     onToggleExpand,
     onAddSection,
     updateSection,
-    currentUserId,
-    constitutionVersion
+    currentUserId
 }) => {
     const [showAddSection, setShowAddSection] = useState(false);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const selectedSectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+    // Auto-scroll to selected section
+    useEffect(() => {
+        if (selectedSection && scrollContainerRef.current) {
+            const selectedElement = selectedSectionRefs.current.get(selectedSection);
+            if (selectedElement) {
+                selectedElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            }
+        }
+    }, [selectedSection]);
 
     const moveSection = async (sectionId: string, direction: 'up' | 'down') => {
         const currentSection = sections.find(s => s.id === sectionId);
@@ -86,6 +100,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
                                 onMoveDown={() => moveSection(section.id, 'down')}
                                 canMoveUp={index > 0}
                                 canMoveDown={index < childSections.length - 1}
+                                sectionRefs={selectedSectionRefs}
                             />
                             {hasChildren && isExpanded && (
                                 <div className="ml-4">
@@ -107,7 +122,6 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-3">
                         <div className="min-w-0 flex-1">
                             <h2 className="font-semibold text-gray-900 text-sm md:text-base">Document Structure</h2>
-                            <p className="text-xs text-gray-500">Version {constitutionVersion || 1}</p>
                             <p className="text-xs text-gray-400 hidden md:block">Adopted since September 2006</p>
                         </div>
                         {/* Add Section button - hidden on desktop (lg+), shown on mobile/tablet */}
@@ -136,7 +150,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
                 </div>
 
                 {/* Scrollable content area */}
-                <div className="flex-1 overflow-y-auto p-3 md:p-4 constitution-sidebar-scroll">
+                <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 md:p-4 constitution-sidebar-scroll">
                     {sections.length === 0 ? (
                         <div className="text-center py-6 md:py-8">
                             <FileText className="h-10 w-10 md:h-12 md:w-12 text-gray-300 mx-auto mb-3 md:mb-4" />
@@ -191,6 +205,7 @@ const SectionNavigationItem: React.FC<{
     onMoveDown: () => void;
     canMoveUp: boolean;
     canMoveDown: boolean;
+    sectionRefs: { current: Map<string, HTMLDivElement> };
 }> = ({
     section,
     isSelected,
@@ -202,7 +217,8 @@ const SectionNavigationItem: React.FC<{
     onMoveUp,
     onMoveDown,
     canMoveUp,
-    canMoveDown
+    canMoveDown,
+    sectionRefs
 }) => {
         const hasChildren = allSections.some(s => s.parentId === section.id);
 
@@ -214,6 +230,13 @@ const SectionNavigationItem: React.FC<{
 
         return (
             <div
+                ref={(el) => {
+                    if (el) {
+                        sectionRefs.current.set(section.id, el);
+                    } else {
+                        sectionRefs.current.delete(section.id);
+                    }
+                }}
                 className={`flex items-center gap-1 md:gap-2 p-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}`}
                 onClick={() => onSelect(section.id)}
             >

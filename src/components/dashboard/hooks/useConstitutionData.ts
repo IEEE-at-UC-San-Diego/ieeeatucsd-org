@@ -27,6 +27,8 @@ export const useConstitutionData = () => {
   >("idle");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [constitutionLoaded, setConstitutionLoaded] = useState(false);
+  const [sectionsLoaded, setSectionsLoaded] = useState(false);
 
   const db = getFirestore();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -40,6 +42,11 @@ export const useConstitutionData = () => {
     const initializeConstitution = async () => {
       if (!user) return;
 
+      // Reset loading flags when starting initialization
+      setConstitutionLoaded(false);
+      setSectionsLoaded(false);
+      setIsLoading(true);
+
       try {
         const constitutionRef = doc(db, "constitutions", constitutionId);
         const constitutionDoc = await getDoc(constitutionRef);
@@ -50,7 +57,7 @@ export const useConstitutionData = () => {
             title: "IEEE at UC San Diego Constitution",
             organizationName: "IEEE at UC San Diego",
             sections: [],
-            version: 1,
+            version: 1, // Keep for backward compatibility but don't display
             status: "draft",
             createdAt: Timestamp.now(),
             lastModified: Timestamp.now(),
@@ -66,6 +73,7 @@ export const useConstitutionData = () => {
           if (doc.exists()) {
             setConstitution({ id: doc.id, ...doc.data() } as Constitution);
           }
+          setConstitutionLoaded(true);
         });
 
         const sectionsQuery = query(
@@ -79,9 +87,8 @@ export const useConstitutionData = () => {
             ...doc.data(),
           })) as ConstitutionSection[];
           setSections(sectionsData);
+          setSectionsLoaded(true);
         });
-
-        setIsLoading(false);
 
         return () => {
           unsubscribeConstitution();
@@ -89,12 +96,20 @@ export const useConstitutionData = () => {
         };
       } catch (error) {
         console.error("Error initializing constitution:", error);
-        setIsLoading(false);
+        setConstitutionLoaded(true);
+        setSectionsLoaded(true);
       }
     };
 
     initializeConstitution();
   }, [user, db]);
+
+  // Update loading state when both constitution and sections are loaded
+  useEffect(() => {
+    if (constitutionLoaded && sectionsLoaded) {
+      setIsLoading(false);
+    }
+  }, [constitutionLoaded, sectionsLoaded]);
 
   // Removed collaboration functionality
 
@@ -255,25 +270,6 @@ export const useConstitutionData = () => {
     }
   };
 
-  const updateConstitutionVersion = async (version: number) => {
-    if (!user || !constitutionId) return;
-
-    try {
-      setSaveStatus("saving");
-      const constitutionRef = doc(db, "constitutions", constitutionId);
-      await updateDoc(constitutionRef, {
-        version,
-        lastModified: Timestamp.now(),
-        lastModifiedBy: user.uid,
-      });
-      setSaveStatus("saved");
-      setLastSaved(new Date());
-    } catch (error) {
-      console.error("Error updating constitution version:", error);
-      setSaveStatus("error");
-    }
-  };
-
   return {
     // State
     constitution,
@@ -286,7 +282,6 @@ export const useConstitutionData = () => {
     addSection,
     updateSection,
     deleteSection,
-    updateConstitutionVersion,
 
     // Constants
     constitutionId,

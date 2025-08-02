@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, Bell, User, Plus, Filter, Edit, Trash2, Clock, CheckCircle, XCircle, Eye, FileText, EyeOff, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, Filter, Edit, Trash2, Clock, CheckCircle, XCircle, Eye, FileText, EyeOff, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { getFirestore, collection, getDocs, query, orderBy, where, doc, deleteDoc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { app, auth } from '../../../firebase/client';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -13,6 +13,8 @@ import GraphicsUploadModal from './manage-events/GraphicsUploadModal';
 import { PublicProfileService } from '../services/publicProfile';
 import { EmailClient } from '../../../scripts/email/EmailClient';
 import type { UserRole } from '../types/firestore';
+import { MetricCardSkeleton, TableSkeleton } from '../../ui/loading';
+import DashboardHeader from '../DashboardHeader';
 
 interface EventRequest {
     id: string;
@@ -665,92 +667,44 @@ export default function ManageEventsContent() {
 
     return (
         <div className="flex-1 overflow-auto">
-            {/* Header - Hidden on mobile, using DashboardHeader pattern */}
-            <header className="hidden md:block bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 md:space-x-4 flex-1 min-w-0">
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Search events..."
-                                value={searchTerm}
-                                onChange={(e) => handleSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[44px]"
-                            />
-                        </div>
-                        {searchTerm && (
-                            <button
-                                onClick={handleClearFilters}
-                                className="bg-gray-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors min-h-[44px] text-sm md:text-base"
-                            >
-                                <span className="hidden sm:inline">Clear</span>
-                                <span className="sm:hidden">✕</span>
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="flex items-center space-x-2 md:space-x-4">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
-                            <Calendar className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
-                            <Bell className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
-                            <User className="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-            </header>
+            {/* Header */}
+            <DashboardHeader
+                title="Manage Events"
+                subtitle="Create, edit, and manage IEEE UCSD events"
+                searchPlaceholder="Search events..."
+                searchValue={searchTerm}
+                onSearchChange={handleSearch}
+            >
+                {searchTerm && (
+                    <button
+                        onClick={handleClearFilters}
+                        className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors min-h-[44px] text-sm md:text-base"
+                    >
+                        <span className="hidden sm:inline">Clear</span>
+                        <span className="sm:hidden">✕</span>
+                    </button>
+                )}
+            </DashboardHeader>
 
             {/* Manage Events Content */}
             <main className="p-4 md:p-6">
                 <div className="grid grid-cols-1 gap-4 md:gap-6">
-                    {/* Mobile Search Bar */}
-                    <div className="md:hidden bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Search events..."
-                                value={searchTerm}
-                                onChange={(e) => handleSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base min-h-[44px]"
-                            />
-                        </div>
-                        {searchTerm && (
+                    {/* Action Buttons */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 mb-4 md:mb-6">
+                        {canCreateEvent() && (
                             <button
-                                onClick={handleClearFilters}
-                                className="mt-3 w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors min-h-[44px]"
+                                onClick={() => setShowEventRequestModal(true)}
+                                className="flex items-center justify-center space-x-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] text-sm md:text-base"
                             >
-                                Clear Search
+                                <Plus className="w-4 h-4" />
+                                <span className="hidden sm:inline">Request an Event</span>
+                                <span className="sm:hidden">Request</span>
                             </button>
                         )}
                     </div>
 
-                    {/* Page Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 md:mb-6">
-                        <div>
-                            <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Manage Events</h1>
-                            <p className="text-sm md:text-base text-gray-600">Create, edit, and manage IEEE UCSD events</p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            {canCreateEvent() && (
-                                <button
-                                    onClick={() => setShowEventRequestModal(true)}
-                                    className="flex items-center space-x-2 px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] text-sm md:text-base"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Request an Event</span>
-                                    <span className="sm:hidden">Request</span>
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
                     {/* Stats Overview */}
-                    <EventManagementStats stats={stats} />
+                    <EventManagementStats stats={stats} loading={loading} />
 
                     {error && (
                         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -771,9 +725,7 @@ export default function ManageEventsContent() {
                         </div>
                         <div className="overflow-x-auto table-mobile-scroll">
                             {loading ? (
-                                <div className="p-6 text-center">
-                                    <p className="text-gray-500">Loading event requests...</p>
-                                </div>
+                                <TableSkeleton rows={5} columns={8} />
                             ) : error ? (
                                 <div className="p-6 text-center">
                                     <p className="text-red-500">{error}</p>
