@@ -91,9 +91,14 @@ export default function SignInContent() {
                         <h1 className="text-2xl font-bold text-gray-900 mb-2">
                             Welcome to IEEE UCSD
                         </h1>
-                        <p className="text-gray-600 text-sm">
+                        <p className="text-gray-600 text-sm mb-3">
                             Sign in to access your dashboard
                         </p>
+                        <div className="bg-ieee-blue-50 border border-ieee-blue-100 rounded-lg p-3 mb-2">
+                            <p className="text-ieee-blue-700 text-xs font-medium">
+                                💡 Recommended: Use your UCSD Google account (@ucsd.edu) for seamless access
+                            </p>
+                        </div>
                     </div>
 
                     {/* Sign In Section */}

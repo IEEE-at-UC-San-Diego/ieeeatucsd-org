@@ -111,6 +111,36 @@ export const useConstitutionData = () => {
     }
   }, [constitutionLoaded, sectionsLoaded]);
 
+  // Update lastSaved with the actual last modification time from the document
+  useEffect(() => {
+    if (!constitution && sections.length === 0) {
+      setLastSaved(null);
+      return;
+    }
+
+    const timestamps: Date[] = [];
+
+    // Add constitution's lastModified if it exists
+    if (constitution?.lastModified) {
+      timestamps.push(constitution.lastModified.toDate());
+    }
+
+    // Add all sections' lastModified timestamps
+    sections.forEach((section) => {
+      if (section.lastModified) {
+        timestamps.push(section.lastModified.toDate());
+      }
+    });
+
+    // Find the most recent timestamp
+    if (timestamps.length > 0) {
+      const mostRecent = new Date(
+        Math.max(...timestamps.map((date) => date.getTime())),
+      );
+      setLastSaved(mostRecent);
+    }
+  }, [constitution, sections]);
+
   // Removed collaboration functionality
 
   const addSection = async (
@@ -226,7 +256,7 @@ export const useConstitutionData = () => {
       }
 
       setSaveStatus("saved");
-      setLastSaved(new Date());
+      // lastSaved will be updated automatically by the useEffect that tracks document timestamps
     } catch (error) {
       console.error("Error updating section:", error);
       setSaveStatus("error");

@@ -361,6 +361,30 @@ export const generatePrintContent = (
   sections: ConstitutionSection[],
   baseUrl?: string,
 ) => {
+  // Get the actual last modified date from constitution and sections
+  const getLastModifiedDate = (): Date => {
+    const timestamps: Date[] = [];
+
+    // Add constitution's lastModified if it exists
+    if (constitution?.lastModified) {
+      timestamps.push(constitution.lastModified.toDate());
+    }
+
+    // Add all sections' lastModified timestamps
+    sections.forEach((section) => {
+      if (section.lastModified) {
+        timestamps.push(section.lastModified.toDate());
+      }
+    });
+
+    // Return the most recent timestamp, or current date as fallback
+    if (timestamps.length > 0) {
+      return new Date(Math.max(...timestamps.map((date) => date.getTime())));
+    }
+
+    return new Date(); // Fallback to current date if no timestamps found
+  };
+
   const preamble = sections.find((s) => s.type === "preamble");
   const articles = sections
     .filter((s) => s.type === "article")
@@ -441,11 +465,14 @@ export const generatePrintContent = (
         <h2 style="font-size: 16pt; line-height: 1.3; margin-bottom: 48px; font-weight: 600;">The Institute of Electrical and Electronics Engineers at UC San Diego Constitution</h2>
         <div style="text-align: center; margin-top: 48px;">
             <p style="font-size: 14pt; text-indent: 0; margin-bottom: 12px; text-align: center;">
-                Last Updated: ${new Date().toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+                Last Updated: ${getLastModifiedDate().toLocaleDateString(
+                  "en-US",
+                  {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  },
+                )}
             </p>
 
             <p style="font-size: 11pt; text-indent: 0; color: #888; text-align: center; margin-top: 8px;">

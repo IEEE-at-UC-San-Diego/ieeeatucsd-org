@@ -81,7 +81,9 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         <>
                             <Check className="h-4 w-4 text-green-500" />
                             <span className="text-green-600">
-                                Saved {new Intl.DateTimeFormat('en-US', {
+                                Last edited {new Intl.DateTimeFormat('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
                                     hour: 'numeric',
                                     minute: '2-digit'
                                 }).format(lastSaved)}
@@ -171,7 +173,9 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                             <>
                                 <Check className="h-4 w-4 text-green-500" />
                                 <span className="text-green-600">
-                                    Saved {new Intl.DateTimeFormat('en-US', {
+                                    Last edited {new Intl.DateTimeFormat('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
                                         hour: 'numeric',
                                         minute: '2-digit'
                                     }).format(lastSaved)}
@@ -280,7 +284,9 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                             <>
                                 <Check className="h-4 w-4 text-green-500" />
                                 <span className="text-green-600">
-                                    Saved {new Intl.DateTimeFormat('en-US', {
+                                    Last edited {new Intl.DateTimeFormat('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
                                         hour: 'numeric',
                                         minute: '2-digit'
                                     }).format(lastSaved)}

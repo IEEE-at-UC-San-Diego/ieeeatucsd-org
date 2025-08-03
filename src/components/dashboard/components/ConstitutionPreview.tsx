@@ -40,6 +40,30 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
     // Use internal state if pdfCaptureMode prop is not controlled externally
     const effectivePdfCaptureMode = pdfCaptureMode !== undefined ? pdfCaptureMode : internalPdfCaptureMode;
 
+    // Get the actual last modified date from constitution and sections
+    const getLastModifiedDate = (): Date => {
+        const timestamps: Date[] = [];
+
+        // Add constitution's lastModified if it exists
+        if (constitution?.lastModified) {
+            timestamps.push(constitution.lastModified.toDate());
+        }
+
+        // Add all sections' lastModified timestamps
+        sections.forEach(section => {
+            if (section.lastModified) {
+                timestamps.push(section.lastModified.toDate());
+            }
+        });
+
+        // Return the most recent timestamp, or current date as fallback
+        if (timestamps.length > 0) {
+            return new Date(Math.max(...timestamps.map(date => date.getTime())));
+        }
+
+        return new Date(); // Fallback to current date if no timestamps found
+    };
+
     // Local implementation of calculateTotalPages as fallback
     const calculateTotalPages = (sections: ConstitutionSection[], showTOC: boolean) => {
         let pageCount = 1; // Cover page
@@ -184,7 +208,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                     marginBottom: '12px',
                     color: '#000'
                 }}>
-                    Last Updated: {new Date().toLocaleDateString('en-US', {
+                    Last Updated: {getLastModifiedDate().toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
