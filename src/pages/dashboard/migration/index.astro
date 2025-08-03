@@ -1,0 +1,26 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import MigrationContent from "../../../components/dashboard/pages/migration/MigrationContent.tsx";
+---
+
+<Layout title="Data Migration - IEEE UCSD Dashboard">
+  <div id="migration-root"></div>
+</Layout>
+
+<script>
+  import { createElement } from "react";
+  import { createRoot } from "react-dom/client";
+  import MigrationContent from "../../../components/dashboard/pages/migration/MigrationContent.tsx";
+  import DashboardLayout from "../../../components/dashboard/shared/DashboardLayout.tsx";
+
+  const container = document.getElementById("migration-root");
+  if (container) {
+    const root = createRoot(container);
+    root.render(
+      createElement(DashboardLayout, {
+        currentPath: "/dashboard/migration",
+        children: createElement(MigrationContent),
+      }),
+    );
+  }
+</script>

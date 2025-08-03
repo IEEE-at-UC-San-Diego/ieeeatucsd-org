@@ -1,0 +1,35 @@
+---
+import DashboardLayout from "../../../components/dashboard/shared/DashboardLayout.tsx";
+import ManageUsersContent from "../../../components/dashboard/pages/manage-users/ManageUsersContent.tsx";
+import { NAVIGATION_PATHS } from "../../../components/dashboard/shared/types/navigation";
+
+const title = "Manage Users - Dashboard";
+const currentPath = NAVIGATION_PATHS.MANAGE_USERS;
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{title}</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="stylesheet" href="/src/styles/global.css" />
+        <style>
+            body {
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    sans-serif;
+                background: #f8fafc;
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <DashboardLayout currentPath={currentPath} client:load>
+            <ManageUsersContent client:load />
+        </DashboardLayout>
+    </body>
+</html>

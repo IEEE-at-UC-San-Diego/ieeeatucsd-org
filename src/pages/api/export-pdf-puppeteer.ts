@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import puppeteer from "puppeteer";
-import { generatePrintHTML } from "../../components/dashboard/utils/printUtils";
+import { generatePrintHTML } from "../../components/dashboard/pages/constitution-builder/utils/printUtils";
 
 export const POST: APIRoute = async ({ request }) => {
   try {

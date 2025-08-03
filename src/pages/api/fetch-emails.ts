@@ -70,12 +70,18 @@ export const POST: APIRoute = async ({ request }) => {
       let lock = await client.getMailboxLock("INBOX");
 
       try {
-        console.log(`Mailbox info: ${client.mailbox.exists} messages exist`);
+        const mailboxExists =
+          client.mailbox &&
+          typeof client.mailbox === "object" &&
+          "exists" in client.mailbox
+            ? client.mailbox.exists
+            : 0;
+        console.log(`Mailbox info: ${mailboxExists} messages exist`);
 
         // Fetch recent messages (last 20 or all if less than 20)
-        const messageCount = Math.min(client.mailbox.exists, 20);
-        const startSeq = Math.max(1, client.mailbox.exists - messageCount + 1);
-        const endSeq = client.mailbox.exists;
+        const messageCount = Math.min(mailboxExists, 20);
+        const startSeq = Math.max(1, mailboxExists - messageCount + 1);
+        const endSeq = mailboxExists;
 
         if (messageCount > 0) {
           console.log(`Fetching messages ${startSeq}:${endSeq}`);
@@ -144,7 +150,7 @@ export const POST: APIRoute = async ({ request }) => {
             }
 
             // If no text preview, try to get it from subject or use default
-            if (!preview && message.envelope.subject) {
+            if (!preview && message.envelope?.subject) {
               preview = `Email about: ${message.envelope.subject}`;
             } else if (!preview) {
               preview = "No preview available";
@@ -152,7 +158,7 @@ export const POST: APIRoute = async ({ request }) => {
 
             // Parse sender information
             let fromAddress = "Unknown sender";
-            if (message.envelope.from && message.envelope.from.length > 0) {
+            if (message.envelope?.from && message.envelope.from.length > 0) {
               const sender = message.envelope.from[0];
               if (sender.name) {
                 fromAddress = `${sender.name} <${sender.address}>`;
@@ -163,7 +169,7 @@ export const POST: APIRoute = async ({ request }) => {
 
             // Format date
             let formattedDate = "Unknown date";
-            if (message.envelope.date) {
+            if (message.envelope?.date) {
               try {
                 formattedDate = new Date(
                   message.envelope.date,
@@ -195,7 +201,7 @@ export const POST: APIRoute = async ({ request }) => {
 
             emails.push({
               id: message.uid.toString(),
-              subject: message.envelope.subject || "No subject",
+              subject: message.envelope?.subject || "No subject",
               from: fromAddress,
               date: formattedDate,
               preview: preview,
