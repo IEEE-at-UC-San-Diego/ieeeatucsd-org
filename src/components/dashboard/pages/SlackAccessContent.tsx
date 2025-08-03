@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Key, Eye, EyeOff, AlertCircle, CheckCircle, Loader2, MessageSquare, Shield, RefreshCw, Inbox } from 'lucide-react';
+import { Mail, Key, Eye, EyeOff, AlertCircle, CheckCircle, Loader2, MessageSquare, Shield, RefreshCw, Inbox, X, Paperclip } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth } from '../../../firebase/client';
@@ -14,12 +14,26 @@ interface EmailGenerationState {
     success: string | null;
 }
 
+interface EmailMessage {
+    id: string;
+    subject: string;
+    from: string;
+    date: string;
+    preview: string;
+    isRead: boolean;
+    uid: number;
+}
+
 interface EmailInboxState {
     isAuthenticated: boolean;
     isLoading: boolean;
     isRefreshing: boolean;
-    emails: any[];
+    emails: EmailMessage[];
     error: string | null;
+    credentials: {
+        email: string;
+        password: string;
+    } | null;
 }
 
 export default function SlackAccessContent() {
@@ -27,6 +41,8 @@ export default function SlackAccessContent() {
     const [userData, setUserData] = useState<UserType | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [customPassword, setCustomPassword] = useState('');
+    const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [emailState, setEmailState] = useState<EmailGenerationState>({
         isGenerating: false,
         isResetting: false,
@@ -39,7 +55,8 @@ export default function SlackAccessContent() {
         isLoading: false,
         isRefreshing: false,
         emails: [],
-        error: null
+        error: null,
+        credentials: null
     });
 
     const db = getFirestore();
@@ -73,6 +90,16 @@ export default function SlackAccessContent() {
 
     const extractUsername = (email: string): string => {
         return email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+    };
+
+    const openEmailModal = (email: EmailMessage) => {
+        setSelectedEmail(email);
+        setIsModalOpen(true);
+    };
+
+    const closeEmailModal = () => {
+        setSelectedEmail(null);
+        setIsModalOpen(false);
     };
 
     const generateIEEEEmail = async () => {
@@ -247,83 +274,93 @@ export default function SlackAccessContent() {
     };
 
     const authenticateInbox = async () => {
-        if (!emailState.generatedEmail) return;
+        if (!emailState.generatedEmail || !customPassword.trim()) {
+            setInboxState(prev => ({
+                ...prev,
+                error: 'IEEE email and password are required to access inbox'
+            }));
+            return;
+        }
 
         setInboxState(prev => ({ ...prev, isLoading: true, error: null }));
 
         try {
-            // Simulate IMAP authentication and email fetching
-            // In a real implementation, this would connect to the email server
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Simulate successful authentication and email retrieval
-            const mockEmails = [
-                {
-                    id: 1,
-                    subject: 'Welcome to IEEE UCSD Slack Workspace',
-                    from: 'slack-notifications@ieeeucsd.org',
-                    date: new Date().toLocaleDateString(),
-                    preview: 'You have been invited to join the IEEE UCSD Slack workspace. Click the link below to get started...',
-                    isRead: false
+            const response = await fetch('/api/fetch-emails', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
                 },
-                {
-                    id: 2,
-                    subject: 'Slack Account Verification',
-                    from: 'noreply@slack.com',
-                    date: new Date(Date.now() - 86400000).toLocaleDateString(), // Yesterday
-                    preview: 'Please verify your email address to complete your Slack account setup...',
-                    isRead: true
-                },
-                {
-                    id: 3,
-                    subject: 'IEEE UCSD - Slack Access Instructions',
-                    from: 'webmaster@ieeeatucsd.org',
-                    date: new Date(Date.now() - 172800000).toLocaleDateString(), // 2 days ago
-                    preview: 'Here are the instructions for accessing the IEEE UCSD Slack workspace using your new email...',
-                    isRead: true
-                }
-            ];
+                body: JSON.stringify({
+                    email: emailState.generatedEmail,
+                    password: customPassword
+                }),
+            });
 
-            setInboxState(prev => ({
-                ...prev,
-                isLoading: false,
-                isAuthenticated: true,
-                emails: mockEmails
-            }));
+            const result = await response.json();
+
+            if (result.success) {
+                setInboxState(prev => ({
+                    ...prev,
+                    isLoading: false,
+                    isAuthenticated: true,
+                    emails: result.emails || [],
+                    credentials: {
+                        email: emailState.generatedEmail!,
+                        password: customPassword
+                    }
+                }));
+                setCustomPassword(''); // Clear password for security
+            } else {
+                setInboxState(prev => ({
+                    ...prev,
+                    isLoading: false,
+                    error: result.message || 'Failed to authenticate with email server'
+                }));
+            }
         } catch (error) {
+            console.error('Error authenticating inbox:', error);
             setInboxState(prev => ({
                 ...prev,
                 isLoading: false,
-                error: 'Failed to authenticate with email server. Please try again later.'
+                error: 'Failed to connect to email server. Please try again later.'
             }));
         }
     };
 
     const refreshInbox = async () => {
-        if (!inboxState.isAuthenticated) return;
+        if (!inboxState.isAuthenticated || !inboxState.credentials) return;
 
         setInboxState(prev => ({ ...prev, isRefreshing: true, error: null }));
 
         try {
-            // Simulate refreshing emails
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const response = await fetch('/api/fetch-emails', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: inboxState.credentials.email,
+                    password: inboxState.credentials.password
+                }),
+            });
 
-            // Add a new mock email to simulate new messages
-            const newEmail = {
-                id: Date.now(),
-                subject: 'New Slack Message Notification',
-                from: 'notifications@slack.com',
-                date: new Date().toLocaleDateString(),
-                preview: 'You have new messages in the IEEE UCSD Slack workspace...',
-                isRead: false
-            };
+            const result = await response.json();
 
-            setInboxState(prev => ({
-                ...prev,
-                isRefreshing: false,
-                emails: [newEmail, ...prev.emails]
-            }));
+            if (result.success) {
+                setInboxState(prev => ({
+                    ...prev,
+                    isRefreshing: false,
+                    emails: result.emails || []
+                }));
+            } else {
+                setInboxState(prev => ({
+                    ...prev,
+                    isRefreshing: false,
+                    error: result.message || 'Failed to refresh inbox'
+                }));
+            }
         } catch (error) {
+            console.error('Error refreshing inbox:', error);
             setInboxState(prev => ({
                 ...prev,
                 isRefreshing: false,
@@ -566,51 +603,118 @@ export default function SlackAccessContent() {
                             </div>
                         ) : !inboxState.isAuthenticated ? (
                             <div className="text-center py-8">
-                                <button
-                                    onClick={authenticateInbox}
-                                    disabled={inboxState.isLoading}
-                                    className="bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 mx-auto"
-                                >
-                                    {inboxState.isLoading ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                            <span>Authenticating...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Key className="w-4 h-4" />
-                                            <span>Access Inbox</span>
-                                        </>
+                                <div className="max-w-sm mx-auto space-y-4">
+                                    <div>
+                                        <Key className="w-12 h-12 text-purple-400 mx-auto mb-3" />
+                                        <p className="text-gray-600 mb-4">Enter your IEEE email password to access the inbox</p>
+                                    </div>
+
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? 'text' : 'password'}
+                                            value={customPassword}
+                                            onChange={(e) => setCustomPassword(e.target.value)}
+                                            placeholder="Enter your IEEE email password"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-10"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                        >
+                                            {showPassword ? (
+                                                <EyeOff className="w-4 h-4 text-gray-400" />
+                                            ) : (
+                                                <Eye className="w-4 h-4 text-gray-400" />
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        onClick={authenticateInbox}
+                                        disabled={inboxState.isLoading || !customPassword.trim()}
+                                        className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                    >
+                                        {inboxState.isLoading ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                <span>Authenticating...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Key className="w-4 h-4" />
+                                                <span>Access Inbox</span>
+                                            </>
+                                        )}
+                                    </button>
+
+                                    {!customPassword.trim() && (
+                                        <p className="text-xs text-red-500">
+                                            Password is required to access your inbox
+                                        </p>
                                     )}
-                                </button>
+                                </div>
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {inboxState.emails.length === 0 ? (
+                                {inboxState.isRefreshing && (
+                                    <div className="text-center py-4">
+                                        <Loader2 className="w-6 h-6 animate-spin text-purple-600 mx-auto mb-2" />
+                                        <p className="text-sm text-gray-600">Refreshing emails...</p>
+                                    </div>
+                                )}
+
+                                {inboxState.emails.length === 0 && !inboxState.isRefreshing ? (
                                     <div className="text-center py-8">
                                         <Inbox className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                                        <p className="text-gray-500">No emails found</p>
+                                        <p className="text-gray-500">No emails found in your inbox</p>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            Try refreshing or check if you have received any Slack invitations
+                                        </p>
                                     </div>
-                                ) : (
-                                    inboxState.emails.map((email) => (
-                                        <div key={email.id} className={`p-3 sm:p-4 border rounded-lg hover:bg-gray-50 transition-colors ${email.isRead ? 'border-gray-200 bg-white' : 'border-blue-200 bg-blue-50'
-                                            }`}>
-                                            <div className="flex justify-between items-start mb-1">
-                                                <div className="flex items-center space-x-2">
-                                                    {!email.isRead && (
-                                                        <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
-                                                    )}
-                                                    <h4 className={`text-sm ${email.isRead ? 'font-normal text-gray-900' : 'font-semibold text-gray-900'}`}>
-                                                        {email.subject}
-                                                    </h4>
-                                                </div>
-                                                <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{email.date}</span>
+                                ) : inboxState.emails.length > 0 ? (
+                                    <>
+                                        <div className="mb-3 p-2 bg-purple-50 border border-purple-200 rounded-md">
+                                            <div className="flex items-center space-x-2 text-xs text-purple-700">
+                                                <MessageSquare className="w-3 h-3" />
+                                                <span>Slack-related emails are marked with this icon</span>
                                             </div>
-                                            <p className="text-xs text-gray-600 mb-1">From: {email.from}</p>
-                                            <p className="text-sm text-gray-700 line-clamp-2">{email.preview}</p>
                                         </div>
-                                    ))
-                                )}
+                                        {inboxState.emails.map((email) => {
+                                            // Check if email is Slack-related
+                                            const isSlackRelated =
+                                                email.subject.toLowerCase().includes('slack') ||
+                                                email.from.toLowerCase().includes('slack') ||
+                                                email.from.toLowerCase().includes('ieeeucsd');
+
+                                            return (
+                                                <div
+                                                    key={email.id}
+                                                    onClick={() => openEmailModal(email)}
+                                                    className={`p-3 sm:p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer ${email.isRead ? 'border-gray-200 bg-white' : 'border-blue-200 bg-blue-50'
+                                                        }`}>
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <div className="flex items-center space-x-2">
+                                                            {!email.isRead && (
+                                                                <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
+                                                            )}
+                                                            {isSlackRelated && (
+                                                                <MessageSquare className="w-3 h-3 text-purple-600 flex-shrink-0" />
+                                                            )}
+                                                            <h4 className={`text-sm ${email.isRead ? 'font-normal text-gray-900' : 'font-semibold text-gray-900'}`}>
+                                                                {email.subject}
+                                                            </h4>
+                                                        </div>
+                                                        <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{email.date}</span>
+                                                    </div>
+                                                    <p className="text-xs text-gray-600 mb-1">From: {email.from}</p>
+                                                    <p className="text-sm text-gray-700 line-clamp-2">{email.preview}</p>
+                                                    <p className="text-xs text-blue-600 mt-2">Click to view full email</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </>
+                                ) : null}
                             </div>
                         )}
 
@@ -658,6 +762,165 @@ export default function SlackAccessContent() {
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* Email Modal */}
+            {isModalOpen && selectedEmail && (
+                <EmailModal
+                    email={selectedEmail}
+                    credentials={inboxState.credentials}
+                    onClose={closeEmailModal}
+                />
+            )}
+        </div>
+    );
+}
+
+// Email Modal Component
+interface EmailModalProps {
+    email: EmailMessage;
+    credentials: { email: string; password: string } | null;
+    onClose: () => void;
+}
+
+function EmailModal({ email, credentials, onClose }: EmailModalProps) {
+    const [emailContent, setEmailContent] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchEmailContent = async () => {
+            if (!credentials) {
+                setError('No credentials available');
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/fetch-email-content', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: credentials.email,
+                        password: credentials.password,
+                        uid: email.uid
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    setEmailContent(result.emailContent);
+                } else {
+                    setError(result.message || 'Failed to fetch email content');
+                }
+            } catch (err) {
+                console.error('Error fetching email content:', err);
+                setError('Failed to fetch email content');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchEmailContent();
+    }, [email.uid, credentials]);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                    <h2 className="text-lg font-semibold text-gray-900">Email Details</h2>
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        <X className="w-5 h-5 text-gray-500" />
+                    </button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
+                    {isLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                            <span className="ml-2 text-gray-600">Loading email content...</span>
+                        </div>
+                    ) : error ? (
+                        <div className="p-6">
+                            <div className="flex items-center space-x-2 text-red-600 mb-4">
+                                <AlertCircle className="w-5 h-5" />
+                                <span className="font-medium">Error loading email</span>
+                            </div>
+                            <p className="text-red-700">{error}</p>
+                        </div>
+                    ) : emailContent ? (
+                        <div className="p-6">
+                            {/* Email Headers */}
+                            <div className="mb-6 space-y-3">
+                                <div>
+                                    <label className="text-sm font-medium text-gray-500">Subject</label>
+                                    <p className="text-lg font-semibold text-gray-900">{emailContent.subject}</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-500">From</label>
+                                        <p className="text-gray-900">{emailContent.from}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-500">To</label>
+                                        <p className="text-gray-900">{emailContent.to}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-gray-500">Date</label>
+                                    <p className="text-gray-900">{emailContent.date}</p>
+                                </div>
+                            </div>
+
+                            {/* Attachments */}
+                            {emailContent.attachments && emailContent.attachments.length > 0 && (
+                                <div className="mb-6">
+                                    <label className="text-sm font-medium text-gray-500 mb-2 block">Attachments</label>
+                                    <div className="space-y-2">
+                                        {emailContent.attachments.map((attachment: any, index: number) => (
+                                            <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg">
+                                                <Paperclip className="w-4 h-4 text-gray-500" />
+                                                <span className="text-sm text-gray-900">{attachment.filename}</span>
+                                                <span className="text-xs text-gray-500">({attachment.contentType}, {attachment.size} bytes)</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Email Content */}
+                            <div className="border-t border-gray-200 pt-6">
+                                <label className="text-sm font-medium text-gray-500 mb-3 block">Content</label>
+
+                                {emailContent.htmlContent ? (
+                                    <div
+                                        className="prose max-w-none bg-gray-50 p-4 rounded-lg border"
+                                        dangerouslySetInnerHTML={{ __html: emailContent.htmlContent }}
+                                    />
+                                ) : emailContent.textContent ? (
+                                    <div className="bg-gray-50 p-4 rounded-lg border">
+                                        <pre className="whitespace-pre-wrap text-sm text-gray-900 font-mono">
+                                            {emailContent.textContent}
+                                        </pre>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <Mail className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                                        <p>No content available for this email</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
             </div>
         </div>
