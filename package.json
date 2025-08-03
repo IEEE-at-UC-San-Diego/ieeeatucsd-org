@@ -73,6 +73,7 @@
     "framer-motion": "^12.6.2",
     "highlight.js": "^11.11.1",
     "html2pdf.js": "^0.10.3",
+    "imapflow": "^1.0.193",
     "input-otp": "^1.4.2",
     "js-yaml": "^4.1.0",
     "jspdf": "^3.0.1",

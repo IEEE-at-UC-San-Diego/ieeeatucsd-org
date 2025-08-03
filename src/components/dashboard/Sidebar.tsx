@@ -12,7 +12,8 @@ import {
     Banknote,
     FileText,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    MessageSquare
 } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
@@ -42,6 +43,7 @@ const navigationCategories: NavigationCategory[] = [
         items: [
             { icon: Calendar, label: 'Manage Events', href: NAVIGATION_PATHS.MANAGE_EVENTS },
             { icon: Banknote, label: 'Fund Deposits', href: NAVIGATION_PATHS.FUND_DEPOSITS },
+            { icon: MessageSquare, label: 'Slack Access', href: NAVIGATION_PATHS.SLACK_ACCESS },
         ]
     },
     {

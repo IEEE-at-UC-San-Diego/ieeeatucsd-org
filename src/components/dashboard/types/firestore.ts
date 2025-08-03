@@ -47,6 +47,9 @@ export interface User {
     | "twitter"
     | "apple"
     | "other"; // how the user signed in
+  hasIEEEEmail?: boolean; // whether the user has created an IEEE email
+  ieeeEmail?: string; // the user's IEEE email address
+  ieeeEmailCreatedAt?: Timestamp; // when the IEEE email was created
 }
 
 export interface PublicProfile {

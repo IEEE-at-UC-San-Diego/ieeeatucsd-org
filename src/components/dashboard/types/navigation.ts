@@ -1,4 +1,4 @@
-import type { UserRole } from './firestore';
+import type { UserRole } from "./firestore";
 
 export interface NavigationItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -35,18 +35,20 @@ export interface SidebarProps {
 
 // Navigation configuration
 export const NAVIGATION_PATHS = {
-  OVERVIEW: '/dashboard/overview',
-  EVENTS: '/dashboard/events',
-  REIMBURSEMENT: '/dashboard/reimbursement',
-  LEADERBOARD: '/dashboard/leaderboard',
-  MANAGE_EVENTS: '/dashboard/manage-events',
-  MANAGE_REIMBURSEMENTS: '/dashboard/manage-reimbursements',
-  FUND_DEPOSITS: '/dashboard/fund-deposits',
-  MANAGE_USERS: '/dashboard/manage-users',
-  CONSTITUTION_BUILDER: '/dashboard/constitution-builder',
-  SETTINGS: '/dashboard/settings',
-  SIGNOUT: '/dashboard/signout',
-  GET_STARTED: '/dashboard/get-started',
+  OVERVIEW: "/dashboard/overview",
+  EVENTS: "/dashboard/events",
+  REIMBURSEMENT: "/dashboard/reimbursement",
+  LEADERBOARD: "/dashboard/leaderboard",
+  MANAGE_EVENTS: "/dashboard/manage-events",
+  MANAGE_REIMBURSEMENTS: "/dashboard/manage-reimbursements",
+  FUND_DEPOSITS: "/dashboard/fund-deposits",
+  SLACK_ACCESS: "/dashboard/slack-access",
+  MANAGE_USERS: "/dashboard/manage-users",
+  CONSTITUTION_BUILDER: "/dashboard/constitution-builder",
+  SETTINGS: "/dashboard/settings",
+  SIGNOUT: "/dashboard/signout",
+  GET_STARTED: "/dashboard/get-started",
 } as const;
 
-export type NavigationPath = typeof NAVIGATION_PATHS[keyof typeof NAVIGATION_PATHS]; 
+export type NavigationPath =
+  (typeof NAVIGATION_PATHS)[keyof typeof NAVIGATION_PATHS];

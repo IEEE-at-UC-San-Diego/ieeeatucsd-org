@@ -17,12 +17,13 @@ export const POST: APIRoute = async ({ request }) => {
 
     const { userId, name, email, password } = requestBody;
 
-    if (!userId || !name || !email) {
+    if (!userId || !name || !email || !password) {
       console.log("Missing required parameters");
       return new Response(
         JSON.stringify({
           success: false,
-          message: "Missing required parameters",
+          message:
+            "Missing required parameters (userId, name, email, password)",
         }),
         {
           status: 400,
@@ -41,9 +42,9 @@ export const POST: APIRoute = async ({ request }) => {
     const cleanUsername = emailUsername.replace(/[^a-z0-9]/g, "");
     console.log(`Cleaned username: ${cleanUsername}`);
 
-    // Use provided password or generate a secure random one if not provided
-    const newPassword = password || generateSecurePassword();
-    console.log(`Using ${password ? "user-provided" : "generated"} password`);
+    // Use the provided password
+    const newPassword = password;
+    console.log(`Using user-provided password`);
 
     // MXRoute DirectAdmin API credentials from environment variables
     const loginKey = import.meta.env.MXROUTE_LOGIN_KEY;
@@ -159,16 +160,6 @@ export const POST: APIRoute = async ({ request }) => {
 
     console.log("Email account created successfully");
 
-    // Only send notification email if we generated a random password
-    if (!password) {
-      console.log("Sending credentials email to user");
-      await sendCredentialsEmail(
-        email,
-        `${cleanUsername}@${emailDomain}`,
-        newPassword,
-      );
-    }
-
     console.log("Sending notification to webmaster");
     await sendWebmasterNotification(
       userId,
@@ -182,9 +173,8 @@ export const POST: APIRoute = async ({ request }) => {
         success: true,
         data: {
           ieeeEmail: `${cleanUsername}@${emailDomain}`,
-          message: password
-            ? "Email account created successfully with your chosen password."
-            : "Email account created successfully. Check your email for login details.",
+          message:
+            "Email account created successfully with your chosen password.",
         },
       }),
       {
@@ -210,97 +200,6 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-
-// Generate a secure random password
-function generateSecurePassword(length = 16) {
-  const charset =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
-  let password = "";
-
-  // Ensure at least one character from each category
-  password += charset.substring(0, 26).charAt(Math.floor(Math.random() * 26)); // lowercase
-  password += charset.substring(26, 52).charAt(Math.floor(Math.random() * 26)); // uppercase
-  password += charset.substring(52, 62).charAt(Math.floor(Math.random() * 10)); // number
-  password += charset
-    .substring(62)
-    .charAt(Math.floor(Math.random() * (charset.length - 62))); // special
-
-  // Fill the rest randomly
-  for (let i = 4; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
-  }
-
-  // Shuffle the password
-  return password
-    .split("")
-    .sort(() => 0.5 - Math.random())
-    .join("");
-}
-
-// Send email with credentials to the user
-async function sendCredentialsEmail(
-  userEmail: string,
-  ieeeEmail: string,
-  password: string,
-) {
-  // In a real implementation, you would use an email service like SendGrid, Mailgun, etc.
-  // For now, we'll just log the email that would be sent
-  console.log(`
-    To: ${userEmail}
-    Subject: Your IEEE UCSD Email Account
-    
-    Hello,
-    
-    Your IEEE UCSD email account has been created:
-    
-    Email address: ${ieeeEmail}
-    Password: ${password}
-    
-    You can access your email through:
-    - Webmail: https://heracles.mxrouting.net:2096/
-    - IMAP/SMTP settings can be found at: https://mxroute.com/setup/
-    
-    ===== Setting Up Your IEEE Email in Gmail =====
-    
-    --- First Step: Set Up Sending From Your IEEE Email ---
-    1. Go to settings (gear icon) → Accounts and Import
-    2. In the section that says "Send mail as:", select "Reply from the same address the message was sent to"
-    3. In that same section, select "Add another email address"
-    4. For the Name, put your actual name or department name (e.g. IEEEUCSD Webmaster)
-    5. For the Email address, put ${ieeeEmail}
-    6. Make sure the "Treat as an alias" button is selected. Go to the next step
-    7. For the SMTP Server, put mail.ieeeucsd.org
-    8. For the username, put in your FULL ieeeucsd email address (${ieeeEmail})
-    9. For the password, put in the email's password (provided above)
-    10. For the port, put in 587
-    11. Make sure you select "Secured connection with TLS"
-    12. Go back to mail.ieeeucsd.org and verify the email that Google has sent you
-    
-    --- Second Step: Set Up Receiving Your IEEE Email ---
-    1. Go to settings (gear icon) → Accounts and Import
-    2. In the section that says "Check mail from other accounts:", select "Add a mail account"
-    3. Put in ${ieeeEmail} and hit next
-    4. Make sure "Import emails from my other account (POP3)" is selected, then hit next
-    5. For the username, put in ${ieeeEmail}
-    6. For the password, put in your password (provided above)
-    7. For the POP Server, put in mail.ieeeucsd.org
-    8. For the Port, put in 995
-    9. Select "Leave a copy of retrieved message on the server"
-    10. Select "Always use a secure connection (SSL) when retrieving mail"
-    11. Select "Label incoming messages"
-    12. Then hit "Add Account"
-    
-    Please change your password after your first login.
-    
-    If you have any questions, please contact webmaster@ieeeatucsd.org.
-    
-    Best regards,
-    IEEE UCSD Web Team
-  `);
-
-  // In a production environment, replace with actual email sending code
-  return true;
-}
 
 // Send notification to webmaster
 async function sendWebmasterNotification(

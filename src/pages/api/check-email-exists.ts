@@ -2,25 +2,24 @@ import type { APIRoute } from "astro";
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log("Password reset request received");
+    console.log("Email existence check request received");
 
     const requestBody = await request.json();
     console.log(
       "Request body:",
       JSON.stringify({
         email: requestBody.email,
-        passwordProvided: !!requestBody.password,
       }),
     );
 
-    const { email, password } = requestBody;
+    const { email } = requestBody;
 
-    if (!email || !password) {
-      console.log("Missing email address or password");
+    if (!email) {
+      console.log("Missing email address");
       return new Response(
         JSON.stringify({
           success: false,
-          message: "Missing email address or password",
+          message: "Missing email address",
         }),
         {
           status: 400,
@@ -51,10 +50,6 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Use the provided password
-    const newPassword = password;
-    console.log(`Using user-provided password`);
-
     // MXRoute DirectAdmin API credentials from environment variables
     const loginKey = import.meta.env.MXROUTE_LOGIN_KEY;
     const serverLogin = import.meta.env.MXROUTE_SERVER_LOGIN;
@@ -70,7 +65,7 @@ export const POST: APIRoute = async ({ request }) => {
       throw new Error("Missing MXRoute configuration");
     }
 
-    // DirectAdmin API endpoint for changing email password
+    // DirectAdmin API endpoint for listing email accounts
     let baseUrl = serverUrl;
 
     // If the URL contains a specific command, extract just the base URL
@@ -81,27 +76,20 @@ export const POST: APIRoute = async ({ request }) => {
     // Make sure there's no trailing slash
     baseUrl = baseUrl.replace(/\/$/, "");
 
-    // Construct the email POP API URL
+    // Construct the email POP API URL for listing accounts
     const emailApiUrl = `${baseUrl}/CMD_API_EMAIL_POP`;
 
-    console.log(`Resetting password for email: ${email}`);
+    console.log(`Checking if email exists: ${email}`);
     console.log(`DirectAdmin API URL: ${emailApiUrl}`);
 
-    // Create the form data for password reset
+    // Check if the email account exists by trying to list it
     const formData = new URLSearchParams();
-    formData.append("action", "modify");
+    formData.append("action", "list");
     formData.append("domain", domain);
-    formData.append("user", username);
-    formData.append("passwd", newPassword);
-    formData.append("passwd2", newPassword);
 
-    // Log the form data being sent (without showing the actual password)
     console.log("Form data:");
-    console.log(`  action: modify`);
+    console.log(`  action: list`);
     console.log(`  domain: ${domain}`);
-    console.log(`  user: ${username}`);
-    console.log(`  passwd: ********`);
-    console.log(`  passwd2: ********`);
 
     console.log("Sending request to DirectAdmin API...");
     const response = await fetch(emailApiUrl, {
@@ -119,33 +107,37 @@ export const POST: APIRoute = async ({ request }) => {
 
     // DirectAdmin API returns "error=1" in the response text for errors
     if (responseText.includes("error=1") || !response.ok) {
-      console.error("Error resetting email password:", responseText);
-
-      // Parse the error details if possible
-      let errorMessage = "Failed to reset email password";
-      try {
-        const errorParams = new URLSearchParams(responseText);
-        if (errorParams.has("text")) {
-          errorMessage = decodeURIComponent(errorParams.get("text") || "");
-        }
-        if (errorParams.has("details")) {
-          const details = decodeURIComponent(errorParams.get("details") || "");
-          errorMessage += `: ${details.replace(/<br>/g, " ")}`;
-        }
-      } catch (e) {
-        console.error("Error parsing DirectAdmin error response:", e);
-      }
-
-      throw new Error(errorMessage);
+      console.error("Error checking email existence:", responseText);
+      
+      // If it's an error, we'll assume the email doesn't exist for safety
+      return new Response(
+        JSON.stringify({
+          success: true,
+          exists: false,
+          message: "Unable to verify email existence, proceeding with creation",
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
     }
 
-    console.log("Password reset successful");
+    // Parse the response to check if the username exists
+    // DirectAdmin returns email accounts in a specific format
+    const emailExists = responseText.includes(`${username}=`) || responseText.includes(`user=${username}`);
+
+    console.log(`Email existence check result: ${emailExists ? 'exists' : 'does not exist'}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message:
-          "Password reset successfully. Remember to update your password in any email clients or integrations.",
+        exists: emailExists,
+        message: emailExists 
+          ? `Email ${email} already exists` 
+          : `Email ${email} is available`,
       }),
       {
         status: 200,
@@ -155,14 +147,17 @@ export const POST: APIRoute = async ({ request }) => {
       },
     );
   } catch (error) {
-    console.error("Error in reset-email-password:", error);
+    console.error("Error in check-email-exists:", error);
+    
+    // In case of error, return false for safety (allow creation attempt)
     return new Response(
       JSON.stringify({
-        success: false,
-        message: error instanceof Error ? error.message : "An error occurred",
+        success: true,
+        exists: false,
+        message: "Unable to verify email existence, proceeding with creation",
       }),
       {
-        status: 500,
+        status: 200,
         headers: {
           "Content-Type": "application/json",
         },

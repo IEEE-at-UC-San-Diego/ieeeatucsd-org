@@ -40,6 +40,7 @@ export default function DashboardLayout({ children, currentPath }: DashboardLayo
             '/dashboard/manage-events': 'Manage Events',
             '/dashboard/manage-reimbursements': 'Manage Reimbursements',
             '/dashboard/fund-deposits': 'Fund Deposits',
+            '/dashboard/slack-access': 'Slack Access',
             '/dashboard/manage-users': 'Manage Users',
             '/dashboard/constitution-builder': 'Constitution Builder',
             '/dashboard/settings': 'Settings',
