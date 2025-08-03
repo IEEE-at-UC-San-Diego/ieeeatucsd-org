@@ -9,6 +9,7 @@ interface EmailMessage {
   preview: string;
   isRead: boolean;
   uid: number;
+  attachmentCount: number;
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -175,6 +176,23 @@ export const POST: APIRoute = async ({ request }) => {
             // Check if message is read (not in \Seen flags means unread)
             const isRead = message.flags && message.flags.has("\\Seen");
 
+            // Count attachments from body structure
+            let attachmentCount = 0;
+            if (message.bodyStructure && message.bodyStructure.childNodes) {
+              const countAttachments = (node: any) => {
+                if (
+                  node.disposition === "attachment" &&
+                  node.dispositionParameters?.filename
+                ) {
+                  attachmentCount++;
+                }
+                if (node.childNodes) {
+                  node.childNodes.forEach(countAttachments);
+                }
+              };
+              countAttachments(message.bodyStructure);
+            }
+
             emails.push({
               id: message.uid.toString(),
               subject: message.envelope.subject || "No subject",
@@ -183,6 +201,7 @@ export const POST: APIRoute = async ({ request }) => {
               preview: preview,
               isRead: isRead || false,
               uid: message.uid,
+              attachmentCount: attachmentCount,
             });
           }
         }
