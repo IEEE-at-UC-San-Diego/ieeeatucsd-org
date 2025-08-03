@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import type { Constitution, ConstitutionSection } from '../types/firestore';
-import { validateConstitutionConsistency, type ValidationResult } from '../utils/previewPdfValidator';
+import { validateConstitutionConsistency, type ValidationResult } from '../../pages/constitution-builder/utils/previewPdfValidator';
 
 interface ConsistencyIndicatorProps {
     constitution: Constitution | null;
@@ -60,7 +60,7 @@ const ConsistencyIndicator: React.FC<ConsistencyIndicatorProps> = ({
 
     return (
         <div className={`${className}`}>
-            <div 
+            <div
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors hover:opacity-80 ${getStatusColor()}`}
                 onClick={() => setShowDetails(!showDetails)}
             >
@@ -72,7 +72,7 @@ const ConsistencyIndicator: React.FC<ConsistencyIndicatorProps> = ({
             {showDetails && (
                 <div className={`mt-2 p-3 rounded-lg border text-sm ${getStatusColor()}`}>
                     <div className="font-medium mb-2">Consistency Report:</div>
-                    
+
                     {validation.errors.length > 0 && (
                         <div className="mb-2">
                             <div className="font-medium text-red-700 mb-1">Errors:</div>

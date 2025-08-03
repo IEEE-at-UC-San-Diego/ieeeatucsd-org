@@ -8,7 +8,7 @@ import {
     ArrowUp,
     ArrowDown
 } from 'lucide-react';
-import type { ConstitutionSection } from '../../shar../../shared/types/firestore';
+import type { ConstitutionSection } from '../../shared/types/firestore';
 import { getSectionHierarchy, getSectionDisplayTitle, getSubsectionIndentLevel } from './utils/constitutionUtils';
 import AddSectionModal from './AddSectionModal';
 

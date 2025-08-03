@@ -3,7 +3,7 @@ import {
     ChevronLeft,
     ChevronRight
 } from 'lucide-react';
-import type { Constitution, ConstitutionSection } from '../../shar../../shared/types/firestore';
+import type { Constitution, ConstitutionSection } from '../../shared/types/firestore';
 import { generateContentPages, generateTableOfContents } from './utils/printUtils';
 import { getSectionDisplayTitle, toRomanNumeral } from './utils/constitutionUtils';
 import SectionRenderer from './SectionRenderer';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { ConstitutionSection } from '../../shar../../shared/types/firestore';
+import type { ConstitutionSection } from '../../shared/types/firestore';
 
 interface AddSectionModalProps {
     onClose: () => void;

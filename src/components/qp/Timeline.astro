@@ -1,50 +1,50 @@
 ---
-const {timeline} = Astro.props;
+const { timeline } = Astro.props;
 import Subtitle from "../core/Subtitle.astro";
 ---
 
-<div class="flex flex-col items-center md:mt-[10%] mt-[25%] md:mb-[15%] mb-[35%]">
-    <Subtitle title="Timeline" />
+<div
+  class="flex flex-col items-center md:mt-[10%] mt-[25%] md:mb-[15%] mb-[35%]"
+>
+  <Subtitle title="Timeline" />
 
+  <div
+    class="relative flex items-center justify-between w-full md:max-w-[75vw] max-w-[85vw] py-[10%] md:mt-[7%] mt-[10%]"
+  >
     <div
-        class="relative flex items-center justify-between w-full md:max-w-[75vw] max-w-[85vw] py-[10%] md:mt-[7%] mt-[10%]"
+      class="absolute top-1/2 w-full h-[0.1vw] bg-gray-200 transform -translate-y-1/2"
     >
-        <div
-            class="absolute top-1/2 w-full h-[0.1vw] bg-gray-200 transform -translate-y-1/2"
-        />
-
-        {timeline.map((event, index) => (
-            <div
-                class="relative flex flex-col items-center"
-                style={`flex: 1`}
-            >
-                <div
-                    class={`absolute ${
-                        index % 2 === 0 ? "bottom-0 mb-[70%]" : "top-0 mt-[70%]"
-                    } flex flex-col items-center`}
-                >
-                    <div class="text-center">
-                        <div class="font-bold text-ieee-yellow md:text-[1.4vw] text-[2vw]">
-                            {event.week}
-                        </div>
-                        <div class="md:text-[1.1vw] text-[1.5vw] text-gray-300 md:max-w-[10vw] max-w-[15vw]">
-                            {event.description}
-                        </div>
-                    </div>
-                </div>
-
-                <div
-                    class={`absolute ${
-                        index % 2 === 1
-                            ? "h-[5vw] top-1/2"
-                            : "h-[5vw] bottom-1/2"
-                    } w-[0.1vw] bg-white`}
-                />
-
-                <div class="absolute top-1/2 transform -translate-y-1/2">
-                    <div class="w-[1.2vw] h-[1.2vw] bg-white border-2 rounded-full" />
-                </div>
-            </div>
-        ))}
     </div>
+
+    {
+      timeline.map((event: any, index: number) => (
+        <div class="relative flex flex-col items-center" style={`flex: 1`}>
+          <div
+            class={`absolute ${
+              index % 2 === 0 ? "bottom-0 mb-[70%]" : "top-0 mt-[70%]"
+            } flex flex-col items-center`}
+          >
+            <div class="text-center">
+              <div class="font-bold text-ieee-yellow md:text-[1.4vw] text-[2vw]">
+                {event.week}
+              </div>
+              <div class="md:text-[1.1vw] text-[1.5vw] text-gray-300 md:max-w-[10vw] max-w-[15vw]">
+                {event.description}
+              </div>
+            </div>
+          </div>
+
+          <div
+            class={`absolute ${
+              index % 2 === 1 ? "h-[5vw] top-1/2" : "h-[5vw] bottom-1/2"
+            } w-[0.1vw] bg-white`}
+          />
+
+          <div class="absolute top-1/2 transform -translate-y-1/2">
+            <div class="w-[1.2vw] h-[1.2vw] bg-white border-2 rounded-full" />
+          </div>
+        </div>
+      ))
+    }
+  </div>
 </div>

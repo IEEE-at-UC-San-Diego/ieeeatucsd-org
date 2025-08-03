@@ -1,166 +1,179 @@
 ---
-const { filters, currentFilter } = Astro.props;
+interface Props {
+  filters: string[];
+  currentFilter: string;
+}
+
+const { filters, currentFilter }: Props = Astro.props;
 ---
 
-<div class="inline-flex border border-white/20 rounded-full md:p-[0.2vw] p-[0.4vw] relative my-[3vw]">
-    <div
-        id="slider"
-        class="absolute h-[calc(100%-15%)] bg-[#FFB81C] rounded-full transition-none"
-        style="left: 1%;"
-    >
-    </div>
-    {
-        filters.map((filter) => (
-            <button
-                data-filter={filter}
-                class={`md:text-[1.3vw] text-[2.5vw] md:px-[1.8vw] px-[3vw] md:py-[0.2vw] py-[0.4vw] rounded-full transition-all relative z-10 ${
-                    currentFilter === filter
-                        ? "text-black"
-                        : "text-white hover:bg-white/10 hover:bg-opacity-50"
-                }`}
-            >
-                {filter}
-            </button>
-        ))
-    }
+<div
+  class="inline-flex border border-white/20 rounded-full md:p-[0.2vw] p-[0.4vw] relative my-[3vw]"
+>
+  <div
+    id="slider"
+    class="absolute h-[calc(100%-15%)] bg-[#FFB81C] rounded-full transition-none"
+    style="left: 1%;"
+  >
+  </div>
+  {
+    filters.map((filter) => (
+      <button
+        data-filter={filter}
+        class={`md:text-[1.3vw] text-[2.5vw] md:px-[1.8vw] px-[3vw] md:py-[0.2vw] py-[0.4vw] rounded-full transition-all relative z-10 ${
+          currentFilter === filter
+            ? "text-black"
+            : "text-white hover:bg-white/10 hover:bg-opacity-50"
+        }`}
+      >
+        {filter}
+      </button>
+    ))
+  }
 </div>
 
 <script>
-    const buttons = document.querySelectorAll("[data-filter]");
-    const officers = document.querySelectorAll("[data-officer]");
-    const container = officers[0]?.parentElement;
-    const slider = document.getElementById("slider");
+  const buttons = document.querySelectorAll(
+    "[data-filter]",
+  ) as NodeListOf<HTMLElement>;
+  const officers = document.querySelectorAll(
+    "[data-officer]",
+  ) as NodeListOf<HTMLElement>;
+  const container = officers[0]?.parentElement;
+  const slider = document.getElementById("slider") as HTMLElement;
 
-    // Define type order for consistent sorting
-    const typeOrder = ["Executives", "Internal", "Events", "Projects"];
+  // Define type order for consistent sorting
+  const typeOrder = ["Executives", "Internal", "Events", "Projects"];
 
-    function getTypeWeight(type) {
-        const index = typeOrder.indexOf(type);
-        return index === -1 ? typeOrder.length : index;
-    }
+  function getTypeWeight(type: string) {
+    const index = typeOrder.indexOf(type);
+    return index === -1 ? typeOrder.length : index;
+  }
 
-    function sortOfficersByType() {
-        const officerArray = Array.from(officers);
-        officerArray.sort((a, b) => {
-            const aTypes = JSON.parse(a.getAttribute("data-types"));
-            const bTypes = JSON.parse(b.getAttribute("data-types"));
-            return getTypeWeight(aTypes[0]) - getTypeWeight(bTypes[0]);
+  function sortOfficersByType() {
+    if (!container) return;
+    const officerArray = Array.from(officers);
+    officerArray.sort((a, b) => {
+      const aTypesStr = a.getAttribute("data-types");
+      const bTypesStr = b.getAttribute("data-types");
+      if (!aTypesStr || !bTypesStr) return 0;
+      const aTypes = JSON.parse(aTypesStr);
+      const bTypes = JSON.parse(bTypesStr);
+      return getTypeWeight(aTypes[0]) - getTypeWeight(bTypes[0]);
+    });
+
+    officerArray.forEach((officer) => {
+      container.appendChild(officer);
+    });
+  }
+
+  function moveSlider(button: HTMLElement) {
+    if (!slider || !button.parentElement) return;
+    const buttonRect = button.getBoundingClientRect();
+    const containerRect = button.parentElement.getBoundingClientRect();
+
+    slider.style.width = `${buttonRect.width}px`;
+    slider.style.left = `${buttonRect.left - containerRect.left}px`;
+  }
+
+  function updateFilter(selectedFilter: string, clickedButton: HTMLElement) {
+    // Update button styles
+    buttons.forEach((btn) => {
+      const isSelected = btn.getAttribute("data-filter") === selectedFilter;
+      btn.classList.toggle("text-black", isSelected);
+      btn.classList.toggle("text-white", !isSelected);
+      btn.classList.toggle("hover:bg-white/10", !isSelected);
+      btn.classList.toggle("hover:bg-opacity-50", !isSelected);
+    });
+
+    // move slider
+    moveSlider(clickedButton);
+
+    // fades out all officers
+    officers.forEach((officer) => {
+      officer.style.opacity = "0";
+      officer.style.transition = "opacity 300ms ease-out";
+    });
+
+    // waits, then removes and re-adds officers
+    setTimeout(() => {
+      // removes all officers from container
+      officers.forEach((officer) => {
+        officer.remove();
+      });
+
+      // filters officers and prepares them for re-insertion
+      const officersToShow = Array.from(officers).filter((officer) => {
+        const types = JSON.parse(officer.getAttribute("data-types") || "[]");
+        return selectedFilter === "All" || types.includes(selectedFilter);
+      });
+
+      // sorts if needed
+      if (selectedFilter === "All") {
+        officersToShow.sort((a, b) => {
+          const aTypesStr = a.getAttribute("data-types");
+          const bTypesStr = b.getAttribute("data-types");
+          if (!aTypesStr || !bTypesStr) return 0;
+          const aTypes = JSON.parse(aTypesStr);
+          const bTypes = JSON.parse(bTypesStr);
+          return getTypeWeight(aTypes[0]) - getTypeWeight(bTypes[0]);
         });
+      }
 
-        officerArray.forEach((officer) => {
-            container.appendChild(officer);
+      // sets initial opacity to 0 for fade in
+      officersToShow.forEach((officer) => {
+        officer.style.opacity = "0";
+        officer.style.display = "";
+        if (container) {
+          container.appendChild(officer);
+        }
+      });
+
+      // triggers reflow and fades in
+      requestAnimationFrame(() => {
+        officersToShow.forEach((officer) => {
+          officer.style.opacity = "1";
         });
-    }
+      });
+    }, 300); // matches fade-out duration
+  }
 
-    function moveSlider(button) {
-        if (!slider) return;
-        const buttonRect = button.getBoundingClientRect();
-        const containerRect = button.parentElement.getBoundingClientRect();
+  sortOfficersByType();
 
-        slider.style.width = `${buttonRect.width}px`;
-        slider.style.left = `${buttonRect.left - containerRect.left}px`;
-    }
+  // init
+  const initialButton = Array.from(buttons).find(
+    (btn) => btn.getAttribute("data-filter") === "All",
+  );
 
-    function updateFilter(selectedFilter, clickedButton) {
-        // Update button styles
-        buttons.forEach((btn) => {
-            const isSelected =
-                btn.getAttribute("data-filter") === selectedFilter;
-            btn.classList.toggle("text-black", isSelected);
-            btn.classList.toggle("text-white", !isSelected);
-            btn.classList.toggle("hover:bg-white/10", !isSelected);
-            btn.classList.toggle("hover:bg-opacity-50", !isSelected);
-        });
-
-        // move slider
-        moveSlider(clickedButton);
-
-        // fades out all officers
-        officers.forEach((officer) => {
-            officer.style.opacity = "0";
-            officer.style.transition = "opacity 300ms ease-out";
-        });
-
-        // waits, then removes and re-adds officers
-        setTimeout(() => {
-            // removes all officers from container
-            officers.forEach((officer) => {
-                officer.remove();
-            });
-
-            // filters officers and prepares them for re-insertion
-            const officersToShow = Array.from(officers).filter((officer) => {
-                const types = JSON.parse(
-                    officer.getAttribute("data-types") || "[]"
-                );
-                return (
-                    selectedFilter === "All" || types.includes(selectedFilter)
-                );
-            });
-
-            // sorts if needed
-            if (selectedFilter === "All") {
-                officersToShow.sort((a, b) => {
-                    const aTypes = JSON.parse(a.getAttribute("data-types"));
-                    const bTypes = JSON.parse(b.getAttribute("data-types"));
-                    return getTypeWeight(aTypes[0]) - getTypeWeight(bTypes[0]);
-                });
-            }
-
-            // sets initial opacity to 0 for fade in
-            officersToShow.forEach((officer) => {
-                officer.style.opacity = "0";
-                officer.style.display = "";
-                container.appendChild(officer);
-            });
-
-            // triggers reflow and fades in
-            requestAnimationFrame(() => {
-                officersToShow.forEach((officer) => {
-                    officer.style.opacity = "1";
-                });
-            });
-        }, 300); // matches fade-out duration
-    }
-
-    sortOfficersByType();
-
-    // init
-    const initialButton = Array.from(buttons).find(
-        (btn) => btn.getAttribute("data-filter") === "All"
-    );
-
-    // init
-    if (initialButton && slider) {
-        const buttonRect = initialButton.getBoundingClientRect();
-        slider.style.width = `${buttonRect.width}px`;
-        // turns on transitions
-        requestAnimationFrame(() => {
-            slider.classList.remove("transition-none");
-            slider.classList.add(
-                "transition-all",
-                "duration-300",
-                "ease-in-out"
-            );
-        });
-    }
-
-    // reveals officers after sorting with animation
+  // init
+  if (initialButton && slider) {
+    const buttonRect = initialButton.getBoundingClientRect();
+    slider.style.width = `${buttonRect.width}px`;
+    // turns on transitions
     requestAnimationFrame(() => {
-        officers.forEach((officer) => {
-            officer.style.transition = "opacity 300ms ease-out";
-            officer.style.visibility = "visible";
-            // triggers reflow
-            officer.offsetHeight;
-            officer.style.opacity = "1";
-        });
+      slider.classList.remove("transition-none");
+      slider.classList.add("transition-all", "duration-300", "ease-in-out");
     });
+  }
 
-    // addss click handlers
-    buttons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const filterValue = button.getAttribute("data-filter");
-            updateFilter(filterValue, button);
-        });
+  // reveals officers after sorting with animation
+  requestAnimationFrame(() => {
+    officers.forEach((officer) => {
+      officer.style.transition = "opacity 300ms ease-out";
+      officer.style.visibility = "visible";
+      // triggers reflow
+      officer.offsetHeight;
+      officer.style.opacity = "1";
     });
+  });
+
+  // addss click handlers
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const filterValue = button.getAttribute("data-filter");
+      if (filterValue) {
+        updateFilter(filterValue, button);
+      }
+    });
+  });
 </script>

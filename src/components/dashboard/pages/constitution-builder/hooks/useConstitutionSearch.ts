@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import type { ConstitutionSection } from "../../../shar../../shared/types/firestore";
+import type { ConstitutionSection } from "../../../shared/types/firestore";
 import { getSectionDisplayTitle } from "../utils/constitutionUtils";
 import {
   generateContentPages,
