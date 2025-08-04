@@ -6,7 +6,6 @@ import { USER_ROLES, USER_STATUSES } from '../types/UserManagementTypes';
 interface UserFiltersProps {
     filters: UserFilters;
     onFiltersChange: (filters: Partial<UserFilters>) => void;
-    onShowUserModal: () => void;
     onShowInviteModal: () => void;
     onShowAddMemberModal: () => void;
     canManageUsers: boolean;
@@ -15,7 +14,6 @@ interface UserFiltersProps {
 export default function UserFilters({
     filters,
     onFiltersChange,
-    onShowUserModal,
     onShowInviteModal,
     onShowAddMemberModal,
     canManageUsers
@@ -76,23 +74,15 @@ export default function UserFilters({
                             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                         >
                             <UserPlus className="w-4 h-4" />
-                            <span>Add Member</span>
+                            <span>Promote to Officer</span>
                         </button>
-                        
+
                         <button
                             onClick={onShowInviteModal}
                             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                             <Plus className="w-4 h-4" />
-                            <span>Send Invite</span>
-                        </button>
-                        
-                        <button
-                            onClick={onShowUserModal}
-                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>Add User</span>
+                            <span>Invite Officer</span>
                         </button>
                     </div>
                 )}
@@ -103,7 +93,7 @@ export default function UserFilters({
                 <div className="mt-4 pt-4 border-t border-gray-200">
                     <div className="flex flex-wrap gap-2">
                         <span className="text-sm text-gray-600">Active filters:</span>
-                        
+
                         {filters.searchTerm && (
                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                                 Search: "{filters.searchTerm}"
@@ -115,7 +105,7 @@ export default function UserFilters({
                                 </button>
                             </span>
                         )}
-                        
+
                         {filters.roleFilter !== 'all' && (
                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
                                 Role: {filters.roleFilter}
@@ -127,7 +117,7 @@ export default function UserFilters({
                                 </button>
                             </span>
                         )}
-                        
+
                         {filters.statusFilter !== 'all' && (
                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                                 Status: {filters.statusFilter}
@@ -139,12 +129,12 @@ export default function UserFilters({
                                 </button>
                             </span>
                         )}
-                        
+
                         <button
-                            onClick={() => onFiltersChange({ 
-                                searchTerm: '', 
-                                roleFilter: 'all', 
-                                statusFilter: 'all' 
+                            onClick={() => onFiltersChange({
+                                searchTerm: '',
+                                roleFilter: 'all',
+                                statusFilter: 'all'
                             })}
                             className="text-xs text-gray-500 hover:text-gray-700 underline"
                         >

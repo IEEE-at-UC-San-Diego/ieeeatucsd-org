@@ -308,6 +308,17 @@ export default function ManageEventsContent() {
         setShowEventRequestModal(true);
     };
 
+    // Helper function to get user name
+    const getUserName = (userId: string) => {
+        try {
+            if (!userId || !users) return userId || 'Unknown User';
+            return users[userId]?.name || userId;
+        } catch (error) {
+            console.error('Error getting user name:', error);
+            return userId || 'Unknown User';
+        }
+    };
+
     // Filter functionality
     const filteredEventRequests = eventRequests.filter(request => {
         try {
@@ -315,6 +326,8 @@ export default function ManageEventsContent() {
                 (request.name && request.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (request.location && request.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (request.requestedUser && getUserName(request.requestedUser).toLowerCase().includes(searchTerm.toLowerCase()));
+
+
 
             return matchesSearch;
         } catch (error) {
@@ -393,16 +406,6 @@ export default function ManageEventsContent() {
     useEffect(() => {
         setCurrentPage(1);
     }, [sortBy]);
-
-    const getUserName = (userId: string) => {
-        try {
-            if (!userId || !users) return userId || 'Unknown User';
-            return users[userId]?.name || userId;
-        } catch (error) {
-            console.error('Error getting user name:', error);
-            return userId || 'Unknown User';
-        }
-    };
 
     // Sortable header component
     const SortableHeader = ({ field, children, className = "" }: { field: string; children: React.ReactNode; className?: string }) => (

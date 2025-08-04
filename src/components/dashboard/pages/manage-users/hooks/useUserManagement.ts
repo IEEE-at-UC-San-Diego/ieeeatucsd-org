@@ -290,7 +290,7 @@ export const useUserManagement = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          to: inviteData.email,
+          email: inviteData.email,
           name: inviteData.name,
           role: inviteData.role,
           position: inviteData.position,
