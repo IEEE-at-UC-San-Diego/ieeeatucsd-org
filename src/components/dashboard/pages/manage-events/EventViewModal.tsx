@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, MapPin, User, Clock, DollarSign, Image, FileText, Eye, Download, Users, Camera, Megaphone, AlertTriangle, Settings, Lock, Copy, Check, ExternalLink } from 'lucide-react';
-import { getFirestore, collection, doc, updateDoc, query, where, getDocs } from 'firebase/firestore';
-import { app } from '../../../../firebase/client';
+import { getFirestore, collection, doc, updateDoc, query, where, getDocs, getDoc } from 'firebase/firestore';
+import { app, auth } from '../../../../firebase/client';
+import { EventAuditService } from '../../shared/services/eventAuditService';
+import { useAuthState } from 'react-firebase-hooks/auth';
 
 interface EventViewModalProps {
     request: {
@@ -60,9 +62,11 @@ interface EventViewModalProps {
     } | null;
     users: Record<string, { name: string; email: string }>;
     onClose: () => void;
+    onSuccess?: () => void;
 }
 
-export default function EventViewModal({ request, users, onClose }: EventViewModalProps) {
+export default function EventViewModal({ request, users, onClose, onSuccess }: EventViewModalProps) {
+    const [user] = useAuthState(auth);
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [publishStatus, setPublishStatus] = useState(request?.published || false);
     const [updating, setUpdating] = useState(false);
@@ -76,10 +80,50 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
     const [eventId, setEventId] = useState<string>('');
     const [copiedInvoice, setCopiedInvoice] = useState(false);
     const [attendeeSearch, setAttendeeSearch] = useState('');
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [reviewFeedback, setReviewFeedback] = useState('');
+    const [isEditingSubmittedUser, setIsEditingSubmittedUser] = useState(false);
+    const [newSubmittedUser, setNewSubmittedUser] = useState('');
+    const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+    const [currentUserRole, setCurrentUserRole] = useState<string>('');
+    const [userSearchQuery, setUserSearchQuery] = useState('');
+    const [showUserDropdown, setShowUserDropdown] = useState(false);
 
     const db = getFirestore(app);
 
     if (!request) return null;
+
+    // Fetch current user role and available users for administrators
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchUserRole = async () => {
+            try {
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    setCurrentUserRole(userData.role || 'Member');
+
+                    // If user is administrator, fetch all users for the dropdown
+                    if (userData.role === 'Administrator') {
+                        const usersQuery = query(collection(db, 'users'));
+                        const usersSnapshot = await getDocs(usersQuery);
+                        const usersList = usersSnapshot.docs.map(doc => ({
+                            id: doc.id,
+                            name: doc.data().name || doc.data().email || 'Unknown User',
+                            email: doc.data().email
+                        }));
+                        setAvailableUsers(usersList);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching user role:', error);
+                setCurrentUserRole('Member');
+            }
+        };
+
+        fetchUserRole();
+    }, [user]);
 
     useEffect(() => {
         const fetchEventFiles = async () => {
@@ -329,6 +373,12 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
     const handleStatusChange = async (newStatus: string) => {
         try {
             let declinedReason: string | undefined;
+            let reviewFeedbackText: string | undefined;
+
+            if (newStatus === 'needs_review') {
+                setShowReviewModal(true);
+                return; // Don't proceed until feedback is provided
+            }
 
             if (newStatus === 'declined') {
                 const reason = prompt('Please provide a reason for declining this event:');
@@ -388,12 +438,159 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                 // Don't block the main flow for email failures
             }
 
-            // Refresh the page or update the request object
-            window.location.reload();
+            // Log status change
+            try {
+                const userName = await EventAuditService.getUserName(auth.currentUser?.uid || '');
+                await EventAuditService.logStatusChange(
+                    request.id,
+                    auth.currentUser?.uid || '',
+                    request.status,
+                    newStatus,
+                    declinedReason,
+                    userName,
+                    { eventName: request.name }
+                );
+            } catch (auditError) {
+                console.error('Failed to log status change:', auditError);
+            }
+
+            // Call onSuccess to refresh the parent component's data
+            onSuccess?.();
+            onClose();
         } catch (error) {
             console.error('Error updating status:', error);
             alert('Failed to update status: ' + (error as Error).message);
         }
+    };
+
+    const handleReviewSubmit = async () => {
+        if (!reviewFeedback.trim()) {
+            alert('Please provide feedback for the review');
+            return;
+        }
+
+        try {
+            // Update the event request with needs_review status and feedback
+            const requestRef = doc(db, 'event_requests', request.id);
+            await updateDoc(requestRef, {
+                status: 'needs_review',
+                reviewFeedback: reviewFeedback,
+                updatedAt: new Date()
+            });
+
+            // Send email notification for status change
+            try {
+                const { EmailClient } = await import('../../../../scripts/email/EmailClient');
+                await EmailClient.notifyFirebaseEventRequestStatusChange(
+                    request.id,
+                    'needs_review',
+                    request.status,
+                    undefined, // changedByUserId - could add current user if needed
+                    reviewFeedback
+                );
+            } catch (emailError) {
+                console.error('Failed to send review notification email:', emailError);
+                // Don't block the main flow for email failures
+            }
+
+            // Log status change to needs_review
+            try {
+                const userName = await EventAuditService.getUserName(auth.currentUser?.uid || '');
+                await EventAuditService.logStatusChange(
+                    request.id,
+                    auth.currentUser?.uid || '',
+                    request.status,
+                    'needs_review',
+                    reviewFeedback,
+                    userName,
+                    { eventName: request.name }
+                );
+            } catch (auditError) {
+                console.error('Failed to log review status change:', auditError);
+            }
+
+            setShowReviewModal(false);
+            setReviewFeedback('');
+            // Call onSuccess to refresh the parent component's data
+            onSuccess?.();
+            onClose();
+        } catch (error) {
+            console.error('Error submitting review:', error);
+            alert('Failed to submit review: ' + (error as Error).message);
+        }
+    };
+
+    const handleSubmittedUserEdit = () => {
+        setIsEditingSubmittedUser(true);
+        setNewSubmittedUser(request.requestedUser);
+        setUserSearchQuery('');
+        setShowUserDropdown(false);
+    };
+
+    const filteredUsers = availableUsers.filter(user =>
+        user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+    );
+
+    const handleUserSelect = (userId: string) => {
+        setNewSubmittedUser(userId);
+        setShowUserDropdown(false);
+        const selectedUser = availableUsers.find(u => u.id === userId);
+        setUserSearchQuery(selectedUser ? `${selectedUser.name} (${selectedUser.email})` : '');
+    };
+
+    const handleSubmittedUserSave = async () => {
+        if (!newSubmittedUser || newSubmittedUser === request.requestedUser) {
+            setIsEditingSubmittedUser(false);
+            return;
+        }
+
+        try {
+            const requestRef = doc(db, 'event_requests', request.id);
+            await updateDoc(requestRef, {
+                requestedUser: newSubmittedUser,
+                updatedAt: new Date()
+            });
+
+            // Log the change
+            try {
+                const userName = await EventAuditService.getUserName(auth.currentUser?.uid || '');
+                const oldUserName = users[request.requestedUser]?.name || request.requestedUser;
+                const newUserName = availableUsers.find(u => u.id === newSubmittedUser)?.name || newSubmittedUser;
+
+                await EventAuditService.logEventUpdate(
+                    request.id,
+                    auth.currentUser?.uid || '',
+                    [{
+                        field: 'requestedUser',
+                        fieldDisplayName: 'Submitted By',
+                        oldValue: oldUserName,
+                        newValue: newUserName,
+                        changeType: 'updated'
+                    }],
+                    userName,
+                    undefined,
+                    { eventName: request.name, adminChange: true }
+                );
+            } catch (auditError) {
+                console.error('Failed to log submitted user change:', auditError);
+            }
+
+            setIsEditingSubmittedUser(false);
+            // Call onSuccess to refresh the parent component's data
+            onSuccess?.();
+            onClose();
+        } catch (error) {
+            console.error('Error updating submitted user:', error);
+            alert('Failed to update submitted user: ' + (error as Error).message);
+        }
+    };
+
+    const handleSubmittedUserCancel = () => {
+        setIsEditingSubmittedUser(false);
+        setNewSubmittedUser('');
+        setUserSearchQuery('');
+        setShowUserDropdown(false);
     };
 
     const getStatusColor = (status: string) => {
@@ -402,6 +599,8 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                 return 'bg-green-100 text-green-800 border-green-200';
             case 'pending':
                 return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'needs_review':
+                return 'bg-orange-100 text-orange-800 border-orange-200';
             case 'declined':
                 return 'bg-red-100 text-red-800 border-red-200';
             case 'submitted':
@@ -572,7 +771,69 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                     <div className="space-y-3">
                                         <div>
                                             <label className="text-sm font-medium text-gray-700">Requested By</label>
-                                            <p className="text-gray-900">{getUserName(request.requestedUser)}</p>
+                                            {currentUserRole === 'Administrator' && !isEditingSubmittedUser ? (
+                                                <div className="flex items-center space-x-2">
+                                                    <p className="text-gray-900">{getUserName(request.requestedUser)}</p>
+                                                    <button
+                                                        onClick={handleSubmittedUserEdit}
+                                                        className="text-blue-600 hover:text-blue-800 text-sm"
+                                                        title="Edit submitted user"
+                                                    >
+                                                        <Settings className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ) : currentUserRole === 'Administrator' && isEditingSubmittedUser ? (
+                                                <div className="space-y-2">
+                                                    <div className="relative">
+                                                        <input
+                                                            type="text"
+                                                            value={userSearchQuery}
+                                                            onChange={(e) => {
+                                                                setUserSearchQuery(e.target.value);
+                                                                setShowUserDropdown(true);
+                                                            }}
+                                                            onFocus={() => setShowUserDropdown(true)}
+                                                            placeholder="Search users by name or email..."
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                                        />
+                                                        {showUserDropdown && filteredUsers.length > 0 && (
+                                                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                                {filteredUsers.map(user => (
+                                                                    <button
+                                                                        key={user.id}
+                                                                        onClick={() => handleUserSelect(user.id)}
+                                                                        className="w-full px-3 py-2 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none text-sm border-b border-gray-100 last:border-b-0"
+                                                                    >
+                                                                        <div className="font-medium text-gray-900">{user.name}</div>
+                                                                        <div className="text-gray-600 text-xs">{user.email}</div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        {showUserDropdown && userSearchQuery && filteredUsers.length === 0 && (
+                                                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3">
+                                                                <p className="text-gray-500 text-sm">No users found matching "{userSearchQuery}"</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex space-x-2">
+                                                        <button
+                                                            onClick={handleSubmittedUserSave}
+                                                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                        <button
+                                                            onClick={handleSubmittedUserCancel}
+                                                            className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-gray-900">{getUserName(request.requestedUser)}</p>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium text-gray-700">Submitted On</label>
@@ -587,6 +848,7 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 >
                                                     <option value="submitted">Submitted</option>
+                                                    <option value="needs_review">Needs Review</option>
                                                     <option value="approved">Approved</option>
                                                     <option value="declined">Declined</option>
                                                 </select>
@@ -596,6 +858,12 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                             <div>
                                                 <label className="text-sm font-medium text-red-700">Declined Reason</label>
                                                 <p className="text-red-900 bg-red-50 p-2 rounded border border-red-200">{request.declinedReason}</p>
+                                            </div>
+                                        )}
+                                        {(request as any).reviewFeedback && (
+                                            <div>
+                                                <label className="text-sm font-medium text-orange-700">Review Feedback</label>
+                                                <p className="text-orange-900 bg-orange-50 p-2 rounded border border-orange-200">{(request as any).reviewFeedback}</p>
                                             </div>
                                         )}
                                     </div>
@@ -1202,6 +1470,100 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                                     </div>
                                 </div>
                             )}
+
+                        {/* Audit Log Section */}
+                        <div className="mt-8">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                <Clock className="w-5 h-5 mr-2 text-gray-600" />
+                                Activity History
+                                {/* Debug info - remove in production */}
+                                <span className="text-xs text-gray-500 ml-2">
+                                    ({(request as any).auditLogs ? (request as any).auditLogs.length : 0} logs)
+                                </span>
+                            </h3>
+                            {(request as any).auditLogs && (request as any).auditLogs.length > 0 ? (
+                                <div className="space-y-3 max-h-96 overflow-y-auto">
+                                    {(request as any).auditLogs
+                                        .sort((a: any, b: any) => new Date(b.timestamp?.toDate ? b.timestamp.toDate() : b.timestamp).getTime() - new Date(a.timestamp?.toDate ? a.timestamp.toDate() : a.timestamp).getTime())
+                                        .map((log: any, index: number) => (
+                                            <div key={log.id || index} className="border-l-4 border-blue-200 bg-blue-50 p-4 rounded-r-lg">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center space-x-2 mb-2">
+                                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                {log.action.replace('_', ' ').toUpperCase()}
+                                                            </span>
+                                                            <span className="text-sm text-gray-600">
+                                                                by {log.performedByName || log.performedBy}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Status Changes */}
+                                                        {log.action === 'status_changed' && (
+                                                            <div className="text-sm text-gray-700 mb-2">
+                                                                Status changed from <span className="font-medium">{log.oldStatus}</span> to <span className="font-medium">{log.newStatus}</span>
+                                                                {log.statusReason && (
+                                                                    <div className="mt-1 text-xs text-gray-600 italic">
+                                                                        "{log.statusReason}"
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Field Changes */}
+                                                        {log.changes && log.changes.length > 0 && (
+                                                            <div className="text-sm text-gray-700 mb-2">
+                                                                <div className="font-medium mb-1">Changes made:</div>
+                                                                <ul className="list-disc list-inside space-y-1 text-xs">
+                                                                    {log.changes.map((change: any, changeIndex: number) => (
+                                                                        <li key={changeIndex}>
+                                                                            <span className="font-medium">{change.fieldDisplayName}:</span>
+                                                                            {change.changeType === 'updated' && (
+                                                                                <span> changed from "{String(change.oldValue)}" to "{String(change.newValue)}"</span>
+                                                                            )}
+                                                                            {change.changeType === 'added' && (
+                                                                                <span> set to "{String(change.newValue)}"</span>
+                                                                            )}
+                                                                            {change.changeType === 'removed' && (
+                                                                                <span> removed (was "{String(change.oldValue)}")</span>
+                                                                            )}
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+
+                                                        {/* File Changes */}
+                                                        {log.fileChanges && log.fileChanges.length > 0 && (
+                                                            <div className="text-sm text-gray-700 mb-2">
+                                                                <div className="font-medium mb-1">File changes:</div>
+                                                                <ul className="list-disc list-inside space-y-1 text-xs">
+                                                                    {log.fileChanges.map((fileChange: any, fileIndex: number) => (
+                                                                        <li key={fileIndex}>
+                                                                            {fileChange.action === 'added' ? 'Added' : 'Removed'} {fileChange.fileType} file: {fileChange.fileName}
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 ml-4 flex-shrink-0">
+                                                        {new Date(log.timestamp?.toDate ? log.timestamp.toDate() : log.timestamp).toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            ) : (
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                                    <Clock className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                    <p className="text-gray-600 text-sm">No activity history available</p>
+                                    <p className="text-gray-500 text-xs mt-1">
+                                        Activity logs will appear here when actions are performed on this event
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div >
@@ -1239,6 +1601,62 @@ export default function EventViewModal({ request, users, onClose }: EventViewMod
                     </div>
                 )
             }
+
+            {/* Review Feedback Modal */}
+            {showReviewModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                            <h3 className="text-lg font-semibold text-gray-900">Request Review</h3>
+                            <button
+                                onClick={() => {
+                                    setShowReviewModal(false);
+                                    setReviewFeedback('');
+                                }}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6">
+                            <div className="mb-4">
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Please provide specific feedback about what needs to be addressed before this event can be approved.
+                                </p>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Review Feedback <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={reviewFeedback}
+                                    onChange={(e) => setReviewFeedback(e.target.value)}
+                                    placeholder="Describe what needs to be changed or clarified..."
+                                    rows={4}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                />
+                            </div>
+
+                            <div className="flex space-x-3">
+                                <button
+                                    onClick={() => {
+                                        setShowReviewModal(false);
+                                        setReviewFeedback('');
+                                    }}
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleReviewSubmit}
+                                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                                >
+                                    Submit Review
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
-} 
+}

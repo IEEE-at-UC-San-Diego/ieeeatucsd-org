@@ -326,11 +326,17 @@ export default function EventsContent() {
     const getFilteredEvents = (eventsList: Event[]) => {
         if (!searchTerm) return eventsList;
 
-        return eventsList.filter(event =>
-            event.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            event.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            event.eventDescription.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        return eventsList.filter(event => {
+            try {
+                const searchLower = searchTerm.toLowerCase();
+                return (event.eventName && event.eventName.toLowerCase().includes(searchLower)) ||
+                    (event.location && event.location.toLowerCase().includes(searchLower)) ||
+                    (event.eventDescription && event.eventDescription.toLowerCase().includes(searchLower));
+            } catch (error) {
+                console.error('Error filtering event:', error, event);
+                return true; // Include the item if there's an error to avoid blank pages
+            }
+        });
     };
 
     const isUserCheckedIn = (event: Event) => {

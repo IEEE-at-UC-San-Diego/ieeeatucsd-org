@@ -91,10 +91,16 @@ export default function LeaderboardContent() {
         }
     }, [user]);
 
-    const filteredData = leaderboardData.filter(userData =>
-        userData.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (userData.major && userData.major.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const filteredData = leaderboardData.filter(userData => {
+        try {
+            const searchLower = searchTerm.toLowerCase();
+            return (userData.name && userData.name.toLowerCase().includes(searchLower)) ||
+                (userData.major && userData.major.toLowerCase().includes(searchLower));
+        } catch (error) {
+            console.error('Error filtering leaderboard data:', error, userData);
+            return true; // Include the item if there's an error to avoid blank pages
+        }
+    });
 
     const topThree = filteredData.slice(0, 3);
     const restOfLeaderboard = filteredData.slice(3);

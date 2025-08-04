@@ -3,6 +3,8 @@ import { X, Upload, Trash2, CheckCircle } from 'lucide-react';
 import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { app, auth } from '../../../../firebase/client';
+import { EventAuditService } from '../../shared/services/eventAuditService';
+import type { EventFileChange } from '../../shared/types/firestore';
 
 interface GraphicsUploadModalProps {
     request: any;
@@ -15,6 +17,7 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isCompleted, setIsCompleted] = useState(request?.graphicsCompleted || false);
+    const [prRequirementsConfirmed, setPrRequirementsConfirmed] = useState(false);
 
     const db = getFirestore(app);
     const storage = getStorage(app);
@@ -46,6 +49,13 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
         setUploading(true);
         setError(null);
 
+        // Validate PR requirements confirmation if uploading files
+        if (files.length > 0 && !prRequirementsConfirmed) {
+            setError('Please confirm that you have reviewed the PR requirements before uploading files');
+            setUploading(false);
+            return;
+        }
+
         try {
             let uploadedUrls: string[] = [];
 
@@ -67,6 +77,30 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
             }
 
             await updateDoc(doc(db, 'event_requests', request.id), updateData);
+
+            // Log graphics update
+            try {
+                const userName = await EventAuditService.getUserName(auth.currentUser?.uid || '');
+                const fileChanges: EventFileChange[] = files.map(file => ({
+                    action: 'added',
+                    fileName: file.name,
+                    fileType: 'graphics'
+                }));
+
+                await EventAuditService.logGraphicsUpdate(
+                    request.id,
+                    auth.currentUser?.uid || '',
+                    userName,
+                    fileChanges.length > 0 ? fileChanges : undefined,
+                    {
+                        eventName: request.name,
+                        graphicsCompleted: isCompleted,
+                        filesUploaded: files.length
+                    }
+                );
+            } catch (auditError) {
+                console.error('Failed to log graphics update:', auditError);
+            }
 
             onSuccess();
             onClose();
@@ -124,6 +158,49 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
                             <p className="text-red-700 text-sm">{error}</p>
                         </div>
                     )}
+
+                    {/* PR Requirements Section */}
+                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h5 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
+                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            PR Requirements - Please Review Before Uploading
+                        </h5>
+                        <div className="text-sm text-blue-800 space-y-2">
+                            <p className="font-medium">Before uploading graphics files, ensure you have:</p>
+                            <ul className="list-disc list-inside space-y-1 ml-2">
+                                <li>Created a Pull Request (PR) in the graphics repository</li>
+                                <li>Followed the IEEE@UCSD branding guidelines</li>
+                                <li>Used approved fonts and color schemes</li>
+                                <li>Included all required logos and sponsor acknowledgments</li>
+                                <li>Verified all text content for accuracy and spelling</li>
+                                <li>Exported files in the correct formats and resolutions</li>
+                                <li>Named files according to the naming convention: [EventCode]_[Type]_[Version]</li>
+                            </ul>
+                            <p className="text-xs text-blue-700 mt-3 italic">
+                                Graphics that don't meet these requirements may be rejected and require revision.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* PR Requirements Confirmation Checkbox */}
+                    <div className="mb-6">
+                        <label className="flex items-start space-x-3">
+                            <input
+                                type="checkbox"
+                                checked={prRequirementsConfirmed}
+                                onChange={(e) => setPrRequirementsConfirmed(e.target.checked)}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5"
+                            />
+                            <span className="text-sm text-gray-700">
+                                <span className="font-medium text-red-600">*</span> I confirm that I have reviewed and followed all PR requirements listed above before uploading graphics files.
+                            </span>
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1 ml-7">
+                            This confirmation is required to upload files.
+                        </p>
+                    </div>
 
                     {/* File Upload Section */}
                     <div className="mb-6">

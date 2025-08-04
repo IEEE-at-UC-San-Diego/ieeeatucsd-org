@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Filter, Edit, Trash2, Clock, CheckCircle, XCircle, Eye, FileText, EyeOff, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, Filter, Edit, Trash2, Clock, CheckCircle, XCircle, Eye, FileText, EyeOff, ChevronUp, ChevronDown, ChevronsUpDown, AlertTriangle } from 'lucide-react';
 import { getFirestore, collection, getDocs, query, orderBy, where, doc, deleteDoc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { app, auth } from '../../../../firebase/client';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -310,12 +310,17 @@ export default function ManageEventsContent() {
 
     // Filter functionality
     const filteredEventRequests = eventRequests.filter(request => {
-        const matchesSearch = searchTerm === '' ||
-            request.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            request.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            getUserName(request.requestedUser).toLowerCase().includes(searchTerm.toLowerCase());
+        try {
+            const matchesSearch = searchTerm === '' ||
+                (request.name && request.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (request.location && request.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (request.requestedUser && getUserName(request.requestedUser).toLowerCase().includes(searchTerm.toLowerCase()));
 
-        return matchesSearch;
+            return matchesSearch;
+        } catch (error) {
+            console.error('Error filtering event request:', error, request);
+            return true; // Include the item if there's an error to avoid blank pages
+        }
     });
 
     // Sort functionality
@@ -390,7 +395,13 @@ export default function ManageEventsContent() {
     }, [sortBy]);
 
     const getUserName = (userId: string) => {
-        return users[userId]?.name || userId;
+        try {
+            if (!userId || !users) return userId || 'Unknown User';
+            return users[userId]?.name || userId;
+        } catch (error) {
+            console.error('Error getting user name:', error);
+            return userId || 'Unknown User';
+        }
     };
 
     // Sortable header component
@@ -628,6 +639,8 @@ export default function ManageEventsContent() {
             case 'submitted':
             case 'pending':
                 return 'bg-yellow-100 text-yellow-800';
+            case 'needs_review':
+                return 'bg-orange-100 text-orange-800';
             case 'rejected':
                 return 'bg-red-100 text-red-800';
             default:
@@ -642,6 +655,8 @@ export default function ManageEventsContent() {
             case 'submitted':
             case 'pending':
                 return <Clock className="w-4 h-4" />;
+            case 'needs_review':
+                return <AlertTriangle className="w-4 h-4" />;
             case 'rejected':
                 return <XCircle className="w-4 h-4" />;
             default:
@@ -924,24 +939,7 @@ export default function ManageEventsContent() {
                                                                 <Trash2 className="w-4 h-4" />
                                                             </button>
                                                         )}
-                                                        {canApproveOrPublish() && request.status === 'submitted' && (
-                                                            <>
-                                                                <button
-                                                                    onClick={() => handleUpdateEventStatus(request.id, 'approved')}
-                                                                    className="text-green-600 hover:text-green-900"
-                                                                    title="Approve Event"
-                                                                >
-                                                                    <CheckCircle className="w-4 h-4" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleUpdateEventStatus(request.id, 'rejected')}
-                                                                    className="text-red-600 hover:text-red-900"
-                                                                    title="Reject Event"
-                                                                >
-                                                                    <XCircle className="w-4 h-4" />
-                                                                </button>
-                                                            </>
-                                                        )}
+
 
                                                     </div>
                                                 </td>
@@ -1025,6 +1023,10 @@ export default function ManageEventsContent() {
                         onClose={() => {
                             setShowEventViewModal(false);
                             setViewingRequest(null);
+                        }}
+                        onSuccess={() => {
+                            // The real-time listener will automatically update the data
+                            // No need to manually refresh since we're using onSnapshot
                         }}
                     />
                 )

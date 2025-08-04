@@ -139,9 +139,49 @@ export interface EventRequest {
   invoiceFiles?: string[];
   needsGraphics: boolean;
   needsAsFunding: boolean;
-  status: "submitted" | "pending" | "completed" | "declined";
+  status: "submitted" | "pending" | "completed" | "declined" | "needs_review";
   declinedReason?: string;
+  reviewFeedback?: string;
   requestedUser: string;
+  auditLogs?: EventAuditLog[];
+}
+
+export interface EventAuditLog {
+  id: string;
+  eventRequestId: string;
+  action:
+    | "created"
+    | "updated"
+    | "status_changed"
+    | "file_uploaded"
+    | "file_deleted"
+    | "graphics_updated"
+    | "published"
+    | "unpublished";
+  performedBy: string;
+  performedByName?: string;
+  timestamp: Timestamp;
+  changes?: EventFieldChange[];
+  oldStatus?: string;
+  newStatus?: string;
+  statusReason?: string; // For declined reason or review feedback
+  fileChanges?: EventFileChange[];
+  metadata?: { [key: string]: any };
+}
+
+export interface EventFieldChange {
+  field: string;
+  fieldDisplayName: string;
+  oldValue: any;
+  newValue: any;
+  changeType: "added" | "updated" | "removed";
+}
+
+export interface EventFileChange {
+  action: "added" | "removed";
+  fileName: string;
+  fileUrl?: string;
+  fileType: "room_booking" | "invoice" | "logo" | "graphics" | "other";
 }
 
 export interface Log {

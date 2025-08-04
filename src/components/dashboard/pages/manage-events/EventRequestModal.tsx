@@ -1,50 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, MapPin, FileText, Image, DollarSign, Upload, AlertTriangle, Plus, Trash2 } from 'lucide-react';
-import { getFirestore, collection, addDoc, doc, setDoc, updateDoc, query, where, getDocs } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { X } from 'lucide-react';
+import { getFirestore, collection, addDoc, doc, updateDoc, query, where, getDocs } from 'firebase/firestore';
 import { app } from '../../../../firebase/client';
 import { auth } from '../../../../firebase/client';
+import { EventAuditService } from '../../shared/services/eventAuditService';
 import { EmailClient } from '../../../../scripts/email/EmailClient';
 import { toast } from 'react-hot-toast';
 
-interface EventRequestModalProps {
-    onClose: () => void;
-    editingRequest?: any | null;
-    onSuccess?: () => void;
-}
+// Import refactored components and utilities
+import type {
+    EventRequestModalProps,
+    EventFormData,
+    FieldError
+} from './types/EventRequestTypes';
+import { useInvoiceManagement } from './hooks/useInvoiceManagement';
+import { validateStep, validateCompleteForm } from './utils/validationUtils';
+import {
+    safeGetTimeString,
+    safeGetDateString,
+    safeGetDateTimeString,
+    convertLegacyInvoices,
+    createSafeDateTime
+} from './utils/eventRequestUtils';
+import { uploadFiles } from './utils/fileUploadUtils';
 
-interface ItemizedInvoiceItem {
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    total: number;
-}
-
-interface InvoiceFormData {
-    id: string;
-    vendor: string;
-    items: ItemizedInvoiceItem[];
-    tax: number;
-    tip: number;
-    invoiceFile: File | null;
-    existingInvoiceFile: string;
-}
-
-// JsonInvoiceData interface removed - using simplified per-invoice management
+// Import section components
+import DisclaimerSection from './components/DisclaimerSection';
+import BasicInformationSection from './components/BasicInformationSection';
+import MarketingSection from './components/MarketingSection';
+import LogisticsSection from './components/LogisticsSection';
+import FundingSection from './components/FundingSection';
 
 export default function EventRequestModal({ onClose, editingRequest, onSuccess }: EventRequestModalProps) {
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [fieldErrors, setFieldErrors] = useState<{ [key: string]: boolean }>({});
-
-    // Removed JSON invoice import functionality - using simplified per-invoice management
+    const [fieldErrors, setFieldErrors] = useState<FieldError>({});
 
     // Track original data for comparison when editing
     const [originalData, setOriginalData] = useState<any>(null);
 
     // Form data
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<EventFormData>({
         name: '',
         location: '',
         startDate: '',
@@ -55,299 +52,71 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         eventCode: '',
         pointsToReward: 0,
         flyersNeeded: false,
-        flyerType: [] as string[],
+        flyerType: [],
         otherFlyerType: '',
         flyerAdvertisingStartDate: '',
         flyerAdditionalRequests: '',
         flyersCompleted: false,
         photographyNeeded: false,
-        requiredLogos: [] as string[],
-        otherLogos: [] as string[],
-        otherLogoFiles: [] as File[],
+        requiredLogos: [],
+        otherLogos: [],
+        otherLogoFiles: [],
         advertisingFormat: '',
         additionalSpecifications: '',
         hasRoomBooking: true,
-        roomBookingFile: null as File | null,
+        roomBookingFile: null,
         expectedAttendance: '',
         servingFoodDrinks: false,
         needsAsFunding: false,
-        invoices: [] as InvoiceFormData[],
+        invoices: [],
         needsGraphics: false,
         // Existing files for editing
-        existingRoomBookingFiles: [] as string[],
-        existingOtherLogos: [] as string[],
+        existingRoomBookingFiles: [],
+        existingOtherLogos: [],
         // Legacy fields for backward compatibility
-        itemizedInvoice: [] as ItemizedInvoiceItem[],
+        itemizedInvoice: [],
         invoiceTax: 0,
         invoiceTip: 0,
         invoiceVendor: '',
-        invoice: null as File | null,
-        invoiceFiles: [] as File[],
-        existingInvoiceFiles: [] as string[],
+        invoice: null,
+        invoiceFiles: [],
+        existingInvoiceFiles: [],
         existingInvoiceFile: ''
     });
 
-    // State for managing invoice tabs (Details vs Import JSON)
-    const [invoiceTabState, setInvoiceTabState] = useState<{ [key: string]: 'details' | 'import' }>({});
+    // Use the invoice management hook
+    const {
+        invoices,
+        setInvoices,
+        invoiceTabState,
+        jsonImportData,
+        activeInvoiceTab,
+        setActiveInvoiceTab,
+        addInvoice,
+        removeInvoice,
+        updateInvoice,
+        addInvoiceItem,
+        removeInvoiceItem,
+        updateInvoiceItem,
+        handleJsonImport,
+        updateJsonImportData,
+        updateInvoiceTabState
+    } = useInvoiceManagement(formData.invoices);
 
-    // State for JSON import data for each invoice
-    const [jsonImportData, setJsonImportData] = useState<{ [key: string]: string }>({});
-
-    // State for active invoice tab
-    const [activeInvoiceTab, setActiveInvoiceTab] = useState<string>('');
-
-    // Initialize tab states for existing invoices
+    // Sync invoices with form data
     useEffect(() => {
-        if (formData.invoices.length > 0) {
-            const newTabStates: { [key: string]: 'details' | 'import' } = {};
-            const newJsonData: { [key: string]: string } = {};
-
-            formData.invoices.forEach(invoice => {
-                if (!invoiceTabState[invoice.id]) {
-                    newTabStates[invoice.id] = 'details';
-                }
-                if (!jsonImportData[invoice.id]) {
-                    newJsonData[invoice.id] = '';
-                }
-            });
-
-            if (Object.keys(newTabStates).length > 0) {
-                setInvoiceTabState(prev => ({ ...prev, ...newTabStates }));
-            }
-            if (Object.keys(newJsonData).length > 0) {
-                setJsonImportData(prev => ({ ...prev, ...newJsonData }));
-            }
-
-            // Set active tab if none is selected
-            if (!activeInvoiceTab && formData.invoices.length > 0) {
-                setActiveInvoiceTab(formData.invoices[0].id);
-            }
-        }
-    }, [formData.invoices.length]);
+        setFormData(prev => ({ ...prev, invoices }));
+    }, [invoices]);
 
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
-    // Helper functions for managing invoices
-    const createNewInvoice = (): InvoiceFormData => ({
-        id: `invoice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        vendor: '',
-        items: [{ description: '', quantity: 1, unitPrice: 0, total: 0 }],
-        tax: 0,
-        tip: 0,
-        invoiceFile: null,
-        existingInvoiceFile: ''
-    });
-
-    const addInvoice = () => {
-        const newInvoice = createNewInvoice();
-        setFormData(prev => ({
-            ...prev,
-            invoices: [...prev.invoices, newInvoice]
-        }));
-        // Initialize tab state for new invoice
-        setInvoiceTabState(prev => ({
-            ...prev,
-            [newInvoice.id]: 'details'
-        }));
-        setJsonImportData(prev => ({
-            ...prev,
-            [newInvoice.id]: ''
-        }));
-        // Set as active tab if it's the first invoice
-        if (formData.invoices.length === 0) {
-            setActiveInvoiceTab(newInvoice.id);
-        }
-    };
-
-    const removeInvoice = (invoiceId: string) => {
-        setFormData(prev => ({
-            ...prev,
-            invoices: prev.invoices.filter(invoice => invoice.id !== invoiceId)
-        }));
-        // Clean up tab state for removed invoice
-        setInvoiceTabState(prev => {
-            const newState = { ...prev };
-            delete newState[invoiceId];
-            return newState;
-        });
-        setJsonImportData(prev => {
-            const newState = { ...prev };
-            delete newState[invoiceId];
-            return newState;
-        });
-    };
-
-    // Function to handle JSON import submission
-    const handleJsonImport = (invoiceId: string) => {
-        const jsonText = jsonImportData[invoiceId]?.trim();
-        if (!jsonText) {
-            toast.error('Please enter JSON data to import');
-            return;
-        }
-
-        try {
-            const jsonData = JSON.parse(jsonText);
-            const updates: Partial<InvoiceFormData> = {};
-
-            if (jsonData.vendor) {
-                updates.vendor = jsonData.vendor;
-            }
-            if (jsonData.tax !== undefined) {
-                updates.tax = parseFloat(jsonData.tax) || 0;
-            }
-            if (jsonData.tip !== undefined) {
-                updates.tip = parseFloat(jsonData.tip) || 0;
-            }
-            if (jsonData.items && Array.isArray(jsonData.items)) {
-                const validItems = jsonData.items.map((item: any) => ({
-                    description: item.description || '',
-                    quantity: parseInt(item.quantity) || 1,
-                    unitPrice: parseFloat(item.unitPrice) || 0,
-                    total: parseFloat(item.total) || (parseInt(item.quantity) || 1) * (parseFloat(item.unitPrice) || 0)
-                }));
-                updates.items = validItems;
-            }
-
-            updateInvoice(invoiceId, updates);
-
-            // Clear the JSON input and switch to details tab
-            setJsonImportData(prev => ({
-                ...prev,
-                [invoiceId]: ''
-            }));
-            setInvoiceTabState(prev => ({
-                ...prev,
-                [invoiceId]: 'details'
-            }));
-
-            toast.success('Invoice data imported successfully!');
-        } catch (err) {
-            toast.error('Invalid JSON format. Please check your data and try again.');
-        }
-    };
-
-    const updateInvoice = (invoiceId: string, updates: Partial<InvoiceFormData>) => {
-        console.log(`Updating invoice ${invoiceId}:`, updates);
-        setFormData(prev => ({
-            ...prev,
-            invoices: prev.invoices.map(invoice =>
-                invoice.id === invoiceId ? { ...invoice, ...updates } : invoice
-            )
-        }));
-    };
-
-    const addInvoiceItem = (invoiceId: string) => {
-        const newItem: ItemizedInvoiceItem = { description: '', quantity: 1, unitPrice: 0, total: 0 };
-        updateInvoice(invoiceId, {
-            items: [...(formData.invoices.find(inv => inv.id === invoiceId)?.items || []), newItem]
-        });
-    };
-
-    const removeInvoiceItem = (invoiceId: string, itemIndex: number) => {
-        const invoice = formData.invoices.find(inv => inv.id === invoiceId);
-        if (invoice && invoice.items.length > 1) {
-            updateInvoice(invoiceId, {
-                items: invoice.items.filter((_, index) => index !== itemIndex)
-            });
-        }
-    };
-
-    const updateInvoiceItem = (invoiceId: string, itemIndex: number, field: keyof ItemizedInvoiceItem, value: string | number) => {
-        const invoice = formData.invoices.find(inv => inv.id === invoiceId);
-        if (!invoice) return;
-
-        const updatedItems = invoice.items.map((item, index) => {
-            if (index === itemIndex) {
-                const updatedItem = { ...item, [field]: value };
-                // Auto-calculate total when quantity or unitPrice changes
-                if (field === 'quantity' || field === 'unitPrice') {
-                    updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
-                }
-                return updatedItem;
-            }
-            return item;
-        });
-
-        updateInvoice(invoiceId, { items: updatedItems });
-    };
-
-    // Populate form data when editing or set defaults for new events
+    // Populate form data when editing
     useEffect(() => {
         if (editingRequest) {
-            const safeGetTimeString = (timestamp: any) => {
-                try {
-                    if (!timestamp) return '';
-                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-                    if (isNaN(date.getTime())) return '';
-                    return date.toTimeString().slice(0, 5);
-                } catch (error) {
-                    console.warn('Error parsing time:', error);
-                    return '';
-                }
-            };
+            const invoicesData = convertLegacyInvoices(editingRequest);
 
-            const safeGetDateString = (timestamp: any) => {
-                try {
-                    if (!timestamp) return '';
-                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-                    if (isNaN(date.getTime())) return '';
-                    return date.toISOString().split('T')[0];
-                } catch (error) {
-                    console.warn('Error parsing date:', error);
-                    return '';
-                }
-            };
-
-            const safeGetDateTimeString = (timestamp: any) => {
-                try {
-                    if (!timestamp) return '';
-                    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-                    if (isNaN(date.getTime())) return '';
-                    return date.toISOString().slice(0, 16); // Format for datetime-local input
-                } catch (error) {
-                    console.warn('Error parsing datetime:', error);
-                    return '';
-                }
-            };
-
-            // Convert legacy invoice format to new multi-invoice format
-            const convertLegacyInvoices = () => {
-                const invoices: InvoiceFormData[] = [];
-
-                // Check if there's new format (multiple invoices)
-                if (editingRequest.invoices && editingRequest.invoices.length > 0) {
-                    return editingRequest.invoices.map((invoice: any) => ({
-                        id: invoice.id || `invoice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                        vendor: invoice.vendor || '',
-                        items: invoice.items || [],
-                        tax: invoice.tax || 0,
-                        tip: invoice.tip || 0,
-                        invoiceFile: null,
-                        existingInvoiceFile: invoice.invoiceFile || ''
-                    }));
-                }
-
-                // Convert legacy format (single invoice)
-                if (editingRequest.itemizedInvoice && editingRequest.itemizedInvoice.length > 0) {
-                    invoices.push({
-                        id: `legacy_invoice_${Date.now()}`,
-                        vendor: editingRequest.invoiceVendor || '',
-                        items: editingRequest.itemizedInvoice || [],
-                        tax: editingRequest.invoiceTax || 0,
-                        tip: editingRequest.invoiceTip || 0,
-                        invoiceFile: null,
-                        existingInvoiceFile: editingRequest.invoice || ''
-                    });
-                }
-
-                return invoices;
-            };
-
-            const invoicesData = convertLegacyInvoices();
-
-            // Store original data for change comparison
-            const originalFormData = {
+            // Set original data for comparison
+            setOriginalData({
                 name: editingRequest.name || '',
                 location: editingRequest.location || '',
                 startDate: safeGetDateString(editingRequest.startDateTime),
@@ -364,11 +133,9 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 photographyNeeded: editingRequest.photographyNeeded || false,
                 servingFoodDrinks: editingRequest.servingFoodDrinks || editingRequest.foodDrinksBeingServed || false,
                 hasRoomBooking: editingRequest.hasRoomBooking ?? editingRequest.willOrHaveRoomBooking ?? true,
-                // Invoice data - use new format consistently
-                invoices: invoicesData
-            };
-
-            setOriginalData(originalFormData);
+                invoices: invoicesData,
+                _firestore: editingRequest
+            });
 
             setFormData({
                 name: editingRequest.name || '',
@@ -399,10 +166,9 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 needsAsFunding: editingRequest.needsAsFunding || editingRequest.asFundingRequired || false,
                 invoices: invoicesData,
                 needsGraphics: editingRequest.needsGraphics || false,
-                // Existing files for editing
                 existingRoomBookingFiles: editingRequest.roomBookingFiles || [],
                 existingOtherLogos: editingRequest.otherLogos || [],
-                // Legacy fields for backward compatibility
+                // Legacy fields
                 itemizedInvoice: editingRequest.itemizedInvoice || [],
                 invoiceTax: editingRequest.invoiceTax || 0,
                 invoiceTip: editingRequest.invoiceTip || 0,
@@ -410,37 +176,17 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 invoice: null,
                 invoiceFiles: [],
                 existingInvoiceFiles: editingRequest.invoiceFiles || [],
-                existingInvoiceFile: editingRequest.invoice || ''
+                existingInvoiceFile: editingRequest.invoiceFile || ''
             });
-        } else {
-            // Set default event code for new events and initialize with one empty invoice if needed
-            setFormData(prev => ({
-                ...prev,
-                eventCode: generateEventCode(),
-                invoices: [] // Start with no invoices - user can add as needed
-            }));
+
+            // Initialize invoices in the hook
+            setInvoices(invoicesData);
         }
-    }, [editingRequest]);
-
-    const flyerTypes = [
-        'Digital flyer (with social media advertising: Facebook, Instagram, Discord)',
-        'Digital flyer (with NO social media advertising)',
-        'Physical flyer (with advertising)',
-        'Physical flyer (with NO advertising)',
-        'Newsletter (IEEE, ECE, IDEA)',
-        'Other'
-    ];
-
-    const logoTypes = ['IEEE', 'AS (required if funded by AS)', 'HKN', 'TESC', 'PIB', 'TNT', 'SWE', 'OTHER (please upload transparent logo files)'];
-    const formatTypes = ['PDF', 'JPEG', 'PNG', "Doesn't Matter"];
-    const eventTypes = ['social', 'technical', 'outreach', 'professional', 'projects', 'other'];
+    }, [editingRequest, setInvoices]);
 
     const handleInputChange = (field: string, value: any) => {
-        if (field === 'roomBookingFile' && value) {
-            console.log(`Setting room booking file:`, value.name);
-        }
         setFormData(prev => ({ ...prev, [field]: value }));
-        setError(null);
+
         // Clear field error when user starts typing
         if (fieldErrors[field]) {
             setFieldErrors(prev => ({ ...prev, [field]: false }));
@@ -451,8 +197,8 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         setFormData(prev => ({
             ...prev,
             [field]: checked
-                ? [...(prev[field as keyof typeof prev] as string[]), value]
-                : (prev[field as keyof typeof prev] as string[]).filter(item => item !== value)
+                ? [...(prev[field as keyof EventFormData] as string[]), value]
+                : (prev[field as keyof EventFormData] as string[]).filter(item => item !== value)
         }));
     };
 
@@ -470,16 +216,6 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         ...prev,
                         existingRoomBookingFiles: prev.existingRoomBookingFiles.filter(url => url !== fileUrl)
                     };
-                case 'invoice':
-                    return {
-                        ...prev,
-                        existingInvoiceFile: ''
-                    };
-                case 'invoiceFiles':
-                    return {
-                        ...prev,
-                        existingInvoiceFiles: prev.existingInvoiceFiles.filter(url => url !== fileUrl)
-                    };
                 case 'otherLogos':
                     return {
                         ...prev,
@@ -491,37 +227,6 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         });
     };
 
-    // Legacy invoice item functions removed - using new multi-invoice functions instead
-
-    const calculateBudget = (attendance: number) => {
-        const perPersonCost = 10;
-        const maxBudget = 5000;
-        const calculatedBudget = attendance * perPersonCost;
-        const actualBudget = Math.min(calculatedBudget, maxBudget);
-
-        return {
-            calculatedBudget,
-            actualBudget,
-            isCapReached: calculatedBudget > maxBudget,
-            perPersonCost,
-            maxBudget
-        };
-    };
-
-    // Legacy JSON import functions removed - using simplified per-invoice management
-
-    const uploadFiles = async (files: File[], path: string): Promise<string[]> => {
-        const uploadPromises = files.map(async (file) => {
-            const storageRef = ref(storage, `${path}/${auth.currentUser?.uid}/${Date.now()}_${file.name}`);
-            const uploadTask = uploadBytesResumable(storageRef, file);
-            await new Promise((resolve, reject) => {
-                uploadTask.on('state_changed', null, reject, () => resolve(uploadTask.snapshot.ref));
-            });
-            return await getDownloadURL(storageRef);
-        });
-        return await Promise.all(uploadPromises);
-    };
-
     const scrollToTop = () => {
         const modalContent = document.querySelector('.overflow-y-auto');
         if (modalContent) {
@@ -529,393 +234,37 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         }
     };
 
-    const generateEventCode = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        let result = '';
-        for (let i = 0; i < 6; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
+    const validateCurrentStep = () => {
+        const validation = validateStep(currentStep, formData);
+        if (!validation.isValid) {
+            setError(validation.errorMessage || 'Please fix the errors before continuing');
+            setFieldErrors(validation.errors);
+            scrollToTop();
+            return false;
         }
-        return result;
-    };
-
-    const formatTimeTo12H = (time24: string) => {
-        try {
-            if (!time24) return '';
-            const [hours, minutes] = time24.split(':');
-            if (!hours || !minutes) return time24; // Return original if parsing fails
-            const hour = parseInt(hours);
-            if (isNaN(hour)) return time24;
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            const hour12 = hour % 12 || 12;
-            return `${hour12}:${minutes} ${ampm}`;
-        } catch (error) {
-            console.warn('Error formatting time to 12H:', error);
-            return time24 || ''; // Return original time or empty string
-        }
-    };
-
-    const getFileIcon = (filename: string) => {
-        const ext = filename.toLowerCase().split('.').pop();
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '')) {
-            return <Image className="w-5 h-5 text-blue-500" />;
-        }
-        return <FileText className="w-5 h-5 text-gray-500" />;
-    };
-
-    const extractFileName = (url: string) => {
-        try {
-            const urlObj = new URL(url);
-            const pathname = urlObj.pathname;
-            const filename = pathname.split('/').pop();
-            if (filename && filename.includes('_')) {
-                return filename.substring(filename.indexOf('_') + 1);
-            }
-            return filename || 'File';
-        } catch {
-            return 'File';
-        }
-    };
-
-    const renderExistingFiles = (files: string[], title: string, onRemove: (url: string) => void) => {
-        if (!files || files.length === 0) return null;
-
-        return (
-            <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">{title}</h4>
-                <div className="space-y-2">
-                    {files.map((fileUrl, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                            <div className="flex items-center space-x-2">
-                                {getFileIcon(fileUrl)}
-                                <span className="text-sm text-gray-700">{extractFileName(fileUrl)}</span>
-                            </div>
-                            <div className="flex space-x-2">
-                                <a
-                                    href={fileUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 text-sm"
-                                >
-                                    View
-                                </a>
-                                <button
-                                    onClick={() => onRemove(fileUrl)}
-                                    className="text-red-600 hover:text-red-800 text-sm"
-                                >
-                                    Remove
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    };
-
-    const validateStep = (step: number) => {
         setError(null);
-        const errors: { [key: string]: boolean } = {};
-
-        switch (step) {
-            case 0: // Important Information (requirements) - no validation needed
-                break;
-
-            case 1: // Basic Information
-                const errorMessages: string[] = [];
-
-                if (!formData.name) {
-                    errors.name = true;
-                    errorMessages.push('Event name is required');
-                }
-                if (!formData.location) {
-                    errors.location = true;
-                    errorMessages.push('Event location is required');
-                }
-                if (!formData.startDate) {
-                    errors.startDate = true;
-                    errorMessages.push('Event start date is required');
-                }
-                if (!formData.startTime) {
-                    errors.startTime = true;
-                    errorMessages.push('Event start time is required');
-                }
-                if (!formData.endTime) {
-                    errors.endTime = true;
-                    errorMessages.push('Event end time is required');
-                }
-                if (formData.startDate && formData.startTime && formData.endTime) {
-                    const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
-                    const endDateTime = new Date(`${formData.startDate}T${formData.endTime}`);
-                    if (endDateTime <= startDateTime) {
-                        errors.endTime = true;
-                        errorMessages.push('End time must be after start time');
-                    }
-                }
-                if (!formData.eventDescription) {
-                    errors.eventDescription = true;
-                    errorMessages.push('Event description is required');
-                }
-                if (!formData.eventCode) {
-                    errors.eventCode = true;
-                    errorMessages.push('Event code is required');
-                }
-                if (formData.pointsToReward < 0) {
-                    errors.pointsToReward = true;
-                    errorMessages.push('Points to reward must be non-negative');
-                }
-                if (!formData.department) {
-                    errors.department = true;
-                    errorMessages.push('Event department is required');
-                }
-
-                if (Object.keys(errors).length > 0) {
-                    setFieldErrors(errors);
-                    setError(errorMessages.join(', '));
-                    scrollToTop();
-                    return false;
-                }
-                break;
-
-            case 2: // Marketing & Graphics
-                if (formData.needsGraphics) {
-                    if (formData.flyerType.length === 0) {
-                        setError('Please select at least one flyer type when graphics are needed');
-                        scrollToTop();
-                        return false;
-                    }
-                    if (formData.flyerType.includes('Other') && !formData.otherFlyerType) {
-                        setError('Please specify the other flyer type');
-                        scrollToTop();
-                        return false;
-                    }
-                    if (formData.requiredLogos.length === 0) {
-                        setError('Please select at least one logo when graphics are needed');
-                        scrollToTop();
-                        return false;
-                    }
-                    if (formData.requiredLogos.includes('OTHER (please upload transparent logo files)') && formData.otherLogoFiles.length === 0) {
-                        setError('Please upload logo files for "OTHER" selection');
-                        scrollToTop();
-                        return false;
-                    }
-                    if (!formData.advertisingFormat) {
-                        setError('Please select a format for the materials');
-                        scrollToTop();
-                        return false;
-                    }
-                    if (formData.flyerType.length > 0 && !formData.flyerAdvertisingStartDate) {
-                        setError('Advertising start date is required when graphics are needed');
-                        scrollToTop();
-                        return false;
-                    }
-                }
-                // If graphics not needed, no validation required for this step
-                break;
-
-            case 3: // Logistics
-                // Room booking validation
-                if (formData.hasRoomBooking === undefined || formData.hasRoomBooking === null) {
-                    setError('Please answer whether you have a room booking');
-                    scrollToTop();
-                    return false;
-                }
-                if (formData.hasRoomBooking && !formData.roomBookingFile && formData.existingRoomBookingFiles.length === 0) {
-                    setError('Please upload room booking confirmation');
-                    scrollToTop();
-                    return false;
-                }
-                if (formData.roomBookingFile && formData.roomBookingFile.size > 1024 * 1024) {
-                    setError('Room booking file must be under 1MB');
-                    scrollToTop();
-                    return false;
-                }
-
-                // Attendance validation
-                if (!formData.expectedAttendance) {
-                    setError('Expected attendance is required');
-                    scrollToTop();
-                    return false;
-                }
-
-                // Food/drinks validation
-                if (formData.servingFoodDrinks === undefined || formData.servingFoodDrinks === null) {
-                    setError('Please answer whether you will be serving food or drinks');
-                    scrollToTop();
-                    return false;
-                }
-
-                // Only validate AS funding if they're serving food/drinks
-                if (formData.servingFoodDrinks && (formData.needsAsFunding === undefined || formData.needsAsFunding === null)) {
-                    setError('Please answer whether you need AS funding');
-                    scrollToTop();
-                    return false;
-                }
-                break;
-
-            case 4: // Funding (if step exists)
-                if (formData.needsAsFunding) {
-                    if (formData.invoices.length === 0) {
-                        setError('Please add at least one invoice for AS funding');
-                        scrollToTop();
-                        return false;
-                    }
-
-                    // Validate each invoice
-                    for (let i = 0; i < formData.invoices.length; i++) {
-                        const invoice = formData.invoices[i];
-                        const invoiceNum = i + 1;
-
-                        if (!invoice.vendor.trim()) {
-                            setError(`Invoice #${invoiceNum}: Vendor/Restaurant is required`);
-                            scrollToTop();
-                            return false;
-                        }
-
-                        if (invoice.items.length === 0) {
-                            setError(`Invoice #${invoiceNum}: Please add at least one item`);
-                            scrollToTop();
-                            return false;
-                        }
-
-                        // Validate each item has required data
-                        for (let j = 0; j < invoice.items.length; j++) {
-                            const item = invoice.items[j];
-                            const itemNum = j + 1;
-
-                            if (!item.description.trim()) {
-                                setError(`Invoice #${invoiceNum}, Item #${itemNum}: Description is required`);
-                                scrollToTop();
-                                return false;
-                            }
-
-                            if (item.quantity <= 0) {
-                                setError(`Invoice #${invoiceNum}, Item #${itemNum}: Quantity must be greater than 0`);
-                                scrollToTop();
-                                return false;
-                            }
-
-                            if (item.unitPrice < 0) {
-                                setError(`Invoice #${invoiceNum}, Item #${itemNum}: Unit price cannot be negative`);
-                                scrollToTop();
-                                return false;
-                            }
-                        }
-                    }
-                }
-                break;
-        }
-
+        setFieldErrors({});
         return true;
     };
 
-    const validateGraphicsSection = () => {
-        return validateStep(2);
+    const handleNext = () => {
+        if (validateCurrentStep()) {
+            setCurrentStep(prev => prev + 1);
+            scrollToTop();
+        }
+    };
+
+    const handlePrevious = () => {
+        setCurrentStep(prev => prev - 1);
+        scrollToTop();
     };
 
     const handleSubmit = async () => {
-        // Validate required fields
-        if (!formData.name || !formData.location || !formData.startDate || !formData.startTime || !formData.endTime || !formData.eventDescription) {
-            setError('Please fill in all required fields');
-            return;
-        }
-
-        // Validate end time is after start time
-        const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
-        const endDateTime = new Date(`${formData.startDate}T${formData.endTime}`);
-        if (endDateTime <= startDateTime) {
-            setError('End time must be after start time');
-            return;
-        }
-
-        // Validate room booking file if required
-        if (formData.hasRoomBooking && !formData.roomBookingFile && formData.existingRoomBookingFiles.length === 0) {
-            setError('Please upload room booking confirmation');
-            return;
-        }
-
-        // Validate file size for room booking
-        if (formData.roomBookingFile && formData.roomBookingFile.size > 1024 * 1024) {
-            setError('Room booking file must be under 1MB');
-            return;
-        }
-
-        // Validate food/drinks question is answered
-        if (formData.servingFoodDrinks === undefined || formData.servingFoodDrinks === null) {
-            setError('Please answer whether you will be serving food or drinks');
-            return;
-        }
-
-        // Validate AS funding question if serving food/drinks
-        if (formData.servingFoodDrinks && (formData.needsAsFunding === undefined || formData.needsAsFunding === null)) {
-            setError('Please answer whether you need AS funding');
-            return;
-        }
-
-        // Validate invoices if AS funding is needed
-        if (formData.needsAsFunding) {
-            if (formData.invoices.length === 0) {
-                setError('Please add at least one invoice for AS funding');
-                return;
-            }
-
-            // Validate each invoice
-            for (let i = 0; i < formData.invoices.length; i++) {
-                const invoice = formData.invoices[i];
-                const invoiceNum = i + 1;
-
-                // Validate vendor
-                if (!invoice.vendor.trim()) {
-                    setError(`Invoice #${invoiceNum}: Vendor/Restaurant is required`);
-                    return;
-                }
-
-                // Validate at least one item
-                if (invoice.items.length === 0) {
-                    setError(`Invoice #${invoiceNum}: Please add at least one item`);
-                    return;
-                }
-
-                // Validate each item
-                for (let j = 0; j < invoice.items.length; j++) {
-                    const item = invoice.items[j];
-                    const itemNum = j + 1;
-
-                    if (!item.description.trim()) {
-                        setError(`Invoice #${invoiceNum}, Item #${itemNum}: Description is required`);
-                        return;
-                    }
-
-                    if (item.quantity <= 0) {
-                        setError(`Invoice #${invoiceNum}, Item #${itemNum}: Quantity must be greater than 0`);
-                        return;
-                    }
-
-                    if (item.unitPrice < 0) {
-                        setError(`Invoice #${invoiceNum}, Item #${itemNum}: Unit price cannot be negative`);
-                        return;
-                    }
-                }
-
-                // Validate tax and tip are not negative
-                if (invoice.tax < 0) {
-                    setError(`Invoice #${invoiceNum}: Tax cannot be negative`);
-                    return;
-                }
-
-                if (invoice.tip < 0) {
-                    setError(`Invoice #${invoiceNum}: Tip cannot be negative`);
-                    return;
-                }
-            }
-        }
-
-        // Validate flyer advertising start date if graphics are needed
-        if (formData.needsGraphics && formData.flyerType.length > 0 && !formData.flyerAdvertisingStartDate) {
-            setError('Advertising start date is required when graphics are needed');
-            return;
-        }
-
-        if (!validateGraphicsSection()) {
+        const validation = validateCompleteForm(formData);
+        if (!validation.isValid) {
+            setError(validation.errorMessage || 'Please fix all errors before submitting');
+            setFieldErrors(validation.errors);
+            scrollToTop();
             return;
         }
 
@@ -927,7 +276,6 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
             let roomBookingUrls: string[] = [];
             let otherLogoUrls: string[] = [];
 
-            // Handle new file uploads
             if (formData.roomBookingFile) {
                 roomBookingUrls = await uploadFiles([formData.roomBookingFile], 'room_bookings');
             }
@@ -936,27 +284,21 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 otherLogoUrls = await uploadFiles(formData.otherLogoFiles, 'logos');
             }
 
-            // Upload files for each invoice
+            // Process invoices with file uploads
             const processedInvoices = await Promise.all(
-                formData.invoices.map(async (invoice) => {
+                invoices.map(async (invoice) => {
                     let invoiceFileUrl = invoice.existingInvoiceFile;
 
-                    // Upload main invoice file if new file is provided
                     if (invoice.invoiceFile) {
                         const [url] = await uploadFiles([invoice.invoiceFile], 'invoices');
                         invoiceFileUrl = url;
                     }
 
-                    // Calculate totals
                     const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0);
                     const total = subtotal + invoice.tax + invoice.tip;
 
                     return {
-                        id: invoice.id,
-                        vendor: invoice.vendor,
-                        items: invoice.items,
-                        tax: invoice.tax,
-                        tip: invoice.tip,
+                        ...invoice,
                         invoiceFile: invoiceFileUrl,
                         subtotal,
                         total
@@ -964,7 +306,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 })
             );
 
-            // Merge existing files with new uploads (for editing)
+            // Merge existing files with new uploads
             const finalRoomBookingUrls = editingRequest
                 ? [...formData.existingRoomBookingFiles, ...roomBookingUrls]
                 : roomBookingUrls;
@@ -973,41 +315,21 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 ? [...formData.existingOtherLogos, ...otherLogoUrls]
                 : otherLogoUrls;
 
-            // Create event request
-            const createSafeDateTime = (date: string, time: string) => {
-                try {
-                    if (!date || !time) {
-                        throw new Error('Date or time is missing');
-                    }
-                    const dateTime = new Date(`${date}T${time}`);
-                    if (isNaN(dateTime.getTime())) {
-                        throw new Error('Invalid date/time combination');
-                    }
-                    return dateTime;
-                } catch (error) {
-                    console.error('Error creating date:', error);
-                    throw new Error(`Invalid date/time format: ${date}T${time}`);
-                }
-            };
-
-            let startDateTime, endDateTime;
-            try {
-                startDateTime = createSafeDateTime(formData.startDate, formData.startTime);
-                endDateTime = createSafeDateTime(formData.startDate, formData.endTime);
-            } catch (error) {
-                setError(`Date/time error: ${(error as Error).message}`);
-                return;
-            }
+            // Create event request data
+            const startDateTime = createSafeDateTime(formData.startDate, formData.startTime);
+            const endDateTime = createSafeDateTime(formData.startDate, formData.endTime);
 
             const eventRequestData = {
                 name: formData.name,
                 location: formData.location,
-                startDateTime: startDateTime,
-                endDateTime: endDateTime,
+                startDateTime,
+                endDateTime,
                 eventDescription: formData.eventDescription,
                 department: formData.department,
                 eventCode: formData.eventCode,
                 pointsToReward: formData.pointsToReward,
+                expectedAttendance: parseInt(formData.expectedAttendance) || 0,
+                needsGraphics: formData.needsGraphics,
                 flyersNeeded: formData.flyersNeeded,
                 flyerType: formData.flyerType,
                 otherFlyerType: formData.otherFlyerType,
@@ -1020,96 +342,96 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 advertisingFormat: formData.advertisingFormat,
                 additionalSpecifications: formData.additionalSpecifications,
                 hasRoomBooking: formData.hasRoomBooking,
-                expectedAttendance: formData.expectedAttendance ? parseInt(formData.expectedAttendance) : null,
                 roomBookingFiles: finalRoomBookingUrls,
                 servingFoodDrinks: formData.servingFoodDrinks,
-                // New multi-invoice format
+                needsAsFunding: formData.needsAsFunding,
                 invoices: processedInvoices,
                 // Legacy fields for backward compatibility
                 itemizedInvoice: processedInvoices.length > 0 ? processedInvoices[0].items : [],
                 invoiceTax: processedInvoices.length > 0 ? processedInvoices[0].tax : 0,
                 invoiceTip: processedInvoices.length > 0 ? processedInvoices[0].tip : 0,
                 invoiceVendor: processedInvoices.length > 0 ? processedInvoices[0].vendor : '',
-                invoice: processedInvoices.length > 0 ? processedInvoices[0].invoiceFile : '',
-                invoiceFiles: [],
-                needsGraphics: formData.needsGraphics,
-                needsAsFunding: formData.needsAsFunding,
+                invoiceFile: processedInvoices.length > 0 ? processedInvoices[0].invoiceFile : '',
                 status: editingRequest ? editingRequest.status : 'submitted',
-                requestedUser: auth.currentUser?.uid,
-                ...(editingRequest ? { updatedAt: new Date() } : { createdAt: new Date() })
+                requestedUser: auth.currentUser?.uid || '',
+                createdAt: editingRequest ? editingRequest.createdAt : new Date(),
+                updatedAt: new Date()
             };
 
             let eventRequestRef;
-            if (editingRequest) {
-                // Store original data for edit email comparison
-                const originalData = {
-                    name: editingRequest.name,
-                    location: editingRequest.location,
-                    startDateTime: editingRequest.startDateTime,
-                    endDateTime: editingRequest.endDateTime,
-                    eventDescription: editingRequest.eventDescription,
-                    department: editingRequest.department,
-                    expectedAttendance: editingRequest.expectedAttendance,
-                    needsGraphics: editingRequest.needsGraphics,
-                    needsAsFunding: editingRequest.needsAsFunding,
-                    flyersNeeded: editingRequest.flyersNeeded,
-                    photographyNeeded: editingRequest.photographyNeeded
-                };
 
+            if (editingRequest) {
                 // Update existing event request
                 eventRequestRef = doc(db, 'event_requests', editingRequest.id);
                 await updateDoc(eventRequestRef, eventRequestData);
-                console.log('Updated event request:', editingRequest.id);
 
-                // Send edit notification email
+                // Log event update
                 try {
-                    console.log('Sending edit notification email for event request:', editingRequest.id);
-                    await EmailClient.notifyFirebaseEventEdit(
-                        editingRequest.id,
-                        originalData,
-                        {
-                            name: formData.name,
-                            location: formData.location,
-                            startDateTime: startDateTime,
-                            endDateTime: endDateTime,
-                            eventDescription: formData.eventDescription,
-                            department: formData.department,
-                            expectedAttendance: formData.expectedAttendance ? parseInt(formData.expectedAttendance) : null,
-                            needsGraphics: formData.needsGraphics,
-                            needsAsFunding: formData.needsAsFunding,
-                            flyersNeeded: formData.flyersNeeded,
-                            photographyNeeded: formData.photographyNeeded
-                        }
+                    const userName = await EventAuditService.getUserName(auth.currentUser?.uid || '');
+                    const fieldMappings = {
+                        name: 'Event Name',
+                        location: 'Location',
+                        startDateTime: 'Start Date/Time',
+                        endDateTime: 'End Date/Time',
+                        eventDescription: 'Description',
+                        department: 'Department',
+                        expectedAttendance: 'Expected Attendance',
+                        needsGraphics: 'Graphics Needed',
+                        needsAsFunding: 'AS Funding Needed'
+                    };
+                    const changes = EventAuditService.generateFieldChanges(
+                        originalData?._firestore || originalData,
+                        eventRequestData,
+                        fieldMappings
                     );
-                } catch (emailError) {
-                    console.error('Failed to send edit notification email:', emailError);
-                    // Don't block the main flow for email failures
+
+                    if (changes.length > 0) {
+                        await EventAuditService.logEventUpdate(
+                            editingRequest.id,
+                            userName,
+                            changes,
+                            userName,
+                            undefined,
+                            { eventName: formData.name }
+                        );
+                    }
+                } catch (error) {
+                    console.error('Error logging event update:', error);
                 }
+
+                toast.success('Event request updated successfully!');
             } else {
                 // Create new event request
                 eventRequestRef = await addDoc(collection(db, 'event_requests'), eventRequestData);
-                console.log('Created new event request:', (eventRequestRef as any).id);
+
+                // Log event creation
+                try {
+                    const userName = await EventAuditService.getUserName(auth.currentUser?.uid || '');
+                    await EventAuditService.logEventCreation(
+                        (eventRequestRef as any).id,
+                        userName,
+                        userName,
+                        { eventName: formData.name }
+                    );
+                } catch (error) {
+                    console.error('Error logging event creation:', error);
+                }
+
+                toast.success('Event request submitted successfully!');
             }
 
             // Handle corresponding event in events collection
-            const currentStatus = editingRequest ? editingRequest.status : 'submitted';
             const eventData = {
                 eventName: formData.name,
                 eventDescription: formData.eventDescription,
-                department: formData.department,
-                eventCode: formData.eventCode || generateEventCode(),
-                location: formData.location,
-                files: [], // Keep existing files, just update metadata
-                privateFiles: [], // Keep existing private files
-                pointsToReward: formData.pointsToReward,
                 startDate: startDateTime,
                 endDate: endDateTime,
-                published: currentStatus === 'approved',
-                eventType: 'other' as const,
-                hasFood: formData.servingFoodDrinks,
-                capacity: formData.expectedAttendance ? parseInt(formData.expectedAttendance) : null,
+                location: formData.location,
+                files: [],
+                privateFiles: [],
+                pointsToReward: formData.pointsToReward,
                 createdFrom: editingRequest ? editingRequest.id : (eventRequestRef as any).id,
-                ...(editingRequest ? { updatedAt: new Date() } : { createdAt: new Date() })
+                status: 'draft'
             };
 
             if (editingRequest) {
@@ -1118,1365 +440,136 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 const eventsSnapshot = await getDocs(eventsQuery);
 
                 if (!eventsSnapshot.empty) {
-                    // Update existing event, but preserve files
                     const eventDoc = eventsSnapshot.docs[0];
                     const existingEventData = eventDoc.data();
 
                     const updatedEventData = {
                         ...eventData,
-                        files: existingEventData.files || [], // Preserve existing files
-                        privateFiles: existingEventData.privateFiles || [], // Preserve existing private files
+                        files: existingEventData.files || [],
+                        privateFiles: existingEventData.privateFiles || [],
                     };
 
-                    await updateDoc(doc(db, 'events', eventDoc.id), updatedEventData);
-                    console.log('Updated existing event:', eventDoc.id, updatedEventData);
+                    await updateDoc(eventDoc.ref, updatedEventData);
                 } else {
-                    // Create new event if it doesn't exist
                     await addDoc(collection(db, 'events'), eventData);
-                    console.log('Created new event for existing request');
                 }
             } else {
-                // Create new draft event
                 await addDoc(collection(db, 'events'), eventData);
-                console.log('Created new event for new request');
             }
 
             // Send email notification for new submissions
             if (!editingRequest) {
                 try {
-                    console.log('Sending submission email for event request:', (eventRequestRef as any).id);
                     await EmailClient.notifyFirebaseEventRequestSubmission((eventRequestRef as any).id);
-                } catch (emailError) {
-                    console.error('Failed to send submission email:', emailError);
-                    // Don't block the main flow for email failures
+                } catch (error) {
+                    console.error('Error sending email notification:', error);
                 }
             }
 
             onSuccess?.();
             onClose();
-        } catch (err: any) {
-            setError(err.message);
+        } catch (error) {
+            console.error('Error submitting event request:', error);
+            setError('Failed to submit event request. Please try again.');
+            toast.error('Failed to submit event request');
         } finally {
             setLoading(false);
         }
     };
 
-
-
-    const renderDisclaimer = () => (
-        <div className="space-y-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                    <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                        <h4 className="font-medium text-yellow-800 mb-2">Important Information</h4>
-                        <div className="text-sm text-yellow-700 space-y-2">
-                            <p><strong>Timeline:</strong> If you need PR Materials, please don't forget that this form MUST be submitted at least 6 weeks in advance even if you aren't requesting AS funding or physical flyers. Also, please remember to ping PR in #-events on Slack once you've submitted this form.</p>
-
-                            <p><strong>WARNING:</strong> If you need a booking and submit without one, your event WILL BE CANCELLED. This is non-negotiable. Contact the event coordinator immediately if you have any booking concerns.</p>
-
-                            <p><strong>Note:</strong> For multi-day events, please submit a separate request for each day.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="text-center">
-                <p className="text-gray-600 mb-4">
-                    Please read all requirements above before proceeding.
-                </p>
-            </div>
-        </div>
-    );
-
-    const renderBasicInfo = () => (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Event Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.name ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                            }`}
-                        placeholder="Enter event name"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Location <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        value={formData.location}
-                        onChange={(e) => handleInputChange('location', e.target.value)}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.location ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                            }`}
-                        placeholder="Enter event location"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Event Description <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                        value={formData.eventDescription}
-                        onChange={(e) => handleInputChange('eventDescription', e.target.value)}
-                        rows={4}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.eventDescription ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                            }`}
-                        placeholder="Describe the event in detail..."
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Department <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                        <select
-                            value={formData.department}
-                            onChange={(e) => handleInputChange('department', e.target.value)}
-                            className={`appearance-none w-full px-4 py-3 pr-8 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors cursor-pointer ${fieldErrors.department ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                }`}
-                        >
-                            <option value="General">General</option>
-                            <option value="Projects">Projects</option>
-                            <option value="Internal">Internal</option>
-                            <option value="External">External</option>
-                            <option value="Technical">Technical</option>
-                            <option value="Social">Social</option>
-                            <option value="Professional">Professional</option>
-                        </select>
-                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Event Code <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            value={formData.eventCode}
-                            onChange={(e) => handleInputChange('eventCode', e.target.value)}
-                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.eventCode ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                }`}
-                            placeholder="Enter event code (e.g., HACK-2024)"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Points to Reward <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="number"
-                            min="0"
-                            value={formData.pointsToReward}
-                            onChange={(e) => handleInputChange('pointsToReward', parseInt(e.target.value) || 0)}
-                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.pointsToReward ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                }`}
-                            placeholder="Enter points to reward"
-                        />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Event Start Date <span className="text-red-500">*</span>
-                        </label>
-                        <p className="text-xs text-gray-500 mb-2">Date of the event</p>
-                        <input
-                            type="date"
-                            value={formData.startDate}
-                            onChange={(e) => handleInputChange('startDate', e.target.value)}
-                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.startDate ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                }`}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Start Time <span className="text-red-500">*</span>
-                        </label>
-                        <p className="text-xs text-gray-500 mb-2">The event time should not include setup time.</p>
-                        <input
-                            type="time"
-                            value={formData.startTime}
-                            onChange={(e) => handleInputChange('startTime', e.target.value)}
-                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.startTime ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                }`}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            End Time <span className="text-red-500">*</span>
-                        </label>
-                        <p className="text-xs text-gray-500 mb-2">When does the event end?</p>
-                        <input
-                            type="time"
-                            value={formData.endTime}
-                            onChange={(e) => handleInputChange('endTime', e.target.value)}
-                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.endTime ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                                }`}
-                        />
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    );
-
-    const renderMarketingSection = () => (
-        <div className="space-y-6">
-            <div className="flex items-center space-x-3">
-                <input
-                    type="checkbox"
-                    id="needsGraphics"
-                    checked={formData.needsGraphics}
-                    onChange={(e) => handleInputChange('needsGraphics', e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="needsGraphics" className="text-sm font-medium text-gray-700">
-                    I need graphics from the design team
-                </label>
-            </div>
-
-            {formData.needsGraphics && (
-                <div className="space-y-4 pl-7">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                            Select flyer types needed <span className="text-red-500">*</span>
-                        </label>
-                        <div className="space-y-2">
-                            {flyerTypes.map(type => (
-                                <label key={type} className="flex items-start space-x-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.flyerType.includes(type)}
-                                        onChange={(e) => handleArrayChange('flyerType', type, e.target.checked)}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5"
-                                    />
-                                    <span className="text-sm text-gray-700 leading-5">{type}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    {formData.flyerType.includes('Other') && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Specify other flyer type</label>
-                            <input
-                                type="text"
-                                value={formData.otherFlyerType}
-                                onChange={(e) => handleInputChange('otherFlyerType', e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                                placeholder="Specify other flyer type"
-                            />
-                        </div>
-                    )}
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                            Select logos needed <span className="text-red-500">*</span>
-                        </label>
-                        <div className="space-y-2">
-                            {logoTypes.map(logo => (
-                                <label key={logo} className="flex items-start space-x-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.requiredLogos.includes(logo)}
-                                        onChange={(e) => handleArrayChange('requiredLogos', logo, e.target.checked)}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5"
-                                    />
-                                    <span className="text-sm text-gray-700 leading-5">{logo}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    {formData.requiredLogos.includes('OTHER (please upload transparent logo files)') && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Upload logo files</label>
-                            <input
-                                type="file"
-                                multiple
-                                accept=".png,.jpg,.jpeg,.svg"
-                                onChange={(e) => handleFileChange('otherLogoFiles', e.target.files)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Please upload transparent PNG or SVG files for best quality</p>
-
-                            {/* Show newly selected files */}
-                            {formData.otherLogoFiles && formData.otherLogoFiles.length > 0 && (
-                                <div className="mt-4">
-                                    <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Files</h4>
-                                    <div className="space-y-2">
-                                        {formData.otherLogoFiles.map((file, index) => (
-                                            <div key={index} className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
-                                                <div className="flex items-center space-x-2">
-                                                    <Image className="h-4 w-4 text-green-600" />
-                                                    <span className="text-sm text-green-700">
-                                                        {file.name} (New file selected)
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    onClick={() => {
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            otherLogoFiles: prev.otherLogoFiles.filter((_, i) => i !== index)
-                                                        }));
-                                                    }}
-                                                    className="text-red-600 hover:text-red-800 text-sm"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Show existing files when no new files are selected */}
-                            {(!formData.otherLogoFiles || formData.otherLogoFiles.length === 0) && renderExistingFiles(
-                                formData.existingOtherLogos,
-                                "Existing Logo Files",
-                                (url) => handleRemoveExistingFile(url, 'otherLogos')
-                            )}
-                        </div>
-                    )}
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                            Format of materials <span className="text-red-500">*</span>
-                        </label>
-                        <div className="space-y-2">
-                            {formatTypes.map(format => (
-                                <label key={format} className="flex items-center space-x-3">
-                                    <input
-                                        type="radio"
-                                        name="advertisingFormat"
-                                        value={format}
-                                        checked={formData.advertisingFormat === format}
-                                        onChange={(e) => handleInputChange('advertisingFormat', e.target.value)}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                                    />
-                                    <span className="text-sm text-gray-700">{format}</span>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Additional specifications</label>
-                        <textarea
-                            value={formData.additionalSpecifications}
-                            onChange={(e) => handleInputChange('additionalSpecifications', e.target.value)}
-                            rows={3}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                            placeholder="Any additional requirements or specifications"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Flyer advertising start date {formData.needsGraphics && formData.flyerType.length > 0 && <span className="text-red-500">*</span>}
-                        </label>
-                        <input
-                            type="datetime-local"
-                            value={formData.flyerAdvertisingStartDate}
-                            onChange={(e) => handleInputChange('flyerAdvertisingStartDate', e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                            required={formData.needsGraphics && formData.flyerType.length > 0}
-                        />
-                    </div>
-                </div>
-            )}
-
-            <div className="flex items-center space-x-3">
-                <input
-                    type="checkbox"
-                    id="photographyNeeded"
-                    checked={formData.photographyNeeded}
-                    onChange={(e) => handleInputChange('photographyNeeded', e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="photographyNeeded" className="text-sm font-medium text-gray-700">
-                    Photography needed
-                </label>
-            </div>
-        </div>
-    );
-
-    const renderLogisticsSection = () => {
-        const attendance = parseInt(formData.expectedAttendance) || 0;
-        const budget = calculateBudget(attendance);
-
-        return (
-            <div className="space-y-6">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Do you have a room booking? <span className="text-red-500">*</span>
-                    </label>
-                    <div className="space-y-3">
-                        <label className="flex items-center space-x-3">
-                            <input
-                                type="radio"
-                                name="hasRoomBooking"
-                                checked={formData.hasRoomBooking === true}
-                                onChange={() => handleInputChange('hasRoomBooking', true)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                            />
-                            <span className="text-sm text-gray-700">Yes</span>
-                        </label>
-                        <label className="flex items-center space-x-3">
-                            <input
-                                type="radio"
-                                name="hasRoomBooking"
-                                checked={formData.hasRoomBooking === false}
-                                onChange={() => handleInputChange('hasRoomBooking', false)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                            />
-                            <span className="text-sm text-gray-700">No</span>
-                        </label>
-                    </div>
-
-                    {formData.hasRoomBooking === false && (
-                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                            <div className="flex items-start space-x-2">
-                                <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <p className="text-sm font-medium text-red-800">Warning</p>
-                                    <p className="text-sm text-red-700">
-                                        Events without room bookings will most likely be canceled. Please secure a room booking before submitting your request.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {formData.hasRoomBooking && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Upload room booking confirmation <span className="text-red-500">*</span>
-                        </label>
-                        <p className="text-xs text-gray-500 mb-2">PDF or image file under 1MB</p>
-                        <input
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleInputChange('roomBookingFile', e.target.files?.[0] || null)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
-
-                        {/* Show selected new file */}
-                        {formData.roomBookingFile && (
-                            <div className="mt-2">
-                                <div className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
-                                    <div className="flex items-center space-x-2">
-                                        <FileText className="h-4 w-4 text-green-600" />
-                                        <span className="text-sm text-green-700">
-                                            {formData.roomBookingFile.name} (New file selected)
-                                        </span>
-                                    </div>
-                                    <button
-                                        onClick={() => handleInputChange('roomBookingFile', null)}
-                                        className="text-red-600 hover:text-red-800 text-sm"
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Show existing files when no new file is selected */}
-                        {!formData.roomBookingFile && renderExistingFiles(
-                            formData.existingRoomBookingFiles,
-                            "Existing Room Booking Files",
-                            (url) => handleRemoveExistingFile(url, 'roomBooking')
-                        )}
-                    </div>
-                )}
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Expected attendance <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="number"
-                        value={formData.expectedAttendance}
-                        onChange={(e) => handleInputChange('expectedAttendance', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                        placeholder="Number of expected attendees"
-                    />
-
-                    {attendance > 0 && (
-                        <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <h4 className="text-sm font-medium text-blue-900 mb-2">Budget Calculator</h4>
-                            <p className="text-sm text-blue-800">
-                                ${budget.perPersonCost} per person × {attendance} people
-                            </p>
-                            <p className="text-sm text-blue-800 font-medium">
-                                You cannot exceed spending past ${budget.actualBudget.toLocaleString()} dollars.
-                            </p>
-                            {budget.isCapReached && (
-                                <p className="text-sm text-orange-700 font-medium mt-1">
-                                    Budget cap reached. Maximum budget is ${budget.maxBudget.toLocaleString()} regardless of attendance.
-                                </p>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Will you be serving food or drinks at your event?
-                    </label>
-                    <div className="space-y-3">
-                        <label className="flex items-center space-x-3">
-                            <input
-                                type="radio"
-                                name="servingFoodDrinks"
-                                checked={formData.servingFoodDrinks === true}
-                                onChange={() => handleInputChange('servingFoodDrinks', true)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                            />
-                            <span className="text-sm text-gray-700">Yes</span>
-                        </label>
-                        <label className="flex items-center space-x-3">
-                            <input
-                                type="radio"
-                                name="servingFoodDrinks"
-                                checked={formData.servingFoodDrinks === false}
-                                onChange={() => handleInputChange('servingFoodDrinks', false)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                            />
-                            <span className="text-sm text-gray-700">No</span>
-                        </label>
-                    </div>
-                </div>
-
-                {formData.servingFoodDrinks && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                            Do you need funding from AS?
-                        </label>
-                        <div className="space-y-3">
-                            <label className="flex items-center space-x-3">
-                                <input
-                                    type="radio"
-                                    name="needsAsFunding"
-                                    checked={formData.needsAsFunding === true}
-                                    onChange={() => handleInputChange('needsAsFunding', true)}
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                                />
-                                <span className="text-sm text-gray-700">Yes</span>
-                            </label>
-                            <label className="flex items-center space-x-3">
-                                <input
-                                    type="radio"
-                                    name="needsAsFunding"
-                                    checked={formData.needsAsFunding === false}
-                                    onChange={() => handleInputChange('needsAsFunding', false)}
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                                />
-                                <span className="text-sm text-gray-700">No</span>
-                            </label>
-                        </div>
-                    </div>
-                )}
-            </div>
-        );
-    };
-
-    const renderFundingSection = () => {
-        if (!formData.needsAsFunding) {
-            return (
-                <div className="text-center py-8">
-                    <p className="text-gray-600">No AS funding required for this event.</p>
-                </div>
-            );
-        }
-
-        // Calculate totals across all invoices
-        const calculateGrandTotal = () => {
-            return formData.invoices.reduce((grandTotal, invoice) => {
-                const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0);
-                return grandTotal + subtotal + invoice.tax + invoice.tip;
-            }, 0);
-        };
-
-        const grandTotal = calculateGrandTotal();
-
-        return (
-            <div className="space-y-6">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h3 className="text-lg font-medium text-blue-900 mb-2">AS Funding Details</h3>
-                    <p className="text-sm text-blue-800">
-                        Add multiple invoices with individual expenses for each vendor. Each invoice can have its own items, tax, tip, and files.
-                    </p>
-                </div>
-
-                {/* Invoice Management Section */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h4 className="text-lg font-medium text-gray-900">Invoices</h4>
-                        <button
-                            type="button"
-                            onClick={addInvoice}
-                            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                            <Plus className="h-4 w-4" />
-                            <span>Add Invoice</span>
-                        </button>
-                    </div>
-
-                    {formData.invoices.length === 0 ? (
-                        <div className="text-center py-8 bg-gray-50 border border-gray-200 rounded-lg">
-                            <p className="text-gray-600 mb-4">No invoices added yet.</p>
-                            <button
-                                type="button"
-                                onClick={addInvoice}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                                Add Your First Invoice
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            {/* Invoice Tab Navigation */}
-                            <div className="border-b border-gray-200">
-                                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                                    {formData.invoices.map((invoice, invoiceIndex) => (
-                                        <button
-                                            key={invoice.id}
-                                            onClick={() => setActiveInvoiceTab(invoice.id)}
-                                            className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeInvoiceTab === invoice.id
-                                                ? 'border-blue-500 text-blue-600'
-                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                                }`}
-                                        >
-                                            Invoice #{invoiceIndex + 1}
-                                        </button>
-                                    ))}
-                                </nav>
-                            </div>
-
-                            {/* Active Invoice Content */}
-                            {formData.invoices.map((invoice, invoiceIndex) => {
-                                if (activeInvoiceTab !== invoice.id) return null;
-
-                                const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0);
-                                const total = subtotal + invoice.tax + invoice.tip;
-                                const currentTab = invoiceTabState[invoice.id] || 'details';
-
-                                return (
-                                    <div key={invoice.id} className="bg-white border border-gray-300 rounded-lg p-6">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h5 className="text-lg font-medium text-gray-900">
-                                                Invoice #{invoiceIndex + 1}
-                                            </h5>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeInvoice(invoice.id)}
-                                                className="flex items-center space-x-1 px-3 py-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                                <span className="text-sm">Remove</span>
-                                            </button>
-                                        </div>
-
-                                        {/* Sub-tabs for Details vs Import JSON */}
-                                        <div className="border-b border-gray-200 mb-4 overflow-hidden">
-                                            <nav className="-mb-px flex space-x-2 md:space-x-8 overflow-x-auto" aria-label="Sub tabs">
-                                                <button
-                                                    onClick={() => setInvoiceTabState(prev => ({ ...prev, [invoice.id]: 'details' }))}
-                                                    className={`whitespace-nowrap py-2 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm flex-shrink-0 ${currentTab === 'details'
-                                                        ? 'border-blue-500 text-blue-600'
-                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                                        }`}
-                                                >
-                                                    Details
-                                                </button>
-                                                <button
-                                                    onClick={() => setInvoiceTabState(prev => ({ ...prev, [invoice.id]: 'import' }))}
-                                                    className={`whitespace-nowrap py-2 px-2 md:px-4 border-b-2 font-medium text-xs md:text-sm flex-shrink-0 ${currentTab === 'import'
-                                                        ? 'border-blue-500 text-blue-600'
-                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                                        }`}
-                                                >
-                                                    <span className="hidden sm:inline">Import JSON</span>
-                                                    <span className="sm:hidden">Import</span>
-                                                </button>
-                                            </nav>
-                                        </div>
-
-                                        {/* Details Tab Content */}
-                                        {currentTab === 'details' && (
-                                            <>
-                                                {/* Vendor field */}
-                                                <div className="mb-4">
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Vendor/Restaurant <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="e.g., Papa Johns, Subway, etc."
-                                                        value={invoice.vendor}
-                                                        onChange={(e) => updateInvoice(invoice.id, { vendor: e.target.value })}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                        required
-                                                    />
-                                                </div>
-
-                                                {/* Invoice file upload */}
-                                                <div className="mb-4">
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Upload Invoice File
-                                                    </label>
-                                                    <input
-                                                        type="file"
-                                                        accept=".pdf,.doc,.docx,.jpg,.png"
-                                                        onChange={(e) => updateInvoice(invoice.id, { invoiceFile: e.target.files?.[0] || null })}
-                                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                                    />
-
-                                                    {/* Show selected new file */}
-                                                    {invoice.invoiceFile && (
-                                                        <div className="mt-2">
-                                                            <div className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
-                                                                <div className="flex items-center space-x-2">
-                                                                    <FileText className="h-4 w-4 text-green-600" />
-                                                                    <span className="text-sm text-green-700">
-                                                                        {invoice.invoiceFile.name} (New file selected)
-                                                                    </span>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => updateInvoice(invoice.id, { invoiceFile: null })}
-                                                                    className="text-red-600 hover:text-red-800 text-sm"
-                                                                >
-                                                                    Remove
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Show existing file */}
-                                                    {invoice.existingInvoiceFile && !invoice.invoiceFile && (
-                                                        <div className="mt-2">
-                                                            <div className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                                                                <div className="flex items-center space-x-2">
-                                                                    <FileText className="h-4 w-4 text-gray-500" />
-                                                                    <span className="text-sm text-gray-700">{extractFileName(invoice.existingInvoiceFile)}</span>
-                                                                </div>
-                                                                <div className="flex space-x-2">
-                                                                    <a
-                                                                        href={invoice.existingInvoiceFile}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="text-blue-600 hover:text-blue-800 text-sm"
-                                                                    >
-                                                                        View
-                                                                    </a>
-                                                                    <button
-                                                                        onClick={() => updateInvoice(invoice.id, { existingInvoiceFile: '' })}
-                                                                        className="text-red-600 hover:text-red-800 text-sm"
-                                                                    >
-                                                                        Remove
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Itemized items */}
-                                                <div className="mb-4">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <label className="block text-sm font-medium text-gray-700">Itemized Items</label>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addInvoiceItem(invoice.id)}
-                                                            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                                                        >
-                                                            + Add Item
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="space-y-3">
-                                                        {invoice.items.map((item, itemIndex) => (
-                                                            <div key={itemIndex} className="grid grid-cols-12 gap-2 items-center">
-                                                                <div className="col-span-4">
-                                                                    <input
-                                                                        type="text"
-                                                                        placeholder="Item description"
-                                                                        value={item.description}
-                                                                        onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'description', e.target.value)}
-                                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                    />
-                                                                </div>
-                                                                <div className="col-span-2">
-                                                                    <input
-                                                                        type="number"
-                                                                        placeholder="Qty"
-                                                                        value={item.quantity}
-                                                                        onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'quantity', e.target.value === '' ? 1 : parseInt(e.target.value) || 1)}
-                                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                    />
-                                                                </div>
-                                                                <div className="col-span-2">
-                                                                    <input
-                                                                        type="number"
-                                                                        step="0.01"
-                                                                        placeholder="Price"
-                                                                        value={item.unitPrice === 0 ? '' : item.unitPrice}
-                                                                        onChange={(e) => updateInvoiceItem(invoice.id, itemIndex, 'unitPrice', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-                                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                    />
-                                                                </div>
-                                                                <div className="col-span-2">
-                                                                    <span className="text-sm font-medium text-gray-700">${item.total.toFixed(2)}</span>
-                                                                </div>
-                                                                <div className="col-span-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => removeInvoiceItem(invoice.id, itemIndex)}
-                                                                        className="text-red-600 hover:text-red-700 text-sm"
-                                                                    >
-                                                                        Remove
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Tax and Tip */}
-                                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Tax ($)</label>
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={invoice.tax === 0 ? '' : invoice.tax}
-                                                            onChange={(e) => updateInvoice(invoice.id, { tax: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Tip ($)</label>
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={invoice.tip === 0 ? '' : invoice.tip}
-                                                            onChange={(e) => updateInvoice(invoice.id, { tip: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Invoice total */}
-                                                <div className="bg-gray-50 border border-gray-300 rounded-lg p-3">
-                                                    <div className="flex justify-between text-sm">
-                                                        <span>Subtotal:</span>
-                                                        <span>${subtotal.toFixed(2)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between text-sm">
-                                                        <span>Tax:</span>
-                                                        <span>${invoice.tax.toFixed(2)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between text-sm">
-                                                        <span>Tip:</span>
-                                                        <span>${invoice.tip.toFixed(2)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between text-lg font-semibold border-t border-gray-200 pt-2 mt-2">
-                                                        <span>Invoice Total:</span>
-                                                        <span>${total.toFixed(2)}</span>
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )}
-
-                                        {/* Import JSON Tab Content */}
-                                        {currentTab === 'import' && (
-                                            <div className="space-y-4">
-                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                                    <h6 className="text-sm font-medium text-blue-900 mb-2">Import Invoice Data from JSON</h6>
-                                                    <p className="text-xs text-blue-800">
-                                                        Paste JSON data below and click "Import Data" to populate this invoice. This will replace existing data.
-                                                    </p>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        JSON Data
-                                                    </label>
-                                                    <textarea
-                                                        rows={8}
-                                                        placeholder="Paste JSON here..."
-                                                        value={jsonImportData[invoice.id] || ''}
-                                                        onChange={(e) => setJsonImportData(prev => ({ ...prev, [invoice.id]: e.target.value }))}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
-                                                    />
-                                                </div>
-
-                                                <div className="flex space-x-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleJsonImport(invoice.id)}
-                                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                                    >
-                                                        Import Data
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setJsonImportData(prev => ({ ...prev, [invoice.id]: '' }))}
-                                                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
-                                                    >
-                                                        Clear
-                                                    </button>
-                                                </div>
-
-                                                {/* Sample JSON Format */}
-                                                <div className="mt-4 p-3 bg-gray-50 rounded text-xs">
-                                                    <div className="text-gray-700 font-medium mb-1">Sample JSON format:</div>
-                                                    <pre className="text-gray-600 whitespace-pre-wrap">
-                                                        {`{
-  "vendor": "Restaurant Name",
-  "tax": 8.50,
-  "tip": 12.00,
-  "items": [
-    {
-      "description": "Pizza",
-      "quantity": 2,
-      "unitPrice": 15.99,
-      "total": 31.98
-    },
-    {
-      "description": "Drinks",
-      "quantity": 4,
-      "unitPrice": 2.50,
-      "total": 10.00
-    }
-  ]
-}`}
-                                                    </pre>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-
-                {/* Grand total */}
-                {formData.invoices.length > 0 && (
-                    <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
-                        <div className="flex justify-between items-center">
-                            <span className="text-lg font-semibold text-blue-900">Grand Total (All Invoices):</span>
-                            <span className="text-xl font-bold text-blue-900">${grandTotal.toFixed(2)}</span>
-                        </div>
-                        <p className="text-sm text-blue-700 mt-1">
-                            Total funding request across {formData.invoices.length} invoice{formData.invoices.length !== 1 ? 's' : ''}
-                        </p>
-                    </div>
-                )}
-            </div>
-        );
-    };
-
-    // Function to detect and display changes
-    const getChangedFields = () => {
-        if (!editingRequest || !originalData) return [];
-
-        const changes = [];
-        const fieldsToCheck = [
-            { key: 'name', label: 'Event Name' },
-            { key: 'location', label: 'Location' },
-            { key: 'startDate', label: 'Start Date' },
-            { key: 'startTime', label: 'Start Time' },
-            { key: 'endTime', label: 'End Time' },
-            { key: 'eventDescription', label: 'Event Description' },
-            { key: 'department', label: 'Department' },
-            { key: 'eventCode', label: 'Event Code' },
-            { key: 'pointsToReward', label: 'Points to Reward', format: (val: any) => `${val} points` },
-            { key: 'expectedAttendance', label: 'Expected Attendance' },
-            { key: 'needsGraphics', label: 'Needs Graphics', format: (val: any) => val ? 'Yes' : 'No' },
-            { key: 'needsAsFunding', label: 'Needs AS Funding', format: (val: any) => val ? 'Yes' : 'No' },
-            { key: 'flyersNeeded', label: 'Flyers Needed', format: (val: any) => val ? 'Yes' : 'No' },
-            { key: 'photographyNeeded', label: 'Photography Needed', format: (val: any) => val ? 'Yes' : 'No' },
-            { key: 'servingFoodDrinks', label: 'Serving Food/Drinks', format: (val: any) => val ? 'Yes' : 'No' },
-            { key: 'hasRoomBooking', label: 'Has Room Booking', format: (val: any) => val ? 'Yes' : 'No' },
-            {
-                key: 'invoices', label: 'Invoices', format: (val: any) => {
-                    if (!val || val.length === 0) return 'None';
-                    const totalItems = val.reduce((sum: number, invoice: any) => sum + (invoice.items?.length || 0), 0);
-                    return `${val.length} invoice${val.length !== 1 ? 's' : ''} (${totalItems} items total)`;
-                }
-            },
-        ];
-
-        for (const field of fieldsToCheck) {
-            const originalValue = (originalData as any)[field.key];
-            const currentValue = (formData as any)[field.key];
-
-            if (originalValue !== currentValue) {
-                changes.push({
-                    field: field.label,
-                    original: field.format ? field.format(originalValue) : (originalValue || 'Not specified'),
-                    current: field.format ? field.format(currentValue) : (currentValue || 'Not specified')
-                });
-            }
-        }
-
-        return changes;
-    };
-
-    // Helper function to check if a specific field has changed
-    const hasFieldChanged = (fieldKey: string) => {
-        if (!editingRequest || !originalData) return false;
-        const originalValue = (originalData as any)[fieldKey];
-        const currentValue = (formData as any)[fieldKey];
-        return originalValue !== currentValue;
-    };
-
-    // Helper function to get the original value for display
-    const getOriginalValue = (fieldKey: string) => {
-        if (!editingRequest || !originalData) return null;
-        return (originalData as any)[fieldKey];
-    };
-
-    const renderReviewSection = () => {
-        const createSafeDisplayDateTime = (date: string, time: string) => {
-            try {
-                if (!date || !time) return null;
-                const dateTime = new Date(`${date}T${time}`);
-                if (isNaN(dateTime.getTime())) return null;
-                return dateTime;
-            } catch (error) {
-                console.warn('Error creating display date:', error);
-                return null;
-            }
-        };
-
-        const startDateTime = createSafeDisplayDateTime(formData.startDate, formData.startTime);
-        const endDateTime = createSafeDisplayDateTime(formData.startDate, formData.endTime);
-        const changedFields = getChangedFields();
-
-        // Helper component for displaying field with change indicator
-        const FieldDisplay = ({ label, value, fieldKey, format }: { label: string; value: any; fieldKey: string; format?: (val: any) => string }) => {
-            const hasChanged = hasFieldChanged(fieldKey);
-            const originalValue = getOriginalValue(fieldKey);
-            const displayValue = format ? format(value) : (value || 'Not specified');
-            const originalDisplayValue = format ? format(originalValue) : (originalValue || 'Not specified');
-
-            return (
-                <div className={`${hasChanged ? 'bg-amber-50 border border-amber-200 rounded-lg p-3' : ''}`}>
-                    <div className="flex items-center space-x-2">
-                        <span className="font-medium text-gray-700">{label}:</span>
-                        {hasChanged && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                                Modified
-                            </span>
-                        )}
-                    </div>
-                    {hasChanged ? (
-                        <div className="mt-1 space-y-1">
-                            <div className="text-sm text-red-600 line-through">
-                                <span className="font-medium">Before:</span> {originalDisplayValue}
-                            </div>
-                            <div className="text-sm text-green-600 font-medium">
-                                <span className="font-medium">After:</span> {displayValue}
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="text-gray-900 mt-1">{displayValue}</p>
-                    )}
-                </div>
-            );
-        };
-
-        return (
-            <div className="space-y-6">
-                {editingRequest && changedFields.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                        <div className="flex items-center space-x-2 mb-2">
-                            <AlertTriangle className="w-5 h-5 text-amber-600" />
-                            <h3 className="text-md font-medium text-amber-800">Changes Detected</h3>
-                        </div>
-                        <p className="text-sm text-amber-700">
-                            You've modified {changedFields.length} field{changedFields.length !== 1 ? 's' : ''}. Modified fields are highlighted below with before/after values. Both you and the events team will receive email notifications about these changes.
-                        </p>
-                    </div>
-                )}
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h3 className="text-lg font-medium text-blue-900 mb-2">Review Your Event Request</h3>
-                    <p className="text-sm text-blue-800">
-                        Please review all the information below before submitting your event request.
-                    </p>
-                </div>
-
-                {/* Basic Information */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h4 className="text-md font-semibold text-gray-900 mb-3">Basic Information</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <FieldDisplay label="Event Name" value={formData.name} fieldKey="name" />
-                        <FieldDisplay label="Location" value={formData.location} fieldKey="location" />
-                        <FieldDisplay
-                            label="Date"
-                            value={formData.startDate}
-                            fieldKey="startDate"
-                            format={(val) => {
-                                try {
-                                    return val ? new Date(val).toLocaleDateString() : 'Not specified';
-                                } catch (error) {
-                                    return 'Invalid date';
-                                }
-                            }}
-                        />
-                        <FieldDisplay
-                            label="Time"
-                            value={formData.startTime && formData.endTime ? `${formData.startTime} - ${formData.endTime}` : ''}
-                            fieldKey="startTime"
-                            format={(val) => {
-                                try {
-                                    return formData.startTime && formData.endTime ?
-                                        `${formatTimeTo12H(formData.startTime)} - ${formatTimeTo12H(formData.endTime)}` : 'Not specified';
-                                } catch (error) {
-                                    return 'Invalid time';
-                                }
-                            }}
-                        />
-                        <FieldDisplay label="Event Code" value={formData.eventCode} fieldKey="eventCode" />
-                        <FieldDisplay label="Points to Reward" value={formData.pointsToReward} fieldKey="pointsToReward" format={(val) => `${val} points`} />
-                        <FieldDisplay label="Department" value={formData.department} fieldKey="department" />
-                        <div className="md:col-span-2">
-                            <FieldDisplay label="Description" value={formData.eventDescription} fieldKey="eventDescription" />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Graphics & Marketing */}
-                {formData.needsGraphics && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                        <h4 className="text-md font-semibold text-gray-900 mb-3">Graphics & Marketing</h4>
-                        <div className="space-y-3 text-sm">
-                            <FieldDisplay label="Graphics Needed" value={formData.needsGraphics} fieldKey="needsGraphics" format={(val) => val ? 'Yes' : 'No'} />
-                            {formData.flyerType.length > 0 && (
-                                <div>
-                                    <span className="font-medium text-gray-700">Flyer Types:</span>
-                                    <ul className="text-gray-900 mt-1 list-disc list-inside">
-                                        {formData.flyerType.map((type, index) => (
-                                            <li key={index}>{type}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                            {formData.requiredLogos.length > 0 && (
-                                <div>
-                                    <span className="font-medium text-gray-700">Required Logos:</span>
-                                    <ul className="text-gray-900 mt-1 list-disc list-inside">
-                                        {formData.requiredLogos.map((logo, index) => (
-                                            <li key={index}>{logo}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                            {formData.advertisingFormat && (
-                                <div>
-                                    <span className="font-medium text-gray-700">Format:</span>
-                                    <p className="text-gray-900">{formData.advertisingFormat}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Logistics */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h4 className="text-md font-semibold text-gray-900 mb-3">Logistics</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <span className="font-medium text-gray-700">Room Booking:</span>
-                            <p className="text-gray-900">{formData.hasRoomBooking ? 'Yes' : 'No'}</p>
-                        </div>
-                        <FieldDisplay label="Expected Attendance" value={formData.expectedAttendance} fieldKey="expectedAttendance" />
-                        <FieldDisplay label="Serving Food/Drinks" value={formData.servingFoodDrinks} fieldKey="servingFoodDrinks" format={(val) => val ? 'Yes' : 'No'} />
-                        {formData.servingFoodDrinks && (
-                            <FieldDisplay label="AS Funding Needed" value={formData.needsAsFunding} fieldKey="needsAsFunding" format={(val) => val ? 'Yes' : 'No'} />
-                        )}
-                    </div>
-                </div>
-
-                {/* Funding Information */}
-                {formData.needsAsFunding && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                        <h4 className="text-md font-semibold text-gray-900 mb-3">Funding & Invoices</h4>
-                        <div className="space-y-4 text-sm">
-                            <div>
-                                <span className="font-medium text-gray-700">AS Funding Required:</span>
-                                <p className="text-gray-900">Yes</p>
-                            </div>
-
-                            {formData.invoices.length > 0 ? (
-                                <div>
-                                    <span className="font-medium text-gray-700">Invoices ({formData.invoices.length}):</span>
-                                    <div className="mt-2 space-y-4">
-                                        {formData.invoices.map((invoice, invoiceIndex) => {
-                                            const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0);
-                                            const total = subtotal + invoice.tax + invoice.tip;
-
-                                            return (
-                                                <div key={invoice.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <h5 className="font-medium text-gray-900">Invoice #{invoiceIndex + 1}</h5>
-                                                        <span className="text-lg font-semibold text-blue-600">${total.toFixed(2)}</span>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                                        <div>
-                                                            <span className="font-medium text-gray-600">Vendor:</span>
-                                                            <p className="text-gray-900">{invoice.vendor}</p>
-                                                        </div>
-                                                        {invoice.invoiceFile && (
-                                                            <div>
-                                                                <span className="font-medium text-gray-600">File:</span>
-                                                                <p className="text-gray-900">{invoice.invoiceFile.name}</p>
-                                                            </div>
-                                                        )}
-                                                        {invoice.existingInvoiceFile && !invoice.invoiceFile && (
-                                                            <div>
-                                                                <span className="font-medium text-gray-600">File:</span>
-                                                                <p className="text-gray-900">Existing file uploaded</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {invoice.items.length > 0 && (
-                                                        <div className="mb-3">
-                                                            <span className="font-medium text-gray-600">Items:</span>
-                                                            <div className="mt-1 space-y-1">
-                                                                {invoice.items.map((item, itemIndex) => (
-                                                                    <div key={itemIndex} className="flex justify-between items-start gap-2 text-sm">
-                                                                        <span className="break-words flex-1 min-w-0">{item.description}</span>
-                                                                        <span className="whitespace-nowrap flex-shrink-0">{item.quantity} × ${item.unitPrice.toFixed(2)} = ${item.total.toFixed(2)}</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="border-t border-gray-300 pt-2 space-y-1">
-                                                        <div className="flex justify-between text-sm">
-                                                            <span>Subtotal:</span>
-                                                            <span>${subtotal.toFixed(2)}</span>
-                                                        </div>
-                                                        {invoice.tax > 0 && (
-                                                            <div className="flex justify-between text-sm">
-                                                                <span>Tax:</span>
-                                                                <span>${invoice.tax.toFixed(2)}</span>
-                                                            </div>
-                                                        )}
-                                                        {invoice.tip > 0 && (
-                                                            <div className="flex justify-between text-sm">
-                                                                <span>Tip:</span>
-                                                                <span>${invoice.tip.toFixed(2)}</span>
-                                                            </div>
-                                                        )}
-                                                        <div className="flex justify-between font-medium">
-                                                            <span>Invoice Total:</span>
-                                                            <span>${total.toFixed(2)}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-
-                                        {/* Grand total */}
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                            <div className="flex justify-between items-center">
-                                                <span className="font-semibold text-blue-900">Grand Total (All Invoices):</span>
-                                                <span className="text-xl font-bold text-blue-900">
-                                                    ${formData.invoices.reduce((grandTotal, invoice) => {
-                                                        const invoiceTotal = invoice.items.reduce((sum, item) => sum + item.total, 0) + invoice.tax + invoice.tip;
-                                                        return grandTotal + invoiceTotal;
-                                                    }, 0).toFixed(2)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div>
-                                    <span className="font-medium text-gray-700">Invoices:</span>
-                                    <p className="text-gray-500">No invoices added yet</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </div>
-        );
-    };
-
     const getSteps = () => {
         const baseSteps = [
-            { title: 'Important Information', component: renderDisclaimer },
-            { title: 'Basic Information', component: renderBasicInfo },
-            { title: 'Marketing & Graphics', component: renderMarketingSection },
-            { title: 'Logistics', component: renderLogisticsSection }
+            { title: 'Important Information', component: () => <DisclaimerSection /> },
+            {
+                title: 'Basic Information', component: () => (
+                    <BasicInformationSection
+                        formData={formData}
+                        fieldErrors={fieldErrors}
+                        onInputChange={handleInputChange}
+                    />
+                )
+            },
+            {
+                title: 'Marketing & Graphics', component: () => (
+                    <MarketingSection
+                        formData={formData}
+                        onInputChange={handleInputChange}
+                        onArrayChange={handleArrayChange}
+                        onFileChange={handleFileChange}
+                    />
+                )
+            },
+            {
+                title: 'Logistics', component: () => (
+                    <LogisticsSection
+                        formData={formData}
+                        onInputChange={handleInputChange}
+                        onRemoveExistingFile={handleRemoveExistingFile}
+                    />
+                )
+            }
         ];
 
+        // Add funding step if needed
         if (formData.needsAsFunding) {
-            baseSteps.push({ title: 'Funding & Invoices', component: renderFundingSection });
+            baseSteps.push({
+                title: 'Funding Details',
+                component: () => (
+                    <FundingSection
+                        needsAsFunding={formData.needsAsFunding}
+                        invoices={invoices}
+                        invoiceTabState={invoiceTabState}
+                        jsonImportData={jsonImportData}
+                        activeInvoiceTab={activeInvoiceTab}
+                        onAddInvoice={addInvoice}
+                        onRemoveInvoice={removeInvoice}
+                        onUpdateInvoice={updateInvoice}
+                        onAddInvoiceItem={addInvoiceItem}
+                        onRemoveInvoiceItem={removeInvoiceItem}
+                        onUpdateInvoiceItem={(invoiceId: string, itemIndex: number, field: string, value: string | number) =>
+                            updateInvoiceItem(invoiceId, itemIndex, field as keyof import('./types/EventRequestTypes').ItemizedInvoiceItem, value)
+                        }
+                        onHandleJsonImport={handleJsonImport}
+                        onUpdateJsonImportData={updateJsonImportData}
+                        onUpdateInvoiceTabState={updateInvoiceTabState}
+                        onSetActiveInvoiceTab={setActiveInvoiceTab}
+                    />
+                )
+            });
         }
-
-        // Always add review as the last step
-        baseSteps.push({ title: 'Review & Submit', component: renderReviewSection });
 
         return baseSteps;
     };
 
     const steps = getSteps();
+    const isLastStep = currentStep === steps.length - 1;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-900">{editingRequest ? 'Edit Event Request' : 'Create Event Request'}</h2>
-                        <p className="text-sm text-gray-600">Fill out the form to request a new event</p>
-                    </div>
+                    <h2 className="text-xl font-semibold text-gray-900">
+                        {editingRequest ? 'Edit Event Request' : 'New Event Request'}
+                    </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        disabled={loading}
                     >
-                        <X className="w-5 h-5" />
+                        <X className="w-6 h-6" />
                     </button>
                 </div>
 
-
-
-                {/* Progress */}
+                {/* Progress Bar */}
                 <div className="px-6 py-4 border-b border-gray-200">
-                    <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                        <span>Step {currentStep + 1} of {steps.length}</span>
-                        <span>{Math.round(((currentStep + 1) / steps.length) * 100)}% Complete</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                            Step {currentStep + 1} of {steps.length}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                            {steps[currentStep]?.title}
+                        </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
@@ -2487,63 +580,55 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto" style={{ maxHeight: '60vh' }}>
-                    <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{steps[currentStep].title}</h3>
-                    </div>
-
+                <div className="flex-1 overflow-y-auto p-6">
                     {error && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-red-700 text-sm">{error}</p>
+                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-red-800 text-sm">{error}</p>
                         </div>
                     )}
 
-                    {steps[currentStep].component()}
+                    {steps[currentStep]?.component()}
                 </div>
 
                 {/* Footer */}
                 <div className="flex items-center justify-between p-6 border-t border-gray-200">
                     <button
-                        onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-                        disabled={currentStep === 0}
-                        className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        type="button"
+                        onClick={handlePrevious}
+                        disabled={currentStep === 0 || loading}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                     >
                         Previous
                     </button>
 
                     <div className="flex space-x-3">
                         <button
+                            type="button"
                             onClick={onClose}
-                            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            disabled={loading}
+                            className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                         >
                             Cancel
                         </button>
 
-                        {currentStep === steps.length - 1 ? (
+                        {isLastStep ? (
                             <button
+                                type="button"
                                 onClick={handleSubmit}
                                 disabled={loading}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
                             >
-                                {loading ? (editingRequest ? 'Updating...' : 'Submitting...') : (editingRequest ? 'Update Request' : 'Submit Request')}
+                                {loading && (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                )}
+                                <span>{editingRequest ? 'Update Request' : 'Submit Request'}</span>
                             </button>
                         ) : (
                             <button
-                                onClick={() => {
-                                    // No validation needed for step 0 (requirements)
-                                    if (currentStep === 0 || validateStep(currentStep)) {
-                                        console.log('Current form state before step change:', {
-                                            roomBookingFile: formData.roomBookingFile?.name,
-                                            invoices: formData.invoices.map(inv => ({
-                                                id: inv.id,
-                                                vendor: inv.vendor,
-                                                invoiceFile: inv.invoiceFile?.name
-                                            }))
-                                        });
-                                        setCurrentStep(Math.min(steps.length - 1, currentStep + 1));
-                                    }
-                                }}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                type="button"
+                                onClick={handleNext}
+                                disabled={loading}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
                             >
                                 Next
                             </button>
@@ -2553,4 +638,4 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
             </div>
         </div>
     );
-} 
+}

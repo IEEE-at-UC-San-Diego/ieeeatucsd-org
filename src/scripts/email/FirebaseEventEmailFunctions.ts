@@ -1,49 +1,67 @@
-import { getFirestore } from 'firebase-admin/firestore';
-import { app } from '../../firebase/server';
+import { getFirestore } from "firebase-admin/firestore";
+import { app } from "../../firebase/server";
 
-export async function sendFirebaseEventRequestSubmissionEmail(resend: any, fromEmail: string, replyToEmail: string, data: any): Promise<boolean> {
+export async function sendFirebaseEventRequestSubmissionEmail(
+  resend: any,
+  fromEmail: string,
+  replyToEmail: string,
+  data: any,
+): Promise<boolean> {
   try {
-    console.log('🎪 Starting Firebase event request submission email process...');
+    console.log(
+      "🎪 Starting Firebase event request submission email process...",
+    );
 
     const db = getFirestore(app);
-    
+
     // Get event request details
-    const eventRequestDoc = await db.collection('event_requests').doc(data.eventRequestId).get();
+    const eventRequestDoc = await db
+      .collection("event_requests")
+      .doc(data.eventRequestId)
+      .get();
     if (!eventRequestDoc.exists) {
-      console.error('❌ Event request not found:', data.eventRequestId);
+      console.error("❌ Event request not found:", data.eventRequestId);
       return false;
     }
-    
-    const eventRequest = { id: eventRequestDoc.id, ...eventRequestDoc.data() } as any;
-    
+
+    const eventRequest = {
+      id: eventRequestDoc.id,
+      ...eventRequestDoc.data(),
+    } as any;
+
     // Get user details
-    const userDoc = await db.collection('users').doc(eventRequest.requestedUser).get();
+    const userDoc = await db
+      .collection("users")
+      .doc(eventRequest.requestedUser)
+      .get();
     if (!userDoc.exists) {
-      console.error('❌ User not found:', eventRequest.requestedUser);
+      console.error("❌ User not found:", eventRequest.requestedUser);
       return false;
     }
-    
+
     const user = { id: userDoc.id, ...userDoc.data() } as any;
 
-    const eventsEmail = 'events@ieeeatucsd.org';
+    const eventsEmail = "events@ieeeatucsd.org";
     const eventsSubject = `New Event Request Submitted: ${eventRequest.name}`;
     const userSubject = `Your Event Request Has Been Submitted: ${eventRequest.name}`;
 
     const formatDateTime = (timestamp: any) => {
-      if (!timestamp) return 'Not specified';
+      if (!timestamp) return "Not specified";
       try {
-        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-        return date.toLocaleString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
+        const date = timestamp.toDate
+          ? timestamp.toDate()
+          : new Date(timestamp);
+        return date.toLocaleString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
         });
       } catch (error) {
-        return 'Invalid date';
+        return "Invalid date";
       }
     };
 
@@ -101,11 +119,11 @@ export async function sendFirebaseEventRequestSubmissionEmail(resend: any, fromE
                 </tr>
                 <tr>
                   <td>Expected Attendance</td>
-                  <td>${eventRequest.expectedAttendance || 'Not specified'}</td>
+                  <td>${eventRequest.expectedAttendance || "Not specified"}</td>
                 </tr>
                 <tr>
                   <td>Department</td>
-                  <td>${eventRequest.department || 'General'}</td>
+                  <td>${eventRequest.department || "General"}</td>
                 </tr>
                 <tr>
                   <td>Submitted By</td>
@@ -114,26 +132,37 @@ export async function sendFirebaseEventRequestSubmissionEmail(resend: any, fromE
               </table>
             </div>
 
-            ${eventRequest.eventDescription ? `
+            ${
+              eventRequest.eventDescription
+                ? `
             <div class="info-card">
               <h3 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px;">📝 Description</h3>
               <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #3b82f6;">
                 <p style="margin: 0; white-space: pre-wrap; line-height: 1.6;">${eventRequest.eventDescription}</p>
               </div>
             </div>
-            ` : ''}
+            `
+                : ""
+            }
 
-            ${eventRequest.needsGraphics || eventRequest.needsAsFunding || eventRequest.flyersNeeded || eventRequest.photographyNeeded ? `
+            ${
+              eventRequest.needsGraphics ||
+              eventRequest.needsAsFunding ||
+              eventRequest.flyersNeeded ||
+              eventRequest.photographyNeeded
+                ? `
             <div class="info-card">
               <h3 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px;">⚡ Special Requirements</h3>
               <div>
-                ${eventRequest.needsGraphics ? '<span class="badge">Graphics Required</span>' : ''}
-                ${eventRequest.needsAsFunding ? '<span class="badge">AS Funding</span>' : ''}
-                ${eventRequest.flyersNeeded ? '<span class="badge">Flyers Needed</span>' : ''}
-                ${eventRequest.photographyNeeded ? '<span class="badge">Photography</span>' : ''}
+                ${eventRequest.needsGraphics ? '<span class="badge">Graphics Required</span>' : ""}
+                ${eventRequest.needsAsFunding ? '<span class="badge">AS Funding</span>' : ""}
+                ${eventRequest.flyersNeeded ? '<span class="badge">Flyers Needed</span>' : ""}
+                ${eventRequest.photographyNeeded ? '<span class="badge">Photography</span>' : ""}
               </div>
             </div>
-            ` : ''}
+            `
+                : ""
+            }
             
             <div style="background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 25px 0;">
               <h4 style="margin: 0 0 12px 0; color: #15803d; font-size: 16px;">✅ Next Steps</h4>
@@ -206,7 +235,7 @@ export async function sendFirebaseEventRequestSubmissionEmail(resend: any, fromE
                 </tr>
                 <tr>
                   <td>Expected Attendance</td>
-                  <td>${eventRequest.expectedAttendance || 'Not specified'}</td>
+                  <td>${eventRequest.expectedAttendance || "Not specified"}</td>
                 </tr>
                 <tr>
                   <td>Status</td>
@@ -255,77 +284,112 @@ export async function sendFirebaseEventRequestSubmissionEmail(resend: any, fromE
       html: userHtml,
     });
 
-    console.log('✅ Firebase event request notification emails sent successfully!');
+    console.log(
+      "✅ Firebase event request notification emails sent successfully!",
+    );
     return true;
   } catch (error) {
-    console.error('❌ Failed to send Firebase event request notification email:', error);
+    console.error(
+      "❌ Failed to send Firebase event request notification email:",
+      error,
+    );
     return false;
   }
 }
 
-export async function sendFirebaseEventRequestStatusChangeEmail(resend: any, fromEmail: string, replyToEmail: string, data: any): Promise<boolean> {
+export async function sendFirebaseEventRequestStatusChangeEmail(
+  resend: any,
+  fromEmail: string,
+  replyToEmail: string,
+  data: any,
+): Promise<boolean> {
   try {
-    console.log('🎯 Starting Firebase event request status change email process...');
+    console.log(
+      "🎯 Starting Firebase event request status change email process...",
+    );
 
     const db = getFirestore(app);
-    
+
     // Get event request details
-    const eventRequestDoc = await db.collection('event_requests').doc(data.eventRequestId).get();
+    const eventRequestDoc = await db
+      .collection("event_requests")
+      .doc(data.eventRequestId)
+      .get();
     if (!eventRequestDoc.exists) {
-      console.error('❌ Event request not found:', data.eventRequestId);
+      console.error("❌ Event request not found:", data.eventRequestId);
       return false;
     }
-    
-    const eventRequest = { id: eventRequestDoc.id, ...eventRequestDoc.data() } as any;
-    
+
+    const eventRequest = {
+      id: eventRequestDoc.id,
+      ...eventRequestDoc.data(),
+    } as any;
+
     // Get user details
-    const userDoc = await db.collection('users').doc(eventRequest.requestedUser).get();
+    const userDoc = await db
+      .collection("users")
+      .doc(eventRequest.requestedUser)
+      .get();
     if (!userDoc.exists) {
-      console.error('❌ User not found:', eventRequest.requestedUser);
+      console.error("❌ User not found:", eventRequest.requestedUser);
       return false;
     }
-    
+
     const user = { id: userDoc.id, ...userDoc.data() } as any;
 
     const getStatusColor = (status: string) => {
       switch (status) {
-        case 'approved': return '#28a745';
-        case 'declined': case 'rejected': return '#dc3545';
-        case 'submitted': case 'pending': return '#ffc107';
-        default: return '#6c757d';
+        case "approved":
+          return "#28a745";
+        case "declined":
+        case "rejected":
+          return "#dc3545";
+        case "submitted":
+        case "pending":
+          return "#ffc107";
+        default:
+          return "#6c757d";
       }
     };
 
     const getStatusText = (status: string) => {
       switch (status) {
-        case 'approved': return 'Approved';
-        case 'declined': case 'rejected': return 'Declined';
-        case 'submitted': return 'Submitted';
-        case 'pending': return 'Pending Review';
-        default: return status;
+        case "approved":
+          return "Approved";
+        case "declined":
+        case "rejected":
+          return "Declined";
+        case "submitted":
+          return "Submitted";
+        case "pending":
+          return "Pending Review";
+        default:
+          return status;
       }
     };
 
     const formatDateTime = (timestamp: any) => {
-      if (!timestamp) return 'Not specified';
+      if (!timestamp) return "Not specified";
       try {
-        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-        return date.toLocaleString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
+        const date = timestamp.toDate
+          ? timestamp.toDate()
+          : new Date(timestamp);
+        return date.toLocaleString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
         });
       } catch (error) {
-        return 'Invalid date';
+        return "Invalid date";
       }
     };
 
     const userSubject = `Your Event Request Status Updated: ${eventRequest.name}`;
-    
+
     const userHtml = `
       <!DOCTYPE html>
       <html>
@@ -363,18 +427,28 @@ export async function sendFirebaseEventRequestStatusChangeEmail(resend: any, fro
                 <span style="background: ${getStatusColor(data.newStatus)}; color: white; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500; margin-left: 10px;">${getStatusText(data.newStatus)}</span>
               </div>
               
-              ${data.previousStatus && data.previousStatus !== data.newStatus ? `
+              ${
+                data.previousStatus && data.previousStatus !== data.newStatus
+                  ? `
                 <div style="color: #666; font-size: 14px;">
                   Changed from: <span style="text-decoration: line-through;">${getStatusText(data.previousStatus)}</span> → <strong>${getStatusText(data.newStatus)}</strong>
                 </div>
-              ` : ''}
+              `
+                  : ""
+              }
 
-              ${(data.newStatus === 'declined' || data.newStatus === 'rejected') && data.declinedReason ? `
+              ${
+                (data.newStatus === "declined" ||
+                  data.newStatus === "rejected") &&
+                data.declinedReason
+                  ? `
                 <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 8px; margin: 15px 0;">
                   <p style="margin: 0; color: #991b1b; font-weight: 600;">Decline Reason:</p>
                   <p style="margin: 5px 0 0 0; color: #991b1b;">${data.declinedReason}</p>
                 </div>
-              ` : ''}
+              `
+                  : ""
+              }
             </div>
             
             <div class="info-card">
@@ -420,110 +494,167 @@ export async function sendFirebaseEventRequestStatusChangeEmail(resend: any, fro
       html: userHtml,
     });
 
-    console.log('✅ Firebase event request status change email sent successfully!');
+    console.log(
+      "✅ Firebase event request status change email sent successfully!",
+    );
     return true;
   } catch (error) {
-    console.error('❌ Failed to send Firebase event request status change email:', error);
+    console.error(
+      "❌ Failed to send Firebase event request status change email:",
+      error,
+    );
     return false;
   }
 }
 
-export async function sendFirebaseEventEditEmail(resend: any, fromEmail: string, replyToEmail: string, data: any): Promise<boolean> {
+export async function sendFirebaseEventEditEmail(
+  resend: any,
+  fromEmail: string,
+  replyToEmail: string,
+  data: any,
+): Promise<boolean> {
   try {
-    console.log('✏️ Starting Firebase event edit email process...');
+    console.log("✏️ Starting Firebase event edit email process...");
 
     const db = getFirestore(app);
-    
+
     // Get event request details
-    const eventRequestDoc = await db.collection('event_requests').doc(data.eventRequestId).get();
+    const eventRequestDoc = await db
+      .collection("event_requests")
+      .doc(data.eventRequestId)
+      .get();
     if (!eventRequestDoc.exists) {
-      console.error('❌ Event request not found:', data.eventRequestId);
+      console.error("❌ Event request not found:", data.eventRequestId);
       return false;
     }
-    
-    const eventRequest = { id: eventRequestDoc.id, ...eventRequestDoc.data() } as any;
-    
+
+    const eventRequest = {
+      id: eventRequestDoc.id,
+      ...eventRequestDoc.data(),
+    } as any;
+
     // Get user details
-    const userDoc = await db.collection('users').doc(eventRequest.requestedUser).get();
+    const userDoc = await db
+      .collection("users")
+      .doc(eventRequest.requestedUser)
+      .get();
     if (!userDoc.exists) {
-      console.error('❌ User not found:', eventRequest.requestedUser);
+      console.error("❌ User not found:", eventRequest.requestedUser);
       return false;
     }
-    
+
     const user = { id: userDoc.id, ...userDoc.data() } as any;
 
-    const eventsEmail = 'events@ieeeatucsd.org';
+    const eventsEmail = "events@ieeeatucsd.org";
     const subject = `Event Request Edited: ${eventRequest.name}`;
 
     const formatDateTime = (timestamp: any) => {
-      if (!timestamp) return 'Not specified';
+      if (!timestamp) return "Not specified";
       try {
-        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-        return date.toLocaleString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
+        const date = timestamp.toDate
+          ? timestamp.toDate()
+          : new Date(timestamp);
+        return date.toLocaleString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
         });
       } catch (error) {
-        return 'Invalid date';
+        return "Invalid date";
       }
     };
 
     const generateChangesTable = (before: any, after: any) => {
       const changes = [];
       const fieldsToCheck = [
-        { key: 'name', label: 'Event Name' },
-        { key: 'location', label: 'Location' },
-        { key: 'eventDescription', label: 'Description' },
-        { key: 'department', label: 'Department' },
-        { key: 'expectedAttendance', label: 'Expected Attendance' },
-        { key: 'needsGraphics', label: 'Needs Graphics', format: (val: boolean) => val ? 'Yes' : 'No' },
-        { key: 'needsAsFunding', label: 'Needs AS Funding', format: (val: boolean) => val ? 'Yes' : 'No' },
-        { key: 'flyersNeeded', label: 'Flyers Needed', format: (val: boolean) => val ? 'Yes' : 'No' },
-        { key: 'photographyNeeded', label: 'Photography Needed', format: (val: boolean) => val ? 'Yes' : 'No' },
+        { key: "name", label: "Event Name" },
+        { key: "location", label: "Location" },
+        { key: "eventDescription", label: "Description" },
+        { key: "department", label: "Department" },
+        { key: "expectedAttendance", label: "Expected Attendance" },
+        {
+          key: "needsGraphics",
+          label: "Needs Graphics",
+          format: (val: boolean) => (val ? "Yes" : "No"),
+        },
+        {
+          key: "needsAsFunding",
+          label: "Needs AS Funding",
+          format: (val: boolean) => (val ? "Yes" : "No"),
+        },
+        {
+          key: "flyersNeeded",
+          label: "Flyers Needed",
+          format: (val: boolean) => (val ? "Yes" : "No"),
+        },
+        {
+          key: "photographyNeeded",
+          label: "Photography Needed",
+          format: (val: boolean) => (val ? "Yes" : "No"),
+        },
       ];
 
       for (const field of fieldsToCheck) {
         const beforeVal = before[field.key];
         const afterVal = after[field.key];
-        
+
         if (beforeVal !== afterVal) {
           changes.push({
             field: field.label,
-            before: field.format ? field.format(beforeVal) : (beforeVal || 'Not specified'),
-            after: field.format ? field.format(afterVal) : (afterVal || 'Not specified')
+            before: field.format
+              ? field.format(beforeVal)
+              : beforeVal || "Not specified",
+            after: field.format
+              ? field.format(afterVal)
+              : afterVal || "Not specified",
           });
         }
       }
 
-      // Handle date changes
-      if (before.startDateTime !== after.startDateTime) {
+      // Handle date changes - compare actual time values
+      const getTimeValue = (timestamp: any) => {
+        if (!timestamp) return null;
+        if (timestamp.toDate) return timestamp.toDate().getTime();
+        if (timestamp instanceof Date) return timestamp.getTime();
+        return new Date(timestamp).getTime();
+      };
+
+      const beforeStartTime = getTimeValue(before.startDateTime);
+      const afterStartTime = getTimeValue(after.startDateTime);
+      const beforeEndTime = getTimeValue(before.endDateTime);
+      const afterEndTime = getTimeValue(after.endDateTime);
+
+      if (beforeStartTime !== afterStartTime) {
         changes.push({
-          field: 'Start Date & Time',
+          field: "Start Date & Time",
           before: formatDateTime(before.startDateTime),
-          after: formatDateTime(after.startDateTime)
+          after: formatDateTime(after.startDateTime),
         });
       }
 
-      if (before.endDateTime !== after.endDateTime) {
+      if (beforeEndTime !== afterEndTime) {
         changes.push({
-          field: 'End Date & Time',
+          field: "End Date & Time",
           before: formatDateTime(before.endDateTime),
-          after: formatDateTime(after.endDateTime)
+          after: formatDateTime(after.endDateTime),
         });
       }
 
-      return changes.map(change => `
+      return changes
+        .map(
+          (change) => `
         <tr>
           <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">${change.field}</td>
           <td style="padding: 8px; border: 1px solid #ddd; color: #dc3545; text-decoration: line-through;">${change.before}</td>
           <td style="padding: 8px; border: 1px solid #ddd; color: #28a745; font-weight: 500;">${change.after}</td>
         </tr>
-      `).join('');
+      `,
+        )
+        .join("");
     };
 
     const changesTable = generateChangesTable(data.previousData, data.newData);
@@ -559,7 +690,9 @@ export async function sendFirebaseEventEditEmail(resend: any, fromEmail: string,
               The event request "<strong>${eventRequest.name}</strong>" submitted by <strong>${user.name || user.email}</strong> has been edited.
             </p>
             
-            ${changesTable ? `
+            ${
+              changesTable
+                ? `
             <div class="info-card" style="border-left: 4px solid #f59e0b;">
               <h3 style="margin: 0 0 15px 0; color: #92400e; font-size: 18px;">📝 Changes Made</h3>
               <table style="width: 100%; border-collapse: collapse;">
@@ -571,11 +704,13 @@ export async function sendFirebaseEventEditEmail(resend: any, fromEmail: string,
                 ${changesTable}
               </table>
             </div>
-            ` : `
+            `
+                : `
             <div class="info-card" style="border-left: 4px solid #3b82f6;">
               <p style="margin: 0; color: #1e40af;">Minor changes were made to the event request. Please review the updated details in the dashboard.</p>
             </div>
-            `}
+            `
+            }
 
             <div class="info-card">
               <h3 style="margin: 0 0 15px 0; color: #1e293b; font-size: 18px;">📋 Current Event Details</h3>
@@ -631,9 +766,13 @@ export async function sendFirebaseEventEditEmail(resend: any, fromEmail: string,
 
     // Send to event requester
     const userSubject = `Your Event Request Has Been Updated: ${eventRequest.name}`;
-    const userHtml = html.replace('Event Changes', 'Your Event Update')
-                         .replace('has been edited.', 'has been updated.')
-                         .replace('Review the changes in the dashboard', 'You can view the updated details in the dashboard');
+    const userHtml = html
+      .replace("Event Changes", "Your Event Update")
+      .replace("has been edited.", "has been updated.")
+      .replace(
+        "Review the changes in the dashboard",
+        "You can view the updated details in the dashboard",
+      );
 
     await resend.emails.send({
       from: fromEmail,
@@ -643,19 +782,24 @@ export async function sendFirebaseEventEditEmail(resend: any, fromEmail: string,
       html: userHtml,
     });
 
-    console.log('✅ Firebase event edit emails sent successfully!');
+    console.log("✅ Firebase event edit emails sent successfully!");
     return true;
   } catch (error) {
-    console.error('❌ Failed to send Firebase event edit email:', error);
+    console.error("❌ Failed to send Firebase event edit email:", error);
     return false;
   }
 }
 
-export async function sendFirebaseEventDeleteEmail(resend: any, fromEmail: string, replyToEmail: string, data: any): Promise<boolean> {
+export async function sendFirebaseEventDeleteEmail(
+  resend: any,
+  fromEmail: string,
+  replyToEmail: string,
+  data: any,
+): Promise<boolean> {
   try {
-    console.log('🗑️ Starting Firebase event delete email process...');
+    console.log("🗑️ Starting Firebase event delete email process...");
 
-    const eventsEmail = 'events@ieeeatucsd.org';
+    const eventsEmail = "events@ieeeatucsd.org";
     const subject = `Event Request Deleted: ${data.eventName}`;
 
     const html = `
@@ -698,7 +842,7 @@ export async function sendFirebaseEventDeleteEmail(resend: any, fromEmail: strin
                 </tr>
                 <tr>
                   <td>Location</td>
-                  <td>${data.location || 'Not specified'}</td>
+                  <td>${data.location || "Not specified"}</td>
                 </tr>
                 <tr>
                   <td>Submitted By</td>
@@ -706,7 +850,7 @@ export async function sendFirebaseEventDeleteEmail(resend: any, fromEmail: strin
                 </tr>
                 <tr>
                   <td>Status</td>
-                  <td>${data.status || 'Unknown'}</td>
+                  <td>${data.status || "Unknown"}</td>
                 </tr>
                 <tr>
                   <td>Event Request ID</td>
@@ -747,12 +891,25 @@ export async function sendFirebaseEventDeleteEmail(resend: any, fromEmail: strin
 
     // Send to event requester
     const userSubject = `Your Event Request Has Been Deleted: ${data.eventName}`;
-    const userHtml = html.replace('Event Deletion Notice', `Hello ${data.userName}!`)
-                         .replace('has been deleted from the system.', 'has been deleted.')
-                         .replace('Cancel any ongoing work related to this event', 'The event request has been removed from the system')
-                         .replace('Notify team members who were assigned to this event', 'Any related materials and tasks have been cancelled')
-                         .replace('Update any external communications if necessary', 'Please contact us if you need to submit a new request')
-                         .replace('Contact the submitter if follow-up is needed', 'Feel free to reach out if you have any questions');
+    const userHtml = html
+      .replace("Event Deletion Notice", `Hello ${data.userName}!`)
+      .replace("has been deleted from the system.", "has been deleted.")
+      .replace(
+        "Cancel any ongoing work related to this event",
+        "The event request has been removed from the system",
+      )
+      .replace(
+        "Notify team members who were assigned to this event",
+        "Any related materials and tasks have been cancelled",
+      )
+      .replace(
+        "Update any external communications if necessary",
+        "Please contact us if you need to submit a new request",
+      )
+      .replace(
+        "Contact the submitter if follow-up is needed",
+        "Feel free to reach out if you have any questions",
+      );
 
     await resend.emails.send({
       from: fromEmail,
@@ -762,10 +919,10 @@ export async function sendFirebaseEventDeleteEmail(resend: any, fromEmail: strin
       html: userHtml,
     });
 
-    console.log('✅ Firebase event delete emails sent successfully!');
+    console.log("✅ Firebase event delete emails sent successfully!");
     return true;
   } catch (error) {
-    console.error('❌ Failed to send Firebase event delete email:', error);
+    console.error("❌ Failed to send Firebase event delete email:", error);
     return false;
   }
-} 
+}
