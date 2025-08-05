@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FileText, Eye, Download, ExternalLink, Copy, Check, HelpCircle, Upload } from 'lucide-react';
 import { truncateFilename, isImageFile, isPdfFile } from '../utils/filenameUtils';
 import DragDropFileUpload from './DragDropFileUpload';
+import EnhancedFileUploadManager from './EnhancedFileUploadManager';
 
 interface InvoiceItem {
   description: string;
@@ -18,7 +19,11 @@ interface Invoice {
   tip: number;
   subtotal: number;
   total: number;
-  invoiceFile?: string;
+  invoiceFiles: File[];
+  existingInvoiceFiles: string[];
+  // Legacy fields for backward compatibility
+  invoiceFile?: File | null;
+  existingInvoiceFile?: string;
 }
 
 interface InvoiceEditorProps {
@@ -121,7 +126,12 @@ export default function InvoiceEditor({
       tax: 0,
       tip: 0,
       subtotal: 0,
-      total: 0
+      total: 0,
+      invoiceFiles: [],
+      existingInvoiceFiles: [],
+      // Legacy fields for backward compatibility
+      invoiceFile: null,
+      existingInvoiceFile: ''
     };
     onInvoicesChange([...invoices, newInvoice]);
   };
@@ -131,7 +141,7 @@ export default function InvoiceEditor({
   };
 
   const updateInvoice = (invoiceId: string, updates: Partial<Invoice>) => {
-    onInvoicesChange(invoices.map(inv => 
+    onInvoicesChange(invoices.map(inv =>
       inv.id === invoiceId ? { ...inv, ...updates } : inv
     ));
   };
@@ -184,7 +194,7 @@ export default function InvoiceEditor({
       const updatedInvoice = { ...invoice, ...updates };
       const subtotal = updatedInvoice.items.reduce((sum, item) => sum + item.total, 0);
       const total = subtotal + (updatedInvoice.tax || 0) + (updatedInvoice.tip || 0);
-      
+
       updateInvoice(invoiceId, {
         ...updates,
         subtotal,
@@ -238,7 +248,7 @@ export default function InvoiceEditor({
           />
         )}
         {isPdf && (
-          <div 
+          <div
             className="w-full h-20 bg-red-100 rounded flex items-center justify-center cursor-pointer"
             onClick={() => setSelectedFile(url)}
           >
@@ -463,27 +473,35 @@ export default function InvoiceEditor({
 
             {/* File Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Invoice File (Optional)
-              </label>
-              {invoice.invoiceFile ? (
-                <FileViewer url={invoice.invoiceFile} filename="Invoice File" />
-              ) : (
-                <DragDropFileUpload
-                  onFilesSelected={(files) => {
-                    // Handle file selection
-                    console.log('Files selected for invoice:', files);
-                  }}
-                  onFileUploaded={(file, url) => {
-                    updateInvoice(invoice.id, { invoiceFile: url });
-                  }}
-                  uploadFunction={onFileUpload}
-                  maxFiles={1}
-                  multiple={false}
-                  disabled={disabled}
-                  className="h-24"
-                />
-              )}
+              <EnhancedFileUploadManager
+                title="Invoice Files"
+                description="Upload invoice files (PDF, image, or document). Required for AS funding requests. Max size: 10MB per file."
+                existingFiles={invoice.existingInvoiceFiles || []}
+                newFiles={invoice.invoiceFiles || []}
+                onFilesChange={(files) => {
+                  const fileArray = Array.isArray(files) ? files : (files ? [files] : []);
+                  updateInvoice(invoice.id, {
+                    invoiceFiles: fileArray,
+                    // Update legacy field for backward compatibility
+                    invoiceFile: fileArray[0] || null
+                  });
+                }}
+                onRemoveExistingFile={(fileUrl) => {
+                  const updatedFiles = (invoice.existingInvoiceFiles || []).filter(url => url !== fileUrl);
+                  updateInvoice(invoice.id, {
+                    existingInvoiceFiles: updatedFiles,
+                    // Update legacy field for backward compatibility
+                    existingInvoiceFile: updatedFiles[0] || ''
+                  });
+                }}
+                allowedTypes={['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx']}
+                maxSizeInMB={10}
+                maxFiles={5}
+                multiple={true}
+                required={false}
+                disabled={disabled}
+                uploadFunction={onFileUpload}
+              />
             </div>
           </div>
         ))}

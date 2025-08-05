@@ -30,6 +30,7 @@ import BasicInformationSection from './components/BasicInformationSection';
 import MarketingSection from './components/MarketingSection';
 import LogisticsSection from './components/LogisticsSection';
 import FundingSection from './components/FundingSection';
+import EventReviewSection from './components/EventReviewSection';
 
 export default function EventRequestModal({ onClose, editingRequest, onSuccess }: EventRequestModalProps) {
     const [currentStep, setCurrentStep] = useState(0);
@@ -287,11 +288,12 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
             // Process invoices with file uploads
             const processedInvoices = await Promise.all(
                 invoices.map(async (invoice) => {
-                    let invoiceFileUrl = invoice.existingInvoiceFile;
+                    // Handle multiple invoice files
+                    let invoiceFileUrls: string[] = [...(invoice.existingInvoiceFiles || [])];
 
-                    if (invoice.invoiceFile) {
-                        const [url] = await uploadFiles([invoice.invoiceFile], 'invoices');
-                        invoiceFileUrl = url;
+                    if (invoice.invoiceFiles && invoice.invoiceFiles.length > 0) {
+                        const uploadedUrls = await uploadFiles(invoice.invoiceFiles, 'invoices');
+                        invoiceFileUrls = [...invoiceFileUrls, ...uploadedUrls];
                     }
 
                     const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0);
@@ -299,7 +301,9 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
 
                     return {
                         ...invoice,
-                        invoiceFile: invoiceFileUrl,
+                        invoiceFiles: invoiceFileUrls,
+                        // Legacy field for backward compatibility
+                        invoiceFile: invoiceFileUrls[0] || '',
                         subtotal,
                         total
                     };
@@ -496,6 +500,8 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         onInputChange={handleInputChange}
                         onArrayChange={handleArrayChange}
                         onFileChange={handleFileChange}
+                        onRemoveExistingFile={handleRemoveExistingFile}
+                        eventRequestId={editingRequest?.id}
                     />
                 )
             },
@@ -505,6 +511,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         formData={formData}
                         onInputChange={handleInputChange}
                         onRemoveExistingFile={handleRemoveExistingFile}
+                        eventRequestId={editingRequest?.id}
                     />
                 )
             }
@@ -533,10 +540,29 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                         onUpdateJsonImportData={updateJsonImportData}
                         onUpdateInvoiceTabState={updateInvoiceTabState}
                         onSetActiveInvoiceTab={setActiveInvoiceTab}
+                        onRemoveExistingFile={handleRemoveExistingFile}
+                        eventRequestId={editingRequest?.id}
                     />
                 )
             });
         }
+
+        // Add review step as the final step
+        baseSteps.push({
+            title: 'Review & Submit',
+            component: () => (
+                <EventReviewSection
+                    formData={formData}
+                    isInlineStep={true}
+                    showRoomBookingWarning={true}
+                    originalData={originalData}
+                    isEditMode={!!editingRequest}
+                    onConfirm={handleSubmit}
+                    onCancel={onClose}
+                    isSubmitting={loading}
+                />
+            )
+        });
 
         return baseSteps;
     };

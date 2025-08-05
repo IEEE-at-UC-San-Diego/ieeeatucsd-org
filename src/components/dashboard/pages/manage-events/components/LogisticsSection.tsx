@@ -2,17 +2,20 @@ import React from 'react';
 import { MapPin, Users, Upload, DollarSign, AlertTriangle, FileText, Image } from 'lucide-react';
 import type { EventFormData } from '../types/EventRequestTypes';
 import { calculateBudget, extractFileName } from '../utils/eventRequestUtils';
+import EnhancedFileUploadManager from './EnhancedFileUploadManager';
 
 interface LogisticsSectionProps {
     formData: EventFormData;
     onInputChange: (field: string, value: any) => void;
     onRemoveExistingFile: (fileUrl: string, fileType: 'roomBooking' | 'invoice' | 'invoiceFiles' | 'otherLogos') => void;
+    eventRequestId?: string;
 }
 
 export default function LogisticsSection({
     formData,
     onInputChange,
-    onRemoveExistingFile
+    onRemoveExistingFile,
+    eventRequestId
 }: LogisticsSectionProps) {
     const attendance = parseInt(formData.expectedAttendance) || 0;
     const budget = calculateBudget(attendance);
@@ -99,21 +102,20 @@ export default function LogisticsSection({
 
                 {formData.hasRoomBooking && (
                     <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            <Upload className="w-4 h-4 inline mr-2" />
-                            Upload Room Booking Confirmation *
-                        </label>
-                        <input
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                            onChange={(e) => onInputChange('roomBookingFile', e.target.files?.[0] || null)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        <EnhancedFileUploadManager
+                            title="Room Booking Confirmation"
+                            description="Please upload your room booking confirmation (PDF, image, or document). Max size: 1MB"
+                            existingFiles={formData.existingRoomBookingFiles}
+                            newFiles={formData.roomBookingFile}
+                            onFilesChange={(files) => onInputChange('roomBookingFile', files)}
+                            onRemoveExistingFile={(fileUrl) => onRemoveExistingFile(fileUrl, 'roomBooking')}
+                            allowedTypes={['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx']}
+                            maxSizeInMB={1}
+                            maxFiles={1}
+                            multiple={false}
+                            required={true}
+                            eventRequestId={eventRequestId}
                         />
-                        <p className="text-xs text-gray-500 mt-1">
-                            Please upload your room booking confirmation (PDF, image, or document). Max size: 1MB
-                        </p>
-
-                        {renderExistingFiles(formData.existingRoomBookingFiles, 'Current room booking files', 'roomBooking')}
                     </div>
                 )}
             </div>

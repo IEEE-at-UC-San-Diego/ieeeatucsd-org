@@ -9,6 +9,9 @@ export const createNewInvoice = (): InvoiceFormData => ({
   items: [{ description: "", quantity: 1, unitPrice: 0, total: 0 }],
   tax: 0,
   tip: 0,
+  invoiceFiles: [],
+  existingInvoiceFiles: [],
+  // Legacy fields for backward compatibility
   invoiceFile: null,
   existingInvoiceFile: "",
 });
@@ -147,6 +150,11 @@ export const convertLegacyInvoices = (
       items: invoice.items || [],
       tax: invoice.tax || 0,
       tip: invoice.tip || 0,
+      invoiceFiles: [],
+      existingInvoiceFiles:
+        invoice.invoiceFiles ||
+        (invoice.invoiceFile ? [invoice.invoiceFile] : []),
+      // Legacy fields for backward compatibility
       invoiceFile: null,
       existingInvoiceFile: invoice.invoiceFile || "",
     }));
@@ -157,15 +165,19 @@ export const convertLegacyInvoices = (
     editingRequest.itemizedInvoice &&
     editingRequest.itemizedInvoice.length > 0
   ) {
+    const legacyInvoiceFile =
+      editingRequest.invoiceFile || editingRequest.existingInvoiceFile || "";
     invoices.push({
       id: `invoice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       vendor: editingRequest.invoiceVendor || "",
       items: editingRequest.itemizedInvoice,
       tax: editingRequest.invoiceTax || 0,
       tip: editingRequest.invoiceTip || 0,
+      invoiceFiles: [],
+      existingInvoiceFiles: legacyInvoiceFile ? [legacyInvoiceFile] : [],
+      // Legacy fields for backward compatibility
       invoiceFile: null,
-      existingInvoiceFile:
-        editingRequest.invoiceFile || editingRequest.existingInvoiceFile || "",
+      existingInvoiceFile: legacyInvoiceFile,
     });
   }
 

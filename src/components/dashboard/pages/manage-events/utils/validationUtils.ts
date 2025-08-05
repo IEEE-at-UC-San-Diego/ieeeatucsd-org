@@ -195,8 +195,30 @@ export const validateFunding = (formData: EventFormData): ValidationResult => {
         return { isValid: false, errors, errorMessage };
       }
 
-      if (!invoice.invoiceFile && !invoice.existingInvoiceFile) {
-        errorMessage = `Invoice #${invoiceNum}: Invoice file is required when requesting AS funding`;
+      // Check if invoice has either new files or existing files
+      const hasNewFiles =
+        (invoice.invoiceFiles && invoice.invoiceFiles.length > 0) ||
+        (invoice.invoiceFile !== null && invoice.invoiceFile !== undefined);
+      const hasExistingFiles =
+        (invoice.existingInvoiceFiles &&
+          invoice.existingInvoiceFiles.length > 0) ||
+        (invoice.existingInvoiceFile &&
+          invoice.existingInvoiceFile.trim() !== "");
+
+      // Debug logging for invoice file validation
+      console.log(`Invoice #${invoiceNum} validation:`, {
+        invoiceId: invoice.id,
+        hasNewFiles,
+        hasExistingFiles,
+        invoiceFiles: invoice.invoiceFiles,
+        existingInvoiceFiles: invoice.existingInvoiceFiles,
+        // Legacy fields
+        invoiceFile: invoice.invoiceFile,
+        existingInvoiceFile: invoice.existingInvoiceFile,
+      });
+
+      if (!hasNewFiles && !hasExistingFiles) {
+        errorMessage = `Invoice #${invoiceNum}: At least one invoice file is required when requesting AS funding`;
         return { isValid: false, errors, errorMessage };
       }
 
@@ -259,8 +281,16 @@ export const validateStep = (
     case 3: // Logistics
       return validateLogistics(formData);
 
-    case 4: // Funding
-      return validateFunding(formData);
+    case 4: // Funding (if needed) or Review & Submit
+      if (formData.needsAsFunding) {
+        return validateFunding(formData);
+      } else {
+        // This is the review step - no additional validation needed
+        return { isValid: true, errors: {} };
+      }
+
+    case 5: // Review & Submit (when funding step is present)
+      return { isValid: true, errors: {} };
 
     default:
       return { isValid: true, errors: {} };

@@ -1,7 +1,8 @@
 import React from 'react';
-import { DollarSign, Plus, Trash2, Upload, FileText } from 'lucide-react';
+import { DollarSign, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import type { InvoiceFormData, InvoiceTabState, JsonImportData } from '../types/EventRequestTypes';
 import { calculateGrandTotal } from '../utils/eventRequestUtils';
+import EnhancedFileUploadManager from './EnhancedFileUploadManager';
 
 interface FundingSectionProps {
     needsAsFunding: boolean;
@@ -19,6 +20,9 @@ interface FundingSectionProps {
     onUpdateJsonImportData: (invoiceId: string, data: string) => void;
     onUpdateInvoiceTabState: (invoiceId: string, tab: 'details' | 'import') => void;
     onSetActiveInvoiceTab: (invoiceId: string) => void;
+    // File handling props
+    onRemoveExistingFile?: (fileUrl: string, fileType: 'roomBooking' | 'invoice' | 'invoiceFiles' | 'otherLogos') => void;
+    eventRequestId?: string;
 }
 
 export default function FundingSection({
@@ -36,8 +40,19 @@ export default function FundingSection({
     onHandleJsonImport,
     onUpdateJsonImportData,
     onUpdateInvoiceTabState,
-    onSetActiveInvoiceTab
+    onSetActiveInvoiceTab,
+    onRemoveExistingFile,
+    eventRequestId
 }: FundingSectionProps) {
+    // Helper function to check if an invoice has missing files
+    const hasInvoiceFiles = (invoice: InvoiceFormData): boolean => {
+        const hasNewFiles = (invoice.invoiceFiles && invoice.invoiceFiles.length > 0) ||
+            (invoice.invoiceFile !== null && invoice.invoiceFile !== undefined);
+        const hasExistingFiles = (invoice.existingInvoiceFiles && invoice.existingInvoiceFiles.length > 0) ||
+            (invoice.existingInvoiceFile && invoice.existingInvoiceFile.trim() !== "");
+        return Boolean(hasNewFiles || hasExistingFiles);
+    };
+
     if (!needsAsFunding) {
         return (
             <div className="bg-gray-50 p-4 rounded-lg">
@@ -82,22 +97,29 @@ export default function FundingSection({
                             {invoices.map((invoice, index) => {
                                 const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0);
                                 const total = subtotal + invoice.tax + invoice.tip;
-                                const currentTab = invoiceTabState[invoice.id] || 'details';
+                                const hasMissingFiles = !hasInvoiceFiles(invoice);
 
                                 return (
                                     <button
                                         key={invoice.id}
                                         type="button"
                                         onClick={() => onSetActiveInvoiceTab(invoice.id)}
-                                        className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeInvoiceTab === invoice.id
-                                                ? 'border-green-500 text-green-600'
-                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${activeInvoiceTab === invoice.id
+                                            ? 'border-green-500 text-green-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                             }`}
                                     >
-                                        Invoice #{index + 1}
-                                        {invoice.vendor && ` - ${invoice.vendor}`}
+                                        <span>
+                                            Invoice #{index + 1}
+                                            {invoice.vendor && ` - ${invoice.vendor}`}
+                                        </span>
+                                        {hasMissingFiles && (
+                                            <div title="Missing invoice file">
+                                                <AlertTriangle className="w-4 h-4 text-red-500" />
+                                            </div>
+                                        )}
                                         {total > 0 && (
-                                            <span className="ml-2 text-xs bg-gray-100 px-2 py-1 rounded">
+                                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                                                 ${total.toFixed(2)}
                                             </span>
                                         )}
@@ -137,8 +159,8 @@ export default function FundingSection({
                                         type="button"
                                         onClick={() => onUpdateInvoiceTabState(invoice.id, 'details')}
                                         className={`px-3 py-1 rounded text-sm font-medium ${currentTab === 'details'
-                                                ? 'bg-blue-100 text-blue-700'
-                                                : 'text-gray-600 hover:text-gray-800'
+                                            ? 'bg-blue-100 text-blue-700'
+                                            : 'text-gray-600 hover:text-gray-800'
                                             }`}
                                     >
                                         Manual Entry
@@ -147,8 +169,8 @@ export default function FundingSection({
                                         type="button"
                                         onClick={() => onUpdateInvoiceTabState(invoice.id, 'import')}
                                         className={`px-3 py-1 rounded text-sm font-medium ${currentTab === 'import'
-                                                ? 'bg-blue-100 text-blue-700'
-                                                : 'text-gray-600 hover:text-gray-800'
+                                            ? 'bg-blue-100 text-blue-700'
+                                            : 'text-gray-600 hover:text-gray-800'
                                             }`}
                                     >
                                         Import JSON
@@ -173,22 +195,45 @@ export default function FundingSection({
 
                                         {/* Invoice File */}
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                <Upload className="w-4 h-4 inline mr-2" />
-                                                Invoice File *
-                                            </label>
-                                            <input
-                                                type="file"
-                                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                                onChange={(e) => onUpdateInvoice(invoice.id, { invoiceFile: e.target.files?.[0] || null })}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                            {invoice.existingInvoiceFile && (
-                                                <div className="mt-2 flex items-center space-x-2 text-sm text-gray-600">
-                                                    <FileText className="w-4 h-4" />
-                                                    <span>Current file: {invoice.existingInvoiceFile.split('/').pop()}</span>
+                                            {!hasInvoiceFiles(invoice) && (
+                                                <div className="flex items-center space-x-2 mb-3 text-red-600">
+                                                    <AlertTriangle className="w-4 h-4" />
+                                                    <span className="text-sm font-medium">Invoice file required</span>
                                                 </div>
                                             )}
+                                            <EnhancedFileUploadManager
+                                                title="Invoice Files"
+                                                description="Upload invoice files (PDF, image, or document). Required for AS funding requests. Max size: 1MB per file."
+                                                existingFiles={invoice.existingInvoiceFiles || []}
+                                                newFiles={invoice.invoiceFiles || []}
+                                                onFilesChange={(files) => {
+                                                    const fileArray = Array.isArray(files) ? files : (files ? [files] : []);
+                                                    onUpdateInvoice(invoice.id, {
+                                                        invoiceFiles: fileArray,
+                                                        // Update legacy field for backward compatibility
+                                                        invoiceFile: fileArray[0] || null
+                                                    });
+                                                }}
+                                                onRemoveExistingFile={(fileUrl) => {
+                                                    if (onRemoveExistingFile) {
+                                                        onRemoveExistingFile(fileUrl, 'invoiceFiles');
+                                                    }
+                                                    // Also update the invoice state
+                                                    const updatedFiles = (invoice.existingInvoiceFiles || []).filter(url => url !== fileUrl);
+                                                    onUpdateInvoice(invoice.id, {
+                                                        existingInvoiceFiles: updatedFiles,
+                                                        // Update legacy field for backward compatibility
+                                                        existingInvoiceFile: updatedFiles[0] || ''
+                                                    });
+                                                }}
+                                                allowedTypes={['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx']}
+                                                maxSizeInMB={1}
+                                                maxFiles={1}
+                                                multiple={false}
+                                                required={true}
+                                                eventRequestId={eventRequestId}
+                                                className={!hasInvoiceFiles(invoice) ? 'border-2 border-red-300 bg-red-50 rounded-lg' : ''}
+                                            />
                                         </div>
 
                                         {/* Items */}

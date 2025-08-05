@@ -2,19 +2,24 @@ import React from 'react';
 import { Megaphone, Image, Upload } from 'lucide-react';
 import type { EventFormData } from '../types/EventRequestTypes';
 import { flyerTypes, logoTypes, formatTypes } from '../types/EventRequestTypes';
+import EnhancedFileUploadManager from './EnhancedFileUploadManager';
 
 interface MarketingSectionProps {
     formData: EventFormData;
     onInputChange: (field: string, value: any) => void;
     onArrayChange: (field: string, value: string, checked: boolean) => void;
     onFileChange: (field: string, files: FileList | null) => void;
+    onRemoveExistingFile?: (fileUrl: string, fileType: 'roomBooking' | 'invoice' | 'invoiceFiles' | 'otherLogos') => void;
+    eventRequestId?: string;
 }
 
 export default function MarketingSection({
     formData,
     onInputChange,
     onArrayChange,
-    onFileChange
+    onFileChange,
+    onRemoveExistingFile,
+    eventRequestId
 }: MarketingSectionProps) {
     return (
         <div className="space-y-6">
@@ -99,20 +104,32 @@ export default function MarketingSection({
                     {/* Other Logo Files */}
                     {formData.requiredLogos.includes('OTHER (please upload transparent logo files)') && (
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                <Upload className="w-4 h-4 inline mr-2" />
-                                Upload Other Logo Files *
-                            </label>
-                            <input
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={(e) => onFileChange('otherLogoFiles', e.target.files)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            <EnhancedFileUploadManager
+                                title="Other Logo Files"
+                                description="Please upload transparent PNG files for best quality. Max size: 10MB each"
+                                existingFiles={formData.existingOtherLogos || []}
+                                newFiles={formData.otherLogoFiles || []}
+                                onFilesChange={(files) => {
+                                    // Convert File[] to FileList-like object
+                                    if (Array.isArray(files)) {
+                                        const fileList = {
+                                            item: (index: number) => files[index] || null,
+                                            length: files.length,
+                                            ...files
+                                        } as FileList;
+                                        onFileChange('otherLogoFiles', fileList);
+                                    } else {
+                                        onFileChange('otherLogoFiles', null);
+                                    }
+                                }}
+                                onRemoveExistingFile={(fileUrl) => onRemoveExistingFile?.(fileUrl, 'otherLogos')}
+                                allowedTypes={['png', 'jpg', 'jpeg', 'svg', 'gif']}
+                                maxSizeInMB={10}
+                                maxFiles={5}
+                                multiple={true}
+                                required={true}
+                                eventRequestId={eventRequestId}
                             />
-                            <p className="text-xs text-gray-500 mt-1">
-                                Please upload transparent PNG files for best quality
-                            </p>
                         </div>
                     )}
 

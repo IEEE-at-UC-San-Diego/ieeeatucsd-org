@@ -45,11 +45,11 @@ export default function DragDropFileUpload({
     if (!isFileTypeAllowed(file.name, allowedTypes)) {
       return `File type not allowed. Allowed types: ${allowedTypes.join(', ')}`;
     }
-    
+
     if (!isFileSizeValid(file.size, maxSizeInMB)) {
       return `File size too large. Maximum size: ${maxSizeInMB}MB`;
     }
-    
+
     return null;
   };
 
@@ -90,7 +90,7 @@ export default function DragDropFileUpload({
       progress: 0,
       status: 'uploading' as const
     }));
-    
+
     setUploadProgress(prev => [...prev, ...initialProgress]);
     onFilesSelected(validFiles);
 
@@ -100,7 +100,7 @@ export default function DragDropFileUpload({
         try {
           // Simulate progress updates
           const progressInterval = setInterval(() => {
-            setUploadProgress(prev => prev.map(item => 
+            setUploadProgress(prev => prev.map(item =>
               item.file === file && item.status === 'uploading'
                 ? { ...item, progress: Math.min(item.progress + 10, 90) }
                 : item
@@ -108,23 +108,23 @@ export default function DragDropFileUpload({
           }, 200);
 
           const url = await uploadFunction(file);
-          
+
           clearInterval(progressInterval);
-          
-          setUploadProgress(prev => prev.map(item => 
-            item.file === file 
+
+          setUploadProgress(prev => prev.map(item =>
+            item.file === file
               ? { ...item, progress: 100, status: 'completed', url }
               : item
           ));
-          
+
           onFileUploaded?.(file, url);
         } catch (error) {
-          setUploadProgress(prev => prev.map(item => 
-            item.file === file 
+          setUploadProgress(prev => prev.map(item =>
+            item.file === file
               ? { ...item, status: 'error', error: error instanceof Error ? error.message : 'Upload failed' }
               : item
           ));
-          
+
           onUploadError?.(file, error instanceof Error ? error.message : 'Upload failed');
         }
       });
@@ -146,9 +146,9 @@ export default function DragDropFileUpload({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    
+
     if (disabled) return;
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       handleFiles(files);
@@ -189,9 +189,11 @@ export default function DragDropFileUpload({
         onDrop={handleDrop}
         className={`
           relative border-2 border-dashed rounded-lg p-6 text-center transition-colors
-          ${isDragOver 
-            ? 'border-blue-400 bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400'
+          ${isDragOver
+            ? 'border-blue-400 bg-blue-50'
+            : className.includes('border-red')
+              ? className
+              : 'border-gray-300 hover:border-gray-400'
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
@@ -206,13 +208,13 @@ export default function DragDropFileUpload({
           className="hidden"
           disabled={disabled}
         />
-        
+
         <Upload className={`w-8 h-8 mx-auto mb-2 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
-        
+
         <p className="text-sm font-medium text-gray-700 mb-1">
           {isDragOver ? 'Drop files here' : 'Click to upload or drag and drop'}
         </p>
-        
+
         <p className="text-xs text-gray-500">
           {allowedTypes.join(', ').toUpperCase()} up to {maxSizeInMB}MB each
           {maxFiles > 1 && ` (max ${maxFiles} files)`}
@@ -235,7 +237,7 @@ export default function DragDropFileUpload({
                     {formatFileSize(item.file.size)}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   {item.status === 'completed' && (
                     <CheckCircle className="w-4 h-4 text-green-500" />
@@ -251,20 +253,20 @@ export default function DragDropFileUpload({
                   </button>
                 </div>
               </div>
-              
+
               {item.status === 'uploading' && (
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
+                  <div
                     className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${item.progress}%` }}
                   />
                 </div>
               )}
-              
+
               {item.status === 'error' && item.error && (
                 <p className="text-xs text-red-600 mt-1">{item.error}</p>
               )}
-              
+
               {item.status === 'completed' && (
                 <p className="text-xs text-green-600 mt-1">Upload completed successfully</p>
               )}
