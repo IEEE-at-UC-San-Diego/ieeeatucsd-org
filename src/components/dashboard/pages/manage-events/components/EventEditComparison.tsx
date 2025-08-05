@@ -60,26 +60,37 @@ export default function EventEditComparison({
   });
 
   const formatValue = (value: any, type: string): string => {
-    // Handle null, undefined, and empty strings
-    if (value === null || value === undefined || value === '') return 'Not specified';
+    // Handle null and undefined
+    if (value === null || value === undefined) return 'Not specified';
+
+    // Handle File objects
+    if (value instanceof File) {
+      return value.name;
+    }
+
+    // Handle arrays that might contain File objects
+    if (Array.isArray(value) && value.some(item => item instanceof File)) {
+      return value.map(item => item instanceof File ? item.name : item).join(', ');
+    }
 
     switch (type) {
       case 'boolean':
         return value ? 'Yes' : 'No';
       case 'date':
+        // Handle empty string for dates
+        if (value === '') return 'Not specified';
         try {
           const date = value.toDate ? value.toDate() : new Date(value);
-          return date.toLocaleString('en-US', {
+          // Check if date is valid
+          if (isNaN(date.getTime())) return 'Not specified';
+          return date.toLocaleDateString('en-US', {
             weekday: 'short',
             year: 'numeric',
             month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
+            day: 'numeric'
           });
         } catch {
-          return 'Invalid date';
+          return 'Not specified';
         }
       case 'array':
         if (Array.isArray(value)) {
@@ -92,9 +103,13 @@ export default function EventEditComparison({
         }
         return String(value);
       case 'number':
-        return value === 0 ? '0' : String(value);
+        // Handle number values properly
+        if (value === '' || value === null || value === undefined) return 'Not specified';
+        const numValue = Number(value);
+        return isNaN(numValue) ? 'Not specified' : String(numValue);
       default:
-        // Handle string values properly
+        // Handle string values properly - don't treat empty string as "Not specified" unless it's truly empty
+        if (value === '') return 'Not specified';
         const stringValue = String(value).trim();
         return stringValue === '' ? 'Not specified' : stringValue;
     }
@@ -127,15 +142,18 @@ export default function EventEditComparison({
         const numValue = Number(value);
         return isNaN(numValue) ? null : numValue;
       case 'boolean':
-        if (value === null || value === undefined || value === '') return false;
+        // Handle boolean values more strictly
+        if (value === null || value === undefined) return null;
+        if (value === '' || value === 'false' || value === false) return false;
         return Boolean(value);
       case 'array':
         if (!Array.isArray(value)) return [];
         return value.filter(item => item !== null && item !== undefined && item !== '');
       case 'date':
-        if (!value) return null;
+        if (!value || value === '') return null;
         try {
           const date = value.toDate ? value.toDate() : new Date(value);
+          if (isNaN(date.getTime())) return null;
           return date.toISOString();
         } catch {
           return null;
@@ -153,9 +171,12 @@ export default function EventEditComparison({
       { field: 'eventDescription', label: 'Description', type: 'text' },
       { field: 'location', label: 'Location', type: 'text' },
       { field: 'department', label: 'Department', type: 'text' },
-      { field: 'expectedAttendance', label: 'Expected Attendance', type: 'number' },
-      { field: 'startDateTime', label: 'Start Date & Time', type: 'date' },
-      { field: 'endDateTime', label: 'End Date & Time', type: 'date' },
+      { field: 'expectedAttendance', label: 'Expected Attendance', type: 'text' },
+      { field: 'startDate', label: 'Start Date', type: 'date' },
+      { field: 'startTime', label: 'Start Time', type: 'text' },
+      { field: 'endTime', label: 'End Time', type: 'text' },
+      { field: 'eventCode', label: 'Event Code', type: 'text' },
+      { field: 'pointsToReward', label: 'Points to Reward', type: 'number' },
       { field: 'needsGraphics', label: 'Graphics Required', type: 'boolean' },
       { field: 'needsAsFunding', label: 'AS Funding Required', type: 'boolean' },
       { field: 'flyersNeeded', label: 'Flyers Needed', type: 'boolean' },
@@ -166,29 +187,14 @@ export default function EventEditComparison({
       { field: 'requiredLogos', label: 'Required Logos', type: 'array' },
       { field: 'advertisingFormat', label: 'Advertising Format', type: 'text' },
       { field: 'additionalSpecifications', label: 'Additional Specifications', type: 'text' },
+      { field: 'flyerAdvertisingStartDate', label: 'Flyer Start Date', type: 'date' },
+      { field: 'flyerAdditionalRequests', label: 'Flyer Additional Requests', type: 'text' },
     ];
 
     fieldMappings.forEach(({ field, label, type }) => {
-      // Handle nested field access and different data structures
+      // Get values directly from the data objects
       let oldValue = originalData?.[field];
       let newValue = newData?.[field];
-
-      // Handle special cases for date fields that might be stored differently
-      if (field === 'startDateTime' || field === 'endDateTime') {
-        // Check if the data uses separate date/time fields
-        if (field === 'startDateTime' && !oldValue && originalData?.startDate) {
-          oldValue = `${originalData.startDate} ${originalData.startTime || ''}`.trim();
-        }
-        if (field === 'startDateTime' && !newValue && newData?.startDate) {
-          newValue = `${newData.startDate} ${newData.startTime || ''}`.trim();
-        }
-        if (field === 'endDateTime' && !oldValue && originalData?.endTime) {
-          oldValue = `${originalData.startDate || ''} ${originalData.endTime || ''}`.trim();
-        }
-        if (field === 'endDateTime' && !newValue && newData?.endTime) {
-          newValue = `${newData.startDate || ''} ${newData.endTime || ''}`.trim();
-        }
-      }
 
       // Normalize both values for proper comparison
       const normalizedOldValue = normalizeValue(oldValue, type);
@@ -197,9 +203,21 @@ export default function EventEditComparison({
       // Use deep equality comparison for arrays and objects
       let hasChanged = false;
       if (type === 'array') {
-        hasChanged = JSON.stringify(normalizedOldValue.sort()) !== JSON.stringify(normalizedNewValue.sort());
+        const oldArray = Array.isArray(normalizedOldValue) ? normalizedOldValue : [];
+        const newArray = Array.isArray(normalizedNewValue) ? normalizedNewValue : [];
+        hasChanged = JSON.stringify(oldArray.sort()) !== JSON.stringify(newArray.sort());
       } else {
         hasChanged = normalizedOldValue !== normalizedNewValue;
+      }
+
+      // Skip optional fields that are empty in both original and new data
+      const optionalFields = ['additionalSpecifications', 'flyerAdditionalRequests'];
+      if (optionalFields.includes(field)) {
+        const isOldEmpty = !normalizedOldValue || (typeof normalizedOldValue === 'string' && normalizedOldValue.trim() === '');
+        const isNewEmpty = !normalizedNewValue || (typeof normalizedNewValue === 'string' && normalizedNewValue.trim() === '');
+        if (isOldEmpty && isNewEmpty) {
+          return; // Skip this field
+        }
       }
 
       if (hasChanged) {
@@ -227,12 +245,17 @@ export default function EventEditComparison({
     ];
 
     fileFields.forEach(({ field }) => {
-      const oldFiles = originalData[field] || [];
-      const newFiles = newData[field] || [];
+      const oldFiles = Array.isArray(originalData[field]) ? originalData[field] : [];
+      const newFiles = Array.isArray(newData[field]) ? newData[field] : [];
+
+      // Only detect changes if the arrays are actually different
+      if (JSON.stringify(oldFiles.sort()) === JSON.stringify(newFiles.sort())) {
+        return; // No changes in this field
+      }
 
       // Detect removed files
       oldFiles.forEach((fileUrl: string) => {
-        if (!newFiles.includes(fileUrl)) {
+        if (fileUrl && !newFiles.includes(fileUrl)) {
           changes.push({
             type: 'removed',
             field,
@@ -244,7 +267,7 @@ export default function EventEditComparison({
 
       // Detect added files
       newFiles.forEach((fileUrl: string) => {
-        if (!oldFiles.includes(fileUrl)) {
+        if (fileUrl && !oldFiles.includes(fileUrl)) {
           changes.push({
             type: 'added',
             field,
@@ -253,6 +276,45 @@ export default function EventEditComparison({
           });
         }
       });
+    });
+
+    // Check for new file uploads (File objects) only if they exist and are different from existing files
+    const newFileFields = [
+      { field: 'roomBookingFile', existingField: 'existingRoomBookingFiles' },
+      { field: 'otherLogoFiles', existingField: 'existingOtherLogos' }
+    ];
+
+    newFileFields.forEach(({ field, existingField }) => {
+      const newFileData = newData[field];
+      const existingFiles = Array.isArray(newData[existingField]) ? newData[existingField] : [];
+      const originalExistingFiles = Array.isArray(originalData[existingField]) ? originalData[existingField] : [];
+
+      if (field === 'roomBookingFile' && newFileData instanceof File) {
+        // Only add if this is a new file upload and wasn't in the original data
+        const isNewFile = !originalExistingFiles.some((url: string) => extractFilename(url) === newFileData.name) &&
+          !existingFiles.some((url: string) => extractFilename(url) === newFileData.name);
+        if (isNewFile) {
+          changes.push({
+            type: 'added',
+            field,
+            filename: newFileData.name
+          });
+        }
+      } else if (field === 'otherLogoFiles' && Array.isArray(newFileData)) {
+        newFileData.forEach((file: File) => {
+          if (file instanceof File) {
+            const isNewFile = !originalExistingFiles.some((url: string) => extractFilename(url) === file.name) &&
+              !existingFiles.some((url: string) => extractFilename(url) === file.name);
+            if (isNewFile) {
+              changes.push({
+                type: 'added',
+                field,
+                filename: file.name
+              });
+            }
+          }
+        });
+      }
     });
 
     return changes;
@@ -343,7 +405,14 @@ export default function EventEditComparison({
   };
 
   const renderChangeValue = (value: any, type: string, isOld: boolean = false) => {
-    const formattedValue = formatValue(value, type);
+    let formattedValue = formatValue(value, type);
+
+    // Special handling for File objects that might appear in invoice changes
+    if (value instanceof File) {
+      formattedValue = value.name;
+    } else if (typeof value === 'object' && value !== null && value.constructor === File) {
+      formattedValue = value.name;
+    }
 
     return (
       <div className={`px-3 py-2 rounded text-sm ${isOld

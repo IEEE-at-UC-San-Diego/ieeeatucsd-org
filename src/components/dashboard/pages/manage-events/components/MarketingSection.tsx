@@ -114,7 +114,6 @@ export default function MarketingSection({
                                     if (Array.isArray(files)) {
                                         const fileList = {
                                             item: (index: number) => files[index] || null,
-                                            length: files.length,
                                             ...files
                                         } as FileList;
                                         onFileChange('otherLogoFiles', fileList);

@@ -142,13 +142,22 @@ export function useChangeTracking(
     const changes: FileChange[] = [];
     const timestamp = new Date();
 
-    fileFieldMappings.forEach(({ field, label }) => {
-      const oldFiles = originalData[field] || [];
-      const newFiles = currentData[field] || [];
+    fileFieldMappings.forEach(({ field }) => {
+      const oldFiles = Array.isArray(originalData[field])
+        ? originalData[field]
+        : [];
+      const newFiles = Array.isArray(currentData[field])
+        ? currentData[field]
+        : [];
+
+      // Only detect changes if the arrays are actually different
+      if (JSON.stringify(oldFiles.sort()) === JSON.stringify(newFiles.sort())) {
+        return; // No changes in this field
+      }
 
       // Detect removed files
       oldFiles.forEach((fileUrl: string) => {
-        if (!newFiles.includes(fileUrl)) {
+        if (fileUrl && !newFiles.includes(fileUrl)) {
           changes.push({
             type: "removed",
             field,
@@ -161,7 +170,7 @@ export function useChangeTracking(
 
       // Detect added files
       newFiles.forEach((fileUrl: string) => {
-        if (!oldFiles.includes(fileUrl)) {
+        if (fileUrl && !oldFiles.includes(fileUrl)) {
           changes.push({
             type: "added",
             field,
@@ -173,24 +182,64 @@ export function useChangeTracking(
       });
     });
 
-    // Check for new file uploads (File objects)
-    if (currentData.roomBookingFile) {
-      changes.push({
-        type: "added",
-        field: "roomBookingFile",
-        filename: currentData.roomBookingFile.name,
-        timestamp,
-      });
-    }
+    // Check for new file uploads (File objects) only if they're truly new
+    const existingRoomBookingFiles = Array.isArray(
+      currentData.existingRoomBookingFiles,
+    )
+      ? currentData.existingRoomBookingFiles
+      : [];
+    const existingOtherLogos = Array.isArray(currentData.existingOtherLogos)
+      ? currentData.existingOtherLogos
+      : [];
+    const originalRoomBookingFiles = Array.isArray(
+      originalData.existingRoomBookingFiles,
+    )
+      ? originalData.existingRoomBookingFiles
+      : [];
+    const originalOtherLogos = Array.isArray(originalData.existingOtherLogos)
+      ? originalData.existingOtherLogos
+      : [];
 
-    if (currentData.otherLogoFiles && currentData.otherLogoFiles.length > 0) {
-      currentData.otherLogoFiles.forEach((file: File) => {
+    if (currentData.roomBookingFile instanceof File) {
+      // Only add if this file isn't already in the existing files or original files
+      const isNewFile =
+        !existingRoomBookingFiles.some(
+          (url: string) =>
+            extractFilename(url) === currentData.roomBookingFile.name,
+        ) &&
+        !originalRoomBookingFiles.some(
+          (url: string) =>
+            extractFilename(url) === currentData.roomBookingFile.name,
+        );
+      if (isNewFile) {
         changes.push({
           type: "added",
-          field: "otherLogoFiles",
-          filename: file.name,
+          field: "roomBookingFile",
+          filename: currentData.roomBookingFile.name,
           timestamp,
         });
+      }
+    }
+
+    if (Array.isArray(currentData.otherLogoFiles)) {
+      currentData.otherLogoFiles.forEach((file: File) => {
+        if (file instanceof File) {
+          const isNewFile =
+            !existingOtherLogos.some(
+              (url: string) => extractFilename(url) === file.name,
+            ) &&
+            !originalOtherLogos.some(
+              (url: string) => extractFilename(url) === file.name,
+            );
+          if (isNewFile) {
+            changes.push({
+              type: "added",
+              field: "otherLogoFiles",
+              filename: file.name,
+              timestamp,
+            });
+          }
+        }
       });
     }
 

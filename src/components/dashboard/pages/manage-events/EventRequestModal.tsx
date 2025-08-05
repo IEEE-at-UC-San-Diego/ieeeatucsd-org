@@ -134,6 +134,17 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 photographyNeeded: editingRequest.photographyNeeded || false,
                 servingFoodDrinks: editingRequest.servingFoodDrinks || editingRequest.foodDrinksBeingServed || false,
                 hasRoomBooking: editingRequest.hasRoomBooking ?? editingRequest.willOrHaveRoomBooking ?? true,
+                // Marketing fields
+                flyerType: editingRequest.flyerType || [],
+                requiredLogos: editingRequest.requiredLogos || [],
+                advertisingFormat: editingRequest.advertisingFormat || '',
+                additionalSpecifications: editingRequest.additionalSpecifications || '',
+                flyerAdvertisingStartDate: safeGetDateTimeString(editingRequest.flyerAdvertisingStartDate),
+                flyerAdditionalRequests: editingRequest.flyerAdditionalRequests || '',
+                // File fields
+                existingRoomBookingFiles: editingRequest.roomBookingFiles || [],
+                existingOtherLogos: editingRequest.otherLogos || [],
+                existingInvoiceFiles: editingRequest.invoiceFiles || [],
                 invoices: invoicesData,
                 _firestore: editingRequest
             });
