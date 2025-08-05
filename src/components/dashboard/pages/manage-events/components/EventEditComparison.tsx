@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { ArrowRight, Calendar, MapPin, Users, DollarSign, FileText, AlertCircle, Upload, Trash2, Plus, Eye, Clock, RefreshCw } from 'lucide-react';
-import { truncateFilename, extractFilename } from '../utils/filenameUtils';
+import { extractFilename } from '../utils/filenameUtils';
 import { useChangeTracking } from '../hooks/useChangeTracking';
 
 interface FieldChange {
@@ -32,6 +32,7 @@ interface EventEditComparisonProps {
   newData: any;
   onConfirm: () => void;
   onCancel: () => void;
+  onBack?: () => void;
   isSubmitting?: boolean;
   eventRequestId?: string;
   enableRealTimeTracking?: boolean;
@@ -42,6 +43,7 @@ export default function EventEditComparison({
   newData,
   onConfirm,
   onCancel,
+  onBack,
   isSubmitting = false,
   eventRequestId,
   enableRealTimeTracking = true
@@ -114,20 +116,6 @@ export default function EventEditComparison({
         return stringValue === '' ? 'Not specified' : stringValue;
     }
   };
-
-  // Comprehensive change detection with memoization
-  const allChanges = useMemo(() => {
-    const fieldChanges = enableRealTimeTracking ? trackedFieldChanges : detectLegacyChanges();
-    const fileChanges = enableRealTimeTracking ? trackedFileChanges : detectFileChanges();
-    const invoiceChanges = enableRealTimeTracking ? trackedInvoiceChanges : detectInvoiceChanges();
-
-    return {
-      fieldChanges,
-      fileChanges,
-      invoiceChanges,
-      hasChanges: fieldChanges.length > 0 || fileChanges.length > 0 || invoiceChanges.length > 0
-    };
-  }, [originalData, newData, trackedFieldChanges, trackedFileChanges, trackedInvoiceChanges, enableRealTimeTracking]);
 
   // Helper function to normalize values for comparison
   const normalizeValue = (value: any, type: string): any => {
@@ -378,6 +366,20 @@ export default function EventEditComparison({
 
     return changes;
   };
+
+  // Comprehensive change detection with memoization
+  const allChanges = useMemo(() => {
+    const fieldChanges = enableRealTimeTracking ? trackedFieldChanges : detectLegacyChanges();
+    const fileChanges = enableRealTimeTracking ? trackedFileChanges : detectFileChanges();
+    const invoiceChanges = enableRealTimeTracking ? trackedInvoiceChanges : detectInvoiceChanges();
+
+    return {
+      fieldChanges,
+      fileChanges,
+      invoiceChanges,
+      hasChanges: fieldChanges.length > 0 || fileChanges.length > 0 || invoiceChanges.length > 0
+    };
+  }, [originalData, newData, trackedFieldChanges, trackedFileChanges, trackedInvoiceChanges, enableRealTimeTracking]);
 
   // Use comprehensive changes
   const { fieldChanges, fileChanges, invoiceChanges, hasChanges } = allChanges;
@@ -694,28 +696,48 @@ export default function EventEditComparison({
           )}
 
           {/* Action Buttons */}
-          <div className="flex space-x-4 pt-6 border-t mt-6">
+          <div className="flex items-center pt-6 border-t mt-6">
+            {/* Cancel Button - Leftmost */}
             <button
               onClick={onCancel}
               disabled={isSubmitting}
-              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel Changes
             </button>
-            <button
-              onClick={onConfirm}
-              disabled={isSubmitting || !hasChanges}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Saving Changes...
-                </>
-              ) : (
-                `Confirm ${fieldChanges.length + fileChanges.length + invoiceChanges.length} Change${(fieldChanges.length + fileChanges.length + invoiceChanges.length) !== 1 ? 's' : ''}`
+
+            {/* Spacer */}
+            <div className="flex-1"></div>
+
+            {/* Right side buttons */}
+            <div className="flex space-x-3">
+              {/* Back Button */}
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  disabled={isSubmitting}
+                  className="px-6 py-3 text-gray-600 hover:text-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                >
+                  ← Back
+                </button>
               )}
-            </button>
+
+              {/* Confirm Button - Primary position (rightmost) */}
+              <button
+                onClick={onConfirm}
+                disabled={isSubmitting || !hasChanges}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saving Changes...
+                  </>
+                ) : (
+                  `Confirm ${fieldChanges.length + fileChanges.length + invoiceChanges.length} Change${(fieldChanges.length + fileChanges.length + invoiceChanges.length) !== 1 ? 's' : ''}`
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

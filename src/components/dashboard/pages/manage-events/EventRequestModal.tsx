@@ -570,6 +570,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                     isEditMode={!!editingRequest}
                     onConfirm={handleSubmit}
                     onCancel={onClose}
+                    onBack={handlePrevious}
                     isSubmitting={loading}
                 />
             )
@@ -628,24 +629,29 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between p-6 border-t border-gray-200">
+                <div className="flex items-center p-6 border-t border-gray-200">
+                    {/* Cancel Button - Leftmost */}
                     <button
                         type="button"
-                        onClick={handlePrevious}
-                        disabled={currentStep === 0 || loading}
-                        className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                        onClick={onClose}
+                        disabled={loading}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                     >
-                        Previous
+                        Cancel
                     </button>
 
+                    {/* Spacer */}
+                    <div className="flex-1"></div>
+
+                    {/* Right side buttons */}
                     <div className="flex space-x-3">
                         <button
                             type="button"
-                            onClick={onClose}
-                            disabled={loading}
+                            onClick={handlePrevious}
+                            disabled={currentStep === 0 || loading}
                             className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                         >
-                            Cancel
+                            Previous
                         </button>
 
                         {isLastStep ? (

@@ -9,6 +9,7 @@ interface EventReviewSectionProps {
   formData?: EventFormData;
   onConfirm?: () => void;
   onCancel?: () => void;
+  onBack?: () => void;
   isSubmitting?: boolean;
   showRoomBookingWarning?: boolean;
   isInlineStep?: boolean;
@@ -21,6 +22,7 @@ export default function EventReviewSection({
   formData,
   onConfirm,
   onCancel,
+  onBack,
   isSubmitting = false,
   showRoomBookingWarning = true,
   isInlineStep = false,
@@ -40,6 +42,7 @@ export default function EventReviewSection({
         newData={data}
         onConfirm={onConfirm || (() => { })}
         onCancel={onCancel || (() => { })}
+        onBack={onBack}
         isSubmitting={isSubmitting}
         enableRealTimeTracking={true}
       />
