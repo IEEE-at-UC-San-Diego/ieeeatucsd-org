@@ -4,6 +4,11 @@ import { getFirestore, collection, doc, updateDoc, query, where, getDocs, getDoc
 import { app, auth } from '../../../../firebase/client';
 import { EventAuditService } from '../../shared/services/eventAuditService';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import EnhancedFileViewer from './components/EnhancedFileViewer';
+import FilePreviewModal from './components/FilePreviewModal';
+import EventReviewSection from './components/EventReviewSection';
+import EventEditComparison from './components/EventEditComparison';
+import { truncateFilename } from './utils/filenameUtils';
 
 interface EventViewModalProps {
     request: {
@@ -610,66 +615,7 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
         }
     };
 
-    const FileViewer = ({ url, filename }: { url: string; filename: string }) => {
-        const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(filename);
-        const isPdf = /\.pdf$/i.test(filename);
-
-        return (
-            <div className="border rounded-lg p-4 bg-gray-50">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700 truncate">{filename}</span>
-                    <div className="flex space-x-2">
-                        <button
-                            onClick={() => setSelectedFile(url)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="View File"
-                        >
-                            <Eye className="w-4 h-4" />
-                        </button>
-                        <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-purple-600 hover:text-purple-800"
-                            title="Open in New Tab"
-                        >
-                            <ExternalLink className="w-4 h-4" />
-                        </a>
-                        <a
-                            href={url}
-                            download={filename}
-                            className="text-green-600 hover:text-green-800"
-                            title="Download File"
-                        >
-                            <Download className="w-4 h-4" />
-                        </a>
-                    </div>
-                </div>
-                {isImage && (
-                    <img
-                        src={url}
-                        alt={filename}
-                        className="w-full h-32 object-cover rounded cursor-pointer"
-                        onClick={() => setSelectedFile(url)}
-                    />
-                )}
-                {isPdf && (
-                    <div className="w-full h-32 bg-red-100 rounded flex items-center justify-center cursor-pointer"
-                        onClick={() => setSelectedFile(url)}>
-                        <FileText className="w-8 h-8 text-red-600" />
-                        <span className="ml-2 text-red-600 font-medium">PDF Document</span>
-                    </div>
-                )}
-                {!isImage && !isPdf && (
-                    <div className="w-full h-32 bg-gray-200 rounded flex items-center justify-center cursor-pointer"
-                        onClick={() => setSelectedFile(url)}>
-                        <FileText className="w-8 h-8 text-gray-600" />
-                        <span className="ml-2 text-gray-600 font-medium">File</span>
-                    </div>
-                )}
-            </div>
-        );
-    };
+    // Enhanced FileViewer component is now imported and used directly
 
     return (
         <>
@@ -994,7 +940,13 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Room Booking Files</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {request.roomBookingFiles.map((file, index) => (
-                                        <FileViewer key={index} url={file} filename={`Room Booking ${index + 1}`} />
+                                        <EnhancedFileViewer
+                                            key={index}
+                                            url={file}
+                                            filename={`Room Booking ${index + 1}`}
+                                            eventRequestId={request.id}
+                                            onPreview={setSelectedFile}
+                                        />
                                     ))}
                                 </div>
                             </div>
@@ -1131,7 +1083,12 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
                                                                     Invoice File
                                                                 </h6>
                                                                 <div className="bg-white border border-gray-200 rounded-lg p-3">
-                                                                    <FileViewer url={invoice.invoiceFile} filename="Invoice" />
+                                                                    <EnhancedFileViewer
+                                                                        url={invoice.invoiceFile}
+                                                                        filename="Invoice"
+                                                                        eventRequestId={request.id}
+                                                                        onPreview={setSelectedFile}
+                                                                    />
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1197,7 +1154,13 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
                                             <h4 className="font-medium text-gray-900 mb-3">Invoice Files (Legacy)</h4>
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                 {request.invoiceFiles.map((file, index) => (
-                                                    <FileViewer key={index} url={file} filename={`Invoice ${index + 1}`} />
+                                                    <EnhancedFileViewer
+                                                        key={index}
+                                                        url={file}
+                                                        filename={`Invoice ${index + 1}`}
+                                                        eventRequestId={request.id}
+                                                        onPreview={setSelectedFile}
+                                                    />
                                                 ))}
                                             </div>
                                         </div>
@@ -1219,7 +1182,13 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
                             ) : eventFiles.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {eventFiles.map((file, index) => (
-                                        <FileViewer key={index} url={file} filename={`Public File ${index + 1}`} />
+                                        <EnhancedFileViewer
+                                            key={index}
+                                            url={file}
+                                            filename={`Public File ${index + 1}`}
+                                            eventRequestId={request.id}
+                                            onPreview={setSelectedFile}
+                                        />
                                     ))}
                                 </div>
                             ) : (
@@ -1260,7 +1229,13 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
                                                 <h4 className="font-medium text-gray-900 mb-2">Invoice Files</h4>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                     {request.invoiceFiles.map((file, index) => (
-                                                        <FileViewer key={`invoice-${index}`} url={file} filename={`Invoice ${index + 1}`} />
+                                                        <EnhancedFileViewer
+                                                            key={`invoice-${index}`}
+                                                            url={file}
+                                                            filename={`Invoice ${index + 1}`}
+                                                            eventRequestId={request.id}
+                                                            onPreview={setSelectedFile}
+                                                        />
                                                     ))}
                                                 </div>
                                             </div>
@@ -1270,19 +1245,24 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
                                             <div>
                                                 <h4 className="font-medium text-gray-900 mb-2">Main Invoice</h4>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                    <FileViewer url={request.invoice} filename={(() => {
-                                                        try {
-                                                            const urlObj = new URL(request.invoice);
-                                                            const pathname = urlObj.pathname;
-                                                            const filename = pathname.split('/').pop();
-                                                            if (filename && filename.includes('_')) {
-                                                                return filename.substring(filename.indexOf('_') + 1);
+                                                    <EnhancedFileViewer
+                                                        url={request.invoice}
+                                                        filename={(() => {
+                                                            try {
+                                                                const urlObj = new URL(request.invoice);
+                                                                const pathname = urlObj.pathname;
+                                                                const filename = pathname.split('/').pop();
+                                                                if (filename && filename.includes('_')) {
+                                                                    return filename.substring(filename.indexOf('_') + 1);
+                                                                }
+                                                                return filename || 'Main Invoice File';
+                                                            } catch {
+                                                                return 'Main Invoice File';
                                                             }
-                                                            return filename || 'Main Invoice File';
-                                                        } catch {
-                                                            return 'Main Invoice File';
-                                                        }
-                                                    })()} />
+                                                        })()}
+                                                        eventRequestId={request.id}
+                                                        onPreview={setSelectedFile}
+                                                    />
                                                 </div>
                                             </div>
                                         )}
@@ -1292,7 +1272,13 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
                                                 <h4 className="font-medium text-gray-900 mb-2">Room Booking Files</h4>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                     {request.roomBookingFiles.map((file, index) => (
-                                                        <FileViewer key={`room-${index}`} url={file} filename={`Room Booking ${index + 1}`} />
+                                                        <EnhancedFileViewer
+                                                            key={`room-${index}`}
+                                                            url={file}
+                                                            filename={`Room Booking ${index + 1}`}
+                                                            eventRequestId={request.id}
+                                                            onPreview={setSelectedFile}
+                                                        />
                                                     ))}
                                                 </div>
                                             </div>
@@ -1303,7 +1289,13 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
                                                 <h4 className="font-medium text-gray-900 mb-2">Other Private Files</h4>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                     {privateFiles.map((file, index) => (
-                                                        <FileViewer key={`private-${index}`} url={file} filename={`Private File ${index + 1}`} />
+                                                        <EnhancedFileViewer
+                                                            key={`private-${index}`}
+                                                            url={file}
+                                                            filename={`Private File ${index + 1}`}
+                                                            eventRequestId={request.id}
+                                                            onPreview={setSelectedFile}
+                                                        />
                                                     ))}
                                                 </div>
                                             </div>
@@ -1386,7 +1378,7 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
                                                     </div>
                                                     <div>
                                                         <span className="text-sm font-medium text-gray-700">User ID:</span>
-                                                        <p className="text-gray-900 text-xs font-mono text-gray-600">{attendee.userId || attendee.id}</p>
+                                                        <p className="text-xs font-mono text-gray-600">{attendee.userId || attendee.id}</p>
                                                     </div>
                                                     <div>
                                                         <span className="text-sm font-medium text-gray-700">Check-in Time:</span>
@@ -1568,39 +1560,11 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
                 </div>
             </div >
 
-            {/* File Preview Modal */}
-            {
-                selectedFile && (
-                    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
-                        <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto">
-                            <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
-                                <h3 className="text-lg font-semibold">File Preview</h3>
-                                <button
-                                    onClick={() => setSelectedFile(null)}
-                                    className="text-gray-400 hover:text-gray-600"
-                                >
-                                    <X className="w-6 h-6" />
-                                </button>
-                            </div>
-                            <div className="p-4">
-                                {selectedFile.toLowerCase().includes('.pdf') ? (
-                                    <iframe
-                                        src={selectedFile}
-                                        className="w-full h-96"
-                                        title="PDF Preview"
-                                    />
-                                ) : (
-                                    <img
-                                        src={selectedFile}
-                                        alt="File preview"
-                                        className="max-w-full h-auto"
-                                    />
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
+            {/* Enhanced File Preview Modal */}
+            <FilePreviewModal
+                url={selectedFile}
+                onClose={() => setSelectedFile(null)}
+            />
 
             {/* Review Feedback Modal */}
             {showReviewModal && (
