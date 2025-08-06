@@ -5,6 +5,8 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/
 import { app, auth } from '../../../../firebase/client';
 import { EventAuditService } from '../../shared/services/eventAuditService';
 import type { EventFileChange } from '../../shared/types/firestore';
+import EnhancedFileViewer from './components/EnhancedFileViewer';
+import { extractPRRequirements } from './utils/prRequirementsUtils';
 
 interface GraphicsUploadModalProps {
     request: any;
@@ -16,7 +18,6 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
     const [files, setFiles] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isCompleted, setIsCompleted] = useState(request?.graphicsCompleted || false);
     const [prRequirementsConfirmed, setPrRequirementsConfirmed] = useState(false);
 
     const db = getFirestore(app);
@@ -51,7 +52,7 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
 
         // Validate PR requirements confirmation if uploading files
         if (files.length > 0 && !prRequirementsConfirmed) {
-            setError('Please confirm that you have reviewed the PR requirements before uploading files');
+            setError('Please confirm that your graphics files meet all the event-specific PR requirements before uploading');
             setUploading(false);
             return;
         }
@@ -64,10 +65,9 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
                 uploadedUrls = await uploadFiles(files);
             }
 
-            // Update event request with completion status and file URLs
+            // Update event request with file URLs
             const existingGraphicsFiles = request.graphicsFiles || [];
             const updateData: any = {
-                graphicsCompleted: isCompleted,
                 updatedAt: new Date()
             };
 
@@ -94,7 +94,6 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
                     fileChanges.length > 0 ? fileChanges : undefined,
                     {
                         eventName: request.name,
-                        graphicsCompleted: isCompleted,
                         filesUploaded: files.length
                     }
                 );
@@ -114,7 +113,7 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
                     <h3 className="text-lg font-semibold text-gray-900">
                         Upload Graphics Files
@@ -135,23 +134,7 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
                         </p>
                     </div>
 
-                    {/* Graphics Completion Status */}
-                    <div className="mb-6">
-                        <label className="flex items-center space-x-3">
-                            <input
-                                type="checkbox"
-                                checked={isCompleted}
-                                onChange={(e) => setIsCompleted(e.target.checked)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm font-medium text-gray-700">
-                                Mark graphics as completed
-                            </span>
-                        </label>
-                        <p className="text-xs text-gray-500 mt-1">
-                            Check this box to indicate that all graphics work for this event is finished.
-                        </p>
-                    </div>
+
 
                     {error && (
                         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -159,25 +142,76 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
                         </div>
                     )}
 
-                    {/* PR Requirements Section */}
+                    {/* Event-Specific PR Requirements Section */}
                     <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <h5 className="text-sm font-semibold text-blue-900 mb-3 flex items-center">
                             <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                             </svg>
-                            PR Requirements - Please Review Before Uploading
+                            Event PR Requirements - Please Review Before Uploading
                         </h5>
-                        <div className="text-sm text-blue-800 space-y-2">
-                            <p className="font-medium">Before uploading graphics files, ensure you have:</p>
-                            <ul className="list-disc list-inside space-y-1 ml-2">
-                                <li>Created a Pull Request (PR) in the graphics repository</li>
-                                <li>Followed the IEEE@UCSD branding guidelines</li>
-                                <li>Used approved fonts and color schemes</li>
-                                <li>Included all required logos and sponsor acknowledgments</li>
-                                <li>Verified all text content for accuracy and spelling</li>
-                                <li>Exported files in the correct formats and resolutions</li>
-                                <li>Named files according to the naming convention: [EventCode]_[Type]_[Version]</li>
-                            </ul>
+                        <div className="text-sm text-blue-800 space-y-3">
+                            <p className="font-medium">Ensure your graphics meet the following event-specific requirements:</p>
+
+                            {/* Event-specific requirements */}
+                            <div className="space-y-3 bg-white p-3 rounded border">
+                                {request.flyerType && request.flyerType.length > 0 && (
+                                    <div>
+                                        <span className="font-medium text-blue-800">Flyer Type Required:</span>
+                                        <ul className="list-disc list-inside ml-2 mt-1 text-blue-700">
+                                            {request.flyerType.map((type: string, index: number) => (
+                                                <li key={index}>{type}</li>
+                                            ))}
+                                        </ul>
+                                        {request.otherFlyerType && (
+                                            <div className="ml-2 mt-1 text-blue-700">
+                                                <span className="font-medium">Other:</span> {request.otherFlyerType}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {request.requiredLogos && request.requiredLogos.length > 0 && (
+                                    <div>
+                                        <span className="font-medium text-blue-800">Required Logos:</span>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {request.requiredLogos.map((logo: string, index: number) => (
+                                                <span key={index} className="bg-blue-200 text-blue-800 px-2 py-1 rounded text-xs">
+                                                    {logo}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {request.advertisingFormat && (
+                                    <div>
+                                        <span className="font-medium text-blue-800">Required Format:</span>
+                                        <span className="ml-2 text-blue-700">{request.advertisingFormat}</span>
+                                    </div>
+                                )}
+
+                                {request.additionalSpecifications && (
+                                    <div>
+                                        <span className="font-medium text-blue-800">Additional Specifications:</span>
+                                        <div className="mt-1 text-blue-700 bg-gray-50 p-2 rounded border">
+                                            {request.additionalSpecifications}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {request.flyerAdditionalRequests && (
+                                    <div>
+                                        <span className="font-medium text-blue-800">Additional Requests:</span>
+                                        <div className="mt-1 text-blue-700 bg-gray-50 p-2 rounded border">
+                                            {request.flyerAdditionalRequests}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+
+
                             <p className="text-xs text-blue-700 mt-3 italic">
                                 Graphics that don't meet these requirements may be rejected and require revision.
                             </p>
@@ -194,11 +228,11 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
                                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5"
                             />
                             <span className="text-sm text-gray-700">
-                                <span className="font-medium text-red-600">*</span> I confirm that I have reviewed and followed all PR requirements listed above before uploading graphics files.
+                                <span className="font-medium text-red-600">*</span> I confirm that the graphics files I'm uploading meet all the event-specific PR requirements listed above (flyer type, logos, format, specifications, etc.).
                             </span>
                         </label>
                         <p className="text-xs text-gray-500 mt-1 ml-7">
-                            This confirmation is required to upload files.
+                            This confirmation ensures the uploaded files match what the event organizer requested.
                         </p>
                     </div>
 
@@ -249,25 +283,18 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
                     {/* Existing Graphics Files */}
                     {request.graphicsFiles && request.graphicsFiles.length > 0 && (
                         <div className="mb-6">
-                            <h5 className="text-sm font-medium text-gray-700 mb-2">Previously Uploaded Files:</h5>
-                            <div className="space-y-2">
+                            <h5 className="text-sm font-medium text-gray-700 mb-3">Previously Uploaded Graphics Files:</h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {request.graphicsFiles.map((fileUrl: string, index: number) => (
-                                    <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                                        <div className="flex items-center space-x-2">
-                                            <CheckCircle className="w-4 h-4 text-green-500" />
-                                            <span className="text-sm text-gray-700">
-                                                {fileUrl.split('/').pop()?.split('_').slice(1).join('_') || 'Graphics file'}
-                                            </span>
-                                        </div>
-                                        <a
-                                            href={fileUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-blue-600 hover:text-blue-800 text-sm"
-                                        >
-                                            View
-                                        </a>
-                                    </div>
+                                    <EnhancedFileViewer
+                                        key={index}
+                                        url={fileUrl}
+                                        filename={fileUrl.split('/').pop()?.split('_').slice(1).join('_') || `Graphics File ${index + 1}`}
+                                        eventRequestId={request.id}
+                                        showPRRequirements={true}
+                                        prRequirements={extractPRRequirements(request)}
+                                        className="bg-green-50 border-green-200"
+                                    />
                                 ))}
                             </div>
                         </div>

@@ -7,6 +7,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import EnhancedFileViewer from './components/EnhancedFileViewer';
 import FilePreviewModal from './components/FilePreviewModal';
 import EventReviewSection from './components/EventReviewSection';
+import { extractPRRequirements, hasPRRequirements } from './utils/prRequirementsUtils';
 import EventEditComparison from './components/EventEditComparison';
 import { truncateFilename } from './utils/filenameUtils';
 
@@ -43,6 +44,9 @@ interface EventViewModalProps {
         asFundingRequired?: boolean;
         foodDrinksBeingServed?: boolean;
         servingFoodDrinks?: boolean;
+        graphicsFiles?: string[];
+        graphicsCompleted?: boolean;
+        additionalSpecifications?: string;
         // New multi-invoice format
         invoices?: {
             id: string;
@@ -915,6 +919,30 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
                                             </div>
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Graphics Files */}
+                        {request.graphicsFiles && request.graphicsFiles.length > 0 && (
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <FileText className="w-5 h-5 mr-2 text-purple-600" />
+                                    Graphics Files
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {request.graphicsFiles.map((file: string, index: number) => (
+                                        <EnhancedFileViewer
+                                            key={index}
+                                            url={file}
+                                            filename={file.split('/').pop()?.split('_').slice(1).join('_') || `Graphics File ${index + 1}`}
+                                            eventRequestId={request.id}
+                                            onPreview={setSelectedFile}
+                                            showPRRequirements={hasPRRequirements(request)}
+                                            prRequirements={extractPRRequirements(request)}
+                                            className="bg-purple-50 border-purple-200"
+                                        />
+                                    ))}
                                 </div>
                             </div>
                         )}

@@ -1,8 +1,17 @@
-import React from 'react';
-import { Eye, Download, ExternalLink, FileText, Image } from 'lucide-react';
+import React, { useState } from 'react';
+import { Eye, Download, ExternalLink, FileText, Image, ChevronDown, ChevronUp, CheckCircle } from 'lucide-react';
 import { truncateFilename, extractFilename, isImageFile, isPdfFile } from '../utils/filenameUtils';
 import { EventAuditService } from '../../../shared/services/eventAuditService';
 import { auth } from '../../../../../firebase/client';
+
+interface PRRequirements {
+  flyerType?: string[];
+  otherFlyerType?: string;
+  requiredLogos?: string[];
+  advertisingFormat?: string;
+  additionalSpecifications?: string;
+  flyerAdditionalRequests?: string;
+}
 
 interface EnhancedFileViewerProps {
   url: string;
@@ -11,6 +20,8 @@ interface EnhancedFileViewerProps {
   onPreview?: (url: string) => void;
   showAuditLogging?: boolean;
   className?: string;
+  prRequirements?: PRRequirements;
+  showPRRequirements?: boolean;
 }
 
 export default function EnhancedFileViewer({
@@ -19,8 +30,11 @@ export default function EnhancedFileViewer({
   eventRequestId,
   onPreview,
   showAuditLogging = true,
-  className = ''
+  className = '',
+  prRequirements,
+  showPRRequirements = false
 }: EnhancedFileViewerProps) {
+  const [showRequirements, setShowRequirements] = useState(false);
   const extractedFilename = filename || extractFilename(url);
   const displayName = truncateFilename(extractedFilename);
   const isImage = isImageFile(extractedFilename);
@@ -28,7 +42,7 @@ export default function EnhancedFileViewer({
 
   const logFileView = async (action: string) => {
     if (!showAuditLogging || !eventRequestId) return;
-    
+
     try {
       const userName = await EventAuditService.getUserName(auth.currentUser?.uid || '');
       await EventAuditService.logFileView(
@@ -80,7 +94,7 @@ export default function EnhancedFileViewer({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2 flex-1 min-w-0">
           {getFileIcon()}
-          <span 
+          <span
             className="text-sm font-medium text-gray-700 truncate"
             title={extractedFilename}
           >
@@ -119,7 +133,7 @@ export default function EnhancedFileViewer({
 
       {/* File Preview Thumbnail */}
       {isImage && (
-        <div 
+        <div
           className="w-full h-32 rounded cursor-pointer overflow-hidden"
           onClick={handlePreview}
         >
@@ -133,7 +147,7 @@ export default function EnhancedFileViewer({
       )}
 
       {isPdf && (
-        <div 
+        <div
           className="w-full h-32 bg-red-100 rounded flex items-center justify-center cursor-pointer hover:bg-red-200 transition-colors"
           onClick={handlePreview}
         >
@@ -145,7 +159,7 @@ export default function EnhancedFileViewer({
       )}
 
       {!isImage && !isPdf && (
-        <div 
+        <div
           className="w-full h-32 bg-gray-200 rounded flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors"
           onClick={handlePreview}
         >
@@ -165,6 +179,88 @@ export default function EnhancedFileViewer({
           </span>
         </div>
       </div>
+
+      {/* PR Requirements Section */}
+      {showPRRequirements && prRequirements && (
+        <div className="mt-4 border-t pt-4">
+          <button
+            onClick={() => setShowRequirements(!showRequirements)}
+            className="flex items-center justify-between w-full text-left text-sm font-medium text-blue-700 hover:text-blue-900 transition-colors"
+          >
+            <span className="flex items-center">
+              <CheckCircle className="w-4 h-4 mr-2" />
+              PR Requirements Review
+            </span>
+            {showRequirements ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+
+          {showRequirements && (
+            <div className="mt-3 space-y-3 text-xs bg-blue-50 p-3 rounded-lg">
+              <div className="text-blue-900 font-medium mb-2">
+                Verify the uploaded file meets these requirements:
+              </div>
+
+              {prRequirements.flyerType && prRequirements.flyerType.length > 0 && (
+                <div>
+                  <span className="font-medium text-blue-800">Flyer Type:</span>
+                  <ul className="list-disc list-inside ml-2 mt-1 text-blue-700">
+                    {prRequirements.flyerType.map((type, index) => (
+                      <li key={index}>{type}</li>
+                    ))}
+                  </ul>
+                  {prRequirements.otherFlyerType && (
+                    <div className="ml-2 mt-1 text-blue-700">
+                      <span className="font-medium">Other:</span> {prRequirements.otherFlyerType}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {prRequirements.requiredLogos && prRequirements.requiredLogos.length > 0 && (
+                <div>
+                  <span className="font-medium text-blue-800">Required Logos:</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {prRequirements.requiredLogos.map((logo, index) => (
+                      <span key={index} className="bg-blue-200 text-blue-800 px-2 py-1 rounded text-xs">
+                        {logo}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {prRequirements.advertisingFormat && (
+                <div>
+                  <span className="font-medium text-blue-800">Format:</span>
+                  <span className="ml-2 text-blue-700">{prRequirements.advertisingFormat}</span>
+                </div>
+              )}
+
+              {prRequirements.additionalSpecifications && (
+                <div>
+                  <span className="font-medium text-blue-800">Additional Specifications:</span>
+                  <div className="mt-1 text-blue-700 bg-white p-2 rounded border">
+                    {prRequirements.additionalSpecifications}
+                  </div>
+                </div>
+              )}
+
+              {prRequirements.flyerAdditionalRequests && (
+                <div>
+                  <span className="font-medium text-blue-800">Additional Requests:</span>
+                  <div className="mt-1 text-blue-700 bg-white p-2 rounded border">
+                    {prRequirements.flyerAdditionalRequests}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
