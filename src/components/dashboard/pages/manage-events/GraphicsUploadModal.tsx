@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, Trash2, CheckCircle } from 'lucide-react';
+import { X, Upload, Trash2 } from 'lucide-react';
 import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { app, auth } from '../../../../firebase/client';
@@ -50,31 +50,30 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
         setUploading(true);
         setError(null);
 
-        // Validate PR requirements confirmation if uploading files
-        if (files.length > 0 && !prRequirementsConfirmed) {
+        // Validate that at least one file is selected
+        if (files.length === 0) {
+            setError('Please select at least one file to upload before submitting');
+            setUploading(false);
+            return;
+        }
+
+        // Validate PR requirements confirmation
+        if (!prRequirementsConfirmed) {
             setError('Please confirm that your graphics files meet all the event-specific PR requirements before uploading');
             setUploading(false);
             return;
         }
 
         try {
-            let uploadedUrls: string[] = [];
+            // Upload the selected files
+            const uploadedUrls = await uploadFiles(files);
 
-            // Upload new files if any are selected
-            if (files.length > 0) {
-                uploadedUrls = await uploadFiles(files);
-            }
-
-            // Update event request with file URLs
+            // Update event request with new file URLs
             const existingGraphicsFiles = request.graphicsFiles || [];
             const updateData: any = {
+                graphicsFiles: [...existingGraphicsFiles, ...uploadedUrls],
                 updatedAt: new Date()
             };
-
-            // Only update files if new files were uploaded
-            if (uploadedUrls.length > 0) {
-                updateData.graphicsFiles = [...existingGraphicsFiles, ...uploadedUrls];
-            }
 
             await updateDoc(doc(db, 'event_requests', request.id), updateData);
 
@@ -220,26 +219,30 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
 
                     {/* PR Requirements Confirmation Checkbox */}
                     <div className="mb-6">
-                        <label className="flex items-start space-x-3">
+                        <label className={`flex items-start space-x-3 ${files.length === 0 ? 'opacity-50' : ''}`}>
                             <input
                                 type="checkbox"
                                 checked={prRequirementsConfirmed}
                                 onChange={(e) => setPrRequirementsConfirmed(e.target.checked)}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5"
+                                disabled={files.length === 0}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-0.5 disabled:opacity-50"
                             />
                             <span className="text-sm text-gray-700">
                                 <span className="font-medium text-red-600">*</span> I confirm that the graphics files I'm uploading meet all the event-specific PR requirements listed above (flyer type, logos, format, specifications, etc.).
                             </span>
                         </label>
                         <p className="text-xs text-gray-500 mt-1 ml-7">
-                            This confirmation ensures the uploaded files match what the event organizer requested.
+                            {files.length === 0
+                                ? 'Please select files first before confirming requirements.'
+                                : 'This confirmation ensures the uploaded files match what the event organizer requested.'
+                            }
                         </p>
                     </div>
 
                     {/* File Upload Section */}
                     <div className="mb-6">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Select Graphics Files
+                            <span className="font-medium text-red-600">*</span> Select Graphics Files (Required)
                         </label>
                         <input
                             type="file"
@@ -250,6 +253,11 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
                         />
                         <p className="text-xs text-gray-500 mt-1">
                             Accepted formats: PNG, JPG, SVG, PDF, AI, PSD
+                            {files.length > 0 && (
+                                <span className="ml-2 text-blue-600 font-medium">
+                                    • {files.length} file{files.length !== 1 ? 's' : ''} selected
+                                </span>
+                            )}
                         </p>
                     </div>
 
@@ -304,18 +312,18 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
                     <div className="flex space-x-3">
                         <button
                             onClick={handleSubmit}
-                            disabled={uploading}
+                            disabled={uploading || files.length === 0 || !prRequirementsConfirmed}
                             className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                         >
                             {uploading ? (
                                 <>
                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                    <span>Updating...</span>
+                                    <span>Uploading...</span>
                                 </>
                             ) : (
                                 <>
-                                    <CheckCircle className="w-4 h-4" />
-                                    <span>Update Graphics Status</span>
+                                    <Upload className="w-4 h-4" />
+                                    <span>Upload Graphics Files</span>
                                 </>
                             )}
                         </button>
