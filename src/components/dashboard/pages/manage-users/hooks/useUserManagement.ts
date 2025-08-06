@@ -398,6 +398,18 @@ export const useUserManagement = () => {
         UserPermissionService.canDeleteUser(currentUserRole, targetUser),
       isOAuthUser: (targetUserId: string) =>
         UserPermissionService.isOAuthUser(targetUserId, users, user),
+      // Email management permissions
+      canManageEmails: UserPermissionService.canManageEmails(currentUserRole),
+      canEditUserEmail: (targetUser: FirestoreUser & { id: string }) =>
+        UserPermissionService.canEditUserEmail(
+          currentUserRole,
+          targetUser,
+          currentUser?.id,
+        ),
+      canDisableUserEmail: (targetUser: FirestoreUser & { id: string }) =>
+        UserPermissionService.canDisableUserEmail(currentUserRole, targetUser),
+      canDeleteUserEmail: (targetUser: FirestoreUser & { id: string }) =>
+        UserPermissionService.canDeleteUserEmail(currentUserRole, targetUser),
     }),
     [currentUserRole, currentUser, users, user],
   );

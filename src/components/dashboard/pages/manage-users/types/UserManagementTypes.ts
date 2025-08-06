@@ -12,6 +12,11 @@ export interface UserModalData {
   major?: string;
   graduationYear?: number;
   points?: number;
+  // IEEE Email fields
+  hasIEEEEmail?: boolean;
+  ieeeEmail?: string;
+  ieeeEmailCreatedAt?: any;
+  ieeeEmailStatus?: "active" | "disabled";
 }
 
 export interface InviteModalData {
@@ -38,6 +43,19 @@ export interface UserFilters {
 export interface SortConfig {
   field: string;
   direction: "asc" | "desc";
+}
+
+export interface EmailManagementData {
+  userId: string;
+  currentEmail?: string;
+  newAlias?: string;
+  action: "update" | "disable" | "enable" | "delete";
+}
+
+export interface EmailOperationResult {
+  success: boolean;
+  message: string;
+  newEmail?: string;
 }
 
 export interface UserPermissions {

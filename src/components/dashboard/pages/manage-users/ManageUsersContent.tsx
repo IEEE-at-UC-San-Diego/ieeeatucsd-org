@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { useUserManagement } from './hooks/useUserManagement';
 import type { UserModalData, InviteModalData } from './types/UserManagementTypes';
 import { UserManagementTableSkeleton, MetricCardSkeleton } from '../../../ui/loading';
@@ -64,7 +65,12 @@ export default function ManageUsersContent() {
             memberId: user.memberId || '',
             major: user.major || '',
             graduationYear: user.graduationYear || undefined,
-            points: user.points || 0
+            points: user.points || 0,
+            // IEEE Email fields
+            hasIEEEEmail: user.hasIEEEEmail || false,
+            ieeeEmail: user.ieeeEmail || '',
+            ieeeEmailCreatedAt: user.ieeeEmailCreatedAt || null,
+            ieeeEmailStatus: user.ieeeEmailStatus || 'active'
         });
         setShowUserModal(true);
     };
@@ -88,6 +94,101 @@ export default function ManageUsersContent() {
         await addExistingMember(userId, newRole, newPosition);
         if (!error) {
             setShowAddMemberModal(false);
+        }
+    };
+
+    const handleEmailAction = async (action: 'disable' | 'enable' | 'delete', userId: string, email?: string) => {
+        if (!user?.uid || !email) {
+            console.error('Missing required parameters for email action');
+            return;
+        }
+
+        // Clear any existing messages
+        clearMessages();
+
+        try {
+            let endpoint = '';
+            switch (action) {
+                case 'disable':
+                    endpoint = '/api/disable-ieee-email';
+                    break;
+                case 'enable':
+                    endpoint = '/api/enable-ieee-email';
+                    break;
+                case 'delete':
+                    endpoint = '/api/delete-ieee-email';
+                    break;
+                default:
+                    throw new Error(`Invalid email action: ${action}`);
+            }
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId,
+                    email,
+                    adminUserId: user.uid
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Update the user's email status in Firebase
+                const db = getFirestore();
+                const userRef = doc(db, 'users', userId);
+
+                try {
+                    if (action === 'delete') {
+                        await updateDoc(userRef, {
+                            hasIEEEEmail: false,
+                            ieeeEmail: null,
+                            ieeeEmailCreatedAt: null,
+                            ieeeEmailStatus: null
+                        });
+                    } else {
+                        await updateDoc(userRef, {
+                            ieeeEmailStatus: action === 'disable' ? 'disabled' : 'active'
+                        });
+                    }
+                } catch (firebaseError) {
+                    console.error('Error updating Firebase:', firebaseError);
+                    // Continue with the operation even if Firebase update fails
+                }
+
+                // Refresh the users list
+                try {
+                    await fetchUsers();
+                } catch (fetchError) {
+                    console.error('Error refreshing users list:', fetchError);
+                }
+
+                // Close the modal and show success message
+                setShowUserModal(false);
+                setEditingUser(null);
+
+                console.log(`Email ${action} successful:`, result.message);
+            } else {
+                throw new Error(result.message || `Failed to ${action} email`);
+            }
+        } catch (error) {
+            console.error(`Email ${action} failed:`, error);
+
+            // Set error message that will be displayed in the UI
+            const errorMessage = error instanceof Error
+                ? error.message
+                : `Failed to ${action} email. Please try again.`;
+
+            // You can add a toast notification here or set an error state
+            // For now, we'll just log the error
+            console.error('Email operation error:', errorMessage);
         }
     };
 
@@ -254,6 +355,8 @@ export default function ManageUsersContent() {
                     canEditRole={editingUser ? permissions.canEditUserRole(editingUser as any) : true}
                     canEditPosition={editingUser ? permissions.canEditUserPosition(editingUser as any) : true}
                     canEditPoints={currentUserRole === 'Administrator'}
+                    canManageEmails={permissions.canManageEmails}
+                    onEmailAction={handleEmailAction}
                     loading={loading}
                 />
 

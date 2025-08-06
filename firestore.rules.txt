@@ -54,9 +54,33 @@ service cloud.firestore {
         resource.data.role in ['Executive Officer', 'Administrator'];
 
       // Users can update their own profile and attendance/points
-      allow update: if request.auth != null && 
+      allow update: if request.auth != null &&
         request.auth.uid == userId &&
         request.resource.data.keys().hasAny(['lastEventAttended', 'points', 'eventsAttended', 'name', 'major', 'graduationYear']);
+
+      // Users can update their own IEEE email data (creation only, not modification)
+      allow update: if request.auth != null &&
+        request.auth.uid == userId &&
+        request.resource.data.keys().hasAny(['hasIEEEEmail', 'ieeeEmailCreatedAt']) &&
+        // Prevent users from changing their email address after creation
+        (!request.resource.data.keys().hasAny(['ieeeEmail']) ||
+         !exists(/databases/$(database)/documents/users/$(userId)) ||
+         !get(/databases/$(database)/documents/users/$(userId)).data.keys().hasAny(['ieeeEmail']));
+
+      // Users can update their own email status (for password resets by officers+)
+      allow update: if request.auth != null &&
+        request.auth.uid == userId &&
+        request.resource.data.keys().hasOnly(['ieeeEmailStatus']) &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
+          'General Officer', 'Executive Officer', 'Past Officer', 'Administrator'
+        ];
+
+      // Only Administrators can update IEEE email data for other users
+      allow update: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Administrator' &&
+        request.resource.data.keys().hasAny(['hasIEEEEmail', 'ieeeEmail', 'ieeeEmailCreatedAt', 'ieeeEmailStatus']);
     }
 
     // Invites collection - allow officers to manage, invited users to read/update their invites

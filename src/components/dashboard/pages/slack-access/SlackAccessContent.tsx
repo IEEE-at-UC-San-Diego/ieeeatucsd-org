@@ -5,7 +5,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth } from '../../../../firebase/client';
 import DashboardHeader from '../../shared/DashboardHeader';
-import type { User as UserType } from '../../shared/types/firestore';
+import type { User as UserType, UserRole } from '../../shared/types/firestore';
 
 interface EmailGenerationState {
     isGenerating: boolean;
@@ -73,6 +73,9 @@ export default function SlackAccessContent() {
     });
 
     const db = getFirestore();
+
+    // Check if user can reset password (officers and above)
+    const canResetPassword = userData?.role && ['General Officer', 'Executive Officer', 'Past Officer', 'Administrator'].includes(userData.role);
 
     useEffect(() => {
         if (!user) return;
@@ -612,7 +615,8 @@ export default function SlackAccessContent() {
                                     onKeyDown={handleIEEEPasswordKeyDown}
                                     placeholder={userData?.hasIEEEEmail ? "Enter new password" : "Enter a secure password"}
                                     required
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                                    disabled={userData?.hasIEEEEmail && !canResetPassword}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                 />
                                 <button
                                     type="button"
@@ -634,7 +638,9 @@ export default function SlackAccessContent() {
 
                             <p className="text-xs text-gray-500 mt-2">
                                 {userData.hasIEEEEmail
-                                    ? 'Enter a new secure password to reset your IEEE email password.'
+                                    ? canResetPassword
+                                        ? 'Enter a new secure password to reset your IEEE email password.'
+                                        : 'Password reset is only available to officers and administrators.'
                                     : 'Create a secure password for your IEEE email account. You\'ll use this to access your email and Slack.'
                                 }
                             </p>
@@ -642,23 +648,38 @@ export default function SlackAccessContent() {
 
                         {/* Action Button */}
                         {userData.hasIEEEEmail ? (
-                            <button
-                                onClick={resetEmailPassword}
-                                disabled={emailState.isResetting || !customPassword.trim() || !passwordValidation.isValid}
-                                className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                            >
-                                {emailState.isResetting ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        <span>Resetting Password...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <RefreshCw className="w-4 h-4" />
-                                        <span>Reset Password</span>
-                                    </>
-                                )}
-                            </button>
+                            canResetPassword ? (
+                                <button
+                                    onClick={resetEmailPassword}
+                                    disabled={emailState.isResetting || !customPassword.trim() || !passwordValidation.isValid}
+                                    className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                >
+                                    {emailState.isResetting ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span>Resetting Password...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <RefreshCw className="w-4 h-4" />
+                                            <span>Reset Password</span>
+                                        </>
+                                    )}
+                                </button>
+                            ) : (
+                                <div className="w-full p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                                    <div className="flex items-start space-x-3">
+                                        <Shield className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <h4 className="font-medium text-amber-800 mb-1">Password Reset Restricted</h4>
+                                            <p className="text-sm text-amber-700">
+                                                Only officers and administrators can reset their IEEE email passwords.
+                                                Please contact an administrator for assistance.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
                         ) : (
                             <button
                                 onClick={generateIEEEEmail}
