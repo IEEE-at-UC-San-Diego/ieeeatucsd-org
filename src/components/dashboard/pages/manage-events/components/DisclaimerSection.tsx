@@ -74,8 +74,8 @@ export default function DisclaimerSection() {
                         <div>
                             <h4 className="font-semibold text-orange-800 mb-2">Approval Process</h4>
                             <ul className="text-sm text-orange-700 space-y-1">
-                                <li>• All requests require officer approval</li>
-                                <li>• Large events may need board approval</li>
+                                <li>• All requests require VC Operations / Executive approval</li>
+                                <li>• Large events may need executive board approval</li>
                                 <li>• Changes after approval require re-submission</li>
                                 <li>• You'll receive email updates on status</li>
                             </ul>
@@ -91,20 +91,21 @@ export default function DisclaimerSection() {
                         <h4 className="font-semibold text-red-800 mb-2">Important Notes</h4>
                         <ul className="text-sm text-red-700 space-y-2">
                             <li>
-                                <strong>Food Safety:</strong> All food must be from approved vendors and follow 
-                                university food safety guidelines. Home-cooked food is not permitted.
+                                <strong>Food Safety:</strong> All food must be from approved AS vendors and follow
+                                university food safety guidelines. Home-cooked food is not permitted unless
+                                approved by VC Operations.
                             </li>
                             <li>
-                                <strong>Liability:</strong> Event organizers are responsible for ensuring all 
+                                <strong>Liability:</strong> Event organizers are responsible for ensuring all
                                 activities comply with university policies and safety requirements.
                             </li>
                             <li>
-                                <strong>Cancellation:</strong> If you need to cancel or significantly modify 
-                                your event, notify us immediately to avoid unnecessary expenses.
+                                <strong>Cancellation:</strong> If you need to cancel or significantly modify
+                                your event, notify us immediately to avoid unnecessary expenses / hassles.
                             </li>
                             <li>
-                                <strong>Post-Event:</strong> Submit attendance numbers and photos within 
-                                48 hours of your event for record-keeping.
+                                <strong>Post-Event:</strong> Submit photos within
+                                48 hours of your event within the Google Drive for record-keeping.
                             </li>
                         </ul>
                     </div>
@@ -114,12 +115,8 @@ export default function DisclaimerSection() {
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <h4 className="font-semibold text-gray-800 mb-2">Need Help?</h4>
                 <p className="text-sm text-gray-700">
-                    If you have questions about any of these requirements or need assistance with your 
-                    event planning, please contact the IEEE UCSD officers at{' '}
-                    <a href="mailto:ieee@ucsd.edu" className="text-blue-600 hover:text-blue-800">
-                        ieee@ucsd.edu
-                    </a>{' '}
-                    or reach out on our Discord server.
+                    If you have questions about any of these requirements or need assistance with your
+                    event planning, please contact VC Operations on Slack
                 </p>
             </div>
         </div>
