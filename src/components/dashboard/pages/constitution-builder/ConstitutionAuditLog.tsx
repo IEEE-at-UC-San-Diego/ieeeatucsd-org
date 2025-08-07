@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Clock, User, Search, Filter, FileText, Plus, Minus, Edit3, Move } from 'lucide-react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
@@ -22,7 +22,7 @@ import {
 } from '../../../ui/dialog';
 import { ScrollArea } from '../../../ui/scroll-area';
 import { useConstitutionAudit } from './hooks/useConstitutionAudit';
-import type { ConstitutionAuditEntry } from '../../shar../../shared/types/firestore';
+import type { ConstitutionAuditEntry } from '../../shared/types/firestore';
 
 interface ConstitutionAuditLogProps {
     constitutionId: string;
@@ -31,33 +31,79 @@ interface ConstitutionAuditLogProps {
 export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({ constitutionId }) => {
     const { auditEntries, isLoading } = useConstitutionAudit(constitutionId);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [changeTypeFilter, setChangeTypeFilter] = useState<string>('all');
     const [userFilter, setUserFilter] = useState<string>('all');
-    const [selectedEntry, setSelectedEntry] = useState<ConstitutionAuditEntry | null>(null);
 
-    // Get unique users for filter
+
+    // Debounce search query to improve performance
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 300); // 300ms debounce for audit log search
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Get unique users for filter - memoized for performance
     const uniqueUsers = useMemo(() => {
         const users = new Set(auditEntries.map(entry => entry.userName));
         return Array.from(users).sort();
     }, [auditEntries]);
 
-    // Filter entries based on search and filters
+    // Enhanced search function that covers all audit log fields
+    const searchInEntry = useCallback((entry: ConstitutionAuditEntry, query: string): boolean => {
+        if (!query) return true;
+
+        const lowerQuery = query.toLowerCase();
+
+        // Search in basic fields
+        if (entry.changeDescription.toLowerCase().includes(lowerQuery) ||
+            entry.userName.toLowerCase().includes(lowerQuery) ||
+            entry.changeType.toLowerCase().includes(lowerQuery)) {
+            return true;
+        }
+
+        // Search in before/after values
+        if (entry.beforeValue?.title?.toLowerCase().includes(lowerQuery) ||
+            entry.afterValue?.title?.toLowerCase().includes(lowerQuery) ||
+            entry.beforeValue?.content?.toLowerCase().includes(lowerQuery) ||
+            entry.afterValue?.content?.toLowerCase().includes(lowerQuery) ||
+            entry.beforeValue?.type?.toLowerCase().includes(lowerQuery) ||
+            entry.afterValue?.type?.toLowerCase().includes(lowerQuery)) {
+            return true;
+        }
+
+        // Search in metadata fields
+        if (entry.sectionId?.toLowerCase().includes(lowerQuery) ||
+            entry.ipAddress?.toLowerCase().includes(lowerQuery) ||
+            entry.userAgent?.toLowerCase().includes(lowerQuery)) {
+            return true;
+        }
+
+        // Search in timestamp (formatted)
+        if (entry.timestamp) {
+            const formattedDate = formatTimestamp(entry.timestamp).toLowerCase();
+            if (formattedDate.includes(lowerQuery)) {
+                return true;
+            }
+        }
+
+        return false;
+    }, []);
+
+    // Filter entries based on search and filters - optimized with debounced search
     const filteredEntries = useMemo(() => {
         return auditEntries.filter(entry => {
-            const matchesSearch = searchQuery === '' ||
-                entry.changeDescription.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                entry.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (entry.beforeValue?.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-                (entry.afterValue?.title?.toLowerCase() || '').includes(searchQuery.toLowerCase());
-
+            const matchesSearch = searchInEntry(entry, debouncedSearchQuery);
             const matchesChangeType = changeTypeFilter === 'all' || entry.changeType === changeTypeFilter;
             const matchesUser = userFilter === 'all' || entry.userName === userFilter;
 
             return matchesSearch && matchesChangeType && matchesUser;
         });
-    }, [auditEntries, searchQuery, changeTypeFilter, userFilter]);
+    }, [auditEntries, debouncedSearchQuery, changeTypeFilter, userFilter, searchInEntry]);
 
-    const getChangeTypeIcon = (changeType: ConstitutionAuditEntry['changeType']) => {
+    const getChangeTypeIcon = useCallback((changeType: ConstitutionAuditEntry['changeType']) => {
         switch (changeType) {
             case 'create':
                 return <Plus className="h-4 w-4 text-green-600" />;
@@ -70,9 +116,9 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({ cons
             default:
                 return <FileText className="h-4 w-4 text-gray-600" />;
         }
-    };
+    }, []);
 
-    const getChangeTypeBadge = (changeType: ConstitutionAuditEntry['changeType']) => {
+    const getChangeTypeBadge = useCallback((changeType: ConstitutionAuditEntry['changeType']) => {
         const variants = {
             create: 'bg-green-100 text-green-800 hover:bg-green-100',
             update: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
@@ -85,16 +131,16 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({ cons
                 {changeType.charAt(0).toUpperCase() + changeType.slice(1)}
             </Badge>
         );
-    };
+    }, []);
 
-    const formatTimestamp = (timestamp: any) => {
+    const formatTimestamp = useCallback((timestamp: any) => {
         if (!timestamp) return 'Unknown time';
 
         const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
         return format(date, 'MMM dd, yyyy \'at\' h:mm a');
-    };
+    }, []);
 
-    const renderBeforeAfterComparison = (entry: ConstitutionAuditEntry) => {
+    const renderBeforeAfterComparison = useCallback((entry: ConstitutionAuditEntry) => {
         if (entry.changeType === 'create') {
             return (
                 <div className="space-y-4">
@@ -199,7 +245,7 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({ cons
         }
 
         return null;
-    };
+    }, []);
 
     if (isLoading) {
         return (
@@ -235,7 +281,7 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({ cons
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
-                                placeholder="Search audit entries..."
+                                placeholder="Search audit entries (description, user, content, timestamp, etc.)..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-10"
@@ -339,7 +385,11 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({ cons
                 {/* Summary */}
                 <div className="mt-4 pt-4 border-t">
                     <p className="text-sm text-gray-600">
-                        Showing {filteredEntries.length} of {auditEntries.length} audit entries
+                        {filteredEntries.length === auditEntries.length
+                            ? `Showing all ${auditEntries.length} audit entries`
+                            : `Showing ${filteredEntries.length} of ${auditEntries.length} audit entries`
+                        }
+                        {debouncedSearchQuery && ` (filtered by "${debouncedSearchQuery}")`}
                     </p>
                 </div>
             </CardContent>
