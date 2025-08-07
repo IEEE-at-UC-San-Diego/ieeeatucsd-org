@@ -95,7 +95,8 @@ export const validateMarketingGraphics = (
       formData.requiredLogos.includes(
         "OTHER (please upload transparent logo files)",
       ) &&
-      formData.otherLogoFiles.length === 0
+      formData.otherLogoFiles.length === 0 &&
+      (formData.existingOtherLogos || []).length === 0
     ) {
       errorMessage = 'Please upload logo files when "OTHER" is selected';
       return { isValid: false, errors, errorMessage };
