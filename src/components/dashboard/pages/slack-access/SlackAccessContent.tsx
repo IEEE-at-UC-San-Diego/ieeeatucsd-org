@@ -959,22 +959,22 @@ export default function SlackAccessContent() {
                         <div className="flex items-start space-x-3">
                             <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">2</div>
                             <div>
-                                <h3 className="font-medium text-gray-900 mb-1">Check your inbox</h3>
-                                <p className="text-sm text-gray-600">Look for the Slack invitation email in your inbox preview or your personal email.</p>
+                                <h3 className="font-medium text-gray-900 mb-1">Sign up for Slack</h3>
+                                <p className="text-sm text-gray-600">Use the ieeeucsd.org email to sign up for Slack.</p>
                             </div>
                         </div>
                         <div className="flex items-start space-x-3">
                             <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">3</div>
                             <div>
-                                <h3 className="font-medium text-gray-900 mb-1">Join the workspace</h3>
-                                <p className="text-sm text-gray-600">Click the invitation link and use your IEEE email to join ieeeucsdofficers.slack.com.</p>
+                                <h3 className="font-medium text-gray-900 mb-1">Use the email reader to read Slack</h3>
+                                <p className="text-sm text-gray-600">Read the Slack confirmation email in your inbox preview.</p>
                             </div>
                         </div>
                         <div className="flex items-start space-x-3">
                             <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">4</div>
                             <div>
                                 <h3 className="font-medium text-gray-900 mb-1">Start collaborating</h3>
-                                <p className="text-sm text-gray-600">Connect with other IEEE UCSD members and participate in discussions.</p>
+                                <p className="text-sm text-gray-600">Connect with other IEEE UCSD members and participate in the different channels.</p>
                             </div>
                         </div>
                     </div>
