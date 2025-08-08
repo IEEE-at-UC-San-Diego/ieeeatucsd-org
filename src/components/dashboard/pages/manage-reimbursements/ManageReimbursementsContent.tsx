@@ -327,7 +327,7 @@ export default function ManageReimbursementsContent() {
 
     // Helper function to check if user can perform officer actions
     const canPerformOfficerActions = () => {
-        return currentUserRole === 'General Officer' || currentUserRole === 'Executive Officer';
+        return currentUserRole === 'Executive Officer' || currentUserRole === 'Administrator';
     };
 
     return (
