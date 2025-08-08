@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { X, Upload, Trash2 } from 'lucide-react';
 import { getFirestore, doc, updateDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { app, auth } from '../../../../firebase/client';
 import { EventAuditService } from '../../shared/services/eventAuditService';
 import type { EventFileChange } from '../../shared/types/firestore';
 import EnhancedFileViewer from './components/EnhancedFileViewer';
 import { extractPRRequirements } from './utils/prRequirementsUtils';
+import { uploadFilesForEvent } from './utils/fileUploadUtils';
 
 interface GraphicsUploadModalProps {
     request: any;
@@ -21,7 +21,6 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
     const [prRequirementsConfirmed, setPrRequirementsConfirmed] = useState(false);
 
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -34,19 +33,7 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
         setFiles(files.filter((_, i) => i !== index));
     };
 
-    const uploadFiles = async (filesToUpload: File[]): Promise<string[]> => {
-        // For graphics, we'll use the event request ID if available, otherwise fall back to user ID
-        const eventId = request?.id || `user_${auth.currentUser?.uid}`;
-        const uploadPromises = filesToUpload.map(async (file) => {
-            const storageRef = ref(storage, `events/${eventId}/graphics/${Date.now()}_${file.name}`);
-            const uploadTask = uploadBytesResumable(storageRef, file);
-            await new Promise((resolve, reject) => {
-                uploadTask.on('state_changed', null, reject, () => resolve(uploadTask.snapshot.ref));
-            });
-            return await getDownloadURL(storageRef);
-        });
-        return await Promise.all(uploadPromises);
-    };
+
 
     const handleSubmit = async () => {
         setUploading(true);
@@ -67,8 +54,8 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
         }
 
         try {
-            // Upload the selected files
-            const uploadedUrls = await uploadFiles(files);
+            // Upload the selected files using event-based structure
+            const uploadedUrls = await uploadFilesForEvent(files, request.id, 'graphics');
 
             // Update event request with new file URLs
             const existingGraphicsFiles = request.graphicsFiles || [];

@@ -149,7 +149,7 @@ export default function MigrationContent() {
             const results = await migrationTester.runAllTests();
             setTestResults(results);
 
-            const passedTests = results.filter(r => r.passed).length;
+            const passedTests = results.filter((r: any) => r.passed).length;
             const progressPercent = (passedTests / results.length) * 100;
 
             setProgress(prev => ({

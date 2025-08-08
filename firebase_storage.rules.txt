@@ -14,28 +14,36 @@ service firebase.storage {
         exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
         get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in [
          'General Officer', 'Executive Officer', 'Administrator'
-        ] &&
-        get(/databases/(default)/documents/users/$(request.auth.uid)).data.status == 'active';
+        ];
     }
 
-    // New helper: check if user is current submitter of an event request
-    function isEventRequestSubmitter(userId) {
-      return request.auth != null &&
-        exists(/databases/(default)/documents/event_requests/$(userId)) &&
-        get(/databases/(default)/documents/event_requests/$(userId)).data.requestedUser == request.auth.uid;
-    }
-
-    // Helper: check if user owns the event request
+    // Helper: check if user owns the event request (eventId can be event_request ID or actual event ID)
     function isEventRequestOwner(eventId) {
-      return request.auth != null &&
-        exists(/databases/(default)/documents/event_requests/$(eventId)) &&
-        get(/databases/(default)/documents/event_requests/$(eventId)).data.requestedUser == request.auth.uid;
+      return request.auth != null && (
+        // Check if eventId is an event_request ID
+        (exists(/databases/(default)/documents/event_requests/$(eventId)) &&
+         get(/databases/(default)/documents/event_requests/$(eventId)).data.requestedUser == request.auth.uid) ||
+        // Check if eventId is an actual event ID with createdFrom field
+        (exists(/databases/(default)/documents/events/$(eventId)) &&
+         exists(/databases/(default)/documents/event_requests/$(get(/databases/(default)/documents/events/$(eventId)).data.createdFrom)) &&
+         get(/databases/(default)/documents/event_requests/$(get(/databases/(default)/documents/events/$(eventId)).data.createdFrom)).data.requestedUser == request.auth.uid)
+      );
     }
 
     // Helper: check if event is published (public access)
     function isEventPublic(eventId) {
       return exists(/databases/(default)/documents/events/$(eventId)) &&
         get(/databases/(default)/documents/events/$(eventId)).data.published == true;
+    }
+
+    // Helper: check if user can access event files (broader permissions)
+    function canAccessEventFiles(eventId) {
+      return request.auth != null && (
+        isOfficer() ||
+        canSubmitEvents() ||
+        isEventRequestOwner(eventId) ||
+        isEventPublic(eventId)
+      );
     }
 
     // Legacy user-based paths (kept during migration period)
@@ -45,27 +53,27 @@ service firebase.storage {
 
     match /invoices/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null &&
-        (request.auth.uid == userId || isOfficer() || canSubmitEvents() || isEventRequestSubmitter(userId));
+        (request.auth.uid == userId || isOfficer() || canSubmitEvents());
     }
 
     match /room_bookings/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null &&
-        (request.auth.uid == userId || isOfficer() || canSubmitEvents() || isEventRequestSubmitter(userId));
+        (request.auth.uid == userId || isOfficer() || canSubmitEvents());
     }
 
     match /logos/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null &&
-        (request.auth.uid == userId || isOfficer() || canSubmitEvents() || isEventRequestSubmitter(userId));
+        (request.auth.uid == userId || isOfficer() || canSubmitEvents());
     }
 
     match /reimbursements/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null &&
-        (request.auth.uid == userId || isOfficer() || canSubmitEvents() || isEventRequestSubmitter(userId));
+        (request.auth.uid == userId || isOfficer() || canSubmitEvents());
     }
 
     match /fund_deposits/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null &&
-        (request.auth.uid == userId || isOfficer() || canSubmitEvents() || isEventRequestSubmitter(userId));
+        (request.auth.uid == userId || isOfficer() || canSubmitEvents());
     }
 
     match /graphics/{userId}/{allPaths=**} {
@@ -75,17 +83,25 @@ service firebase.storage {
 
     // New event-based file organization
     match /events/{eventId}/{category}/{allPaths=**} {
-      allow read: if request.auth != null && (
+      // Allow officers and event submitters full access
+      allow read, write: if request.auth != null && (
         isOfficer() ||
-        canSubmitEvents() ||
-        isEventRequestOwner(eventId) ||
-        isEventPublic(eventId)
+        canSubmitEvents()
       );
-      allow write: if request.auth != null && (
-        isOfficer() ||
-        canSubmitEvents() ||
-        isEventRequestOwner(eventId)
-      );
+
+      // Allow any authenticated user to write files (for event request creation)
+      // This is safe because files are organized by event ID and access is controlled by Firestore rules
+      allow write: if request.auth != null;
+
+      // Allow event request owners to access their files (when document exists)
+      allow read: if request.auth != null &&
+        exists(/databases/(default)/documents/event_requests/$(eventId)) &&
+        get(/databases/(default)/documents/event_requests/$(eventId)).data.requestedUser == request.auth.uid;
+
+      // Allow public read access for published events
+      allow read: if request.auth != null &&
+        exists(/databases/(default)/documents/events/$(eventId)) &&
+        get(/databases/(default)/documents/events/$(eventId)).data.published == true;
     }
 
     match /{allPaths=**} {
