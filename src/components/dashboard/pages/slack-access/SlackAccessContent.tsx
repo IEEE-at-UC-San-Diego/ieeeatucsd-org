@@ -324,7 +324,8 @@ export default function SlackAccessContent() {
     };
 
     const resetEmailPassword = async () => {
-        if (!emailState.generatedEmail) {
+        const ieeeEmail = emailState.generatedEmail || userData?.ieeeEmail;
+        if (!ieeeEmail) {
             setEmailState(prev => ({ ...prev, error: 'No IEEE email found to reset password for' }));
             return;
         }
@@ -360,7 +361,7 @@ export default function SlackAccessContent() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    email: emailState.generatedEmail,
+                    email: ieeeEmail,
                     password: customPassword
                 }),
             });
