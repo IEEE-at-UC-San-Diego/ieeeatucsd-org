@@ -22,7 +22,7 @@ import {
     convertLegacyInvoices,
     createSafeDateTime
 } from './utils/eventRequestUtils';
-import { uploadFiles } from './utils/fileUploadUtils';
+import { uploadFiles, uploadFilesForEvent, moveFilesToActualEventId } from './utils/fileUploadUtils';
 
 // Import section components
 import DisclaimerSection from './components/DisclaimerSection';
@@ -284,16 +284,20 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
         setError(null);
 
         try {
-            // Upload files
+            // For new requests, create a temporary ID for file organization
+            // For existing requests, use the existing ID
+            const eventId = editingRequest ? editingRequest.id : `temp_${Date.now()}_${auth.currentUser?.uid}`;
+
+            // Upload files using event-based structure
             let roomBookingUrls: string[] = [];
             let otherLogoUrls: string[] = [];
 
             if (formData.roomBookingFile) {
-                roomBookingUrls = await uploadFiles([formData.roomBookingFile], 'room_bookings');
+                roomBookingUrls = await uploadFilesForEvent([formData.roomBookingFile], eventId, 'room_booking');
             }
 
             if (formData.otherLogoFiles.length > 0) {
-                otherLogoUrls = await uploadFiles(formData.otherLogoFiles, 'logos');
+                otherLogoUrls = await uploadFilesForEvent(formData.otherLogoFiles, eventId, 'logo');
             }
 
             // Process invoices with file uploads
@@ -303,7 +307,7 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                     let invoiceFileUrls: string[] = [...(invoice.existingInvoiceFiles || [])];
 
                     if (invoice.invoiceFiles && invoice.invoiceFiles.length > 0) {
-                        const uploadedUrls = await uploadFiles(invoice.invoiceFiles, 'invoices');
+                        const uploadedUrls = await uploadFilesForEvent(invoice.invoiceFiles, eventId, 'invoice');
                         invoiceFileUrls = [...invoiceFileUrls, ...uploadedUrls];
                     }
 
@@ -418,12 +422,54 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
             } else {
                 // Create new event request
                 eventRequestRef = await addDoc(collection(db, 'event_requests'), eventRequestData);
+                const newEventRequestId = (eventRequestRef as any).id;
+
+                // If we used a temporary ID for file uploads, we need to move the files
+                if (eventId.startsWith('temp_')) {
+                    try {
+                        // Collect all file URLs that need to be moved
+                        const allFileUrls = [
+                            ...roomBookingUrls,
+                            ...otherLogoUrls,
+                            ...processedInvoices.flatMap(inv => inv.invoiceFiles || [])
+                        ];
+
+                        if (allFileUrls.length > 0) {
+                            const movedUrls = await moveFilesToActualEventId(eventId, newEventRequestId, allFileUrls);
+
+                            // Update the event request with the new URLs
+                            const updatedData: any = {};
+
+                            if (roomBookingUrls.length > 0) {
+                                updatedData.roomBookingFiles = movedUrls.slice(0, roomBookingUrls.length);
+                            }
+
+                            if (otherLogoUrls.length > 0) {
+                                const startIndex = roomBookingUrls.length;
+                                updatedData.otherLogos = movedUrls.slice(startIndex, startIndex + otherLogoUrls.length);
+                            }
+
+                            // Update invoice files if any
+                            if (processedInvoices.some(inv => inv.invoiceFiles?.length)) {
+                                // If needed, update invoice URLs on the newly created doc here
+                                // Currently invoiceFiles are already in eventRequestData via processedInvoices
+                            }
+
+                            if (Object.keys(updatedData).length > 0) {
+                                await updateDoc(eventRequestRef, updatedData);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error moving files to actual event ID:', error);
+                        // Continue anyway - files can be moved later via migration
+                    }
+                }
 
                 // Log event creation
                 try {
                     const userName = await EventAuditService.getUserName(auth.currentUser?.uid || '');
                     await EventAuditService.logEventCreation(
-                        (eventRequestRef as any).id,
+                        newEventRequestId,
                         userName,
                         userName,
                         { eventName: formData.name }

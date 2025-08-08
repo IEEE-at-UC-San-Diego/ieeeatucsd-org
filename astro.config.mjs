@@ -39,5 +39,15 @@ export default defineConfig({
         process.env.LOGTO_API_ENDPOINT,
       ),
     },
+    resolve: {
+      dedupe: ["react", "react-dom"],
+    },
+    optimizeDeps: {
+      exclude: [
+        // Avoid scanning Node-only scripts that contain require/module usage
+        "src/scripts/testFileMigration.ts",
+        "src/scripts/runFileMigration.ts",
+      ],
+    },
   },
 });

@@ -293,6 +293,8 @@ const FundDepositsContent: React.FC = () => {
     }, [deposits, searchTerm, statusFilter, userRole, user]);
 
     const uploadFiles = async (files: File[], path: string): Promise<string[]> => {
+        // For fund deposits, we'll keep user-based organization for now
+        // as they're not directly tied to specific events
         const uploadPromises = files.map(async (file) => {
             const storageRef = ref(storage, `${path}/${user?.uid}/${Date.now()}_${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);

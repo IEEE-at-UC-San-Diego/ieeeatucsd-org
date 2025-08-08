@@ -49,7 +49,7 @@ export default function EnhancedFileViewer({
         eventRequestId,
         auth.currentUser?.uid || '',
         extractedFilename,
-        getFileType(extractedFilename),
+        'other',
         userName,
         { action, url }
       );

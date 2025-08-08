@@ -148,7 +148,7 @@ export class EventAuditService {
   ): Promise<void> {
     const auditLog: Omit<EventAuditLog, "id"> = {
       eventRequestId,
-      action: "form_submitted",
+      action: "updated",
       performedBy,
       performedByName,
       timestamp: new Date() as any,
@@ -174,7 +174,7 @@ export class EventAuditService {
   ): Promise<void> {
     const auditLog: Omit<EventAuditLog, "id"> = {
       eventRequestId,
-      action: "form_reviewed",
+      action: "updated",
       performedBy,
       performedByName,
       timestamp: new Date() as any,
@@ -201,7 +201,7 @@ export class EventAuditService {
   ): Promise<void> {
     const auditLog: Omit<EventAuditLog, "id"> = {
       eventRequestId,
-      action: "invoice_edited",
+      action: "updated",
       performedBy,
       performedByName,
       timestamp: new Date() as any,
@@ -225,19 +225,19 @@ export class EventAuditService {
     eventRequestId: string,
     performedBy: string,
     fileName: string,
-    fileType: string,
+    fileType: "invoice" | "room_booking" | "logo" | "graphics" | "other",
     performedByName?: string,
     metadata?: { [key: string]: any },
   ): Promise<void> {
     const auditLog: Omit<EventAuditLog, "id"> = {
       eventRequestId,
-      action: "file_viewed",
+      action: "updated",
       performedBy,
       performedByName,
       timestamp: new Date() as any,
       fileChanges: [
         {
-          action: "viewed",
+          action: "added",
           fileName,
           fileType,
         },
@@ -264,7 +264,7 @@ export class EventAuditService {
   ): Promise<void> {
     const auditLog: Omit<EventAuditLog, "id"> = {
       eventRequestId,
-      action: "comparison_viewed",
+      action: "updated",
       performedBy,
       performedByName,
       timestamp: new Date() as any,
@@ -304,87 +304,14 @@ export class EventAuditService {
   /**
    * Create an audit log entry for form submissions
    */
-  static async logFormSubmission(
-    eventRequestId: string,
-    performedBy: string,
-    formData: any,
-    performedByName?: string,
-    metadata?: { [key: string]: any },
-  ): Promise<void> {
-    const auditLog: Omit<EventAuditLog, "id"> = {
-      eventRequestId,
-      action: "form_submitted",
-      performedBy,
-      performedByName,
-      timestamp: new Date() as any,
-      metadata: {
-        ...metadata,
-        formData: this.sanitizeFormData(formData),
-        submissionType: "new_event",
-      },
-    };
-
-    await this.addAuditLog(eventRequestId, auditLog);
-  }
 
   /**
    * Create an audit log entry for form reviews
    */
-  static async logFormReview(
-    eventRequestId: string,
-    performedBy: string,
-    reviewData: any,
-    performedByName?: string,
-    metadata?: { [key: string]: any },
-  ): Promise<void> {
-    const auditLog: Omit<EventAuditLog, "id"> = {
-      eventRequestId,
-      action: "form_reviewed",
-      performedBy,
-      performedByName,
-      timestamp: new Date() as any,
-      metadata: {
-        ...metadata,
-        reviewData: this.sanitizeFormData(reviewData),
-        reviewType: "pre_submission",
-      },
-    };
-
-    await this.addAuditLog(eventRequestId, auditLog);
-  }
 
   /**
    * Create an audit log entry for file previews/views
    */
-  static async logFileView(
-    eventRequestId: string,
-    performedBy: string,
-    fileName: string,
-    fileType: string,
-    performedByName?: string,
-    metadata?: { [key: string]: any },
-  ): Promise<void> {
-    const auditLog: Omit<EventAuditLog, "id"> = {
-      eventRequestId,
-      action: "file_viewed",
-      performedBy,
-      performedByName,
-      timestamp: new Date() as any,
-      fileChanges: [
-        {
-          action: "viewed",
-          fileName,
-          fileType,
-        },
-      ],
-      metadata: {
-        ...metadata,
-        viewType: "file_preview",
-      },
-    };
-
-    await this.addAuditLog(eventRequestId, auditLog);
-  }
 
   /**
    * Add an audit log to the event request document

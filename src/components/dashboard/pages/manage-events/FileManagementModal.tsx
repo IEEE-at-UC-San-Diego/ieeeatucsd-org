@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, File, Trash2, Download, Eye, Plus, Image, FileText, FolderOpen, Lock, Globe, Receipt, Calendar, Archive } from 'lucide-react';
 import { getFirestore, collection, doc, updateDoc, query, where, getDocs } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { app } from '../../../../firebase/client';
-import { auth } from '../../../../firebase/client';
 import { Button } from '../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
 import { Badge } from '../../../ui/badge';
@@ -12,6 +11,7 @@ import { Alert, AlertDescription } from '../../../ui/alert';
 import { Separator } from '../../../ui/separator';
 import { Label } from '../../../ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../ui/dialog';
+import { uploadFilesForEvent } from './utils/fileUploadUtils';
 
 interface FileManagementModalProps {
     request: {
@@ -155,20 +155,13 @@ export default function FileManagementModal({ request, onClose }: FileManagement
             setUploading(true);
             setError(null);
 
-            const uploadPromises = Array.from(selectedFiles).map(async (file) => {
-                const fileName = `${Date.now()}_${file.name}`;
-                const folderPath = uploadTarget === 'public' ? 'event_files' : 'private_files';
-                const storageRef = ref(storage, `${folderPath}/${uploadCategory}/${auth.currentUser?.uid}/${fileName}`);
-
-                const uploadTask = uploadBytesResumable(storageRef, file);
-                await new Promise((resolve, reject) => {
-                    uploadTask.on('state_changed', null, reject, () => resolve(uploadTask.snapshot.ref));
-                });
-
-                return await getDownloadURL(storageRef);
-            });
-
-            const uploadedUrls = await Promise.all(uploadPromises);
+            // Use the new event-based upload system
+            const category = uploadTarget === 'public' ? 'public' : uploadCategory;
+            const uploadedUrls = await uploadFilesForEvent(
+                Array.from(selectedFiles),
+                request.id,
+                category
+            );
 
             // Update the appropriate collection
             if (uploadTarget === 'public') {

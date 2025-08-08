@@ -35,8 +35,10 @@ export default function GraphicsUploadModal({ request, onClose, onSuccess }: Gra
     };
 
     const uploadFiles = async (filesToUpload: File[]): Promise<string[]> => {
+        // For graphics, we'll use the event request ID if available, otherwise fall back to user ID
+        const eventId = request?.id || `user_${auth.currentUser?.uid}`;
         const uploadPromises = filesToUpload.map(async (file) => {
-            const storageRef = ref(storage, `graphics/${auth.currentUser?.uid}/${Date.now()}_${file.name}`);
+            const storageRef = ref(storage, `events/${eventId}/graphics/${Date.now()}_${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
             await new Promise((resolve, reject) => {
                 uploadTask.on('state_changed', null, reject, () => resolve(uploadTask.snapshot.ref));

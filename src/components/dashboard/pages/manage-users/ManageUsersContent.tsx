@@ -36,6 +36,7 @@ export default function ManageUsersContent() {
         updateFilters,
         updateSort,
         clearMessages,
+        fetchUsers,
 
         // Permissions
         permissions,

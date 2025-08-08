@@ -99,6 +99,8 @@ export default function ReimbursementRequestModal({ isOpen, onClose, onSubmit }:
             setUploadingFiles(prev => new Set(prev).add(expenseId));
 
             // Upload file to Firebase Storage
+            // For reimbursements, we'll keep user-based organization for now
+            // as they're not directly tied to specific events
             const fileName = `${Date.now()}_${file.name}`;
             const storageRef = ref(storage, `reimbursements/${auth.currentUser?.uid}/${fileName}`);
 
