@@ -1,6 +1,16 @@
 import type { APIRoute } from "astro";
 import { ImapFlow } from "imapflow";
 
+// Helper function to decode quoted-printable content
+function decodeQuotedPrintable(str: string): string {
+  return str
+    .replace(/=\r?\n/g, "") // Remove soft line breaks
+    .replace(/=([0-9A-F]{2})/gi, (match, hex) =>
+      String.fromCharCode(parseInt(hex, 16)),
+    )
+    .replace(/=3D/g, "="); // Common quoted-printable encoding
+}
+
 interface EmailContent {
   subject: string;
   from: string;
@@ -71,12 +81,91 @@ export const POST: APIRoute = async ({ request }) => {
       let lock = await client.getMailboxLock("INBOX");
 
       try {
-        // Fetch the specific message by UID
+        // First fetch the message structure to understand the parts
+        const messageStructure = await client.fetchOne(uid, {
+          envelope: true,
+          flags: true,
+          bodyStructure: true,
+        });
+
+        if (!messageStructure) {
+          throw new Error("Message not found");
+        }
+
+        // Analyze body structure to determine which parts to fetch
+        const partsToFetch: string[] = ["HEADER"];
+        let textPartId = "";
+        let htmlPartId = "";
+
+        const analyzeStructure = (node: any, partId = "") => {
+          console.log(`Analyzing node: type=${node.type}, partId=${partId}`);
+
+          // Handle both formats: "text/plain" and separate type/subtype
+          const nodeType = node.type || "";
+          const isTextPlain =
+            nodeType === "text/plain" ||
+            (nodeType === "text" && node.subtype === "plain");
+          const isTextHtml =
+            nodeType === "text/html" ||
+            (nodeType === "text" && node.subtype === "html");
+
+          if (isTextPlain && !textPartId) {
+            textPartId = partId || "1";
+            console.log(`Found text/plain part: ${textPartId}`);
+          } else if (isTextHtml && !htmlPartId) {
+            htmlPartId = partId || "1";
+            console.log(`Found text/html part: ${htmlPartId}`);
+          }
+
+          if (node.childNodes && Array.isArray(node.childNodes)) {
+            node.childNodes.forEach((child: any, index: number) => {
+              const childPartId = partId
+                ? `${partId}.${index + 1}`
+                : `${index + 1}`;
+              analyzeStructure(child, childPartId);
+            });
+          }
+        };
+
+        console.log(
+          "Message body structure:",
+          JSON.stringify(messageStructure.bodyStructure, null, 2),
+        );
+
+        // For multipart messages, analyze child nodes with proper part numbering
+        if (
+          messageStructure.bodyStructure &&
+          messageStructure.bodyStructure.childNodes
+        ) {
+          messageStructure.bodyStructure.childNodes.forEach(
+            (child: any, index: number) => {
+              analyzeStructure(child, `${index + 1}`);
+            },
+          );
+        } else if (messageStructure.bodyStructure) {
+          analyzeStructure(messageStructure.bodyStructure);
+        }
+
+        // Add the identified parts to fetch
+        if (textPartId) partsToFetch.push(textPartId);
+        if (htmlPartId) partsToFetch.push(htmlPartId);
+
+        // Also try common fallbacks including part 2 for HTML
+        partsToFetch.push("TEXT", "1", "2", "1.1", "1.2");
+
+        console.log(
+          `Fetching parts: ${partsToFetch.join(", ")} for UID ${uid}`,
+        );
+        console.log(
+          `Identified - Text part: ${textPartId}, HTML part: ${htmlPartId}`,
+        );
+
+        // Now fetch the message with the identified parts
         const message = await client.fetchOne(uid, {
           envelope: true,
           flags: true,
           bodyStructure: true,
-          bodyParts: ["HEADER", "TEXT", "1", "1.1", "1.2"], // Get various body parts
+          bodyParts: partsToFetch,
         });
 
         if (message) {
@@ -112,37 +201,119 @@ export const POST: APIRoute = async ({ request }) => {
             }
           }
 
-          // Extract email content from body parts
+          // Extract email content from body parts using identified part IDs
           let htmlContent = "";
           let textContent = "";
 
           const bodyParts = message.bodyParts;
           if (bodyParts) {
-            // Try to get HTML content first
-            const htmlPart = bodyParts.get("1.2") || bodyParts.get("TEXT");
-            if (htmlPart) {
+            console.log("Available body parts:", Array.from(bodyParts.keys()));
+
+            // Extract HTML content using identified HTML part
+            if (htmlPartId && bodyParts.has(htmlPartId)) {
               try {
-                htmlContent = htmlPart.toString("utf-8");
+                const htmlPart = bodyParts.get(htmlPartId);
+                if (htmlPart) {
+                  let rawHtml = htmlPart.toString("utf-8");
+                  // Decode quoted-printable if needed
+                  if (rawHtml.includes("=3D") || rawHtml.includes("=\n")) {
+                    htmlContent = decodeQuotedPrintable(rawHtml);
+                    console.log(
+                      `HTML content decoded from quoted-printable, part ${htmlPartId}, length: ${htmlContent.length}`,
+                    );
+                  } else {
+                    htmlContent = rawHtml;
+                    console.log(
+                      `HTML content extracted from part ${htmlPartId}, length: ${htmlContent.length}`,
+                    );
+                  }
+                }
               } catch (e) {
                 console.warn("Error parsing HTML content:", e);
               }
             }
 
-            // Try to get plain text content
-            const textPart =
-              bodyParts.get("1.1") ||
-              bodyParts.get("1") ||
-              bodyParts.get("TEXT");
-            if (textPart) {
+            // Extract text content using identified text part
+            if (textPartId && bodyParts.has(textPartId)) {
               try {
-                textContent = textPart.toString("utf-8");
-                // Clean up text content
-                textContent = textContent
-                  .replace(/\r\n/g, "\n")
-                  .replace(/\r/g, "\n")
-                  .trim();
+                const textPart = bodyParts.get(textPartId);
+                if (textPart) {
+                  let rawText = textPart.toString("utf-8");
+                  // Decode quoted-printable if needed
+                  if (rawText.includes("=3D") || rawText.includes("=\n")) {
+                    textContent = decodeQuotedPrintable(rawText);
+                    console.log(
+                      `Text content decoded from quoted-printable, part ${textPartId}, length: ${textContent.length}`,
+                    );
+                  } else {
+                    textContent = rawText;
+                    console.log(
+                      `Text content extracted from part ${textPartId}, length: ${textContent.length}`,
+                    );
+                  }
+                  // Clean up text content
+                  textContent = textContent
+                    .replace(/\r\n/g, "\n")
+                    .replace(/\r/g, "\n")
+                    .trim();
+                }
               } catch (e) {
                 console.warn("Error parsing text content:", e);
+              }
+            }
+
+            // Fallback logic if we didn't get content from identified parts
+            if (!htmlContent && !textContent) {
+              console.log(
+                "No content from identified parts, trying fallbacks...",
+              );
+
+              // Try common part IDs as fallbacks
+              const fallbackParts = ["TEXT", "1", "2", "1.1", "1.2"];
+              for (const partId of fallbackParts) {
+                if (bodyParts.has(partId)) {
+                  try {
+                    const part = bodyParts.get(partId);
+                    if (part) {
+                      let content = part.toString("utf-8");
+
+                      // Decode quoted-printable if needed
+                      if (content.includes("=3D") || content.includes("=\n")) {
+                        content = decodeQuotedPrintable(content);
+                        console.log(
+                          `Content decoded from quoted-printable for part ${partId}`,
+                        );
+                      }
+
+                      // Determine if it's HTML or text based on content
+                      if (
+                        content.includes("<html") ||
+                        content.includes("<!DOCTYPE") ||
+                        content.includes("<body") ||
+                        content.includes("<div")
+                      ) {
+                        if (!htmlContent) {
+                          htmlContent = content;
+                          console.log(
+                            `HTML content found in fallback part ${partId}, length: ${content.length}`,
+                          );
+                        }
+                      } else {
+                        if (!textContent) {
+                          textContent = content
+                            .replace(/\r\n/g, "\n")
+                            .replace(/\r/g, "\n")
+                            .trim();
+                          console.log(
+                            `Text content found in fallback part ${partId}, length: ${textContent.length}`,
+                          );
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    console.warn(`Error parsing fallback part ${partId}:`, e);
+                  }
+                }
               }
             }
           }
@@ -183,8 +354,10 @@ export const POST: APIRoute = async ({ request }) => {
           };
 
           console.log(
-            `Successfully fetched email content. HTML: ${htmlContent.length > 0}, Text: ${textContent.length > 0}, Attachments: ${attachments.length}`,
+            `Successfully fetched email content. HTML: ${htmlContent.length > 0} (${htmlContent.length} chars), Text: ${textContent.length > 0} (${textContent.length} chars), Attachments: ${attachments.length}`,
           );
+          console.log("HTML content preview:", htmlContent.substring(0, 200));
+          console.log("Text content preview:", textContent.substring(0, 200));
         }
       } finally {
         // Always release the lock
