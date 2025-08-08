@@ -323,15 +323,17 @@ export class EventAuditService {
     try {
       // Generate a unique ID for the audit log
       const logId = `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const fullAuditLog: EventAuditLog = {
+
+      // Clean the audit log to remove undefined values
+      const cleanedAuditLog = this.cleanAuditLogData({
         ...auditLog,
         id: logId,
-      };
+      });
 
       // Update the event request document with the new audit log
       const eventRequestRef = doc(this.db, "event_requests", eventRequestId);
       await updateDoc(eventRequestRef, {
-        auditLogs: arrayUnion(fullAuditLog),
+        auditLogs: arrayUnion(cleanedAuditLog),
         updatedAt: new Date(),
       });
 
@@ -340,6 +342,22 @@ export class EventAuditService {
       console.error("Error adding audit log:", error);
       // Don't throw error to avoid breaking the main flow
     }
+  }
+
+  /**
+   * Clean audit log data to remove undefined values that cause arrayUnion errors
+   */
+  private static cleanAuditLogData(auditLog: EventAuditLog): EventAuditLog {
+    const cleaned: any = {};
+
+    Object.keys(auditLog).forEach((key) => {
+      const value = (auditLog as any)[key];
+      if (value !== undefined && value !== null) {
+        cleaned[key] = value;
+      }
+    });
+
+    return cleaned as EventAuditLog;
   }
 
   /**

@@ -6,6 +6,42 @@ import {
   deleteObject,
 } from "firebase/storage";
 import { auth } from "../../../../../firebase/client";
+import {
+  logFirebaseDebugInfo,
+  checkStoragePermissions,
+} from "./firebaseDebugUtils";
+
+// Debug function to log user authentication state
+const debugAuthState = () => {
+  const user = auth.currentUser;
+  console.log("🔍 Auth Debug:", {
+    isAuthenticated: !!user,
+    uid: user?.uid,
+    email: user?.email,
+    emailVerified: user?.emailVerified,
+  });
+};
+
+// Debug function to check file path permissions
+const debugFilePermissions = (
+  eventId: string,
+  category: string,
+  fileName: string,
+) => {
+  const user = auth.currentUser;
+  const filePath = `events/${eventId}/${category}/${fileName}`;
+
+  console.log("🔍 File Permission Debug:", {
+    filePath,
+    eventId,
+    category,
+    fileName,
+    userUid: user?.uid,
+    isTemp: eventId.startsWith("temp_"),
+    tempPattern: eventId.match(/^temp_[^_]+_(.+)$/)?.[1],
+    matchesUserUid: eventId.match(/^temp_[^_]+_(.+)$/)?.[1] === user?.uid,
+  });
+};
 
 // Legacy function - kept for backward compatibility during migration
 export const uploadFiles = async (
@@ -39,22 +75,114 @@ export const uploadFilesForEvent = async (
   category: string = "general",
 ): Promise<string[]> => {
   const storage = getStorage();
+
+  // Check if user is authenticated
+  if (!auth.currentUser) {
+    debugAuthState();
+    throw new Error("User must be authenticated to upload files");
+  }
+
+  console.log(
+    `📤 Uploading ${files.length} files for event ${eventId} in category ${category}`,
+  );
+
+  // Comprehensive debug logging
+  const debugInfo = await logFirebaseDebugInfo(eventId, "File Upload");
+  const hasPermission = checkStoragePermissions(debugInfo);
+
+  if (!hasPermission) {
+    console.error(
+      "❌ User does not have permission to upload files for this event",
+    );
+    throw new Error("Insufficient permissions to upload files for this event");
+  }
+
   const uploadPromises = files.map(async (file) => {
     const timestamp = Date.now();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const finalFileName = `${timestamp}_${sanitizedFileName}`;
     const storageRef = ref(
       storage,
-      `events/${eventId}/${category}/${timestamp}_${sanitizedFileName}`,
+      `events/${eventId}/${category}/${finalFileName}`,
     );
-    const uploadTask = uploadBytesResumable(storageRef, file);
 
-    await new Promise((resolve, reject) => {
-      uploadTask.on("state_changed", null, reject, () =>
-        resolve(uploadTask.snapshot.ref),
-      );
-    });
+    // Debug file permissions
+    debugFilePermissions(eventId, category, finalFileName);
 
-    return await getDownloadURL(uploadTask.snapshot.ref);
+    try {
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      await new Promise((resolve, reject) => {
+        uploadTask.on("state_changed", null, reject, () =>
+          resolve(uploadTask.snapshot.ref),
+        );
+      });
+
+      // Add a small delay to ensure Firebase rules have processed the upload
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Get download URL with retry logic
+      let retries = 3;
+      let initialDelay = 1000; // Start with 1 second delay
+
+      while (retries > 0) {
+        try {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          console.log(`✅ Successfully got download URL for ${file.name}`);
+          return downloadURL;
+        } catch (error: any) {
+          console.warn(
+            `Failed to get download URL (${retries} retries left):`,
+            error,
+          );
+
+          // Log specific Firebase Storage errors
+          if (error.code === "storage/unauthorized") {
+            console.error("🚫 Firebase Storage unauthorized error:", {
+              errorCode: error.code,
+              errorMessage: error.message,
+              filePath: storageRef.fullPath,
+              eventId,
+              category,
+              fileName: finalFileName,
+            });
+
+            // Re-check permissions on unauthorized error
+            const recheckDebugInfo = await logFirebaseDebugInfo(
+              eventId,
+              "Unauthorized Error Recheck",
+            );
+            checkStoragePermissions(recheckDebugInfo);
+
+            // For Administrators, add extra delay to allow rules to propagate
+            if (recheckDebugInfo.userRole === "Administrator") {
+              console.log(
+                "🔄 Administrator detected - adding extra delay for rule propagation",
+              );
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+            }
+          }
+
+          if (retries === 1) {
+            // On final retry, throw the error with more context
+            throw new Error(
+              `Failed to get download URL after upload: ${error.message} (Code: ${error.code || "unknown"})`,
+            );
+          }
+          retries--;
+          // Wait before retrying with increasing delay
+          const delay = initialDelay * (4 - retries); // 1s, 2s, 3s
+          console.log(`⏳ Waiting ${delay}ms before retry...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+
+      // This should never be reached, but TypeScript needs it
+      throw new Error("Unexpected error in upload retry logic");
+    } catch (error: any) {
+      console.error(`Upload failed for file ${file.name}:`, error);
+      throw new Error(`Upload failed for ${file.name}: ${error.message}`);
+    }
   });
 
   return await Promise.all(uploadPromises);
@@ -156,6 +284,27 @@ export const validateFileType = (
 
 export const getFileExtension = (filename: string): string => {
   return filename.toLowerCase().split(".").pop() || "";
+};
+
+/**
+ * Extract storage path from Firebase Storage download URL
+ * Converts: https://firebasestorage.googleapis.com/v0/b/bucket/o/path%2Fto%2Ffile.jpg?alt=media&token=...
+ * To: path/to/file.jpg
+ */
+export const extractStoragePathFromUrl = (
+  downloadUrl: string,
+): string | null => {
+  try {
+    const url = new URL(downloadUrl);
+    const pathMatch = url.pathname.match(/\/o\/(.+?)(\?|$)/);
+    if (pathMatch) {
+      return decodeURIComponent(pathMatch[1]);
+    }
+    return null;
+  } catch (error) {
+    console.error("Error extracting storage path from URL:", error);
+    return null;
+  }
 };
 
 export const isImageFile = (filename: string): boolean => {

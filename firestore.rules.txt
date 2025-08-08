@@ -87,11 +87,25 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
           'Executive Officer', 'Administrator'
         ];
+      // Allow officers to create events
       allow create: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
           'General Officer', 'Executive Officer', 'Administrator'
         ];
+
+      // Allow any authenticated user to create events if they own the corresponding event request
+      allow create: if request.auth != null &&
+        request.resource.data.createdFrom != null &&
+        exists(/databases/$(database)/documents/event_requests/$(request.resource.data.createdFrom)) &&
+        get(/databases/$(database)/documents/event_requests/$(request.resource.data.createdFrom)).data.requestedUser == request.auth.uid;
+      // Allow event owners to update their events (via event request ownership)
+      allow update: if request.auth != null &&
+        resource.data.createdFrom != null &&
+        exists(/databases/$(database)/documents/event_requests/$(resource.data.createdFrom)) &&
+        get(/databases/$(database)/documents/event_requests/$(resource.data.createdFrom)).data.requestedUser == request.auth.uid;
+
+      // Legacy rule for General Officers (keeping for backward compatibility)
       allow update, delete: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'General Officer' &&
@@ -122,8 +136,13 @@ service cloud.firestore {
 
     // Event requests collection
     match /event_requests/{requestId} {
-      // Allow officers to read and edit any event request
-      allow read, update: if request.auth != null &&
+      // PRIORITY 1: Allow any authenticated user to CREATE new event requests
+      // (they will be the owner/submitter)
+      allow create: if request.auth != null &&
+        request.resource.data.requestedUser == request.auth.uid;
+
+      // PRIORITY 2: Allow officers to read, create, and edit any event request (administrative access)
+      allow read, create, update: if request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in [
           'General Officer', 'Executive Officer', 'Administrator'
@@ -137,17 +156,9 @@ service cloud.firestore {
         ] &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['auditLogs', 'updatedAt']);
 
-      // Allow original submitter to read and delete their own requests
-      allow read, delete: if request.auth != null &&
-        request.auth.uid == resource.data.requestedUser;
-
-      // Allow original submitter to update their own requests when status is submitted
-      allow update: if request.auth != null &&
-        request.auth.uid == resource.data.requestedUser &&
-        resource.data.status == 'submitted';
-
-      // Allow original submitter to update their own requests (broader rule)
-      allow update: if request.auth != null &&
+      // PRIORITY 3: Allow users to READ, UPDATE, DELETE their own event requests
+      // (ownership-based permissions - works for any role including Members)
+      allow read, update, delete: if request.auth != null &&
         request.auth.uid == resource.data.requestedUser;
       // Allow officers to update graphics-related fields
       allow update: if request.auth != null &&

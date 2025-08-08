@@ -407,10 +407,10 @@ export default function EventRequestModal({ onClose, editingRequest, onSuccess }
                     if (changes.length > 0) {
                         await EventAuditService.logEventUpdate(
                             editingRequest.id,
-                            userName,
+                            auth.currentUser?.uid || '',
                             changes,
                             userName,
-                            undefined,
+                            [], // Empty array instead of undefined
                             { eventName: formData.name }
                         );
                     }

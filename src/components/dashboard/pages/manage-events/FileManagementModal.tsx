@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '../../../ui/alert';
 import { Separator } from '../../../ui/separator';
 import { Label } from '../../../ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../ui/dialog';
-import { uploadFilesForEvent } from './utils/fileUploadUtils';
+import { uploadFilesForEvent, extractStoragePathFromUrl } from './utils/fileUploadUtils';
 
 interface FileManagementModalProps {
     request: {
@@ -206,8 +206,14 @@ export default function FileManagementModal({ request, onClose }: FileManagement
 
     const handleFileDelete = async (fileToDelete: FileItem) => {
         try {
-            // Remove from storage
-            const storageRef = ref(storage, fileToDelete.url);
+            // Extract storage path from download URL
+            const storagePath = extractStoragePathFromUrl(fileToDelete.url);
+            if (!storagePath) {
+                throw new Error('Could not extract storage path from file URL');
+            }
+
+            // Remove from storage using the correct storage path
+            const storageRef = ref(storage, storagePath);
             await deleteObject(storageRef);
 
             // Remove from database
