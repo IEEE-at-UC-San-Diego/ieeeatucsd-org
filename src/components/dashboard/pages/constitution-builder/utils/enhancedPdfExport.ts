@@ -108,7 +108,6 @@ export class EnhancedPDFExporter {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error("PDF export failed:", errorData);
         throw new Error(
           errorData.error ||
             `Server error: ${response.status} - ${errorData.details || "Unknown error"}`,
@@ -136,7 +135,6 @@ export class EnhancedPDFExporter {
       } else {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        console.error("Enhanced PDF export failed:", error);
         this.reportProgress(0, `PDF export failed: ${errorMessage}`);
         throw error;
       }
@@ -200,7 +198,6 @@ export class EnhancedPDFExporter {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error("PDF export failed:", errorData);
         throw new Error(
           errorData.error ||
             `Server error: ${response.status} - ${errorData.details || "Unknown error"}`,
@@ -217,7 +214,6 @@ export class EnhancedPDFExporter {
       } else {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        console.error("Enhanced PDF export failed:", error);
         this.reportProgress(0, `Export failed: ${errorMessage}`);
         throw error;
       }
@@ -236,7 +232,6 @@ export class EnhancedPDFExporter {
       // Try to open PDF in new window and trigger print dialog
       await this.openPrintDialog(url);
     } catch (error) {
-      console.warn("PDF print dialog failed, falling back to download:", error);
       // Fallback to download if popup is blocked
       await this.createDownloadLink(url, this.generateFilename());
     }
@@ -301,10 +296,6 @@ export class EnhancedPDFExporter {
               }
               resolve();
             } catch (error) {
-              console.warn(
-                "Auto-print failed, user can manually print:",
-                error,
-              );
               resolve(); // Still resolve as window opened successfully
             }
           }, 1000); // Wait 1 second for PDF to fully load
@@ -312,7 +303,6 @@ export class EnhancedPDFExporter {
 
         // Handle window close/error events
         printWindow.onerror = () => {
-          console.warn("Print window encountered an error");
           resolve(); // Still resolve as we've done our best
         };
 
@@ -323,10 +313,6 @@ export class EnhancedPDFExporter {
               printWindow.print();
               resolve();
             } catch (error) {
-              console.warn(
-                "Auto-print failed, user can manually print:",
-                error,
-              );
               resolve();
             }
           } else if (!printWindow || printWindow.closed) {

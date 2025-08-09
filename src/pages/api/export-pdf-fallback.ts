@@ -3,8 +3,6 @@ import { generatePrintHTML } from "../../components/dashboard/pages/constitution
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log("Fallback PDF export API called");
-
     const body = await request.json();
     const { constitution, sections, options = {} } = body;
 
@@ -32,7 +30,6 @@ export const POST: APIRoute = async ({ request }) => {
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    console.error("Fallback PDF generation error:", error);
 
     return new Response(
       JSON.stringify({

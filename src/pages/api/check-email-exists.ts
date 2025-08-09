@@ -55,12 +55,6 @@ export const POST: APIRoute = async ({ request }) => {
     const serverLogin = import.meta.env.MXROUTE_SERVER_LOGIN;
     const serverUrl = import.meta.env.MXROUTE_SERVER_URL;
 
-    console.log(`Environment variables: 
-      loginKey: ${loginKey ? "Set" : "Not set"}
-      serverLogin: ${serverLogin ? "Set" : "Not set"}
-      serverUrl: ${serverUrl ? "Set" : "Not set"}
-    `);
-
     if (!loginKey || !serverLogin || !serverUrl) {
       throw new Error("Missing MXRoute configuration");
     }
@@ -102,13 +96,9 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     const responseText = await response.text();
-    console.log(`DirectAdmin response status: ${response.status}`);
-    console.log(`DirectAdmin response: ${responseText}`);
 
     // DirectAdmin API returns "error=1" in the response text for errors
     if (responseText.includes("error=1") || !response.ok) {
-      console.error("Error checking email existence:", responseText);
-
       // If it's an error, we'll assume the email doesn't exist for safety
       return new Response(
         JSON.stringify({

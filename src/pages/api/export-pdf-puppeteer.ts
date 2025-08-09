@@ -4,19 +4,10 @@ import { generatePrintHTML } from "../../components/dashboard/pages/constitution
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log("PDF export API called");
-
     const body = await request.json();
     const { constitution, sections, options = {} } = body;
 
-    console.log("Request body parsed:", {
-      hasConstitution: !!constitution,
-      sectionsCount: sections?.length || 0,
-      options,
-    });
-
     if (!sections || !Array.isArray(sections)) {
-      console.error("Invalid sections data:", sections);
       return new Response(JSON.stringify({ error: "Invalid sections data" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
@@ -40,8 +31,6 @@ export const POST: APIRoute = async ({ request }) => {
     };
 
     // Launch Puppeteer with optimized settings
-    console.log("Launching Puppeteer with options:", pdfOptions);
-
     const browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -67,8 +56,6 @@ export const POST: APIRoute = async ({ request }) => {
       timeout: 60000,
     });
 
-    console.log("Puppeteer browser launched successfully");
-
     try {
       const page = await browser.newPage();
 
@@ -86,7 +73,6 @@ export const POST: APIRoute = async ({ request }) => {
           ? "https://ieeeucsd.org"
           : `http://localhost:4321`; // Use the correct Astro dev server port
 
-      console.log("Using base URL for images:", baseUrl);
       const htmlContent = generatePrintHTML(constitution, sections, baseUrl);
 
       // Set the content
@@ -150,11 +136,6 @@ export const POST: APIRoute = async ({ request }) => {
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    console.error("PDF generation error:", error);
-    console.error(
-      "Error stack:",
-      error instanceof Error ? error.stack : "No stack trace",
-    );
 
     return new Response(
       JSON.stringify({
@@ -217,7 +198,6 @@ export const PUT: APIRoute = async ({ request }) => {
           ? "https://ieeeucsd.org"
           : `http://localhost:4321`; // Use the correct Astro dev server port
 
-      console.log("Using base URL for images:", baseUrl);
       const htmlContent = generatePrintHTML(constitution, sections, baseUrl);
       await page.setContent(htmlContent, {
         waitUntil: ["networkidle0", "domcontentloaded"],
@@ -269,11 +249,6 @@ export const PUT: APIRoute = async ({ request }) => {
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    console.error("Screenshot PDF generation error:", error);
-    console.error(
-      "Error stack:",
-      error instanceof Error ? error.stack : "No stack trace",
-    );
 
     return new Response(
       JSON.stringify({
@@ -304,29 +279,22 @@ async function waitForContentLoad(page: any): Promise<void> {
     }));
   });
 
-  console.log("Images found on page:", imageInfo);
-
   // Wait for images to load
   await page.evaluate(() => {
     return Promise.all(
       Array.from(document.images, (img: HTMLImageElement) => {
         if (img.complete && img.naturalWidth > 0) {
-          console.log(`Image already loaded: ${img.src}`);
           return Promise.resolve();
         }
 
-        console.log(`Waiting for image to load: ${img.src}`);
         return new Promise((resolve) => {
           img.addEventListener("load", () => {
-            console.log(`Image loaded successfully: ${img.src}`);
             resolve(undefined);
           });
-          img.addEventListener("error", (e) => {
-            console.error(`Image failed to load: ${img.src}`, e);
+          img.addEventListener("error", () => {
             resolve(undefined); // Continue even if image fails
           });
           setTimeout(() => {
-            console.warn(`Image load timeout: ${img.src}`);
             resolve(undefined);
           }, 10000); // Increased timeout to 10 seconds
         });
@@ -341,8 +309,6 @@ async function waitForContentLoad(page: any): Promise<void> {
 
   // Additional delay for final rendering
   await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  console.log("Content loading complete");
 }
 
 /**

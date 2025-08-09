@@ -2,15 +2,19 @@ import { z } from "zod";
 
 // Load dotenv only on server-side
 let dotenvLoaded = false;
-if (typeof process !== 'undefined' && typeof window === 'undefined' && !dotenvLoaded) {
+if (
+  typeof process !== "undefined" &&
+  typeof window === "undefined" &&
+  !dotenvLoaded
+) {
   try {
     // Use require for synchronous loading when available
-    if (typeof require !== 'undefined') {
-      require('dotenv').config();
+    if (typeof require !== "undefined") {
+      require("dotenv").config();
     }
     dotenvLoaded = true;
   } catch (error) {
-    console.warn('Failed to load dotenv:', error);
+    // Failed to load dotenv - continue without it
   }
 }
 
@@ -30,7 +34,7 @@ interface ImportMetaEnv {
   readonly PUBLIC_FIREBASE_STORAGE_BUCKET: string;
   readonly PUBLIC_FIREBASE_MESSAGING_SENDER_ID: string;
   readonly PUBLIC_FIREBASE_APP_ID: string;
-  
+
   // LogTo Configuration
   readonly LOGTO_APP_ID: string;
   readonly LOGTO_APP_SECRET: string;
@@ -46,12 +50,16 @@ interface ImportMeta {
 }
 
 // Helper function to get environment variable with fallback
-function getEnvVar(key: string, fallback: string = ''): string {
+function getEnvVar(key: string, fallback: string = ""): string {
   // Try process.env first (for dotenv), then import.meta.env (for Astro)
-  if (typeof process !== 'undefined' && process.env[key]) {
+  if (typeof process !== "undefined" && process.env[key]) {
     return process.env[key] || fallback;
   }
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+  if (
+    typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    import.meta.env[key]
+  ) {
     return import.meta.env[key] || fallback;
   }
   return fallback;
@@ -62,115 +70,170 @@ function getEnvVar(key: string, fallback: string = ''): string {
  */
 export const firebaseEnv = {
   // Client-side configuration (for web app)
-  apiKey: getEnvVar('PUBLIC_FIREBASE_WEB_API_KEY'),
-  authDomain: getEnvVar('PUBLIC_FIREBASE_AUTH_DOMAIN'),
-  projectId: getEnvVar('PUBLIC_FIREBASE_PROJECT_ID'),
-  storageBucket: getEnvVar('PUBLIC_FIREBASE_STORAGE_BUCKET'),
-  messagingSenderId: getEnvVar('PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
-  appId: getEnvVar('PUBLIC_FIREBASE_APP_ID'),
-  
+  apiKey: getEnvVar("PUBLIC_FIREBASE_WEB_API_KEY"),
+  authDomain: getEnvVar("PUBLIC_FIREBASE_AUTH_DOMAIN"),
+  projectId: getEnvVar("PUBLIC_FIREBASE_PROJECT_ID"),
+  storageBucket: getEnvVar("PUBLIC_FIREBASE_STORAGE_BUCKET"),
+  messagingSenderId: getEnvVar("PUBLIC_FIREBASE_MESSAGING_SENDER_ID"),
+  appId: getEnvVar("PUBLIC_FIREBASE_APP_ID"),
+
   // Server-side configuration (service account)
-  privateKeyId: getEnvVar('FIREBASE_PRIVATE_KEY_ID'),
-  privateKey: getEnvVar('FIREBASE_PRIVATE_KEY'), // dotenv should auto-parse this
-  clientEmail: getEnvVar('FIREBASE_CLIENT_EMAIL'),
-  clientId: getEnvVar('FIREBASE_CLIENT_ID'),
-  authUri: getEnvVar('FIREBASE_AUTH_URL', 'https://accounts.google.com/o/oauth2/auth'),
-  tokenUri: getEnvVar('FIREBASE_TOKEN_URL', 'https://oauth2.googleapis.com/token'),
-  authCertUrl: getEnvVar('FIREBASE_AUTH_CERT_URL', 'https://www.googleapis.com/oauth2/v1/certs'),
-  clientCertUrl: getEnvVar('FIREBASE_CLIENT_CERT_URL'),
+  privateKeyId: getEnvVar("FIREBASE_PRIVATE_KEY_ID"),
+  privateKey: getEnvVar("FIREBASE_PRIVATE_KEY"), // dotenv should auto-parse this
+  clientEmail: getEnvVar("FIREBASE_CLIENT_EMAIL"),
+  clientId: getEnvVar("FIREBASE_CLIENT_ID"),
+  authUri: getEnvVar(
+    "FIREBASE_AUTH_URL",
+    "https://accounts.google.com/o/oauth2/auth",
+  ),
+  tokenUri: getEnvVar(
+    "FIREBASE_TOKEN_URL",
+    "https://oauth2.googleapis.com/token",
+  ),
+  authCertUrl: getEnvVar(
+    "FIREBASE_AUTH_CERT_URL",
+    "https://www.googleapis.com/oauth2/v1/certs",
+  ),
+  clientCertUrl: getEnvVar("FIREBASE_CLIENT_CERT_URL"),
 };
 
 // Other environment variables
-export const isDevelopment = (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') || (typeof import.meta !== 'undefined' && import.meta.env?.DEV);
-export const isProduction = (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') || (typeof import.meta !== 'undefined' && import.meta.env?.PROD);
+export const isDevelopment =
+  (typeof process !== "undefined" && process.env.NODE_ENV === "development") ||
+  (typeof import.meta !== "undefined" && import.meta.env?.DEV);
+export const isProduction =
+  (typeof process !== "undefined" && process.env.NODE_ENV === "production") ||
+  (typeof import.meta !== "undefined" && import.meta.env?.PROD);
 
 /**
  * Validate Firebase configuration for client-side usage
  */
-export function validateFirebaseClientConfig(): { 
-  isValid: boolean; 
-  missing: string[]; 
-  errors: string[] 
+export function validateFirebaseClientConfig(): {
+  isValid: boolean;
+  missing: string[];
+  errors: string[];
 } {
   const missing: string[] = [];
   const errors: string[] = [];
-  
+
   // Required for client-side Firebase
   const requiredClientFields = [
-    { key: 'apiKey', value: firebaseEnv.apiKey, name: 'PUBLIC_FIREBASE_WEB_API_KEY' },
-    { key: 'projectId', value: firebaseEnv.projectId, name: 'PUBLIC_FIREBASE_PROJECT_ID' }
+    {
+      key: "apiKey",
+      value: firebaseEnv.apiKey,
+      name: "PUBLIC_FIREBASE_WEB_API_KEY",
+    },
+    {
+      key: "projectId",
+      value: firebaseEnv.projectId,
+      name: "PUBLIC_FIREBASE_PROJECT_ID",
+    },
   ];
-  
-  requiredClientFields.forEach(field => {
-    if (!field.value || field.value.trim() === '') {
+
+  requiredClientFields.forEach((field) => {
+    if (!field.value || field.value.trim() === "") {
       missing.push(field.name);
     }
   });
-  
+
   // Validate API key format (should be a long string starting with AIza)
-  if (firebaseEnv.apiKey && !firebaseEnv.apiKey.startsWith('AIza')) {
-    errors.push('PUBLIC_FIREBASE_WEB_API_KEY should start with "AIza" and be a valid API key');
+  if (firebaseEnv.apiKey && !firebaseEnv.apiKey.startsWith("AIza")) {
+    errors.push(
+      'PUBLIC_FIREBASE_WEB_API_KEY should start with "AIza" and be a valid API key',
+    );
   }
-  
+
   // Validate project ID format (should be lowercase with dashes)
   if (firebaseEnv.projectId && !/^[a-z0-9-]+$/.test(firebaseEnv.projectId)) {
-    errors.push('PUBLIC_FIREBASE_PROJECT_ID should contain only lowercase letters, numbers, and dashes');
+    errors.push(
+      "PUBLIC_FIREBASE_PROJECT_ID should contain only lowercase letters, numbers, and dashes",
+    );
   }
-  
+
   // Check for placeholder values
-  const placeholderValues = ['your-api-key', 'your-project-id', 'placeholder', 'example'];
+  const placeholderValues = [
+    "your-api-key",
+    "your-project-id",
+    "placeholder",
+    "example",
+  ];
   [firebaseEnv.apiKey, firebaseEnv.projectId].forEach((value, index) => {
-    if (value && placeholderValues.some(placeholder => value.toLowerCase().includes(placeholder))) {
-      const fieldName = index === 0 ? 'PUBLIC_FIREBASE_WEB_API_KEY' : 'PUBLIC_FIREBASE_PROJECT_ID';
+    if (
+      value &&
+      placeholderValues.some((placeholder) =>
+        value.toLowerCase().includes(placeholder),
+      )
+    ) {
+      const fieldName =
+        index === 0
+          ? "PUBLIC_FIREBASE_WEB_API_KEY"
+          : "PUBLIC_FIREBASE_PROJECT_ID";
       errors.push(`${fieldName} appears to be a placeholder value`);
     }
   });
-  
+
   return {
     isValid: missing.length === 0 && errors.length === 0,
     missing,
-    errors
+    errors,
   };
 }
 
 /**
  * Validate Firebase configuration for server-side usage
  */
-export function validateFirebaseServerConfig(): { 
-  isValid: boolean; 
-  missing: string[]; 
-  errors: string[] 
+export function validateFirebaseServerConfig(): {
+  isValid: boolean;
+  missing: string[];
+  errors: string[];
 } {
   const missing: string[] = [];
   const errors: string[] = [];
-  
+
   // Required for server-side Firebase
   const requiredServerFields = [
-    { key: 'projectId', value: firebaseEnv.projectId, name: 'PUBLIC_FIREBASE_PROJECT_ID' },
-    { key: 'privateKey', value: firebaseEnv.privateKey, name: 'FIREBASE_PRIVATE_KEY' },
-    { key: 'clientEmail', value: firebaseEnv.clientEmail, name: 'FIREBASE_CLIENT_EMAIL' }
+    {
+      key: "projectId",
+      value: firebaseEnv.projectId,
+      name: "PUBLIC_FIREBASE_PROJECT_ID",
+    },
+    {
+      key: "privateKey",
+      value: firebaseEnv.privateKey,
+      name: "FIREBASE_PRIVATE_KEY",
+    },
+    {
+      key: "clientEmail",
+      value: firebaseEnv.clientEmail,
+      name: "FIREBASE_CLIENT_EMAIL",
+    },
   ];
-  
-  requiredServerFields.forEach(field => {
-    if (!field.value || field.value.trim() === '') {
+
+  requiredServerFields.forEach((field) => {
+    if (!field.value || field.value.trim() === "") {
       missing.push(field.name);
     }
   });
-  
+
   // Validate client email format
-  if (firebaseEnv.clientEmail && !firebaseEnv.clientEmail.includes('@')) {
-    errors.push('FIREBASE_CLIENT_EMAIL should be a valid service account email');
+  if (firebaseEnv.clientEmail && !firebaseEnv.clientEmail.includes("@")) {
+    errors.push(
+      "FIREBASE_CLIENT_EMAIL should be a valid service account email",
+    );
   }
-  
+
   // Validate private key format (dotenv should handle parsing)
-  if (firebaseEnv.privateKey && !firebaseEnv.privateKey.includes('BEGIN PRIVATE KEY')) {
-    errors.push('FIREBASE_PRIVATE_KEY should be a valid private key');
+  if (
+    firebaseEnv.privateKey &&
+    !firebaseEnv.privateKey.includes("BEGIN PRIVATE KEY")
+  ) {
+    errors.push("FIREBASE_PRIVATE_KEY should be a valid private key");
   }
-  
+
   return {
     isValid: missing.length === 0 && errors.length === 0,
     missing,
-    errors
+    errors,
   };
 }
 
@@ -182,41 +245,6 @@ export function validateFirebaseConfig(): boolean {
   return clientValidation.isValid;
 }
 
-// Debug function to check what environment variables are actually loaded
-export function debugEnvVars() {
-  console.log('=== Firebase Environment Variables Debug ===');
-  console.log('Loading method: dotenv + Astro env');
-  console.log('Runtime environment:', typeof window !== 'undefined' ? 'Client' : 'Server');
-  console.log('Dotenv loaded:', dotenvLoaded);
-  console.log('FIREBASE_PROJECT_ID:', firebaseEnv.projectId ? '✓ Set' : '✗ Missing');
-  console.log('FIREBASE_API_KEY:', firebaseEnv.apiKey ? '✓ Set' : '✗ Missing');
-  console.log('FIREBASE_CLIENT_EMAIL:', firebaseEnv.clientEmail ? '✓ Set' : '✗ Missing');
-  console.log('FIREBASE_PRIVATE_KEY:', firebaseEnv.privateKey ? '✓ Set' : '✗ Missing');
-  console.log('Environment:', isProduction ? 'Production' : 'Development');
-  
-  if (firebaseEnv.projectId) {
-    console.log('Project ID value:', firebaseEnv.projectId);
-  }
-  if (firebaseEnv.apiKey) {
-    console.log('API Key starts with:', firebaseEnv.apiKey.substring(0, 10) + '...');
-  }
-  if (firebaseEnv.clientEmail) {
-    console.log('Client Email:', firebaseEnv.clientEmail);
-  }
-  if (firebaseEnv.privateKey) {
-    console.log('Private Key length:', firebaseEnv.privateKey.length);
-    console.log('Private Key starts with:', firebaseEnv.privateKey.substring(0, 30) + '...');
-  }
-  
-  // Show all available environment variables for debugging (server-side only)
-  if (typeof process !== 'undefined') {
-    console.log('Available process.env Firebase vars:');
-    Object.keys(process.env).filter(key => key.startsWith('FIREBASE_')).forEach(key => {
-      console.log(`  ${key}: ${process.env[key] ? '✓' : '✗'}`);
-    });
-  }
-}
-
 // Legacy export for backward compatibility
 export const env = {
   firebase: firebaseEnv,
@@ -225,7 +253,6 @@ export const env = {
   validateFirebaseConfig,
   validateFirebaseClientConfig,
   validateFirebaseServerConfig,
-  debugEnvVars
 };
 
 // Export individual configs for convenience

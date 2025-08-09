@@ -54,15 +54,6 @@ export const POST: APIRoute = async ({ request }) => {
     const emailOutboundLimit = import.meta.env.MXROUTE_EMAIL_OUTBOUND_LIMIT;
     const emailDomain = import.meta.env.MXROUTE_EMAIL_DOMAIN;
 
-    console.log(`Environment variables: 
-      loginKey: ${loginKey ? "Set" : "Not set"}
-      serverLogin: ${serverLogin ? "Set" : "Not set"}
-      serverUrl: ${serverUrl ? "Set" : "Not set"}
-      emailQuota: ${emailQuota || "Not set"}
-      emailOutboundLimit: ${emailOutboundLimit || "Not set"}
-      emailDomain: ${emailDomain || "Not set"}
-    `);
-
     if (!loginKey || !serverLogin || !serverUrl || !emailDomain) {
       throw new Error("Missing MXRoute configuration");
     }
@@ -122,8 +113,6 @@ export const POST: APIRoute = async ({ request }) => {
 
     // DirectAdmin API returns "error=1" in the response text for errors
     if (responseText.includes("error=1") || !response.ok) {
-      console.error("Error creating email account:", responseText);
-
       // Parse the error details if possible
       let errorMessage = "Failed to create email account";
       try {
@@ -136,7 +125,7 @@ export const POST: APIRoute = async ({ request }) => {
           errorMessage += `: ${details.replace(/<br>/g, " ")}`;
         }
       } catch (e) {
-        console.error("Error parsing DirectAdmin error response:", e);
+        // Error parsing DirectAdmin error response
       }
 
       // If the error is because the email already exists

@@ -45,8 +45,6 @@ export default defineConfig({
     optimizeDeps: {
       exclude: [
         // Avoid scanning Node-only scripts that contain require/module usage
-        "src/scripts/testFileMigration.ts",
-        "src/scripts/runFileMigration.ts",
       ],
     },
   },

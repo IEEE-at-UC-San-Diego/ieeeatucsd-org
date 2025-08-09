@@ -33,7 +33,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Extract username and domain from email
-    const emailParts = email.split('@');
+    const emailParts = email.split("@");
     if (emailParts.length !== 2) {
       return new Response(
         JSON.stringify({
@@ -55,12 +55,6 @@ export const POST: APIRoute = async ({ request }) => {
     const loginKey = import.meta.env.MXROUTE_LOGIN_KEY;
     const serverLogin = import.meta.env.MXROUTE_SERVER_LOGIN;
     const serverUrl = import.meta.env.MXROUTE_SERVER_URL;
-
-    console.log(`Environment variables: 
-      loginKey: ${loginKey ? "Set" : "Not set"}
-      serverLogin: ${serverLogin ? "Set" : "Not set"}
-      serverUrl: ${serverUrl ? "Set" : "Not set"}
-    `);
 
     if (!loginKey || !serverLogin || !serverUrl) {
       throw new Error("Missing MXRoute configuration");
@@ -112,14 +106,19 @@ export const POST: APIRoute = async ({ request }) => {
     // DirectAdmin API returns "error=1" in the response text for errors
     if (responseText.includes("error=1") || !response.ok) {
       console.error("Error deleting email:", responseText);
-      
-      const errorMessage = responseText.includes("error=1") 
+
+      const errorMessage = responseText.includes("error=1")
         ? "Failed to delete email account. The account may not exist or there was a server error."
         : `HTTP error! status: ${response.status}`;
 
       // If the error is because the email doesn't exist, we can consider it a success
-      if (responseText.includes("does not exist") || responseText.includes("not found")) {
-        console.log("Email account already doesn't exist, considering as successful deletion");
+      if (
+        responseText.includes("does not exist") ||
+        responseText.includes("not found")
+      ) {
+        console.log(
+          "Email account already doesn't exist, considering as successful deletion",
+        );
         return new Response(
           JSON.stringify({
             success: true,

@@ -6,41 +6,16 @@ import {
   deleteObject,
 } from "firebase/storage";
 import { auth } from "../../../../../firebase/client";
-import {
-  logFirebaseDebugInfo,
-  checkStoragePermissions,
-} from "./firebaseDebugUtils";
 
 // Debug function to log user authentication state
 const debugAuthState = () => {
   const user = auth.currentUser;
-  console.log("🔍 Auth Debug:", {
+  return {
     isAuthenticated: !!user,
     uid: user?.uid,
     email: user?.email,
     emailVerified: user?.emailVerified,
-  });
-};
-
-// Debug function to check file path permissions
-const debugFilePermissions = (
-  eventId: string,
-  category: string,
-  fileName: string,
-) => {
-  const user = auth.currentUser;
-  const filePath = `events/${eventId}/${category}/${fileName}`;
-
-  console.log("🔍 File Permission Debug:", {
-    filePath,
-    eventId,
-    category,
-    fileName,
-    userUid: user?.uid,
-    isTemp: eventId.startsWith("temp_"),
-    tempPattern: eventId.match(/^temp_[^_]+_(.+)$/)?.[1],
-    matchesUserUid: eventId.match(/^temp_[^_]+_(.+)$/)?.[1] === user?.uid,
-  });
+  };
 };
 
 // Legacy function - kept for backward compatibility during migration
@@ -82,20 +57,7 @@ export const uploadFilesForEvent = async (
     throw new Error("User must be authenticated to upload files");
   }
 
-  console.log(
-    `📤 Uploading ${files.length} files for event ${eventId} in category ${category}`,
-  );
-
-  // Comprehensive debug logging
-  const debugInfo = await logFirebaseDebugInfo(eventId, "File Upload");
-  const hasPermission = checkStoragePermissions(debugInfo);
-
-  if (!hasPermission) {
-    console.error(
-      "❌ User does not have permission to upload files for this event",
-    );
-    throw new Error("Insufficient permissions to upload files for this event");
-  }
+  // Note: Permission checks are handled by Firebase Security Rules
 
   const uploadPromises = files.map(async (file) => {
     const timestamp = Date.now();
@@ -105,9 +67,6 @@ export const uploadFilesForEvent = async (
       storage,
       `events/${eventId}/${category}/${finalFileName}`,
     );
-
-    // Debug file permissions
-    debugFilePermissions(eventId, category, finalFileName);
 
     try {
       const uploadTask = uploadBytesResumable(storageRef, file);
@@ -128,39 +87,12 @@ export const uploadFilesForEvent = async (
       while (retries > 0) {
         try {
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          console.log(`✅ Successfully got download URL for ${file.name}`);
           return downloadURL;
         } catch (error: any) {
-          console.warn(
-            `Failed to get download URL (${retries} retries left):`,
-            error,
-          );
-
-          // Log specific Firebase Storage errors
+          // Handle specific Firebase Storage errors
           if (error.code === "storage/unauthorized") {
-            console.error("🚫 Firebase Storage unauthorized error:", {
-              errorCode: error.code,
-              errorMessage: error.message,
-              filePath: storageRef.fullPath,
-              eventId,
-              category,
-              fileName: finalFileName,
-            });
-
-            // Re-check permissions on unauthorized error
-            const recheckDebugInfo = await logFirebaseDebugInfo(
-              eventId,
-              "Unauthorized Error Recheck",
-            );
-            checkStoragePermissions(recheckDebugInfo);
-
-            // For Administrators, add extra delay to allow rules to propagate
-            if (recheckDebugInfo.userRole === "Administrator") {
-              console.log(
-                "🔄 Administrator detected - adding extra delay for rule propagation",
-              );
-              await new Promise((resolve) => setTimeout(resolve, 2000));
-            }
+            // Add delay for rule propagation
+            await new Promise((resolve) => setTimeout(resolve, 2000));
           }
 
           if (retries === 1) {
@@ -172,7 +104,6 @@ export const uploadFilesForEvent = async (
           retries--;
           // Wait before retrying with increasing delay
           const delay = initialDelay * (4 - retries); // 1s, 2s, 3s
-          console.log(`⏳ Waiting ${delay}ms before retry...`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
@@ -180,7 +111,6 @@ export const uploadFilesForEvent = async (
       // This should never be reached, but TypeScript needs it
       throw new Error("Unexpected error in upload retry logic");
     } catch (error: any) {
-      console.error(`Upload failed for file ${file.name}:`, error);
       throw new Error(`Upload failed for ${file.name}: ${error.message}`);
     }
   });
@@ -255,7 +185,6 @@ export const moveFilesToActualEventId = async (
         newUrls.push(url);
       }
     } catch (error) {
-      console.error("Error moving file:", url, error);
       // Keep original URL if moving fails
       newUrls.push(url);
     }
@@ -302,7 +231,6 @@ export const extractStoragePathFromUrl = (
     }
     return null;
   } catch (error) {
-    console.error("Error extracting storage path from URL:", error);
     return null;
   }
 };
@@ -379,7 +307,7 @@ export const extractFileMetadata = (url: string) => {
       }
     }
   } catch (error) {
-    console.error("Error extracting file metadata:", error);
+    // Error extracting file metadata
   }
 
   return metadata;

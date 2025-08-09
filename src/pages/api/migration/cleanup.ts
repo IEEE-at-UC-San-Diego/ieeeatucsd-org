@@ -15,8 +15,6 @@ interface CleanupResult {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log("Migration cleanup API called");
-
     const result: CleanupResult = {
       success: false,
       migratedFiles: 0,
@@ -25,10 +23,10 @@ export const POST: APIRoute = async ({ request }) => {
     };
 
     const bucket = storage.bucket();
-    
+
     // List all files in the events folder to find temporary event folders
     const [files] = await bucket.getFiles({ prefix: "events/" });
-    
+
     // Group files by event folder
     const eventFolders = new Set<string>();
     for (const file of files) {
@@ -40,8 +38,6 @@ export const POST: APIRoute = async ({ request }) => {
 
     for (const eventId of eventFolders) {
       if (eventId.startsWith("temp_")) {
-        console.log(`Found temporary event folder: ${eventId}`);
-
         // Try to find the corresponding actual event request
         const actualEventId = await findActualEventId(eventId);
 
@@ -58,7 +54,6 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     result.success = result.errors.length === 0;
-    console.log("Cleanup completed:", result);
 
     return new Response(JSON.stringify(result), {
       status: 200,
@@ -66,10 +61,10 @@ export const POST: APIRoute = async ({ request }) => {
     });
   } catch (error) {
     console.error("Cleanup failed:", error);
-    return new Response(
-      JSON.stringify({ error: `Cleanup failed: ${error}` }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: `Cleanup failed: ${error}` }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };
 
@@ -101,7 +96,7 @@ async function moveTemporaryEventFiles(
   try {
     const bucket = storage.bucket();
     const tempPrefix = `events/${tempEventId}/`;
-    
+
     // List all files in the temporary event folder
     const [tempFiles] = await bucket.getFiles({ prefix: tempPrefix });
 
@@ -148,23 +143,18 @@ async function deleteTemporaryEventFiles(tempEventId: string): Promise<void> {
   try {
     const bucket = storage.bucket();
     const tempPrefix = `events/${tempEventId}/`;
-    
+
     // List all files in the temporary event folder
     const [tempFiles] = await bucket.getFiles({ prefix: tempPrefix });
 
     for (const tempFile of tempFiles) {
       try {
         await tempFile.delete();
-        console.log(`Deleted orphaned file: ${tempFile.name}`);
       } catch (error) {
-        console.error(`Failed to delete file ${tempFile.name}:`, error);
         // Continue with other files even if one fails
       }
     }
-
-    console.log(`Cleaned up temporary event folder: ${tempEventId}`);
   } catch (error) {
-    console.error(`Error deleting temporary event files for ${tempEventId}:`, error);
     throw error;
   }
 }

@@ -25,8 +25,6 @@ export class FileMigrationService {
    * Now uses server-side APIs with Firebase Admin SDK
    */
   async migrateAllFiles(): Promise<MigrationResult> {
-    console.log("🚀 Starting file migration...");
-
     try {
       const response = await fetch("/api/migration/migrate", {
         method: "POST",
@@ -40,10 +38,8 @@ export class FileMigrationService {
       }
 
       const result: MigrationResult = await response.json();
-      console.log("🎉 Migration completed:", result);
       return result;
     } catch (error) {
-      console.error("💥 Migration failed:", error);
       return {
         success: false,
         migratedFiles: 0,
@@ -59,8 +55,6 @@ export class FileMigrationService {
    * Now uses server-side API
    */
   async previewMigration(): Promise<FileToMigrate[]> {
-    console.log("🔍 Previewing migration...");
-
     try {
       const response = await fetch("/api/migration/preview", {
         method: "POST",
@@ -74,10 +68,8 @@ export class FileMigrationService {
       }
 
       const filesToMigrate: FileToMigrate[] = await response.json();
-      console.log(`📋 Found ${filesToMigrate.length} files to migrate`);
       return filesToMigrate;
     } catch (error) {
-      console.error("💥 Preview failed:", error);
       return [];
     }
   }
@@ -87,8 +79,6 @@ export class FileMigrationService {
    * Now uses server-side API
    */
   async cleanupTemporaryFiles(): Promise<MigrationResult> {
-    console.log("🧹 Starting cleanup of temporary files...");
-
     try {
       const response = await fetch("/api/migration/cleanup", {
         method: "POST",
@@ -102,10 +92,8 @@ export class FileMigrationService {
       }
 
       const result: MigrationResult = await response.json();
-      console.log("🎉 Cleanup completed:", result);
       return result;
     } catch (error) {
-      console.error("💥 Cleanup failed:", error);
       return {
         success: false,
         migratedFiles: 0,

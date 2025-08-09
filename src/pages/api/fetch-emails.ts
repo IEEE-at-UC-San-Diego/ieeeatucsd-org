@@ -264,8 +264,6 @@ export const POST: APIRoute = async ({ request }) => {
       },
     );
   } catch (error) {
-    console.error("Error fetching emails:", error);
-
     // Provide more specific error messages
     let errorMessage = "Failed to fetch emails";
     if (error instanceof Error) {
