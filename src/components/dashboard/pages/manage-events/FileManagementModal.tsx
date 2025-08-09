@@ -197,7 +197,6 @@ export default function FileManagementModal({ request, onClose }: FileManagement
             setSelectedFiles(null);
             fetchFiles(); // Refresh the file list
         } catch (err) {
-            console.error('Error uploading files:', err);
             setError('Failed to upload files: ' + (err as Error).message);
         } finally {
             setUploading(false);

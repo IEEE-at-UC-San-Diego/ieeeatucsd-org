@@ -645,7 +645,7 @@ const FundDepositsContent: React.FC = () => {
                     await deleteObject(fileRef);
                 }
             } catch (deleteError) {
-                console.warn('Failed to delete file from storage:', deleteError);
+                // Failed to delete file from storage
             }
 
             // Update deposit document

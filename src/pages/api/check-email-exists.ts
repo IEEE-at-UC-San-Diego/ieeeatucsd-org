@@ -32,10 +32,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Extract username and domain from email
     const [username, domain] = email.split("@");
-    console.log(`Email parsed: username=${username}, domain=${domain}`);
 
     if (!username || !domain) {
-      console.log("Invalid email format");
       return new Response(
         JSON.stringify({
           success: false,

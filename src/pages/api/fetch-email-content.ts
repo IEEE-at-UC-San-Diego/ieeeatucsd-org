@@ -197,7 +197,7 @@ export const POST: APIRoute = async ({ request }) => {
             try {
               formattedDate = new Date(message.envelope.date).toLocaleString();
             } catch (e) {
-              console.warn("Error parsing date:", message.envelope.date);
+              // Error parsing date
             }
           }
 
@@ -207,8 +207,6 @@ export const POST: APIRoute = async ({ request }) => {
 
           const bodyParts = message.bodyParts;
           if (bodyParts) {
-            console.log("Available body parts:", Array.from(bodyParts.keys()));
-
             // Extract HTML content using identified HTML part
             if (htmlPartId && bodyParts.has(htmlPartId)) {
               try {
@@ -218,18 +216,12 @@ export const POST: APIRoute = async ({ request }) => {
                   // Decode quoted-printable if needed
                   if (rawHtml.includes("=3D") || rawHtml.includes("=\n")) {
                     htmlContent = decodeQuotedPrintable(rawHtml);
-                    console.log(
-                      `HTML content decoded from quoted-printable, part ${htmlPartId}, length: ${htmlContent.length}`,
-                    );
                   } else {
                     htmlContent = rawHtml;
-                    console.log(
-                      `HTML content extracted from part ${htmlPartId}, length: ${htmlContent.length}`,
-                    );
                   }
                 }
               } catch (e) {
-                console.warn("Error parsing HTML content:", e);
+                // Error parsing HTML content
               }
             }
 
@@ -242,14 +234,8 @@ export const POST: APIRoute = async ({ request }) => {
                   // Decode quoted-printable if needed
                   if (rawText.includes("=3D") || rawText.includes("=\n")) {
                     textContent = decodeQuotedPrintable(rawText);
-                    console.log(
-                      `Text content decoded from quoted-printable, part ${textPartId}, length: ${textContent.length}`,
-                    );
                   } else {
                     textContent = rawText;
-                    console.log(
-                      `Text content extracted from part ${textPartId}, length: ${textContent.length}`,
-                    );
                   }
                   // Clean up text content
                   textContent = textContent
@@ -258,7 +244,7 @@ export const POST: APIRoute = async ({ request }) => {
                     .trim();
                 }
               } catch (e) {
-                console.warn("Error parsing text content:", e);
+                // Error parsing text content
               }
             }
 
@@ -367,9 +353,8 @@ export const POST: APIRoute = async ({ request }) => {
       // Always logout and close connection
       try {
         await client.logout();
-        console.log("Successfully logged out from IMAP server");
       } catch (logoutError) {
-        console.warn("Error during logout:", logoutError);
+        // Error during logout
       }
     }
 

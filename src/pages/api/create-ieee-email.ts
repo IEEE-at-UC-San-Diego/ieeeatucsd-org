@@ -87,17 +87,6 @@ export const POST: APIRoute = async ({ request }) => {
     formData.append("quota", emailQuota || "200");
     formData.append("limit", emailOutboundLimit || "9600");
 
-    // Log the form data being sent (without showing the actual password)
-    console.log("Form data:");
-    console.log(`  action: create`);
-    console.log(`  domain: ${emailDomain}`);
-    console.log(`  user: ${cleanUsername}`);
-    console.log(`  passwd: ********`);
-    console.log(`  passwd2: ********`);
-    console.log(`  quota: ${emailQuota || "200"}`);
-    console.log(`  limit: ${emailOutboundLimit || "9600"}`);
-
-    console.log("Sending request to DirectAdmin API...");
     const response = await fetch(emailApiUrl, {
       method: "POST",
       headers: {
@@ -197,21 +186,6 @@ async function sendWebmasterNotification(
   email: string,
   ieeeEmail: string,
 ) {
-  // In a real implementation, you would use an email service
-  console.log(`
-    To: webmaster@ieeeatucsd.org
-    Subject: New IEEE Email Account Created
-    
-    A new IEEE email account has been created:
-    
-    User ID: ${userId}
-    Name: ${name}
-    Personal Email: ${email}
-    IEEE Email: ${ieeeEmail}
-    
-    This is an automated notification.
-  `);
-
   // In a production environment, replace with actual email sending code
   return true;
 }

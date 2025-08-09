@@ -39,10 +39,8 @@ export class EmailClient {
   private static getAuthData(): { token: string; model: any } | null {
     try {
       // For Firebase-based event emails, auth is handled server-side
-      console.warn("Authentication not available in Firebase system");
       return null;
     } catch (error) {
-      console.warn("Could not get auth data:", error);
       return null;
     }
   }

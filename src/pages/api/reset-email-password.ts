@@ -53,18 +53,11 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Use the provided password
     const newPassword = password;
-    console.log(`Using user-provided password`);
 
     // MXRoute DirectAdmin API credentials from environment variables
     const loginKey = import.meta.env.MXROUTE_LOGIN_KEY;
     const serverLogin = import.meta.env.MXROUTE_SERVER_LOGIN;
     const serverUrl = import.meta.env.MXROUTE_SERVER_URL;
-
-    console.log(`Environment variables: 
-      loginKey: ${loginKey ? "Set" : "Not set"}
-      serverLogin: ${serverLogin ? "Set" : "Not set"}
-      serverUrl: ${serverUrl ? "Set" : "Not set"}
-    `);
 
     if (!loginKey || !serverLogin || !serverUrl) {
       throw new Error("Missing MXRoute configuration");
@@ -95,15 +88,6 @@ export const POST: APIRoute = async ({ request }) => {
     formData.append("passwd", newPassword);
     formData.append("passwd2", newPassword);
 
-    // Log the form data being sent (without showing the actual password)
-    console.log("Form data:");
-    console.log(`  action: modify`);
-    console.log(`  domain: ${domain}`);
-    console.log(`  user: ${username}`);
-    console.log(`  passwd: ********`);
-    console.log(`  passwd2: ********`);
-
-    console.log("Sending request to DirectAdmin API...");
     const response = await fetch(emailApiUrl, {
       method: "POST",
       headers: {
@@ -114,13 +98,9 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     const responseText = await response.text();
-    console.log(`DirectAdmin response status: ${response.status}`);
-    console.log(`DirectAdmin response: ${responseText}`);
 
     // DirectAdmin API returns "error=1" in the response text for errors
     if (responseText.includes("error=1") || !response.ok) {
-      console.error("Error resetting email password:", responseText);
-
       // Parse the error details if possible
       let errorMessage = "Failed to reset email password";
       try {
@@ -133,7 +113,7 @@ export const POST: APIRoute = async ({ request }) => {
           errorMessage += `: ${details.replace(/<br>/g, " ")}`;
         }
       } catch (e) {
-        console.error("Error parsing DirectAdmin error response:", e);
+        // Error parsing DirectAdmin error response
       }
 
       throw new Error(errorMessage);

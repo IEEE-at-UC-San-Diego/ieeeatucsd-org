@@ -92,7 +92,6 @@ export class PixelPerfectPDFExporter {
         this.cleanupCaptureContainer(captureContainer);
       }
     } catch (error) {
-      console.error("PDF export failed:", error);
       this.reportProgress(0, "PDF export failed. Please try again.");
       throw error;
     }

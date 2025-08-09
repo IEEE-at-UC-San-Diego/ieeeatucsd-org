@@ -55,7 +55,6 @@ export class PublicProfileService {
         // Failed to sync to subcollection, but main sync succeeded
       }
     } catch (error) {
-      console.error("Error syncing public profile:", error);
       throw error;
     }
   }
@@ -88,12 +87,11 @@ export class PublicProfileService {
           return subProfileSnap.data() as PublicProfile;
         }
       } catch (subError) {
-        console.warn("Failed to check subcollection fallback:", subError);
+        // Failed to check subcollection fallback
       }
 
       return null;
     } catch (error) {
-      console.error("Error getting public profile:", error);
       throw error;
     }
   }
@@ -116,7 +114,6 @@ export class PublicProfileService {
         ...(doc.data() as PublicProfile),
       }));
     } catch (error) {
-      console.error("Error getting leaderboard:", error);
       throw error;
     }
   }
@@ -151,13 +148,9 @@ export class PublicProfileService {
           lastUpdated: new Date(),
         });
       } catch (subError) {
-        console.warn(
-          "Failed to update subcollection, but main update succeeded:",
-          subError,
-        );
+        // Failed to update subcollection, but main update succeeded
       }
     } catch (error) {
-      console.error("Error updating user stats:", error);
       throw error;
     }
   }
@@ -167,8 +160,6 @@ export class PublicProfileService {
    */
   static async migrateFromUsersCollection(): Promise<void> {
     try {
-      console.log("Starting migration of user data to public profiles...");
-
       // Get all users from the users collection
       const usersRef = collection(db, "users");
       const usersSnapshot = await getDocs(usersRef);
@@ -195,14 +186,11 @@ export class PublicProfileService {
             userDoc.id,
             publicProfileData,
           );
-          console.log(`Migrated public profile for user: ${userDoc.id}`);
         }
       });
 
       await Promise.all(migrationPromises);
-      console.log("Migration completed successfully");
     } catch (error) {
-      console.error("Error during migration:", error);
       throw error;
     }
   }

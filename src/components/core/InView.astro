@@ -5,11 +5,9 @@
         if (entry.isIntersecting) {
           entry.target.classList.add("in-view");
           entry.target.classList.remove("opacity-0");
-          // console.log("Added 'in-view' class to:", entry.target);
         } else {
           entry.target.classList.remove("in-view");
           entry.target.classList.add("opacity-0");
-          // console.log("Removed 'in-view' class from:", entry.target);
         }
       });
     },

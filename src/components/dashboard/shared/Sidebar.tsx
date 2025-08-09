@@ -7,7 +7,6 @@ import {
     LogOut,
     Users,
     DollarSign,
-    Database,
     Trophy,
     Banknote,
     FileText,
@@ -53,7 +52,6 @@ const navigationCategories: NavigationCategory[] = [
             { icon: DollarSign, label: 'Manage Reimbursements', href: NAVIGATION_PATHS.MANAGE_REIMBURSEMENTS },
             { icon: Users, label: 'Manage Users', href: NAVIGATION_PATHS.MANAGE_USERS },
             { icon: FileText, label: 'Constitution Builder', href: NAVIGATION_PATHS.CONSTITUTION_BUILDER },
-            { icon: Database, label: 'File Migration', href: NAVIGATION_PATHS.MIGRATION },
         ]
     },
     {

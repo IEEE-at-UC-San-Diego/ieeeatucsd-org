@@ -35,8 +35,6 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    console.log(`Attempting to connect to IMAP for: ${email}`);
-
     // Create IMAP client with MXRoute settings
     const client = new ImapFlow({
       host: "mail.ieeeucsd.org",
@@ -244,9 +242,8 @@ export const POST: APIRoute = async ({ request }) => {
       // Always logout and close connection
       try {
         await client.logout();
-        console.log("Successfully logged out from IMAP server");
       } catch (logoutError) {
-        console.warn("Error during logout:", logoutError);
+        // Error during logout
       }
     }
 

@@ -257,7 +257,7 @@ export const useConstitutionAudit = (constitutionId: string) => {
           auditEntry,
         );
       } catch (error) {
-        console.error("Error creating audit entry:", error);
+        // Error creating audit entry
       }
     },
     [user, constitutionId, db, getUserDisplayName, generateChangeDescription],

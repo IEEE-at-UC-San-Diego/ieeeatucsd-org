@@ -105,8 +105,6 @@ export const POST: APIRoute = async ({ request }) => {
 
     // DirectAdmin API returns "error=1" in the response text for errors
     if (responseText.includes("error=1") || !response.ok) {
-      console.error("Error deleting email:", responseText);
-
       const errorMessage = responseText.includes("error=1")
         ? "Failed to delete email account. The account may not exist or there was a server error."
         : `HTTP error! status: ${response.status}`;
@@ -116,9 +114,7 @@ export const POST: APIRoute = async ({ request }) => {
         responseText.includes("does not exist") ||
         responseText.includes("not found")
       ) {
-        console.log(
-          "Email account already doesn't exist, considering as successful deletion",
-        );
+        // Email account already doesn't exist, considering as successful deletion
         return new Response(
           JSON.stringify({
             success: true,
@@ -147,8 +143,6 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    console.log("Email account deleted successfully");
-
     return new Response(
       JSON.stringify({
         success: true,
@@ -162,7 +156,6 @@ export const POST: APIRoute = async ({ request }) => {
       },
     );
   } catch (error) {
-    console.error("Error in delete-ieee-email:", error);
     return new Response(
       JSON.stringify({
         success: false,
