@@ -1,198 +1,163 @@
 [
   {
-    "name": "Mustahsin Zarif",
+    "name": "Erik Duarte",
     "position": "Chair",
-    "picture": "/officers/zarif.webp",
-    "email": "mmzarif@ucsd.edu",
+    "picture": "/officers/erik.webp",
+    "email": "president@ieeeatucsd.org",
     "type": ["Executives"]
   },
   {
-    "name": "Stephanie Xu",
+    "name": "Wan-Rong Leung",
     "position": "Vice Chair Internal",
-    "picture": "/officers/steph.webp",
-    "email": "sxxu@ucsd.edu",
+    "picture": "https://placehold.co/800x800?text=WAN-RONG%20LEUNG",
+    "email": "internal@ieeeatucsd.org",
     "type": ["Executives", "Internal"]
   },
   {
-    "name": "Rana Singh",
+    "name": "Akhil Ram Shankar",
     "position": "Vice Chair External",
-    "picture": "https://placehold.co/800x800?text=RANA%20SINGH",
-    "email": "ras010@ucsd.edu",
+    "picture": "/officers/akhil.webp",
+    "email": "external@ieeeatucsd.org",
     "type": ["Executives"]
   },
   {
-    "name": "Rohil Kadekar",
+    "name": "Yu Chen Tai",
     "position": "Vice Chair Projects",
-    "picture": "/officers/rohil.webp",
-    "email": "rkadekar@ucsd.edu",
+    "picture": "https://placehold.co/800x800?text=YU%20CHEN%20TAI",
+    "email": "projects@ieeeatucsd.org",
     "type": ["Executives", "Projects"]
   },
   {
-    "name": "Shipra Gudekar",
+    "name": "Anupama Nambiar",
     "position": "Vice Chair Events",
-    "picture": "/officers/shipra.webp",
-    "email": "sgudekar@ucsd.edu",
+    "picture": "/officers/anu.webp",
+    "email": "events@ieeeatucsd.org",
     "type": ["Executives", "Events"]
-  },
-  {
-    "name": "Lisa Liu",
-    "position": "Vice Chair Finance",
-    "picture": "/officers/lisa.webp",
-    "email": "lil043@ucsd.edu",
-    "type": ["Executives"]
   },
   {
     "name": "Charles Nguyen",
-    "position": "Webmaster",
+    "position": "Vice Chair Finance",
     "picture": "/officers/charles.webp",
-    "email": "cmn010@ucsd.edu",
-    "type": ["Internal"]
+    "email": "treasurer@ieeeatucsd.org",
+    "type": ["Executives"]
   },
   {
-    "name": "Shing Hung",
-    "position": "Webmaster",
-    "picture": "/officers/shing.webp",
-    "email": "s1hung@ucsd.edu",
-    "type": ["Internal"]
-  },
-  {
-    "name": "Andy Smithwick",
-    "position": "Webmaster",
-    "picture": "/officers/andy.webp",
-    "email": "asmithwick@ucsd.edu",
-    "type": ["Internal"]
-  },
-  {
-    "name": "Stella Ji",
-    "position": "Marketing Chair",
-    "picture": "/officers/stella.webp",
-    "email": "seji@ucsd.edu",
-    "type": ["Internal"]
-  },
-  {
-    "name": "Lauren Vo",
-    "position": "Marketing Chair",
-    "picture": "/officers/lauren.webp",
-    "email": "lavo@ucsd.edu",
-    "type": ["Internal"]
-  },
-  {
-    "name": "Emma Leung",
-    "position": "Design Chair",
-    "picture": "/officers/emma.webp",
-    "email": "waleung@ucsd.edu",
-    "type": ["Internal"]
-  },
-  {
-    "name": "Christine Uy",
-    "position": "Design Chair",
-    "picture": "/officers/christine.webp",
-    "email": "c1uy@ucsd.edu",
-    "type": ["Internal"]
-  },
-  {
-    "name": "Erik Duarte",
+    "name": "Aiden Bassette",
     "position": "Events Coordinator",
-    "picture": "/officers/erik.webp",
-    "email": "Erduarte@ucsd.edu",
-    "type": ["Executives", "Events"]
+    "picture": "https://placehold.co/800x800?text=AIDEN%20BASSETTE",
+    "email": "coordinators@ieeeatucsd.org",
+    "type": ["Events"]
   },
   {
-    "name": "Rafaella Gomes",
-    "position": "Project Space Chair",
-    "picture": "/officers/rafaella.webp",
-    "email": "ragomes@ucsd.edu",
-    "type": ["Projects"]
-  },
-  {
-    "name": "Terri Tai",
-    "position": "Robocup Soccer Chair",
-    "picture": "/officers/terri.webp",
-    "email": "y2tai@ucsd.edu",
-    "type": ["Projects"]
+    "name": "Anusha Chadalavada",
+    "position": "Events Coordinator",
+    "picture": "https://placehold.co/800x800?text=ANUSHA%20CHADALAVADA",
+    "email": "coordinators@ieeeatucsd.org",
+    "type": ["Events"]
   },
   {
     "name": "Raymond Rada",
     "position": "Robocup Soccer Chair",
     "picture": "/officers/raymond.webp",
-    "email": "rrada@ucsd.edu",
+    "email": "robocup@ieeeatucsd.org",
     "type": ["Projects"]
   },
   {
-    "name": "Philip Pincencia",
-    "position": "Signal Processing Chair",
-    "picture": "/officers/philip.webp",
-    "email": "ppincencia@ucsd.edu",
+    "name": "Lukas Cao",
+    "position": "Robocup Soccer Chair",
+    "picture": "https://placehold.co/800x800?text=LUKAS%20CAO",
+    "email": "robocup@ieeeatucsd.org",
     "type": ["Projects"]
   },
   {
-    "name": "Akhil Ram Shankar",
+    "name": "Gauri Renjith",
+    "position": "Supercomputing Chair",
+    "picture": "https://placehold.co/800x800?text=GAURI%20RENJITH",
+    "email": "projects@ieeeatucsd.org",
+    "type": ["Projects"]
+  },
+  {
+    "name": "Ferrari Guan",
     "position": "Quarterly Projects Chair",
-    "picture": "/officers/akhil.webp",
-    "email": "aramshankar@ucsd.edu",
+    "picture": "https://placehold.co/800x800?text=FERRARI%20GUAN",
+    "email": "qp@ieeeatucsd.org",
     "type": ["Projects"]
-  },
-  {
-    "name": "Jonathan Zhou",
-    "position": "Quarterly Projects Chair",
-    "picture": "/officers/jonathan.webp",
-    "email": "jtzhou@ucsd.edu",
-    "type": ["Projects"]
-  },
-  {
-    "name": "Ashlee Young",
-    "position": "Professional Chair",
-    "picture": "/officers/ashlee.webp",
-    "email": "asy001@ucsd.edu",
-    "type": ["Events"]
   },
   {
     "name": "Allie Dinh",
     "position": "Professional Chair",
     "picture": "/officers/allie.webp",
-    "email": "ald012@ucsd.edu",
+    "email": "professional@ieeeatucsd.org",
     "type": ["Events"]
   },
   {
-    "name": "Fahad Alkhazam",
-    "position": "Technical Chair",
-    "picture": "https://placehold.co/800x800?text=FAHAD%20ALKHAZAM",
-    "email": "falkhazam@ucsd.edu",
-    "type": ["Events"]
-  },
-  {
-    "name": "Pranav Mehta",
-    "position": "Technical Chair",
-    "picture": "/officers/pranav.webp",
-    "email": "p3mehta@ucsd.edu",
+    "name": "Iris Chou",
+    "position": "Professional Chair",
+    "picture": "https://placehold.co/800x800?text=IRIS%20CHOU",
+    "email": "professional@ieeeatucsd.org",
     "type": ["Events"]
   },
   {
     "name": "Ridhi Srikanth",
     "position": "Technical Chair",
     "picture": "/officers/ridhi.webp",
-    "email": "rsrikanth@ucsd.edu",
+    "email": "technical@ieeeatucsd.org",
     "type": ["Events"]
   },
   {
     "name": "Anika Agarwal",
     "position": "Outreach Chair",
     "picture": "/officers/anika.webp",
-    "email": "ana012@ucsd.edu",
+    "email": "outreach@ieeeatucsd.org",
     "type": ["Events"]
   },
   {
-    "name": "Anupama Nambiar",
-    "position": "Social Chair",
-    "picture": "/officers/anu.webp",
-    "email": "annambiar@ucsd.edu",
+    "name": "Aaditya Pillai",
+    "position": "Outreach Chair",
+    "picture": "https://placehold.co/800x800?text=AADITYA%20PILLAI",
+    "email": "outreach@ieeeatucsd.org",
     "type": ["Events"]
   },
   {
-    "name": "Dhruv Roy Choudhary",
+    "name": "Kelly Guan",
     "position": "Social Chair",
-    "picture": "/officers/dhruv.webp",
-    "email": "dchoudhary@ucsd.edu",
+    "picture": "https://placehold.co/800x800?text=KELLY%20GUAN",
+    "email": "social@ieeeatucsd.org",
     "type": ["Events"]
+  },
+  {
+    "name": "Andy Smithwick",
+    "position": "Webmaster",
+    "picture": "/officers/andy.webp",
+    "email": "webmaster@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Shing Hung",
+    "position": "Webmaster",
+    "picture": "/officers/shing.webp",
+    "email": "webmaster@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Lauren Vo",
+    "position": "Marketing Chair",
+    "picture": "/officers/lauren.webp",
+    "email": "marketing@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Julianna Soto",
+    "position": "Marketing Chair",
+    "picture": "https://placehold.co/800x800?text=JULIANNA%20SOTO",
+    "email": "marketing@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Christine Uy",
+    "position": "Design Chair",
+    "picture": "/officers/christine.webp",
+    "email": "design@ieeeatucsd.org",
+    "type": ["Internal"]
   }
 ]
