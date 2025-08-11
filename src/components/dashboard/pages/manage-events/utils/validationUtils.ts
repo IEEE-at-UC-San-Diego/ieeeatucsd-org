@@ -206,18 +206,6 @@ export const validateFunding = (formData: EventFormData): ValidationResult => {
         (invoice.existingInvoiceFile &&
           invoice.existingInvoiceFile.trim() !== "");
 
-      // Debug logging for invoice file validation
-      console.log(`Invoice #${invoiceNum} validation:`, {
-        invoiceId: invoice.id,
-        hasNewFiles,
-        hasExistingFiles,
-        invoiceFiles: invoice.invoiceFiles,
-        existingInvoiceFiles: invoice.existingInvoiceFiles,
-        // Legacy fields
-        invoiceFile: invoice.invoiceFile,
-        existingInvoiceFile: invoice.existingInvoiceFile,
-      });
-
       if (!hasNewFiles && !hasExistingFiles) {
         errorMessage = `Invoice #${invoiceNum}: At least one invoice file is required when requesting AS funding`;
         return { isValid: false, errors, errorMessage };

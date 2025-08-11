@@ -129,33 +129,13 @@ export default function EventsContent() {
                 return dateA.getTime() - dateB.getTime();
             });
 
-            console.log('=== EVENT DEBUGGING ===');
-            console.log('Current user:', auth.currentUser?.uid || 'Not authenticated');
-            console.log('Total events fetched:', eventsData.length);
-            console.log('Events with published field:', eventsData.filter(e => e.published !== undefined).length);
-            console.log('Events where published = true:', publishedEvents.length);
-            console.log('All events data:', eventsData.map(e => ({
-                id: e.id,
-                name: e.eventName,
-                published: e.published,
-                startDate: e.startDate,
-                location: e.location
-            })));
-            console.log('Published events:', publishedEvents.map(e => ({
-                id: e.id,
-                name: e.eventName,
-                published: e.published,
-                startDate: e.startDate
-            })));
-            console.log('Final published events after filtering:', publishedEvents.length, publishedEvents);
             setEvents(publishedEvents);
 
             if (publishedEvents.length === 0) {
                 console.warn('No published events found. Check that events are properly published.');
-                console.log('Debug: All events from database:', eventsData);
+
             }
         } catch (error) {
-            console.error('Error fetching events:', error);
             setError('Failed to fetch events: ' + (error as Error).message);
         } finally {
             setLoading(false);
@@ -178,7 +158,7 @@ export default function EventsContent() {
                 });
             }
         } catch (error) {
-            console.error('Error fetching user stats:', error);
+
         }
     };
 
@@ -377,21 +357,7 @@ export default function EventsContent() {
                         </div>
                     )}
 
-                    {/* Debug Info - Show all events from database for debugging */}
-                    {process.env.NODE_ENV === 'development' && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                            <h3 className="font-medium text-yellow-800 mb-2">DEBUG: Database Events</h3>
-                            <p className="text-sm text-yellow-700">
-                                Total events in database: {loading ? 'Loading...' : 'Check console for details'}
-                            </p>
-                            <p className="text-sm text-yellow-700">
-                                Published events found: {events.length}
-                            </p>
-                            <p className="text-sm text-yellow-700">
-                                Open browser console to see detailed event data
-                            </p>
-                        </div>
-                    )}
+
 
                     {/* User Stats */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">

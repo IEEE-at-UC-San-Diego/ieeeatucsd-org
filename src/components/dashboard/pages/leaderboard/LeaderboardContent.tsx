@@ -25,7 +25,6 @@ export default function LeaderboardContent() {
     const [currentUserRank, setCurrentUserRank] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [debugInfo, setDebugInfo] = useState<string>('');
 
     useEffect(() => {
         // Set up real-time listener for public profiles leaderboard
@@ -39,7 +38,6 @@ export default function LeaderboardContent() {
 
             const unsubscribe = onSnapshot(publicProfilesQuery, (snapshot) => {
                 console.log('Leaderboard snapshot received:', snapshot.size, 'documents');
-                setDebugInfo(`Found ${snapshot.size} documents in public_profiles collection`);
 
                 const users = snapshot.docs.map((doc, index) => {
                     const data = doc.data();
@@ -57,13 +55,9 @@ export default function LeaderboardContent() {
                     };
                 }) as LeaderboardUser[];
 
-                console.log('Processed leaderboard users:', users.length, users);
-
                 // Only filter out users with invalid names, but keep users with 0 points
                 const validUsers = users.filter(u => u.name && u.name !== 'Unknown User' && u.name.trim() !== '');
 
-                console.log('Valid users after filtering:', validUsers.length, validUsers);
-                setDebugInfo(prev => `${prev}. After filtering: ${validUsers.length} valid users`);
 
                 setLeaderboardData(validUsers);
 
@@ -166,14 +160,6 @@ export default function LeaderboardContent() {
             />
 
             <main className="p-4 md:p-6">
-                {/* Debug Info */}
-                {debugInfo && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 md:mb-6">
-                        <p className="text-sm text-blue-800">
-                            <strong>Debug:</strong> {debugInfo}
-                        </p>
-                    </div>
-                )}
 
                 <div className="grid grid-cols-1 gap-4 md:gap-6">
                     {/* Stats Overview */}
