@@ -46,24 +46,21 @@ export const POST: APIRoute = async ({ request }) => {
         "--disable-background-timer-throttling",
         "--disable-backgrounding-occluded-windows",
         "--disable-renderer-backgrounding",
-        `--force-device-scale-factor=${pdfOptions.scale}`,
       ],
-      defaultViewport: {
-        width: 850, // 8.5 inches at 100 DPI
-        height: 1100, // 11 inches at 100 DPI
-        deviceScaleFactor: pdfOptions.scale,
-      },
+      // Let CSS @page control the size; avoid pixel viewport scaling
+      defaultViewport: null,
       timeout: 60000,
     });
 
     try {
       const page = await browser.newPage();
 
-      // Set high DPI for crisp rendering
+      // Use default viewport; CSS + @page drive layout
+      // Keep deviceScaleFactor as 1 to avoid shrinking content
       await page.setViewport({
-        width: 850,
-        height: 1100,
-        deviceScaleFactor: pdfOptions.scale,
+        width: 1280,
+        height: 800,
+        deviceScaleFactor: 1,
       });
 
       // Generate the complete HTML content with proper base URL
@@ -114,7 +111,8 @@ export const POST: APIRoute = async ({ request }) => {
         printBackground: pdfOptions.printBackground,
         preferCSSPageSize: true,
         displayHeaderFooter: false,
-        scale: 1, // We already applied scaling via deviceScaleFactor
+        // Keep scale at 1 to match CSS @page size; content sizing is controlled by CSS
+        scale: 1,
         timeout: 60000,
       });
 

@@ -69,6 +69,36 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
         }, 100);
     };
 
+    const handleDownloadPDF = async () => {
+        try {
+            const response = await fetch('/api/export-pdf-puppeteer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    constitution,
+                    sections: getSectionHierarchy(sections),
+                    options: { printBackground: true, format: 'Letter', scale: 2, dpi: 300 },
+                }),
+            });
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Export failed: ${response.status} ${errText}`);
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const filename = `IEEE_UCSD_Constitution_${new Date().toISOString().split('T')[0]}_v${constitution?.version || 1}.pdf`;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        } catch (err) {
+            console.error('PDF download failed', err);
+        }
+    };
+
     const handleDeleteSection = async (sectionId: string) => {
         await deleteSection(sectionId);
 
@@ -146,6 +176,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                     currentView={currentView}
                     onViewChange={setCurrentView}
                     onPrint={handlePrint}
+                    onDownload={handleDownloadPDF}
                     sections={sections}
                     onSelectSection={(sectionId, pageNumber) => {
                         setSelectedSection(sectionId);

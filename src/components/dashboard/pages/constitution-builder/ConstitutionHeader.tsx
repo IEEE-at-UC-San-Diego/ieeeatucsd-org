@@ -7,7 +7,8 @@ import {
     Edit3,
     Eye,
     Printer,
-    History
+    History,
+    Download,
 } from 'lucide-react';
 import type { Constitution, ConstitutionSection } from '../../shared/types/firestore';
 import ConstitutionSearch from './ConstitutionSearch';
@@ -35,6 +36,7 @@ interface ConstitutionHeaderProps {
     currentView: 'editor' | 'preview' | 'audit';
     onViewChange: (view: 'editor' | 'preview' | 'audit') => void;
     onPrint: () => void;
+    onDownload: () => void;
     sections: ConstitutionSection[];
     onSelectSection: (sectionId: string, pageNumber?: number) => void;
     onSearchTermChange?: (term: string) => void;
@@ -46,6 +48,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
     currentView,
     onViewChange,
     onPrint,
+    onDownload,
     sections,
     onSelectSection,
     onSearchTermChange
@@ -138,14 +141,23 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                     </button>
                 </div>
 
-                {/* Print Button - Mobile */}
-                <button
-                    onClick={onPrint}
-                    className="w-full inline-flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[44px]"
-                >
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print PDF
-                </button>
+                {/* Actions - Mobile */}
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        onClick={onDownload}
+                        className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors min-h-[44px]"
+                    >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download PDF
+                    </button>
+                    <button
+                        onClick={onPrint}
+                        className="inline-flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[44px]"
+                    >
+                        <Printer className="h-4 w-4 mr-2" />
+                        Print PDF
+                    </button>
+                </div>
             </div>
 
             {/* Tablet Layout - Compact horizontal layout */}
@@ -241,14 +253,23 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         </button>
                     </div>
 
-                    {/* Print Button - Tablet */}
-                    <button
-                        onClick={onPrint}
-                        className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[40px]"
-                    >
-                        <Printer className="h-4 w-4 mr-2" />
-                        Print PDF
-                    </button>
+                    {/* Actions - Tablet */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={onDownload}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors min-h-[40px]"
+                        >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download PDF
+                        </button>
+                        <button
+                            onClick={onPrint}
+                            className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[40px]"
+                        >
+                            <Printer className="h-4 w-4 mr-2" />
+                            Print PDF
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -341,14 +362,23 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         </button>
                     </div>
 
-                    {/* Print Section - Desktop */}
-                    <button
-                        onClick={onPrint}
-                        className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[44px]"
-                    >
-                        <Printer className="h-4 w-4 mr-2" />
-                        Print PDF
-                    </button>
+                    {/* Actions - Desktop */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={onDownload}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors min-h-[44px]"
+                        >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download PDF
+                        </button>
+                        <button
+                            onClick={onPrint}
+                            className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[44px]"
+                        >
+                            <Printer className="h-4 w-4 mr-2" />
+                            Print PDF
+                        </button>
+                    </div>
                 </div>
             </div>
 

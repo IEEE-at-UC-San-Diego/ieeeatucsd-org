@@ -301,6 +301,14 @@ const parseContentForPrint = (content: string) => {
           });
           html += "</ul>";
         }
+        // Tree-like org structure: render exact text block in monospace to preserve alignment
+        else if (trimmed.includes("├──") || trimmed.includes("└──")) {
+          const safe = trimmed
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+          html += `<pre class="org-tree-pre">${safe}</pre>`;
+        }
         // Regular paragraph
         else {
           html += `<p>${formatInlineTextForPrint(trimmed)}</p>`;
@@ -366,18 +374,48 @@ export const generatePrintContent = (
 ) => {
   // Get the actual last modified date from constitution and sections
   const getLastModifiedDate = (): Date => {
+    const toDateSafe = (value: any): Date | null => {
+      if (!value) return null;
+      // Firestore Timestamp-like object
+      if (typeof value.toDate === "function") {
+        try {
+          return value.toDate();
+        } catch {
+          /* noop */
+        }
+      }
+      // Firestore Timestamp plain object { seconds, nanoseconds }
+      if (typeof value.seconds === "number") {
+        const ms =
+          value.seconds * 1000 +
+          (typeof value.nanoseconds === "number"
+            ? Math.floor(value.nanoseconds / 1e6)
+            : 0);
+        const d = new Date(ms);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      // ISO string or epoch ms
+      if (typeof value === "string" || typeof value === "number") {
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      // Already a Date
+      if (value instanceof Date) {
+        return isNaN(value.getTime()) ? null : value;
+      }
+      return null;
+    };
+
     const timestamps: Date[] = [];
 
     // Add constitution's lastModified if it exists
-    if (constitution?.lastModified) {
-      timestamps.push(constitution.lastModified.toDate());
-    }
+    const cDate = toDateSafe(constitution?.lastModified);
+    if (cDate) timestamps.push(cDate);
 
     // Add all sections' lastModified timestamps
     sections.forEach((section) => {
-      if (section.lastModified) {
-        timestamps.push(section.lastModified.toDate());
-      }
+      const sDate = toDateSafe(section.lastModified as any);
+      if (sDate) timestamps.push(sDate);
     });
 
     // Return the most recent timestamp, or current date as fallback
@@ -401,13 +439,12 @@ export const generatePrintContent = (
     const toc = generateTableOfContents(sections);
     return toc
       .map(({ section, pageNum }) => {
-        const getIndentClass = (section: ConstitutionSection) => {
-          if (section.type === "section") return "ml-6";
+        const getIndentPx = (section: ConstitutionSection) => {
+          if (section.type === "section") return 24; // 1 level in
           if (section.type === "subsection") {
             // Calculate nesting depth for subsections
-            let depth = 2;
+            let depth = 1; // base indent
             let currentParentId = section.parentId;
-
             while (currentParentId) {
               const parent = sections.find((s) => s.id === currentParentId);
               if (parent && parent.type === "subsection") {
@@ -417,9 +454,9 @@ export const generatePrintContent = (
                 break;
               }
             }
-            return `ml-${Math.min(depth * 6, 24)}`;
+            return Math.min((depth + 1) * 24, 144); // cap deep nesting
           }
-          return "";
+          return 0;
         };
 
         // Get the correct title based on section type
@@ -442,9 +479,9 @@ export const generatePrintContent = (
           title = getSectionDisplayTitle(section, sections);
         }
 
-        return `<div class="toc-entry ${getIndentClass(section)}">
-                <a href="#section-${section.id}" style="text-decoration: none; color: inherit; display: flex; justify-content: space-between; width: 100%;">
-                    <span>${title}</span>
+        return `<div class="toc-entry" style="padding-left:${getIndentPx(section)}px;">
+                <a href="#section-${section.id}" style="text-decoration: none; color: inherit; display: flex; justify-content: space-between; width: 100%; gap:12px;">
+                    <span style="flex:1;">${title}</span>
                     <span style="margin-left: auto;">${pageNum}</span>
                 </a>
             </div>`;
@@ -460,14 +497,14 @@ export const generatePrintContent = (
 
   // Cover Page
   content += `
-    <div class="constitution-page">
-        <div class="logo-container" style="text-align: center; margin: 48px 0;">
+    <div class="constitution-page cover-page" style="display:flex; flex-direction:column; align-items:center; text-align:center;">
+        <div class="logo-container" style="text-align: center; margin: 48px 0; width:100%;">
             <img src="${baseUrl}/blue_logo_only.png" alt="IEEE Logo" style="width: 120px; height: 120px; object-fit: contain; margin: 0 auto; display: block;" />
         </div>
-        <h1 style="font-size: 28pt; line-height: 1.1; margin-bottom: 24px;">IEEE at UC San Diego</h1>
-        <h2 style="font-size: 16pt; line-height: 1.3; margin-bottom: 48px; font-weight: 600;">The Institute of Electrical and Electronics Engineers at UC San Diego Constitution</h2>
-        <div style="text-align: center; margin-top: 48px;">
-            <p style="font-size: 14pt; text-indent: 0; margin-bottom: 12px; text-align: center;">
+        <h1 style="font-size: 28pt; line-height: 1.1; margin-bottom: 24px; text-align:center; width:100%;">IEEE at UC San Diego</h1>
+        <h2 class="cover-subtitle" style="font-size: 16pt; line-height: 1.3; margin-bottom: 48px; font-weight: 600; width:100%;">The Institute of Electrical and Electronics Engineers at UC San Diego Constitution</h2>
+        <div style="text-align: center; margin-top: 48px; width:100%;">
+            <p class="cover-meta" style="font-size: 14pt; margin-bottom: 12px;">
                 Last Updated: ${getLastModifiedDate().toLocaleDateString(
                   "en-US",
                   {
@@ -478,7 +515,7 @@ export const generatePrintContent = (
                 )}
             </p>
 
-            <p style="font-size: 11pt; text-indent: 0; color: #888; text-align: center; margin-top: 8px;">
+            <p class="cover-meta" style="font-size: 11pt; color: #888; margin-top: 8px;">
                 Adopted since September 2006
             </p>
         </div>
@@ -575,6 +612,7 @@ export const generatePrintHTML = (
             <title>IEEE at UC San Diego Constitution</title>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
+            ${baseUrl ? `<base href="${baseUrl}/" />` : ""}
             <style>
                 * {
                     box-sizing: border-box;
@@ -592,16 +630,14 @@ export const generatePrintHTML = (
                 
                 .constitution-page {
                     page-break-after: always;
-                    width: 8.5in;
-                    height: 11in;
-                    min-height: 11in;
-                    max-height: 11in;
+                    /* Let content flow naturally; use padding for margins */
                     padding: 1in;
                     background: white;
                     position: relative;
                     margin: 0 auto;
                     box-sizing: border-box;
-                    overflow: hidden; /* Prevent content overflow */
+                    /* Allow content to paginate instead of being clipped */
+                    overflow: visible;
                 }
                 
                 .constitution-page:last-child {
@@ -620,6 +656,15 @@ export const generatePrintHTML = (
                     margin-bottom: 24px;
                     page-break-after: avoid;
                     color: #333;  // Softer dark gray for headings
+                }
+
+                /* Cover page strict centering */
+                .cover-page h2.cover-subtitle,
+                .cover-page .cover-meta {
+                    text-align: center !important;
+                    width: 100% !important;
+                    margin-left: auto !important;
+                    margin-right: auto !important;
                 }
 
                 /* Article titles (h2) - larger font size - FORCE OVERRIDE */
@@ -728,6 +773,16 @@ export const generatePrintHTML = (
                     text-align: justify;
                 }
 
+                /* Org tree block preserves alignment */
+                pre.org-tree-pre {
+                    white-space: pre; /* exact spacing */
+                    font-family: "Courier New", Courier, monospace;
+                    font-size: 11pt;
+                    line-height: 1.4;
+                    margin: 12px 0;
+                    color: #444;
+                }
+
                 strong {
                     font-weight: bold;
                 }
@@ -739,10 +794,13 @@ export const generatePrintHTML = (
                                  .toc-entry {
                      display: flex;
                      justify-content: space-between;
+                     align-items: center;
+                     gap: 12px;
                      margin-bottom: 6px;
                      text-indent: 0;
                      font-family: Arial, sans-serif;
                  }
+                 .toc-entry a span:first-child { flex: 1; }
 
                 .image-placeholder {
                     border: 2px dashed #ccc;
@@ -776,7 +834,7 @@ export const generatePrintHTML = (
                 
                 @page {
                     size: letter;
-                    margin: 1in;
+                    margin: 0.75in;
                 }
                 
                 /* Force print styles to apply in all contexts, including PDF generation */
@@ -791,14 +849,11 @@ export const generatePrintHTML = (
 
                     .constitution-page {
                         page-break-after: always;
-                        width: 8.5in !important;
-                        height: 11in !important;
-                        min-height: 11in !important;
-                        max-height: 11in !important;
-                        padding: 1in !important;
+                        /* No fixed height — let browser paginate */
+                        padding: 0 !important; /* Use @page margins for print */
                         margin: 0 !important;
                         box-sizing: border-box !important;
-                        overflow: hidden !important; /* Prevent content overflow */
+                        overflow: visible !important;
                     }
 
                     .constitution-page:last-child {
