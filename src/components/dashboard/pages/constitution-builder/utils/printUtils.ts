@@ -9,14 +9,8 @@ export interface TableOfContentsEntry {
   pageNum: number;
 }
 
-export const generateTableOfContents = (
-  sections: ConstitutionSection[],
-): TableOfContentsEntry[] => {
-  const toc: TableOfContentsEntry[] = [];
-
-  let tocStartPage = 2; // TOC starts on page 2 (after cover page)
-
-  // Calculate how many TOC pages we need
+// Helper function to calculate TOC pages needed (used by both TOC generation and page calculation)
+const calculateTocPagesNeeded = (sections: ConstitutionSection[]): number => {
   const estimatedTocEntries = sections.filter(
     (s) =>
       s.type === "preamble" ||
@@ -25,14 +19,32 @@ export const generateTableOfContents = (
       s.type === "subsection" ||
       s.type === "amendment",
   ).length;
-  const tocPagesNeeded = Math.ceil(estimatedTocEntries / 30); // Increased to 30 entries per page to match PDF density
+  return Math.ceil(estimatedTocEntries / 30); // 30 entries per page to match PDF density
+};
 
-  let currentPageNum = tocStartPage + tocPagesNeeded; // Content starts after TOC pages
+export const generateTableOfContents = (
+  sections: ConstitutionSection[],
+): TableOfContentsEntry[] => {
+  const toc: TableOfContentsEntry[] = [];
 
-  // Map sections to their actual page numbers using the same logic as generatePrintHTML
+  let tocStartPage = 2; // TOC starts on page 2 (after cover page)
+  const tocPagesNeeded = calculateTocPagesNeeded(sections);
+  let contentStartPage = tocStartPage + tocPagesNeeded; // Content starts after TOC pages
+
+  // Use the actual page generation logic to get correct page numbers
+  // This accounts for content overflow and matches the real PDF layout
+  const contentPages = generateContentPages(sections);
   const sectionToPageMap = new Map<string, number>();
 
-  // Group sections by type for proper page assignment (matching generatePrintHTML)
+  // Map each section to its actual page number based on real page generation
+  contentPages.forEach((page, pageIndex) => {
+    const actualPageNumber = contentStartPage + pageIndex;
+    page.forEach((section) => {
+      sectionToPageMap.set(section.id, actualPageNumber);
+    });
+  });
+
+  // Group sections by type for TOC generation
   const preamble = sections.find((s) => s.type === "preamble");
   const articles = sections
     .filter((s) => s.type === "article")
@@ -41,48 +53,6 @@ export const generateTableOfContents = (
     .filter((s) => s.type === "amendment")
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  // Preamble gets its own page (matching generatePrintHTML)
-  if (preamble) {
-    sectionToPageMap.set(preamble.id, currentPageNum);
-    currentPageNum++;
-  }
-
-  // Each article gets its own page with all its sections/subsections (matching generatePrintHTML)
-  articles.forEach((article) => {
-    sectionToPageMap.set(article.id, currentPageNum);
-
-    // All sections and subsections within this article are on the same page
-    const articleSections = sections
-      .filter((s) => s.parentId === article.id && s.type === "section")
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-    articleSections.forEach((section) => {
-      sectionToPageMap.set(section.id, currentPageNum);
-
-      // Add all subsections for this section (they're on the same page)
-      const addSubsectionsToMap = (parentId: string) => {
-        const subsections = sections
-          .filter((s) => s.parentId === parentId && s.type === "subsection")
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-        subsections.forEach((subsection) => {
-          sectionToPageMap.set(subsection.id, currentPageNum);
-          addSubsectionsToMap(subsection.id); // Recursive for nested subsections
-        });
-      };
-
-      addSubsectionsToMap(section.id);
-    });
-
-    currentPageNum++; // Move to next page for next article
-  });
-
-  // Each amendment gets its own page (matching generatePrintHTML)
-  amendments.forEach((amendment) => {
-    sectionToPageMap.set(amendment.id, currentPageNum);
-    currentPageNum++;
-  });
-
   // Helper function to add subsections recursively to TOC
   const addSubsectionsToTOC = (parentId: string): void => {
     const subsections = sections
@@ -90,8 +60,10 @@ export const generateTableOfContents = (
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
     subsections.forEach((subsection) => {
-      const pageNum = sectionToPageMap.get(subsection.id) || currentPageNum;
-      toc.push({ section: subsection, pageNum });
+      const pageNum = sectionToPageMap.get(subsection.id);
+      if (pageNum) {
+        toc.push({ section: subsection, pageNum });
+      }
 
       // Recursively add nested subsections
       addSubsectionsToTOC(subsection.id);
@@ -100,14 +72,18 @@ export const generateTableOfContents = (
 
   // Add preamble to TOC
   if (preamble) {
-    const pageNum = sectionToPageMap.get(preamble.id) || currentPageNum;
-    toc.push({ section: preamble, pageNum });
+    const pageNum = sectionToPageMap.get(preamble.id);
+    if (pageNum) {
+      toc.push({ section: preamble, pageNum });
+    }
   }
 
   // Add articles to TOC
   articles.forEach((article) => {
-    const pageNum = sectionToPageMap.get(article.id) || currentPageNum;
-    toc.push({ section: article, pageNum });
+    const pageNum = sectionToPageMap.get(article.id);
+    if (pageNum) {
+      toc.push({ section: article, pageNum });
+    }
 
     // Sections within this article
     const articleSections = sections
@@ -115,8 +91,10 @@ export const generateTableOfContents = (
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
     articleSections.forEach((section) => {
-      const sectionPageNum = sectionToPageMap.get(section.id) || pageNum;
-      toc.push({ section, pageNum: sectionPageNum });
+      const sectionPageNum = sectionToPageMap.get(section.id);
+      if (sectionPageNum) {
+        toc.push({ section, pageNum: sectionPageNum });
+      }
 
       // Add all subsections for this section
       addSubsectionsToTOC(section.id);
@@ -125,8 +103,10 @@ export const generateTableOfContents = (
 
   // Add amendments to TOC
   amendments.forEach((amendment) => {
-    const pageNum = sectionToPageMap.get(amendment.id) || currentPageNum;
-    toc.push({ section: amendment, pageNum });
+    const pageNum = sectionToPageMap.get(amendment.id);
+    if (pageNum) {
+      toc.push({ section: amendment, pageNum });
+    }
   });
 
   return toc;
@@ -139,16 +119,8 @@ export const calculateTotalPages = (
   let pageCount = 1; // Cover page
 
   if (showTOC) {
-    // Calculate TOC pages needed
-    const estimatedTocEntries = sections.filter(
-      (s) =>
-        s.type === "preamble" ||
-        s.type === "article" ||
-        s.type === "section" ||
-        s.type === "subsection" ||
-        s.type === "amendment",
-    ).length;
-    const tocPagesNeeded = Math.ceil(estimatedTocEntries / 30); // Increased to 30 entries per page to match PDF density
+    // Use the same calculation as TOC generation
+    const tocPagesNeeded = calculateTocPagesNeeded(sections);
     pageCount += tocPagesNeeded;
   }
 
@@ -181,11 +153,11 @@ const estimateContentHeight = (section: ConstitutionSection): number => {
       break;
   }
 
-  // Content height (if any) - more accurate calculation
+  // Content height (if any) - more conservative calculation
   if (section.content && section.type !== "article") {
     const contentLines = section.content.split("\n").length;
-    // Balanced words per line calculation for 11pt font with justify alignment
-    const wordsPerLine = 14; // Reduced from 15 to 14 for better balance with PDF
+    // More conservative words per line calculation to account for PDF rendering differences
+    const wordsPerLine = 12; // Further reduced from 13 to 12 for more conservative estimation
     const words = section.content
       .split(/\s+/)
       .filter((word) => word.length > 0).length;
@@ -193,8 +165,8 @@ const estimateContentHeight = (section: ConstitutionSection): number => {
       contentLines,
       Math.ceil(words / wordsPerLine),
     );
-    // 11pt font with 1.5 line height = 16.5pt per line (updated to match PDF exactly)
-    height += estimatedLines * 16.5;
+    // 11pt font with 1.5 line height = 16.5pt per line, plus extra margin for safety
+    height += estimatedLines * 17; // Increased from 16.5 to 17 for more conservative estimation
   }
 
   // Bottom margin - matching PDF content margin-bottom: 10px
@@ -208,7 +180,7 @@ export const generateContentPages = (
 ): ConstitutionSection[][] => {
   const pages: ConstitutionSection[][] = [];
   // Fine-tuned page height to match PDF output exactly (37 pages)
-  const PAGE_HEIGHT = 655; // Reduced from 665 to 655pt to add 1 more page (36→37)
+  const PAGE_HEIGHT = 625; // Further reduced to ensure we get enough pages (was 635)
   const SECTION_BREAK_THRESHOLD = 85; // Balanced threshold for proper page breaks
 
   // Group sections by type for proper page breaks
