@@ -49,24 +49,30 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
         setExpandedSections(newExpanded);
     };
 
-    const handlePrint = () => {
-        // Set the preview to PDF capture mode for optimal printing
-        setCurrentView('preview');
-
-        // Add print class to body to trigger print-only styles
-        document.body.classList.add('constitution-print-mode');
-
-        // Small delay to ensure the preview is rendered properly
-        setTimeout(() => {
-            // Trigger the browser's native print dialog
-            window.print();
-
-            // Remove print class after printing (when dialog closes)
-            // Use a longer timeout to ensure print dialog has time to capture the styles
-            setTimeout(() => {
-                document.body.classList.remove('constitution-print-mode');
-            }, 1000);
-        }, 100);
+    const handleViewPDF = async () => {
+        try {
+            const response = await fetch('/api/export-pdf-puppeteer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    constitution,
+                    sections: getSectionHierarchy(sections),
+                    options: { printBackground: true, format: 'Letter' },
+                }),
+            });
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Export failed: ${response.status} ${errText}`);
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            // Open in new tab/window for viewing
+            window.open(url, '_blank', 'noopener');
+            // Revoke after a short delay to allow loading
+            setTimeout(() => URL.revokeObjectURL(url), 300_000);
+        } catch (err) {
+            console.error('PDF view failed', err);
+        }
     };
 
     const handleDownloadPDF = async () => {
@@ -175,7 +181,7 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                     lastSaved={lastSaved}
                     currentView={currentView}
                     onViewChange={setCurrentView}
-                    onPrint={handlePrint}
+                    onViewPdf={handleViewPDF}
                     onDownload={handleDownloadPDF}
                     sections={sections}
                     onSelectSection={(sectionId, pageNumber) => {
@@ -256,7 +262,6 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                                 <ConstitutionPreview
                                     constitution={constitution}
                                     sections={getSectionHierarchy(sections)}
-                                    onPrint={handlePrint}
                                     currentPage={currentPage}
                                     onPageChange={setCurrentPage}
                                     highlightedSectionId={highlightedSectionId}

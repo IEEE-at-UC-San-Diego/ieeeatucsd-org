@@ -9,23 +9,24 @@ import {
     Printer,
     History,
     Download,
+    ExternalLink,  // for View PDF icon
 } from 'lucide-react';
 import type { Constitution, ConstitutionSection } from '../../shared/types/firestore';
 import ConstitutionSearch from './ConstitutionSearch';
 
-// Simple Print Button Component
-interface PrintButtonProps {
-    onPrint: () => void;
+// Simple View PDF Button Component (unused in layout but kept for parity)
+interface ViewPdfButtonProps {
+    onViewPdf: () => void;
 }
 
-const PrintButton: React.FC<PrintButtonProps> = ({ onPrint }) => {
+const ViewPdfButton: React.FC<ViewPdfButtonProps> = ({ onViewPdf }) => {
     return (
         <button
-            onClick={onPrint}
+            onClick={onViewPdf}
             className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
         >
-            <Printer className="h-4 w-4 mr-2" />
-            Print PDF
+            <ExternalLink className="h-4 w-4 mr-2" />
+            View PDF
         </button>
     );
 };
@@ -35,7 +36,7 @@ interface ConstitutionHeaderProps {
     lastSaved: Date | null;
     currentView: 'editor' | 'preview' | 'audit';
     onViewChange: (view: 'editor' | 'preview' | 'audit') => void;
-    onPrint: () => void;
+    onViewPdf: () => void;
     onDownload: () => void;
     sections: ConstitutionSection[];
     onSelectSection: (sectionId: string, pageNumber?: number) => void;
@@ -47,7 +48,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
     lastSaved,
     currentView,
     onViewChange,
-    onPrint,
+    onViewPdf,
     onDownload,
     sections,
     onSelectSection,
@@ -151,11 +152,11 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         Download PDF
                     </button>
                     <button
-                        onClick={onPrint}
+                        onClick={onViewPdf}
                         className="inline-flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[44px]"
                     >
-                        <Printer className="h-4 w-4 mr-2" />
-                        Print PDF
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        View PDF
                     </button>
                 </div>
             </div>
@@ -263,11 +264,11 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                             Download PDF
                         </button>
                         <button
-                            onClick={onPrint}
+                            onClick={onViewPdf}
                             className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[40px]"
                         >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print PDF
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            View PDF
                         </button>
                     </div>
                 </div>
@@ -372,11 +373,11 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                             Download PDF
                         </button>
                         <button
-                            onClick={onPrint}
+                            onClick={onViewPdf}
                             className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[44px]"
                         >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print PDF
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            View PDF
                         </button>
                     </div>
                 </div>

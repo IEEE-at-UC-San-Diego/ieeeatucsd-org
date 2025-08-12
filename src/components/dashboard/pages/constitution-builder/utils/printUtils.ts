@@ -759,6 +759,12 @@ export const generatePrintHTML = (
                     color: #444;  /* Softer dark gray for body text */
                 }
 
+                /* Slightly emphasize Last Updated on cover */
+                .cover-page .cover-meta:first-of-type {
+                    font-weight: 600 !important;
+                    font-size: 15pt !important;
+                }
+
                 ol.numbered-list, ul.bullet-list {
                     font-family: Arial, sans-serif;
                     font-size: 11pt;

@@ -150,7 +150,6 @@ export class PixelPerfectPDFExporter {
                 React.createElement(ConstitutionPreview, {
                   constitution: this.constitution,
                   sections: this.sections,
-                  onPrint: () => {},
                   currentPage: pageNum,
                   onPageChange: () => {},
                   // Special prop to indicate PDF capture mode
