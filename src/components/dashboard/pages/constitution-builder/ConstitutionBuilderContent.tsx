@@ -5,7 +5,7 @@ import { getSectionHierarchy } from './utils/constitutionUtils';
 import ConstitutionHeader from './ConstitutionHeader';
 import ConstitutionSidebar from './ConstitutionSidebar';
 import ConstitutionEditor from './ConstitutionEditor';
-import ConstitutionPreview from './ConstitutionPreview';
+import PDFPreview from './PDFPreview';
 import { ConstitutionAuditLog } from './ConstitutionAuditLog';
 
 import SafariBrowserBlock from './SafariBrowserBlock';
@@ -181,8 +181,8 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                     lastSaved={lastSaved}
                     currentView={currentView}
                     onViewChange={setCurrentView}
-                    onViewPdf={handleViewPDF}
-                    onDownload={handleDownloadPDF}
+                    onViewPdf={() => { }} // No longer used - PDF functionality in preview
+                    onDownload={() => { }} // No longer used - PDF functionality in preview
                     sections={sections}
                     onSelectSection={(sectionId, pageNumber) => {
                         setSelectedSection(sectionId);
@@ -258,13 +258,14 @@ const ConstitutionBuilderContent: React.FC<ConstitutionBuilderContentProps> = ()
                     /* Full-width layout for preview and audit views - better spacing on larger screens */
                     <div className="w-full">
                         {currentView === 'preview' ? (
-                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
-                                <ConstitutionPreview
+                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-[calc(100vh-200px)]">
+                                <PDFPreview
                                     constitution={constitution}
                                     sections={getSectionHierarchy(sections)}
                                     currentPage={currentPage}
                                     onPageChange={setCurrentPage}
                                     highlightedSectionId={highlightedSectionId}
+                                    onPrint={() => { }} // PDFPreview handles its own download
                                 />
                             </div>
                         ) : (

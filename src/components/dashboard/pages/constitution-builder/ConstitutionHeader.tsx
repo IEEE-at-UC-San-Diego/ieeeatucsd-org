@@ -142,23 +142,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                     </button>
                 </div>
 
-                {/* Actions - Mobile */}
-                <div className="grid grid-cols-2 gap-2">
-                    <button
-                        onClick={onDownload}
-                        className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors min-h-[44px]"
-                    >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download PDF
-                    </button>
-                    <button
-                        onClick={onViewPdf}
-                        className="inline-flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[44px]"
-                    >
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        View PDF
-                    </button>
-                </div>
+                {/* Actions removed - PDF functionality now handled in preview */}
             </div>
 
             {/* Tablet Layout - Compact horizontal layout */}
@@ -254,23 +238,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         </button>
                     </div>
 
-                    {/* Actions - Tablet */}
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={onDownload}
-                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors min-h-[40px]"
-                        >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download PDF
-                        </button>
-                        <button
-                            onClick={onViewPdf}
-                            className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[40px]"
-                        >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            View PDF
-                        </button>
-                    </div>
+                    {/* Actions removed - PDF functionality now handled in preview */}
                 </div>
             </div>
 
@@ -363,23 +331,7 @@ const ConstitutionHeader: React.FC<ConstitutionHeaderProps> = ({
                         </button>
                     </div>
 
-                    {/* Actions - Desktop */}
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={onDownload}
-                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors min-h-[44px]"
-                        >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download PDF
-                        </button>
-                        <button
-                            onClick={onViewPdf}
-                            className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors min-h-[44px]"
-                        >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            View PDF
-                        </button>
-                    </div>
+                    {/* Actions removed - PDF functionality now handled in preview */}
                 </div>
             </div>
 

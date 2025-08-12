@@ -71,7 +71,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
         if (showTOC) {
             // Calculate actual TOC pages needed
             const tableOfContents = generateTableOfContents(sections);
-            const tocPagesNeeded = Math.ceil(tableOfContents.length / 25);
+            const tocPagesNeeded = Math.ceil(tableOfContents.length / 30);
             pageCount += tocPagesNeeded;
         }
 
@@ -90,7 +90,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
         } else if (showTableOfContents) {
             // Calculate TOC pages needed
             const tableOfContents = generateTableOfContents(sections);
-            const tocPagesNeeded = Math.ceil(tableOfContents.length / 25);
+            const tocPagesNeeded = Math.ceil(tableOfContents.length / 30);
 
             if (currentPage >= 2 && currentPage <= 1 + tocPagesNeeded) {
                 // This is a TOC page
@@ -231,7 +231,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 
     const renderTableOfContentsPages = () => {
         const tableOfContents = generateTableOfContents(sections);
-        const entriesPerPage = 25;
+        const entriesPerPage = 30; // Increased to match PDF TOC density
         const tocPages = [];
 
         for (let i = 0; i < tableOfContents.length; i += entriesPerPage) {

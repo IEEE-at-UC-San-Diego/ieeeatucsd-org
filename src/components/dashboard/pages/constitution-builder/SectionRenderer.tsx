@@ -136,46 +136,46 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections,
             case 'preamble':
                 return {
                     ...baseStyle,
-                    fontSize: '18pt',     // Increased from 16pt to 18pt to match articles
+                    fontSize: '18pt',
                     textAlign: 'center' as const,
-                    marginBottom: '12px',
-                    marginTop: '20px',
+                    marginBottom: '8px',   // Match PDF exactly
+                    marginTop: '20px',     // Match PDF exactly
                     textTransform: 'uppercase' as const,
                     letterSpacing: '1px'
                 };
             case 'article':
                 return {
                     ...baseStyle,
-                    fontSize: '18pt',     // Increased from 16pt to 18pt for proper article size
+                    fontSize: '18pt',
                     textAlign: 'left' as const,
-                    marginBottom: '8px',  // Reduced spacing after article title
-                    marginTop: '20px'
+                    marginBottom: '8px',   // Match PDF exactly
+                    marginTop: '20px'      // Match PDF exactly
                 };
             case 'section':
                 return {
                     ...baseStyle,
-                    fontSize: '12pt',     // Reduced from 14pt to 12pt
+                    fontSize: '12pt',
                     textAlign: 'left' as const,
-                    marginBottom: '8px',
-                    marginTop: '12px',    // Reduced spacing before section
-                    color: '#555'         // Lighter color for sections
+                    marginBottom: '8px',   // Match PDF exactly
+                    marginTop: '12px',     // Match PDF exactly
+                    color: '#555'
                 };
             case 'subsection':
                 return {
                     ...baseStyle,
-                    fontSize: '11pt',     // Reduced from 12pt to 11pt
+                    fontSize: '11pt',
                     fontWeight: '600' as const,
-                    marginBottom: '6px',
-                    marginTop: '10px',
-                    color: '#666'         // Even lighter color for subsections
+                    marginBottom: '6px',   // Match PDF exactly
+                    marginTop: '10px',     // Match PDF exactly
+                    color: '#666'
                 };
             case 'amendment':
                 return {
                     ...baseStyle,
-                    fontSize: '18pt',     // Increased from 16pt to 18pt to match articles
+                    fontSize: '18pt',
                     textAlign: 'center' as const,
-                    marginBottom: '12px',
-                    marginTop: '20px'
+                    marginBottom: '8px',   // Match PDF exactly
+                    marginTop: '20px'      // Match PDF exactly
                 };
             default:
                 return {
@@ -191,9 +191,9 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections,
     const getContentStyle = () => {
         return {
             fontFamily: 'Arial, sans-serif',
-            fontSize: '11pt',     // Reduced from 12pt to 11pt
-            lineHeight: '1.5',    // Slightly tighter line height
-            color: '#444',        // Softer dark gray for body text
+            fontSize: '11pt',
+            lineHeight: '1.5',    // Updated to match PDF exactly (1.5)
+            color: '#444',
             textAlign: 'justify' as const
         };
     };
@@ -340,7 +340,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({ section, allSections,
         <div
             id={`section-${section.id}`}
             style={{
-                marginBottom: section.type === 'article' ? '12px' : '20px',  // Less spacing after articles
+                marginBottom: section.type === 'article' ? '8px' : '14px',  // Reduced spacing for better density
                 ...getIndentStyle(),
                 ...(isHighlighted && {
                     backgroundColor: '#fef08a',

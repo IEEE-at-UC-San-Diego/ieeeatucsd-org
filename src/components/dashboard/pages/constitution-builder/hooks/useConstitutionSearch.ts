@@ -20,7 +20,7 @@ const createSectionPageMap = (
 ): Map<string, number> => {
   const contentPages = generateContentPages(sections);
   const tableOfContents = generateTableOfContents(sections);
-  const tocPagesNeeded = Math.ceil(tableOfContents.length / 25);
+  const tocPagesNeeded = Math.ceil(tableOfContents.length / 30);
   const contentStartPage = 2 + tocPagesNeeded; // Content starts after cover page (1) and TOC pages
 
   const sectionPageMap = new Map<string, number>();
