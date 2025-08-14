@@ -4,10 +4,330 @@ import type {
 } from "../../../shared/types/firestore";
 import { toRomanNumeral, getSectionDisplayTitle } from "./constitutionUtils";
 
+// Legacy interface for backward compatibility
 export interface TableOfContentsEntry {
   section: ConstitutionSection;
   pageNum: number;
 }
+
+// New hierarchical TOC entry interface
+export interface TOCEntry {
+  section: ConstitutionSection;
+  depth: number;
+  children: TOCEntry[];
+}
+
+// Page numbering strategy types
+export type PageNumberingStrategy =
+  | "css-counters"
+  | "intersection-observer"
+  | "logical-grouping";
+
+// TOC generation options
+export interface TOCGenerationOptions {
+  strategy: PageNumberingStrategy;
+  baseUrl?: string;
+}
+
+/**
+ * First Pass: Generate hierarchical TOC structure without page numbers
+ * Handles preamble, articles with nested sections/subsections, and amendments
+ */
+export const generateTOCStructure = (
+  sections: ConstitutionSection[],
+): TOCEntry[] => {
+  const tocEntries: TOCEntry[] = [];
+
+  // Helper function to recursively build subsection hierarchy
+  const buildSubsectionHierarchy = (
+    parentId: string,
+    currentDepth: number,
+  ): TOCEntry[] => {
+    const subsections = sections
+      .filter((s) => s.parentId === parentId && s.type === "subsection")
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    return subsections.map((subsection) => ({
+      section: subsection,
+      depth: currentDepth,
+      children: buildSubsectionHierarchy(subsection.id, currentDepth + 1),
+    }));
+  };
+
+  // Group sections by type for proper ordering
+  const preamble = sections.find((s) => s.type === "preamble");
+  const articles = sections
+    .filter((s) => s.type === "article")
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  const amendments = sections
+    .filter((s) => s.type === "amendment")
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  // Add preamble to TOC structure
+  if (preamble) {
+    tocEntries.push({
+      section: preamble,
+      depth: 0,
+      children: [],
+    });
+  }
+
+  // Add articles with their sections and subsections
+  articles.forEach((article) => {
+    const articleSections = sections
+      .filter((s) => s.parentId === article.id && s.type === "section")
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    const sectionChildren: TOCEntry[] = articleSections.map((section) => ({
+      section,
+      depth: 1,
+      children: buildSubsectionHierarchy(section.id, 2),
+    }));
+
+    tocEntries.push({
+      section: article,
+      depth: 0,
+      children: sectionChildren,
+    });
+  });
+
+  // Add amendments to TOC structure
+  amendments.forEach((amendment) => {
+    tocEntries.push({
+      section: amendment,
+      depth: 0,
+      children: [],
+    });
+  });
+
+  return tocEntries;
+};
+
+/**
+ * Second Pass: Page numbering strategies
+ */
+
+// Strategy 1: CSS Page Counters (for PDF generation)
+const assignPageNumbersWithCSSCounters = (
+  tocStructure: TOCEntry[],
+  sections: ConstitutionSection[],
+): string => {
+  const renderTOCWithCSSCounters = (
+    entries: TOCEntry[],
+    depth: number = 0,
+  ): string => {
+    return entries
+      .map((entry) => {
+        const indentPx = depth * 24;
+
+        // Get the correct title based on section type
+        let title = "";
+        if (entry.section.type === "article") {
+          const articles = sections
+            .filter((s) => s.type === "article")
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          const articleIndex = articles.findIndex(
+            (a) => a.id === entry.section.id,
+          );
+          title = getSectionPrintTitle(entry.section, articleIndex, sections);
+        } else if (entry.section.type === "amendment") {
+          const amendments = sections
+            .filter((s) => s.type === "amendment")
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          const amendmentIndex = amendments.findIndex(
+            (a) => a.id === entry.section.id,
+          );
+          title = getSectionPrintTitle(entry.section, amendmentIndex, sections);
+        } else {
+          title = getSectionDisplayTitle(entry.section, sections);
+        }
+
+        let html = `<div class="toc-entry" style="padding-left:${indentPx}px;">
+          <a href="#section-${entry.section.id}" style="text-decoration: none; color: inherit; display: flex; justify-content: space-between; width: 100%; gap:12px;">
+            <span style="flex:1;">${title}</span>
+            <span style="margin-left: auto;" class="page-number" data-target="#section-${entry.section.id}"></span>
+          </a>
+        </div>`;
+
+        if (entry.children.length > 0) {
+          html += renderTOCWithCSSCounters(entry.children, depth + 1);
+        }
+
+        return html;
+      })
+      .join("");
+  };
+
+  return renderTOCWithCSSCounters(tocStructure);
+};
+
+// Strategy 2: Intersection Observer (for web preview)
+const assignPageNumbersWithIntersectionObserver = (
+  tocStructure: TOCEntry[],
+  sections: ConstitutionSection[],
+): string => {
+  const renderTOCWithObserver = (
+    entries: TOCEntry[],
+    depth: number = 0,
+  ): string => {
+    return entries
+      .map((entry) => {
+        const indentPx = depth * 24;
+
+        // Get the correct title based on section type
+        let title = "";
+        if (entry.section.type === "article") {
+          const articles = sections
+            .filter((s) => s.type === "article")
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          const articleIndex = articles.findIndex(
+            (a) => a.id === entry.section.id,
+          );
+          title = getSectionPrintTitle(entry.section, articleIndex, sections);
+        } else if (entry.section.type === "amendment") {
+          const amendments = sections
+            .filter((s) => s.type === "amendment")
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          const amendmentIndex = amendments.findIndex(
+            (a) => a.id === entry.section.id,
+          );
+          title = getSectionPrintTitle(entry.section, amendmentIndex, sections);
+        } else {
+          title = getSectionDisplayTitle(entry.section, sections);
+        }
+
+        let html = `<div class="toc-entry" style="padding-left:${indentPx}px;">
+          <a href="#section-${entry.section.id}" style="text-decoration: none; color: inherit; display: flex; justify-content: space-between; width: 100%; gap:12px;">
+            <span style="flex:1;">${title}</span>
+            <span style="margin-left: auto;" class="page-number" data-section-id="${entry.section.id}">-</span>
+          </a>
+        </div>`;
+
+        if (entry.children.length > 0) {
+          html += renderTOCWithObserver(entry.children, depth + 1);
+        }
+
+        return html;
+      })
+      .join("");
+  };
+
+  return renderTOCWithObserver(tocStructure);
+};
+
+// Strategy 3: Simplified Logical Grouping (fallback)
+const assignPageNumbersWithLogicalGrouping = (
+  tocStructure: TOCEntry[],
+  sections: ConstitutionSection[],
+): string => {
+  // Use the original page calculation logic for backward compatibility
+  let tocStartPage = 2; // TOC starts on page 2 (after cover page)
+  let tocPagesNeeded = calculateTocPagesNeeded(sections);
+  let contentStartPage = tocStartPage + tocPagesNeeded;
+
+  // Generate page mapping using the original logic
+  const contentPages = generateContentPages(sections);
+  const sectionToPageMap = new Map<string, number>();
+
+  contentPages.forEach((page, pageIndex) => {
+    const actualPageNumber = contentStartPage + pageIndex;
+    page.forEach((section) => {
+      sectionToPageMap.set(section.id, actualPageNumber);
+    });
+  });
+
+  const renderTOCWithLogicalPages = (
+    entries: TOCEntry[],
+    depth: number = 0,
+  ): string => {
+    return entries
+      .map((entry) => {
+        const indentPx = depth * 24;
+
+        // Get the correct title based on section type
+        let title = "";
+        if (entry.section.type === "article") {
+          const articles = sections
+            .filter((s) => s.type === "article")
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          const articleIndex = articles.findIndex(
+            (a) => a.id === entry.section.id,
+          );
+          title = getSectionPrintTitle(entry.section, articleIndex, sections);
+        } else if (entry.section.type === "amendment") {
+          const amendments = sections
+            .filter((s) => s.type === "amendment")
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          const amendmentIndex = amendments.findIndex(
+            (a) => a.id === entry.section.id,
+          );
+          title = getSectionPrintTitle(entry.section, amendmentIndex, sections);
+        } else {
+          title = getSectionDisplayTitle(entry.section, sections);
+        }
+
+        // Get page number from the mapping
+        const pageNum = sectionToPageMap.get(entry.section.id) || "?";
+
+        let html = `<div class="toc-entry" style="padding-left:${indentPx}px;">
+          <a href="#section-${entry.section.id}" style="text-decoration: none; color: inherit; display: flex; justify-content: space-between; width: 100%; gap:12px;">
+            <span style="flex:1;">${title}</span>
+            <span style="margin-left: auto;">${pageNum}</span>
+          </a>
+        </div>`;
+
+        if (entry.children.length > 0) {
+          html += renderTOCWithLogicalPages(entry.children, depth + 1);
+        }
+
+        return html;
+      })
+      .join("");
+  };
+
+  return renderTOCWithLogicalPages(tocStructure);
+};
+
+/**
+ * Generate TOC HTML using the specified strategy
+ */
+export const generateTOCHTML = (
+  sections: ConstitutionSection[],
+  options: TOCGenerationOptions = { strategy: "logical-grouping" },
+): string => {
+  // First pass: Generate hierarchical structure
+  const tocStructure = generateTOCStructure(sections);
+
+  // Second pass: Apply page numbering strategy
+  switch (options.strategy) {
+    case "css-counters":
+      return assignPageNumbersWithCSSCounters(tocStructure, sections);
+    case "intersection-observer":
+      return assignPageNumbersWithIntersectionObserver(tocStructure, sections);
+    case "logical-grouping":
+    default:
+      return assignPageNumbersWithLogicalGrouping(tocStructure, sections);
+  }
+};
+
+/**
+ * Flatten TOC structure for backward compatibility
+ */
+export const flattenTOCStructure = (tocStructure: TOCEntry[]): TOCEntry[] => {
+  const flattened: TOCEntry[] = [];
+
+  const flatten = (entries: TOCEntry[]) => {
+    entries.forEach((entry) => {
+      flattened.push(entry);
+      if (entry.children.length > 0) {
+        flatten(entry.children);
+      }
+    });
+  };
+
+  flatten(tocStructure);
+  return flattened;
+};
 
 // Helper function to calculate TOC pages needed (used by both TOC generation and page calculation)
 const calculateTocPagesNeeded = (sections: ConstitutionSection[]): number => {
@@ -22,17 +342,26 @@ const calculateTocPagesNeeded = (sections: ConstitutionSection[]): number => {
   return Math.ceil(estimatedTocEntries / 30); // 30 entries per page to match PDF density
 };
 
+/**
+ * Legacy function for backward compatibility
+ * Now uses the new two-pass system internally
+ */
 export const generateTableOfContents = (
   sections: ConstitutionSection[],
 ): TableOfContentsEntry[] => {
-  const toc: TableOfContentsEntry[] = [];
+  // Use the new system to generate the hierarchical structure
+  const tocStructure = generateTOCStructure(sections);
 
+  // Flatten the structure and assign page numbers using logical grouping
+  const flattenedTOC = flattenTOCStructure(tocStructure);
+
+  // Calculate page numbers using simplified logic
   let tocStartPage = 2; // TOC starts on page 2 (after cover page)
-  const tocPagesNeeded = calculateTocPagesNeeded(sections);
-  let contentStartPage = tocStartPage + tocPagesNeeded; // Content starts after TOC pages
+  let tocPagesNeeded = calculateTocPagesNeeded(sections);
+  let contentStartPage = tocStartPage + tocPagesNeeded;
 
-  // Use the actual page generation logic to get correct page numbers
-  // This accounts for content overflow and matches the real PDF layout
+  // For backward compatibility, we'll use the existing page generation logic
+  // but with simplified mapping
   const contentPages = generateContentPages(sections);
   const sectionToPageMap = new Map<string, number>();
 
@@ -44,68 +373,12 @@ export const generateTableOfContents = (
     });
   });
 
-  // Group sections by type for TOC generation
-  const preamble = sections.find((s) => s.type === "preamble");
-  const articles = sections
-    .filter((s) => s.type === "article")
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
-  const amendments = sections
-    .filter((s) => s.type === "amendment")
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-  // Helper function to add subsections recursively to TOC
-  const addSubsectionsToTOC = (parentId: string): void => {
-    const subsections = sections
-      .filter((s) => s.parentId === parentId && s.type === "subsection")
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-    subsections.forEach((subsection) => {
-      const pageNum = sectionToPageMap.get(subsection.id);
-      if (pageNum) {
-        toc.push({ section: subsection, pageNum });
-      }
-
-      // Recursively add nested subsections
-      addSubsectionsToTOC(subsection.id);
-    });
-  };
-
-  // Add preamble to TOC
-  if (preamble) {
-    const pageNum = sectionToPageMap.get(preamble.id);
+  // Convert the new structure to the legacy format
+  const toc: TableOfContentsEntry[] = [];
+  flattenedTOC.forEach((entry) => {
+    const pageNum = sectionToPageMap.get(entry.section.id);
     if (pageNum) {
-      toc.push({ section: preamble, pageNum });
-    }
-  }
-
-  // Add articles to TOC
-  articles.forEach((article) => {
-    const pageNum = sectionToPageMap.get(article.id);
-    if (pageNum) {
-      toc.push({ section: article, pageNum });
-    }
-
-    // Sections within this article
-    const articleSections = sections
-      .filter((s) => s.parentId === article.id && s.type === "section")
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-    articleSections.forEach((section) => {
-      const sectionPageNum = sectionToPageMap.get(section.id);
-      if (sectionPageNum) {
-        toc.push({ section, pageNum: sectionPageNum });
-      }
-
-      // Add all subsections for this section
-      addSubsectionsToTOC(section.id);
-    });
-  });
-
-  // Add amendments to TOC
-  amendments.forEach((amendment) => {
-    const pageNum = sectionToPageMap.get(amendment.id);
-    if (pageNum) {
-      toc.push({ section: amendment, pageNum });
+      toc.push({ section: entry.section, pageNum });
     }
   });
 
@@ -444,59 +717,10 @@ export const generatePrintContent = (
     .filter((s) => s.type === "amendment")
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  // Generate table of contents
+  // Generate table of contents using the new system
   const generateTOC = () => {
-    const toc = generateTableOfContents(sections);
-    return toc
-      .map(({ section, pageNum }) => {
-        const getIndentPx = (section: ConstitutionSection) => {
-          if (section.type === "section") return 24; // 1 level in
-          if (section.type === "subsection") {
-            // Calculate nesting depth for subsections
-            let depth = 1; // base indent
-            let currentParentId = section.parentId;
-            while (currentParentId) {
-              const parent = sections.find((s) => s.id === currentParentId);
-              if (parent && parent.type === "subsection") {
-                depth++;
-                currentParentId = parent.parentId;
-              } else {
-                break;
-              }
-            }
-            return Math.min((depth + 1) * 24, 144); // cap deep nesting
-          }
-          return 0;
-        };
-
-        // Get the correct title based on section type
-        let title = "";
-        if (section.type === "article") {
-          const articles = sections
-            .filter((s) => s.type === "article")
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-          const articleIndex = articles.findIndex((a) => a.id === section.id);
-          title = getSectionPrintTitle(section, articleIndex, sections);
-        } else if (section.type === "amendment") {
-          const amendments = sections
-            .filter((s) => s.type === "amendment")
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-          const amendmentIndex = amendments.findIndex(
-            (a) => a.id === section.id,
-          );
-          title = getSectionPrintTitle(section, amendmentIndex, sections);
-        } else {
-          title = getSectionDisplayTitle(section, sections);
-        }
-
-        return `<div class="toc-entry" style="padding-left:${getIndentPx(section)}px;">
-                <a href="#section-${section.id}" style="text-decoration: none; color: inherit; display: flex; justify-content: space-between; width: 100%; gap:12px;">
-                    <span style="flex:1;">${title}</span>
-                    <span style="margin-left: auto;">${pageNum}</span>
-                </a>
-            </div>`;
-      })
-      .join("");
+    // Use the new TOC generation system with CSS counters for PDF
+    return generateTOCHTML(sections, { strategy: "css-counters", baseUrl });
   };
 
   let content = "";
@@ -817,6 +1041,18 @@ export const generatePrintHTML = (
                      font-family: Arial, sans-serif;
                  }
                  .toc-entry a span:first-child { flex: 1; }
+
+                 /* CSS Page Counter styles for accurate page numbering */
+                 .page-number[data-target]::after {
+                     content: target-counter(attr(data-target), page);
+                 }
+
+                 /* Fallback for browsers that don't support target-counter */
+                 @supports not (content: target-counter(attr(data-target), page)) {
+                     .page-number[data-target]::after {
+                         content: "?";
+                     }
+                 }
 
                 .image-placeholder {
                     border: 2px dashed #ccc;
