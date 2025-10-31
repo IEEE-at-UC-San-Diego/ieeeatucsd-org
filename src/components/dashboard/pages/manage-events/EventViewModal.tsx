@@ -72,7 +72,7 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
         };
 
         fetchUserRoleAndUsers();
-    }, [db, user]);
+    }, [user]);
 
     useEffect(() => {
         if (!request) return;
@@ -121,7 +121,7 @@ export default function EventViewModal({ request, users, onClose, onSuccess }: E
         };
 
         fetchEventFiles();
-    }, [db, request]);
+    }, [request]);
 
     if (!request) return null;
 

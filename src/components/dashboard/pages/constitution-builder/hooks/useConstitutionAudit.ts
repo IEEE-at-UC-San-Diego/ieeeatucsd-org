@@ -5,6 +5,7 @@ import {
   addDoc,
   query,
   orderBy,
+  limit,
   onSnapshot,
   Timestamp,
   getDoc,
@@ -31,7 +32,7 @@ export const useConstitutionAudit = (constitutionId: string) => {
     const auditQuery = query(
       collection(db, "constitutions", constitutionId, "auditLog"),
       orderBy("timestamp", "desc"),
-      // Removed artificial limit - load all audit entries for comprehensive history
+      limit(500) // Limit to 500 entries to prevent expensive snapshots on large constitutions
     );
 
     const unsubscribe = onSnapshot(

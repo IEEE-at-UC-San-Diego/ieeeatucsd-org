@@ -645,7 +645,7 @@ export default function EventRequestModal({
           );
           await EventAuditService.logEventCreation(
             newEventRequestId,
-            userName,
+            auth.currentUser?.uid || "",
             userName,
             { eventName: formData.name },
           );

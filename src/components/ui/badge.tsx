@@ -9,12 +9,12 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground shadow-sm hover:bg-primary/80 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
+          "border-transparent bg-primary text-primary-foreground shadow-sm hover:bg-primary/80 hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
+          "border-transparent bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/80 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
-        outline: "text-foreground border-border bg-background hover:bg-muted/50 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0",
+          "border-transparent bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/80 hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0",
+        outline: "text-foreground border-border bg-background hover:bg-muted/50 hover:shadow-sm motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0",
       },
     },
     defaultVariants: {
