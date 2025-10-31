@@ -124,7 +124,7 @@ export const useConstitutionData = () => {
     };
 
     initializeConstitution();
-  }, [user, db]);
+  }, [user]);
 
   // Update loading state when both constitution and sections are loaded
   useEffect(() => {

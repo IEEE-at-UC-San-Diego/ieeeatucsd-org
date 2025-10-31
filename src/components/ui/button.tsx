@@ -10,14 +10,14 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
+          "bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-md hover:bg-destructive/90 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
+          "bg-destructive text-destructive-foreground shadow-md hover:bg-destructive/90 hover:shadow-lg motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0",
         outline:
-          "border border-input bg-background shadow-md hover:bg-accent hover:text-accent-foreground hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
+          "border border-input bg-background shadow-md hover:bg-accent hover:text-accent-foreground hover:shadow-lg motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-md hover:bg-secondary/80 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0",
-        ghost: "hover:bg-accent hover:text-accent-foreground hover:shadow-md hover:-translate-y-0.5 active:translate-y-0",
+          "bg-secondary text-secondary-foreground shadow-md hover:bg-secondary/80 hover:shadow-lg motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0",
+        ghost: "hover:bg-accent hover:text-accent-foreground hover:shadow-md motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0",
         link: "text-primary underline-offset-4 hover:underline hover:text-primary/80",
       },
       size: {

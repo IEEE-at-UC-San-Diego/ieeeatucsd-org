@@ -69,6 +69,12 @@ export default function ResumeDatabaseContent() {
     useEffect(() => {
         if (!user || !currentUserRole) return;
 
+        // Check permissions before querying Firestore
+        if (!SponsorPermissionService.hasSponsorAccess(currentUserRole, sponsorTier as any)) {
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
@@ -95,7 +101,7 @@ export default function ResumeDatabaseContent() {
         );
 
         return () => unsubscribe();
-    }, [user, currentUserRole]);
+    }, [user, currentUserRole, sponsorTier]);
 
     // Memoize major normalization map for efficient lookups
     const majorNormalizationMap = useMemo(() => {
