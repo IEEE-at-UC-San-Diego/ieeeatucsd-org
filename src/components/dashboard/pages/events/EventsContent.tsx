@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Calendar, MapPin, Clock, Users, UserCheck, X, Award, FileText, Eye, Download } from 'lucide-react';
-import { collection, query, where, doc, updateDoc, setDoc, onSnapshot, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, setDoc, onSnapshot, arrayUnion, serverTimestamp, increment } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '../../../../firebase/client';
 import { PublicProfileService } from '../../shared/services/publicProfile';
@@ -229,7 +229,7 @@ export default function EventsContent() {
             const attendeeRef = doc(db, 'events', event.id, 'attendees', user.uid);
             await setDoc(attendeeRef, {
                 userId: user.uid,
-                timeCheckedIn: new Date(),
+                timeCheckedIn: serverTimestamp(),
                 food: foodPreference,
                 pointsEarned: event.pointsToReward,
                 eventCode: enteredCode // Store the code they used to check in
@@ -241,15 +241,15 @@ export default function EventsContent() {
                 attendees: arrayUnion(user.uid)
             });
 
-            // Update user with event attendance and points
+            // Update user with event attendance and points using atomic operations
             const userRef = doc(db, 'users', user.uid);
             const newPoints = userStats.totalPointsEarned + event.pointsToReward;
             const newEventsAttended = userStats.totalEventsAttended + 1;
 
             await updateDoc(userRef, {
                 lastEventAttended: event.eventName,
-                points: newPoints,
-                eventsAttended: newEventsAttended
+                points: increment(event.pointsToReward),
+                eventsAttended: increment(1)
             });
 
             // Sync to public profile

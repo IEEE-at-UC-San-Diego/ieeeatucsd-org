@@ -258,6 +258,8 @@ const FundDepositsContent: React.FC = () => {
     useEffect(() => {
         if (!user) return;
 
+        let unsubscribe: (() => void) | undefined;
+
         const fetchUserRole = async () => {
             try {
                 const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -282,7 +284,7 @@ const FundDepositsContent: React.FC = () => {
                         );
                     }
 
-                    const unsubscribe = onSnapshot(depositsQuery, (snapshot) => {
+                    unsubscribe = onSnapshot(depositsQuery, (snapshot) => {
                         const depositsData = snapshot.docs.map(doc => ({
                             id: doc.id,
                             ...doc.data()
@@ -293,8 +295,6 @@ const FundDepositsContent: React.FC = () => {
                         console.error('Error fetching deposits:', error);
                         setIsLoading(false);
                     });
-
-                    return () => unsubscribe();
                 }
             } catch (error) {
                 console.error('Error fetching user role:', error);
@@ -303,6 +303,12 @@ const FundDepositsContent: React.FC = () => {
         };
 
         fetchUserRole();
+
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
     }, [user]);
 
     useEffect(() => {

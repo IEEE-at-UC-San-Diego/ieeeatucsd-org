@@ -183,7 +183,6 @@ export function useOnboarding() {
       }
 
       setSuccess(`Invitation sent successfully to ${formData.name}!`);
-      await fetchInvitations();
     } catch (err) {
       console.error("Error sending invitation:", err);
       setError(
@@ -265,7 +264,6 @@ export function useOnboarding() {
       }
 
       setSuccess("Invitation resent successfully!");
-      await fetchInvitations();
     } catch (err) {
       console.error("Error resending invitation:", err);
       setError(
@@ -276,9 +274,9 @@ export function useOnboarding() {
     }
   };
 
-  // Refresh invitations
+  // Refresh invitations (data updates automatically via real-time listener)
   const refreshInvitations = async () => {
-    await fetchInvitations();
+    // No-op: invitations are updated automatically via onSnapshot listener
   };
 
   // Clear messages

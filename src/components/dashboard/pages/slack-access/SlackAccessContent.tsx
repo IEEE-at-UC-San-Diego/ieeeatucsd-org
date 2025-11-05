@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Key, Eye, EyeOff, AlertCircle, CheckCircle, Loader2, MessageSquare, Shield, RefreshCw, Inbox, X, Paperclip, Check, Download, FileText, File, Image, FileVideo, FileAudio, Archive, ExternalLink } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../../../firebase/client';
 import type { User as UserType, UserRole } from '../../shared/types/firestore';
 import { Spinner } from '@heroui/react';
@@ -95,7 +95,7 @@ export default function SlackAccessContent() {
         };
 
         fetchUserData();
-    }, [user, db]);
+    }, [user]);
 
     // Update password validation when passwords change
     useEffect(() => {
@@ -292,7 +292,7 @@ export default function SlackAccessContent() {
                     await updateDoc(userRef, {
                         hasIEEEEmail: true,
                         ieeeEmail: result.data.ieeeEmail,
-                        ieeeEmailCreatedAt: new Date()
+                        ieeeEmailCreatedAt: serverTimestamp()
                     });
                 } catch (firebaseError) {
                     console.error('Error updating Firebase:', firebaseError);
