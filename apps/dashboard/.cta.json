@@ -1,0 +1,26 @@
+{
+  "projectName": "dashboard",
+  "mode": "file-router",
+  "typescript": true,
+  "packageManager": "bun",
+  "tailwind": true,
+  "addOnOptions": {},
+  "git": true,
+  "version": 1,
+  "framework": "react-cra",
+  "chosenAddOns": [
+    "biome",
+    "nitro",
+    "start",
+    "convex",
+    "ai",
+    "form",
+    "shadcn",
+    "table",
+    "t3env",
+    "tRPC",
+    "better-auth",
+    "tanstack-query",
+    "store"
+  ]
+}

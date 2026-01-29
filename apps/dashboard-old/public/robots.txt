@@ -1,0 +1,25 @@
+# robots.txt for IEEE at UC San Diego
+# https://ieeeucsd.org
+
+User-agent: *
+Allow: /
+
+# Disallow dashboard and admin areas
+Disallow: /dashboard/
+Disallow: /api/
+
+# Disallow authentication pages
+Disallow: /dashboard/signin
+Disallow: /dashboard/signout
+
+# Allow public pages
+Allow: /
+Allow: /join
+Allow: /events
+Allow: /projects
+Allow: /board
+Allow: /find
+
+# Sitemap location
+Sitemap: https://ieeeucsd.org/sitemap-index.xml
+

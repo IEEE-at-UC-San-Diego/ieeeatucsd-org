@@ -1,0 +1,21 @@
+---
+import ClientDashboardLayout from "../../components/dashboard/shared/wrappers/ClientDashboardLayout.tsx";
+import DashboardHead from "../../components/dashboard/shared/DashboardHead.astro";
+import ManageFundRequestsContent from "../../components/dashboard/pages/manage-fund-requests/ManageFundRequestsContent.tsx";
+import { NAVIGATION_PATHS } from "../../components/dashboard/shared/types/navigation.ts";
+
+const title = "Manage Fund Requests - Dashboard";
+const currentPath = NAVIGATION_PATHS.MANAGE_FUND_REQUESTS;
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <DashboardHead title={title} />
+    </head>
+    <body>
+        <ClientDashboardLayout currentPath={currentPath} client:load>
+            <ManageFundRequestsContent client:load />
+        </ClientDashboardLayout>
+    </body>
+</html>
