@@ -9,7 +9,19 @@
     "dev:website": "bun run --cwd apps/website dev",
     "build:website": "bun run --cwd apps/website build",
     "dev:dashboard": "bun run --cwd apps/dashboard dev",
-    "build:dashboard": "bun run --cwd apps/dashboard build"
+    "build:dashboard": "bun run --cwd apps/dashboard build",
+    "migrate:export": "npx tsx scripts/migrate/export-firestore.ts",
+    "migrate:export:dry": "npx tsx scripts/migrate/export-firestore.ts --dry-run",
+    "migrate:export:verbose": "npx tsx scripts/migrate/export-firestore.ts --verbose",
+    "migrate:export:users": "npx tsx scripts/migrate/export-firestore.ts --collection=users",
+    "migrate:export:events": "npx tsx scripts/migrate/export-firestore.ts --collection=events",
+    "migrate:export:all": "npx tsx scripts/migrate/export-firestore.ts --verbose",
+    "migrate:transform": "npx tsx scripts/migrate/transform.ts",
+    "migrate:transform:dry": "npx tsx scripts/migrate/transform.ts --dry-run",
+    "migrate:transform:verbose": "npx tsx scripts/migrate/transform.ts --verbose",
+    "migrate:transform:users": "npx tsx scripts/migrate/transform.ts --collection users",
+    "migrate:transform:events": "npx tsx scripts/migrate/transform.ts --collection events",
+    "migrate:transform:all": "npx tsx scripts/migrate/transform.ts --verbose"
   },
   "devDependencies": {
     "prettier": "^3.4.2",

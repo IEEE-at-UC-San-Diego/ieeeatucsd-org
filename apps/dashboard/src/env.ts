@@ -3,7 +3,16 @@ import { z } from 'zod'
 
 export const env = createEnv({
   server: {
-    SERVER_URL: z.string().url().optional(),
+    // Convex configuration
+    CONVEX_SELF_HOSTED_URL: z.string().url().optional(),
+    CONVEX_SELF_HOSTED_ADMIN_KEY: z.string().optional(),
+
+    // Logto server-side configuration
+    // Used for server SDK, Management API, and webhook verification
+    LOGTO_ENDPOINT: z.string().url(),
+    LOGTO_APP_ID: z.string(),
+    LOGTO_APP_SECRET: z.string(),
+    LOGTO_WEBHOOK_SECRET: z.string().optional(),
   },
 
   /**
@@ -13,7 +22,14 @@ export const env = createEnv({
   clientPrefix: 'VITE_',
 
   client: {
+    // App configuration
     VITE_APP_TITLE: z.string().min(1).optional(),
+
+    // Logto client-side configuration
+    VITE_LOGTO_ENDPOINT: z.string().url(),
+    VITE_LOGTO_APP_ID: z.string(),
+    VITE_LOGTO_REDIRECT_URI: z.string().url().optional(),
+    VITE_APP_URL: z.string().url().optional(),
   },
 
   /**

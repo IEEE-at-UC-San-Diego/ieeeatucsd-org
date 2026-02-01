@@ -1,0 +1,94 @@
+# Continuous Integration Workflow
+# This workflow runs on every push to main/develop branches and on pull requests
+# It performs code quality checks, type checking, testing, and building
+
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'apps/dashboard/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'apps/dashboard/**'
+
+# Prevent multiple simultaneous runs for the same branch/ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: CI Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./apps/dashboard
+
+    steps:
+      # Step 1: Checkout repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for proper change detection
+
+      # Step 2: Setup Bun runtime
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Step 3: Cache Bun dependencies for faster builds
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            apps/dashboard/node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('apps/dashboard/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      # Step 4: Install dependencies
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Step 5: Run Biome linter and formatter checks
+      - name: Run linter and format check
+        run: bun run check
+
+      # Step 6: Run TypeScript type checking
+      - name: Type check
+        run: bunx tsc --noEmit
+
+      # Step 7: Run tests with Vitest
+      - name: Run tests
+        run: bun run test
+        env:
+          CI: true
+
+      # Step 8: Build the application
+      - name: Build application
+        run: bun run build
+        env:
+          # Environment variables for build (these are placeholders)
+          # In production, these should be set as GitHub Secrets
+          VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL || 'https://example.convex.site' }}
+          VITE_LOGTO_ENDPOINT: ${{ secrets.VITE_LOGTO_ENDPOINT || 'https://example.logto.app' }}
+          VITE_LOGTO_APP_ID: ${{ secrets.VITE_LOGTO_APP_ID || 'dummy-app-id' }}
+
+      # Step 9: Upload build artifacts for potential deployment
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+        with:
+          name: build-${{ github.ref_name }}-${{ github.sha }}
+          path: apps/dashboard/dist
+          retention-days: 7

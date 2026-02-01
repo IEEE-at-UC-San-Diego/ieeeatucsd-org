@@ -1,0 +1,134 @@
+# Deploy Convex Functions
+# This workflow deploys Convex backend functions when changes are made to the convex directory
+# or when manually triggered
+
+name: Deploy Convex Functions
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'apps/dashboard/convex/**'
+      - '.github/workflows/deploy-convex.yml'
+  workflow_dispatch:
+    # Allow manual deployment with environment selection
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - development
+
+# Prevent multiple simultaneous Convex deployments
+concurrency:
+  group: deploy-convex
+  cancel-in-progress: false
+
+jobs:
+  deploy-convex:
+    name: Deploy Convex Functions
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'development') }}
+    defaults:
+      run:
+        working-directory: ./apps/dashboard
+
+    steps:
+      # Step 1: Checkout repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Node.js (required for Convex CLI)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/dashboard/bun.lock
+
+      # Step 3: Setup Bun runtime
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Step 4: Cache dependencies
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            apps/dashboard/node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('apps/dashboard/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      # Step 5: Install dependencies
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Step 6: Validate Convex schema and functions
+      - name: Validate Convex code
+        run: |
+          echo "Validating Convex TypeScript files..."
+          bunx tsc --noEmit -p convex/tsconfig.json
+          echo "✅ Convex TypeScript validation passed"
+
+      # Step 7: Deploy to Convex
+      # Uses the CONVEX_DEPLOY_KEY secret for authentication
+      - name: Deploy Convex functions
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "❌ ERROR: CONVEX_DEPLOY_KEY secret is not set!"
+            echo "Please add the CONVEX_DEPLOY_KEY to your GitHub repository secrets."
+            echo ""
+            echo "To get your deploy key:"
+            echo "1. Run: npx convex deploy --dry-run"
+            echo "2. Or visit your Convex dashboard: https://dashboard.convex.dev"
+            echo "3. Go to Settings -> Deploy Key"
+            exit 1
+          fi
+
+          echo "🚀 Deploying Convex functions..."
+          bunx convex deploy
+          echo "✅ Convex deployment complete!"
+
+      # Step 8: Verify deployment (optional health check)
+      - name: Verify deployment
+        if: success()
+        run: |
+          echo "Verifying Convex deployment..."
+          # List deployed functions as verification
+          bunx convex function list || true
+          echo "✅ Convex verification complete"
+
+      # Step 9: Notify deployment status
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "✅ Convex functions deployed successfully!"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Changed files:"
+          git diff --name-only HEAD~1 HEAD -- convex/ || echo "Unable to list changes"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "❌ Convex deployment failed!"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo ""
+          echo "Common issues:"
+          echo "  - Missing CONVEX_DEPLOY_KEY secret"
+          echo "  - Type errors in convex functions"
+          echo "  - Schema validation failures"
+          echo "  - Network connectivity issues"

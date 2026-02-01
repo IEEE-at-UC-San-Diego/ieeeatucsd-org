@@ -1,0 +1,111 @@
+# Deploy to Development Environment
+# This workflow automatically deploys the application to the development environment
+# when changes are pushed to the develop branch
+
+name: Deploy to Development
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'apps/dashboard/**'
+      - '.github/workflows/deploy-dev.yml'
+
+# Prevent multiple simultaneous deployments
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false # Don't cancel to ensure environment stability
+
+jobs:
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: ${{ steps.deploy.outputs.url }} # Will be set by deployment step
+    defaults:
+      run:
+        working-directory: ./apps/dashboard
+
+    steps:
+      # Step 1: Checkout repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Bun runtime
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Step 3: Cache Bun dependencies
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            apps/dashboard/node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('apps/dashboard/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      # Step 4: Install dependencies
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Step 5: Run quality checks before deployment
+      - name: Run checks
+        run: |
+          bun run check
+          bunx tsc --noEmit
+
+      # Step 6: Build the application for development
+      - name: Build application
+        run: bun run build
+        env:
+          # Development environment variables
+          # These should be configured as GitHub Secrets for the development environment
+          NODE_ENV: development
+          VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
+          VITE_LOGTO_ENDPOINT: ${{ secrets.VITE_LOGTO_ENDPOINT }}
+          VITE_LOGTO_APP_ID: ${{ secrets.VITE_LOGTO_APP_ID }}
+
+      # Step 7: Deploy to development environment
+      # NOTE: This is a placeholder step. Replace with actual deployment provider:
+      # - For Vercel: use `vercel` CLI or `vercel-deploy` action
+      # - For Netlify: use `netlify` CLI or `netlify/actions`  
+      # - For AWS: use `aws-actions/configure-aws-credentials` + S3/CloudFront
+      # - For Cloudflare Pages: use `cloudflare/pages-action`
+      # - For Railway: use `railway/cli`
+      # - For Fly.io: use `superfly/flyctl-actions`
+      - name: Deploy to development
+        id: deploy
+        run: |
+          echo "🚀 Deploying to development environment..."
+          echo "Build output location: ./dist"
+          echo ""
+          echo "TODO: Configure your deployment provider"
+          echo "Common options:"
+          echo "  - Vercel: vercel --prod"
+          echo "  - Netlify: netlify deploy --prod"
+          echo "  - AWS S3: aws s3 sync dist s3://your-bucket"
+          echo "  - Cloudflare Pages: use cloudflare/pages-action"
+          echo ""
+          echo "url=https://dev-your-app.example.com" >> $GITHUB_OUTPUT
+          echo "✅ Deployment placeholder complete. Replace with actual deployment commands."
+
+      # Step 8: Notify deployment status (optional)
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "✅ Development deployment successful!"
+          echo "Deployed commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "❌ Development deployment failed!"
+          echo "Failed commit: ${{ github.sha }}"
+          echo "Check logs above for details."

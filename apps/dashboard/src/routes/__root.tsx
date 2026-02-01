@@ -10,6 +10,8 @@ import Header from '../components/Header'
 
 import ConvexProvider from '../integrations/convex/provider'
 
+import LogtoProvider from '../integrations/logto/provider'
+
 import AiDevtools from '../lib/ai-devtools'
 
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
@@ -62,22 +64,24 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <ConvexProvider>
-          <Header />
-          {children}
-          <TanStackDevtools
-            config={{
-              position: 'bottom-right',
-            }}
-            plugins={[
-              {
-                name: 'Tanstack Router',
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              AiDevtools,
-              TanStackQueryDevtools,
-              StoreDevtools,
-            ]}
-          />
+          <LogtoProvider>
+            <Header />
+            {children}
+            <TanStackDevtools
+              config={{
+                position: 'bottom-right',
+              }}
+              plugins={[
+                {
+                  name: 'Tanstack Router',
+                  render: <TanStackRouterDevtoolsPanel />,
+                },
+                AiDevtools,
+                TanStackQueryDevtools,
+                StoreDevtools,
+              ]}
+            />
+          </LogtoProvider>
         </ConvexProvider>
         <Scripts />
       </body>
