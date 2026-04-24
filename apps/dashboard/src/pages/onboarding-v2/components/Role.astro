@@ -1,0 +1,31 @@
+---
+interface Props {
+  title: string;
+  lastUpdatedText?: string; // e.g. "Last updated Nov 4, 2025"
+}
+const { title, lastUpdatedText = "Last updated April 23, 2026" } = Astro.props;
+---
+
+<div class="max-w-4xl">
+  <div class="flex items-center justify-between gap-6">
+    <div>
+      <h1 class="text-3xl md:text-4xl font-black tracking-tight">{title}</h1>
+      <span class="mt-3 inline-block rounded bg-orange-100 px-2 py-1 text-xs text-orange-800">
+        {lastUpdatedText}
+      </span>
+    </div>
+  </div>
+
+  <div class="mt-6 border-b border-black/15 flex gap-8 text-sm">
+    <button class="pb-2 border-b-2 border-black font-semibold flex items-center gap-2">
+      <span>↗</span> Links
+    </button>
+    <button class="pb-2 text-black/40 flex items-center gap-2">
+      <span>✉</span> Key Contacts
+    </button>
+  </div>
+
+  <div class="mt-7">
+    <slot />
+  </div>
+</div>

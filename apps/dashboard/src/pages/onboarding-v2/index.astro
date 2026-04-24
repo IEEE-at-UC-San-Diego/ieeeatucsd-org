@@ -1,0 +1,36 @@
+---
+import Topbar from "./components/Topbar.astro";
+---
+
+<div class="min-h-screen bg-white">
+  <Topbar />
+
+  <main class="flex items-center justify-center px-6 py-16">
+    <div class="w-full max-w-3xl rounded-xl border border-black/15 bg-white p-10">
+      <h1 class="text-2xl md:text-3xl font-black text-center">
+        IEEE @ UC San Diego Onboarding Website
+      </h1>
+
+      <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+        <div class="border border-black/10 rounded-lg p-6 flex flex-col items-center">
+          <p class="text-sm font-semibold">Click Here to Sign In</p>
+          <div class="mt-4 h-16 w-16 rounded-full bg-black/15"></div>
+          <a
+            href="/onboarding-v2/dashboard"
+            class="mt-6 w-full rounded bg-[#0A66A6] py-3 text-center text-white font-semibold hover:opacity-90"
+          >
+            Sign In
+          </a>
+        </div>
+
+        <div class="text-sm text-black/70 leading-relaxed">
+          <p class="font-semibold text-black">Welcome to the IEEE@UCSD Onboarding Portal!</p>
+          <p class="mt-4">
+            This is your central hub for everything you need to know to get started as an officer.
+            Find your role, learn the ropes, and hit the ground running.
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

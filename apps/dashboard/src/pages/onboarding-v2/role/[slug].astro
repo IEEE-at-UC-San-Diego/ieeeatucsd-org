@@ -1,0 +1,820 @@
+---
+import OnboardingLayout from "../layout/onboardinglayout.astro";
+import PersonRolePage from "../components/PersonRolePage.astro";
+
+type LinkRow = {
+  label: string;
+  href?: string;
+  description?: string;
+};
+
+type OfficerPage = {
+  title: string;
+  currentName: string;
+  currentMeta: string;
+  whatToKnow: string;
+  links: LinkRow[];
+  fellowText: string;
+};
+
+const { slug } = Astro.params;
+const slugKey = slug ?? "";
+
+const officerPages: Record<string, OfficerPage> = {
+  // ── EXECUTIVE ──────────────────────────────────────────────
+  "erik-duarte": {
+    title: "President",
+    currentName: "Erik Duarte",
+    currentMeta: "President | 2026",
+    whatToKnow:
+      "As President, you are responsible for",
+    links: [
+      { label: "Text", href: "#", description: "Text" },
+      { label: "Text", href: "#", description: "Text" },
+    ],
+    fellowText:
+      "You will frequently collaborate with",
+  },
+  "emma-leung": {
+    title: "VC Internal",
+    currentName: "Emma Leung",
+    currentMeta: "VC Internal | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "akhil-ram-shankar": {
+    title: "VC External",
+    currentName: "Akhil Ram Shankar",
+    currentMeta: "VC External | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "anupama-nambiar": {
+    title: "VC Events",
+    currentName: "Anupama Nambiar",
+    currentMeta: "VC Events | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "charles-nguyen": {
+    title: "VC Finance",
+    currentName: "Charles Nguyen",
+    currentMeta: "VC Finance | 2026",
+    whatToKnow:
+      "VC Finance manages budgets, reimbursements, and financial planning for IEEE UCSD events and operations.",
+    links: [
+      { label: "Budget Spreadsheet", href: "#", description: "Track organization spending." },
+      { label: "Reimbursement Form", href: "#", description: "Submit reimbursement requests." },
+    ],
+    fellowText:
+      "Work closely with the President and project leads to approve funding.",
+  },
+  "aiden-basset": {
+    title: "VC Operations",
+    currentName: "Aiden Basset",
+    currentMeta: "VC Operations | 2026",
+    whatToKnow: `
+      <strong>Key Contacts</strong>
+      <ul>
+        <li><strong>A.S.</strong> &mdash; funds food and sometimes materials. Contact <strong>Chris</strong> by email</li>
+        <li><strong>SLBO</strong> &mdash; buys the food, and handles purchases, expenses, and reimbursements. Contact <strong>Alma</strong> through TAP or email. Check with the SLBO Fund Manager before answering vendor questions about payment</li>
+        <li><strong>CSI</strong> &mdash; advisor for non-food, non-money matters. Contact <strong>Maria</strong> through TAP or email</li>
+        <li>Email and TAP are the best lines of contact; schedule a meeting with any of the three if something is unclear</li>
+      </ul>
+
+      <strong>Due Dates Calendar</strong>
+      <p>Until A.S. changes the rules:</p>
+      <ul>
+        <li><strong>Friday, 5 weeks before event</strong> &mdash; Programming App due</li>
+        <li><strong>21 days before event</strong> &mdash; TAP Form due</li>
+      </ul>
+      <p>A.S.'s calendar of funding due dates aligns with the academic calendar &mdash; <strong>funding weeks start on Mondays and end on Sundays</strong>. If the Spring Week 6 and Week 7 due dates are both Friday of Spring Week 1 at 11:59pm, you can set the deadlines for when you want events submitted by the other board members. This will help when people are missing invoices and you need to ask them for it.</p>
+
+      <strong>Programming Apps</strong>
+      <ul>
+        <li>What files are needed, what info is needed, etc. &mdash; see the A.S. funding guide</li>
+        <li>Read <strong>all</strong> of the funding guide (except tournament funding)</li>
+        <li>The app is your best play at VCO; it has a good rubric for most of the information you'll eventually know by heart</li>
+        <li>An event is eligible for A.S. Funding if:
+          <ul>
+            <li>The event is on campus</li>
+            <li>It is open to all UCSD undergraduate students</li>
+            <li>It is open to only UCSD undergraduate students, graduate students, faculty, and staff</li>
+          </ul>
+        </li>
+      </ul>
+
+      <strong>PEEFS</strong>
+      <ul>
+        <li>Fill out PEEFS &mdash; your programming app will be denied if you are not filling out PEEFS</li>
+        <li>Join the A.S. Town Hall Discord for feedback and to ask the things you don't need to ask publicly; don't ask questions in the main Discord &mdash; email Chris or message him directly</li>
+      </ul>
+
+      <strong>TAP Forms</strong>
+      <ul>
+        <li>Needed for all the information from the programming app, plus general knowledge about the event</li>
+        <li>The TAP form for an event must be <strong>started and confirmation submitted 21 days before</strong> the event, and the final version must be <strong>submitted by 14 days before</strong> the event</li>
+        <li>Use only approved vendors (e.g., Amazon, tap.ucsd.edu/vendor)</li>
+      </ul>
+
+      <strong>Reimbursements (A.S. Funding)</strong>
+      <ul>
+        <li>You still have SLBO buy most of your food from events, but for doing by one of the officers helping run the event, however some vendors such as Vons, Costco, or Amazon require you to file for reimbursement because SLBO cannot easily go and pay for an invoiced order:
+          <ul>
+            <li>This is when one of the <strong>principal members</strong> (should be all exec officers) will purchase the items on their card, then be reimbursed later</li>
+            <li><strong>You still need to apply for A.S. funding for reimbursement</strong> &mdash; fill out the questionnaire accordingly and you should see the reimbursement module pop up instead of the vendors one</li>
+            <li>Fill out the module and have the paying Principal Member (PM) apply for reimbursement as is instructed</li>
+            <li><strong>Submitting for reimbursement is due within 7 days after the event, but do the application ASAP so nothing falls through the cracks</strong></li>
+            <li>A reimbursement is a good way to still get funding for non-traditional vendors (have been used in the past for a Valentine's Day card making event), or as a last-resort backup to resolve problems with a stingy vendor not giving you an invoice, however try to use it as little as possible so that no money has to come out of anyone's account and no payments fall through the cracks</li>
+          </ul>
+        </li>
+      </ul>
+
+      <strong>VTools</strong>
+      <ul>
+        <li>Our way of getting funding from the <strong>SD Section</strong> of big IEEE (<code>events.vtools.ieee.org/tego_/events/administration</code>)</li>
+        <li>Fill out VTools forms for events both future and past, but only for events big IEEE would care about (workshops, GBMs, outreach &mdash; not necessarily social events)</li>
+        <li>Unless the event explicitly allows public attendance (meaning it wouldn't be A.S. funded), <strong>do not allow registration</strong>. The typical workaround is to set registration from an arbitrary date weeks ago through yesterday (or day-of if the event has passed) so technically registration dates exist but no one can sign up</li>
+        <li>Not every tab needs to be filled &mdash; include what someone from SD Section would care to know about the event</li>
+        <li><strong>Make sure you have attendance records from the event</strong> &mdash; you'll need them for PEEFS too</li>
+      </ul>
+    `,
+    links: [
+      { label: "A.S. Finance Home", href: "https://finance.ucsd.edu/Finance/Home", description: "A.S. programming app portal." },
+      { label: "A.S. Funding Guide", href: "https://asfunding.org/guide/introduction", description: "Read all of this (except tournament funding)." },
+      { label: "TAP Vendor List", href: "https://tap.ucsd.edu/vendor/", description: "Approved vendors for A.S.-funded events." },
+      { label: "TAP Student Listing", href: "https://tap.ucsd.edu/student/?go=listing", description: "Find and manage your org's TAP forms." },
+      { label: "VTools Administration", href: "https://events.vtools.ieee.org/tego_/events/administration", description: "Submit events to IEEE SD Section for funding." },
+    ],
+    fellowText:
+      "Work closely with VC Finance on budgets and reimbursements, VC Events on event submissions and deadlines, and the rest of the exec board; principal members carry reimbursements on their cards. Loop in A.S. (Chris), SLBO (Alma), and CSI (Maria) through TAP/email as needed.",
+  },
+  "anusha-chadalavada": {
+    title: "VC Operations",
+    currentName: "Anusha Chadalavada",
+    currentMeta: "VC Operations | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+
+  // ── EVENTS ─────────────────────────────────────────────────
+  "kelly-guan": {
+    title: "Social Chair",
+    currentName: "Kelly Guan",
+    currentMeta: "Social Chair | 2026",
+    whatToKnow: `
+      <strong>Catering Orders</strong>
+      <p>When emailing vendors, include the following:</p>
+      <ul>
+        <li>Your name and the club you are representing</li>
+        <li>Date, time, and whether it's pickup or delivery</li>
+        <li>If delivery: school address is <strong>9500 Gilman Drive, La Jolla, CA 92093</strong>. Request the dropoff at Jacobs Hall (EBU1) so you don't have to walk from Price Center</li>
+        <li>Phone number, email, or other contact info</li>
+      </ul>
+
+      <strong>Budgeting Tips</strong>
+      <ul>
+        <li>Factor in delivery fee and sales tax so the <strong>price per person does not exceed $10</strong></li>
+        <li>Example: subtotal $100 + tax $7.75 + delivery $12.50 = $120.25 &divide; 10 = ~$12/person &rarr; round up to 13 people</li>
+      </ul>
+
+      <strong>Payment</strong>
+      <ul>
+        <li>NO need to put a credit card down. Explain that a student government representative will send payment <strong>24&ndash;72 hours before</strong> the event</li>
+        <li>If there is any confusion, ask your exec for help</li>
+      </ul>
+
+      <strong>Using AS Funding at Vons/Ralphs/Costco</strong>
+      <ul>
+        <li>Use the grocery app or website to build an online order</li>
+        <li>Screenshot the cart and use it as your invoice</li>
+      </ul>
+
+      <strong>Room Bookings</strong>
+      <p><strong>Price Center (PC):</strong></p>
+      <ul>
+        <li>Only exec officers can book PC rooms, up to 4 confirmed reservations at a time</li>
+        <li>Recommend sticking with <strong>floor 2</strong> &mdash; floor 4 rooms are harder to find and fewer people show up</li>
+      </ul>
+      <p><strong>Jacobs Hall (EBU1):</strong></p>
+      <ul>
+        <li>ECE facilities can take up to <strong>5 days</strong> to return your confirmation &mdash; plan ahead</li>
+        <li>Post directions to classroom 2315, especially for joint events with other clubs where students may not know the building</li>
+      </ul>
+    `,
+    links: [
+      { label: "IEEE Dashboard", href: "https://dashboard.ieeeatucsd.org/overview", description: "Main IEEE UCSD dashboard for event management." },
+      { label: "HBR Room Booking", href: "https://jacobsschoolucsd.libcal.com/reserve/ECEStudentOrg", description: "Book rooms at Jacobs Hall (EBU1)." },
+      { label: "AS-Funded Vendors", href: "https://tap.ucsd.edu/vendor/", description: "Approved vendor list for AS-funded events." },
+    ],
+    fellowText:
+      "Check the 'Important Links' tab in the events channel on Slack for additional resources. Work closely with VC Events and VC Operations for event submissions and room bookings.",
+  },
+  "cailey-murad": {
+    title: "Social Chair",
+    currentName: "Cailey Murad",
+    currentMeta: "Social Chair | 2026",
+    whatToKnow: `
+      <strong>Organizing Events</strong>
+      <ul>
+        <li>Start planning as early as possible &mdash; deadlines creep up fast. Miss a deadline and there won't be any events</li>
+        <li>Expect around <strong>20&ndash;25 people</strong> per event</li>
+      </ul>
+
+      <strong>Event Ideas</strong>
+      <p><strong>Quarterly:</strong></p>
+      <ul>
+        <li>Pizza and Board Game Night</li>
+        <li>Study Jam with Boba (twice a quarter)</li>
+        <li>Fundraisers: Bake Sale, Yogurt World Fundraiser + Meet the Board</li>
+      </ul>
+      <p><strong>Holiday:</strong></p>
+      <ul>
+        <li>Pumpkin Carving Night</li>
+        <li>Gingerbread House Showdown</li>
+        <li>Valentine's Day Crafting &amp; Gifting (cards, bouquets, chocolates)</li>
+        <li>3.14 Pi Day Party</li>
+        <li>Earth Day Party (swap meet, sustainability, houseplants)</li>
+        <li>Mother's Day Crafting &amp; Gift Giving (cards, painted canvases)</li>
+      </ul>
+      <p><strong>Annual:</strong></p>
+      <ul>
+        <li>Bonfire &amp; S'mores at La Jolla Shores</li>
+        <li>Ultimate Scavenger Hunt</li>
+      </ul>
+      <p><strong>Other:</strong></p>
+      <ul>
+        <li>Movie Night at Price Theatre</li>
+        <li>Create Your Own Keychain</li>
+      </ul>
+      <p>Get creative! There's a lot of material left over from past events (utensils, decor, etc.) that can be reused.</p>
+
+      <strong>AS Funding Rules</strong>
+      <ul>
+        <li><strong>ONLY</strong> use a credit card from an executive board member for AS-funded events. Do NOT use your personal credit card</li>
+        <li>If collaborating with another club, one club can use AS funding and the other can use personal cards</li>
+        <li>Invoices don't need credit card info and dates don't need to be exact</li>
+        <li>Do not exceed the budget</li>
+      </ul>
+
+      <strong>Room Options</strong>
+      <ul>
+        <li>Henry Booker Room (Jacobs Hall 2512)</li>
+        <li>Price Center &mdash; only VC Events can book these rooms</li>
+        <li>For food events, book EBU1 or a classroom at Price Center</li>
+      </ul>
+
+      <strong>Event Submissions</strong>
+      <ul>
+        <li>Submit events about a quarter of the way into the quarter, every Monday</li>
+        <li>Check in with VC Operations for submission deadlines</li>
+      </ul>
+
+      <strong>After the Event</strong>
+      <ul>
+        <li>Clean the room completely and take out the trash (there should be access to a vacuum and cleaning supplies through another door)</li>
+      </ul>
+    `,
+    links: [
+      { label: "IEEE Dashboard", href: "https://dashboard.ieeeatucsd.org/overview", description: "Main IEEE UCSD dashboard for event management." },
+      { label: "HBR Room Booking", href: "https://jacobsschoolucsd.libcal.com/reserve/ECEStudentOrg", description: "Book rooms at Jacobs Hall." },
+      { label: "AS-Funded Vendors", href: "https://tap.ucsd.edu/vendor/", description: "Approved vendor list for AS-funded events." },
+    ],
+    fellowText:
+      "Check the 'Important Links' tab in the events channel on Slack for additional resources. Work closely with VC Events for event submissions and VC Operations for logistics.",
+  },
+  "ridhi-srikanth": {
+    title: "Technical Chair",
+    currentName: "Ridhi Srikanth",
+    currentMeta: "Technical Chair | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "ayren-singhal": {
+    title: "Technical Chair",
+    currentName: "Ayren Singhal",
+    currentMeta: "Technical Chair | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "riya-bhatia": {
+    title: "Technical Chair",
+    currentName: "Riya Bhatia",
+    currentMeta: "Technical Chair | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+
+  // ── EXTERNAL ───────────────────────────────────────────────
+  "iris-chou": {
+    title: "Professional Chair",
+    currentName: "Iris Chou",
+    currentMeta: "Professional Chair | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "anika-agarwal": {
+    title: "Outreach Chair",
+    currentName: "Anika Agarwal",
+    currentMeta: "Outreach Chair | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "aaditya-pillai": {
+    title: "Outreach Chair",
+    currentName: "Aaditya Pillai",
+    currentMeta: "Outreach Chair |2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+
+  // ── INTERNAL ───────────────────────────────────────────────
+  "lauren-vo": {
+    title: "Marketing Chair",
+    currentName: "Lauren Vo",
+    currentMeta: "Marketing Chair | 2026",
+    whatToKnow: `
+      <strong>Marketing Structure</strong>
+      <p>Marketing covers two areas &mdash; media and photography:</p>
+      <ul>
+        <li><strong>Media</strong> &mdash; promoting through social media: Discord, Instagram, Facebook, newsletters</li>
+        <li><strong>Photography</strong> &mdash; capturing content at events for recaps and future promotion</li>
+      </ul>
+
+      <strong>Pre-Event Process</strong>
+      <ol>
+        <li>Receive event requests &mdash; <strong>enforce that they're submitted at least 6 weeks in advance</strong></li>
+        <li>Create graphics (flyer, FB, IG)</li>
+        <li>Send graphics to the PR team for feedback</li>
+        <li>Send graphics to whoever requested for approval</li>
+        <li>Create posts on social media platforms</li>
+        <li>Promote those posts (see below)</li>
+      </ol>
+
+      <strong>Where to Cross-Promote</strong>
+      <p><strong>Facebook:</strong></p>
+      <ul>
+        <li>Class of 20XX groups</li>
+        <li>IEEE UC San Diego Branch Members</li>
+        <li>TESC Outreach &mdash; Incoming UCSD Freshmen</li>
+        <li>What's Happening @ UCSD</li>
+        <li>Others: UCSD Free Food Brigade, CS @ UCSD, EE @ UCSD, CSES</li>
+        <li>Anywhere else that might be helpful</li>
+      </ul>
+      <p><strong>Instagram</strong> &mdash; DM for story reshares:</p>
+      <ul>
+        <li>@ucsandiegoece, @ucsandiegoengineering, @eceusc_ucsd</li>
+        <li>Others: @acm.ucsd, @hkn_ucsd, @pibucsd, @qcucsd, @tntucsd, @swe.ucsd, @ucsdtesc, @sphbeucsd, @shpeatucsd, @girlswhocodeucsd, @ostemucsd, @bwiucsd, @saseatucsd</li>
+      </ul>
+      <p><strong>Discord</strong> &mdash; post in: U[CS]D, UCSD Cog Sci Study Group, UCSD LGBTQIA+, HKN Kappa Psi, ACM UC San Diego, oSTEM @ UCSD, Computer Science &amp; Engineering Society, Women in Computing @ UCSD, Class of 20XX. Get help from all officers &mdash; they may be in other servers that you aren't in to help promote, especially STEM-adjacent and non-STEM groups (Math, MAE, Robotics, etc.)</p>
+      <p><strong>Newsletters:</strong> IEEE, ECE, IDEA</p>
+
+      <strong>Physical Flyers</strong>
+      <ul>
+        <li>Use the <strong>'23&ndash;'24 Marketing Masterlist</strong> (Google Doc) as a reference</li>
+        <li>If someone (probably me/Brigette) would order them through Triton Print and Digital Media, pay out of pocket, pick up at the Campus Services Complex, then submit an AS reimbursement for the flyers</li>
+        <li>Whoever ordered them (they have to be a Principal Member) submits the AS reimbursement</li>
+      </ul>
+
+      <strong>During the Event &mdash; Photography</strong>
+      <ul>
+        <li>Coordinate with one another &mdash; as well as the officers who want to take pictures &mdash; so no one is doubling up for too long</li>
+        <li>Real cameras preferred, but phone cameras are fine</li>
+      </ul>
+
+      <strong>During the Event &mdash; Stories</strong>
+      <p>Post on FB and IG stories. It'd be nice to revamp our story highlights to make them relevant.</p>
+
+      <strong>Post-Event</strong>
+      <ol>
+        <li><strong>Photography</strong> &mdash; upload photos to IEEE's Google Photos (create a new album)</li>
+        <li>Pick at most 10 photos you think are worthy enough to post on social media for a recap</li>
+        <li>Edit them if they need it and add our logo/watermark</li>
+        <li>Post the recap on social media accounts</li>
+      </ol>
+
+      <strong>General Expectations</strong>
+      <ul>
+        <li>Weekly OAH (2 hours), Weekly Internal Meeting (1 hour), Working Mandatory Events</li>
+        <li>Bi-Quarterly All Hands (1&ndash;3 hours), Quarterly GBMs (1&ndash;3 hours, recap videos &amp; collages)</li>
+        <li>Posting on Instagram &amp; Discord (~1 hour), attending events for photo/video (1&ndash;3 hours)</li>
+      </ul>
+    `,
+    links: [
+      { label: "IEEE UCSD Instagram", href: "https://www.instagram.com/ieeeucsd/", description: "Primary posting channel." },
+      { label: "Triton Print & Digital Media", href: "https://tritonprint.ucsd.edu/", description: "Campus print shop for physical flyers." },
+      { label: "AS Reimbursement Info", href: "https://asfunding.org/", description: "Submit reimbursements for printed flyers." },
+    ],
+    fellowText:
+      "Split responsibilities with your co-Marketing Chair; decide who posts, who edits, and who covers which event. Coordinate with the Design Chair on graphics, PR team on feedback, VC Internal on Slack/Discord, and VC Operations on AS reimbursements for printed materials.",
+  },
+  "loraine-diosa": {
+    title: "Marketing Chair",
+    currentName: "Loraine Diosa",
+    currentMeta: "Marketing Chair | 2026",
+    whatToKnow: `
+      <strong>Overview of Duties</strong>
+      <p>At a high level, your role is to:</p>
+      <ul>
+        <li>Capture content (photos/videos) at events</li>
+        <li>Create recap posts (collages, videos, etc.)</li>
+        <li>Manage and contribute to IEEE's social media presence</li>
+        <li>Help promote events and maintain engagement</li>
+      </ul>
+      <p>You're also expected to be present and involved as a general board member.</p>
+
+      <strong>Weekly Expectations</strong>
+      <ul>
+        <li><strong>OAH (Office/Activity Hours):</strong> ~2 hours/week</li>
+        <li><strong>Internal Meetings:</strong> ~1 hour/week</li>
+        <li><strong>Events:</strong> varies, 1&ndash;3 hours depending on schedule</li>
+      </ul>
+      <p>Stay consistent with meetings and keep up through Slack.</p>
+
+      <strong>Marketing Chair Responsibilities</strong>
+      <ul>
+        <li>Bi-Quarterly All Hands (1&ndash;3 hours)</li>
+        <li>Quarterly GBMs (1&ndash;3 hours) &mdash; recap videos &amp; collages</li>
+        <li>Posting on Instagram &amp; Discord (~1 hour)</li>
+        <li>Attending events / taking pictures &amp; videos (1&ndash;3 hours)</li>
+      </ul>
+
+      <strong>Content Creation</strong>
+      <ul>
+        <li>Take photos and videos at events</li>
+        <li>Make recap collages or short videos</li>
+        <li>Post content on Instagram and Discord</li>
+      </ul>
+
+      <strong>Posting</strong>
+      <ul>
+        <li>Instagram posts + stories</li>
+        <li>Discord Newsletter announcements (same as posts) &mdash; extra step: create an event on Discord</li>
+      </ul>
+      <p>On average this is ~30 min&ndash;1 hour per week, varies with events.</p>
+
+      <strong>Tools &amp; Access</strong>
+      <p>Make sure you get access to:</p>
+      <ul>
+        <li><strong>Instagram Account</strong> (posting access)</li>
+        <li><strong>Discord Admin Permissions</strong></li>
+        <li><strong>Slack Channels</strong> &mdash; important ones: <code>2026-2027-board</code>, <code>26-27-internal</code>, <code>pr</code>, <code>z-play</code> (for posting media)</li>
+      </ul>
+      <p>Use Slack actively to stay updated and share content.</p>
+
+      <strong>Key Documents</strong>
+      <ul>
+        <li>IEEE Drive &mdash; for storing content and materials</li>
+        <li>Slack &mdash; main communication + media sharing</li>
+      </ul>
+
+      <strong>Tips &amp; Best Practices</strong>
+      <ol>
+        <li><strong>Take more content than you think you need.</strong> You'll always use it later &mdash; better to have extra than not enough</li>
+        <li><strong>Stay consistent with posting.</strong> Even simple posts help keep engagement up</li>
+        <li><strong>Don't overthink content.</strong> It doesn't need to be perfect, just clear, fun, and representative of the event and org</li>
+        <li><strong>Communicate with your co-chair.</strong> Split responsibilities (who posts, who edits, who covers which event) so nothing gets overwhelming</li>
+        <li><strong>Be present at events.</strong> Some of the best content comes naturally when you're actively engaged</li>
+      </ol>
+
+      <strong>Final Remarks</strong>
+      <p>This role is what you make of it &mdash; as creative, involved, and fun as you want. Once you get into the rhythm of capturing content and posting, it becomes pretty natural. Good luck!</p>
+    `,
+    links: [
+      { label: "IEEE Drive", href: "#", description: "Store event content, flyers, and shared media." },
+      { label: "IEEE UCSD Instagram", href: "https://www.instagram.com/ieeeucsd/", description: "Primary posting channel." },
+    ],
+    fellowText:
+      "Split coverage with your co-Marketing Chair, coordinate with the Design Chair on graphics, and check in with VC Internal and Webmaster on cross-platform posting. See the Marketing Chair overview (Lauren Vo's page) for the full pre/during/post-event workflow.",
+  },
+  "shing-hung": {
+    title: "Webmaster",
+    currentName: "Shing Hung",
+    currentMeta: "Webmaster | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "katie-ngo": {
+    title: "Webmaster",
+    currentName: "Katie Ngo",
+    currentMeta: "Webmaster | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "daniel-xu": {
+    title: "Webmaster",
+    currentName: "Daniel Xu",
+    currentMeta: "Webmaster | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "emma-pan": {
+    title: "Design Chair",
+    currentName: "Emma Pan",
+    currentMeta: "Design Chair | 2026",
+    whatToKnow: `
+      <strong>What You'll Be Doing</strong>
+      <ul>
+        <li>Making graphics on a weekly basis for IEEE GBMs, workshops, and socials</li>
+        <li>Designing merchandise &mdash; in the past we've needed designs for events like Robocup (stamp cards, flyers, clothing) and general IEEE merchandise</li>
+      </ul>
+
+      <strong>Tools</strong>
+      <ul>
+        <li>Canva and Figma, plus any other software of your choosing</li>
+      </ul>
+
+      <strong>Logos</strong>
+      <p>The shared Drive contains all the logos you'll need (AS logos and IEEE). See the Logo Drive link below.</p>
+
+      <strong>Flyers &mdash; Timing</strong>
+      <p><strong>Send out flyers roughly a week before the event</strong> for optimal advertising and outreach.</p>
+
+      <strong>Flyers &mdash; Workflow</strong>
+      <ol>
+        <li>Message the event planners if you need any extra information about the event</li>
+        <li>Double-check the IEEE dashboard to make sure all event details are correct</li>
+        <li>Download a high-resolution version of the flyer &mdash; typically <strong>.png at 2x</strong> size</li>
+        <li>Send the flyer to the event planner in case they have changes for you to make</li>
+        <li>In the <strong>#pr</strong> Slack channel, @ the marketing team (<code>@marketing</code>) in your message and upload the flyer</li>
+        <li>Upload the flyer to the IEEE dashboard under the event's <strong>Graphics</strong> tab (Graphics Delivery &rarr; upload file or paste link, then mark graphics as completed)</li>
+      </ol>
+
+      <strong>Quarterly Cadence</strong>
+      <p>The VC Internal will give you the chance to sign up for which flyers to make over the next couple of weeks &mdash; choose wisely.</p>
+
+      <p><strong>Weeks 1&ndash;2 (very busy):</strong></p>
+      <ul>
+        <li>This is when the quarterly kickoff GBM and subteam events happen, so you'll be making a lot of flyers and presentation slides</li>
+        <li>Ask the VC Internal which flyers and slides to start early &mdash; starting during summer / winter / spring break gives you much more breathing room once the quarter begins</li>
+      </ul>
+      <p>General tasks for Weeks 1&ndash;2:</p>
+      <ul>
+        <li><strong>Kickoff flyer</strong></li>
+        <li><strong>Kickoff presentation slides</strong>
+          <ul>
+            <li>Design them in Canva, then transfer to Google Slides by exporting slides as .jpeg and matching similar fonts in Google Slides</li>
+            <li>Build the slides using the <strong>IEEE Internal email</strong> account</li>
+            <li>Provide a variety of templates to make it easy for the VC Internal and other board members</li>
+            <li>Before kickoff, give the slides a once-over to make sure everything is polished and on-brand</li>
+          </ul>
+        </li>
+        <li><strong>Weeks 1&ndash;2 GBM schedule</strong> (sometimes) &mdash; check with your VC Chair for what they want</li>
+      </ul>
+
+      <p><strong>Weeks 3+:</strong></p>
+      <ul>
+        <li>Flyer demand drops to roughly <strong>1&ndash;2 flyers per week</strong></li>
+        <li>By <strong>Week 10</strong>, IEEE typically has no events</li>
+      </ul>
+    `,
+    links: [
+      { label: "Logo Drive (AS & IEEE)", href: "https://drive.google.com/drive/folders/16EW13ELJvCwYvDgDidrihyg7L18B_Kzk5?usp=sharing", description: "All AS and IEEE logos you'll need for flyers and merch." },
+      { label: "IEEE Dashboard", href: "https://dashboard.ieeeatucsd.org/overview", description: "Upload finished flyers under each event's Graphics tab." },
+      { label: "Canva", href: "https://www.canva.com/", description: "Primary design tool for flyers and slides." },
+      { label: "Figma", href: "https://www.figma.com/", description: "Secondary design tool for more complex layouts and merch." },
+    ],
+    fellowText:
+      "Work closely with VC Internal on the quarterly flyer schedule, the Marketing Chairs (ping @marketing in #pr) for posting and cross-promotion, and event planners for accurate details. Loop in the Webmaster and UI/UX Chair when designs need to translate to the website.",
+  },
+  "cameryn-mugol": {
+    title: "Design Chair",
+    currentName: "Cameryn Mugol",
+    currentMeta: "Design Chair | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "paul-moore": {
+    title: "UI/UX Chair",
+    currentName: "Paul Moore",
+    currentMeta: "UI/UX Chair | 2026",
+    whatToKnow:
+      "The UI/UX Chair focuses on designing intuitive user experiences across IEEE UCSD platforms. You will work closely with the Webmaster to implement designs.",
+    links: [
+      { label: "Component Library", href: "#", description: "Reusable UI components." },
+    ],
+    fellowText:
+      "Coordinate with Design Chair and Webmaster to maintain consistency across the website.",
+  },
+
+  // ── PROJECTS ───────────────────────────────────────────────
+  "raymond-rada": {
+    title: "Robocup Soccer Chair",
+    currentName: "Raymond Rada",
+    currentMeta: "Robocup Soccer Chair | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "lukas-cao": {
+    title: "Robocup Soccer Chair",
+    currentName: "Lukas Cao",
+    currentMeta: "Robocup Soccer Chair | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+  "gauri-renjith": {
+    title: "Supercomputing Chair",
+    currentName: "Gauri Renjith",
+    currentMeta: "Supercomputing Chair | 2026",
+    whatToKnow: `
+      <strong>Overview</strong>
+      <p>The Supercomputing Chair is the primary liaison between UCSD Supercomputing and IEEE. UCSD Supercomputing is technically a subcommunity of UCSD IEEE, so IEEE manages key logistics like TAP forms and marketing support. The Chair also represents Supercomputing at IEEE events and helps promote it.</p>
+
+      <strong>Election Process</strong>
+      <ol>
+        <li>Get selected through the Supercomputing election process</li>
+        <li>Present and get formally elected during IEEE general elections</li>
+      </ol>
+
+      <strong>IEEE Meetings</strong>
+      <ul>
+        <li><strong>All-Hands</strong> &mdash; 2&times; per quarter with all IEEE board members. Share major updates and stay informed on IEEE-wide developments</li>
+        <li><strong>IEEE GBM</strong> &mdash; 1&times; per quarter event for the larger engineering student body. Make sure the Supercomputing information is relevant and engaging, and have yourself (or another Supercomputing officer) present the slides</li>
+        <li><strong>Projects Meetings</strong> &mdash; more frequent at the VC of Projects' discretion; communicate all relevant Supercomputing updates and needs to IEEE</li>
+      </ul>
+
+      <strong>Open Access Hours &amp; Tabling</strong>
+      <ul>
+        <li>Hold <strong>2 hours/week</strong> at the IEEE project space (can typically be used as work time)</li>
+        <li>IEEE tables in the first few weeks of each quarter (Library Walk, Engineering on the Green) &mdash; all IEEE officers are expected to be involved</li>
+        <li>Rule of thumb: each Supercomputing officer does ~2 hours of tabling (especially in Fall)</li>
+        <li>Arrange additional Supercomputing-only tabling before Winter GBM if possible (coordinate with VCP)</li>
+      </ul>
+
+      <strong>Supercomputing Officer Meetings</strong>
+      <p>Attend Supercomputing officer meetings and stay up to date on all activities.</p>
+
+      <strong>Event Planning &amp; Logistics</strong>
+      <p>Manage AS funding and logistics for major events:</p>
+      <ol>
+        <li><strong>Supercomputing GBM</strong> in Winter Quarter</li>
+        <li><strong>SBCC</strong> (Days 1&ndash;3, each day counts as an event)</li>
+      </ol>
+      <p>Responsibilities include:</p>
+      <ul>
+        <li>Obtaining <strong>official food invoices</strong></li>
+        <li>Coordinating <strong>room bookings</strong> (e.g., with SDSC)</li>
+        <li>Submitting all materials to IEEE VP Operations on time</li>
+      </ul>
+      <p>Plan these events (and any other Supercomputing events needing food) at least <strong>one quarter in advance</strong>; keep the Supercomputing officers on track.</p>
+
+      <strong>Marketing &amp; Promotion</strong>
+      <p>Make sure all events and SCC team applications are promoted across IEEE platforms (Instagram, Discord, etc.). Work with the marketing/design team for flyers, or create them yourself.</p>
+
+      <strong>Publicity &amp; Outreach</strong>
+      <ul>
+        <li>Reach out to IEEE San Diego and IEEE Computer Society for funding opportunities (SCC, SBCC, etc.); coordinate with VC Finance</li>
+        <li>Work with VP External to understand what Supercomputing information is in the IEEE sponsorship package; reach out to IEEE company contacts for partnerships when possible</li>
+        <li>Supercomputing runs its own company outreach &mdash; keep the Supercomputing outreach officer informed and involved</li>
+        <li>After major Supercomputing milestones, attend or send a representative to IEEE Executive Committee meetings and ECE faculty/alumni events</li>
+        <li>Key that UCSD departments (CSE, ECE, HDSI, SCIDS, etc.) are <strong>aware</strong> of Supercomputing's accomplishments. Coordinate with President or VCP to arrange this</li>
+      </ul>
+
+      <strong>Main Expectations</strong>
+      <ul>
+        <li><strong>Strong communication</strong> &mdash; actively bridge IEEE and Supercomputing; attend and contribute to both sets of meetings. Stay active on Slack</li>
+        <li><strong>Stay up-to-date</strong> &mdash; be aware and reasonably knowledgeable about everything Supercomputing does and what high-performance computing means (you'll need to answer questions)</li>
+      </ul>
+    `,
+    links: [
+      { label: "IEEE Dashboard", href: "https://dashboard.ieeeatucsd.org/overview", description: "Submit event requests and manage logistics." },
+      { label: "AS-Funded Vendors", href: "https://tap.ucsd.edu/vendor/", description: "Approved vendors for food invoices." },
+    ],
+    fellowText:
+      "Bridge IEEE and Supercomputing: report up to the VC of Projects and President, coordinate funding with VC Finance, work with VP External on sponsorship, VP Operations on event submissions, and the Marketing/Design team on promotion.",
+  },
+  "ferrari-guan": {
+    title: "Quarterly Projects Chair",
+    currentName: "Ferrari Guan",
+    currentMeta: "Quarterly Projects Chair | 2026",
+    whatToKnow: `
+      <strong>Meetings &amp; Presence</strong>
+      <ul>
+        <li>Attend project team meetings with the VC of Projects</li>
+        <li>Attend All Hands officer meetings</li>
+        <li>Attend general body meetings and speak about QP</li>
+        <li>Hold <strong>2 hours</strong> of open access hours per week</li>
+      </ul>
+
+      <strong>Event Timeline</strong>
+      <p>Run each quarter in this order:</p>
+      <ol>
+        <li>General Body Meeting &mdash; applications released</li>
+        <li>Allow <strong>1 week</strong> for applications to be completed</li>
+        <li>Team Formation (see below)</li>
+        <li>QP Kickoff &mdash; project proposal released</li>
+        <li>Workathon 1 &mdash; Update Form 1 due</li>
+        <li>Workathon 2 &mdash; Update Form 2 due</li>
+        <li>Showcase &mdash; Devpost due</li>
+      </ol>
+
+      <strong>Hosting Events</strong>
+      <ul>
+        <li>Submit the event request form on the IEEE dashboard</li>
+        <li>Send out participant and mentor applications at GBMs</li>
+        <li>Prepare slides teams can refer back to; include the AS form and IEEE dashboard password for sign-ins (reuse past slides as a starting point)</li>
+        <li>Schedule workathons on <strong>weekends</strong> to match team availability</li>
+        <li>Define judging criteria and invite judges for the showcase</li>
+      </ul>
+
+      <strong>Reserving Rooms</strong>
+      <ul>
+        <li>Always get <strong>written confirmation</strong> that a room is booked</li>
+        <li>Estimate attendance and book an appropriately sized room</li>
+      </ul>
+      <p><strong>Expected attendance (with ~50% drop-off):</strong></p>
+      <ul>
+        <li>Fall kickoff: ~120 people</li>
+        <li>Winter kickoff: ~60 people</li>
+        <li>Spring kickoff: ~40 people</li>
+      </ul>
+      <p><strong>Rooms that worked well:</strong></p>
+      <ul>
+        <li>SME 304 &mdash; email <strong>envision@ucsd.edu</strong>, cc <strong>czyskows@ucsd.edu</strong></li>
+        <li>Qualcomm Conference Room &mdash; book via Jacobs libcal (QCC)</li>
+        <li>Henry Booker Room &mdash; email <strong>jmoritz@eng.ucsd.edu</strong>, cc <strong>ece-faci-asst@ucsd.edu</strong></li>
+      </ul>
+
+      <strong>Ordering Food</strong>
+      <ul>
+        <li>Use only <strong>approved vendors</strong> (tap.ucsd.edu/vendor)</li>
+        <li>Get written confirmation and insist on documentation (e.g., invoice)</li>
+        <li>Order <strong>6+ weeks in advance</strong> and schedule pickup for event day</li>
+        <li>Allow a <strong>2-hour buffer</strong> before the event for pickup</li>
+        <li>Assign officers to pick up food instead of paying delivery fees</li>
+        <li>Budget rule: <strong>$10 per expected attendee</strong> (e.g., 20 people &rarr; $200)</li>
+        <li>Look for bulk discounts when possible</li>
+      </ul>
+
+      <strong>Managing Team Logistics</strong>
+      <ul>
+        <li>Create a separate Discord channel for each team</li>
+        <li>Send out project proposals (reuse past forms if helpful)</li>
+        <li>Send update forms and respond to team concerns</li>
+        <li>Manage team mentors, budgets, and parts orders</li>
+        <li>Create the Devpost and manage showcase prizes</li>
+      </ul>
+
+      <strong>Team Formation</strong>
+      <ul>
+        <li>All teammates must apply <strong>individually</strong></li>
+        <li>Prioritize grouping people with their preferred teammates</li>
+        <li>Balance each team: <strong>2 experienced + 2 less experienced</strong> members</li>
+        <li>Mix in some unique or unconventional team combinations</li>
+      </ul>
+    `,
+    links: [
+      { label: "IEEE Dashboard", href: "https://dashboard.ieeeatucsd.org/overview", description: "Submit event requests and manage QP events." },
+      { label: "AS-Funded Vendors", href: "https://tap.ucsd.edu/vendor/", description: "Approved vendor list for food orders." },
+      { label: "Qualcomm Conference Room", href: "https://jacobsschoolucsd.libcal.com/reserve/qcc", description: "Book the QCC for workathons and kickoffs." },
+    ],
+    fellowText:
+      "Work closely with the VC of Projects on team meetings and timeline alignment, and coordinate with VC Events and VC Operations for room bookings, event submissions, and AS funding.",
+  },
+  "angel-arguilla": {
+    title: "Quarterly Projects Chair",
+    currentName: "Angel Arguilla",
+    currentMeta: "Quarterly Projects Chair | 2026",
+    whatToKnow: "Add onboarding information for this officer.",
+    links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+    fellowText: "Add collaboration notes here.",
+  },
+};
+
+const fallback: OfficerPage = {
+  title: "Officer Role",
+  currentName: "First Last",
+  currentMeta: "Role |Year",
+  whatToKnow: "Add onboarding information for this officer.",
+  links: [{ label: "Placeholder Link", href: "#", description: "Replace with real content." }],
+  fellowText: "Add collaboration notes here.",
+};
+
+const content: OfficerPage = officerPages[slugKey] ?? fallback;
+---
+<OnboardingLayout active="directory">
+  <PersonRolePage
+    title={content.title}
+    currentName={content.currentName}
+    currentMeta={content.currentMeta}
+    whatToKnow={content.whatToKnow}
+    links={content.links}
+    fellowText={content.fellowText}
+  />
+</OnboardingLayout>

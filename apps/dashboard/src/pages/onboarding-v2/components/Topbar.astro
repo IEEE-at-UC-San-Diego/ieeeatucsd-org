@@ -1,0 +1,33 @@
+---
+const user = { name: "First Last" };
+---
+
+<header class="sticky top-0 z-40 h-14 border-b border-black/10 bg-white">
+  <div class="h-full px-4 md:px-6 grid grid-cols-3 items-center">
+    <div class="justify-self-start">
+      <button class="p-2 -ml-2" aria-label="Open menu">
+        <div class="w-5 h-[2px] bg-black mb-1"></div>
+        <div class="w-5 h-[2px] bg-black mb-1"></div>
+        <div class="w-5 h-[2px] bg-black"></div>
+      </button>
+    </div>
+
+    <div class="justify-self-center">
+      <a href="/onboarding-v2/dashboard" class="flex items-center gap-1.5">
+        <img src="/logos/blue_logo_only.svg" alt="IEEE Logo" class="h-7 w-7" />
+        <span class="font-bold tracking-wide text-[#003C73]">IEEE</span>
+      </a>
+    </div>
+
+    <div class="justify-self-end flex items-center gap-3">
+      <div class="hidden md:flex items-center gap-2">
+        <div class="h-7 w-7 rounded-full bg-black/10"></div>
+        <span class="text-sm">{user.name}</span>
+      </div>
+
+      <button class="rounded bg-[#0A66A6] px-3 py-1.5 text-white text-sm font-semibold hover:opacity-90">
+        Sign Out
+      </button>
+    </div>
+  </div>
+</header>

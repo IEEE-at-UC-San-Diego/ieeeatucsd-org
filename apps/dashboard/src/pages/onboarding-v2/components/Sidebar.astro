@@ -1,0 +1,159 @@
+---
+type RoleLink = { label: string; href: string };
+
+type SidebarSection = {
+  key: string;
+  label: string;
+  roles: string[];
+  roleLinks: Record<string, RoleLink>;
+};
+
+const sections: SidebarSection[] = [
+  {
+    key: "executive",
+    label: "EXECUTIVE",
+    roles: ["President", "VC Internal", "VC External", "VC Events", "VC Finance", "VC Operations"],
+    roleLinks: {
+      "President": { label: "President", href: "/onboarding-v2/role/erik-duarte" },
+      "VC Internal": { label: "VC Internal", href: "/onboarding-v2/role/emma-leung" },
+      "VC External": { label: "VC External", href: "/onboarding-v2/role/akhil-ram-shankar" },
+      "VC Events": { label: "VC Events", href: "/onboarding-v2/role/anupama-nambiar" },
+      "VC Finance": { label: "VC Finance", href: "/onboarding-v2/role/charles-nguyen" },
+      "VC Operations": { label: "VC Operations", href: "/onboarding-v2/directory#executive" },
+    },
+  },
+
+  {
+    key: "events",
+    label: "EVENTS",
+    roles: ["Social Chair", "Technical Chair"],
+    roleLinks: {
+      "Social Chair": { label: "Social Chair", href: "/onboarding-v2/directory#events" },
+      "Technical Chair": { label: "Technical Chair", href: "/onboarding-v2/directory#events" },
+    },
+  },
+
+  {
+    key: "external",
+    label: "EXTERNAL",
+    roles: ["Professional Chair", "Outreach Chair"],
+    roleLinks: {
+      "Professional Chair": { label: "Professional Chair", href: "/onboarding-v2/role/iris-chou" },
+      "Outreach Chair": { label: "Outreach Chair", href: "/onboarding-v2/directory#external" },
+    },
+  },
+
+  {
+    key: "finance",
+    label: "FINANCE",
+    roles: ["VC Finance"],
+    roleLinks: {
+      "VC Finance": { label: "VC Finance", href: "/onboarding-v2/role/charles-nguyen" },
+    },
+  },
+
+  {
+    key: "internal",
+    label: "INTERNAL",
+    roles: ["Webmaster", "Marketing Chair", "Design Chair", "UI/UX Chair"],
+    roleLinks: {
+      "Webmaster": { label: "Webmaster", href: "/onboarding-v2/directory#internal" },
+      "Marketing Chair": { label: "Marketing Chair", href: "/onboarding-v2/directory#internal" },
+      "Design Chair": { label: "Design Chair", href: "/onboarding-v2/directory#internal" },
+      "UI/UX Chair": { label: "UI/UX Chair", href: "/onboarding-v2/role/paul-moore" },
+    },
+  },
+
+  {
+    key: "projects",
+    label: "PROJECTS",
+    roles: ["Robocup Soccer Chair", "Supercomputing Chair", "Quarterly Projects Chair"],
+    roleLinks: {
+      "Robocup Soccer Chair": { label: "Robocup Soccer Chair", href: "/onboarding-v2/directory#projects" },
+      "Supercomputing Chair": { label: "Supercomputing Chair", href: "/onboarding-v2/role/gauri-renjith" },
+      "Quarterly Projects Chair": { label: "Quarterly Projects Chair", href: "/onboarding-v2/directory#projects" },
+    },
+  },
+
+  {
+    key: "misc",
+    label: "MISC",
+    roles: ["Executive Onboarding", "General Onboarding", "FAQ"],
+    roleLinks: {
+      "Executive Onboarding": { label: "Executive Onboarding", href: "/onboarding-v2/general/executive" },
+      "General Onboarding": { label: "General Onboarding", href: "/onboarding-v2/general/officer" },
+      "FAQ": { label: "FAQ", href: "/onboarding-v2/general/faq" },
+    },
+  },
+];
+---
+
+<aside class="w-[80vw] md:w-[18vw] bg-white text-black min-h-screen border-r border-black/10 px-[6vw] md:px-[1.6vw] pt-[6vw] md:pt-[1.6vw]">
+  <nav class="mt-[2vw] space-y-[4vw] md:space-y-[1.2vw]">
+    <a href="/onboarding-v2/directory" class="block text-[4.8vw] md:text-[1vw] font-semibold tracking-wide">
+      OFFICER DIRECTORY
+    </a>
+
+    {sections.map((s) => (
+      <div class="border-b border-black/10 pb-[2.5vw] md:pb-[0.7vw]">
+        <div class="flex items-center justify-between">
+          <a
+            href={`/onboarding-v2/directory#${s.key}`}
+            class="text-[4.8vw] md:text-[1vw] font-semibold tracking-wide"
+          >
+            {s.label}
+          </a>
+
+          {s.roles.length > 0 && (
+            <button
+              type="button"
+              class="toggle-btn text-black/60 px-[2vw] md:px-[0.4vw] py-[1vw] md:py-[0.2vw]"
+              data-toggle={s.key}
+              aria-label={`Toggle ${s.label}`}
+            >
+              <svg class="w-[3vw] md:w-[0.8vw] h-[3vw] md:h-[0.8vw]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {s.roles.length > 0 && (
+          <div
+            class="mt-[2vw] md:mt-[0.6vw] pl-[2vw] md:pl-[0.6vw] space-y-[1.8vw] md:space-y-[0.5vw] hidden"
+            data-panel={s.key}
+          >
+            {s.roles.map((role) => (
+              <a
+                href={s.roleLinks[role]?.href ?? `/onboarding-v2/directory#${s.key}`}
+                class="block text-[3.4vw] md:text-[0.85vw] text-black/60 hover:text-black"
+              >
+                {role}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    ))}
+  </nav>
+
+  <script>
+    const toggles = document.querySelectorAll("[data-toggle]");
+    toggles.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const key = btn.getAttribute("data-toggle");
+        if (!key) return;
+
+        const panel = document.querySelector(`[data-panel="${key}"]`);
+        if (!panel) return;
+
+        panel.classList.toggle("hidden");
+        btn.classList.toggle("rotate-180");
+        btn.classList.add("transition-transform", "duration-200");
+      });
+    });
+  </script>
+</aside>

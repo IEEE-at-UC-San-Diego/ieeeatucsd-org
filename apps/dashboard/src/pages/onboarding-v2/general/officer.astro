@@ -1,0 +1,105 @@
+---
+import OnboardingLayout from "../layout/onboardinglayout.astro";
+---
+
+<OnboardingLayout active="misc">
+  <div class="w-[92%] md:w-[70%] mx-auto">
+    <h1 class="text-[6vw] md:text-[2.6vw] font-black tracking-tight">
+      General Officer Onboarding
+    </h1>
+
+    <span class="mt-[1.2vw] inline-block rounded bg-orange-100 px-[1vw] py-[0.5vw] md:px-[0.5vw] md:py-[0.2vw] text-[2.3vw] md:text-[0.75vw] text-orange-800">
+      Last updated April 23, 2026
+    </span>
+
+    <!-- Tabs -->
+    <div class="mt-[4vw] md:mt-[1.6vw] flex items-center gap-[4vw] md:gap-[1.6vw] border-b border-black/10 pb-[2vw] md:pb-[0.6vw]">
+      <button class="flex items-center gap-[1vw] md:gap-[0.4vw] text-[3vw] md:text-[0.9vw] font-semibold text-black">
+        <svg class="w-[3.5vw] md:w-[1vw] h-[3.5vw] md:h-[1vw]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+        </svg>
+        Links
+      </button>
+      <button class="flex items-center gap-[1vw] md:gap-[0.4vw] text-[3vw] md:text-[0.9vw] text-black/40">
+        <svg class="w-[3.5vw] md:w-[1vw] h-[3.5vw] md:h-[1vw]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+        </svg>
+        Key Contacts
+      </button>
+    </div>
+
+    <!-- Content area -->
+    <div class="mt-[4vw] md:mt-[1.6vw]">
+      <h3 class="text-[4vw] md:text-[1.2vw] font-bold">Welcome to IEEE at UC San Diego</h3>
+      <p class="mt-[1.6vw] md:mt-[0.6vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+        As a general officer, you help run the day-to-day of IEEE UCSD &mdash; planning and staffing events, building projects, creating marketing content, and supporting the general body. This page walks through shared expectations that apply to every chair on the board: meetings, OAH, tabling, and how to get events off the ground.
+      </p>
+    </div>
+
+    <!-- Overview -->
+    <div class="mt-[6vw] md:mt-[2.4vw] flex items-center gap-[1.4vw] md:gap-[0.5vw] border-b border-black/10 pb-[2vw] md:pb-[0.6vw]">
+      <svg class="w-[3.5vw] md:w-[1vw] h-[3.5vw] md:h-[1vw] text-black/70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+      </svg>
+      <span class="text-[3vw] md:text-[0.9vw] font-semibold">Overview</span>
+    </div>
+
+    <!-- Officer Responsibilities -->
+    <h2 class="mt-[6vw] md:mt-[2.4vw] text-[5vw] md:text-[2vw] font-black tracking-tight">
+      Officer Responsibilities
+    </h2>
+
+    <div class="mt-[4vw] md:mt-[1.6vw] space-y-[6vw] md:space-y-[2.4vw]">
+      <div>
+        <h3 class="text-[4vw] md:text-[1.3vw] font-bold">1. Main Tasks</h3>
+        <ul class="mt-[2vw] md:mt-[0.6vw] list-disc pl-[4vw] md:pl-[1.4vw] space-y-[1vw] md:space-y-[0.3vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+            <li>Own your role's deliverables (flyers, events, workshops, projects, or outreach) and follow through on commitments.</li>
+            <li>Attend weekly internal meetings, biquarterly All-Hands, and the quarterly General Body Meeting (GBM).</li>
+            <li>Hold <strong>2 hours/week of Open Access Hours (OAH)</strong> in the IEEE project space.</li>
+            <li>Work mandatory events (GBMs, kickoffs, tabling) and at least one staffed event per quarter in your branch.</li>
+            <li>Stay active on Slack, especially <code>#pr</code>, <code>#26-27-internal</code>, <code>#2026-2027-board</code>, and your branch channel.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-[4vw] md:text-[1.3vw] font-bold">2. Meetings &amp; Cadence</h3>
+        <ul class="mt-[2vw] md:mt-[0.6vw] list-disc pl-[4vw] md:pl-[1.4vw] space-y-[1vw] md:space-y-[0.3vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+            <li><strong>Weekly internal meeting:</strong> ~1 hour, with your VC and co-chairs. Share blockers and plan the week.</li>
+            <li><strong>All-Hands:</strong> 2&times; per quarter, entire board present. Share major updates and hear from other branches.</li>
+            <li><strong>Quarterly GBM:</strong> 1&times; per quarter, the full member-facing meeting. All officers attend and help run it.</li>
+            <li><strong>Projects / subteam meetings:</strong> cadence set by your VC; attend to stay synced with deliverables.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-[4vw] md:text-[1.3vw] font-bold">3. OAH Directions</h3>
+        <ul class="mt-[2vw] md:mt-[0.6vw] list-disc pl-[4vw] md:pl-[1.4vw] space-y-[1vw] md:space-y-[0.3vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+            <li>Sign up for your <strong>2 hours/week</strong> slot in the OAH scheduling sheet at the start of each quarter.</li>
+            <li>OAH time can generally be used as your own work time (flyers, event planning, code, homework), as long as you're physically in the project space and available to members.</li>
+            <li>Open the space for drop-in members and answer questions; if you have to leave early, post in Slack so someone else can cover.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-[4vw] md:text-[1.3vw] font-bold">4. Events &amp; Tabling</h3>
+        <ul class="mt-[2vw] md:mt-[0.6vw] list-disc pl-[4vw] md:pl-[1.4vw] space-y-[1vw] md:space-y-[0.3vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+            <li>Submit event requests through the IEEE dashboard at least <strong>6 weeks in advance</strong> for AS-funded events (Programming App due 5 weeks out, TAP form due 21 days out).</li>
+            <li>Tabling happens the first few weeks of each quarter at Library Walk and Engineering on the Green. Every officer is expected to help cover.</li>
+            <li>Upload flyers to the event's <strong>Graphics</strong> tab on the dashboard and ping <code>@marketing</code> in <code>#pr</code>.</li>
+            <li>Keep attendance records. You'll need them for PEEFS and VTools.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-[4vw] md:text-[1.3vw] font-bold">5. Advice From Past Officers</h3>
+        <ul class="mt-[2vw] md:mt-[0.6vw] list-disc pl-[4vw] md:pl-[1.4vw] space-y-[1vw] md:space-y-[0.3vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+            <li>Ask early. Someone on the board has done almost every task before, and Slack beats silence.</li>
+            <li>Put deadlines (TAP, AS, graphics handoffs) on your calendar the day you hear about them.</li>
+            <li>Communicate with your co-chair and split responsibilities clearly so nothing falls through the cracks.</li>
+            <li>Take more photos/content at events than you think you need. Marketing will use it for months.</li>
+            <li>This role is what you make of it. Lean in, show up, and it pays off both socially and professionally.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</OnboardingLayout>

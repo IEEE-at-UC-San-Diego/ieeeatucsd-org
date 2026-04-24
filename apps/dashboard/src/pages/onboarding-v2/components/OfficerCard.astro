@@ -1,0 +1,27 @@
+---
+interface Props {
+  role: string;
+  name: string;
+  href: string;
+}
+
+const { role, name, href } = Astro.props as Props;
+---
+
+<a
+  href={href}
+  class="block rounded-[1.6vw] md:rounded-[0.6vw] border border-black/15 bg-white
+         p-[5vw] md:p-[1.8vw] hover:shadow-[0_1.2vw_3vw_rgba(0,0,0,0.08)] transition-shadow"
+>
+  <p class="text-[2.8vw] md:text-[0.95vw] font-semibold text-black/80">
+    {role}
+  </p>
+
+  <h3 class="mt-[1vw] md:mt-[0.4vw] text-[7vw] md:text-[2.3vw] font-black tracking-tight leading-tight">
+    {name}
+  </h3>
+
+  <p class="mt-[2.6vw] md:mt-[0.9vw] text-[2.8vw] md:text-[0.95vw] text-black/60">
+    View role details &rarr;
+  </p>
+</a>

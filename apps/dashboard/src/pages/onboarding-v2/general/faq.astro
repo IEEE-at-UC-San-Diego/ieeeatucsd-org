@@ -1,0 +1,105 @@
+---
+import OnboardingLayout from "../layout/onboardinglayout.astro";
+---
+
+<OnboardingLayout active="misc">
+  <div class="w-[92%] md:w-[70%] mx-auto">
+    <h1 class="text-[6vw] md:text-[2.6vw] font-black tracking-tight">
+      Frequently Asked Questions
+    </h1>
+
+    <!-- Tabs -->
+    <div class="mt-[4vw] md:mt-[1.6vw] flex items-center gap-[4vw] md:gap-[1.6vw] border-b border-black/10 pb-[2vw] md:pb-[0.6vw]">
+      <button class="flex items-center gap-[1vw] md:gap-[0.4vw] text-[3vw] md:text-[0.9vw] font-semibold text-black">
+        <svg class="w-[3.5vw] md:w-[1vw] h-[3.5vw] md:h-[1vw]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+        </svg>
+        Links
+      </button>
+      <button class="flex items-center gap-[1vw] md:gap-[0.4vw] text-[3vw] md:text-[0.9vw] text-black/40">
+        <svg class="w-[3.5vw] md:w-[1vw] h-[3.5vw] md:h-[1vw]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+        </svg>
+        Key Contacts
+      </button>
+    </div>
+
+    <!-- Content area -->
+    <div class="mt-[4vw] md:mt-[1.6vw]">
+      <h3 class="text-[4vw] md:text-[1.2vw] font-bold">About This Page</h3>
+      <p class="mt-[1.6vw] md:mt-[0.6vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+        Answers to the questions new officers and members of IEEE at UC San Diego ask most often &mdash; meetings, OAH, events, membership, and where to get help. If something isn't covered here, ask in Slack or reach out to the VC of your branch.
+      </p>
+    </div>
+
+    <!-- Overview -->
+    <div class="mt-[6vw] md:mt-[2.4vw] flex items-center gap-[1.4vw] md:gap-[0.5vw] border-b border-black/10 pb-[2vw] md:pb-[0.6vw]">
+      <svg class="w-[3.5vw] md:w-[1vw] h-[3.5vw] md:h-[1vw] text-black/70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+      </svg>
+      <span class="text-[3vw] md:text-[0.9vw] font-semibold">Overview</span>
+    </div>
+
+    <!-- FAQ Questions -->
+    <div class="mt-[4vw] md:mt-[1.6vw] space-y-[6vw] md:space-y-[2.4vw]">
+      <div>
+        <h3 class="text-[4vw] md:text-[1.3vw] font-bold">1. When are meetings?</h3>
+        <ul class="mt-[2vw] md:mt-[0.6vw] list-disc pl-[4vw] md:pl-[1.4vw] space-y-[1vw] md:space-y-[0.3vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+          <li><strong>Weekly internal meeting:</strong> ~1 hour with your branch (Events, Internal, External, Operations, Projects). Time is set by your VC at the start of each quarter.</li>
+          <li><strong>All-Hands:</strong> 2&times; per quarter with the full IEEE board.</li>
+          <li><strong>GBM:</strong> once per quarter, open to the entire engineering student body. All officers are expected to attend.</li>
+          <li>Meeting times are posted in the <code>#2026-2027-board</code> and <code>#26-27-internal</code> Slack channels.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-[4vw] md:text-[1.3vw] font-bold">2. What is OAH and how do I sign up?</h3>
+        <ul class="mt-[2vw] md:mt-[0.6vw] list-disc pl-[4vw] md:pl-[1.4vw] space-y-[1vw] md:space-y-[0.3vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+          <li>OAH (Open Access Hours) is <strong>2 hours/week</strong> every officer holds in the IEEE project space.</li>
+          <li>Sign up in the OAH scheduling sheet posted by VC Internal at the start of each quarter.</li>
+          <li>You can typically use OAH as your own work time, as long as the space stays open for members and you're reachable on Slack.</li>
+          <li>If you can't cover your slot one week, post in Slack so another officer can swap with you.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-[4vw] md:text-[1.3vw] font-bold">3. I have an event idea. How do I share it?</h3>
+        <ul class="mt-[2vw] md:mt-[0.6vw] list-disc pl-[4vw] md:pl-[1.4vw] space-y-[1vw] md:space-y-[0.3vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+          <li>Bring it up in your weekly internal meeting or message your VC directly.</li>
+          <li>Once approved, submit an event request on the IEEE dashboard <strong>at least 6 weeks before</strong> the event date (5 weeks for AS Programming App, 21 days for TAP form).</li>
+          <li>Coordinate with VC Operations for AS funding, VC Events for scheduling, and the Design/Marketing Chairs for graphics and promotion.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-[4vw] md:text-[1.3vw] font-bold">4. How do I get my IEEE membership?</h3>
+        <ul class="mt-[2vw] md:mt-[0.6vw] list-disc pl-[4vw] md:pl-[1.4vw] space-y-[1vw] md:space-y-[0.3vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+          <li>Create an account at <strong>ieee.org</strong> and sign up for student membership.</li>
+          <li>The student rate is discounted (check the IEEE site for the current price, usually around $27/year).</li>
+          <li>Once registered, link your membership to UCSD's student branch so you get credit toward local events and benefits.</li>
+          <li>Membership is not required to be an officer, but it unlocks IEEE Xplore, scholarships, and conference discounts.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-[4vw] md:text-[1.3vw] font-bold">5. How do reimbursements work?</h3>
+        <ul class="mt-[2vw] md:mt-[0.6vw] list-disc pl-[4vw] md:pl-[1.4vw] space-y-[1vw] md:space-y-[0.3vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+          <li>For AS-funded events, only a <strong>Principal Member</strong> (exec board) can front the purchase on their card.</li>
+          <li>Submit the reimbursement module through TAP and have the paying PM file through AS.</li>
+          <li>Do it <strong>within 7 days</strong> of the event. Slipping past that risks the claim being denied.</li>
+          <li>For non-AS-funded purchases (internal IEEE funds), use the reimbursement form on the IEEE dashboard.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-[4vw] md:text-[1.3vw] font-bold">6. Where do I get help?</h3>
+        <ul class="mt-[2vw] md:mt-[0.6vw] list-disc pl-[4vw] md:pl-[1.4vw] space-y-[1vw] md:space-y-[0.3vw] text-[2.8vw] md:text-[0.9vw] text-black/70 leading-relaxed">
+          <li><strong>Slack:</strong> primary channel for day-to-day questions. Post in your branch channel or <code>#2026-2027-board</code>.</li>
+          <li><strong>Your VC:</strong> first line of escalation for scope, funding, or scheduling questions.</li>
+          <li><strong>AS (Chris), SLBO (Alma), CSI (Maria):</strong> external contacts for funding, purchasing, and policy. VC Operations owns these relationships.</li>
+          <li><strong>Past officers:</strong> check this onboarding site for role-specific notes and advice.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</OnboardingLayout>

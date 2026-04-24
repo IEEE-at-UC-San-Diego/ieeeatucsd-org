@@ -1,0 +1,147 @@
+---
+import OnboardingLayout from "./layout/onboardinglayout.astro";
+import OfficerCard from "./components/OfficerCard.astro";
+
+type Officer = { role: string; name: string; slug: string };
+
+const data: Record<string, { title: string; officers: Officer[] }> = {
+  executive: {
+    title: "Executive Officers",
+    officers: [
+      { role: "President", name: "Erik Duarte", slug: "erik-duarte" },
+      { role: "VC Internal", name: "Emma Leung", slug: "emma-leung" },
+      { role: "VC External", name: "Akhil Ram Shankar", slug: "akhil-ram-shankar" },
+      { role: "VC Events", name: "Anupama Nambiar", slug: "anupama-nambiar" },
+      { role: "VC Finance", name: "Charles Nguyen", slug: "charles-nguyen" },
+      { role: "VC Operations", name: "Aiden Basset", slug: "aiden-basset" },
+      { role: "VC Operations", name: "Anusha Chadalavada", slug: "anusha-chadalavada" },
+    ],
+  },
+
+  events: {
+    title: "EVENTS",
+    officers: [
+      { role: "Technical Chair", name: "Ridhi Srikanth", slug: "ridhi-srikanth" },
+      { role: "Technical Chair", name: "Ayren Singhal", slug: "ayren-singhal" },
+      { role: "Technical Chair", name: "Riya Bhatia", slug: "riya-bhatia" },
+      { role: "Social Chair", name: "Kelly Guan", slug: "kelly-guan" },
+      { role: "Social Chair", name: "Cailey Murad", slug: "cailey-murad" },
+    ],
+  },
+
+  external: {
+    title: "EXTERNAL",
+    officers: [
+      { role: "Professional Chair", name: "Iris Chou", slug: "iris-chou" },
+      { role: "Outreach Chair", name: "Anika Agarwal", slug: "anika-agarwal" },
+      { role: "Outreach Chair", name: "Aaditya Pillai", slug: "aaditya-pillai" },
+    ],
+  },
+
+  internal: {
+    title: "INTERNAL",
+    officers: [
+      { role: "Webmaster", name: "Shing Hung", slug: "shing-hung" },
+      { role: "Webmaster", name: "Katie Ngo", slug: "katie-ngo" },
+      { role: "Webmaster", name: "Daniel Xu", slug: "daniel-xu" },
+      { role: "Marketing Chair", name: "Lauren Vo", slug: "lauren-vo" },
+      { role: "Marketing Chair", name: "Loraine Diosa", slug: "loraine-diosa" },
+      { role: "Design Chair", name: "Emma Pan", slug: "emma-pan" },
+      { role: "Design Chair", name: "Cameryn Mugol", slug: "cameryn-mugol" },
+      { role: "UI/UX Chair", name: "Paul Moore", slug: "paul-moore" },
+    ],
+  },
+
+  projects: {
+    title: "PROJECTS",
+    officers: [
+      { role: "Robocup Soccer Chair", name: "Raymond Rada", slug: "raymond-rada" },
+      { role: "Robocup Soccer Chair", name: "Lukas Cao", slug: "lukas-cao" },
+      { role: "Supercomputing Chair", name: "Gauri Renjith", slug: "gauri-renjith" },
+      { role: "Quarterly Projects Chair", name: "Ferrari Guan", slug: "ferrari-guan" },
+      { role: "Quarterly Projects Chair", name: "Angel Arguilla", slug: "angel-arguilla" },
+    ],
+  },
+};
+
+function slugifyRole(role: string) {
+  return role
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function roleCounts(officers: Officer[]) {
+  const counts: Record<string, number> = {};
+  for (const o of officers) counts[o.role] = (counts[o.role] ?? 0) + 1;
+  return counts;
+}
+
+function sortedOfficers(officers: Officer[]) {
+  return [...officers].sort((a, b) => {
+    const roleCompare = a.role.localeCompare(b.role);
+    if (roleCompare !== 0) return roleCompare;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+type RenderOfficer = Officer & { anchorId?: string };
+
+const renderData = Object.entries(data).map(([key, section]) => {
+  const counts = roleCounts(section.officers);
+  const sorted = sortedOfficers(section.officers);
+
+  const seenRoles = new Set<string>();
+
+  const officers: RenderOfficer[] = sorted.map((o) => {
+    const duplicateRole = (counts[o.role] ?? 0) > 1;
+    const roleKey = `${key}-${slugifyRole(o.role)}`;
+
+    if (duplicateRole && !seenRoles.has(roleKey)) {
+      seenRoles.add(roleKey);
+      return { ...o, anchorId: `role-${roleKey}` };
+    }
+
+    return o;
+  });
+
+  return {
+    key,
+    title: section.title,
+    officers,
+  };
+});
+---
+
+<OnboardingLayout
+  active="directory"
+  title="IEEE UCSD Officer Directory"
+  subtitle="Meet the current officers serving the IEEE Student Branch at UC San Diego for 2026"
+>
+
+  {renderData.map((section) => (
+    <section id={section.key} class="scroll-mt-[10vw] md:scroll-mt-[5vw]">
+
+      <h2 class="mt-[7vw] md:mt-[3vw] text-[5vw] md:text-[2vw] font-black tracking-tight">
+        {section.title}
+      </h2>
+
+      <div class="mt-[3vw] md:mt-[1.4vw] grid grid-cols-1 md:grid-cols-2 gap-[3vw] md:gap-[1.4vw] w-[96%] md:w-[78%]">
+
+        {section.officers.map((o) => (
+          <div id={o.anchorId} class={o.anchorId ? "scroll-mt-[12vw] md:scroll-mt-[6vw]" : ""}>
+            <OfficerCard
+              role={o.role}
+              name={o.name}
+              href={`/onboarding-v2/role/${o.slug}`}
+            />
+          </div>
+        ))}
+
+      </div>
+
+    </section>
+  ))}
+
+</OnboardingLayout>

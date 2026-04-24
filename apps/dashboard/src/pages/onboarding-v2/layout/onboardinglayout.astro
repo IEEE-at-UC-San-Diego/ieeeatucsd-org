@@ -1,0 +1,56 @@
+---
+import Sidebar from "../components/Sidebar.astro";
+import Topbar from "../components/Topbar.astro";
+
+interface Props {
+  active?: string; 
+  title?: string;
+  subtitle?: string;
+  hasHero?: boolean;
+  heroImageUrl?: string;
+}
+
+const {
+  active = "",
+  title = "",
+  subtitle = "",
+  hasHero = false,
+  heroImageUrl = "/jacob.jpg",
+}: Props = Astro.props;
+---
+
+<div class="min-h-screen bg-white text-black">
+  <Topbar />
+
+  <div class="flex">
+    <Sidebar active={active} />
+
+    <main class="flex-1 min-w-0">
+      {hasHero ? (
+        <div class="relative min-h-[calc(100vh-3.5rem)] overflow-hidden">
+          <img
+            src={heroImageUrl}
+            alt="background"
+            class="absolute inset-0 h-full w-full object-cover blur-[3px] scale-105"
+          />
+          <div class="absolute inset-0 bg-black/15"></div>
+
+          <div class="relative z-10 flex items-center justify-center min-h-[calc(100vh-3.5rem)] px-8 md:px-14">
+            <slot />
+          </div>
+        </div>
+      ) : (
+        <section class="px-8 md:px-14 pt-10 pb-16">
+          {(title || subtitle) && (
+            <header class="mb-8">
+              {title && <h1 class="text-4xl md:text-5xl font-black tracking-tight">{title}</h1>}
+              {subtitle && <p class="mt-3 text-base md:text-lg text-black/70 max-w-3xl">{subtitle}</p>}
+            </header>
+          )}
+
+          <slot />
+        </section>
+      )}
+    </main>
+  </div>
+</div>

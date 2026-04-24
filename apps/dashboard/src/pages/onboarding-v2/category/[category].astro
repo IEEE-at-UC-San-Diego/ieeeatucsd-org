@@ -1,0 +1,51 @@
+---
+import OnboardingLayout from "../layout/onboardinglayout.astro";
+import OfficerCard from "../components/OfficerCard.astro";
+
+type Officer = { role: string; name: string; slug: string };
+
+const data = {
+  executive: {
+    title: "Executive Officers",
+    officers: [
+      { role: "President", name: "Erik Duarte", slug: "president" },
+      { role: "VC Internal", name: "Emma Leung", slug: "vc-internal" },
+      { role: "VC External", name: "Akhil Ram Shankar", slug: "vc-external" },
+      { role: "VC Events", name: "Anupama Nambiar", slug: "vc-events" },
+      { role: "VC Finance", name: "Charles Nguyen", slug: "vc-finance" },
+      { role: "VC Operations", name: "Aiden Basset", slug: "vc-operations" },
+      { role: "VC Operations", name: "Anusha Chadalavada", slug: "vc-operations" },
+    ] as Officer[],
+  },
+  events: { title: "EVENTS", officers: [/* ... */] as Officer[] },
+  external: { title: "EXTERNAL", officers: [/* ... */] as Officer[] },
+  internal: { title: "INTERNAL", officers: [/* ... */] as Officer[] },
+  projects: { title: "PROJECTS", officers: [/* ... */] as Officer[] },
+} satisfies Record<string, { title: string; officers: Officer[] }>;
+
+const categoryKey = (Astro.params.category ?? "") as keyof typeof data;
+const section = data[categoryKey];
+---
+
+<OnboardingLayout
+  active="directory"
+  title={`${section?.title ?? "Category"} General Onboarding`}
+  subtitle="General onboarding information for this category"
+>
+  {section ? (
+    <div class="w-[92%] md:w-[70%] mx-auto">
+      <h2 class="text-[6vw] md:text-[2.2vw] font-black">{section.title}</h2>
+
+      <div class="mt-[3vw] md:mt-[1.4vw] grid grid-cols-1 md:grid-cols-2 gap-[3vw] md:gap-[1.4vw]">
+        {section.officers.map((o) => (
+          <OfficerCard role={o.role} name={o.name} href={`/onboarding-v2/role/${o.slug}`} />
+        ))}
+      </div>
+    </div>
+  ) : (
+    <div class="w-[92%] md:w-[70%] mx-auto">
+      <h2 class="text-[6vw] md:text-[2.2vw] font-black">Not found</h2>
+      <p class="mt-[2vw] text-black/60">This category does not exist.</p>
+    </div>
+  )}
+</OnboardingLayout>

@@ -1,0 +1,33 @@
+---
+import OnboardingLayout from "./layout/onboardinglayout.astro";
+---
+
+<OnboardingLayout active="dashboard" hasHero={true}>
+  <div class="w-full md:w-[75%] mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-[3vw] md:gap-[1.4vw]">
+      <a
+        href="https://dashboard.ieeeatucsd.org/overview"
+        class="block rounded-2xl bg-white/85 backdrop-blur-md p-[6vw] md:p-[2vw]
+               shadow-lg hover:shadow-xl transition-shadow"
+      >
+        <p class="text-[2.6vw] md:text-[0.9vw] font-semibold text-black/70">Dashboard</p>
+        <h2 class="mt-[1vw] text-[5vw] md:text-[2vw] font-black tracking-tight">On Campus Events</h2>
+        <p class="mt-[1.4vw] text-[2.6vw] md:text-[0.9vw] text-black/60">
+          https://dashboard.ieeeatucsd.org/overview &rarr;
+        </p>
+      </a>
+
+      <a
+        href="/onboarding-v2/general/faq"
+        class="block rounded-2xl bg-white/85 backdrop-blur-md p-[6vw] md:p-[2vw]
+               shadow-lg hover:shadow-xl transition-shadow"
+      >
+        <p class="text-[2.6vw] md:text-[0.9vw] font-semibold text-black/70">FAQ</p>
+        <h2 class="mt-[1vw] text-[5vw] md:text-[2vw] font-black tracking-tight">Any Questions?</h2>
+        <p class="mt-[1.4vw] text-[2.6vw] md:text-[0.9vw] text-black/60">
+          Go to onboarding resources &rarr;
+        </p>
+      </a>
+    </div>
+  </div>
+</OnboardingLayout>
