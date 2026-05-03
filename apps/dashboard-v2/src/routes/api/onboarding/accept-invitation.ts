@@ -3,22 +3,13 @@ import { ConvexHttpClient } from "convex/browser";
 import type { FunctionReference } from "convex/server";
 
 import { env } from "@/env";
+import { DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE } from "@/lib/onboarding-template";
 import { sendDirectOnboardingEmail } from "@/server/email-templates";
 import {
 	ensureRoleOnLogtoUser,
 	findLogtoUserByEmail,
 	isSupportedRole,
 } from "@/server/logto";
-
-const DEFAULT_ACCEPTED_ONBOARDING_TEMPLATE = `Hello {NAME}!
-
-Congratulations on accepting the {POSITION} position for IEEE at UC San Diego.
-
-Your onboarding process has begun. Please join the dashboard, review your onboarding steps, and keep an eye on your email for follow-up access information. {LEADER_INFO}
-
-{CUSTOM_MESSAGE}
-
-We are excited to have you on the board.`;
 
 type PublicInvitation = {
 	_id: string;
@@ -32,6 +23,11 @@ type PublicInvitation = {
 	message?: string;
 	acceptanceDeadline?: string;
 	leaderName?: string;
+};
+
+type PublicOnboardingEmailConfig = {
+	googleSheetsContactListUrl?: string;
+	directOnboardingEmailTemplate?: string;
 };
 
 function json(data: unknown, status = 200) {
@@ -89,6 +85,12 @@ async function readInvitation(convex: ConvexHttpClient, inviteId: string) {
 	return (await convex.query(getPublicFn, {
 		id: inviteId,
 	})) as PublicInvitation | null;
+}
+
+async function readOnboardingEmailConfig(convex: ConvexHttpClient) {
+	const getConfigFn =
+		"organizationSettings:getPublicOnboardingEmailConfig" as unknown as FunctionReference<"query">;
+	return (await convex.query(getConfigFn, {})) as PublicOnboardingEmailConfig;
 }
 
 async function recordAcceptanceSideEffects(
@@ -165,15 +167,21 @@ async function handlePost({ request }: { request: Request }) {
 			userCreatedOrUpdated?: boolean;
 		};
 
-		const onboardingEmailSent = await sendDirectOnboardingEmail({
-			name: acceptedInvitation.name,
-			email: acceptedInvitation.email,
-			role: acceptedInvitation.role,
-			position: acceptedInvitation.position,
-			leaderName: acceptedInvitation.leaderName,
-			customMessage: acceptedInvitation.message,
-			emailTemplate: DEFAULT_ACCEPTED_ONBOARDING_TEMPLATE,
-		});
+		const onboardingEmailConfig = await readOnboardingEmailConfig(convex);
+		const onboardingEmailSent = await sendDirectOnboardingEmail(
+			{
+				name: acceptedInvitation.name,
+				email: acceptedInvitation.email,
+				role: acceptedInvitation.role,
+				position: acceptedInvitation.position,
+				leaderName: acceptedInvitation.leaderName,
+				customMessage: acceptedInvitation.message,
+				emailTemplate:
+					onboardingEmailConfig.directOnboardingEmailTemplate ||
+					DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE,
+			},
+			onboardingEmailConfig.googleSheetsContactListUrl,
+		);
 
 		let logtoUpdated = false;
 		const warnings: string[] = [];

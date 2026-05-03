@@ -103,7 +103,6 @@ export async function sendInvitationEmail(data: InvitationEmailData): Promise<bo
     const html = renderEmail({
       subject,
       preheader: `You've been elected as ${data.position}`,
-      recipientName: data.name,
       introHtml,
       details: [
         { label: "Position", value: positionHtml },

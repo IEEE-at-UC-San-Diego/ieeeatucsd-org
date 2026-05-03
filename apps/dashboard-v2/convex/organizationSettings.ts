@@ -10,11 +10,23 @@ export const get = query({
   },
 });
 
+export const getPublicOnboardingEmailConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    const settings = await ctx.db.query("organizationSettings").first();
+    return {
+      googleSheetsContactListUrl: settings?.googleSheetsContactListUrl,
+      directOnboardingEmailTemplate: settings?.directOnboardingEmailTemplate,
+    };
+  },
+});
+
 export const update = mutation({
   args: {
     logtoId: v.string(),
     authToken: v.string(),
     googleSheetsContactListUrl: v.optional(v.string()),
+    directOnboardingEmailTemplate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const admin = await requireAdminAccess(ctx, args.logtoId, args.authToken);
@@ -23,6 +35,7 @@ export const update = mutation({
 
     const data = {
       googleSheetsContactListUrl: args.googleSheetsContactListUrl,
+      directOnboardingEmailTemplate: args.directOnboardingEmailTemplate,
       updatedBy: adminId,
     };
 

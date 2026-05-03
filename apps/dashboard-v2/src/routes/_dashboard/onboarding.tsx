@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAuthedQuery, useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { api } from "@convex/_generated/api";
+import { DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE } from "@/lib/onboarding-template";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -73,48 +74,6 @@ const ALL_ROLES = [
 ] as const;
 
 const TEAMS = ["Internal", "Events", "Projects"] as const;
-
-const DEFAULT_EMAIL_TEMPLATE = `Hello {NAME}!
-
-Congratulations on being elected as the new {POSITION} for IEEE at UC San Diego! There is a lot of information to get started but it is fairly quick and straightforward. Please read this email in its entirety. If you have any problems feel free to ask me or any of the other officers!
-
-1. Contact Info
-
-Our primary forms of communication are through Slack, Google Groups, Google Drive, and Google Sites. In order to be added to these lists, please input your contact information onto this document. Once you fill out your information on this document (https://docs.google.com/spreadsheets/d/1XTaiDNwJqFelR_w3v_vvptxxLQGcEfI0Fl3bf7cDGS8/edit?gid=0#gid=0), please respond to this email confirming that, as we need this information for some of the following tasks.
-
-2. Join IEEE
-
-Go to http://ieee.org/join and join IEEE as a student member. Be sure to list UC San Diego as your affiliated branch. The cost is $32 / year. IEEE is our parent organization and our constitution states that all officers must be members of IEEE.
-
-3. Join the Dashboard and Slack
-
-Your role should have been updated on our Dashboard to a general officer, if it hasn't please let me know as soon as possible. Once on the dashboard, please go into the tab labeled "Slack Access" and follow the instructions to gain access to your IEEE email for slack.
-
-Here is some information about Slack if you have not used it in the past:
-
-I. Slack is a popular cloud-based team collaboration tool that allows members to have real-time chatting and document sharing under different topics (called "channels" in Slack). After your first login, you should find out a list of channels, and please consult your mentor or executive board officers regarding which channels you should join. {LEADER_INFO}
-
-You should definitely join channels such as "#-announcements", "#-executive", "#-events",  "#-internal", "#-projects", "#-pr", "#-outreach", and "#z_play" in order to establish your initial connection with the whole team. Please also put your position in your Slack Profile and add a picture!
-
-II. If you are new to Slack, please follow the tutorial that should pop out after your first login. You may also familiarize yourself with Slack by checking out this page. It is required that you should install the Slack Mobile App to your cell phone with your account logged on so that you are reachable by all other officers. Slack Desktop App is also nice to have.
-
-III. After you download Slack, make sure to change these settings:
-\ta. "Notify me about…" —> Select "All new messages"
-\tb. Check the box labeled "Notify me about replies to threads I'm following"
-\tc. Notification Schedule —> Every day, 00:00 to Midnight
-\td. "When I'm inactive on desktop" —> "Send notifications to my mobile devices" —> Select "as soon as I'm inactive"
-
-4. Position Email
-
-After you're on Slack, we will provide you access with your Positions email that provides access to all documents and files we will be using within the organization throughout the year.
-
-5. Read Slack and your email frequently. Good communication is key. Please try to be responsive.
-
-Once you join these groups, you will receive information on weekly meetings with your subgroups (Internal, Events, Project) for the rest of the quarter as well as further onboarding information for your position.
-
-{CUSTOM_MESSAGE}
-
-Once again, congratulations on this position and we're all so excited to have you on our board! We'll be here to support you in every step of the way so feel free to ask any questions and get as much clarification as you need.`;
 
 // ── Main Page ──
 
@@ -447,6 +406,9 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
   const [showPreview, setShowPreview] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [tempGoogleSheetsUrl, setTempGoogleSheetsUrl] = useState("");
+  const [tempEmailTemplate, setTempEmailTemplate] = useState(
+    DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE,
+  );
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
@@ -458,13 +420,24 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
   const [team, setTeam] = useState<string>("");
   const [leaderName, setLeaderName] = useState("");
   const [customMessage, setCustomMessage] = useState("");
-  const [emailTemplate, setEmailTemplate] = useState(DEFAULT_EMAIL_TEMPLATE);
+  const [emailTemplate, setEmailTemplate] = useState(
+    DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE,
+  );
 
   const googleSheetsUrl = orgSettings?.googleSheetsContactListUrl || "";
+  const savedEmailTemplate =
+    orgSettings?.directOnboardingEmailTemplate ||
+    DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE;
 
   useEffect(() => {
     setTempGoogleSheetsUrl(googleSheetsUrl);
   }, [googleSheetsUrl]);
+
+  useEffect(() => {
+    if (orgSettings === undefined) return;
+    setEmailTemplate(savedEmailTemplate);
+    setTempEmailTemplate(savedEmailTemplate);
+  }, [orgSettings, savedEmailTemplate]);
 
   const validateGoogleSheetsUrl = (url: string): boolean => {
     if (!url) return true;
@@ -479,14 +452,20 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
       setSettingsError("Please enter a valid Google Sheets URL");
       return;
     }
+    if (!tempEmailTemplate.trim()) {
+      setSettingsError("Please enter an onboarding email template");
+      return;
+    }
 
     setSavingSettings(true);
     try {
       await updateOrgSettings({
         logtoId,
         googleSheetsContactListUrl: tempGoogleSheetsUrl || undefined,
+        directOnboardingEmailTemplate: tempEmailTemplate,
       });
-      toast.success("Google Sheets URL saved successfully!");
+      setEmailTemplate(tempEmailTemplate);
+      toast.success("Onboarding settings saved successfully!");
       setTimeout(() => setShowSettings(false), 500);
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -504,7 +483,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
     setTeam("");
     setLeaderName("");
     setCustomMessage("");
-    setEmailTemplate(DEFAULT_EMAIL_TEMPLATE);
+    setEmailTemplate(savedEmailTemplate);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -627,11 +606,11 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
           <div className="flex-1">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Settings className="w-5 h-5" />
-              Contact List Configuration
+              Onboarding Email Configuration
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Configure the Google Sheets URL for the officer contact list that
-              will be included in onboarding emails.
+              Configure the saved Direct Onboarding template and Google Sheets
+              contact list URL used by invitation acceptance emails.
             </p>
 
             {orgSettings === undefined ? (
@@ -669,6 +648,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
             variant="outline"
             onClick={() => {
               setTempGoogleSheetsUrl(googleSheetsUrl);
+              setTempEmailTemplate(savedEmailTemplate);
               setSettingsError(null);
               setShowSettings(true);
             }}
@@ -847,19 +827,20 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
             setShowSettings(false);
             setSettingsError(null);
             setTempGoogleSheetsUrl(googleSheetsUrl);
+            setTempEmailTemplate(savedEmailTemplate);
           }
         }}
       >
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Configure Contact List URL</DialogTitle>
+            <DialogTitle>Configure Onboarding Email</DialogTitle>
             <DialogDescription>
-              Enter the Google Sheets URL for the officer contact list. This URL
-              will be included in all onboarding emails.
+              Save the Direct Onboarding template and contact list URL. Accepted
+              invitations use this saved configuration.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label>Google Sheets URL</Label>
               <Input
@@ -871,6 +852,20 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
               <p className="text-xs text-muted-foreground">
                 The URL should start with https://docs.google.com/spreadsheets/d/
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Saved Direct Onboarding Template</Label>
+              <p className="text-xs text-muted-foreground">
+                Use {"{NAME}"}, {"{POSITION}"}, {"{LEADER_INFO}"}, and{" "}
+                {"{CUSTOM_MESSAGE}"} as placeholders.
+              </p>
+              <Textarea
+                value={tempEmailTemplate}
+                onChange={(e) => setTempEmailTemplate(e.target.value)}
+                rows={12}
+                className="font-mono text-sm"
+              />
             </div>
 
             {settingsError && (
@@ -900,6 +895,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
                 setShowSettings(false);
                 setSettingsError(null);
                 setTempGoogleSheetsUrl(googleSheetsUrl);
+                setTempEmailTemplate(savedEmailTemplate);
               }}
             >
               Cancel
@@ -910,7 +906,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
-              {savingSettings ? "Saving..." : "Save URL"}
+              {savingSettings ? "Saving..." : "Save Settings"}
             </Button>
           </DialogFooter>
         </DialogContent>
