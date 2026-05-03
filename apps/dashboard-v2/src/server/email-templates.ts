@@ -97,7 +97,7 @@ export async function sendInvitationEmail(data: InvitationEmailData): Promise<bo
 
     const introHtml = `
       <h2 style="margin:0 0 16px 0;color:#003B5C;">Congratulations, ${escapeHtml(data.name)}!</h2>
-      <p>We are excited to inform you that you have been elected to the IEEE at UCSD general board for the 2025-2026 academic year for the following position:</p>
+      <p>We are excited to inform you that you have been elected to the IEEE at UCSD general board for the current academic year for the following position:</p>
     `;
 
     const html = renderEmail({
