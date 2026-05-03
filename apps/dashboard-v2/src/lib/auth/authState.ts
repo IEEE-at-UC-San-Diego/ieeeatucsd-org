@@ -11,6 +11,7 @@ interface ResolveAuthStateInput {
 }
 
 export function resolveAuthState({
+  logtoLoading,
   isAuthenticated,
   logtoId,
   accessToken,
@@ -24,6 +25,16 @@ export function resolveAuthState({
     return {
       isAuthResolved: true,
       isLoading: false,
+    };
+  }
+
+  // Logto often reports isAuthenticated=false while it is still loading the
+  // session from storage (new tab, hard refresh). If we treat that as "signed
+  // out and resolved", dashboard routes redirect to /signin and then overview.
+  if (logtoLoading && !isAuthenticated) {
+    return {
+      isAuthResolved: false,
+      isLoading: true,
     };
   }
 

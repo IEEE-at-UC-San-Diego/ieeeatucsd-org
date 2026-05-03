@@ -412,7 +412,6 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
               <li>An invitation email will be sent to the prospective officer</li>
               <li>They will have until the acceptance deadline to accept or decline</li>
               <li>Upon acceptance, they will automatically receive onboarding instructions</li>
-              <li>They will be added to the appropriate Google Group</li>
               <li>Officer permissions will be granted in the system</li>
             </ul>
           </div>
@@ -686,8 +685,8 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
           <h3 className="text-lg font-semibold">Direct Officer Onboarding</h3>
           <p className="text-sm text-muted-foreground mt-1">
             Directly onboard an officer without requiring acceptance. The
-            onboarding email will be sent immediately, and they will be added to
-            the appropriate Google Group.
+            onboarding email will be sent immediately, and their officer
+            permissions will be synced where possible.
           </p>
         </div>
 
@@ -794,7 +793,6 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
             </h4>
             <ul className="text-sm text-green-700 space-y-1 list-disc list-inside">
               <li>Onboarding email will be sent with all necessary instructions</li>
-              <li>User will be added to the appropriate Google Group</li>
               <li>Officer permissions will be granted in the system</li>
               <li>No acceptance required - they are onboarded immediately</li>
             </ul>

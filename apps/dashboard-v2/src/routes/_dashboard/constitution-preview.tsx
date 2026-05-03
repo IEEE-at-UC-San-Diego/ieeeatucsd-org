@@ -21,11 +21,14 @@ function ConstitutionPreviewPage() {
     logtoId ? { logtoId } : "skip",
   );
 
-  // getSections is a public query with no auth args
-  const sections = useQuery(
+  const sectionsFromQuery = useQuery(
     api.constitutions.getSections,
     constitution ? { constitutionId: constitution._id } : "skip",
   );
+
+  const constitutionPending = constitution === undefined;
+  const sectionsPending =
+    constitution != null && sectionsFromQuery === undefined;
 
   if (isLoading) {
     return (
@@ -43,7 +46,7 @@ function ConstitutionPreviewPage() {
     );
   }
 
-  if (constitution === undefined || sections === undefined) {
+  if (constitutionPending || sectionsPending) {
     return (
       <div className="w-full p-6">
         <div className="max-w-[8.5in] mx-auto space-y-4">
@@ -53,6 +56,19 @@ function ConstitutionPreviewPage() {
       </div>
     );
   }
+
+  if (constitution === null) {
+    return (
+      <div className="p-6 text-center text-muted-foreground max-w-lg mx-auto space-y-2">
+        <p>No default constitution document was found.</p>
+        <p className="text-sm">
+          Open the Constitution Builder from the dashboard so the document can be created, then use Live Preview again.
+        </p>
+      </div>
+    );
+  }
+
+  const sections = sectionsFromQuery ?? [];
 
   const handlePrint = () => {
     exportConstitutionToPdf(constitution, sections);

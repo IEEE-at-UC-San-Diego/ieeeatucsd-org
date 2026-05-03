@@ -352,9 +352,6 @@ function useSharedAuthClient(options: {
             isExpired,
             error: errorMessage(error),
           });
-          if (isExpired) {
-            markAuthFailure("session_mint_failed");
-          }
         } finally {
           refreshInFlightRef.current = false;
         }
@@ -369,7 +366,6 @@ function useSharedAuthClient(options: {
     convexSessionToken,
     isAuthenticated,
     logtoId,
-    markAuthFailure,
     mode,
     refreshSession,
   ]);
@@ -380,10 +376,29 @@ function useSharedAuthClient(options: {
       ? { logtoId, authToken: convexSessionToken }
       : "skip",
   );
+  const [stableConvexUser, setStableConvexUser] = useState<{
+    logtoId: string;
+    user: typeof convexUser;
+  } | null>(null);
+  const hasStableConvexUser = stableConvexUser?.logtoId === logtoId;
+  const effectiveConvexUser =
+    convexUser === undefined && hasStableConvexUser ? stableConvexUser.user : convexUser;
+
+  useEffect(() => {
+    if (!logtoId) {
+      setStableConvexUser(null);
+      return;
+    }
+
+    if (convexUser !== undefined) {
+      setStableConvexUser({ logtoId, user: convexUser });
+    }
+  }, [convexUser, logtoId]);
 
   useEffect(() => {
     if (!isAuthenticated || authFailureReason) return;
     if (!logtoId || !accessToken || !convexSessionToken) return;
+    if (hasStableConvexUser) return;
     if (convexUser !== undefined) return;
 
     const timeout = window.setTimeout(() => {
@@ -397,6 +412,7 @@ function useSharedAuthClient(options: {
     logtoId,
     accessToken,
     convexSessionToken,
+    hasStableConvexUser,
     convexUser,
     markAuthFailure,
   ]);
@@ -411,7 +427,7 @@ function useSharedAuthClient(options: {
       isAuthenticated,
       logtoId,
       convexSessionToken,
-      convexUser,
+      convexUser: effectiveConvexUser,
       lastProvisioningAttemptLogtoId: lastProvisioningAttemptRef.current,
     })) {
       setIsProvisioningUser(false);
@@ -459,7 +475,7 @@ function useSharedAuthClient(options: {
     accessToken,
     authFailureReason,
     convexSessionToken,
-    convexUser,
+    effectiveConvexUser,
     isAuthenticated,
     logtoId,
     mode,
@@ -492,7 +508,7 @@ function useSharedAuthClient(options: {
     })();
   }, [authFailureReason, clearLocalAuthState, mode, origin]);
 
-  const userRole: UserRole = (convexUser?.role as UserRole) ?? "Member";
+  const userRole: UserRole = (effectiveConvexUser?.role as UserRole) ?? "Member";
   const hasProvisioningAttempt =
     !!logtoId && lastProvisioningAttemptRef.current === logtoId;
   const { isAuthResolved, isLoading } = resolveAuthState({
@@ -501,7 +517,7 @@ function useSharedAuthClient(options: {
     logtoId,
     accessToken,
     convexSessionToken,
-    convexUser,
+    convexUser: effectiveConvexUser,
     isProvisioningUser,
     hasProvisioningAttempt,
     authFailureReason,
@@ -513,7 +529,7 @@ function useSharedAuthClient(options: {
     isAuthResolved,
     isProvisioningUser,
     authFailureReason,
-    user: convexUser ?? null,
+    user: effectiveConvexUser ?? null,
     userRole,
     logtoId,
     accessToken,
@@ -527,7 +543,7 @@ function useSharedAuthClient(options: {
     accessToken,
     authFailureReason,
     convexSessionToken,
-    convexUser,
+    effectiveConvexUser,
     getAuthHeaders,
     isAuthenticated,
     isAuthResolved,

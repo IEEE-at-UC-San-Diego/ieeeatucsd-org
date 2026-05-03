@@ -93,7 +93,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
         }}
       >
         <img
-          src="/blue_logo_only.png"
+          src="/logos/blue_logo_only.svg"
           alt="IEEE Logo"
           style={{
             width: "120px",

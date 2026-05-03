@@ -105,6 +105,7 @@ function EventsPage() {
     try {
       const result = await checkIn({
         logtoId,
+        eventId: checkInEvent?._id as any,
         eventCode: code,
         food: foodPreference || "none",
       });

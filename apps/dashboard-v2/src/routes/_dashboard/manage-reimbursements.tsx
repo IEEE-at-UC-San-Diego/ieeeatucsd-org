@@ -44,11 +44,17 @@ import {
 	Sparkles,
 	UploadCloud,
 	FileText,
+	Car,
 } from "lucide-react";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { sendNotification } from "@/lib/send-notification";
 import { format, formatDistanceToNow } from "date-fns";
+import {
+	MILEAGE_RATE_PER_MILE,
+	computeMileageTotal,
+	formatMileageRoute,
+} from "@/lib/reimbursement-mileage";
 
 function formatAuditAction(action: string): {
 	label: string;
@@ -266,6 +272,10 @@ function ManageReimbursementsPage() {
 
 	// Calculate receipt total
 	const calculateReceiptTotal = (receipt: any) => {
+		if (receipt.expenseType === "mileage") {
+			if (receipt.total && receipt.total > 0) return receipt.total;
+			return computeMileageTotal(receipt.miles ?? 0);
+		}
 		if (receipt.total && receipt.total > 0) {
 			return receipt.total;
 		}
@@ -654,6 +664,7 @@ function ManageReimbursementsPage() {
 
 	const currentReceipt =
 		selectedReimbursement?.receipts?.[activeReceiptIndex] || null;
+	const currentIsMileage = currentReceipt?.expenseType === "mileage";
 
 	// Detail View - Split Pane Layout
 	if (viewMode === "detail" && selectedReimbursement) {
@@ -836,7 +847,7 @@ function ManageReimbursementsPage() {
 								selectedReimbursement.receipts.length > 0 && (
 									<section className="space-y-4">
 										<h3 className="text-sm font-bold text-gray-900 flex justify-between">
-											<span>Receipts</span>
+											<span>Expenses</span>
 											<span className="text-gray-500 font-medium text-xs">
 												{selectedReimbursement.receipts.length} items
 											</span>
@@ -853,25 +864,76 @@ function ManageReimbursementsPage() {
 																: "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
 														}`}
 													>
-														<div className="flex justify-between items-start mb-1">
-															<span className="font-semibold text-gray-900">
-																{receipt.vendorName || "Unknown Vendor"}
-															</span>
-															<span className="font-bold text-gray-900 tabular-nums">
+														<div className="flex justify-between items-start mb-1 gap-2">
+															<div className="min-w-0 flex flex-wrap items-center gap-1.5">
+																<span className="font-semibold text-gray-900">
+																	{receipt.vendorName ||
+																		(receipt.expenseType === "mileage"
+																			? "Mileage"
+																			: "Unknown Vendor")}
+																</span>
+																{receipt.expenseType === "mileage" && (
+																	<Badge
+																		variant="secondary"
+																		className="text-[10px] font-normal shrink-0"
+																	>
+																		Mileage
+																	</Badge>
+																)}
+															</div>
+															<span className="font-bold text-gray-900 tabular-nums shrink-0">
 																${(receipt.total || 0).toFixed(2)}
 															</span>
 														</div>
-														<div className="text-xs text-gray-500 flex justify-between">
-															<span>
-																{receipt.dateOfPurchase
-																	? format(
-																			receipt.dateOfPurchase,
-																			"MMM d, yyyy",
-																		)
-																	: "No date"}
+														<div className="text-xs text-gray-500 flex justify-between gap-2">
+															<span className="min-w-0 flex flex-col gap-0.5">
+																{receipt.expenseType === "mileage" ? (
+																	<>
+																		<span className="truncate">
+																			{receipt.dateOfPurchase
+																				? format(
+																						receipt.dateOfPurchase,
+																						"MMM d, yyyy",
+																					)
+																				: "No date"}{" "}
+																			·{" "}
+																			{(receipt.miles ?? 0).toLocaleString(
+																				undefined,
+																				{ maximumFractionDigits: 2 },
+																			)}{" "}
+																			mi × ${MILEAGE_RATE_PER_MILE.toFixed(2)}
+																			/mi
+																		</span>
+																		{(formatMileageRoute(
+																			receipt.mileageFrom,
+																			receipt.mileageTo,
+																			receipt.mileageStops,
+																		) ||
+																			receipt.location?.trim()) && (
+																			<span className="truncate text-gray-600">
+																				{formatMileageRoute(
+																					receipt.mileageFrom,
+																					receipt.mileageTo,
+																					receipt.mileageStops,
+																				) || receipt.location}
+																			</span>
+																		)}
+																	</>
+																) : receipt.dateOfPurchase ? (
+																	format(
+																		receipt.dateOfPurchase,
+																		"MMM d, yyyy",
+																	)
+																) : (
+																	"No date"
+																)}
 															</span>
-															<span>
-																{receipt.receiptFile ? "View File" : "No File"}
+															<span className="shrink-0">
+																{receipt.expenseType === "mileage"
+																	? "—"
+																	: receipt.receiptFile
+																		? "View File"
+																		: "No File"}
 															</span>
 														</div>
 													</div>
@@ -1004,9 +1066,92 @@ function ManageReimbursementsPage() {
 						</div>
 					</div>
 
-					{/* Right Panel (7/12) - Receipt Viewer */}
+					{/* Right Panel (7/12) - Receipt file or mileage */}
 					<div className="w-7/12 bg-gray-100 flex flex-col border-l border-gray-200 overflow-hidden">
 						{currentReceipt ? (
+							currentIsMileage ? (
+								<div className="flex flex-1 flex-col overflow-auto p-6">
+									<div className="mx-auto flex w-full max-w-lg flex-col items-center rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center">
+										<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+											<Car className="h-7 w-7 text-primary" />
+										</div>
+										<Badge variant="secondary" className="mb-2">
+											Mileage
+										</Badge>
+										<h3 className="text-base font-semibold text-gray-900">
+											{currentReceipt.vendorName || "Mileage"}
+										</h3>
+										<p className="mt-1 text-sm text-gray-500">
+											{currentReceipt.dateOfPurchase
+												? format(
+														currentReceipt.dateOfPurchase,
+														"MMM d, yyyy",
+													)
+												: "No date"}
+										</p>
+										<p className="mt-3 text-sm text-gray-600">
+											{(currentReceipt.miles ?? 0).toLocaleString(undefined, {
+												maximumFractionDigits: 2,
+											})}{" "}
+											mi × $
+											{(
+												currentReceipt.mileageRatePerMile ??
+												MILEAGE_RATE_PER_MILE
+											).toFixed(2)}
+											/mi
+										</p>
+										<p className="mt-4 font-mono text-3xl font-bold tabular-nums text-gray-900">
+											$
+											{calculateReceiptTotal(currentReceipt).toFixed(2)}
+										</p>
+										<p className="mt-4 max-w-md text-sm leading-snug text-gray-700">
+											{formatMileageRoute(
+												currentReceipt.mileageFrom,
+												currentReceipt.mileageTo,
+												currentReceipt.mileageStops,
+											) ||
+												currentReceipt.location?.trim() ||
+												""}
+										</p>
+										{(currentReceipt.mileageFrom?.trim() ||
+											currentReceipt.mileageTo?.trim() ||
+											(currentReceipt.mileageStops &&
+												currentReceipt.mileageStops.length > 0)) && (
+											<div className="mt-4 w-full max-w-md space-y-2 border-t border-gray-100 pt-4 text-left text-xs text-gray-600">
+												<div>
+													<span className="font-semibold text-gray-500">
+														From
+													</span>
+													<p className="mt-0.5">
+														{currentReceipt.mileageFrom?.trim() || "—"}
+													</p>
+												</div>
+												<div>
+													<span className="font-semibold text-gray-500">To</span>
+													<p className="mt-0.5">
+														{currentReceipt.mileageTo?.trim() || "—"}
+													</p>
+												</div>
+												{currentReceipt.mileageStops &&
+													currentReceipt.mileageStops.length > 0 && (
+														<div>
+															<span className="font-semibold text-gray-500">
+																Stops
+															</span>
+															<ol className="mt-0.5 list-decimal list-inside space-y-0.5">
+																{currentReceipt.mileageStops.map(
+																	(s: string, i: number) => (
+																		<li key={i}>{s}</li>
+																	),
+																)}
+															</ol>
+														</div>
+													)}
+											</div>
+										)}
+									</div>
+								</div>
+							) : (
 							<Tabs defaultValue="image" className="h-full flex flex-col">
 								<TabsList className="mx-4 mt-4 justify-start shrink-0">
 									<TabsTrigger value="image">Receipt Image</TabsTrigger>
@@ -1171,6 +1316,7 @@ function ManageReimbursementsPage() {
 									</div>
 								</TabsContent>
 							</Tabs>
+							)
 						) : (
 							<div className="flex items-center justify-center h-full text-muted-foreground">
 								<div className="text-center">

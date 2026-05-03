@@ -467,7 +467,12 @@ const generateTOCHTML = (sections: ConstitutionSection[]): string => {
 export const generatePrintContent = (
   _constitution: Constitution | null,
   sections: ConstitutionSection[],
+  /** Use absolute URLs (e.g. window.location.origin) so the logo loads in about:blank print windows */
+  assetOrigin: string = "",
 ) => {
+  const logoSrc = assetOrigin
+    ? `${assetOrigin.replace(/\/$/, "")}/logos/blue_logo_only.svg`
+    : "/logos/blue_logo_only.svg";
   const preamble = sections.find((s) => s.type === "preamble");
   const articles = sections
     .filter((s) => s.type === "article")
@@ -482,7 +487,7 @@ export const generatePrintContent = (
   content += `
     <div class="constitution-page cover-page" style="display:flex; flex-direction:column; align-items:center; text-align:center;">
         <div class="logo-container" style="text-align: center; margin: 48px 0; width:100%;">
-            <img src="/blue_logo_only.png" alt="IEEE Logo" style="width: 120px; height: 120px; object-fit: contain; margin: 0 auto; display: block;" />
+            <img src="${logoSrc}" alt="IEEE Logo" style="width: 120px; height: 120px; object-fit: contain; margin: 0 auto; display: block;" />
         </div>
         <h1 style="font-size: 28pt; line-height: 1.1; margin-bottom: 24px; text-align:center; width:100%;">IEEE at UC San Diego</h1>
         <h2 class="cover-subtitle" style="font-size: 16pt; line-height: 1.3; margin-bottom: 48px; font-weight: 600; width:100%;">The Institute of Electrical and Electronics Engineers at UC San Diego Constitution</h2>
@@ -575,7 +580,11 @@ export const generatePrintHTML = (
   constitution: Constitution | null,
   sections: ConstitutionSection[],
 ) => {
-  const printContent = generatePrintContent(constitution, sections);
+  const assetOrigin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "";
+  const printContent = generatePrintContent(constitution, sections, assetOrigin);
 
   return `<!DOCTYPE html>
 <html>

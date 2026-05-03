@@ -28,7 +28,7 @@ describe("shouldAttemptProvisioning", () => {
 });
 
 describe("resolveAuthState", () => {
-  it("does not block unauthenticated users on logto loading", () => {
+  it("defers unauthenticated resolution while Logto is still hydrating", () => {
     const state = resolveAuthState({
       logtoLoading: true,
       isAuthenticated: false,
@@ -41,8 +41,8 @@ describe("resolveAuthState", () => {
       authFailureReason: null,
     });
 
-    expect(state.isLoading).toBe(false);
-    expect(state.isAuthResolved).toBe(true);
+    expect(state.isLoading).toBe(true);
+    expect(state.isAuthResolved).toBe(false);
   });
 
   it("stays loading while provisioning is in progress", () => {

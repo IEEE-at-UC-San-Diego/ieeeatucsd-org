@@ -45,6 +45,14 @@ const receipt = v.object({
   tip: v.optional(v.number()),
   shipping: v.optional(v.number()),
   total: v.number(),
+  expenseType: v.optional(
+    v.union(v.literal("receipt"), v.literal("mileage")),
+  ),
+  miles: v.optional(v.number()),
+  mileageRatePerMile: v.optional(v.number()),
+  mileageFrom: v.optional(v.string()),
+  mileageTo: v.optional(v.string()),
+  mileageStops: v.optional(v.array(v.string())),
 });
 
 const invoiceItem = v.object({

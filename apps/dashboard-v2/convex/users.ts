@@ -244,12 +244,36 @@ export const upsertFromAuth = mutation({
       }
     }
 
-    // Check for accepted officer invitations
-    const acceptedInvitation = await ctx.db
-      .query("officerInvitations")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail || args.email))
-      .filter((q) => q.eq(q.field("status"), "accepted"))
-      .first();
+    // Check for accepted officer invitations. Older invitations may have been
+    // stored before email normalization, so check both forms.
+    const invitationMatches: any[] = [];
+    const addInvitation = (candidate: any) => {
+      if (!candidate) return;
+      if (invitationMatches.some((match) => match._id === candidate._id)) return;
+      invitationMatches.push(candidate);
+    };
+
+    if (normalizedEmail) {
+      addInvitation(
+        await ctx.db
+          .query("officerInvitations")
+          .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+          .filter((q) => q.eq(q.field("status"), "accepted"))
+          .first(),
+      );
+    }
+
+    if (args.email && args.email !== normalizedEmail) {
+      addInvitation(
+        await ctx.db
+          .query("officerInvitations")
+          .withIndex("by_email", (q) => q.eq("email", args.email))
+          .filter((q) => q.eq(q.field("status"), "accepted"))
+          .first(),
+      );
+    }
+
+    const acceptedInvitation = invitationMatches[0];
 
     if (acceptedInvitation && role === "Member") {
       role = acceptedInvitation.role;

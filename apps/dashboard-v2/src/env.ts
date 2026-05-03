@@ -37,6 +37,8 @@ export const env = createEnv({
 		VITE_LOGTO_REDIRECT_URI: z.string().url().optional(),
 		VITE_LOGTO_SCOPES: z.string().optional(),
 		VITE_LOGTO_DIRECT_SIGN_IN_TARGET: z.string().optional(),
+		/** Optional: enables Google Places address suggestions on mileage route fields */
+		VITE_GOOGLE_MAPS_API_KEY: z.string().optional(),
 	},
 
 	runtimeEnv: {
@@ -70,6 +72,7 @@ export const env = createEnv({
 		VITE_LOGTO_SCOPES: import.meta.env.VITE_LOGTO_SCOPES,
 		VITE_LOGTO_DIRECT_SIGN_IN_TARGET: import.meta.env
 			.VITE_LOGTO_DIRECT_SIGN_IN_TARGET,
+		VITE_GOOGLE_MAPS_API_KEY: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
 	},
 	emptyStringAsUndefined: true,
 });

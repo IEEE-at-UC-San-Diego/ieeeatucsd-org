@@ -2,6 +2,20 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdminAccess } from "./permissions";
 
+const publicInvitationFields = (invitation: any) => ({
+  _id: invitation._id,
+  name: invitation.name,
+  email: invitation.email,
+  role: invitation.role,
+  position: invitation.position,
+  status: invitation.status,
+  invitedAt: invitation.invitedAt,
+  expiresAt: invitation.expiresAt,
+  message: invitation.message,
+  acceptanceDeadline: invitation.acceptanceDeadline,
+  leaderName: invitation.leaderName,
+});
+
 export const list = query({
   args: { logtoId: v.string(), authToken: v.string() },
   handler: async (ctx, args) => {
@@ -24,6 +38,14 @@ export const get = query({
   args: { id: v.id("officerInvitations") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
+  },
+});
+
+export const getPublic = query({
+  args: { id: v.id("officerInvitations") },
+  handler: async (ctx, args) => {
+    const invitation = await ctx.db.get(args.id);
+    return invitation ? publicInvitationFields(invitation) : null;
   },
 });
 
@@ -54,6 +76,7 @@ export const create = mutation({
     const { logtoId, authToken, ...data } = args;
     return await ctx.db.insert("officerInvitations", {
       ...data,
+      email: data.email.trim().toLowerCase(),
       status: "pending",
       invitedBy: adminId,
       invitedAt: now,
@@ -82,6 +105,125 @@ export const updateStatus = mutation({
     if (args.status === "accepted") updates.acceptedAt = now;
     if (args.status === "declined") updates.declinedAt = now;
     await ctx.db.patch(args.id, updates);
+    return args.id;
+  },
+});
+
+export const acceptPublic = mutation({
+  args: { id: v.id("officerInvitations") },
+  handler: async (ctx, args) => {
+    const invitation = await ctx.db.get(args.id);
+    if (!invitation) {
+      throw new Error("Invitation not found");
+    }
+    if (invitation.status !== "pending") {
+      throw new Error(`Invitation has already been ${invitation.status}`);
+    }
+    if (Date.now() > invitation.expiresAt) {
+      await ctx.db.patch(args.id, { status: "expired" });
+      throw new Error("Invitation has expired");
+    }
+
+    const now = Date.now();
+    const normalizedEmail = invitation.email.trim().toLowerCase();
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+      .first();
+
+    let roleGranted = false;
+    if (existingUser) {
+      await ctx.db.patch(existingUser._id, {
+        role: invitation.role,
+        position: invitation.position,
+        lastUpdated: now,
+        lastUpdatedBy: invitation.invitedBy,
+      });
+      roleGranted = true;
+    }
+
+    const updates: Record<string, unknown> = {
+      status: "accepted",
+      acceptedAt: now,
+      roleGranted,
+      userCreatedOrUpdated: roleGranted,
+      permissionsGranted: roleGranted,
+    };
+    if (roleGranted) {
+      updates.roleGrantedAt = now;
+    }
+    await ctx.db.patch(args.id, updates);
+
+    return {
+      ...publicInvitationFields(invitation),
+      status: "accepted",
+      acceptedAt: now,
+      roleGranted,
+      userCreatedOrUpdated: roleGranted,
+    };
+  },
+});
+
+export const declinePublic = mutation({
+  args: { id: v.id("officerInvitations") },
+  handler: async (ctx, args) => {
+    const invitation = await ctx.db.get(args.id);
+    if (!invitation) {
+      throw new Error("Invitation not found");
+    }
+    if (invitation.status !== "pending") {
+      throw new Error(`Invitation has already been ${invitation.status}`);
+    }
+    if (Date.now() > invitation.expiresAt) {
+      await ctx.db.patch(args.id, { status: "expired" });
+      throw new Error("Invitation has expired");
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(args.id, {
+      status: "declined",
+      declinedAt: now,
+    });
+
+    return {
+      ...publicInvitationFields(invitation),
+      status: "declined",
+      declinedAt: now,
+    };
+  },
+});
+
+export const recordAcceptanceSideEffects = mutation({
+  args: {
+    id: v.id("officerInvitations"),
+    onboardingEmailSent: v.optional(v.boolean()),
+    roleGranted: v.optional(v.boolean()),
+    userCreatedOrUpdated: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const invitation = await ctx.db.get(args.id);
+    if (!invitation) {
+      throw new Error("Invitation not found");
+    }
+
+    const now = Date.now();
+    const updates: Record<string, unknown> = {};
+    if (args.onboardingEmailSent !== undefined) {
+      updates.onboardingEmailSent = args.onboardingEmailSent;
+    }
+    if (args.roleGranted !== undefined) {
+      updates.roleGranted = args.roleGranted;
+      updates.permissionsGranted = args.roleGranted;
+      if (args.roleGranted) {
+        updates.roleGrantedAt = now;
+      }
+    }
+    if (args.userCreatedOrUpdated !== undefined) {
+      updates.userCreatedOrUpdated = args.userCreatedOrUpdated;
+    }
+
+    await ctx.db.patch(args.id, updates);
+
     return args.id;
   },
 });
