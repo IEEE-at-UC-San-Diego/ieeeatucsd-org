@@ -21,6 +21,7 @@ type Invitation = {
 	email: string;
 	role: string;
 	position: string;
+	offeredPositions?: string[];
 	status: "pending" | "accepted" | "declined" | "expired";
 	expiresAt: number;
 	message?: string;
@@ -39,6 +40,15 @@ function AcceptInvitationPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState(false);
 	const [declined, setDeclined] = useState(false);
+	const [selectedPosition, setSelectedPosition] = useState("");
+
+	const offeredPositions =
+		invitation?.offeredPositions && invitation.offeredPositions.length > 0
+			? invitation.offeredPositions
+			: invitation?.position
+				? [invitation.position]
+				: [];
+	const hasMultiplePositions = offeredPositions.length > 1;
 
 	useEffect(() => {
 		let cancelled = false;
@@ -68,6 +78,11 @@ function AcceptInvitationPage() {
 				setInvitation(data);
 				setSuccess(data.status === "accepted");
 				setDeclined(data.status === "declined");
+				setSelectedPosition(
+					data.offeredPositions && data.offeredPositions.length > 1
+						? ""
+						: data.position,
+				);
 
 				const expiresAt = new Date(data.expiresAt);
 				if (new Date() > expiresAt && data.status === "pending") {
@@ -105,6 +120,9 @@ function AcceptInvitationPage() {
 				body: JSON.stringify({
 					inviteId,
 					action: "accept",
+					selectedPosition: hasMultiplePositions
+						? selectedPosition
+						: invitation?.position,
 				}),
 			});
 			const result = await response.json();
@@ -124,6 +142,9 @@ function AcceptInvitationPage() {
 			setProcessing(false);
 		}
 	};
+
+	const canAccept =
+		!processing && (!hasMultiplePositions || Boolean(selectedPosition));
 
 	const handleDecline = async () => {
 		if (!window.confirm("Are you sure you want to decline this position?")) {
@@ -240,14 +261,56 @@ function AcceptInvitationPage() {
 									<Briefcase className="h-6 w-6 text-primary" />
 								</div>
 								<div>
-									<p className="text-sm text-muted-foreground">Your Position</p>
-									<h2 className="text-2xl font-bold">{invitation?.position}</h2>
+									<p className="text-sm text-muted-foreground">
+										{hasMultiplePositions ? "Available Positions" : "Your Position"}
+									</p>
+									<h2 className="text-2xl font-bold">
+										{hasMultiplePositions
+											? "Choose one position"
+											: invitation?.position}
+									</h2>
 									<p className="mt-1 text-sm text-muted-foreground">
 										{invitation?.role}
 									</p>
 								</div>
 							</div>
 						</div>
+
+						{hasMultiplePositions ? (
+							<div className="space-y-3">
+								<p className="text-sm font-medium">
+									Select the position you want to accept
+								</p>
+								<div className="grid gap-3">
+									{offeredPositions.map((position) => {
+										const selected = selectedPosition === position;
+										return (
+											<button
+												key={position}
+												type="button"
+												onClick={() => setSelectedPosition(position)}
+												className={`rounded-lg border p-4 text-left transition ${
+													selected
+														? "border-primary bg-primary/10"
+														: "bg-card hover:bg-muted/60"
+												}`}
+											>
+												<div className="flex items-center justify-between gap-3">
+													<span className="font-semibold">{position}</span>
+													<span
+														className={`h-4 w-4 rounded-full border ${
+															selected
+																? "border-primary bg-primary"
+																: "border-muted-foreground/40"
+														}`}
+													/>
+												</div>
+											</button>
+										);
+									})}
+								</div>
+							</div>
+						) : null}
 
 						<InvitationDetails invitation={invitation} />
 
@@ -266,8 +329,13 @@ function AcceptInvitationPage() {
 							<p className="font-semibold">Important</p>
 							<p className="mt-1 leading-relaxed">
 								By accepting this position, you agree to fulfill the
-								responsibilities of <strong>{invitation?.position}</strong> and
-								commit to supporting IEEE at UCSD's mission.
+								responsibilities of{" "}
+								<strong>
+									{hasMultiplePositions
+										? selectedPosition || "the selected position"
+										: invitation?.position}
+								</strong>{" "}
+								and commit to supporting IEEE at UCSD's mission.
 							</p>
 						</div>
 
@@ -284,7 +352,7 @@ function AcceptInvitationPage() {
 							<Button
 								type="button"
 								onClick={handleAccept}
-								disabled={processing}
+								disabled={!canAccept}
 								className="flex-1"
 							>
 								{processing ? (

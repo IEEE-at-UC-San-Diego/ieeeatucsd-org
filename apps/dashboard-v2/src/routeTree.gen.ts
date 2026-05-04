@@ -44,6 +44,7 @@ import { Route as DashboardConstitutionPreviewRouteImport } from './routes/_dash
 import { Route as DashboardConstitutionBuilderRouteImport } from './routes/_dashboard/constitution-builder'
 import { Route as ApiUsersUpdateRoleRouteImport } from './routes/api/users/update-role'
 import { Route as ApiRpcSplatRouteImport } from './routes/api.rpc.$'
+import { Route as ApiOnboardingSendRejectionRouteImport } from './routes/api/onboarding/send-rejection'
 import { Route as ApiOnboardingSendInvitationRouteImport } from './routes/api/onboarding/send-invitation'
 import { Route as ApiOnboardingSendDirectOnboardingRouteImport } from './routes/api/onboarding/send-direct-onboarding'
 import { Route as ApiOnboardingResendInvitationRouteImport } from './routes/api/onboarding/resend-invitation'
@@ -239,6 +240,12 @@ const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   path: '/api/rpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOnboardingSendRejectionRoute =
+  ApiOnboardingSendRejectionRouteImport.update({
+    id: '/api/onboarding/send-rejection',
+    path: '/api/onboarding/send-rejection',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiOnboardingSendInvitationRoute =
   ApiOnboardingSendInvitationRouteImport.update({
     id: '/api/onboarding/send-invitation',
@@ -352,6 +359,7 @@ export interface FileRoutesByFullPath {
   '/api/onboarding/resend-invitation': typeof ApiOnboardingResendInvitationRoute
   '/api/onboarding/send-direct-onboarding': typeof ApiOnboardingSendDirectOnboardingRoute
   '/api/onboarding/send-invitation': typeof ApiOnboardingSendInvitationRoute
+  '/api/onboarding/send-rejection': typeof ApiOnboardingSendRejectionRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
 }
@@ -400,6 +408,7 @@ export interface FileRoutesByTo {
   '/api/onboarding/resend-invitation': typeof ApiOnboardingResendInvitationRoute
   '/api/onboarding/send-direct-onboarding': typeof ApiOnboardingSendDirectOnboardingRoute
   '/api/onboarding/send-invitation': typeof ApiOnboardingSendInvitationRoute
+  '/api/onboarding/send-rejection': typeof ApiOnboardingSendRejectionRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
 }
@@ -450,6 +459,7 @@ export interface FileRoutesById {
   '/api/onboarding/resend-invitation': typeof ApiOnboardingResendInvitationRoute
   '/api/onboarding/send-direct-onboarding': typeof ApiOnboardingSendDirectOnboardingRoute
   '/api/onboarding/send-invitation': typeof ApiOnboardingSendInvitationRoute
+  '/api/onboarding/send-rejection': typeof ApiOnboardingSendRejectionRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
 }
@@ -500,6 +510,7 @@ export interface FileRouteTypes {
     | '/api/onboarding/resend-invitation'
     | '/api/onboarding/send-direct-onboarding'
     | '/api/onboarding/send-invitation'
+    | '/api/onboarding/send-rejection'
     | '/api/rpc/$'
     | '/api/users/update-role'
   fileRoutesByTo: FileRoutesByTo
@@ -548,6 +559,7 @@ export interface FileRouteTypes {
     | '/api/onboarding/resend-invitation'
     | '/api/onboarding/send-direct-onboarding'
     | '/api/onboarding/send-invitation'
+    | '/api/onboarding/send-rejection'
     | '/api/rpc/$'
     | '/api/users/update-role'
   id:
@@ -597,6 +609,7 @@ export interface FileRouteTypes {
     | '/api/onboarding/resend-invitation'
     | '/api/onboarding/send-direct-onboarding'
     | '/api/onboarding/send-invitation'
+    | '/api/onboarding/send-rejection'
     | '/api/rpc/$'
     | '/api/users/update-role'
   fileRoutesById: FileRoutesById
@@ -626,6 +639,7 @@ export interface RootRouteChildren {
   ApiOnboardingResendInvitationRoute: typeof ApiOnboardingResendInvitationRoute
   ApiOnboardingSendDirectOnboardingRoute: typeof ApiOnboardingSendDirectOnboardingRoute
   ApiOnboardingSendInvitationRoute: typeof ApiOnboardingSendInvitationRoute
+  ApiOnboardingSendRejectionRoute: typeof ApiOnboardingSendRejectionRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
   ApiUsersUpdateRoleRoute: typeof ApiUsersUpdateRoleRoute
 }
@@ -877,6 +891,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/onboarding/send-rejection': {
+      id: '/api/onboarding/send-rejection'
+      path: '/api/onboarding/send-rejection'
+      fullPath: '/api/onboarding/send-rejection'
+      preLoaderRoute: typeof ApiOnboardingSendRejectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/onboarding/send-invitation': {
       id: '/api/onboarding/send-invitation'
       path: '/api/onboarding/send-invitation'
@@ -1042,6 +1063,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOnboardingSendDirectOnboardingRoute:
     ApiOnboardingSendDirectOnboardingRoute,
   ApiOnboardingSendInvitationRoute: ApiOnboardingSendInvitationRoute,
+  ApiOnboardingSendRejectionRoute: ApiOnboardingSendRejectionRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
   ApiUsersUpdateRoleRoute: ApiUsersUpdateRoleRoute,
 }

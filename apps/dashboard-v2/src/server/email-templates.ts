@@ -80,9 +80,26 @@ interface InvitationEmailData {
   email: string;
   role: string;
   position: string;
+  offeredPositions?: string[];
   acceptanceDeadline?: string;
   message?: string;
   leaderName?: string;
+}
+
+interface RejectionEmailData {
+  name: string;
+  email: string;
+  positions: string[];
+  customMessage?: string;
+}
+
+function normalizePositions(position: string, offeredPositions?: string[]) {
+  const positions = (offeredPositions && offeredPositions.length > 0
+    ? offeredPositions
+    : [position])
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return positions.length > 0 ? positions : [position];
 }
 
 export async function sendInvitationEmail(data: InvitationEmailData): Promise<boolean> {
@@ -90,22 +107,33 @@ export async function sendInvitationEmail(data: InvitationEmailData): Promise<bo
     const baseUrl =
       process.env.PUBLIC_DASHBOARD_URL || "https://dashboard.ieeeatucsd.org";
     const acceptLink = `${baseUrl}/accept-invitation/${data.inviteId}`;
+    const positions = normalizePositions(data.position, data.offeredPositions);
+    const hasMultiplePositions = positions.length > 1;
+    const subject = hasMultiplePositions
+      ? `You've been selected for IEEE at UCSD board positions!`
+      : `You've been elected as ${positions[0]} for IEEE at UCSD!`;
 
-    const subject = `You've been elected as ${data.position} for IEEE at UCSD!`;
-
-    const positionHtml = `<strong>${escapeHtml(data.position)}</strong> (${escapeHtml(data.role)})`;
+    const positionHtml = hasMultiplePositions
+      ? `<ul style="margin:0;padding-left:18px;">${positions.map((position) => `<li><strong>${escapeHtml(position)}</strong></li>`).join("")}</ul>`
+      : `<strong>${escapeHtml(positions[0])}</strong> (${escapeHtml(data.role)})`;
 
     const introHtml = `
       <h2 style="margin:0 0 16px 0;color:#003B5C;">Congratulations, ${escapeHtml(data.name)}!</h2>
-      <p>We are excited to inform you that you have been elected to the IEEE at UCSD general board for the current academic year for the following position:</p>
+      <p>${
+        hasMultiplePositions
+          ? "We are excited to inform you that you have been selected for multiple possible IEEE at UCSD general board positions for the current academic year. Please choose one position when you accept:"
+          : "We are excited to inform you that you have been elected to the IEEE at UCSD general board for the current academic year for the following position:"
+      }</p>
     `;
 
     const html = renderEmail({
       subject,
-      preheader: `You've been elected as ${data.position}`,
+      preheader: hasMultiplePositions
+        ? "Choose one IEEE at UCSD board position"
+        : `You've been elected as ${positions[0]}`,
       introHtml,
       details: [
-        { label: "Position", value: positionHtml },
+        { label: hasMultiplePositions ? "Positions" : "Position", value: positionHtml },
         { label: "Role", value: escapeHtml(data.role) },
         { label: "Deadline", value: escapeHtml(data.acceptanceDeadline || "End of the week") },
         ...(data.leaderName ? [{ label: "Team Lead", value: escapeHtml(data.leaderName) }] : []),
@@ -114,7 +142,9 @@ export async function sendInvitationEmail(data: InvitationEmailData): Promise<bo
         ...(data.message ? [{ title: "Message from Leadership", content: data.message, variant: "info" as const }] : []),
         {
           title: "What happens next?",
-          content: "If you choose to accept the position, we will begin onboarding as soon as possible to get you up to speed on tasks and give you access to everything you need. There will be a follow-up email detailing your next steps.",
+          content: hasMultiplePositions
+            ? "If you choose to accept one of these positions, we will begin onboarding as soon as possible to get you up to speed on tasks and give you access to everything you need. There will be a follow-up email detailing your next steps."
+            : "If you choose to accept the position, we will begin onboarding as soon as possible to get you up to speed on tasks and give you access to everything you need. There will be a follow-up email detailing your next steps.",
           variant: "success" as const,
         },
       ],
@@ -136,6 +166,40 @@ export async function sendInvitationEmail(data: InvitationEmailData): Promise<bo
     return true;
   } catch (error) {
     console.error("Error sending invitation email:", error);
+    return false;
+  }
+}
+
+export async function sendRejectionEmail(data: RejectionEmailData): Promise<boolean> {
+  try {
+    const positions = data.positions.map((position) => position.trim()).filter(Boolean);
+    const hasPositions = positions.length > 0;
+    const positionsHtml = hasPositions
+      ? `<ul style="margin:0;padding-left:18px;">${positions.map((position) => `<li>${escapeHtml(position)}</li>`).join("")}</ul>`
+      : "";
+    const subject = "Update on your IEEE at UCSD board application";
+
+    const html = renderEmail({
+      subject,
+      preheader: "Thank you for your interest in IEEE at UCSD",
+      introHtml: `
+        <h2 style="margin:0 0 16px 0;color:#003B5C;">Thank you, ${escapeHtml(data.name)}.</h2>
+        <p>Thank you for your interest in serving on the IEEE at UCSD board. After reviewing applications and available positions, we are unable to offer you a board role at this time.</p>
+        <p>We appreciate the time and care you put into the process, and we hope you will continue participating with IEEE at UCSD through events, projects, and future opportunities.</p>
+      `,
+      details: hasPositions
+        ? [{ label: positions.length === 1 ? "Position" : "Positions", value: positionsHtml }]
+        : undefined,
+      notes: data.customMessage
+        ? [{ title: "Message from Leadership", content: data.customMessage, variant: "info" as const }]
+        : undefined,
+      footerText: "IEEE at UC San Diego — Officer Selection",
+    });
+
+    await sendEmail({ to: data.email, subject, html });
+    return true;
+  } catch (error) {
+    console.error("Error sending rejection email:", error);
     return false;
   }
 }

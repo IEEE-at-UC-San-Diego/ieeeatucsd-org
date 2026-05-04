@@ -8,6 +8,7 @@ const publicInvitationFields = (invitation: any) => ({
   email: invitation.email,
   role: invitation.role,
   position: invitation.position,
+  offeredPositions: invitation.offeredPositions,
   status: invitation.status,
   invitedAt: invitation.invitedAt,
   expiresAt: invitation.expiresAt,
@@ -65,6 +66,7 @@ export const create = mutation({
       v.literal("Administrator"),
     ),
     position: v.string(),
+    offeredPositions: v.optional(v.array(v.string())),
     message: v.optional(v.string()),
     acceptanceDeadline: v.optional(v.string()),
     leaderName: v.optional(v.string()),
@@ -110,7 +112,10 @@ export const updateStatus = mutation({
 });
 
 export const acceptPublic = mutation({
-  args: { id: v.id("officerInvitations") },
+  args: {
+    id: v.id("officerInvitations"),
+    selectedPosition: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const invitation = await ctx.db.get(args.id);
     if (!invitation) {
@@ -124,6 +129,18 @@ export const acceptPublic = mutation({
       throw new Error("Invitation has expired");
     }
 
+    const offeredPositions =
+      invitation.offeredPositions && invitation.offeredPositions.length > 0
+        ? invitation.offeredPositions
+        : [invitation.position];
+    if (offeredPositions.length > 1 && !args.selectedPosition?.trim()) {
+      throw new Error("Please select one position to accept");
+    }
+    const selectedPosition = args.selectedPosition?.trim() || invitation.position;
+    if (!offeredPositions.includes(selectedPosition)) {
+      throw new Error("Selected position is not part of this invitation");
+    }
+
     const now = Date.now();
     const normalizedEmail = invitation.email.trim().toLowerCase();
     const existingUser = await ctx.db
@@ -135,7 +152,7 @@ export const acceptPublic = mutation({
     if (existingUser) {
       await ctx.db.patch(existingUser._id, {
         role: invitation.role,
-        position: invitation.position,
+        position: selectedPosition,
         lastUpdated: now,
         lastUpdatedBy: invitation.invitedBy,
       });
@@ -144,6 +161,7 @@ export const acceptPublic = mutation({
 
     const updates: Record<string, unknown> = {
       status: "accepted",
+      position: selectedPosition,
       acceptedAt: now,
       roleGranted,
       userCreatedOrUpdated: roleGranted,
@@ -156,6 +174,7 @@ export const acceptPublic = mutation({
 
     return {
       ...publicInvitationFields(invitation),
+      position: selectedPosition,
       status: "accepted",
       acceptedAt: now,
       roleGranted,

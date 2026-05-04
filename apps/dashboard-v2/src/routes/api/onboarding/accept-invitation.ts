@@ -17,6 +17,7 @@ type PublicInvitation = {
 	email: string;
 	role: string;
 	position: string;
+	offeredPositions?: string[];
 	status: "pending" | "accepted" | "declined" | "expired";
 	invitedAt: number;
 	expiresAt: number;
@@ -136,6 +137,8 @@ async function handlePost({ request }: { request: Request }) {
 		const body = (await request.json()) as Record<string, unknown>;
 		const inviteId = getInviteId(request, body);
 		const action = typeof body.action === "string" ? body.action : "";
+		const selectedPosition =
+			typeof body.selectedPosition === "string" ? body.selectedPosition : undefined;
 
 		if (!inviteId) {
 			return json({ error: "Missing inviteId" }, 400);
@@ -162,6 +165,7 @@ async function handlePost({ request }: { request: Request }) {
 			"officerInvitations:acceptPublic" as unknown as FunctionReference<"mutation">;
 		const acceptedInvitation = (await convex.mutation(acceptFn, {
 			id: inviteId,
+			selectedPosition,
 		})) as PublicInvitation & {
 			roleGranted?: boolean;
 			userCreatedOrUpdated?: boolean;

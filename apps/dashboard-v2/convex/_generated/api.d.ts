@@ -30,6 +30,7 @@ import type * as links from "../links.js";
 import type * as logs from "../logs.js";
 import type * as notifications from "../notifications.js";
 import type * as officerInvitations from "../officerInvitations.js";
+import type * as officerRejections from "../officerRejections.js";
 import type * as organizationSettings from "../organizationSettings.js";
 import type * as permissions from "../permissions.js";
 import type * as reimbursements from "../reimbursements.js";
@@ -64,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   logs: typeof logs;
   notifications: typeof notifications;
   officerInvitations: typeof officerInvitations;
+  officerRejections: typeof officerRejections;
   organizationSettings: typeof organizationSettings;
   permissions: typeof permissions;
   reimbursements: typeof reimbursements;

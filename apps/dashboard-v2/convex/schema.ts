@@ -487,6 +487,7 @@ export default defineSchema({
     email: v.string(),
     role: userRole,
     position: v.string(),
+    offeredPositions: v.optional(v.array(v.string())),
     status: v.union(
       v.literal("pending"),
       v.literal("accepted"),
@@ -513,6 +514,18 @@ export default defineSchema({
   })
     .index("by_email", ["email"])
     .index("by_status", ["status"]),
+
+  officerRejections: defineTable({
+    name: v.string(),
+    email: v.string(),
+    positions: v.array(v.string()),
+    customMessage: v.optional(v.string()),
+    sentBy: v.string(),
+    sentAt: v.number(),
+    emailSent: v.boolean(),
+  })
+    .index("by_email", ["email"])
+    .index("by_sentAt", ["sentAt"]),
 
   sponsorDomains: defineTable({
     domain: v.string(),
