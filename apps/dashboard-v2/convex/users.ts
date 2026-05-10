@@ -501,7 +501,7 @@ export const list = query({
     );
     const count = Math.max(
       1,
-      Math.min(args.paginationOpts?.numItems ?? users.length, 500),
+      args.paginationOpts?.numItems ?? users.length,
     );
     return users.slice(start, start + count);
   },
@@ -561,6 +561,54 @@ export const updateRole = mutation({
     });
 
     return args.userId;
+  },
+});
+
+export const createPlaceholder = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    email: v.string(),
+    name: v.string(),
+    role: v.string(),
+    position: v.optional(v.string()),
+    team: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const admin = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const normalizedEmail = args.email.trim().toLowerCase();
+    const now = Date.now();
+
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+      .first();
+
+    if (existingUser) {
+      return existingUser._id;
+    }
+
+    return await ctx.db.insert("users", {
+      email: normalizedEmail,
+      emailVisibility: true,
+      verified: true,
+      name: args.name,
+      role: args.role as any,
+      position: args.position,
+      team: args.team as any,
+      status: "active",
+      signedUp: false,
+      requestedEmail: false,
+      joinDate: now,
+      invitedBy: admin.logtoId ?? admin.authUserId ?? "",
+      lastUpdated: now,
+      lastUpdatedBy: admin.logtoId ?? admin.authUserId ?? "",
+      notificationPreferences: {},
+      displayPreferences: {},
+      accessibilitySettings: {},
+      eventsAttended: 0,
+      points: 0,
+    });
   },
 });
 

@@ -25,6 +25,7 @@ import type * as googleCalendar from "../googleCalendar.js";
 import type * as googleCalendarEventUtils from "../googleCalendarEventUtils.js";
 import type * as googleCalendarIds from "../googleCalendarIds.js";
 import type * as googleCalendarQueries from "../googleCalendarQueries.js";
+import type * as googleGroupAssignments from "../googleGroupAssignments.js";
 import type * as internalEvents from "../internalEvents.js";
 import type * as links from "../links.js";
 import type * as logs from "../logs.js";
@@ -60,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   googleCalendarEventUtils: typeof googleCalendarEventUtils;
   googleCalendarIds: typeof googleCalendarIds;
   googleCalendarQueries: typeof googleCalendarQueries;
+  googleGroupAssignments: typeof googleGroupAssignments;
   internalEvents: typeof internalEvents;
   links: typeof links;
   logs: typeof logs;

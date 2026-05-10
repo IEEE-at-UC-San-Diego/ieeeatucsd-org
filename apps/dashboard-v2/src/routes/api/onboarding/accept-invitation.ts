@@ -5,10 +5,11 @@ import type { FunctionReference } from "convex/server";
 import { env } from "@/env";
 import { DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE } from "@/lib/onboarding-template";
 import { sendDirectOnboardingEmail } from "@/server/email-templates";
+import { getGoogleGroupForRole, syncGoogleGroupsForRole } from "@/server/google-groups";
 import {
-	ensureRoleOnLogtoUser,
 	findLogtoUserByEmail,
 	isSupportedRole,
+	syncOfficerRolesOnLogtoUser,
 } from "@/server/logto";
 
 type PublicInvitation = {
@@ -101,6 +102,8 @@ async function recordAcceptanceSideEffects(
 		onboardingEmailSent?: boolean;
 		roleGranted?: boolean;
 		userCreatedOrUpdated?: boolean;
+		googleGroupAssigned?: boolean;
+		googleGroup?: string;
 	},
 ) {
 	const recordFn =
@@ -188,12 +191,14 @@ async function handlePost({ request }: { request: Request }) {
 		);
 
 		let logtoUpdated = false;
+		let googleGroupAssigned = false;
+		let resolvedGoogleGroup: string | null = null;
 		const warnings: string[] = [];
 		if (isSupportedRole(acceptedInvitation.role)) {
 			try {
 				const logtoUser = await findLogtoUserByEmail(acceptedInvitation.email);
 				if (logtoUser) {
-					await ensureRoleOnLogtoUser(logtoUser.id, acceptedInvitation.role);
+					await syncOfficerRolesOnLogtoUser(logtoUser.id, acceptedInvitation.role);
 					logtoUpdated = true;
 				} else {
 					warnings.push(
@@ -207,12 +212,45 @@ async function handlePost({ request }: { request: Request }) {
 						: "Failed to sync role to Logto",
 				);
 			}
+
+			try {
+				resolvedGoogleGroup = getGoogleGroupForRole(acceptedInvitation.role);
+				const googleResults = await syncGoogleGroupsForRole(
+					acceptedInvitation.email,
+					acceptedInvitation.role,
+				);
+				googleGroupAssigned = googleResults.filter((r) => r.error).length === 0;
+
+				const createGgFn =
+					"googleGroupAssignments:create" as unknown as FunctionReference<"mutation">;
+				for (const result of googleResults) {
+					try {
+						await convex.mutation(createGgFn, {
+							email: acceptedInvitation.email,
+							googleGroup: result.group,
+							role: acceptedInvitation.role,
+							success: !result.error,
+							error: result.error,
+						});
+					} catch {
+						// Non-fatal: audit logging failure
+					}
+				}
+			} catch (error) {
+				warnings.push(
+					error instanceof Error
+						? `Failed to sync Google Groups: ${error.message}`
+						: "Failed to sync Google Groups",
+				);
+			}
 		}
 
 		await recordAcceptanceSideEffects(convex, inviteId, {
 			onboardingEmailSent,
 			roleGranted: Boolean(acceptedInvitation.roleGranted || logtoUpdated),
 			userCreatedOrUpdated: Boolean(acceptedInvitation.userCreatedOrUpdated),
+			googleGroupAssigned,
+			googleGroup: resolvedGoogleGroup || undefined,
 		});
 
 		return json({
@@ -220,6 +258,7 @@ async function handlePost({ request }: { request: Request }) {
 			invitation: acceptedInvitation,
 			onboardingEmailSent,
 			roleGranted: Boolean(acceptedInvitation.roleGranted || logtoUpdated),
+			googleGroupAssigned,
 			warnings,
 		});
 	} catch (error) {

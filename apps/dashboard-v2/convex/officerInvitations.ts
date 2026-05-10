@@ -157,6 +157,29 @@ export const acceptPublic = mutation({
         lastUpdatedBy: invitation.invitedBy,
       });
       roleGranted = true;
+    } else {
+      await ctx.db.insert("users", {
+        email: normalizedEmail,
+        emailVisibility: true,
+        verified: true,
+        name: invitation.name,
+        role: invitation.role,
+        position: selectedPosition,
+        status: "active",
+        signedUp: false,
+        requestedEmail: false,
+        joinDate: now,
+        invitedBy: invitation.invitedBy,
+        inviteAccepted: now,
+        lastUpdated: now,
+        lastUpdatedBy: invitation.invitedBy,
+        notificationPreferences: {},
+        displayPreferences: {},
+        accessibilitySettings: {},
+        eventsAttended: 0,
+        points: 0,
+      });
+      roleGranted = true;
     }
 
     const updates: Record<string, unknown> = {
@@ -218,6 +241,8 @@ export const recordAcceptanceSideEffects = mutation({
     onboardingEmailSent: v.optional(v.boolean()),
     roleGranted: v.optional(v.boolean()),
     userCreatedOrUpdated: v.optional(v.boolean()),
+    googleGroupAssigned: v.optional(v.boolean()),
+    googleGroup: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const invitation = await ctx.db.get(args.id);
@@ -240,9 +265,33 @@ export const recordAcceptanceSideEffects = mutation({
     if (args.userCreatedOrUpdated !== undefined) {
       updates.userCreatedOrUpdated = args.userCreatedOrUpdated;
     }
+    if (args.googleGroupAssigned !== undefined) {
+      updates.googleGroupAssigned = args.googleGroupAssigned;
+    }
+    if (args.googleGroup !== undefined) {
+      updates.googleGroup = args.googleGroup;
+    }
 
     await ctx.db.patch(args.id, updates);
 
+    return args.id;
+  },
+});
+
+export const updateGoogleGroup = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    id: v.id("officerInvitations"),
+    googleGroupAssigned: v.boolean(),
+    googleGroup: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    await ctx.db.patch(args.id, {
+      googleGroupAssigned: args.googleGroupAssigned,
+      googleGroup: args.googleGroup,
+    });
     return args.id;
   },
 });

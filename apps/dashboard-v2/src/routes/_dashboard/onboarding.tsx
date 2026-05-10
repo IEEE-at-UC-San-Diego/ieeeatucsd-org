@@ -618,6 +618,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
           headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify({
             email,
+            name,
             role,
             position,
             team: team && team !== "none" ? team : undefined,
