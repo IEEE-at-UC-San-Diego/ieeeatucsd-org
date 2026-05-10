@@ -1,10 +1,14 @@
 import { action, internalAction } from "./_generated/server";
+import type { ActionCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
-import { generateGoogleCalendarEventId } from "./googleCalendarIds";
+import {
+  generateGoogleCalendarEventId,
+  isManagedGoogleCalendarEventId,
+} from "./googleCalendarIds";
 import { normalizeGoogleCalendarEventsForSync } from "./googleCalendarEventUtils";
 
-interface CalendarEvent {
+export interface CalendarEvent {
   id: string;
   summary: string;
   description?: string;
@@ -20,8 +24,17 @@ interface GoogleConfig {
   publicCalendarId: string;
 }
 
+interface CalendarSyncStats {
+  calendarId: string;
+  existingCount: number;
+  upsertCount: number;
+  deletedCount: number;
+}
+
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
 const GOOGLE_API_MAX_RETRIES = 5;
+const GOOGLE_CALENDAR_MAX_RESULTS = 2500;
+const GOOGLE_CALENDAR_CONCURRENCY = 5;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -203,47 +216,73 @@ async function getGoogleAccessToken(config: GoogleConfig): Promise<string> {
   return accessToken;
 }
 
-async function fetchGoogleCalendarEvents(accessToken: string, calendarId: string): Promise<CalendarEvent[]> {
+export async function fetchGoogleCalendarEvents(
+  accessToken: string,
+  calendarId: string,
+): Promise<CalendarEvent[]> {
   const now = new Date();
   const threeMonthsLater = new Date();
   threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
 
   const timeMin = now.toISOString();
   const timeMax = threeMonthsLater.toISOString();
+  const allEvents: CalendarEvent[] = [];
+  let pageToken: string | undefined;
 
-  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime`;
+  do {
+    const params = new URLSearchParams({
+      timeMin,
+      timeMax,
+      singleEvents: "true",
+      orderBy: "startTime",
+      showDeleted: "false",
+      maxResults: GOOGLE_CALENDAR_MAX_RESULTS.toString(),
+    });
 
-  const response = await fetchGoogleWithRetry(
-    url,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    },
-    `Failed to fetch Google Calendar events for calendar ${calendarId}`,
-    [401, 403, 404],
-  );
-  if (!response.ok) {
-    const errorText = await response.text();
-    const googleError = parseGoogleApiError(errorText);
-
-    if (response.status === 404 || googleError.reason === "notFound") {
-      throw new ConvexError(
-        `Google Calendar not found. Verify calendar ID and sharing for service account: ${calendarId}`,
-      );
+    if (pageToken) {
+      params.set("pageToken", pageToken);
     }
 
-    if (response.status === 401 || response.status === 403) {
-      throw new ConvexError(
-        `Google Calendar authorization failed (${response.status}). Verify service account access to calendar: ${calendarId}`,
-      );
-    }
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params.toString()}`;
 
-    throw new Error(
-      `Failed to fetch Google Calendar events (${response.status}): ${googleError.message}`,
+    const response = await fetchGoogleWithRetry(
+      url,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+      `Failed to fetch Google Calendar events for calendar ${calendarId}`,
+      [401, 403, 404],
     );
-  }
+    if (!response.ok) {
+      const errorText = await response.text();
+      const googleError = parseGoogleApiError(errorText);
 
-  const data = await response.json();
-  return data.items || [];
+      if (response.status === 404 || googleError.reason === "notFound") {
+        throw new ConvexError(
+          `Google Calendar not found. Verify calendar ID and sharing for service account: ${calendarId}`,
+        );
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        throw new ConvexError(
+          `Google Calendar authorization failed (${response.status}). Verify service account access to calendar: ${calendarId}`,
+        );
+      }
+
+      throw new Error(
+        `Failed to fetch Google Calendar events (${response.status}): ${googleError.message}`,
+      );
+    }
+
+    const data = (await response.json()) as {
+      items?: CalendarEvent[];
+      nextPageToken?: string;
+    };
+    allEvents.push(...(data.items || []));
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  return allEvents;
 }
 
 async function createOrUpdateGoogleEvent(
@@ -323,6 +362,21 @@ async function deleteGoogleEvent(accessToken: string, calendarId: string, eventI
   }
 }
 
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  run: (item: T) => Promise<void>,
+) {
+  const workerCount = Math.min(limit, items.length);
+  const workers = Array.from({ length: workerCount }, async (_, workerIndex) => {
+    for (let index = workerIndex; index < items.length; index += limit) {
+      await run(items[index]!);
+    }
+  });
+
+  await Promise.all(workers);
+}
+
 function toPublishedCalendarEvent(event: {
   _id: string;
   eventName: string;
@@ -371,49 +425,70 @@ function toInternalCalendarEvent(event: {
   };
 }
 
-async function syncCalendar(
+export async function syncCalendar(
   accessToken: string,
   calendarId: string,
   eventsToUpsert: CalendarEvent[],
-): Promise<void> {
+): Promise<CalendarSyncStats> {
   const existingEvents = await fetchGoogleCalendarEvents(accessToken, calendarId);
   const validEventsToUpsert = normalizeGoogleCalendarEventsForSync(calendarId, eventsToUpsert);
   const validManagedEventIds = new Set(validEventsToUpsert.map((event) => event.id));
+  const staleManagedEvents = existingEvents.filter(
+    (gEvent) =>
+      gEvent.id &&
+      isManagedGoogleCalendarEventId(gEvent.id) &&
+      !validManagedEventIds.has(gEvent.id),
+  );
 
-  for (const event of validEventsToUpsert) {
+  await runWithConcurrency(validEventsToUpsert, GOOGLE_CALENDAR_CONCURRENCY, async (event) => {
     await createOrUpdateGoogleEvent(accessToken, calendarId, event);
+  });
+
+  await runWithConcurrency(staleManagedEvents, GOOGLE_CALENDAR_CONCURRENCY, async (gEvent) => {
+    await deleteGoogleEvent(accessToken, calendarId, gEvent.id);
+  });
+
+  return {
+    calendarId,
+    existingCount: existingEvents.length,
+    upsertCount: validEventsToUpsert.length,
+    deletedCount: staleManagedEvents.length,
+  };
+}
+
+async function runGoogleCalendarSync(ctx: ActionCtx) {
+  const config = getGoogleCalendarConfig();
+  const accessToken = await getGoogleAccessToken(config);
+
+  const publishedEvents = await ctx.runQuery(internal.googleCalendarQueries.getPublishedEventsForSync, {});
+  const internalEvents = await ctx.runQuery(internal.googleCalendarQueries.getInternalEventsForSync, {});
+
+  const publishedCalendarEvents = publishedEvents.map(toPublishedCalendarEvent);
+  const internalCalendarEvents = internalEvents.map(toInternalCalendarEvent);
+
+  const privateSyncStats = await syncCalendar(accessToken, config.privateCalendarId, [
+    ...publishedCalendarEvents,
+    ...internalCalendarEvents,
+  ]);
+  const publicSyncStats = await syncCalendar(accessToken, config.publicCalendarId, publishedCalendarEvents);
+
+  for (const stats of [privateSyncStats, publicSyncStats]) {
+    console.log(
+      `Google Calendar sync ${stats.calendarId}: fetched ${stats.existingCount} existing events, upserted ${stats.upsertCount} Convex events, deleted ${stats.deletedCount} stale managed events`,
+    );
   }
 
-  for (const gEvent of existingEvents) {
-    if (gEvent.id?.startsWith("ieee") && !validManagedEventIds.has(gEvent.id)) {
-      await deleteGoogleEvent(accessToken, calendarId, gEvent.id);
-    }
-  }
+  return {
+    publishedCount: publishedEvents.length,
+    internalCount: internalEvents.length,
+    syncedAt: Date.now(),
+  };
 }
 
 export const syncToGoogleCalendar = action({
   args: { logtoId: v.string(), authToken: v.string() },
   handler: async (ctx, _args): Promise<{ publishedCount: number; internalCount: number; syncedAt: number }> => {
-    const config = getGoogleCalendarConfig();
-    const accessToken = await getGoogleAccessToken(config);
-
-    const publishedEvents = await ctx.runQuery(internal.googleCalendarQueries.getPublishedEventsForSync, {});
-    const internalEvents = await ctx.runQuery(internal.googleCalendarQueries.getInternalEventsForSync, {});
-
-    const publishedCalendarEvents = publishedEvents.map(toPublishedCalendarEvent);
-    const internalCalendarEvents = internalEvents.map(toInternalCalendarEvent);
-
-    await syncCalendar(accessToken, config.privateCalendarId, [
-      ...publishedCalendarEvents,
-      ...internalCalendarEvents,
-    ]);
-    await syncCalendar(accessToken, config.publicCalendarId, publishedCalendarEvents);
-
-    return {
-      publishedCount: publishedEvents.length,
-      internalCount: internalEvents.length,
-      syncedAt: Date.now(),
-    };
+    return await runGoogleCalendarSync(ctx);
   },
 });
 
@@ -440,23 +515,9 @@ export const scheduledSync = internalAction({
       return;
     }
 
-    const config = getGoogleCalendarConfig();
-    const accessToken = await getGoogleAccessToken(config);
-
-    const publishedEvents = await ctx.runQuery(internal.googleCalendarQueries.getPublishedEventsForSync, {});
-    const internalEvents = await ctx.runQuery(internal.googleCalendarQueries.getInternalEventsForSync, {});
-
-    const publishedCalendarEvents = publishedEvents.map(toPublishedCalendarEvent);
-    const internalCalendarEvents = internalEvents.map(toInternalCalendarEvent);
-
-    await syncCalendar(accessToken, config.privateCalendarId, [
-      ...publishedCalendarEvents,
-      ...internalCalendarEvents,
-    ]);
-    await syncCalendar(accessToken, config.publicCalendarId, publishedCalendarEvents);
-
+    const result = await runGoogleCalendarSync(ctx);
     console.log(
-      `Synced ${publishedEvents.length} published events to private and public calendars, plus ${internalEvents.length} internal events to private calendar`,
+      `Synced ${result.publishedCount} published events to private and public calendars, plus ${result.internalCount} internal events to private calendar`,
     );
   },
 });

@@ -10,6 +10,10 @@ export function generateGoogleCalendarEventId(
   return mapped.length >= 5 ? mapped.slice(0, 1024) : mapped.padEnd(5, "0");
 }
 
+export function isManagedGoogleCalendarEventId(eventId: string): boolean {
+  return eventId.startsWith("ieeepublished") || eventId.startsWith("ieeeinternal");
+}
+
 function toBase64(input: string): string {
   return btoa(input);
 }
