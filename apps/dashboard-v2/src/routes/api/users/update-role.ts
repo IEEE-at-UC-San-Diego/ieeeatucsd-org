@@ -5,7 +5,7 @@ import type { FunctionReference } from "convex/server";
 import { env } from "@/env";
 import { requireApiAuth } from "@/server/auth";
 import { createConvexSessionToken } from "@/server/convex-session";
-import { syncGoogleGroupsForRole } from "@/server/google-groups";
+import { syncGoogleGroupsForRoleWithAudit } from "@/server/google-group-sync";
 import {
   findLogtoUserByEmail,
   isSupportedRole,
@@ -207,32 +207,16 @@ async function handle({ request }: { request: Request }) {
     }
 
     let googleGroupUpdated = false;
+    let googleGroup: string | null = null;
     if (resolvedEmail) {
-      try {
-        const googleResults = await syncGoogleGroupsForRole(resolvedEmail, role);
-        googleGroupUpdated = googleResults.filter((r) => r.error).length === 0;
-
-        for (const result of googleResults) {
-          try {
-            const createGgFn = "googleGroupAssignments:create" as unknown as FunctionReference<"mutation">;
-            await convex.mutation(createGgFn, {
-              email: resolvedEmail,
-              googleGroup: result.group,
-              role,
-              success: !result.error,
-              error: result.error,
-            });
-          } catch {
-            // Non-fatal: audit log failure shouldn't block the update
-          }
-        }
-      } catch (error) {
-        warnings.push(
-          error instanceof Error
-            ? `Failed to sync Google Groups: ${error.message}`
-            : "Failed to sync Google Groups",
-        );
-      }
+      const googleGroupResult = await syncGoogleGroupsForRoleWithAudit(
+        convex,
+        resolvedEmail,
+        role,
+      );
+      googleGroupUpdated = googleGroupResult.googleGroupUpdated;
+      googleGroup = googleGroupResult.googleGroup;
+      warnings.push(...googleGroupResult.warnings);
     }
 
     if (!convexUpdated && source === "manage-users") {
@@ -251,6 +235,7 @@ async function handle({ request }: { request: Request }) {
         convexUpdated,
         logtoUpdated,
         googleGroupUpdated,
+        googleGroup,
         warnings,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },

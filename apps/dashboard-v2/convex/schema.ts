@@ -315,6 +315,21 @@ export default defineSchema({
     .index("by_eventType", ["eventType"])
     .index("by_createdBy", ["createdBy"]),
 
+  googleCalendarSyncState: defineTable({
+    calendarId: v.string(),
+    lastSuccessfulSourceCount: v.optional(v.number()),
+    staleCandidates: v.array(
+      v.object({
+        eventId: v.string(),
+        firstSeenMissingAt: v.number(),
+        lastSeenMissingAt: v.number(),
+        missingSyncCount: v.number(),
+        startMs: v.optional(v.number()),
+      }),
+    ),
+    updatedAt: v.number(),
+  }).index("by_calendarId", ["calendarId"]),
+
   attendees: defineTable({
     eventId: v.id("events"),
     userId: v.string(),

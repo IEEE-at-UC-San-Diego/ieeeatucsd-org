@@ -57,6 +57,14 @@ export function getGoogleGroupForRole(role: string): string | null {
   return GOOGLE_GROUP_MAP[role] || null;
 }
 
+export function getGoogleGroupSyncPlan(role: string) {
+  const targetGroup = getGoogleGroupForRole(role);
+  return {
+    targetGroup,
+    groupsToRemove: ALL_GOOGLE_GROUPS.filter((group) => group !== targetGroup),
+  };
+}
+
 export async function addMemberToGroup(email: string, googleGroup: string) {
   const auth = await getAuth();
   const admin = google.admin({ version: "directory_v1", auth });
@@ -99,7 +107,7 @@ export async function syncGoogleGroupsForRole(
   newRole: string,
 ): Promise<Array<{ group: string; added?: boolean; removed?: boolean; error?: string }>> {
   const results: Array<{ group: string; added?: boolean; removed?: boolean; error?: string }> = [];
-  const targetGroup = getGoogleGroupForRole(newRole);
+  const { targetGroup, groupsToRemove } = getGoogleGroupSyncPlan(newRole);
 
   if (targetGroup) {
     try {
@@ -113,7 +121,6 @@ export async function syncGoogleGroupsForRole(
     }
   }
 
-  const groupsToRemove = ALL_GOOGLE_GROUPS.filter((g) => g !== targetGroup);
   for (const group of groupsToRemove) {
     try {
       await removeMemberFromGroup(email, group);

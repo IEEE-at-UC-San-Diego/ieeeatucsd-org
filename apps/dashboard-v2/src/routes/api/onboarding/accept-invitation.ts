@@ -5,7 +5,7 @@ import type { FunctionReference } from "convex/server";
 import { env } from "@/env";
 import { DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE } from "@/lib/onboarding-template";
 import { sendDirectOnboardingEmail } from "@/server/email-templates";
-import { getGoogleGroupForRole, syncGoogleGroupsForRole } from "@/server/google-groups";
+import { syncGoogleGroupsForRoleWithAudit } from "@/server/google-group-sync";
 import {
 	findLogtoUserByEmail,
 	isSupportedRole,
@@ -213,36 +213,14 @@ async function handlePost({ request }: { request: Request }) {
 				);
 			}
 
-			try {
-				resolvedGoogleGroup = getGoogleGroupForRole(acceptedInvitation.role);
-				const googleResults = await syncGoogleGroupsForRole(
-					acceptedInvitation.email,
-					acceptedInvitation.role,
-				);
-				googleGroupAssigned = googleResults.filter((r) => r.error).length === 0;
-
-				const createGgFn =
-					"googleGroupAssignments:create" as unknown as FunctionReference<"mutation">;
-				for (const result of googleResults) {
-					try {
-						await convex.mutation(createGgFn, {
-							email: acceptedInvitation.email,
-							googleGroup: result.group,
-							role: acceptedInvitation.role,
-							success: !result.error,
-							error: result.error,
-						});
-					} catch {
-						// Non-fatal: audit logging failure
-					}
-				}
-			} catch (error) {
-				warnings.push(
-					error instanceof Error
-						? `Failed to sync Google Groups: ${error.message}`
-						: "Failed to sync Google Groups",
-				);
-			}
+			const googleGroupResult = await syncGoogleGroupsForRoleWithAudit(
+				convex,
+				acceptedInvitation.email,
+				acceptedInvitation.role,
+			);
+			googleGroupAssigned = googleGroupResult.googleGroupUpdated;
+			resolvedGoogleGroup = googleGroupResult.googleGroup;
+			warnings.push(...googleGroupResult.warnings);
 		}
 
 		await recordAcceptanceSideEffects(convex, inviteId, {

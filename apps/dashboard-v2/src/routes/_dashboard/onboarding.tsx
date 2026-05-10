@@ -475,6 +475,9 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
   );
   const updateOrgSettings = useAuthedMutation(api.organizationSettings.update);
   const createDirectOnboarding = useAuthedMutation(api.directOnboardings.create);
+  const updateDirectOnboardingGoogleGroup = useAuthedMutation(
+    api.directOnboardings.updateGoogleGroup,
+  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -599,7 +602,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
       }
 
       // Create record in Convex
-      await createDirectOnboarding({
+      const directOnboardingId = await createDirectOnboarding({
         logtoId,
         name,
         email,
@@ -629,11 +632,20 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
         const roleSyncResult = await roleSyncResp.json();
         if (!roleSyncResp.ok) {
           toast.warning(roleSyncResult.error || "Onboarding succeeded but role sync failed");
-        } else if (
-          Array.isArray(roleSyncResult.warnings) &&
-          roleSyncResult.warnings.length > 0
-        ) {
-          toast.warning(roleSyncResult.warnings.join(" | "));
+        } else {
+          await updateDirectOnboardingGoogleGroup({
+            logtoId,
+            id: directOnboardingId,
+            googleGroupAssigned: Boolean(roleSyncResult.googleGroupUpdated),
+            googleGroup: roleSyncResult.googleGroup || undefined,
+          });
+
+          if (
+            Array.isArray(roleSyncResult.warnings) &&
+            roleSyncResult.warnings.length > 0
+          ) {
+            toast.warning(roleSyncResult.warnings.join(" | "));
+          }
         }
       } catch (roleSyncError) {
         console.error("Error syncing onboarding role:", roleSyncError);
