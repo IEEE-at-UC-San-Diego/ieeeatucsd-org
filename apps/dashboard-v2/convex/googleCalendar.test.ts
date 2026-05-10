@@ -24,6 +24,19 @@ const activeEvent: CalendarEvent = {
   },
 };
 
+const laterSourceEvent: CalendarEvent = {
+  id: "ieeepublishedlater",
+  summary: "Later source event",
+  start: {
+    dateTime: "2026-04-03T18:00:00.000Z",
+    timeZone: "America/Los_Angeles",
+  },
+  end: {
+    dateTime: "2026-04-03T19:00:00.000Z",
+    timeZone: "America/Los_Angeles",
+  },
+};
+
 const staleManagedEvent: CalendarEvent = {
   id: "ieeepublishedstale",
   summary: "Stale event",
@@ -115,13 +128,14 @@ describe("syncCalendar", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const stats = await syncCalendar("access-token", "calendar-id", [activeEvent]);
+    const stats = await syncCalendar("access-token", "calendar-id", [activeEvent, laterSourceEvent]);
 
     expect(stats).toMatchObject({
       calendarId: "calendar-id",
       existingCount: 2,
-      upsertCount: 1,
+      upsertCount: 2,
       deletedCount: 1,
+      deferredDeleteCount: 0,
     });
 
     const secondPageIndex = calls.findIndex((call) => call.url.includes("pageToken=page-2"));
@@ -133,6 +147,72 @@ describe("syncCalendar", () => {
     expect(deletedUrl).toContain("/events/ieeepublishedstale");
     expect(calls.some((call) => call.url.includes("/events/ieeepublishedactive") && call.method === "DELETE")).toBe(
       false,
+    );
+  });
+
+  it("defers deleting stale managed events beyond the source event horizon", async () => {
+    const calls: Array<{ method: string; url: string }> = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const method = init?.method || "GET";
+      const url = String(input);
+      calls.push({ method, url });
+
+      if (method === "GET") {
+        return jsonResponse({
+          items: [activeEvent, staleManagedEvent, staleInternalEvent],
+        });
+      }
+
+      return jsonResponse({});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const stats = await syncCalendar("access-token", "calendar-id", [activeEvent]);
+
+    expect(stats).toMatchObject({
+      calendarId: "calendar-id",
+      existingCount: 3,
+      managedExistingCount: 3,
+      upsertCount: 1,
+      deletedCount: 0,
+      deferredDeleteCount: 2,
+      pruneSkippedReason: "source_horizon_before_stale_events",
+    });
+    expect(stats.sourceMaxStartMs).toBe(Date.parse(activeEvent.start.dateTime));
+    expect(calls.some((call) => call.method === "DELETE")).toBe(false);
+  });
+
+  it("deletes stale managed events within the source event horizon", async () => {
+    const calls: Array<{ method: string; url: string }> = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const method = init?.method || "GET";
+      const url = String(input);
+      calls.push({ method, url });
+
+      if (method === "GET") {
+        return jsonResponse({
+          items: [activeEvent, staleManagedEvent],
+        });
+      }
+
+      return jsonResponse({});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const stats = await syncCalendar("access-token", "calendar-id", [activeEvent, laterSourceEvent]);
+
+    expect(stats).toMatchObject({
+      calendarId: "calendar-id",
+      existingCount: 2,
+      managedExistingCount: 2,
+      upsertCount: 2,
+      deletedCount: 1,
+      deferredDeleteCount: 0,
+    });
+    expect(stats.pruneSkippedReason).toBeUndefined();
+    expect(calls.filter((call) => call.method === "DELETE")).toHaveLength(1);
+    expect(calls.some((call) => call.method === "DELETE" && call.url.includes("/events/ieeepublishedstale"))).toBe(
+      true,
     );
   });
 
@@ -161,6 +241,7 @@ describe("syncCalendar", () => {
       managedExistingCount: 2,
       upsertCount: 0,
       deletedCount: 0,
+      deferredDeleteCount: 2,
       pruneSkippedReason: "empty_source_would_delete_existing_managed_events",
     });
     expect(calls.some((call) => call.method === "DELETE")).toBe(false);
@@ -193,6 +274,7 @@ describe("syncCalendar", () => {
       managedExistingCount: 2,
       upsertCount: 0,
       deletedCount: 2,
+      deferredDeleteCount: 0,
     });
     expect(stats.pruneSkippedReason).toBeUndefined();
     expect(calls.filter((call) => call.method === "DELETE")).toHaveLength(2);
@@ -227,6 +309,7 @@ describe("syncCalendar", () => {
       managedExistingCount: 2,
       upsertCount: 1,
       deletedCount: 0,
+      deferredDeleteCount: 2,
       pruneSkippedReason: "refusing_to_delete_all_managed_events",
     });
     expect(calls.some((call) => call.method === "PUT")).toBe(true);

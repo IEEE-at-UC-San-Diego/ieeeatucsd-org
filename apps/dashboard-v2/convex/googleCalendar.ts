@@ -30,6 +30,8 @@ interface CalendarSyncStats {
   managedExistingCount: number;
   upsertCount: number;
   deletedCount: number;
+  deferredDeleteCount: number;
+  sourceMaxStartMs?: number;
   pruneSkippedReason?: string;
 }
 
@@ -78,6 +80,23 @@ function isRetryableGoogleError(status: number, reason?: string): boolean {
 function redactCalendarId(calendarId: string): string {
   const suffix = calendarId.slice(-8);
   return `...${suffix}`;
+}
+
+function parseCalendarEventStartMs(event: CalendarEvent): number | null {
+  const startMs = Date.parse(event.start.dateTime);
+  return Number.isFinite(startMs) ? startMs : null;
+}
+
+function getLatestCalendarEventStartMs(events: CalendarEvent[]): number | undefined {
+  const startTimes = events
+    .map(parseCalendarEventStartMs)
+    .filter((startMs): startMs is number => startMs !== null);
+
+  if (startTimes.length === 0) {
+    return undefined;
+  }
+
+  return Math.max(...startTimes);
 }
 
 function getGoogleCalendarConfig(): GoogleConfig {
@@ -451,6 +470,7 @@ export async function syncCalendar(
   const existingEvents = await fetchGoogleCalendarEvents(accessToken, calendarId);
   const validEventsToUpsert = normalizeGoogleCalendarEventsForSync(calendarId, eventsToUpsert);
   const validManagedEventIds = new Set(validEventsToUpsert.map((event) => event.id));
+  const sourceMaxStartMs = getLatestCalendarEventStartMs(validEventsToUpsert);
   const managedExistingEvents = existingEvents.filter(
     (gEvent) => gEvent.id && isManagedGoogleCalendarEventId(gEvent.id),
   );
@@ -481,11 +501,25 @@ export async function syncCalendar(
       managedExistingCount: managedExistingEvents.length,
       upsertCount: validEventsToUpsert.length,
       deletedCount: 0,
+      deferredDeleteCount: staleManagedEvents.length,
+      sourceMaxStartMs,
       pruneSkippedReason,
     };
   }
 
-  await runWithConcurrency(staleManagedEvents, GOOGLE_CALENDAR_CONCURRENCY, async (gEvent) => {
+  const staleEventsEligibleForDeletion = options.allowEmptyPrune
+    ? staleManagedEvents
+    : staleManagedEvents.filter((event) => {
+        const startMs = parseCalendarEventStartMs(event);
+        return sourceMaxStartMs !== undefined && startMs !== null && startMs <= sourceMaxStartMs;
+      });
+  const staleEventsDeferred = options.allowEmptyPrune
+    ? []
+    : staleManagedEvents.filter((event) => !staleEventsEligibleForDeletion.includes(event));
+  const horizonPruneSkippedReason =
+    staleEventsDeferred.length > 0 ? "source_horizon_before_stale_events" : undefined;
+
+  await runWithConcurrency(staleEventsEligibleForDeletion, GOOGLE_CALENDAR_CONCURRENCY, async (gEvent) => {
     await deleteGoogleEvent(accessToken, calendarId, gEvent.id);
   });
 
@@ -494,7 +528,10 @@ export async function syncCalendar(
     existingCount: existingEvents.length,
     managedExistingCount: managedExistingEvents.length,
     upsertCount: validEventsToUpsert.length,
-    deletedCount: staleManagedEvents.length,
+    deletedCount: staleEventsEligibleForDeletion.length,
+    deferredDeleteCount: staleEventsDeferred.length,
+    sourceMaxStartMs,
+    pruneSkippedReason: horizonPruneSkippedReason,
   };
 }
 
@@ -529,12 +566,12 @@ async function runGoogleCalendarSync(ctx: ActionCtx, options: RunGoogleCalendarS
 
   for (const stats of [privateSyncStats, publicSyncStats]) {
     console.log(
-      `Google Calendar sync calendar version=${GOOGLE_CALENDAR_SYNC_VERSION} entrypoint=${options.entrypoint} calendar=${redactCalendarId(stats.calendarId)} existingCount=${stats.existingCount} managedExistingCount=${stats.managedExistingCount} upsertCount=${stats.upsertCount} deletedCount=${stats.deletedCount} pruneSkippedReason=${stats.pruneSkippedReason ?? "none"}`,
+      `Google Calendar sync calendar version=${GOOGLE_CALENDAR_SYNC_VERSION} entrypoint=${options.entrypoint} calendar=${redactCalendarId(stats.calendarId)} existingCount=${stats.existingCount} managedExistingCount=${stats.managedExistingCount} upsertCount=${stats.upsertCount} deletedCount=${stats.deletedCount} deferredDeleteCount=${stats.deferredDeleteCount} sourceMaxStartMs=${stats.sourceMaxStartMs ?? "none"} pruneSkippedReason=${stats.pruneSkippedReason ?? "none"}`,
     );
   }
 
   console.log(
-    `Google Calendar sync end version=${GOOGLE_CALENDAR_SYNC_VERSION} entrypoint=${options.entrypoint} publishedCount=${publishedEvents.length} internalCount=${internalEvents.length} privateDeleted=${privateSyncStats.deletedCount} publicDeleted=${publicSyncStats.deletedCount} privatePruneSkippedReason=${privateSyncStats.pruneSkippedReason ?? "none"} publicPruneSkippedReason=${publicSyncStats.pruneSkippedReason ?? "none"}`,
+    `Google Calendar sync end version=${GOOGLE_CALENDAR_SYNC_VERSION} entrypoint=${options.entrypoint} publishedCount=${publishedEvents.length} internalCount=${internalEvents.length} privateDeleted=${privateSyncStats.deletedCount} publicDeleted=${publicSyncStats.deletedCount} privateDeferredDeletes=${privateSyncStats.deferredDeleteCount} publicDeferredDeletes=${publicSyncStats.deferredDeleteCount} privatePruneSkippedReason=${privateSyncStats.pruneSkippedReason ?? "none"} publicPruneSkippedReason=${publicSyncStats.pruneSkippedReason ?? "none"}`,
   );
 
   return {
