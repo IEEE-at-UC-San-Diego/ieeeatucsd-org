@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { requireOfficerAccess } from "./permissions";
 import {
@@ -8,6 +9,20 @@ import {
   generateGoogleCalendarEventId,
 } from "./googleCalendarIds";
 import { assertValidEventTimeRange } from "./eventTimeRange";
+
+async function enqueueInternalEventGoogleCalendarDeletion(
+  ctx: MutationCtx,
+  eventId: string,
+) {
+  await ctx.db.insert("googleCalendarDeletionQueue", {
+    calendar: "private",
+    googleEventId: generateGoogleCalendarEventId("internal", eventId),
+    reason: "internal_event_deleted",
+    sourceTable: "internalEvents",
+    sourceId: eventId,
+    createdAt: Date.now(),
+  });
+}
 
 export const list = query({
   args: { logtoId: v.string(), authToken: v.string() },
@@ -131,6 +146,7 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     await requireOfficerAccess(ctx, args.logtoId, args.authToken);
     await ctx.db.delete(args.id);
+    await enqueueInternalEventGoogleCalendarDeletion(ctx, args.id);
     return args.id;
   },
 });

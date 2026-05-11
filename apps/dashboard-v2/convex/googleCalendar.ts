@@ -1,5 +1,6 @@
 import { action, internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { v, ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
 import {
@@ -65,12 +66,30 @@ interface RunGoogleCalendarSyncOptions {
   allowEmptyPrune: boolean;
 }
 
+interface PendingGoogleCalendarDeletion {
+  _id: Id<"googleCalendarDeletionQueue">;
+  calendar: "private" | "public";
+  googleEventId: string;
+  reason: "event_unpublished" | "event_deleted" | "internal_event_deleted";
+  sourceTable?: "events" | "internalEvents";
+  sourceId?: string;
+  createdAt: number;
+}
+
+interface SelectedGoogleCalendarDeletion {
+  queueIds: Id<"googleCalendarDeletionQueue">[];
+  googleEventId: string;
+  calendar: "private" | "public";
+  reason: string;
+}
+
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
 const GOOGLE_API_MAX_RETRIES = 5;
 const GOOGLE_CALENDAR_MAX_RESULTS = 2500;
 const GOOGLE_CALENDAR_CONCURRENCY = 5;
-const GOOGLE_CALENDAR_SYNC_VERSION = "gcal-sync-two-phase-prune-2026-05-10";
+const GOOGLE_CALENDAR_SYNC_VERSION = "gcal-sync-explicit-delete-queue-2026-05-11";
 const GOOGLE_CALENDAR_SOURCE_DROP_RATIO = 0.5;
+const GOOGLE_CALENDAR_SEND_UPDATES = "none";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -403,7 +422,10 @@ async function createOrUpdateGoogleEvent(
     ...event,
     status: "confirmed" as const,
   };
-  const updateUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${event.id}`;
+  const writeParams = new URLSearchParams({
+    sendUpdates: GOOGLE_CALENDAR_SEND_UPDATES,
+  });
+  const updateUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${event.id}?${writeParams.toString()}`;
   const updateResponse = await fetchGoogleWithRetry(
     updateUrl,
     {
@@ -424,7 +446,7 @@ async function createOrUpdateGoogleEvent(
 
   // Event doesn't exist yet in this calendar, create it with the same stable ID.
   if (updateResponse.status === 404) {
-    const createUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
+    const createUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${writeParams.toString()}`;
     const createResponse = await fetchGoogleWithRetry(
       createUrl,
       {
@@ -457,7 +479,10 @@ async function createOrUpdateGoogleEvent(
 }
 
 async function deleteGoogleEvent(accessToken: string, calendarId: string, eventId: string): Promise<void> {
-  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`;
+  const params = new URLSearchParams({
+    sendUpdates: GOOGLE_CALENDAR_SEND_UPDATES,
+  });
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${eventId}?${params.toString()}`;
 
   const response = await fetchGoogleWithRetry(
     url,
@@ -473,6 +498,100 @@ async function deleteGoogleEvent(accessToken: string, calendarId: string, eventI
     const error = await response.text();
     throw new Error(`Failed to delete event from Google Calendar: ${error}`);
   }
+}
+
+export function selectGoogleCalendarDeletionsForSync(
+  pendingDeletions: PendingGoogleCalendarDeletion[],
+  protectedEventIds: Set<string>,
+): {
+  deletionsToProcess: SelectedGoogleCalendarDeletion[];
+  skippedQueueIds: Id<"googleCalendarDeletionQueue">[];
+} {
+  const grouped = new Map<string, SelectedGoogleCalendarDeletion>();
+  const skippedQueueIds: Id<"googleCalendarDeletionQueue">[] = [];
+
+  for (const deletion of pendingDeletions) {
+    if (protectedEventIds.has(deletion.googleEventId)) {
+      skippedQueueIds.push(deletion._id);
+      continue;
+    }
+
+    const key = `${deletion.calendar}:${deletion.googleEventId}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.queueIds.push(deletion._id);
+      continue;
+    }
+
+    grouped.set(key, {
+      calendar: deletion.calendar,
+      googleEventId: deletion.googleEventId,
+      queueIds: [deletion._id],
+      reason: deletion.reason,
+    });
+  }
+
+  return {
+    deletionsToProcess: [...grouped.values()],
+    skippedQueueIds,
+  };
+}
+
+async function processQueuedGoogleCalendarDeletions(
+  ctx: ActionCtx,
+  accessToken: string,
+  config: GoogleConfig,
+  privateProtectedEventIds: Set<string>,
+  publicProtectedEventIds: Set<string>,
+): Promise<{
+  privateDeletedCount: number;
+  publicDeletedCount: number;
+  skippedCount: number;
+  clearedCount: number;
+}> {
+  const pendingDeletions = await ctx.runQuery(
+    internal.googleCalendarQueries.getPendingDeletionQueue,
+    {},
+  ) as PendingGoogleCalendarDeletion[];
+
+  const privateSelection = selectGoogleCalendarDeletionsForSync(
+    pendingDeletions.filter((deletion) => deletion.calendar === "private"),
+    privateProtectedEventIds,
+  );
+  const publicSelection = selectGoogleCalendarDeletionsForSync(
+    pendingDeletions.filter((deletion) => deletion.calendar === "public"),
+    publicProtectedEventIds,
+  );
+  const deletionsToProcess = [
+    ...privateSelection.deletionsToProcess,
+    ...publicSelection.deletionsToProcess,
+  ];
+
+  for (const deletion of deletionsToProcess) {
+    const calendarId =
+      deletion.calendar === "private" ? config.privateCalendarId : config.publicCalendarId;
+    await deleteGoogleEvent(accessToken, calendarId, deletion.googleEventId);
+  }
+
+  const queueIdsToClear = [
+    ...privateSelection.skippedQueueIds,
+    ...publicSelection.skippedQueueIds,
+    ...deletionsToProcess.flatMap((deletion) => deletion.queueIds),
+  ];
+
+  if (queueIdsToClear.length > 0) {
+    await ctx.runMutation(internal.googleCalendarQueries.clearDeletionQueue, {
+      ids: queueIdsToClear,
+    });
+  }
+
+  return {
+    privateDeletedCount: privateSelection.deletionsToProcess.length,
+    publicDeletedCount: publicSelection.deletionsToProcess.length,
+    skippedCount:
+      privateSelection.skippedQueueIds.length + publicSelection.skippedQueueIds.length,
+    clearedCount: queueIdsToClear.length,
+  };
 }
 
 async function runWithConcurrency<T>(
@@ -566,37 +685,7 @@ export async function syncCalendar(
     await createOrUpdateGoogleEvent(accessToken, calendarId, event);
   });
 
-  if (options.allowEmptyPrune) {
-    await runWithConcurrency(staleManagedEvents, GOOGLE_CALENDAR_CONCURRENCY, async (gEvent) => {
-      await deleteGoogleEvent(accessToken, calendarId, gEvent.id);
-    });
-
-    const deletedEventIds = new Set(staleManagedEvents.map((event) => event.id));
-    const nextSyncState = buildNextSyncState(
-      calendarId,
-      sourceCount,
-      staleManagedEvents,
-      deletedEventIds,
-      options.syncState,
-      nowMs,
-      true,
-    );
-
-    return {
-      calendarId,
-      existingCount: existingEvents.length,
-      managedExistingCount: managedExistingEvents.length,
-      upsertCount: sourceCount,
-      deletedCount: staleManagedEvents.length,
-      deferredDeleteCount: 0,
-      staleCandidateCount: nextSyncState.staleCandidates.length,
-      sourceMaxStartMs,
-      previousSourceCount: options.syncState?.lastSuccessfulSourceCount,
-      nextSyncState,
-    };
-  }
-
-  const pruneSkippedReason =
+  const guardedPruneSkippedReason =
     sourceCount === 0 && managedExistingEvents.length > 0
       ? "empty_source_would_delete_existing_managed_events"
       : staleManagedEvents.length === managedExistingEvents.length &&
@@ -604,17 +693,26 @@ export async function syncCalendar(
         ? "refusing_to_delete_all_managed_events"
         : hasLargeSourceCountDrop(sourceCount, options.syncState)
           ? "source_count_drop_from_last_successful_sync"
-        : undefined;
+          : undefined;
 
+  const shouldPruneAutomatically = false;
+  const pruneSkippedReason =
+    guardedPruneSkippedReason ??
+    (staleManagedEvents.length > 0 && !shouldPruneAutomatically
+      ? "prune_disabled_without_deletion_queue"
+      : undefined);
+
+  // A missing source event is not authoritative enough to cancel a Google event.
+  // Deletion is only allowed through the explicit allowEmptyPrune escape hatch above.
   if (pruneSkippedReason) {
     const nextSyncState = buildNextSyncState(
       calendarId,
       sourceCount,
-      [],
+      guardedPruneSkippedReason ? [] : staleManagedEvents,
       new Set(),
       options.syncState,
       nowMs,
-      false,
+      !guardedPruneSkippedReason,
     );
 
     return {
@@ -642,7 +740,7 @@ export async function syncCalendar(
     return sourceMaxStartMs !== undefined && startMs !== null && startMs <= sourceMaxStartMs;
   });
   const staleEventsEligibleForDeletion = staleEventsWithinSourceHorizon.filter((event) =>
-    previouslyMissingEventIds.has(event.id),
+    shouldPruneAutomatically && previouslyMissingEventIds.has(event.id),
   );
   const staleEventsDeferred = staleManagedEvents.filter(
     (event) => !staleEventsEligibleForDeletion.includes(event),
@@ -702,6 +800,12 @@ async function runGoogleCalendarSync(ctx: ActionCtx, options: RunGoogleCalendarS
 
   const publishedCalendarEvents = publishedEvents.map(toPublishedCalendarEvent);
   const internalCalendarEvents = internalEvents.map(toInternalCalendarEvent);
+  const privateProtectedEventIds = new Set(
+    [...publishedCalendarEvents, ...internalCalendarEvents].map((event) => event.id),
+  );
+  const publicProtectedEventIds = new Set(
+    publishedCalendarEvents.map((event) => event.id),
+  );
   const privateSyncState = await ctx.runQuery(internal.googleCalendarQueries.getSyncState, {
     calendarId: config.privateCalendarId,
   });
@@ -731,6 +835,14 @@ async function runGoogleCalendarSync(ctx: ActionCtx, options: RunGoogleCalendarS
   );
   await ctx.runMutation(internal.googleCalendarQueries.saveSyncState, publicSyncStats.nextSyncState);
 
+  const queuedDeletionStats = await processQueuedGoogleCalendarDeletions(
+    ctx,
+    accessToken,
+    config,
+    privateProtectedEventIds,
+    publicProtectedEventIds,
+  );
+
   for (const stats of [privateSyncStats, publicSyncStats]) {
     console.log(
       `Google Calendar sync calendar version=${GOOGLE_CALENDAR_SYNC_VERSION} entrypoint=${options.entrypoint} calendar=${redactCalendarId(stats.calendarId)} existingCount=${stats.existingCount} managedExistingCount=${stats.managedExistingCount} upsertCount=${stats.upsertCount} deletedCount=${stats.deletedCount} deferredDeleteCount=${stats.deferredDeleteCount} staleCandidateCount=${stats.staleCandidateCount} previousSourceCount=${stats.previousSourceCount ?? "none"} sourceMaxStartMs=${stats.sourceMaxStartMs ?? "none"} pruneSkippedReason=${stats.pruneSkippedReason ?? "none"}`,
@@ -738,7 +850,11 @@ async function runGoogleCalendarSync(ctx: ActionCtx, options: RunGoogleCalendarS
   }
 
   console.log(
-    `Google Calendar sync end version=${GOOGLE_CALENDAR_SYNC_VERSION} entrypoint=${options.entrypoint} publishedCount=${publishedEvents.length} internalCount=${internalEvents.length} privateDeleted=${privateSyncStats.deletedCount} publicDeleted=${publicSyncStats.deletedCount} privateDeferredDeletes=${privateSyncStats.deferredDeleteCount} publicDeferredDeletes=${publicSyncStats.deferredDeleteCount} privatePruneSkippedReason=${privateSyncStats.pruneSkippedReason ?? "none"} publicPruneSkippedReason=${publicSyncStats.pruneSkippedReason ?? "none"}`,
+    `Google Calendar sync queued deletions version=${GOOGLE_CALENDAR_SYNC_VERSION} entrypoint=${options.entrypoint} privateDeleted=${queuedDeletionStats.privateDeletedCount} publicDeleted=${queuedDeletionStats.publicDeletedCount} skippedRepublished=${queuedDeletionStats.skippedCount} clearedQueueItems=${queuedDeletionStats.clearedCount}`,
+  );
+
+  console.log(
+    `Google Calendar sync end version=${GOOGLE_CALENDAR_SYNC_VERSION} entrypoint=${options.entrypoint} publishedCount=${publishedEvents.length} internalCount=${internalEvents.length} privateDeleted=${privateSyncStats.deletedCount} publicDeleted=${publicSyncStats.deletedCount} privateQueuedDeleted=${queuedDeletionStats.privateDeletedCount} publicQueuedDeleted=${queuedDeletionStats.publicDeletedCount} privateDeferredDeletes=${privateSyncStats.deferredDeleteCount} publicDeferredDeletes=${publicSyncStats.deferredDeleteCount} privatePruneSkippedReason=${privateSyncStats.pruneSkippedReason ?? "none"} publicPruneSkippedReason=${publicSyncStats.pruneSkippedReason ?? "none"}`,
   );
 
   return {

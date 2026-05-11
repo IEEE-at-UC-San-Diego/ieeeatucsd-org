@@ -3,6 +3,7 @@ import {
   type CalendarEvent,
   type GoogleCalendarSyncState,
   fetchGoogleCalendarEvents,
+  selectGoogleCalendarDeletionsForSync,
   syncCalendar,
 } from "./googleCalendar";
 
@@ -117,8 +118,50 @@ describe("fetchGoogleCalendarEvents", () => {
   });
 });
 
+describe("selectGoogleCalendarDeletionsForSync", () => {
+  it("deduplicates explicit delete requests and skips events that are currently protected by the source", () => {
+    const pendingDeletions = [
+      {
+        _id: "queue-1",
+        calendar: "public",
+        googleEventId: "ieeepublishedstale",
+        reason: "event_unpublished",
+        createdAt: 1,
+      },
+      {
+        _id: "queue-2",
+        calendar: "public",
+        googleEventId: "ieeepublishedstale",
+        reason: "event_deleted",
+        createdAt: 2,
+      },
+      {
+        _id: "queue-3",
+        calendar: "public",
+        googleEventId: "ieeepublishedactive",
+        reason: "event_unpublished",
+        createdAt: 3,
+      },
+    ] as any;
+
+    const result = selectGoogleCalendarDeletionsForSync(
+      pendingDeletions,
+      new Set(["ieeepublishedactive"]),
+    );
+
+    expect(result.deletionsToProcess).toMatchObject([
+      {
+        calendar: "public",
+        googleEventId: "ieeepublishedstale",
+        queueIds: ["queue-1", "queue-2"],
+      },
+    ]);
+    expect(result.skippedQueueIds).toEqual(["queue-3"]);
+  });
+});
+
 describe("syncCalendar", () => {
-  it("deletes stale managed events only after all Google Calendar pages are fetched", async () => {
+  it("does not prune stale managed events even when allowEmptyPrune is requested", async () => {
     const calls: Array<{ method: string; url: string }> = [];
     let listRequestCount = 0;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -145,7 +188,7 @@ describe("syncCalendar", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const stats = await syncCalendar("access-token", "calendar-id", [activeEvent, laterSourceEvent], {
-      allowEmptyPrune: false,
+      allowEmptyPrune: true,
       syncState: staleCandidateState,
       nowMs: 2_000,
     });
@@ -154,18 +197,16 @@ describe("syncCalendar", () => {
       calendarId: "calendar-id",
       existingCount: 2,
       upsertCount: 2,
-      deletedCount: 1,
-      deferredDeleteCount: 0,
-      staleCandidateCount: 0,
+      deletedCount: 0,
+      deferredDeleteCount: 1,
+      staleCandidateCount: 1,
+      pruneSkippedReason: "prune_disabled_without_deletion_queue",
     });
 
     const secondPageIndex = calls.findIndex((call) => call.url.includes("pageToken=page-2"));
-    const deleteIndex = calls.findIndex((call) => call.method === "DELETE");
-    const deletedUrl = calls[deleteIndex]?.url || "";
 
     expect(secondPageIndex).toBeGreaterThan(-1);
-    expect(deleteIndex).toBeGreaterThan(secondPageIndex);
-    expect(deletedUrl).toContain("/events/ieeepublishedstale");
+    expect(calls.some((call) => call.method === "DELETE")).toBe(false);
     expect(calls.some((call) => call.url.includes("/events/ieeepublishedactive") && call.method === "DELETE")).toBe(
       false,
     );
@@ -197,7 +238,8 @@ describe("syncCalendar", () => {
       upsertCount: 1,
       deletedCount: 0,
       deferredDeleteCount: 2,
-      pruneSkippedReason: "source_horizon_before_stale_events",
+      staleCandidateCount: 2,
+      pruneSkippedReason: "prune_disabled_without_deletion_queue",
     });
     expect(stats.sourceMaxStartMs).toBe(Date.parse(activeEvent.start.dateTime));
     expect(calls.some((call) => call.method === "DELETE")).toBe(false);
@@ -224,7 +266,38 @@ describe("syncCalendar", () => {
 
     const putCall = calls.find((call) => call.method === "PUT");
     expect(putCall).toBeDefined();
+    expect(new URL(putCall?.url || "").searchParams.get("sendUpdates")).toBe("none");
     expect(JSON.parse(putCall?.body || "{}")).toMatchObject({
+      id: activeEvent.id,
+      status: "confirmed",
+    });
+  });
+
+  it("suppresses Google attendee update emails when creating events", async () => {
+    const calls: Array<{ method: string; url: string; body?: string }> = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const method = init?.method || "GET";
+      const url = String(input);
+      calls.push({ method, url, body: typeof init?.body === "string" ? init.body : undefined });
+
+      if (method === "GET") {
+        return jsonResponse({ items: [] });
+      }
+
+      if (method === "PUT") {
+        return new Response("", { status: 404 });
+      }
+
+      return jsonResponse({ status: "confirmed" });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await syncCalendar("access-token", "calendar-id", [activeEvent]);
+
+    const postCall = calls.find((call) => call.method === "POST");
+    expect(postCall).toBeDefined();
+    expect(new URL(postCall?.url || "").searchParams.get("sendUpdates")).toBe("none");
+    expect(JSON.parse(postCall?.body || "{}")).toMatchObject({
       id: activeEvent.id,
       status: "confirmed",
     });
@@ -257,7 +330,7 @@ describe("syncCalendar", () => {
       deletedCount: 0,
       deferredDeleteCount: 1,
       staleCandidateCount: 1,
-      pruneSkippedReason: "two_phase_stale_delete_deferred",
+      pruneSkippedReason: "prune_disabled_without_deletion_queue",
     });
     expect(stats.nextSyncState.staleCandidates).toMatchObject([
       {
@@ -268,7 +341,7 @@ describe("syncCalendar", () => {
     expect(calls.some((call) => call.method === "DELETE")).toBe(false);
   });
 
-  it("deletes stale managed events on the second valid missing sync", async () => {
+  it("does not delete stale managed events on the second valid missing sync without explicit pruning", async () => {
     const calls: Array<{ method: string; url: string }> = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const method = init?.method || "GET";
@@ -299,18 +372,16 @@ describe("syncCalendar", () => {
       deletedCount: 0,
       deferredDeleteCount: 1,
       staleCandidateCount: 1,
-      pruneSkippedReason: "two_phase_stale_delete_deferred",
+      pruneSkippedReason: "prune_disabled_without_deletion_queue",
     });
     expect(secondStats).toMatchObject({
-      deletedCount: 1,
-      deferredDeleteCount: 0,
-      staleCandidateCount: 0,
+      deletedCount: 0,
+      deferredDeleteCount: 1,
+      staleCandidateCount: 1,
+      pruneSkippedReason: "prune_disabled_without_deletion_queue",
     });
-    expect(secondStats.pruneSkippedReason).toBeUndefined();
-    expect(calls.filter((call) => call.method === "DELETE")).toHaveLength(1);
-    expect(calls.some((call) => call.method === "DELETE" && call.url.includes("/events/ieeepublishedstale"))).toBe(
-      true,
-    );
+    const deleteCalls = calls.filter((call) => call.method === "DELETE");
+    expect(deleteCalls).toHaveLength(0);
   });
 
   it("skips deletion when an empty source would prune existing managed events", async () => {
@@ -345,7 +416,7 @@ describe("syncCalendar", () => {
     expect(calls.some((call) => call.method === "DELETE")).toBe(false);
   });
 
-  it("allows explicit empty-source pruning when requested", async () => {
+  it("does not allow empty-source pruning when requested", async () => {
     const calls: Array<{ method: string; url: string }> = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const method = init?.method || "GET";
@@ -371,12 +442,13 @@ describe("syncCalendar", () => {
       existingCount: 2,
       managedExistingCount: 2,
       upsertCount: 0,
-      deletedCount: 2,
-      deferredDeleteCount: 0,
+      deletedCount: 0,
+      deferredDeleteCount: 2,
       staleCandidateCount: 0,
+      pruneSkippedReason: "empty_source_would_delete_existing_managed_events",
     });
-    expect(stats.pruneSkippedReason).toBeUndefined();
-    expect(calls.filter((call) => call.method === "DELETE")).toHaveLength(2);
+    const deleteCalls = calls.filter((call) => call.method === "DELETE");
+    expect(deleteCalls).toHaveLength(0);
   });
 
   it("refuses to delete every managed event when source IDs do not match existing calendar IDs", async () => {

@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import {
   requireCurrentUser,
@@ -132,6 +133,34 @@ function getPrivateCalendarMeta(eventType: "published" | "internal", eventId: st
     privateGoogleCalendarSubscribeUrl: buildGoogleCalendarSubscribeUrl(privateCalendarId),
     privateGoogleCalendarIcsUrl: buildGoogleCalendarIcsUrl(privateCalendarId),
   };
+}
+
+async function enqueuePublishedEventGoogleCalendarDeletion(
+  ctx: MutationCtx,
+  eventId: string,
+  reason: "event_unpublished" | "event_deleted",
+) {
+  const googleEventId = generateGoogleCalendarEventId("published", eventId);
+  const createdAt = Date.now();
+
+  await Promise.all([
+    ctx.db.insert("googleCalendarDeletionQueue", {
+      calendar: "private",
+      googleEventId,
+      reason,
+      sourceTable: "events",
+      sourceId: eventId,
+      createdAt,
+    }),
+    ctx.db.insert("googleCalendarDeletionQueue", {
+      calendar: "public",
+      googleEventId,
+      reason,
+      sourceTable: "events",
+      sourceId: eventId,
+      createdAt,
+    }),
+  ]);
 }
 
 // ── Queries ──────────────────────────────────────────────────────────────────
@@ -584,7 +613,15 @@ export const update = mutation({
       }
     }
 
+    const shouldQueueCalendarDeletion =
+      Boolean(event.published) && cleanUpdates.published === false;
+
     await ctx.db.patch(id, cleanUpdates);
+
+    if (shouldQueueCalendarDeletion) {
+      await enqueuePublishedEventGoogleCalendarDeletion(ctx, id, "event_unpublished");
+    }
+
     return id;
   },
 });
@@ -601,6 +638,9 @@ export const remove = mutation({
     // Admins and Executive Officers can delete any event
     if (hasAdminAccess(user.role)) {
       await ctx.db.delete(args.id);
+      if (event.published) {
+        await enqueuePublishedEventGoogleCalendarDeletion(ctx, args.id, "event_deleted");
+      }
       return args.id;
     }
 
@@ -614,6 +654,9 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(args.id);
+    if (event.published) {
+      await enqueuePublishedEventGoogleCalendarDeletion(ctx, args.id, "event_deleted");
+    }
     return args.id;
   },
 });

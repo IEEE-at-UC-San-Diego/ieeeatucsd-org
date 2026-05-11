@@ -72,3 +72,26 @@ export const saveSyncState = internalMutation({
     return await ctx.db.insert("googleCalendarSyncState", syncState);
   },
 });
+
+export const getPendingDeletionQueue = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("googleCalendarDeletionQueue").collect();
+  },
+});
+
+export const clearDeletionQueue = internalMutation({
+  args: {
+    ids: v.array(v.id("googleCalendarDeletionQueue")),
+  },
+  handler: async (ctx, args) => {
+    await Promise.all(
+      args.ids.map(async (id) => {
+        const existing = await ctx.db.get(id);
+        if (existing) {
+          await ctx.db.delete(id);
+        }
+      }),
+    );
+  },
+});

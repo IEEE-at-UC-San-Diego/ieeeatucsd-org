@@ -330,6 +330,23 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_calendarId", ["calendarId"]),
 
+  googleCalendarDeletionQueue: defineTable({
+    calendar: v.union(v.literal("private"), v.literal("public")),
+    googleEventId: v.string(),
+    reason: v.union(
+      v.literal("event_unpublished"),
+      v.literal("event_deleted"),
+      v.literal("internal_event_deleted"),
+    ),
+    sourceTable: v.optional(
+      v.union(v.literal("events"), v.literal("internalEvents")),
+    ),
+    sourceId: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_calendar", ["calendar"])
+    .index("by_googleEventId", ["googleEventId"]),
+
   attendees: defineTable({
     eventId: v.id("events"),
     userId: v.string(),
