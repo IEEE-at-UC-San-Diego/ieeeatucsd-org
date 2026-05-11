@@ -203,6 +203,33 @@ describe("syncCalendar", () => {
     expect(calls.some((call) => call.method === "DELETE")).toBe(false);
   });
 
+  it("forces write payloads to confirmed so cancelled Google tombstones are revived", async () => {
+    const calls: Array<{ method: string; url: string; body?: string }> = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const method = init?.method || "GET";
+      const url = String(input);
+      calls.push({ method, url, body: typeof init?.body === "string" ? init.body : undefined });
+
+      if (method === "GET") {
+        return jsonResponse({
+          items: [activeEvent],
+        });
+      }
+
+      return jsonResponse({ status: "confirmed" });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await syncCalendar("access-token", "calendar-id", [activeEvent]);
+
+    const putCall = calls.find((call) => call.method === "PUT");
+    expect(putCall).toBeDefined();
+    expect(JSON.parse(putCall?.body || "{}")).toMatchObject({
+      id: activeEvent.id,
+      status: "confirmed",
+    });
+  });
+
   it("marks stale managed events on the first valid missing sync", async () => {
     const calls: Array<{ method: string; url: string }> = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

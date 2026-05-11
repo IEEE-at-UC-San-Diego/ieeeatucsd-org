@@ -13,6 +13,7 @@ export interface CalendarEvent {
   summary: string;
   description?: string;
   location?: string;
+  status?: "confirmed" | "tentative" | "cancelled";
   start: { dateTime: string; timeZone: string };
   end: { dateTime: string; timeZone: string };
 }
@@ -398,6 +399,10 @@ async function createOrUpdateGoogleEvent(
   calendarId: string,
   event: CalendarEvent,
 ): Promise<void> {
+  const eventPayload = {
+    ...event,
+    status: "confirmed" as const,
+  };
   const updateUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${event.id}`;
   const updateResponse = await fetchGoogleWithRetry(
     updateUrl,
@@ -407,7 +412,7 @@ async function createOrUpdateGoogleEvent(
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(event),
+      body: JSON.stringify(eventPayload),
     },
     `Failed to update Google Calendar event for calendar ${calendarId}`,
     [404],
@@ -428,7 +433,7 @@ async function createOrUpdateGoogleEvent(
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(event),
+        body: JSON.stringify(eventPayload),
       },
       `Failed to create Google Calendar event for calendar ${calendarId}`,
       [409],
@@ -495,6 +500,7 @@ function toPublishedCalendarEvent(event: {
 }): CalendarEvent {
   return {
     id: generateGoogleCalendarEventId("published", event._id),
+    status: "confirmed",
     summary: event.eventName,
     description: event.eventDescription,
     location: event.location,
@@ -519,6 +525,7 @@ function toInternalCalendarEvent(event: {
 }): CalendarEvent {
   return {
     id: generateGoogleCalendarEventId("internal", event._id),
+    status: "confirmed",
     summary: `[Internal] ${event.name}`,
     description: event.description,
     location: event.location,
