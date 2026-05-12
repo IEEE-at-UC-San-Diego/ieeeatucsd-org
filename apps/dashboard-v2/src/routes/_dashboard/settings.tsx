@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Save,
@@ -27,6 +28,10 @@ export const Route = createFileRoute("/_dashboard/settings")({
 function SettingsPage() {
   const { user, isLoading, logtoId } = useAuth();
   const updateProfile = useAuthedMutation(api.users.updateProfile);
+  const generateResumeUploadUrl = useAuthedMutation(
+    api.users.generateResumeUploadUrl,
+  );
+  const getResumeStorageUrl = useAuthedMutation(api.users.getResumeStorageUrl);
   const [saving, setSaving] = useState(false);
   const [savingAiPreference, setSavingAiPreference] = useState(false);
 
@@ -105,10 +110,27 @@ function SettingsPage() {
     setSuccess(null);
 
     try {
-      // In a real implementation, you'd upload to Convex storage or an external service
-      // For now, we'll store a placeholder URL
-      const resumeUrl = `https://example.com/resumes/${logtoId}/${resumeFile.name}`;
-      
+      const uploadUrl = await generateResumeUploadUrl({});
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "POST",
+        body: resumeFile,
+        headers: { "Content-Type": resumeFile.type || "application/octet-stream" },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload resume file");
+      }
+
+      const uploadPayload: { storageId: Id<"_storage"> } =
+        await uploadResponse.json();
+      const resumeUrl = await getResumeStorageUrl({
+        storageId: uploadPayload.storageId,
+      });
+
+      if (!resumeUrl) {
+        throw new Error("Failed to resolve uploaded resume URL");
+      }
+
       await updateProfile({
         logtoId,
         resume: resumeUrl,

@@ -374,6 +374,26 @@ export const completeOnboarding = mutation({
   },
 });
 
+export const generateResumeUploadUrl = mutation({
+  args: { logtoId: v.string(), authToken: v.string() },
+  handler: async (ctx, args) => {
+    await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const getResumeStorageUrl = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
 export const updateProfile = mutation({
   args: {
     logtoId: v.string(),
