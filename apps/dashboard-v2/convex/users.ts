@@ -1,4 +1,6 @@
 import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import {
   requireCurrentUser,
@@ -8,6 +10,12 @@ import {
 import { buildAuthUpsertResult } from "./userProvisioning";
 
 const FISCAL_YEAR_START_MONTH = 6; // July
+const MAX_RESUME_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_RESUME_CONTENT_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
 const FISCAL_MONTH_LABELS = [
   "Jul",
   "Aug",
@@ -42,6 +50,30 @@ function toPercentChange(currentValue: number, previousValue: number) {
     return null;
   }
   return ((currentValue - previousValue) / previousValue) * 100;
+}
+
+async function validateResumeUpload(
+  ctx: MutationCtx,
+  storageId: Id<"_storage">,
+) {
+  const metadata = await ctx.storage.getMetadata(storageId);
+
+  if (!metadata) {
+    throw new Error("Uploaded resume file was not found.");
+  }
+
+  if (
+    !metadata.contentType ||
+    !ALLOWED_RESUME_CONTENT_TYPES.has(metadata.contentType)
+  ) {
+    await ctx.storage.delete(storageId).catch(() => null);
+    throw new Error("Resume must be a PDF, DOC, or DOCX file.");
+  }
+
+  if (metadata.size > MAX_RESUME_FILE_SIZE_BYTES) {
+    await ctx.storage.delete(storageId).catch(() => null);
+    throw new Error("Resume file must be 5MB or smaller.");
+  }
 }
 
 export function removeUndefinedFields<T extends Record<string, unknown>>(data: T) {
@@ -389,7 +421,12 @@ export const getResumeStorageUrl = mutation({
     storageId: v.id("_storage"),
   },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+
+    if (user.resumeStorageId !== args.storageId) {
+      throw new Error("You are not authorized to access this resume file.");
+    }
+
     return await ctx.storage.getUrl(args.storageId);
   },
 });
@@ -398,22 +435,31 @@ export const saveResumeUpload = mutation({
   args: {
     logtoId: v.string(),
     authToken: v.string(),
-    resume: v.string(),
     resumeStorageId: v.id("_storage"),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
 
     try {
+      await validateResumeUpload(ctx, args.resumeStorageId);
+      const resumeUrl = await ctx.storage.getUrl(args.resumeStorageId);
+
+      if (!resumeUrl) {
+        await ctx.storage.delete(args.resumeStorageId).catch(() => null);
+        throw new Error("Uploaded resume file could not be resolved.");
+      }
+
       if (user.resumeStorageId) {
         await ctx.storage.delete(user.resumeStorageId);
       }
 
       await ctx.db.patch(user._id, {
-        resume: args.resume,
+        resume: resumeUrl,
         resumeStorageId: args.resumeStorageId,
         lastUpdated: Date.now(),
       });
+
+      return resumeUrl;
     } catch (error) {
       await ctx.storage.delete(args.resumeStorageId).catch(() => null);
       throw error;

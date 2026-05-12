@@ -25,13 +25,15 @@ export const Route = createFileRoute("/_dashboard/settings")({
   component: SettingsPage,
 });
 
+const MAX_RESUME_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const RESUME_UPLOAD_TIMEOUT_MS = 15_000;
+
 function SettingsPage() {
   const { user, isLoading, logtoId } = useAuth();
   const updateProfile = useAuthedMutation(api.users.updateProfile);
   const generateResumeUploadUrl = useAuthedMutation(
     api.users.generateResumeUploadUrl,
   );
-  const getResumeStorageUrl = useAuthedMutation(api.users.getResumeStorageUrl);
   const saveResumeUpload = useAuthedMutation(api.users.saveResumeUpload);
   const removeResumeUpload = useAuthedMutation(api.users.removeResumeUpload);
   const [saving, setSaving] = useState(false);
@@ -107,42 +109,76 @@ function SettingsPage() {
   const handleResumeUpload = async () => {
     if (!resumeFile || !logtoId) return;
 
+    if (resumeFile.size > MAX_RESUME_FILE_SIZE_BYTES) {
+      const message = "Resume file must be 5MB or smaller.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
     setUploadingResume(true);
     setError(null);
     setSuccess(null);
 
     try {
       const uploadUrl = await generateResumeUploadUrl({});
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "POST",
-        body: resumeFile,
-        headers: { "Content-Type": resumeFile.type || "application/octet-stream" },
-      });
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        RESUME_UPLOAD_TIMEOUT_MS,
+      );
+      let uploadResponse: Response;
 
-      if (!uploadResponse.ok) {
-        throw new Error("Failed to upload resume file");
+      try {
+        uploadResponse = await fetch(uploadUrl, {
+          method: "POST",
+          body: resumeFile,
+          headers: {
+            "Content-Type": resumeFile.type || "application/octet-stream",
+          },
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timeoutId);
       }
 
-      const uploadPayload: { storageId: Id<"_storage"> } =
-        await uploadResponse.json();
-      const resumeUrl = await getResumeStorageUrl({
-        storageId: uploadPayload.storageId,
+      if (!uploadResponse.ok) {
+        const responseText = await uploadResponse.text();
+        throw new Error(
+          `Failed to upload resume file. Storage upload returned ${uploadResponse.status}: ${responseText}`,
+        );
+      }
+
+      const uploadPayload: unknown = await uploadResponse.json();
+
+      if (
+        !uploadPayload ||
+        typeof uploadPayload !== "object" ||
+        typeof (uploadPayload as { storageId?: unknown }).storageId !== "string"
+      ) {
+        throw new Error(
+          "Storage upload response did not include a valid storageId.",
+        );
+      }
+
+      const storageId = (uploadPayload as { storageId: Id<"_storage"> })
+        .storageId;
+      const resumeUrl = await saveResumeUpload({
+        resumeStorageId: storageId,
       });
 
       if (!resumeUrl) {
-        throw new Error("Failed to resolve uploaded resume URL");
+        throw new Error(
+          "Resume upload was accepted but no resume URL was returned.",
+        );
       }
 
-      await saveResumeUpload({
-        resume: resumeUrl,
-        resumeStorageId: uploadPayload.storageId,
-      });
-      
       setResumeFile(null);
       setSuccess("Resume uploaded successfully!");
       toast.success("Resume uploaded successfully");
-    } catch (err: any) {
-      setError("Failed to upload resume: " + (err.message || "Unknown error"));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError(`Failed to upload resume: ${message}`);
       toast.error("Failed to upload resume");
     } finally {
       setUploadingResume(false);
@@ -162,8 +198,9 @@ function SettingsPage() {
       await removeResumeUpload({});
       setSuccess("Resume removed successfully!");
       toast.success("Resume removed successfully");
-    } catch (err: any) {
-      setError("Failed to remove resume: " + (err.message || "Unknown error"));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError(`Failed to remove resume: ${message}`);
       toast.error("Failed to remove resume");
     } finally {
       setSaving(false);
