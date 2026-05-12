@@ -394,6 +394,53 @@ export const getResumeStorageUrl = mutation({
   },
 });
 
+export const saveResumeUpload = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    resume: v.string(),
+    resumeStorageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+
+    try {
+      if (user.resumeStorageId) {
+        await ctx.storage.delete(user.resumeStorageId);
+      }
+
+      await ctx.db.patch(user._id, {
+        resume: args.resume,
+        resumeStorageId: args.resumeStorageId,
+        lastUpdated: Date.now(),
+      });
+    } catch (error) {
+      await ctx.storage.delete(args.resumeStorageId).catch(() => null);
+      throw error;
+    }
+  },
+});
+
+export const removeResumeUpload = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+
+    if (user.resumeStorageId) {
+      await ctx.storage.delete(user.resumeStorageId);
+    }
+
+    await ctx.db.patch(user._id, {
+      resume: undefined,
+      resumeStorageId: undefined,
+      lastUpdated: Date.now(),
+    });
+  },
+});
+
 export const updateProfile = mutation({
   args: {
     logtoId: v.string(),

@@ -168,6 +168,7 @@ export default defineSchema({
     accessibilitySettings: v.optional(v.any()),
     aiFeaturesEnabled: v.optional(v.boolean()),
     resume: v.optional(v.string()),
+    resumeStorageId: v.optional(v.id("_storage")),
     signedUp: v.boolean(),
     requestedEmail: v.boolean(),
     role: userRole,

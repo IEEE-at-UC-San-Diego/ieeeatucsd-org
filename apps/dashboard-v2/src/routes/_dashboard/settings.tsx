@@ -32,6 +32,8 @@ function SettingsPage() {
     api.users.generateResumeUploadUrl,
   );
   const getResumeStorageUrl = useAuthedMutation(api.users.getResumeStorageUrl);
+  const saveResumeUpload = useAuthedMutation(api.users.saveResumeUpload);
+  const removeResumeUpload = useAuthedMutation(api.users.removeResumeUpload);
   const [saving, setSaving] = useState(false);
   const [savingAiPreference, setSavingAiPreference] = useState(false);
 
@@ -131,10 +133,9 @@ function SettingsPage() {
         throw new Error("Failed to resolve uploaded resume URL");
       }
 
-      await updateProfile({
-        logtoId,
+      await saveResumeUpload({
         resume: resumeUrl,
-        syncPublicProfile: false,
+        resumeStorageId: uploadPayload.storageId,
       });
       
       setResumeFile(null);
@@ -158,11 +159,7 @@ function SettingsPage() {
     setSuccess(null);
 
     try {
-      await updateProfile({
-        logtoId,
-        resume: undefined,
-        syncPublicProfile: false,
-      });
+      await removeResumeUpload({});
       setSuccess("Resume removed successfully!");
       toast.success("Resume removed successfully");
     } catch (err: any) {
