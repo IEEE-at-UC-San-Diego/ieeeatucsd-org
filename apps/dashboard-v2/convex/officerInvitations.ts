@@ -243,6 +243,7 @@ export const recordAcceptanceSideEffects = mutation({
     userCreatedOrUpdated: v.optional(v.boolean()),
     googleGroupAssigned: v.optional(v.boolean()),
     googleGroup: v.optional(v.string()),
+    logtoRoleGranted: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const invitation = await ctx.db.get(args.id);
@@ -270,6 +271,12 @@ export const recordAcceptanceSideEffects = mutation({
     }
     if (args.googleGroup !== undefined) {
       updates.googleGroup = args.googleGroup;
+    }
+    if (args.logtoRoleGranted !== undefined) {
+      updates.logtoRoleGranted = args.logtoRoleGranted;
+      if (args.logtoRoleGranted) {
+        updates.logtoRoleGrantedAt = now;
+      }
     }
 
     await ctx.db.patch(args.id, updates);

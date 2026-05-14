@@ -22,15 +22,18 @@ export const create = mutation({
     emailSent: v.boolean(),
     googleGroupAssigned: v.boolean(),
     googleGroup: v.optional(v.string()),
+    logtoRoleGranted: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const admin = await requireAdminAccess(ctx, args.logtoId, args.authToken);
     const adminId = admin.logtoId ?? admin.authUserId ?? "";
     const { logtoId, authToken, ...rest } = args;
+    const now = Date.now();
     return await ctx.db.insert("directOnboardings", {
       ...rest,
       onboardedBy: adminId,
-      onboardedAt: Date.now(),
+      onboardedAt: now,
+      ...(args.logtoRoleGranted && { logtoRoleGrantedAt: now }),
     });
   },
 });

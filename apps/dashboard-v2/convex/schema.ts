@@ -542,6 +542,8 @@ export default defineSchema({
     lastSentAt: v.optional(v.number()),
     roleGranted: v.optional(v.boolean()),
     roleGrantedAt: v.optional(v.number()),
+    logtoRoleGranted: v.optional(v.boolean()),
+    logtoRoleGrantedAt: v.optional(v.number()),
     userCreatedOrUpdated: v.optional(v.boolean()),
   })
     .index("by_email", ["email"])
@@ -788,6 +790,8 @@ export default defineSchema({
     emailSent: v.boolean(),
     googleGroupAssigned: v.boolean(),
     googleGroup: v.optional(v.string()),
+    logtoRoleGranted: v.optional(v.boolean()),
+    logtoRoleGrantedAt: v.optional(v.number()),
   }).index("by_email", ["email"]),
 
   invites: defineTable({

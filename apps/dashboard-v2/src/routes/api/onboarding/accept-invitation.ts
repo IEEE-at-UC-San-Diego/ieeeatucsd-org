@@ -5,12 +5,7 @@ import type { FunctionReference } from "convex/server";
 import { env } from "@/env";
 import { DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE } from "@/lib/onboarding-template";
 import { sendDirectOnboardingEmail } from "@/server/email-templates";
-import { syncGoogleGroupsForRoleWithAudit } from "@/server/google-group-sync";
-import {
-	findLogtoUserByEmail,
-	isSupportedRole,
-	syncOfficerRolesOnLogtoUser,
-} from "@/server/logto";
+import { syncExternalAccessForRole } from "@/server/role-provisioning";
 
 type PublicInvitation = {
 	_id: string;
@@ -74,7 +69,9 @@ function invitationUnavailableResponse(invitation: PublicInvitation | null) {
 	return null;
 }
 
-function invitationLookupUnavailableResponse(invitation: PublicInvitation | null) {
+function invitationLookupUnavailableResponse(
+	invitation: PublicInvitation | null,
+) {
 	if (!invitation) {
 		return json({ error: "Invitation not found" }, 404);
 	}
@@ -104,6 +101,7 @@ async function recordAcceptanceSideEffects(
 		userCreatedOrUpdated?: boolean;
 		googleGroupAssigned?: boolean;
 		googleGroup?: string;
+		logtoRoleGranted?: boolean;
 	},
 ) {
 	const recordFn =
@@ -141,7 +139,9 @@ async function handlePost({ request }: { request: Request }) {
 		const inviteId = getInviteId(request, body);
 		const action = typeof body.action === "string" ? body.action : "";
 		const selectedPosition =
-			typeof body.selectedPosition === "string" ? body.selectedPosition : undefined;
+			typeof body.selectedPosition === "string"
+				? body.selectedPosition
+				: undefined;
 
 		if (!inviteId) {
 			return json({ error: "Missing inviteId" }, 400);
@@ -190,54 +190,34 @@ async function handlePost({ request }: { request: Request }) {
 			onboardingEmailConfig.googleSheetsContactListUrl,
 		);
 
-		let logtoUpdated = false;
-		let googleGroupAssigned = false;
-		let resolvedGoogleGroup: string | null = null;
-		const warnings: string[] = [];
-		if (isSupportedRole(acceptedInvitation.role)) {
-			try {
-				const logtoUser = await findLogtoUserByEmail(acceptedInvitation.email);
-				if (logtoUser) {
-					await syncOfficerRolesOnLogtoUser(logtoUser.id, acceptedInvitation.role);
-					logtoUpdated = true;
-				} else {
-					warnings.push(
-						`No Logto user found for email '${acceptedInvitation.email}'`,
-					);
-				}
-			} catch (error) {
-				warnings.push(
-					error instanceof Error
-						? `Failed to sync role to Logto: ${error.message}`
-						: "Failed to sync role to Logto",
-				);
-			}
-
-			const googleGroupResult = await syncGoogleGroupsForRoleWithAudit(
-				convex,
-				acceptedInvitation.email,
-				acceptedInvitation.role,
-			);
-			googleGroupAssigned = googleGroupResult.googleGroupUpdated;
-			resolvedGoogleGroup = googleGroupResult.googleGroup;
-			warnings.push(...googleGroupResult.warnings);
-		}
+		const externalSync = await syncExternalAccessForRole({
+			convex,
+			email: acceptedInvitation.email,
+			role: acceptedInvitation.role,
+		});
 
 		await recordAcceptanceSideEffects(convex, inviteId, {
 			onboardingEmailSent,
-			roleGranted: Boolean(acceptedInvitation.roleGranted || logtoUpdated),
+			roleGranted: Boolean(
+				acceptedInvitation.roleGranted || externalSync.logtoUpdated,
+			),
 			userCreatedOrUpdated: Boolean(acceptedInvitation.userCreatedOrUpdated),
-			googleGroupAssigned,
-			googleGroup: resolvedGoogleGroup || undefined,
+			googleGroupAssigned: externalSync.googleGroupUpdated,
+			googleGroup: externalSync.googleGroup || undefined,
+			logtoRoleGranted: externalSync.logtoUpdated,
 		});
 
 		return json({
 			success: true,
 			invitation: acceptedInvitation,
 			onboardingEmailSent,
-			roleGranted: Boolean(acceptedInvitation.roleGranted || logtoUpdated),
-			googleGroupAssigned,
-			warnings,
+			roleGranted: Boolean(
+				acceptedInvitation.roleGranted || externalSync.logtoUpdated,
+			),
+			logtoUpdated: externalSync.logtoUpdated,
+			googleGroupAssigned: externalSync.googleGroupUpdated,
+			googleGroup: externalSync.googleGroup,
+			warnings: externalSync.warnings,
 		});
 	} catch (error) {
 		console.error("Error accepting invitation:", error);
