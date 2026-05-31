@@ -3,6 +3,7 @@ import {
   Outlet,
   Scripts,
   createRootRouteWithContext,
+  useRouterState,
 } from "@tanstack/react-router";
 import AppLogtoProvider from "../integrations/logto/provider";
 import ConvexProvider from "../integrations/convex/provider";
@@ -126,6 +127,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+
+  if (pathname.startsWith("/accept-invitation/")) {
+    return (
+      <>
+        <Outlet />
+        <Toaster richColors position="bottom-right" />
+      </>
+    );
+  }
+
   return (
     <AppLogtoProvider>
       <ConvexProvider>

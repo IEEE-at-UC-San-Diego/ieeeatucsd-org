@@ -1,32 +1,36 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useAuthedQuery, useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { useAuth } from "@/hooks/useAuth";
+import { createFileRoute } from "@tanstack/react-router";
+import { format, formatDistanceToNow } from "date-fns";
 import {
-	Plus,
+	AlertTriangle,
 	ArrowLeft,
-	Trash2,
-	Loader2,
+	ArrowRight,
+	Calendar,
+	Car,
+	CheckCircle,
+	ChevronDown,
 	ChevronLeft,
 	ChevronRight,
-	Receipt,
-	FileText,
-	CheckCircle,
-	Calendar,
+	ChevronUp,
 	ExternalLink,
-	AlertTriangle,
-	ArrowRight,
+	FileText,
+	Loader2,
+	Plus,
+	Receipt,
 	Search,
+	Trash2,
 	Upload,
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { AddressAutocompleteInput } from "@/components/reimbursement/AddressAutocompleteInput";
 import ReceiptViewer from "@/components/reimbursement/ReceiptViewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
 	Select,
 	SelectContent,
@@ -34,13 +38,20 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
+import { useGoogleMapsPlacesLoader } from "@/hooks/useGoogleMapsPlacesLoader";
+import {
+	computeMileageTotal,
+	formatMileageRoute,
+	MILEAGE_RATE_PER_MILE,
+	metersToRoundedMiles,
+} from "@/lib/reimbursement-mileage";
 import { sendNotification } from "@/lib/send-notification";
-import { format, formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
 function formatAuditAction(action: string): {
 	label: string;
@@ -136,7 +147,7 @@ const statusColors: Record<string, string> = {
 const STEPS = [
 	{ id: 1, name: "AI Warning", description: "Before you start" },
 	{ id: 2, name: "Basic Information", description: "Report Details" },
-	{ id: 3, name: "Receipts", description: "Upload Receipts" },
+	{ id: 3, name: "Expenses", description: "Receipts & mileage" },
 	{ id: 4, name: "Review", description: "Review Request" },
 ];
 
@@ -193,11 +204,70 @@ interface ReceiptEntry {
 	tip?: number;
 	shipping?: number;
 	total: number;
+	expenseType?: "receipt" | "mileage";
+	miles?: number;
+	mileageRatePerMile?: number;
+	mileageFrom?: string;
+	mileageTo?: string;
+	mileageStops?: string[];
 }
 
 interface ReceiptParseResult {
 	success: boolean;
 	message: string;
+}
+
+type MileageCalculationState = {
+	receiptId: string | null;
+	routeKey: string;
+	status: "idle" | "waiting" | "calculating" | "calculated" | "error";
+	message: string;
+};
+
+type RoutesLibraryLike = {
+	Route?: {
+		computeRoutes: (
+			request: RoutesComputeRequestLike,
+		) => Promise<RoutesComputeResponseLike>;
+	};
+};
+
+type RoutesComputeRequestLike = {
+	origin: string;
+	destination: string;
+	intermediates?: Array<{ location: string }>;
+	travelMode: "DRIVING";
+	optimizeWaypointOrder: boolean;
+	fields: string[];
+};
+
+type RoutesComputeResponseLike = {
+	routes?: RouteLike[];
+};
+
+type RouteLike = {
+	distanceMeters?: number;
+	legs?: Array<{ distanceMeters?: number }>;
+};
+
+function getRouteCalculationErrorMessage(error: unknown): string {
+	if (error instanceof Error) {
+		return error.message;
+	}
+
+	if (typeof error === "object" && error !== null) {
+		const candidate = error as {
+			message?: unknown;
+			code?: unknown;
+			status?: unknown;
+		};
+		const details = [candidate.code, candidate.status, candidate.message]
+			.filter((value) => typeof value === "string" && value.trim())
+			.join(": ");
+		if (details) return details;
+	}
+
+	return "Google route calculation is unavailable.";
 }
 
 const CATEGORIES = [
@@ -241,13 +311,89 @@ function emptyReceipt(): ReceiptEntry {
 		tip: 0,
 		shipping: 0,
 		total: 0,
+		expenseType: "receipt",
 	};
 }
 
 function recalcReceipt(r: ReceiptEntry): ReceiptEntry {
+	if (r.expenseType === "mileage") {
+		const miles = r.miles ?? 0;
+		const total = computeMileageTotal(miles);
+		const subtotal = total;
+		const firstId = r.lineItems[0]?.id ?? crypto.randomUUID();
+		return {
+			...r,
+			mileageRatePerMile: MILEAGE_RATE_PER_MILE,
+			subtotal,
+			total,
+			tax: 0,
+			tip: 0,
+			shipping: 0,
+			lineItems: [
+				{
+					id: firstId,
+					description:
+						miles > 0
+							? `Mileage (${miles} mi × $${MILEAGE_RATE_PER_MILE.toFixed(2)}/mi)`
+							: "Mileage",
+					category: "Transportation",
+					amount: total,
+				},
+			],
+		};
+	}
 	const subtotal = r.lineItems.reduce((sum, li) => sum + (li.amount || 0), 0);
 	const total = subtotal + (r.tax || 0) + (r.tip || 0) + (r.shipping || 0);
 	return { ...r, subtotal, total };
+}
+
+async function calculateDrivingMiles({
+	from,
+	to,
+	stops,
+}: {
+	from: string;
+	to: string;
+	stops: string[];
+}): Promise<number> {
+	const importLibrary = window.google?.maps?.importLibrary as
+		| ((lib: string) => Promise<unknown>)
+		| undefined;
+	if (!importLibrary) {
+		throw new Error("Google route calculation is unavailable.");
+	}
+
+	const { Route } = (await importLibrary("routes")) as RoutesLibraryLike;
+	if (!Route?.computeRoutes) {
+		throw new Error("Google route calculation is unavailable.");
+	}
+
+	const request: RoutesComputeRequestLike = {
+		origin: from,
+		destination: to,
+		travelMode: "DRIVING",
+		optimizeWaypointOrder: false,
+		fields: ["distanceMeters", "legs"],
+	};
+
+	if (stops.length > 0) {
+		request.intermediates = stops.map((location) => ({ location }));
+	}
+
+	const { routes } = await Route.computeRoutes(request);
+
+	const route = routes?.[0];
+
+	const meters =
+		route?.distanceMeters ??
+		route?.legs?.reduce((sum, leg) => sum + (leg.distanceMeters ?? 0), 0) ??
+		0;
+
+	if (meters <= 0) {
+		throw new Error("No driving distance was returned for this route.");
+	}
+
+	return metersToRoundedMiles(meters);
 }
 
 // Step Progress Indicator Component
@@ -402,6 +548,7 @@ function ReimbursementDetailView({
 	const currentLineItems = currentReceipt.lineItems || [];
 
 	const receiptFileUrl = currentReceipt.receiptFile;
+	const currentIsMileage = currentReceipt.expenseType === "mileage";
 
 	const formatDate = (dateVal: number | undefined) => {
 		if (!dateVal) return "N/A";
@@ -479,7 +626,7 @@ function ReimbursementDetailView({
 					{hasReceipts && (
 						<div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 bg-gray-50/50">
 							<span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-								Receipt {activeReceiptIndex + 1} of {receipts.length}
+								Expense {activeReceiptIndex + 1} of {receipts.length}
 							</span>
 							<div className="flex gap-1">
 								<Button
@@ -579,15 +726,15 @@ function ReimbursementDetailView({
 								</section>
 							)}
 
-						{/* Receipt Details */}
+						{/* Expense details */}
 						<section className="space-y-3">
 							<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground">
-								Receipt Details
+								{currentIsMileage ? "Mileage details" : "Receipt details"}
 							</h3>
 							<div className="grid grid-cols-2 gap-3">
 								<div className="space-y-0.5">
 									<p className="text-[11px] font-medium text-muted-foreground uppercase">
-										Vendor
+										{currentIsMileage ? "Trip or purpose" : "Vendor"}
 									</p>
 									<p className="text-sm">
 										{currentReceipt.vendorName || "N/A"}
@@ -595,7 +742,7 @@ function ReimbursementDetailView({
 								</div>
 								<div className="space-y-0.5">
 									<p className="text-[11px] font-medium text-muted-foreground uppercase">
-										Date of Purchase
+										{currentIsMileage ? "Date of trip" : "Date of purchase"}
 									</p>
 									<p className="text-sm">
 										{currentReceipt.dateOfPurchase
@@ -605,12 +752,88 @@ function ReimbursementDetailView({
 											: "N/A"}
 									</p>
 								</div>
-								<div className="space-y-0.5 col-span-2">
-									<p className="text-[11px] font-medium text-muted-foreground uppercase">
-										Location
-									</p>
-									<p className="text-sm">{currentReceipt.location || "N/A"}</p>
-								</div>
+								{currentIsMileage ? (
+									<>
+										<div className="space-y-0.5">
+											<p className="text-[11px] font-medium text-muted-foreground uppercase">
+												Miles
+											</p>
+											<p className="text-sm tabular-nums">
+												{(currentReceipt.miles ?? 0).toLocaleString(undefined, {
+													maximumFractionDigits: 2,
+												})}{" "}
+												mi @ ${MILEAGE_RATE_PER_MILE.toFixed(2)}/mi
+											</p>
+										</div>
+										<div className="space-y-0.5">
+											<p className="text-[11px] font-medium text-muted-foreground uppercase">
+												Rate
+											</p>
+											<p className="text-sm tabular-nums">
+												$
+												{(
+													currentReceipt.mileageRatePerMile ??
+													MILEAGE_RATE_PER_MILE
+												).toFixed(2)}
+												/mi
+											</p>
+										</div>
+										<div className="col-span-2 space-y-0.5">
+											<p className="text-[11px] font-medium text-muted-foreground uppercase">
+												From
+											</p>
+											<p className="text-sm">
+												{currentReceipt.mileageFrom?.trim() || "—"}
+											</p>
+										</div>
+										<div className="col-span-2 space-y-0.5">
+											<p className="text-[11px] font-medium text-muted-foreground uppercase">
+												To
+											</p>
+											<p className="text-sm">
+												{currentReceipt.mileageTo?.trim() || "—"}
+											</p>
+										</div>
+										{currentReceipt.mileageStops &&
+										currentReceipt.mileageStops.length > 0 ? (
+											<div className="col-span-2 space-y-0.5">
+												<p className="text-[11px] font-medium text-muted-foreground uppercase">
+													Stops
+												</p>
+												<ol className="list-decimal list-inside text-sm space-y-0.5">
+													{currentReceipt.mileageStops.map(
+														(s: string, idx: number) => (
+															<li key={idx}>{s}</li>
+														),
+													)}
+												</ol>
+											</div>
+										) : null}
+										{!currentReceipt.mileageFrom?.trim() &&
+											!currentReceipt.mileageTo?.trim() &&
+											!(
+												currentReceipt.mileageStops &&
+												currentReceipt.mileageStops.length
+											) &&
+											currentReceipt.location?.trim() && (
+												<div className="col-span-2 space-y-0.5">
+													<p className="text-[11px] font-medium text-muted-foreground uppercase">
+														Route
+													</p>
+													<p className="text-sm">{currentReceipt.location}</p>
+												</div>
+											)}
+									</>
+								) : (
+									<div className="col-span-2 space-y-0.5">
+										<p className="text-[11px] font-medium text-muted-foreground uppercase">
+											Location
+										</p>
+										<p className="text-sm">
+											{currentReceipt.location || "N/A"}
+										</p>
+									</div>
+								)}
 							</div>
 						</section>
 
@@ -817,13 +1040,46 @@ function ReimbursementDetailView({
 					</div>
 				</div>
 
-				{/* Right Panel: Receipt Viewer (7/12) */}
+				{/* Right Panel: receipt file or mileage summary */}
 				<div className="lg:col-span-7 bg-gray-50 min-h-[500px] lg:min-h-0 overflow-hidden flex flex-col p-4">
-					<ReceiptViewer
-						receiptUrl={receiptFileUrl || ""}
-						receiptName={`Receipt ${activeReceiptIndex + 1}`}
-						className="h-full"
-					/>
+					{currentIsMileage ? (
+						<div className="flex h-full min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed border-border/80 bg-card p-8">
+							<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+								<Car className="h-7 w-7 text-primary" />
+							</div>
+							<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+								Mileage reimbursement
+							</p>
+							<p className="mt-2 max-w-md text-center text-sm leading-snug text-muted-foreground">
+								{formatMileageRoute(
+									currentReceipt.mileageFrom,
+									currentReceipt.mileageTo,
+									currentReceipt.mileageStops,
+								) ||
+									currentReceipt.location?.trim() ||
+									"No route entered"}
+							</p>
+							<p className="mt-3 text-center text-sm text-muted-foreground">
+								{(currentReceipt.miles ?? 0).toLocaleString(undefined, {
+									maximumFractionDigits: 2,
+								})}{" "}
+								mi × $
+								{(
+									currentReceipt.mileageRatePerMile ?? MILEAGE_RATE_PER_MILE
+								).toFixed(2)}
+								/mi
+							</p>
+							<p className="mt-4 font-mono text-3xl font-bold tabular-nums text-foreground">
+								${(currentReceipt.total ?? 0).toFixed(2)}
+							</p>
+						</div>
+					) : (
+						<ReceiptViewer
+							receiptUrl={receiptFileUrl || ""}
+							receiptName={`Receipt ${activeReceiptIndex + 1}`}
+							className="h-full"
+						/>
+					)}
 				</div>
 			</div>
 		</div>
@@ -978,7 +1234,7 @@ function BasicInfoStep({
 						onBack={onBack}
 						onNext={onNext}
 						canGoNext={!!canProceed}
-						nextLabel="Next: Upload Receipts"
+						nextLabel="Next: Expenses"
 					/>
 				</CardContent>
 			</Card>
@@ -1017,6 +1273,18 @@ function ReceiptsStep({
 	const [parseResults, setParseResults] = useState<
 		Record<string, ReceiptParseResult>
 	>({});
+	const mileageRequestIdRef = useRef(0);
+	const [mileageCalculation, setMileageCalculation] =
+		useState<MileageCalculationState>({
+			receiptId: null,
+			routeKey: "",
+			status: "idle",
+			message: "",
+		});
+	const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as
+		| string
+		| undefined;
+	const maps = useGoogleMapsPlacesLoader(googleMapsApiKey);
 
 	useEffect(() => {
 		if (receipts.length === 0) return;
@@ -1027,12 +1295,228 @@ function ReceiptsStep({
 		}
 	}, [receipts, activeReceiptId]);
 
+	const activeReceipt =
+		receipts.find((r) => r.id === activeReceiptId) ?? receipts[0];
+	const activeMileageReceiptId = activeReceipt?.id ?? null;
+	const activeMileageExpenseType = activeReceipt?.expenseType;
+	const activeMileageFrom = activeReceipt?.mileageFrom ?? "";
+	const activeMileageTo = activeReceipt?.mileageTo ?? "";
+	const activeMileageStopsKey = JSON.stringify(
+		activeReceipt?.mileageStops ?? [],
+	);
+
+	const setReceiptMileageMiles = useCallback(
+		(receiptId: string, miles: number) => {
+			setReceipts((prev) =>
+				prev.map((r) => {
+					if (r.id !== receiptId || r.expenseType !== "mileage") return r;
+					if ((r.miles ?? 0) === miles) return r;
+					return recalcReceipt({ ...r, miles });
+				}),
+			);
+		},
+		[setReceipts],
+	);
+
+	useEffect(() => {
+		if (!activeMileageReceiptId || activeMileageExpenseType !== "mileage") {
+			setMileageCalculation({
+				receiptId: null,
+				routeKey: "",
+				status: "idle",
+				message: "",
+			});
+			return;
+		}
+
+		const from = activeMileageFrom.trim();
+		const to = activeMileageTo.trim();
+		const rawStops = JSON.parse(activeMileageStopsKey) as string[];
+		const hasEmptyStops = rawStops.some((stop) => stop.trim().length === 0);
+		const stops = rawStops.map((stop) => stop.trim()).filter(Boolean);
+		const routeKey = [from, ...stops, to].join("\u001f");
+		const requestId = mileageRequestIdRef.current + 1;
+		mileageRequestIdRef.current = requestId;
+
+		if (!from || !to) {
+			setReceiptMileageMiles(activeMileageReceiptId, 0);
+			setMileageCalculation({
+				receiptId: activeMileageReceiptId,
+				routeKey,
+				status: "waiting",
+				message: "Enter From and To addresses to calculate mileage.",
+			});
+			return;
+		}
+
+		if (hasEmptyStops) {
+			setReceiptMileageMiles(activeMileageReceiptId, 0);
+			setMileageCalculation({
+				receiptId: activeMileageReceiptId,
+				routeKey,
+				status: "waiting",
+				message: "Fill every stop address to calculate the full route.",
+			});
+			return;
+		}
+
+		if (!googleMapsApiKey?.trim()) {
+			setReceiptMileageMiles(activeMileageReceiptId, 0);
+			setMileageCalculation({
+				receiptId: activeMileageReceiptId,
+				routeKey,
+				status: "error",
+				message:
+					"Automatic mileage calculation needs VITE_GOOGLE_MAPS_API_KEY.",
+			});
+			return;
+		}
+
+		if (maps.error) {
+			setReceiptMileageMiles(activeMileageReceiptId, 0);
+			setMileageCalculation({
+				receiptId: activeMileageReceiptId,
+				routeKey,
+				status: "error",
+				message: maps.error,
+			});
+			return;
+		}
+
+		if (maps.loading || !maps.ready) {
+			setMileageCalculation({
+				receiptId: activeMileageReceiptId,
+				routeKey,
+				status: "calculating",
+				message: "Loading route calculation...",
+			});
+			return;
+		}
+
+		setMileageCalculation({
+			receiptId: activeMileageReceiptId,
+			routeKey,
+			status: "calculating",
+			message: "Calculating driving distance...",
+		});
+
+		const timeout = window.setTimeout(() => {
+			calculateDrivingMiles({ from, to, stops })
+				.then((miles) => {
+					if (mileageRequestIdRef.current !== requestId) return;
+					setReceiptMileageMiles(activeMileageReceiptId, miles);
+					setMileageCalculation({
+						receiptId: activeMileageReceiptId,
+						routeKey,
+						status: "calculated",
+						message:
+							stops.length > 0
+								? "Calculated from From through every stop to To."
+								: "Calculated from From to To.",
+					});
+				})
+				.catch((error) => {
+					if (mileageRequestIdRef.current !== requestId) return;
+					setReceiptMileageMiles(activeMileageReceiptId, 0);
+					setMileageCalculation({
+						receiptId: activeMileageReceiptId,
+						routeKey,
+						status: "error",
+						message: getRouteCalculationErrorMessage(error),
+					});
+				});
+		}, 450);
+
+		return () => window.clearTimeout(timeout);
+	}, [
+		activeMileageExpenseType,
+		activeMileageFrom,
+		activeMileageReceiptId,
+		activeMileageStopsKey,
+		activeMileageTo,
+		maps.error,
+		maps.loading,
+		maps.ready,
+		setReceiptMileageMiles,
+	]);
+
 	const updateReceipt = (id: string, updates: Partial<ReceiptEntry>) => {
 		setReceipts((prev) =>
 			prev.map((r) => {
 				if (r.id !== id) return r;
 				const updated = { ...r, ...updates };
 				return recalcReceipt(updated);
+			}),
+		);
+	};
+
+	const updateMileageAddresses = (
+		id: string,
+		patch: Partial<
+			Pick<ReceiptEntry, "mileageFrom" | "mileageTo" | "mileageStops">
+		>,
+	) => {
+		setReceipts((prev) =>
+			prev.map((r) => {
+				if (r.id !== id) return r;
+				const merged = { ...r, ...patch };
+				const loc = formatMileageRoute(
+					merged.mileageFrom,
+					merged.mileageTo,
+					merged.mileageStops ?? [],
+				);
+				return recalcReceipt({ ...merged, location: loc, miles: 0 });
+			}),
+		);
+	};
+
+	const moveMileageStop = (id: string, index: number, delta: -1 | 1) => {
+		setReceipts((prev) =>
+			prev.map((r) => {
+				if (r.id !== id) return r;
+				const stops = [...(r.mileageStops ?? [])];
+				const j = index + delta;
+				if (j < 0 || j >= stops.length) return r;
+				[stops[index], stops[j]] = [stops[j], stops[index]];
+				const loc = formatMileageRoute(r.mileageFrom, r.mileageTo, stops);
+				return recalcReceipt({
+					...r,
+					mileageStops: stops,
+					location: loc,
+					miles: 0,
+				});
+			}),
+		);
+	};
+
+	const addMileageStop = (id: string) => {
+		setReceipts((prev) =>
+			prev.map((r) => {
+				if (r.id !== id) return r;
+				const stops = [...(r.mileageStops ?? []), ""];
+				const loc = formatMileageRoute(r.mileageFrom, r.mileageTo, stops);
+				return recalcReceipt({
+					...r,
+					mileageStops: stops,
+					location: loc,
+					miles: 0,
+				});
+			}),
+		);
+	};
+
+	const removeMileageStop = (id: string, index: number) => {
+		setReceipts((prev) =>
+			prev.map((r) => {
+				if (r.id !== id) return r;
+				const stops = (r.mileageStops ?? []).filter((_, i) => i !== index);
+				const loc = formatMileageRoute(r.mileageFrom, r.mileageTo, stops);
+				return recalcReceipt({
+					...r,
+					mileageStops: stops,
+					location: loc,
+					miles: 0,
+				});
 			}),
 		);
 	};
@@ -1264,12 +1748,59 @@ function ReceiptsStep({
 		}
 	};
 
-	const canProceed =
-		receipts.length > 0 &&
-		receipts.every((r) => !!r.receiptFile && r.total > 0 && r.vendorName);
+	const handleExpenseTypeChange = (
+		receiptId: string,
+		next: "receipt" | "mileage",
+	) => {
+		setParseResults((prev) => {
+			const n = { ...prev };
+			delete n[receiptId];
+			return n;
+		});
+		setReceipts((prev) =>
+			prev.map((r) => {
+				if (r.id !== receiptId) return r;
+				if (next === "mileage") {
+					return recalcReceipt({
+						...r,
+						expenseType: "mileage",
+						receiptFile: undefined,
+						receiptFileType: undefined,
+						miles: r.miles ?? 0,
+						mileageFrom: r.mileageFrom ?? "",
+						mileageTo: r.mileageTo ?? "",
+						mileageStops: r.mileageStops ?? [],
+					});
+				}
+				return recalcReceipt({
+					...r,
+					expenseType: "receipt",
+					miles: undefined,
+					mileageRatePerMile: undefined,
+					mileageFrom: undefined,
+					mileageTo: undefined,
+					mileageStops: undefined,
+					lineItems: [emptyLineItem()],
+					subtotal: 0,
+					tax: 0,
+					tip: 0,
+					shipping: 0,
+					total: 0,
+				});
+			}),
+		);
+	};
 
-	const activeReceipt =
-		receipts.find((r) => r.id === activeReceiptId) ?? receipts[0];
+	const expenseRowValid = (r: ReceiptEntry) => {
+		const nameOk = (r.vendorName ?? "").trim().length > 0;
+		if (r.expenseType === "mileage") {
+			return (r.miles ?? 0) > 0 && r.total > 0 && nameOk;
+		}
+		return !!r.receiptFile && r.total > 0 && nameOk;
+	};
+
+	const canProceed = receipts.length > 0 && receipts.every(expenseRowValid);
+
 	const activeReceiptIndex = receipts.findIndex(
 		(r) => r.id === activeReceipt?.id,
 	);
@@ -1307,16 +1838,16 @@ function ReceiptsStep({
 		<div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden">
 			<div className="flex items-center justify-between mb-4">
 				<div>
-					<h2 className="text-xl font-bold">Upload Receipts</h2>
+					<h2 className="text-xl font-bold">Expenses</h2>
 					<p className="text-xs text-muted-foreground">
 						{aiEnabled
-							? "Use tabs to organize each receipt, then verify AI-filled details"
-							: "Use tabs to organize each receipt and fill in details manually"}
+							? "Add receipt uploads or mileage; verify AI-filled details for receipts"
+							: "Add receipt uploads or mileage routes"}
 					</p>
 				</div>
 				<Button variant="outline" size="sm" onClick={addReceipt}>
 					<Plus className="w-4 h-4 mr-1" />
-					Add Receipt
+					Add expense
 				</Button>
 			</div>
 
@@ -1337,9 +1868,13 @@ function ReceiptsStep({
 								)}
 							>
 								<div className="flex items-center gap-2">
-									<Receipt className="h-3.5 w-3.5 text-muted-foreground" />
+									{receipt.expenseType === "mileage" ? (
+										<Car className="h-3.5 w-3.5 text-muted-foreground" />
+									) : (
+										<Receipt className="h-3.5 w-3.5 text-muted-foreground" />
+									)}
 									<span className="text-xs font-medium">
-										Receipt {index + 1}
+										Expense {index + 1}
 									</span>
 									{receipts.length > 1 && (
 										<span
@@ -1363,7 +1898,11 @@ function ReceiptsStep({
 									)}
 								</div>
 								<div className="mt-1 text-[11px] text-muted-foreground max-w-44 truncate">
-									{receipt.vendorName || "Awaiting upload"}
+									{(receipt.vendorName ?? "").trim()
+										? receipt.vendorName
+										: receipt.expenseType === "mileage"
+											? "Mileage"
+											: "Awaiting upload"}
 								</div>
 								<div className="mt-0.5 text-[11px] font-mono">
 									${receipt.total.toFixed(2)}
@@ -1374,420 +1913,752 @@ function ReceiptsStep({
 				</div>
 			</div>
 
-			<div className="rounded-xl border bg-card flex-1 min-h-[560px] overflow-hidden">
-				{activeReceipt.receiptFile ? (
-					<div className="grid h-full lg:grid-cols-2">
-						<div className="border-b lg:border-b-0 lg:border-r bg-background overflow-y-auto p-5 space-y-5">
-							<div className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/20">
-								<div className="min-w-0">
-									<Label className="font-semibold">Receipt File</Label>
-									<a
-										className="text-xs text-primary underline-offset-2 hover:underline truncate block"
-										href={activeReceipt.receiptFile}
-										target="_blank"
-										rel="noreferrer"
-									>
-										{activeReceipt.receiptFile
-											? "Open file"
-											: "No file uploaded"}
-									</a>
-								</div>
-								<div className="flex items-center gap-2">
-									<label>
-										<input
-											type="file"
-											className="hidden"
-											accept="image/*,application/pdf"
-											onChange={(e) => {
-												const file = e.target.files?.[0];
-												if (file) void handleFileUpload(activeReceipt.id, file);
-												e.target.value = "";
-											}}
-										/>
-										<Button
-											variant="outline"
-											size="sm"
-											asChild
-											disabled={isActiveUploading || isActiveParsing}
-										>
-											<span>
-												{activeReceipt.receiptFile ? "Replace" : "Upload"}
-											</span>
-										</Button>
-									</label>
-									{aiEnabled && activeReceipt.receiptFile && (
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() =>
-												void parseReceipt(
-													activeReceipt.id,
-													activeReceipt.receiptFile!,
-												)
+			<div className="rounded-xl border bg-card flex-1 min-h-[560px] overflow-hidden flex flex-col">
+				<div className="shrink-0 border-b px-4 py-3 bg-muted/10">
+					<p className="text-xs font-medium text-muted-foreground mb-2">
+						Expense type
+					</p>
+					<div
+						className="flex max-w-md w-full gap-0.5 rounded-lg border bg-background p-0.5"
+						role="radiogroup"
+						aria-label="Expense type"
+					>
+						<button
+							type="button"
+							role="radio"
+							aria-checked={activeReceipt.expenseType !== "mileage"}
+							className={cn(
+								"flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+								activeReceipt.expenseType !== "mileage"
+									? "bg-primary text-primary-foreground shadow-sm"
+									: "text-muted-foreground hover:text-foreground",
+							)}
+							onClick={() =>
+								handleExpenseTypeChange(activeReceipt.id, "receipt")
+							}
+						>
+							Receipt
+						</button>
+						<button
+							type="button"
+							role="radio"
+							aria-checked={activeReceipt.expenseType === "mileage"}
+							className={cn(
+								"inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+								activeReceipt.expenseType === "mileage"
+									? "bg-primary text-primary-foreground shadow-sm"
+									: "text-muted-foreground hover:text-foreground",
+							)}
+							onClick={() =>
+								handleExpenseTypeChange(activeReceipt.id, "mileage")
+							}
+						>
+							<Car className="h-3.5 w-3.5" />
+							Mileage
+						</button>
+					</div>
+				</div>
+				<div className="min-h-0 flex-1 overflow-hidden">
+					{activeReceipt.expenseType === "mileage" ? (
+						<div className="grid h-full lg:grid-cols-2">
+							<div className="max-h-[min(560px,70vh)] space-y-5 overflow-y-auto border-b bg-background p-5 lg:max-h-none lg:border-b-0 lg:border-r">
+								<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+									<div className="space-y-2 md:col-span-2">
+										<Label>Trip or purpose</Label>
+										<Input
+											placeholder="e.g. Supply run — campus to store"
+											value={activeReceipt.vendorName}
+											onChange={(e) =>
+												updateReceipt(activeReceipt.id, {
+													vendorName: e.target.value,
+												})
 											}
-											disabled={isActiveParsing}
-										>
-											{isActiveParsing && (
-												<Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label>Calculated miles</Label>
+										<div
+											className={cn(
+												"flex h-9 items-center justify-between rounded-md border bg-muted/30 px-3 text-sm",
+												mileageCalculation.status === "error" &&
+													mileageCalculation.receiptId === activeReceipt.id &&
+													"border-destructive/50 bg-destructive/5",
 											)}
-											Re-Parse
-										</Button>
-									)}
-								</div>
-							</div>
-
-							{isActiveUploading && (
-								<div className="text-xs text-muted-foreground flex items-center gap-2">
-									<Loader2 className="h-3.5 w-3.5 animate-spin" />
-									Uploading receipt...
-								</div>
-							)}
-
-							{parseResults[activeReceipt.id] && (
-								<p
-									className={cn(
-										"text-xs",
-										parseResults[activeReceipt.id].success
-											? "text-green-600"
-											: "text-amber-600",
-									)}
-								>
-									{parseResults[activeReceipt.id].message}
-								</p>
-							)}
-
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								<div className="space-y-2">
-									<Label>Vendor Name</Label>
-									<Input
-										placeholder="e.g. Amazon"
-										value={activeReceipt.vendorName}
-										onChange={(e) =>
-											updateReceipt(activeReceipt.id, {
-												vendorName: e.target.value,
-											})
-										}
-									/>
-								</div>
-								<div className="space-y-2">
-									<Label>Location</Label>
-									<Input
-										placeholder="e.g. Online"
-										value={activeReceipt.location}
-										onChange={(e) =>
-											updateReceipt(activeReceipt.id, {
-												location: e.target.value,
-											})
-										}
-									/>
-								</div>
-								<div className="space-y-2">
-									<Label>Date of Purchase</Label>
-									<Input
-										type="date"
-										value={
-											activeReceipt.dateOfPurchase
-												? new Date(activeReceipt.dateOfPurchase)
-														.toISOString()
-														.split("T")[0]
-												: ""
-										}
-										onChange={(e) =>
-											updateReceipt(activeReceipt.id, {
-												dateOfPurchase: new Date(e.target.value).getTime(),
-											})
-										}
-									/>
-								</div>
-							</div>
-
-							<div className="space-y-2">
-								<div className="flex items-center justify-between">
-									<Label>Line Items</Label>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => addLineItem(activeReceipt.id)}
-									>
-										<Plus className="h-3 w-3 mr-1" />
-										Add Item
-									</Button>
-								</div>
-								<div className="rounded-lg border overflow-hidden">
-									<div className="max-h-[280px] overflow-y-auto">
-										<table className="w-full text-sm">
-											<thead className="bg-muted/50 sticky top-0 z-10">
-												<tr>
-													<th className="px-3 py-2 text-left font-medium">
-														Description
-													</th>
-													<th className="px-3 py-2 text-left font-medium w-40">
-														Category
-													</th>
-													<th className="px-3 py-2 text-left font-medium w-28">
-														Amount
-													</th>
-													<th className="px-3 py-2 w-10" />
-												</tr>
-											</thead>
-											<tbody>
-												{activeReceipt.lineItems.map((li) => (
-													<tr key={li.id} className="border-t">
-														<td className="px-2 py-2">
-															<Input
-																placeholder="Description"
-																value={li.description}
-																onChange={(e) =>
-																	updateLineItem(activeReceipt.id, li.id, {
-																		description: e.target.value,
-																	})
-																}
-															/>
-														</td>
-														<td className="px-2 py-2">
-															<Select
-																value={li.category}
-																onValueChange={(val) =>
-																	updateLineItem(activeReceipt.id, li.id, {
-																		category: val,
-																	})
-																}
+										>
+											<span className="font-mono tabular-nums">
+												{(activeReceipt.miles ?? 0).toLocaleString(undefined, {
+													maximumFractionDigits: 2,
+												})}{" "}
+												mi
+											</span>
+											{mileageCalculation.status === "calculating" &&
+											mileageCalculation.receiptId === activeReceipt.id ? (
+												<Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+											) : null}
+										</div>
+										<p
+											className={cn(
+												"text-[11px] leading-snug text-muted-foreground",
+												mileageCalculation.status === "error" &&
+													mileageCalculation.receiptId === activeReceipt.id &&
+													"text-destructive",
+											)}
+										>
+											{mileageCalculation.receiptId === activeReceipt.id
+												? mileageCalculation.message
+												: "Mileage calculates automatically from the route."}
+										</p>
+									</div>
+									<div className="space-y-2">
+										<Label>Date of trip</Label>
+										<Input
+											type="date"
+											value={
+												activeReceipt.dateOfPurchase
+													? new Date(activeReceipt.dateOfPurchase)
+															.toISOString()
+															.split("T")[0]
+													: ""
+											}
+											onChange={(e) =>
+												updateReceipt(activeReceipt.id, {
+													dateOfPurchase: new Date(e.target.value).getTime(),
+												})
+											}
+										/>
+									</div>
+									<div className="md:col-span-2 space-y-4">
+										<AddressAutocompleteInput
+											id={`mileage-from-${activeReceipt.id}`}
+											label="From (address)"
+											placeholder="Starting address — search or type one line"
+											value={activeReceipt.mileageFrom ?? ""}
+											onChange={(v) =>
+												updateMileageAddresses(activeReceipt.id, {
+													mileageFrom: v,
+												})
+											}
+										/>
+										<AddressAutocompleteInput
+											id={`mileage-to-${activeReceipt.id}`}
+											label="To (address)"
+											placeholder="Destination address"
+											showFootnote={false}
+											value={activeReceipt.mileageTo ?? ""}
+											onChange={(v) =>
+												updateMileageAddresses(activeReceipt.id, {
+													mileageTo: v,
+												})
+											}
+										/>
+										<div className="space-y-3">
+											<div className="flex flex-wrap items-end justify-between gap-2">
+												<Label className="text-xs font-medium">
+													Stops (optional)
+												</Label>
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													className="h-8"
+													onClick={() => addMileageStop(activeReceipt.id)}
+												>
+													<Plus className="mr-1 h-3.5 w-3.5" />
+													Add stop
+												</Button>
+											</div>
+											<p className="text-[11px] text-muted-foreground -mt-1">
+												Each stop is a full address between From and To. Reorder
+												with the arrows.
+											</p>
+											{(activeReceipt.mileageStops ?? []).length === 0 ? (
+												<p className="text-xs text-muted-foreground italic">
+													No stops — route goes directly from From to To.
+												</p>
+											) : (
+												<ul className="space-y-3">
+													{(activeReceipt.mileageStops ?? []).map(
+														(stop, stopIndex) => (
+															<li
+																key={`${activeReceipt.id}-stop-${stopIndex}`}
+																className="flex gap-2 rounded-lg border bg-muted/20 p-3"
 															>
-																<SelectTrigger>
-																	<SelectValue />
-																</SelectTrigger>
-																<SelectContent>
-																	{CATEGORIES.map((cat) => (
-																		<SelectItem key={cat} value={cat}>
-																			{cat}
-																		</SelectItem>
-																	))}
-																</SelectContent>
-															</Select>
-														</td>
-														<td className="px-2 py-2">
-															<div className="relative">
-																<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-																	$
-																</span>
+																<div className="flex shrink-0 flex-col gap-0.5 pt-1">
+																	<Button
+																		type="button"
+																		variant="ghost"
+																		size="icon"
+																		className="h-7 w-7"
+																		disabled={stopIndex === 0}
+																		aria-label="Move stop up"
+																		onClick={() =>
+																			moveMileageStop(
+																				activeReceipt.id,
+																				stopIndex,
+																				-1,
+																			)
+																		}
+																	>
+																		<ChevronUp className="h-4 w-4" />
+																	</Button>
+																	<Button
+																		type="button"
+																		variant="ghost"
+																		size="icon"
+																		className="h-7 w-7"
+																		disabled={
+																			stopIndex >=
+																			(activeReceipt.mileageStops ?? [])
+																				.length -
+																				1
+																		}
+																		aria-label="Move stop down"
+																		onClick={() =>
+																			moveMileageStop(
+																				activeReceipt.id,
+																				stopIndex,
+																				1,
+																			)
+																		}
+																	>
+																		<ChevronDown className="h-4 w-4" />
+																	</Button>
+																</div>
+																<div className="min-w-0 flex-1">
+																	<AddressAutocompleteInput
+																		id={`mileage-stop-${activeReceipt.id}-${stopIndex}`}
+																		label={`Stop ${stopIndex + 1} (address)`}
+																		placeholder="Stop address"
+																		showFootnote={false}
+																		value={stop}
+																		onChange={(v) => {
+																			const stops = [
+																				...(activeReceipt.mileageStops ?? []),
+																			];
+																			stops[stopIndex] = v;
+																			updateMileageAddresses(activeReceipt.id, {
+																				mileageStops: stops,
+																			});
+																		}}
+																	/>
+																</div>
+																<Button
+																	type="button"
+																	variant="ghost"
+																	size="icon"
+																	className="mt-6 h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+																	aria-label="Remove stop"
+																	onClick={() =>
+																		removeMileageStop(
+																			activeReceipt.id,
+																			stopIndex,
+																		)
+																	}
+																>
+																	<Trash2 className="h-4 w-4" />
+																</Button>
+															</li>
+														),
+													)}
+												</ul>
+											)}
+										</div>
+										<div className="rounded-md border border-dashed bg-muted/30 px-3 py-2">
+											<p className="text-[11px] font-medium text-muted-foreground">
+												Route preview
+											</p>
+											<p className="text-sm font-medium text-foreground">
+												{formatMileageRoute(
+													activeReceipt.mileageFrom,
+													activeReceipt.mileageTo,
+													activeReceipt.mileageStops,
+												) || "—"}
+											</p>
+										</div>
+									</div>
+								</div>
+								<div className="space-y-2 rounded-lg border bg-muted/30 p-4">
+									<div className="flex justify-between text-sm">
+										<span className="text-muted-foreground">Rate</span>
+										<span className="font-mono tabular-nums">
+											${MILEAGE_RATE_PER_MILE.toFixed(2)} / mile
+										</span>
+									</div>
+									<div className="flex justify-between text-sm">
+										<span className="text-muted-foreground">Miles</span>
+										<span className="font-mono tabular-nums">
+											{(activeReceipt.miles ?? 0).toLocaleString(undefined, {
+												maximumFractionDigits: 2,
+											})}
+										</span>
+									</div>
+									<Separator />
+									<div className="flex items-baseline justify-between">
+										<span className="font-semibold">Reimbursement</span>
+										<span className="font-mono text-xl font-bold tabular-nums">
+											${activeReceipt.total.toFixed(2)}
+										</span>
+									</div>
+								</div>
+								<div className="space-y-2">
+									<Label>Notes</Label>
+									<Textarea
+										placeholder="Any notes about this trip..."
+										value={activeReceipt.notes}
+										onChange={(e) =>
+											updateReceipt(activeReceipt.id, { notes: e.target.value })
+										}
+										rows={2}
+									/>
+								</div>
+							</div>
+							<div className="flex min-h-[280px] items-center justify-center bg-muted/20 p-6 lg:min-h-0">
+								<div className="w-full max-w-sm space-y-4 rounded-xl border bg-card p-6 shadow-sm">
+									<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+										Summary
+									</p>
+									<div className="flex justify-between text-sm">
+										<span className="text-muted-foreground">Rate</span>
+										<span className="font-mono tabular-nums">
+											${MILEAGE_RATE_PER_MILE.toFixed(2)}/mi
+										</span>
+									</div>
+									<div className="flex justify-between text-sm">
+										<span className="text-muted-foreground">Distance</span>
+										<span className="font-mono tabular-nums">
+											{(activeReceipt.miles ?? 0).toLocaleString(undefined, {
+												maximumFractionDigits: 2,
+											})}{" "}
+											mi
+										</span>
+									</div>
+									<Separator />
+									<div className="flex items-baseline justify-between pt-1">
+										<span className="text-base font-semibold">Total</span>
+										<span className="font-mono text-2xl font-bold tabular-nums">
+											${activeReceipt.total.toFixed(2)}
+										</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					) : activeReceipt.receiptFile ? (
+						<div className="grid h-full lg:grid-cols-2">
+							<div className="border-b lg:border-b-0 lg:border-r bg-background overflow-y-auto p-5 space-y-5">
+								<div className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/20">
+									<div className="min-w-0">
+										<Label className="font-semibold">Receipt File</Label>
+										<a
+											className="text-xs text-primary underline-offset-2 hover:underline truncate block"
+											href={activeReceipt.receiptFile}
+											target="_blank"
+											rel="noreferrer"
+										>
+											{activeReceipt.receiptFile
+												? "Open file"
+												: "No file uploaded"}
+										</a>
+									</div>
+									<div className="flex items-center gap-2">
+										<label>
+											<input
+												type="file"
+												className="hidden"
+												accept="image/*,application/pdf"
+												onChange={(e) => {
+													const file = e.target.files?.[0];
+													if (file)
+														void handleFileUpload(activeReceipt.id, file);
+													e.target.value = "";
+												}}
+											/>
+											<Button
+												variant="outline"
+												size="sm"
+												asChild
+												disabled={isActiveUploading || isActiveParsing}
+											>
+												<span>
+													{activeReceipt.receiptFile ? "Replace" : "Upload"}
+												</span>
+											</Button>
+										</label>
+										{aiEnabled && activeReceipt.receiptFile && (
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={() =>
+													void parseReceipt(
+														activeReceipt.id,
+														activeReceipt.receiptFile!,
+													)
+												}
+												disabled={isActiveParsing}
+											>
+												{isActiveParsing && (
+													<Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+												)}
+												Re-Parse
+											</Button>
+										)}
+									</div>
+								</div>
+
+								{isActiveUploading && (
+									<div className="text-xs text-muted-foreground flex items-center gap-2">
+										<Loader2 className="h-3.5 w-3.5 animate-spin" />
+										Uploading receipt...
+									</div>
+								)}
+
+								{parseResults[activeReceipt.id] && (
+									<p
+										className={cn(
+											"text-xs",
+											parseResults[activeReceipt.id].success
+												? "text-green-600"
+												: "text-amber-600",
+										)}
+									>
+										{parseResults[activeReceipt.id].message}
+									</p>
+								)}
+
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+									<div className="space-y-2">
+										<Label>Vendor Name</Label>
+										<Input
+											placeholder="e.g. Amazon"
+											value={activeReceipt.vendorName}
+											onChange={(e) =>
+												updateReceipt(activeReceipt.id, {
+													vendorName: e.target.value,
+												})
+											}
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label>Location</Label>
+										<Input
+											placeholder="e.g. Online"
+											value={activeReceipt.location}
+											onChange={(e) =>
+												updateReceipt(activeReceipt.id, {
+													location: e.target.value,
+												})
+											}
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label>Date of Purchase</Label>
+										<Input
+											type="date"
+											value={
+												activeReceipt.dateOfPurchase
+													? new Date(activeReceipt.dateOfPurchase)
+															.toISOString()
+															.split("T")[0]
+													: ""
+											}
+											onChange={(e) =>
+												updateReceipt(activeReceipt.id, {
+													dateOfPurchase: new Date(e.target.value).getTime(),
+												})
+											}
+										/>
+									</div>
+								</div>
+
+								<div className="space-y-2">
+									<div className="flex items-center justify-between">
+										<Label>Line Items</Label>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => addLineItem(activeReceipt.id)}
+										>
+											<Plus className="h-3 w-3 mr-1" />
+											Add Item
+										</Button>
+									</div>
+									<div className="rounded-lg border overflow-hidden">
+										<div className="max-h-[280px] overflow-y-auto">
+											<table className="w-full text-sm">
+												<thead className="bg-muted/50 sticky top-0 z-10">
+													<tr>
+														<th className="px-3 py-2 text-left font-medium">
+															Description
+														</th>
+														<th className="px-3 py-2 text-left font-medium w-40">
+															Category
+														</th>
+														<th className="px-3 py-2 text-left font-medium w-28">
+															Amount
+														</th>
+														<th className="px-3 py-2 w-10" />
+													</tr>
+												</thead>
+												<tbody>
+													{activeReceipt.lineItems.map((li) => (
+														<tr key={li.id} className="border-t">
+															<td className="px-2 py-2">
 																<Input
-																	type="number"
-																	step="0.01"
-																	min="0"
-																	className="pl-7"
-																	value={li.amount || ""}
+																	placeholder="Description"
+																	value={li.description}
 																	onChange={(e) =>
 																		updateLineItem(activeReceipt.id, li.id, {
-																			amount: parseFloat(e.target.value) || 0,
+																			description: e.target.value,
 																		})
 																	}
 																/>
-															</div>
-														</td>
-														<td className="px-2 py-2">
-															{activeReceipt.lineItems.length > 1 && (
-																<Button
-																	variant="ghost"
-																	size="icon"
-																	onClick={() =>
-																		removeLineItem(activeReceipt.id, li.id)
+															</td>
+															<td className="px-2 py-2">
+																<Select
+																	value={li.category}
+																	onValueChange={(val) =>
+																		updateLineItem(activeReceipt.id, li.id, {
+																			category: val,
+																		})
 																	}
 																>
-																	<Trash2 className="h-3.5 w-3.5" />
-																</Button>
-															)}
-														</td>
-													</tr>
-												))}
-											</tbody>
-										</table>
+																	<SelectTrigger>
+																		<SelectValue />
+																	</SelectTrigger>
+																	<SelectContent>
+																		{CATEGORIES.map((cat) => (
+																			<SelectItem key={cat} value={cat}>
+																				{cat}
+																			</SelectItem>
+																		))}
+																	</SelectContent>
+																</Select>
+															</td>
+															<td className="px-2 py-2">
+																<div className="relative">
+																	<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+																		$
+																	</span>
+																	<Input
+																		type="number"
+																		step="0.01"
+																		min="0"
+																		className="pl-7"
+																		value={li.amount || ""}
+																		onChange={(e) =>
+																			updateLineItem(activeReceipt.id, li.id, {
+																				amount: parseFloat(e.target.value) || 0,
+																			})
+																		}
+																	/>
+																</div>
+															</td>
+															<td className="px-2 py-2">
+																{activeReceipt.lineItems.length > 1 && (
+																	<Button
+																		variant="ghost"
+																		size="icon"
+																		onClick={() =>
+																			removeLineItem(activeReceipt.id, li.id)
+																		}
+																	>
+																		<Trash2 className="h-3.5 w-3.5" />
+																	</Button>
+																)}
+															</td>
+														</tr>
+													))}
+												</tbody>
+											</table>
+										</div>
 									</div>
+								</div>
+
+								<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+									<div className="space-y-2">
+										<Label>Tax</Label>
+										<div className="relative">
+											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+												$
+											</span>
+											<Input
+												type="number"
+												step="0.01"
+												min="0"
+												className="pl-7"
+												value={activeReceipt.tax || ""}
+												onChange={(e) =>
+													updateReceipt(activeReceipt.id, {
+														tax: parseFloat(e.target.value) || 0,
+													})
+												}
+											/>
+										</div>
+									</div>
+									<div className="space-y-2">
+										<Label>Tip</Label>
+										<div className="relative">
+											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+												$
+											</span>
+											<Input
+												type="number"
+												step="0.01"
+												min="0"
+												className="pl-7"
+												value={activeReceipt.tip || ""}
+												onChange={(e) =>
+													updateReceipt(activeReceipt.id, {
+														tip: parseFloat(e.target.value) || 0,
+													})
+												}
+											/>
+										</div>
+									</div>
+									<div className="space-y-2">
+										<Label>Shipping</Label>
+										<div className="relative">
+											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+												$
+											</span>
+											<Input
+												type="number"
+												step="0.01"
+												min="0"
+												className="pl-7"
+												value={activeReceipt.shipping || ""}
+												onChange={(e) =>
+													updateReceipt(activeReceipt.id, {
+														shipping: parseFloat(e.target.value) || 0,
+													})
+												}
+											/>
+										</div>
+									</div>
+									<div className="space-y-2">
+										<Label>Subtotal</Label>
+										<div className="flex items-center h-9 px-3 rounded-md border bg-muted/50 font-mono text-sm">
+											${activeReceipt.subtotal.toFixed(2)}
+										</div>
+									</div>
+								</div>
+
+								<div className="flex justify-end">
+									<div className="text-right">
+										<p className="text-sm text-muted-foreground">
+											Receipt Total
+										</p>
+										<p className="text-xl font-bold font-mono">
+											${activeReceipt.total.toFixed(2)}
+										</p>
+									</div>
+								</div>
+
+								<div className="space-y-2">
+									<Label>Notes</Label>
+									<Textarea
+										placeholder="Any notes about this receipt..."
+										value={activeReceipt.notes}
+										onChange={(e) =>
+											updateReceipt(activeReceipt.id, { notes: e.target.value })
+										}
+										rows={2}
+									/>
 								</div>
 							</div>
 
-							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-								<div className="space-y-2">
-									<Label>Tax</Label>
-									<div className="relative">
-										<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-											$
-										</span>
-										<Input
-											type="number"
-											step="0.01"
-											min="0"
-											className="pl-7"
-											value={activeReceipt.tax || ""}
-											onChange={(e) =>
-												updateReceipt(activeReceipt.id, {
-													tax: parseFloat(e.target.value) || 0,
-												})
-											}
+							<div className="bg-muted/20 h-full min-h-[320px] p-4 flex items-center justify-center">
+								{activeReceipt.receiptFile ? (
+									activeReceipt.receiptFileType === "application/pdf" ||
+									activeReceipt.receiptFile.toLowerCase().endsWith(".pdf") ||
+									activeReceipt.receiptFile.toLowerCase().includes(".pdf?") ? (
+										<iframe
+											src={activeReceipt.receiptFile}
+											className="w-full h-full rounded-lg border bg-white"
+											title={`Receipt ${activeReceiptIndex + 1}`}
 										/>
-									</div>
-								</div>
-								<div className="space-y-2">
-									<Label>Tip</Label>
-									<div className="relative">
-										<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-											$
-										</span>
-										<Input
-											type="number"
-											step="0.01"
-											min="0"
-											className="pl-7"
-											value={activeReceipt.tip || ""}
-											onChange={(e) =>
-												updateReceipt(activeReceipt.id, {
-													tip: parseFloat(e.target.value) || 0,
-												})
-											}
+									) : (
+										<img
+											src={activeReceipt.receiptFile}
+											alt={`Receipt ${activeReceiptIndex + 1}`}
+											className="max-w-full max-h-full object-contain rounded-lg border bg-black/5"
+											onError={(e) => {
+												// If image fails to load, it might be a PDF — try rendering as iframe
+												const parent = e.currentTarget.parentElement;
+												if (parent && activeReceipt.receiptFile) {
+													e.currentTarget.style.display = "none";
+													const iframe = document.createElement("iframe");
+													iframe.src = activeReceipt.receiptFile;
+													iframe.className =
+														"w-full h-full rounded-lg border bg-white";
+													iframe.title = `Receipt ${activeReceiptIndex + 1}`;
+													iframe.style.minHeight = "320px";
+													parent.appendChild(iframe);
+												}
+											}}
 										/>
+									)
+								) : (
+									<div className="text-center text-muted-foreground">
+										<Receipt className="w-12 h-12 mx-auto mb-2 opacity-50" />
+										<p className="text-sm">No receipt uploaded</p>
 									</div>
-								</div>
-								<div className="space-y-2">
-									<Label>Shipping</Label>
-									<div className="relative">
-										<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-											$
-										</span>
-										<Input
-											type="number"
-											step="0.01"
-											min="0"
-											className="pl-7"
-											value={activeReceipt.shipping || ""}
-											onChange={(e) =>
-												updateReceipt(activeReceipt.id, {
-													shipping: parseFloat(e.target.value) || 0,
-												})
-											}
-										/>
-									</div>
-								</div>
-								<div className="space-y-2">
-									<Label>Subtotal</Label>
-									<div className="flex items-center h-9 px-3 rounded-md border bg-muted/50 font-mono text-sm">
-										${activeReceipt.subtotal.toFixed(2)}
-									</div>
-								</div>
-							</div>
-
-							<div className="flex justify-end">
-								<div className="text-right">
-									<p className="text-sm text-muted-foreground">Receipt Total</p>
-									<p className="text-xl font-bold font-mono">
-										${activeReceipt.total.toFixed(2)}
-									</p>
-								</div>
-							</div>
-
-							<div className="space-y-2">
-								<Label>Notes</Label>
-								<Textarea
-									placeholder="Any notes about this receipt..."
-									value={activeReceipt.notes}
-									onChange={(e) =>
-										updateReceipt(activeReceipt.id, { notes: e.target.value })
-									}
-									rows={2}
-								/>
+								)}
 							</div>
 						</div>
-
-						<div className="bg-muted/20 h-full min-h-[320px] p-4 flex items-center justify-center">
-							{activeReceipt.receiptFile ? (
-								activeReceipt.receiptFileType === "application/pdf" ||
-								activeReceipt.receiptFile.toLowerCase().endsWith(".pdf") ||
-								activeReceipt.receiptFile.toLowerCase().includes(".pdf?") ? (
-									<iframe
-										src={activeReceipt.receiptFile}
-										className="w-full h-full rounded-lg border bg-white"
-										title={`Receipt ${activeReceiptIndex + 1}`}
-									/>
-								) : (
-									<img
-										src={activeReceipt.receiptFile}
-										alt={`Receipt ${activeReceiptIndex + 1}`}
-										className="max-w-full max-h-full object-contain rounded-lg border bg-black/5"
-										onError={(e) => {
-											// If image fails to load, it might be a PDF — try rendering as iframe
-											const parent = e.currentTarget.parentElement;
-											if (parent && activeReceipt.receiptFile) {
-												e.currentTarget.style.display = "none";
-												const iframe = document.createElement("iframe");
-												iframe.src = activeReceipt.receiptFile;
-												iframe.className =
-													"w-full h-full rounded-lg border bg-white";
-												iframe.title = `Receipt ${activeReceiptIndex + 1}`;
-												iframe.style.minHeight = "320px";
-												parent.appendChild(iframe);
-											}
+					) : (
+						<div className="h-full flex items-center justify-center p-8">
+							<div className="w-full max-w-md rounded-xl border-2 border-dashed bg-muted/20 p-8 text-center">
+								<div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+									<Upload className="h-6 w-6 text-primary" />
+								</div>
+								<h3 className="text-base font-semibold">
+									Upload receipt before entering details
+								</h3>
+								<p className="mt-2 text-sm text-muted-foreground">
+									Fields will appear after upload. Supports PDF, PNG, JPG, JPEG,
+									WEBP.
+								</p>
+								<label className="mt-4 block">
+									<input
+										type="file"
+										className="hidden"
+										accept="image/*,application/pdf"
+										onChange={(e) => {
+											const file = e.target.files?.[0];
+											if (file) void handleFileUpload(activeReceipt.id, file);
+											e.target.value = "";
 										}}
 									/>
-								)
-							) : (
-								<div className="text-center text-muted-foreground">
-									<Receipt className="w-12 h-12 mx-auto mb-2 opacity-50" />
-									<p className="text-sm">No receipt uploaded</p>
-								</div>
-							)}
-						</div>
-					</div>
-				) : (
-					<div className="h-full flex items-center justify-center p-8">
-						<div className="w-full max-w-md rounded-xl border-2 border-dashed bg-muted/20 p-8 text-center">
-							<div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-								<Upload className="h-6 w-6 text-primary" />
+									<Button asChild>
+										<span>Select File</span>
+									</Button>
+								</label>
+								{(isActiveUploading || isActiveParsing) && (
+									<div className="mt-4 text-xs text-muted-foreground flex items-center justify-center gap-2">
+										<Loader2 className="h-3.5 w-3.5 animate-spin" />
+										{isActiveUploading
+											? "Uploading receipt..."
+											: aiEnabled
+												? "AI is parsing receipt..."
+												: "Ready for manual entry."}
+									</div>
+								)}
+								{parseResults[activeReceipt.id] && (
+									<p
+										className={cn(
+											"mt-3 text-xs",
+											parseResults[activeReceipt.id].success
+												? "text-green-600"
+												: "text-amber-600",
+										)}
+									>
+										{parseResults[activeReceipt.id].message}
+									</p>
+								)}
 							</div>
-							<h3 className="text-base font-semibold">
-								Upload receipt before entering details
-							</h3>
-							<p className="mt-2 text-sm text-muted-foreground">
-								Fields will appear after upload. Supports PDF, PNG, JPG, JPEG,
-								WEBP.
-							</p>
-							<label className="mt-4 block">
-								<input
-									type="file"
-									className="hidden"
-									accept="image/*,application/pdf"
-									onChange={(e) => {
-										const file = e.target.files?.[0];
-										if (file) void handleFileUpload(activeReceipt.id, file);
-										e.target.value = "";
-									}}
-								/>
-								<Button asChild>
-									<span>Select File</span>
-								</Button>
-							</label>
-							{(isActiveUploading || isActiveParsing) && (
-								<div className="mt-4 text-xs text-muted-foreground flex items-center justify-center gap-2">
-									<Loader2 className="h-3.5 w-3.5 animate-spin" />
-									{isActiveUploading
-										? "Uploading receipt..."
-										: aiEnabled
-											? "AI is parsing receipt..."
-											: "Ready for manual entry."}
-								</div>
-							)}
-							{parseResults[activeReceipt.id] && (
-								<p
-									className={cn(
-										"mt-3 text-xs",
-										parseResults[activeReceipt.id].success
-											? "text-green-600"
-											: "text-amber-600",
-									)}
-								>
-									{parseResults[activeReceipt.id].message}
-								</p>
-							)}
 						</div>
-					</div>
-				)}
+					)}
+				</div>
 			</div>
 
 			<StepNavigation
@@ -1920,14 +2791,58 @@ function ReviewStep({
 											{i + 1}
 										</div>
 										<div>
-											<h4 className="font-bold">
-												{r.vendorName || "Unnamed Receipt"}
-											</h4>
+											<div className="flex flex-wrap items-center gap-2">
+												<h4 className="font-bold">
+													{r.vendorName ||
+														(r.expenseType === "mileage"
+															? "Mileage"
+															: "Unnamed Receipt")}
+												</h4>
+												{r.expenseType === "mileage" && (
+													<Badge
+														variant="secondary"
+														className="text-[10px] font-normal"
+													>
+														Mileage
+													</Badge>
+												)}
+											</div>
 											<p className="text-xs text-muted-foreground">
-												{r.dateOfPurchase
-													? new Date(r.dateOfPurchase).toLocaleDateString()
-													: "N/A"}{" "}
-												• {r.location || "No location"}
+												{r.expenseType === "mileage" ? (
+													<>
+														{(r.miles ?? 0).toLocaleString(undefined, {
+															maximumFractionDigits: 2,
+														})}{" "}
+														mi × ${MILEAGE_RATE_PER_MILE.toFixed(2)}/mi •{" "}
+														{r.dateOfPurchase
+															? new Date(r.dateOfPurchase).toLocaleDateString()
+															: "N/A"}
+														{formatMileageRoute(
+															r.mileageFrom,
+															r.mileageTo,
+															r.mileageStops,
+														) ? (
+															<>
+																{" "}
+																•{" "}
+																{formatMileageRoute(
+																	r.mileageFrom,
+																	r.mileageTo,
+																	r.mileageStops,
+																)}
+															</>
+														) : r.location?.trim() ? (
+															<> • {r.location}</>
+														) : null}
+													</>
+												) : (
+													<>
+														{r.dateOfPurchase
+															? new Date(r.dateOfPurchase).toLocaleDateString()
+															: "N/A"}{" "}
+														• {r.location || "No location"}
+													</>
+												)}
 											</p>
 										</div>
 									</div>
@@ -2010,7 +2925,9 @@ function ReimbursementPage() {
 		logtoId ? { logtoId } : "skip",
 	);
 	const createReimbursement = useAuthedMutation(api.reimbursements.create);
-	const generateUploadUrl = useAuthedMutation(api.reimbursements.generateUploadUrl);
+	const generateUploadUrl = useAuthedMutation(
+		api.reimbursements.generateUploadUrl,
+	);
 	const getStorageUrl = useAuthedMutation(api.reimbursements.getStorageUrl);
 
 	const [view, setView] = useState<"list" | "create" | "detail">("list");
@@ -2107,20 +3024,43 @@ function ReimbursementPage() {
 
 		setIsSubmitting(true);
 		try {
-			const formattedReceipts = receipts.map((r) => ({
-				id: r.id,
-				vendorName: r.vendorName,
-				location: r.location,
-				dateOfPurchase: new Date(r.dateOfPurchase).getTime(),
-				receiptFile: r.receiptFile,
-				lineItems: r.lineItems.filter((li) => li.description.trim()),
-				notes: r.notes || undefined,
-				subtotal: r.subtotal,
-				tax: r.tax || undefined,
-				tip: r.tip || undefined,
-				shipping: r.shipping || undefined,
-				total: r.total,
-			}));
+			const formattedReceipts = receipts.map((r) => {
+				const lineItems = r.lineItems.filter((li) => li.description.trim());
+				const mileageRoute =
+					r.expenseType === "mileage"
+						? formatMileageRoute(r.mileageFrom, r.mileageTo, r.mileageStops)
+						: r.location;
+				const common = {
+					id: r.id,
+					vendorName: r.vendorName,
+					location: mileageRoute,
+					dateOfPurchase: new Date(r.dateOfPurchase).getTime(),
+					lineItems,
+					notes: r.notes || undefined,
+					subtotal: r.subtotal,
+					tax: r.tax || undefined,
+					tip: r.tip || undefined,
+					shipping: r.shipping || undefined,
+					total: r.total,
+				};
+				if (r.expenseType === "mileage") {
+					const stops = r.mileageStops?.filter((s) => s.trim()) ?? [];
+					return {
+						...common,
+						expenseType: "mileage" as const,
+						miles: r.miles,
+						mileageRatePerMile: MILEAGE_RATE_PER_MILE,
+						mileageFrom: r.mileageFrom?.trim() || undefined,
+						mileageTo: r.mileageTo?.trim() || undefined,
+						mileageStops: stops.length > 0 ? stops : undefined,
+					};
+				}
+				return {
+					...common,
+					expenseType: "receipt" as const,
+					receiptFile: r.receiptFile,
+				};
+			});
 
 			const newId = await createReimbursement({
 				logtoId,
@@ -2204,7 +3144,9 @@ function ReimbursementPage() {
 				</div>
 
 				{/* Step Content */}
-				{step === 1 && <AIWarningStep onNext={handleNext} aiEnabled={aiEnabled} />}
+				{step === 1 && (
+					<AIWarningStep onNext={handleNext} aiEnabled={aiEnabled} />
+				)}
 				{step === 2 && (
 					<BasicInfoStep
 						formData={formData}

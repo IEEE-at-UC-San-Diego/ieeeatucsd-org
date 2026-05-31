@@ -1,3 +1,5 @@
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import {
 	Check,
 	DollarSign,
@@ -12,14 +14,10 @@ import {
 	X,
 } from "lucide-react";
 import { useCallback, useEffect, useId, useState } from "react";
-import { useAuthedMutation } from "@/hooks/useAuthedConvex";
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
-import { useAuth } from "@/hooks/useAuth";
-import { sendNotification } from "@/lib/send-notification";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -31,6 +29,9 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuthedMutation } from "@/hooks/useAuthedConvex";
+import { sendNotification } from "@/lib/send-notification";
 import {
 	CATEGORY_LABELS,
 	DEPARTMENT_LABELS,
@@ -59,9 +60,13 @@ interface FundRequestFormModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	onSuccess: () => void;
-	initialData?: Partial<FundRequestFormData> & { amount?: string | number; _id?: string };
+	initialData?: Partial<FundRequestFormData> & {
+		amount?: string | number;
+		_id?: string;
+	};
 	isEditMode?: boolean;
 	showHeader?: boolean;
+	renderMode?: "modal" | "page";
 	logtoId?: string;
 	editRequestId?: string;
 	className?: string; // Add className prop
@@ -80,6 +85,7 @@ export function FundRequestFormModal({
 	initialData,
 	isEditMode = false,
 	showHeader = true,
+	renderMode = "modal",
 	logtoId,
 	editRequestId,
 	className,
@@ -282,7 +288,8 @@ export function FundRequestFormModal({
 					category,
 					department,
 					amount: parsedAmount,
-					vendorLinks: cleanedVendorLinks.length > 0 ? cleanedVendorLinks : undefined,
+					vendorLinks:
+						cleanedVendorLinks.length > 0 ? cleanedVendorLinks : undefined,
 				});
 			} else {
 				const newId = await createFundRequest({
@@ -292,7 +299,8 @@ export function FundRequestFormModal({
 					category,
 					department,
 					amount: parsedAmount,
-					vendorLinks: cleanedVendorLinks.length > 0 ? cleanedVendorLinks : undefined,
+					vendorLinks:
+						cleanedVendorLinks.length > 0 ? cleanedVendorLinks : undefined,
 				});
 
 				// Fire-and-forget email notification
@@ -789,8 +797,10 @@ export function FundRequestFormModal({
 
 	if (!isOpen) return null;
 
-	return (
-		<Card className={`border-0 shadow-none overflow-hidden flex flex-col h-full w-full bg-transparent ${className || ""}`}>
+	const formContent = (
+		<Card
+			className={`border-0 shadow-none overflow-hidden flex flex-col h-full w-full bg-transparent ${className || ""}`}
+		>
 			{showHeader && (
 				<div className="border-b bg-muted/10 px-4 py-3 flex-shrink-0 flex items-center justify-between">
 					<div>
@@ -801,7 +811,13 @@ export function FundRequestFormModal({
 							Complete each step to submit a clear, review-ready request.
 						</p>
 					</div>
-					<Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon"
+						onClick={onClose}
+						className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+					>
 						<X className="w-4 h-4" />
 					</Button>
 				</div>
@@ -855,11 +871,14 @@ export function FundRequestFormModal({
 			</div>
 
 			<ScrollArea className="flex-1 min-h-0 bg-muted/5">
-				<div className="py-4 px-4 h-full max-w-[1800px] mx-auto w-full">{renderStepContent()}</div>
+				<div className="py-4 px-4 h-full max-w-[1800px] mx-auto w-full">
+					{renderStepContent()}
+				</div>
 			</ScrollArea>
 
 			<div className="flex-col sm:flex-row sm:justify-between sm:items-center gap-3 px-4 py-3 border-t bg-background flex flex-shrink-0 z-20 shadow-[0_-5px_10px_rgba(0,0,0,0.02)]">
 				<Button
+					type="button"
 					variant="ghost"
 					onClick={onClose}
 					disabled={isSubmitting}
@@ -882,11 +901,16 @@ export function FundRequestFormModal({
 					)}
 
 					{currentStep < STEPS.length ? (
-						<Button onClick={handleNextStep} className="flex-1 sm:flex-none">
+						<Button
+							type="button"
+							onClick={handleNextStep}
+							className="flex-1 sm:flex-none"
+						>
 							Next Step
 						</Button>
 					) : (
 						<Button
+							type="button"
 							onClick={handleSubmit}
 							disabled={isSubmitting}
 							className="flex-1 sm:flex-none"
@@ -900,5 +924,27 @@ export function FundRequestFormModal({
 				</div>
 			</div>
 		</Card>
+	);
+
+	if (renderMode === "page") {
+		return formContent;
+	}
+
+	return (
+		<Dialog
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open && !isSubmitting) {
+					onClose();
+				}
+			}}
+		>
+			<DialogContent
+				showCloseButton={false}
+				className="max-w-6xl h-[min(92vh,960px)] overflow-hidden p-0 gap-0"
+			>
+				{formContent}
+			</DialogContent>
+		</Dialog>
 	);
 }

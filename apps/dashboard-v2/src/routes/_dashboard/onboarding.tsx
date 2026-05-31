@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAuthedQuery, useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { api } from "@convex/_generated/api";
+import { DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE } from "@/lib/onboarding-template";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,6 +50,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -74,47 +77,14 @@ const ALL_ROLES = [
 
 const TEAMS = ["Internal", "Events", "Projects"] as const;
 
-const DEFAULT_EMAIL_TEMPLATE = `Hello {NAME}!
+type PositionField = { id: string; value: string };
 
-Congratulations on being elected as the new {POSITION} for IEEE at UC San Diego! There is a lot of information to get started but it is fairly quick and straightforward. Please read this email in its entirety. If you have any problems feel free to ask me or any of the other officers!
-
-1. Contact Info
-
-Our primary forms of communication are through Slack, Google Groups, Google Drive, and Google Sites. In order to be added to these lists, please input your contact information onto this document. Once you fill out your information on this document (https://docs.google.com/spreadsheets/d/1XTaiDNwJqFelR_w3v_vvptxxLQGcEfI0Fl3bf7cDGS8/edit?gid=0#gid=0), please respond to this email confirming that, as we need this information for some of the following tasks.
-
-2. Join IEEE
-
-Go to http://ieee.org/join and join IEEE as a student member. Be sure to list UC San Diego as your affiliated branch. The cost is $32 / year. IEEE is our parent organization and our constitution states that all officers must be members of IEEE.
-
-3. Join the Dashboard and Slack
-
-Your role should have been updated on our Dashboard to a general officer, if it hasn't please let me know as soon as possible. Once on the dashboard, please go into the tab labeled "Slack Access" and follow the instructions to gain access to your IEEE email for slack.
-
-Here is some information about Slack if you have not used it in the past:
-
-I. Slack is a popular cloud-based team collaboration tool that allows members to have real-time chatting and document sharing under different topics (called "channels" in Slack). After your first login, you should find out a list of channels, and please consult your mentor or executive board officers regarding which channels you should join. {LEADER_INFO}
-
-You should definitely join channels such as "#-announcements", "#-executive", "#-events",  "#-internal", "#-projects", "#-pr", "#-outreach", and "#z_play" in order to establish your initial connection with the whole team. Please also put your position in your Slack Profile and add a picture!
-
-II. If you are new to Slack, please follow the tutorial that should pop out after your first login. You may also familiarize yourself with Slack by checking out this page. It is required that you should install the Slack Mobile App to your cell phone with your account logged on so that you are reachable by all other officers. Slack Desktop App is also nice to have.
-
-III. After you download Slack, make sure to change these settings:
-\ta. "Notify me about…" —> Select "All new messages"
-\tb. Check the box labeled "Notify me about replies to threads I'm following"
-\tc. Notification Schedule —> Every day, 00:00 to Midnight
-\td. "When I'm inactive on desktop" —> "Send notifications to my mobile devices" —> Select "as soon as I'm inactive"
-
-4. Position Email
-
-After you're on Slack, we will provide you access with your Positions email that provides access to all documents and files we will be using within the organization throughout the year.
-
-5. Read Slack and your email frequently. Good communication is key. Please try to be responsive.
-
-Once you join these groups, you will receive information on weekly meetings with your subgroups (Internal, Events, Project) for the rest of the quarter as well as further onboarding information for your position.
-
-{CUSTOM_MESSAGE}
-
-Once again, congratulations on this position and we're all so excited to have you on our board! We'll be here to support you in every step of the way so feel free to ask any questions and get as much clarification as you need.`;
+function createPositionField(value = ""): PositionField {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    value,
+  };
+}
 
 // ── Main Page ──
 
@@ -171,6 +141,10 @@ function OnboardingPage() {
             <List className="h-4 w-4" />
             Pending Invitations
           </TabsTrigger>
+          <TabsTrigger value="rejections" className="gap-2">
+            <XCircle className="h-4 w-4" />
+            Rejections
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="invitation">
@@ -183,6 +157,10 @@ function OnboardingPage() {
 
         <TabsContent value="pending">
           <PendingInvitationsTab logtoId={logtoId} />
+        </TabsContent>
+
+        <TabsContent value="rejections">
+          <RejectionsTab logtoId={logtoId} />
         </TabsContent>
       </Tabs>
     </div>
@@ -199,7 +177,9 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>("General Officer");
-  const [position, setPosition] = useState("");
+  const [positions, setPositions] = useState<PositionField[]>(() => [
+    createPositionField(),
+  ]);
   const [team, setTeam] = useState<string>("");
   const [acceptanceDeadline, setAcceptanceDeadline] = useState("");
   const [leaderName, setLeaderName] = useState("");
@@ -209,11 +189,33 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
     setName("");
     setEmail("");
     setRole("General Officer");
-    setPosition("");
+    setPositions([createPositionField()]);
     setTeam("");
     setAcceptanceDeadline("");
     setLeaderName("");
     setMessage("");
+  };
+
+  const offeredPositions = positions.map((p) => p.value.trim()).filter(Boolean);
+
+  const updatePosition = (index: number, value: string) => {
+    setPositions((current) =>
+      current.map((position, i) =>
+        i === index ? { ...position, value } : position,
+      ),
+    );
+  };
+
+  const addPosition = () => {
+    setPositions((current) => [...current, createPositionField()]);
+  };
+
+  const removePosition = (index: number) => {
+    setPositions((current) =>
+      current.length === 1
+        ? [createPositionField()]
+        : current.filter((_, i) => i !== index),
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -223,7 +225,7 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
     if (!name.trim()) { toast.error("Name is required"); return; }
     if (!email.trim()) { toast.error("Email is required"); return; }
     if (!role) { toast.error("Role is required"); return; }
-    if (!position.trim()) { toast.error("Position is required"); return; }
+    if (offeredPositions.length === 0) { toast.error("At least one position is required"); return; }
 
     if (acceptanceDeadline) {
       const deadline = new Date(acceptanceDeadline);
@@ -256,7 +258,8 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
         name,
         email,
         role: role as any,
-        position,
+        position: offeredPositions[0],
+        offeredPositions,
         message: message || undefined,
         acceptanceDeadline: formattedDeadline,
         leaderName: leaderName || undefined,
@@ -272,7 +275,8 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
             name,
             email,
             role,
-            position,
+            position: offeredPositions[0],
+            offeredPositions,
             acceptanceDeadline: formattedDeadline,
             message: message || undefined,
             leaderName: leaderName || undefined,
@@ -347,13 +351,42 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Position *</Label>
-              <Input
-                placeholder="e.g., Webmaster, President"
-                value={position}
-                onChange={(e) => setPosition(e.target.value)}
-                required
-              />
+              <Label>Offered Positions *</Label>
+              <div className="space-y-2">
+                {positions.map((position, index) => (
+                  <div key={position.id} className="flex gap-2">
+                    <Input
+                      placeholder="e.g., Webmaster, President"
+                      value={position.value}
+                      onChange={(e) => updatePosition(index, e.target.value)}
+                      required={index === 0}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => removePosition(index)}
+                      disabled={positions.length === 1}
+                      aria-label="Remove position"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addPosition}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Position
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                If multiple positions are offered, the recipient will choose one
+                when accepting.
+              </p>
             </div>
           </div>
 
@@ -412,7 +445,6 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
               <li>An invitation email will be sent to the prospective officer</li>
               <li>They will have until the acceptance deadline to accept or decline</li>
               <li>Upon acceptance, they will automatically receive onboarding instructions</li>
-              <li>They will be added to the appropriate Google Group</li>
               <li>Officer permissions will be granted in the system</li>
             </ul>
           </div>
@@ -443,11 +475,17 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
   );
   const updateOrgSettings = useAuthedMutation(api.organizationSettings.update);
   const createDirectOnboarding = useAuthedMutation(api.directOnboardings.create);
+  const updateDirectOnboardingGoogleGroup = useAuthedMutation(
+    api.directOnboardings.updateGoogleGroup,
+  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [tempGoogleSheetsUrl, setTempGoogleSheetsUrl] = useState("");
+  const [tempEmailTemplate, setTempEmailTemplate] = useState(
+    DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE,
+  );
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
@@ -459,13 +497,24 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
   const [team, setTeam] = useState<string>("");
   const [leaderName, setLeaderName] = useState("");
   const [customMessage, setCustomMessage] = useState("");
-  const [emailTemplate, setEmailTemplate] = useState(DEFAULT_EMAIL_TEMPLATE);
+  const [emailTemplate, setEmailTemplate] = useState(
+    DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE,
+  );
 
   const googleSheetsUrl = orgSettings?.googleSheetsContactListUrl || "";
+  const savedEmailTemplate =
+    orgSettings?.directOnboardingEmailTemplate ||
+    DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE;
 
   useEffect(() => {
     setTempGoogleSheetsUrl(googleSheetsUrl);
   }, [googleSheetsUrl]);
+
+  useEffect(() => {
+    if (orgSettings === undefined) return;
+    setEmailTemplate(savedEmailTemplate);
+    setTempEmailTemplate(savedEmailTemplate);
+  }, [orgSettings, savedEmailTemplate]);
 
   const validateGoogleSheetsUrl = (url: string): boolean => {
     if (!url) return true;
@@ -480,14 +529,20 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
       setSettingsError("Please enter a valid Google Sheets URL");
       return;
     }
+    if (!tempEmailTemplate.trim()) {
+      setSettingsError("Please enter an onboarding email template");
+      return;
+    }
 
     setSavingSettings(true);
     try {
       await updateOrgSettings({
         logtoId,
         googleSheetsContactListUrl: tempGoogleSheetsUrl || undefined,
+        directOnboardingEmailTemplate: tempEmailTemplate,
       });
-      toast.success("Google Sheets URL saved successfully!");
+      setEmailTemplate(tempEmailTemplate);
+      toast.success("Onboarding settings saved successfully!");
       setTimeout(() => setShowSettings(false), 500);
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -505,7 +560,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
     setTeam("");
     setLeaderName("");
     setCustomMessage("");
-    setEmailTemplate(DEFAULT_EMAIL_TEMPLATE);
+    setEmailTemplate(savedEmailTemplate);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -547,7 +602,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
       }
 
       // Create record in Convex
-      await createDirectOnboarding({
+      const directOnboardingId = await createDirectOnboarding({
         logtoId,
         name,
         email,
@@ -566,6 +621,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
           headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify({
             email,
+            name,
             role,
             position,
             team: team && team !== "none" ? team : undefined,
@@ -576,11 +632,20 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
         const roleSyncResult = await roleSyncResp.json();
         if (!roleSyncResp.ok) {
           toast.warning(roleSyncResult.error || "Onboarding succeeded but role sync failed");
-        } else if (
-          Array.isArray(roleSyncResult.warnings) &&
-          roleSyncResult.warnings.length > 0
-        ) {
-          toast.warning(roleSyncResult.warnings.join(" | "));
+        } else {
+          await updateDirectOnboardingGoogleGroup({
+            logtoId,
+            id: directOnboardingId,
+            googleGroupAssigned: Boolean(roleSyncResult.googleGroupUpdated),
+            googleGroup: roleSyncResult.googleGroup || undefined,
+          });
+
+          if (
+            Array.isArray(roleSyncResult.warnings) &&
+            roleSyncResult.warnings.length > 0
+          ) {
+            toast.warning(roleSyncResult.warnings.join(" | "));
+          }
         }
       } catch (roleSyncError) {
         console.error("Error syncing onboarding role:", roleSyncError);
@@ -628,11 +693,11 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
           <div className="flex-1">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Settings className="w-5 h-5" />
-              Contact List Configuration
+              Onboarding Email Configuration
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Configure the Google Sheets URL for the officer contact list that
-              will be included in onboarding emails.
+              Configure the saved Direct Onboarding template and Google Sheets
+              contact list URL used by invitation acceptance emails.
             </p>
 
             {orgSettings === undefined ? (
@@ -670,6 +735,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
             variant="outline"
             onClick={() => {
               setTempGoogleSheetsUrl(googleSheetsUrl);
+              setTempEmailTemplate(savedEmailTemplate);
               setSettingsError(null);
               setShowSettings(true);
             }}
@@ -686,8 +752,8 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
           <h3 className="text-lg font-semibold">Direct Officer Onboarding</h3>
           <p className="text-sm text-muted-foreground mt-1">
             Directly onboard an officer without requiring acceptance. The
-            onboarding email will be sent immediately, and they will be added to
-            the appropriate Google Group.
+            onboarding email will be sent immediately, and their officer
+            permissions will be synced where possible.
           </p>
         </div>
 
@@ -794,7 +860,6 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
             </h4>
             <ul className="text-sm text-green-700 space-y-1 list-disc list-inside">
               <li>Onboarding email will be sent with all necessary instructions</li>
-              <li>User will be added to the appropriate Google Group</li>
               <li>Officer permissions will be granted in the system</li>
               <li>No acceptance required - they are onboarded immediately</li>
             </ul>
@@ -849,19 +914,20 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
             setShowSettings(false);
             setSettingsError(null);
             setTempGoogleSheetsUrl(googleSheetsUrl);
+            setTempEmailTemplate(savedEmailTemplate);
           }
         }}
       >
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Configure Contact List URL</DialogTitle>
+            <DialogTitle>Configure Onboarding Email</DialogTitle>
             <DialogDescription>
-              Enter the Google Sheets URL for the officer contact list. This URL
-              will be included in all onboarding emails.
+              Save the Direct Onboarding template and contact list URL. Accepted
+              invitations use this saved configuration.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label>Google Sheets URL</Label>
               <Input
@@ -873,6 +939,20 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
               <p className="text-xs text-muted-foreground">
                 The URL should start with https://docs.google.com/spreadsheets/d/
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Saved Direct Onboarding Template</Label>
+              <p className="text-xs text-muted-foreground">
+                Use {"{NAME}"}, {"{POSITION}"}, {"{LEADER_INFO}"}, and{" "}
+                {"{CUSTOM_MESSAGE}"} as placeholders.
+              </p>
+              <Textarea
+                value={tempEmailTemplate}
+                onChange={(e) => setTempEmailTemplate(e.target.value)}
+                rows={12}
+                className="font-mono text-sm"
+              />
             </div>
 
             {settingsError && (
@@ -902,6 +982,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
                 setShowSettings(false);
                 setSettingsError(null);
                 setTempGoogleSheetsUrl(googleSheetsUrl);
+                setTempEmailTemplate(savedEmailTemplate);
               }}
             >
               Cancel
@@ -912,7 +993,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
-              {savingSettings ? "Saving..." : "Save URL"}
+              {savingSettings ? "Saving..." : "Save Settings"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -921,7 +1002,254 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
   );
 }
 
-// ── Tab 3: Pending Invitations ──
+// ── Tab 3: Rejections ──
+
+function RejectionsTab({ logtoId }: { logtoId: string | null }) {
+  const { getAuthHeaders } = useAuth();
+  const rejections = useAuthedQuery(
+    api.officerRejections.list,
+    logtoId ? { logtoId } : "skip",
+  );
+  const createRejection = useAuthedMutation(api.officerRejections.create);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [positions, setPositions] = useState<PositionField[]>(() => [
+    createPositionField(),
+  ]);
+  const [customMessage, setCustomMessage] = useState("");
+
+  const rejectionPositions = positions.map((p) => p.value.trim()).filter(Boolean);
+
+  const resetForm = () => {
+    setName("");
+    setEmail("");
+    setPositions([createPositionField()]);
+    setCustomMessage("");
+  };
+
+  const updatePosition = (index: number, value: string) => {
+    setPositions((current) =>
+      current.map((position, i) =>
+        i === index ? { ...position, value } : position,
+      ),
+    );
+  };
+
+  const addPosition = () => {
+    setPositions((current) => [...current, createPositionField()]);
+  };
+
+  const removePosition = (index: number) => {
+    setPositions((current) =>
+      current.length === 1
+        ? [createPositionField()]
+        : current.filter((_, i) => i !== index),
+    );
+  };
+
+  const formatDate = (timestamp: number | undefined) => {
+    if (!timestamp) return "N/A";
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!logtoId) return;
+
+    if (!name.trim()) { toast.error("Name is required"); return; }
+    if (!email.trim()) { toast.error("Email is required"); return; }
+
+    setIsSubmitting(true);
+    try {
+      const resp = await fetch("/api/onboarding/send-rejection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
+          name,
+          email,
+          positions: rejectionPositions,
+          customMessage: customMessage || undefined,
+        }),
+      });
+      const result = await resp.json();
+      if (!resp.ok) {
+        throw new Error(result.error || "Failed to send rejection email");
+      }
+
+      await createRejection({
+        logtoId,
+        name,
+        email,
+        positions: rejectionPositions,
+        customMessage: customMessage || undefined,
+        emailSent: true,
+      });
+
+      toast.success(`Rejection email sent to ${name}`);
+      resetForm();
+    } catch (error: any) {
+      console.error("Error sending rejection:", error);
+      toast.error(error.message || "Failed to send rejection email");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="max-w-4xl rounded-xl border bg-card p-6">
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold">Send Rejection Notice</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Send a standard rejection email to someone who was not selected for
+            an officer role.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Full Name *</Label>
+              <Input
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email Address *</Label>
+              <Input
+                type="email"
+                placeholder="john.doe@ucsd.edu"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Position(s) Applied For (Optional)</Label>
+            <div className="space-y-2">
+              {positions.map((position, index) => (
+                <div key={position.id} className="flex gap-2">
+                  <Input
+                    placeholder="e.g., Webmaster, President"
+                    value={position.value}
+                    onChange={(e) => updatePosition(index, e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => removePosition(index)}
+                    disabled={positions.length === 1}
+                    aria-label="Remove position"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={addPosition}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Position
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Custom Message (Optional)</Label>
+            <Textarea
+              placeholder="Add a brief personal note..."
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              rows={4}
+            />
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              {isSubmitting ? "Sending..." : "Send Rejection"}
+            </Button>
+          </div>
+        </form>
+      </div>
+
+      <div>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">Rejection History</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Rejection notices sent through onboarding.
+          </p>
+        </div>
+
+        {!rejections ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : rejections.length === 0 ? (
+          <div className="rounded-xl border bg-card p-8 text-center">
+            <XCircle className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-muted-foreground">No rejection notices sent yet</p>
+          </div>
+        ) : (
+          <div className="rounded-xl border bg-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Position(s)</TableHead>
+                  <TableHead>Sent</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rejections.map((rejection) => (
+                  <TableRow key={rejection._id}>
+                    <TableCell className="font-medium">{rejection.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{rejection.email}</TableCell>
+                    <TableCell>
+                      {rejection.positions.length > 0
+                        ? rejection.positions.join(", ")
+                        : "N/A"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(rejection.sentAt)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-red-100 text-red-800">
+                        {rejection.emailSent ? "Sent" : "Not Sent"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Tab 4: Pending Invitations ──
 
 function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
   const { getAuthHeaders } = useAuth();
@@ -1001,6 +1329,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
             email: inv.email,
             role: inv.role,
             position: inv.position,
+            offeredPositions: inv.offeredPositions,
             acceptanceDeadline: inv.acceptanceDeadline,
             message: inv.message,
             leaderName: inv.leaderName,
@@ -1125,7 +1454,11 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
                   <TableRow key={inv._id}>
                     <TableCell className="font-medium">{inv.name}</TableCell>
                     <TableCell className="text-muted-foreground">{inv.email}</TableCell>
-                    <TableCell>{inv.position}</TableCell>
+                    <TableCell>
+                      {Array.isArray(inv.offeredPositions) && inv.offeredPositions.length > 1
+                        ? inv.offeredPositions.join(", ")
+                        : inv.position}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{inv.role}</Badge>
                     </TableCell>

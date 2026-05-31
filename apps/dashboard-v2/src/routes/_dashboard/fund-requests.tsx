@@ -1,15 +1,21 @@
 import { api } from "@convex/_generated/api";
 import type { Doc } from "@convex/_generated/dataModel";
 import { createFileRoute } from "@tanstack/react-router";
-import { useAuthedQuery, useAuthedMutation } from "@/hooks/useAuthedConvex";
 import {
 	AlertCircle,
+	ArrowLeft,
+	Briefcase,
 	CheckCircle,
 	Clock,
+	Download,
 	Edit,
+	ExternalLink,
+	Eye,
 	FileText,
+	History,
 	Plus,
 	Search,
+	Tag,
 	Trash2,
 	TrendingUp,
 	XCircle,
@@ -18,7 +24,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { BudgetLogModal } from "@/components/dashboard/fund-requests/BudgetLogModal";
 import { BudgetTrackingCard } from "@/components/dashboard/fund-requests/BudgetTrackingCard";
-import { FundRequestDetailModal } from "@/components/dashboard/fund-requests/FundRequestDetailModal";
 import { FundRequestFormModal } from "@/components/dashboard/fund-requests/FundRequestFormModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,14 +33,20 @@ import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { cn } from "@/lib/utils";
 import {
 	CATEGORY_LABELS,
+	DEPARTMENT_LABELS,
+	type FundRequestCategory,
 	type FundRequestDepartment,
 	type FundRequestStatus,
+	formatCurrency,
+	formatDate,
+	STATUS_COLORS,
 	STATUS_LABELS,
 } from "@/types/fund-requests";
-import { formatCurrency, formatDate } from "@/types/fund-requests";
 
 export const Route = createFileRoute("/_dashboard/fund-requests")({
 	component: FundRequestsPage,
@@ -46,22 +57,19 @@ const ITEMS_PER_PAGE = 6;
 const statusColors: Record<string, string> = {
 	draft: "bg-gray-100 text-gray-800",
 	submitted: "bg-blue-100 text-blue-800",
-	needs_info:
-		"bg-yellow-100 text-yellow-800",
-	approved:
-		"bg-green-100 text-green-800",
+	needs_info: "bg-yellow-100 text-yellow-800",
+	approved: "bg-green-100 text-green-800",
 	denied: "bg-red-100 text-red-800",
-	completed:
-		"bg-purple-100 text-purple-800",
+	completed: "bg-purple-100 text-purple-800",
 };
 
-const statusBorderColors: Record<string, string> = {
-	draft: "bg-gray-300",
-	submitted: "bg-blue-500",
-	needs_info: "bg-yellow-500",
-	approved: "bg-green-500",
-	denied: "bg-red-500",
-	completed: "bg-purple-500",
+const statusIconColors: Record<string, string> = {
+	draft: "bg-muted text-muted-foreground",
+	submitted: "bg-blue-500/10 text-blue-700",
+	needs_info: "bg-yellow-500/10 text-yellow-700",
+	approved: "bg-green-500/10 text-green-700",
+	denied: "bg-red-500/10 text-red-700",
+	completed: "bg-purple-500/10 text-purple-700",
 };
 
 const getStatusIcon = (status: FundRequestStatus) => {
@@ -85,6 +93,344 @@ const getStatusIcon = (status: FundRequestStatus) => {
 
 type FilterTab = "all" | FundRequestStatus;
 type FundRequestRecord = Doc<"fundRequests">;
+type PageView = "list" | "form" | "detail";
+
+function FundRequestDetailPage({
+	request,
+	onBack,
+	onEdit,
+}: {
+	request: FundRequestRecord;
+	onBack: () => void;
+	onEdit?: () => void;
+}) {
+	const canEdit = request.status === "draft" || request.status === "needs_info";
+	const vendorLinks = request.vendorLinks || [];
+	const attachments = request.attachments || [];
+	const auditLogs = request.auditLogs || [];
+
+	return (
+		<div className="w-full max-w-[1600px] mx-auto space-y-6 p-4 sm:p-6">
+			<div className="flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-start lg:justify-between">
+				<div className="flex items-start gap-3 min-w-0">
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={onBack}
+						className="mt-0.5 h-9 shrink-0"
+					>
+						<ArrowLeft className="h-4 w-4 mr-1" />
+						Back
+					</Button>
+					<div className="min-w-0 space-y-2">
+						<div className="flex flex-wrap items-center gap-2">
+							<h1
+								className="min-w-0 text-2xl font-bold tracking-tight sm:text-3xl"
+								title={request.title}
+							>
+								{request.title}
+							</h1>
+							<Badge
+								className={`${STATUS_COLORS[request.status]} px-2 py-0.5`}
+								variant="secondary"
+							>
+								<span className="flex items-center gap-1.5 text-xs font-medium">
+									{getStatusIcon(request.status as FundRequestStatus)}
+									{STATUS_LABELS[request.status]}
+								</span>
+							</Badge>
+						</div>
+						<p className="text-sm text-muted-foreground">
+							Created on {formatDate(request.createdAt)}
+						</p>
+					</div>
+				</div>
+				<div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
+					<div className="rounded-lg border bg-card px-4 py-2 sm:text-right">
+						<p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+							Amount
+						</p>
+						<p className="text-xl font-bold text-green-600">
+							{formatCurrency(request.amount)}
+						</p>
+					</div>
+					{canEdit && onEdit && (
+						<Button onClick={onEdit} className="h-10">
+							<Edit className="w-4 h-4 mr-2" />
+							{request.status === "needs_info"
+								? "Respond & Resubmit"
+								: "Edit Request"}
+						</Button>
+					)}
+				</div>
+			</div>
+
+			{request.status === "needs_info" && request.infoRequestNotes && (
+				<div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 flex gap-3">
+					<AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+					<div>
+						<h2 className="font-semibold text-yellow-800 text-sm mb-0.5">
+							Information Requested
+						</h2>
+						<p className="text-xs text-yellow-700 leading-relaxed">
+							{request.infoRequestNotes}
+						</p>
+					</div>
+				</div>
+			)}
+
+			{request.status === "denied" && request.reviewNotes && (
+				<div className="rounded-xl border border-red-200 bg-red-50 p-4 flex gap-3">
+					<XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+					<div>
+						<h2 className="font-semibold text-red-800 text-sm mb-1">
+							Request Denied
+						</h2>
+						<p className="text-sm text-red-700 leading-relaxed">
+							{request.reviewNotes}
+						</p>
+					</div>
+				</div>
+			)}
+
+			{request.status === "approved" && (
+				<div className="rounded-xl border border-green-200 bg-green-50 p-4 flex gap-3">
+					<CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+					<div>
+						<h2 className="font-semibold text-green-800 text-sm mb-1">
+							Request Approved
+						</h2>
+						{request.reviewNotes && (
+							<p className="text-sm text-green-700 leading-relaxed">
+								{request.reviewNotes}
+							</p>
+						)}
+					</div>
+				</div>
+			)}
+
+			<div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+				<div className="space-y-6">
+					<Card className="border-border/60 shadow-sm">
+						<CardContent className="p-5 space-y-3">
+							<h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+								<FileText className="w-3.5 h-3.5" /> Purpose
+							</h2>
+							<p className="text-sm leading-relaxed whitespace-pre-wrap">
+								{request.purpose}
+							</p>
+						</CardContent>
+					</Card>
+
+					{request.infoResponseNotes && (
+						<Card className="border-yellow-200/70 bg-yellow-50/50 shadow-sm">
+							<CardContent className="p-5 space-y-2">
+								<h2 className="text-xs font-semibold text-yellow-700 uppercase tracking-wide">
+									Response to Info Request
+								</h2>
+								<p className="text-sm leading-relaxed whitespace-pre-wrap">
+									{request.infoResponseNotes}
+								</p>
+							</CardContent>
+						</Card>
+					)}
+
+					<Card className="border-border/60 shadow-sm">
+						<CardContent className="p-5 space-y-3">
+							<h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+								<ExternalLink className="w-3.5 h-3.5" /> Links
+							</h2>
+							{vendorLinks.length > 0 ? (
+								<div className="divide-y rounded-md border">
+									{vendorLinks.map((link) => (
+										<div
+											key={link.id}
+											className="flex items-center justify-between gap-3 p-3"
+										>
+											<div className="min-w-0">
+												<p className="text-sm font-medium truncate">
+													{link.itemName || "Untitled item"}
+												</p>
+												<p className="text-xs text-muted-foreground truncate">
+													Qty {link.quantity || 1}
+													{link.url ? ` · ${link.url}` : ""}
+												</p>
+											</div>
+											{link.url && (
+												<Button
+													variant="ghost"
+													size="icon"
+													className="h-9 w-9 shrink-0"
+													aria-label={`Open ${link.itemName || "vendor link"}`}
+													asChild
+												>
+													<a
+														href={link.url}
+														target="_blank"
+														rel="noopener noreferrer"
+													>
+														<ExternalLink className="w-4 h-4" />
+													</a>
+												</Button>
+											)}
+										</div>
+									))}
+								</div>
+							) : (
+								<p className="text-sm text-muted-foreground italic">
+									No links provided.
+								</p>
+							)}
+						</CardContent>
+					</Card>
+
+					{auditLogs.length > 0 && (
+						<Card className="border-border/60 shadow-sm">
+							<CardContent className="p-5">
+								<h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-4">
+									<History className="w-3.5 h-3.5" /> Activity History
+								</h2>
+								<div className="space-y-0 pl-2">
+									{auditLogs.map((log) => (
+										<div
+											key={log.id}
+											className="relative pl-5 pb-5 last:pb-0 border-l border-border/60 last:border-l-0"
+										>
+											<div className="absolute top-0.5 left-0 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-background bg-muted-foreground/30 z-10 box-content" />
+											<p className="text-xs font-medium">
+												<span className="capitalize">
+													{log.action.replace(/_/g, " ")}
+												</span>
+												{log.performedByName && (
+													<span className="text-muted-foreground font-normal">
+														{" "}
+														by {log.performedByName}
+													</span>
+												)}
+											</p>
+											<p className="text-[10px] text-muted-foreground">
+												{formatDate(log.timestamp)}
+											</p>
+											{log.notes && (
+												<p className="text-xs bg-muted/40 px-2 py-1 rounded inline-block mt-1">
+													{log.notes}
+												</p>
+											)}
+										</div>
+									))}
+								</div>
+							</CardContent>
+						</Card>
+					)}
+				</div>
+
+				<div className="space-y-6">
+					<Card className="border-border/60 shadow-sm">
+						<CardContent className="p-5 space-y-3">
+							<h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+								Details
+							</h2>
+							<div className="space-y-3 text-sm">
+								<div className="flex items-center justify-between gap-3">
+									<span className="text-muted-foreground flex items-center gap-1.5">
+										<Briefcase className="w-3.5 h-3.5" />
+										Department
+									</span>
+									<span className="font-medium text-right">
+										{request.department
+											? DEPARTMENT_LABELS[
+													request.department as keyof typeof DEPARTMENT_LABELS
+												]
+											: "N/A"}
+									</span>
+								</div>
+								<div className="flex items-center justify-between gap-3">
+									<span className="text-muted-foreground flex items-center gap-1.5">
+										<Tag className="w-3.5 h-3.5" />
+										Category
+									</span>
+									<span className="font-medium text-right">
+										{CATEGORY_LABELS[
+											request.category as keyof typeof CATEGORY_LABELS
+										] || request.category}
+									</span>
+								</div>
+								<div className="flex items-center justify-between gap-3">
+									<span className="text-muted-foreground flex items-center gap-1.5">
+										<Clock className="w-3.5 h-3.5" />
+										Created
+									</span>
+									<span className="font-medium text-right">
+										{formatDate(request.createdAt)}
+									</span>
+								</div>
+							</div>
+						</CardContent>
+					</Card>
+
+					<Card className="border-border/60 shadow-sm">
+						<CardContent className="p-5 space-y-3">
+							<h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+								<Download className="w-3.5 h-3.5" /> Attachments
+							</h2>
+							{attachments.length > 0 ? (
+								<div className="space-y-2">
+									{attachments.map((attachment) => (
+										<div
+											key={attachment.id}
+											className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2"
+										>
+											<div className="min-w-0">
+												<p className="text-xs font-medium truncate">
+													{attachment.name}
+												</p>
+												<p className="text-[10px] text-muted-foreground">
+													{(attachment.size / 1024).toFixed(1)} KB
+												</p>
+											</div>
+											<div className="flex gap-1">
+												<Button
+													variant="ghost"
+													size="icon"
+													className="h-9 w-9"
+													aria-label={`View ${attachment.name}`}
+													asChild
+												>
+													<a
+														href={attachment.url}
+														target="_blank"
+														rel="noopener noreferrer"
+													>
+														<Eye className="w-3.5 h-3.5" />
+													</a>
+												</Button>
+												<Button
+													variant="ghost"
+													size="icon"
+													className="h-9 w-9"
+													aria-label={`Download ${attachment.name}`}
+													asChild
+												>
+													<a href={attachment.url} download={attachment.name}>
+														<Download className="w-3.5 h-3.5" />
+													</a>
+												</Button>
+											</div>
+										</div>
+									))}
+								</div>
+							) : (
+								<p className="text-sm text-muted-foreground italic">
+									No attachments.
+								</p>
+							)}
+						</CardContent>
+					</Card>
+				</div>
+			</div>
+		</div>
+	);
+}
 
 function FundRequestsPage() {
 	const { logtoId } = useAuth();
@@ -95,8 +441,7 @@ function FundRequestsPage() {
 	);
 	const deleteFundRequest = useAuthedMutation(api.fundRequests.deleteRequest);
 
-	const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-	const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+	const [view, setView] = useState<PageView>("list");
 	const [isBudgetLogOpen, setIsBudgetLogOpen] = useState(false);
 	const [selectedRequest, setSelectedRequest] =
 		useState<FundRequestRecord | null>(null);
@@ -139,35 +484,55 @@ function FundRequestsPage() {
 		api.fundRequests.listByDepartment,
 		hasOfficerAccess && logtoId && budgetStatsEvents?.startDate
 			? {
-				logtoId,
-				department: "events",
-				startDate: budgetStatsEvents.startDate,
-			}
+					logtoId,
+					department: "events",
+					startDate: budgetStatsEvents.startDate,
+				}
 			: "skip",
 	);
 	const requestsProjects = useAuthedQuery(
 		api.fundRequests.listByDepartment,
 		hasOfficerAccess && logtoId && budgetStatsProjects?.startDate
 			? {
-				logtoId,
-				department: "projects",
-				startDate: budgetStatsProjects.startDate,
-			}
+					logtoId,
+					department: "projects",
+					startDate: budgetStatsProjects.startDate,
+				}
 			: "skip",
 	);
 	const requestsInternal = useAuthedQuery(
 		api.fundRequests.listByDepartment,
 		hasOfficerAccess && logtoId && budgetStatsInternal?.startDate
 			? {
-				logtoId,
-				department: "internal",
-				startDate: budgetStatsInternal.startDate,
-			}
+					logtoId,
+					department: "internal",
+					startDate: budgetStatsInternal.startDate,
+				}
 			: "skip",
 	);
 
 	// Budget log modal data
-	const [selectedBudgetDepartment] = useState<FundRequestDepartment>("events");
+	const [selectedBudgetDepartment, setSelectedBudgetDepartment] =
+		useState<FundRequestDepartment>("events");
+
+	const getSelectedRequestFormData = () => {
+		if (!selectedRequest) return undefined;
+
+		return {
+			title: selectedRequest.title,
+			purpose: selectedRequest.purpose,
+			category: selectedRequest.category as FundRequestCategory,
+			department: selectedRequest.department as FundRequestDepartment,
+			amount: String(selectedRequest.amount),
+			vendorLinks: selectedRequest.vendorLinks?.map((link) => ({
+				id: link.id,
+				url: link.url,
+				itemName: link.itemName,
+				quantity: link.quantity,
+			})),
+			_id: selectedRequest._id,
+		};
+	};
 
 	const getFilteredRequests = () => {
 		if (!requests) return [];
@@ -233,19 +598,18 @@ function FundRequestsPage() {
 	const handleNewRequest = () => {
 		setSelectedRequest(null);
 		setIsEditMode(false);
-		setIsFormModalOpen(true);
+		setView("form");
 	};
 
 	const handleEditRequest = (request: FundRequestRecord) => {
 		setSelectedRequest(request);
 		setIsEditMode(true);
-		setIsDetailModalOpen(false);
-		setIsFormModalOpen(true);
+		setView("form");
 	};
 
 	const handleViewRequest = (request: FundRequestRecord) => {
 		setSelectedRequest(request);
-		setIsDetailModalOpen(true);
+		setView("detail");
 	};
 
 	const handleDeleteRequest = async (request: FundRequestRecord) => {
@@ -266,7 +630,7 @@ function FundRequestsPage() {
 	};
 
 	const handleFormClose = () => {
-		setIsFormModalOpen(false);
+		setView("list");
 		setSelectedRequest(null);
 		setIsEditMode(false);
 	};
@@ -306,24 +670,82 @@ function FundRequestsPage() {
 		}
 	};
 
+	if (view === "form") {
+		return (
+			<div className="h-[calc(100vh-3rem)] flex flex-col overflow-hidden">
+				<div className="border-b px-4 py-4 sm:px-6 flex items-start gap-3 shrink-0">
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={handleFormClose}
+						className="h-9 shrink-0"
+					>
+						<ArrowLeft className="h-4 w-4 mr-1" />
+						Back
+					</Button>
+					<div className="min-w-0">
+						<h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+							{isEditMode ? "Edit Fund Request" : "New Fund Request"}
+						</h1>
+						<p className="text-sm text-muted-foreground">
+							Complete each step to submit a clear, review-ready request.
+						</p>
+					</div>
+				</div>
+				<div className="flex-1 min-h-0">
+					<FundRequestFormModal
+						isOpen
+						onClose={handleFormClose}
+						onSuccess={handleFormSuccess}
+						initialData={getSelectedRequestFormData()}
+						isEditMode={isEditMode}
+						showHeader={false}
+						renderMode="page"
+						logtoId={logtoId ?? undefined}
+						editRequestId={selectedRequest?._id}
+					/>
+				</div>
+			</div>
+		);
+	}
+
+	if (view === "detail" && selectedRequest) {
+		return (
+			<FundRequestDetailPage
+				request={selectedRequest}
+				onBack={() => {
+					setSelectedRequest(null);
+					setIsEditMode(false);
+					setView("list");
+				}}
+				onEdit={
+					selectedRequest.status === "draft" ||
+					selectedRequest.status === "needs_info"
+						? () => handleEditRequest(selectedRequest)
+						: undefined
+				}
+			/>
+		);
+	}
+
 	return (
 		<>
-			<div className="p-6 max-w-[1600px] mx-auto space-y-8">
+			<div className="p-4 sm:p-6 max-w-[1600px] mx-auto space-y-6 sm:space-y-8">
 				{/* Header */}
 				<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-					<div>
-						<h1 className="text-3xl font-bold tracking-tight text-foreground">
+					<div className="min-w-0">
+						<h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
 							Fund Requests
 						</h1>
-						<p className="text-muted-foreground mt-1 max-w-2xl">
-							Manage your funding requests for events, equipment, and travel.
-							Track status and budget usage in real-time.
+						<p className="text-sm sm:text-base text-muted-foreground mt-1 max-w-2xl">
+							Request funding, track review status, and keep department budgets
+							organized.
 						</p>
 					</div>
 					<Button
 						onClick={handleNewRequest}
 						size="lg"
-						className="font-medium shadow-md shadow-primary/20"
+						className="w-full font-medium shadow-sm sm:w-auto"
 					>
 						<Plus className="h-5 w-5 mr-2" />
 						New Request
@@ -333,131 +755,136 @@ function FundRequestsPage() {
 				{/* Budget Tracking Section */}
 				{hasOfficerAccess && (
 					<div className="space-y-4">
-						<div className="flex items-center gap-2 px-1">
+						<div className="flex items-center gap-2">
 							<TrendingUp className="w-5 h-5 text-primary" />
 							<h2 className="text-lg font-semibold text-foreground">
 								Department Budgets
 							</h2>
 						</div>
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
-							{(["events", "projects", "internal"] as FundRequestDepartment[]).map(
-								(dept) => {
-									const budgetStats =
-										dept === "events"
-											? budgetStatsEvents
-											: dept === "projects"
-												? budgetStatsProjects
-												: budgetStatsInternal;
+							{(
+								["events", "projects", "internal"] as FundRequestDepartment[]
+							).map((dept) => {
+								const budgetStats =
+									dept === "events"
+										? budgetStatsEvents
+										: dept === "projects"
+											? budgetStatsProjects
+											: budgetStatsInternal;
 
-									return (
-										<BudgetTrackingCard
-											key={dept}
-											department={dept}
-											totalBudget={budgetStats?.totalBudget || 0}
-											remainingBudget={budgetStats?.remainingBudget || 0}
-											pendingBudget={budgetStats?.pendingBudget || 0}
-											percentUsed={budgetStats?.percentUsed || 0}
-											isConfigured={budgetStats?.isConfigured || false}
-											onClick={() => {
-												setIsBudgetLogOpen(true);
-											}}
-										/>
-									);
-								},
-							)}
+								return (
+									<BudgetTrackingCard
+										key={dept}
+										department={dept}
+										totalBudget={budgetStats?.totalBudget || 0}
+										remainingBudget={budgetStats?.remainingBudget || 0}
+										pendingBudget={budgetStats?.pendingBudget || 0}
+										percentUsed={budgetStats?.percentUsed || 0}
+										isConfigured={budgetStats?.isConfigured || false}
+										onClick={() => {
+											setSelectedBudgetDepartment(dept);
+											setIsBudgetLogOpen(true);
+										}}
+									/>
+								);
+							})}
 						</div>
 					</div>
 				)}
 
 				{/* Filters and Search */}
-				<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between sticky top-0 z-20 bg-background/95 backdrop-blur-sm py-2 -mx-2 px-2 border-b border-border/50">
-					<Tabs
-						value={selectedTab}
-						onValueChange={(v) => {
-							setSelectedTab(v as FilterTab);
-							setPage(1);
-						}}
-						className="w-full sm:w-auto"
-					>
-						<TabsList>
-							<TabsTrigger value="all" className="gap-2">
-								<span>All Requests</span>
-								<Badge variant="secondary">{stats.total}</Badge>
-							</TabsTrigger>
-							<TabsTrigger value="draft" className="gap-2">
-								<span>Draft</span>
-								{stats.draft > 0 && (
-									<Badge variant="secondary">{stats.draft}</Badge>
-								)}
-							</TabsTrigger>
-							<TabsTrigger value="submitted" className="gap-2">
-								<span>Submitted</span>
-								{stats.submitted > 0 && (
-									<Badge
-										variant="secondary"
-										className="bg-blue-500/10 text-blue-700"
-									>
-										{stats.submitted}
-									</Badge>
-								)}
-							</TabsTrigger>
-							<TabsTrigger value="needs_info" className="gap-2">
-								<span>Needs Info</span>
-								{stats.needsInfo > 0 && (
-									<Badge
-										variant="secondary"
-										className="bg-yellow-500/10 text-yellow-700"
-									>
-										{stats.needsInfo}
-									</Badge>
-								)}
-							</TabsTrigger>
-							<TabsTrigger value="approved" className="gap-2">
-								<span>Approved</span>
-								{stats.approved > 0 && (
-									<Badge
-										variant="secondary"
-										className="bg-green-500/10 text-green-700"
-									>
-										{stats.approved}
-									</Badge>
-								)}
-							</TabsTrigger>
-							<TabsTrigger value="denied" className="gap-2">
-								<span>Denied</span>
-								{stats.denied > 0 && (
-									<Badge
-										variant="secondary"
-										className="bg-red-500/10 text-red-700"
-									>
-										{stats.denied}
-									</Badge>
-								)}
-							</TabsTrigger>
-							<TabsTrigger value="completed" className="gap-2">
-								<span>Completed</span>
-								{stats.completed > 0 && (
-									<Badge
-										variant="secondary"
-										className="bg-purple-500/10 text-purple-700"
-									>
-										{stats.completed}
-									</Badge>
-								)}
-							</TabsTrigger>
-						</TabsList>
-					</Tabs>
-					<div className="relative w-full sm:max-w-xs">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-						<Input
-							placeholder="Search requests..."
-							value={searchQuery}
-							onChange={(e) => {
-								setSearchQuery(e.target.value);
+				<div className="sticky top-0 z-20 -mx-4 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+					<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+						<Tabs
+							value={selectedTab}
+							onValueChange={(v) => {
+								setSelectedTab(v as FilterTab);
 								setPage(1);
 							}}
-							className="pl-10"
-						/>
+							className="w-full min-w-0 lg:w-auto"
+						>
+							<div className="-mx-1 overflow-x-auto px-1 pb-1">
+								<TabsList className="w-max">
+									<TabsTrigger value="all" className="gap-2">
+										<span>All Requests</span>
+										<Badge variant="secondary">{stats.total}</Badge>
+									</TabsTrigger>
+									<TabsTrigger value="draft" className="gap-2">
+										<span>Draft</span>
+										{stats.draft > 0 && (
+											<Badge variant="secondary">{stats.draft}</Badge>
+										)}
+									</TabsTrigger>
+									<TabsTrigger value="submitted" className="gap-2">
+										<span>Submitted</span>
+										{stats.submitted > 0 && (
+											<Badge
+												variant="secondary"
+												className="bg-blue-500/10 text-blue-700"
+											>
+												{stats.submitted}
+											</Badge>
+										)}
+									</TabsTrigger>
+									<TabsTrigger value="needs_info" className="gap-2">
+										<span>Needs Info</span>
+										{stats.needsInfo > 0 && (
+											<Badge
+												variant="secondary"
+												className="bg-yellow-500/10 text-yellow-700"
+											>
+												{stats.needsInfo}
+											</Badge>
+										)}
+									</TabsTrigger>
+									<TabsTrigger value="approved" className="gap-2">
+										<span>Approved</span>
+										{stats.approved > 0 && (
+											<Badge
+												variant="secondary"
+												className="bg-green-500/10 text-green-700"
+											>
+												{stats.approved}
+											</Badge>
+										)}
+									</TabsTrigger>
+									<TabsTrigger value="denied" className="gap-2">
+										<span>Denied</span>
+										{stats.denied > 0 && (
+											<Badge
+												variant="secondary"
+												className="bg-red-500/10 text-red-700"
+											>
+												{stats.denied}
+											</Badge>
+										)}
+									</TabsTrigger>
+									<TabsTrigger value="completed" className="gap-2">
+										<span>Completed</span>
+										{stats.completed > 0 && (
+											<Badge
+												variant="secondary"
+												className="bg-purple-500/10 text-purple-700"
+											>
+												{stats.completed}
+											</Badge>
+										)}
+									</TabsTrigger>
+								</TabsList>
+							</div>
+						</Tabs>
+						<div className="relative w-full lg:max-w-sm">
+							<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+							<Input
+								placeholder="Search requests..."
+								value={searchQuery}
+								onChange={(e) => {
+									setSearchQuery(e.target.value);
+									setPage(1);
+								}}
+								className="pl-10"
+							/>
+						</div>
 					</div>
 				</div>
 
@@ -497,31 +924,34 @@ function FundRequestsPage() {
 						{paginatedRequests.map((r) => (
 							<Card
 								key={r._id}
-								className="group w-full border border-border/50 shadow-sm hover:border-primary/50 hover:shadow-md hover:bg-accent/50 transition-all duration-200 cursor-pointer"
+								className="group w-full cursor-pointer border-border/60 shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/40 focus-within:border-primary/40"
 								onClick={() => handleViewRequest(r)}
 							>
-								<CardContent className="p-3">
-									<div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
-										{/* Status Indicator Bar */}
-										<div
-											className={`
-										hidden md:block w-1 self-stretch rounded-full
-										${statusBorderColors[r.status] || "bg-gray-300"}
-									`}
-										/>
-
+								<CardContent className="p-4">
+									<div className="flex flex-col gap-3 md:flex-row md:items-center">
 										{/* Main Content */}
 										<div className="flex-1 min-w-0 space-y-1 w-full">
 											<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-												<h3 className="text-base font-bold text-foreground truncate max-w-full">
+												<div
+													className={cn(
+														"flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
+														statusIconColors[r.status] ||
+															"bg-muted text-muted-foreground",
+													)}
+												>
+													{getStatusIcon(r.status as FundRequestStatus)}
+												</div>
+												<h3
+													className="min-w-0 max-w-full truncate text-base font-semibold text-foreground"
+													title={r.title}
+												>
 													{r.title}
 												</h3>
 												<Badge
-													className={`${statusColors[r.status] || ""} px-2 py-0.5 h-5 text-[10px]`}
+													className={`${statusColors[r.status] || ""} h-5 px-2 py-0.5 text-[10px]`}
 													variant="secondary"
 												>
 													<span className="flex items-center gap-1.5">
-														{getStatusIcon(r.status as FundRequestStatus)}
 														<span className="font-medium">
 															{STATUS_LABELS[
 																r.status as keyof typeof STATUS_LABELS
@@ -531,7 +961,7 @@ function FundRequestsPage() {
 												</Badge>
 											</div>
 
-											<p className="text-sm text-muted-foreground line-clamp-1">
+											<p className="text-sm text-muted-foreground line-clamp-2 md:line-clamp-1">
 												{r.purpose}
 											</p>
 
@@ -551,7 +981,9 @@ function FundRequestsPage() {
 												</div>
 												<div className="flex items-center gap-1.5">
 													<Clock className="w-3.5 h-3.5" />
-													<span className="text-xs">{formatDate(r.createdAt)}</span>
+													<span className="text-xs">
+														{formatDate(r.createdAt)}
+													</span>
 												</div>
 											</div>
 
@@ -580,7 +1012,8 @@ function FundRequestsPage() {
 														e.stopPropagation();
 														handleEditRequest(r);
 													}}
-													className="h-7 w-7 bg-primary/10 text-primary hover:bg-primary/20"
+													className="h-9 w-9 bg-primary/10 text-primary hover:bg-primary/20"
+													aria-label={`Edit ${r.title}`}
 												>
 													<Edit className="w-3.5 h-3.5" />
 												</Button>
@@ -594,7 +1027,8 @@ function FundRequestsPage() {
 														handleDeleteRequest(r);
 													}}
 													disabled={isDeleting}
-													className="h-7 w-7 bg-destructive/10 text-destructive hover:bg-destructive/20"
+													className="h-9 w-9 bg-destructive/10 text-destructive hover:bg-destructive/20"
+													aria-label={`Delete ${r.title}`}
 												>
 													<Trash2 className="w-3.5 h-3.5" />
 												</Button>
@@ -623,37 +1057,6 @@ function FundRequestsPage() {
 					</div>
 				)}
 			</div>
-
-			{/* Fund Request Form Modal (Create/Edit) */}
-			<FundRequestFormModal
-				isOpen={isFormModalOpen}
-				onClose={handleFormClose}
-				onSuccess={handleFormSuccess}
-				initialData={selectedRequest ? {
-					title: selectedRequest.title,
-					purpose: selectedRequest.purpose,
-					category: selectedRequest.category as any,
-					department: selectedRequest.department as any,
-					amount: String(selectedRequest.amount),
-					vendorLinks: selectedRequest.vendorLinks as any,
-					_id: selectedRequest._id,
-				} : undefined}
-				isEditMode={isEditMode}
-				logtoId={logtoId ?? undefined}
-				editRequestId={selectedRequest?._id}
-			/>
-
-			{/* Fund Request Detail Modal (View Only) */}
-			<FundRequestDetailModal
-				isOpen={isDetailModalOpen}
-				onClose={() => setIsDetailModalOpen(false)}
-				request={selectedRequest}
-				onEdit={
-					selectedRequest && (selectedRequest.status === "draft" || selectedRequest.status === "needs_info")
-						? () => handleEditRequest(selectedRequest)
-						: undefined
-				}
-			/>
 
 			{/* Budget Log Modal (Officer Only) */}
 			{hasOfficerAccess && (

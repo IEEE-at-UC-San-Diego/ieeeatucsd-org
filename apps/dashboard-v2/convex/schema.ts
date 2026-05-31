@@ -45,6 +45,14 @@ const receipt = v.object({
   tip: v.optional(v.number()),
   shipping: v.optional(v.number()),
   total: v.number(),
+  expenseType: v.optional(
+    v.union(v.literal("receipt"), v.literal("mileage")),
+  ),
+  miles: v.optional(v.number()),
+  mileageRatePerMile: v.optional(v.number()),
+  mileageFrom: v.optional(v.string()),
+  mileageTo: v.optional(v.string()),
+  mileageStops: v.optional(v.array(v.string())),
 });
 
 const invoiceItem = v.object({
@@ -307,6 +315,38 @@ export default defineSchema({
     .index("by_eventType", ["eventType"])
     .index("by_createdBy", ["createdBy"]),
 
+  googleCalendarSyncState: defineTable({
+    calendarId: v.string(),
+    lastSuccessfulSourceCount: v.optional(v.number()),
+    staleCandidates: v.array(
+      v.object({
+        eventId: v.string(),
+        firstSeenMissingAt: v.number(),
+        lastSeenMissingAt: v.number(),
+        missingSyncCount: v.number(),
+        startMs: v.optional(v.number()),
+      }),
+    ),
+    updatedAt: v.number(),
+  }).index("by_calendarId", ["calendarId"]),
+
+  googleCalendarDeletionQueue: defineTable({
+    calendar: v.union(v.literal("private"), v.literal("public")),
+    googleEventId: v.string(),
+    reason: v.union(
+      v.literal("event_unpublished"),
+      v.literal("event_deleted"),
+      v.literal("internal_event_deleted"),
+    ),
+    sourceTable: v.optional(
+      v.union(v.literal("events"), v.literal("internalEvents")),
+    ),
+    sourceId: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_calendar", ["calendar"])
+    .index("by_googleEventId", ["googleEventId"]),
+
   attendees: defineTable({
     eventId: v.id("events"),
     userId: v.string(),
@@ -479,6 +519,7 @@ export default defineSchema({
     email: v.string(),
     role: userRole,
     position: v.string(),
+    offeredPositions: v.optional(v.array(v.string())),
     status: v.union(
       v.literal("pending"),
       v.literal("accepted"),
@@ -505,6 +546,18 @@ export default defineSchema({
   })
     .index("by_email", ["email"])
     .index("by_status", ["status"]),
+
+  officerRejections: defineTable({
+    name: v.string(),
+    email: v.string(),
+    positions: v.array(v.string()),
+    customMessage: v.optional(v.string()),
+    sentBy: v.string(),
+    sentAt: v.number(),
+    emailSent: v.boolean(),
+  })
+    .index("by_email", ["email"])
+    .index("by_sentAt", ["sentAt"]),
 
   sponsorDomains: defineTable({
     domain: v.string(),
@@ -687,6 +740,7 @@ export default defineSchema({
 
   organizationSettings: defineTable({
     googleSheetsContactListUrl: v.optional(v.string()),
+    directOnboardingEmailTemplate: v.optional(v.string()),
     fallWeek0Start: v.optional(v.string()),
     winterWeek1Start: v.optional(v.string()),
     springWeek1Start: v.optional(v.string()),

@@ -19,11 +19,11 @@ export const env = createEnv({
 		MXROUTE_SERVER_LOGIN: z.string().optional(),
 		MXROUTE_SERVER_URL: z.string().optional(),
 		OPENROUTER_API_KEY: z.string().optional(),
-		ANTHROPIC_AUTH_TOKEN: z.string().optional(),
-		ANTHROPIC_BASE_URL: z.string().url().optional(),
-		ANTHROPIC_API_KEY: z.string().optional(),
 		CONVEX_SESSION_SECRET: z.string().optional(),
 		ALLOWED_FILE_FETCH_HOSTS: z.string().optional(),
+		GOOGLE_CLIENT_EMAIL: z.string().optional(),
+		GOOGLE_PRIVATE_KEY: z.string().optional(),
+		GOOGLE_ADMIN_EMAIL: z.string().optional(),
 	},
 
 	clientPrefix: "VITE_",
@@ -37,6 +37,8 @@ export const env = createEnv({
 		VITE_LOGTO_REDIRECT_URI: z.string().url().optional(),
 		VITE_LOGTO_SCOPES: z.string().optional(),
 		VITE_LOGTO_DIRECT_SIGN_IN_TARGET: z.string().optional(),
+		/** Optional: enables Google Places address suggestions on mileage route fields */
+		VITE_GOOGLE_MAPS_API_KEY: z.string().optional(),
 	},
 
 	runtimeEnv: {
@@ -56,11 +58,11 @@ export const env = createEnv({
 		MXROUTE_SERVER_LOGIN: process.env.MXROUTE_SERVER_LOGIN,
 		MXROUTE_SERVER_URL: process.env.MXROUTE_SERVER_URL,
 		OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
-		ANTHROPIC_AUTH_TOKEN: process.env.ANTHROPIC_AUTH_TOKEN,
-		ANTHROPIC_BASE_URL: process.env.ANTHROPIC_BASE_URL,
-		ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
 		CONVEX_SESSION_SECRET: process.env.CONVEX_SESSION_SECRET,
 		ALLOWED_FILE_FETCH_HOSTS: process.env.ALLOWED_FILE_FETCH_HOSTS,
+		GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
+		GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY,
+		GOOGLE_ADMIN_EMAIL: process.env.GOOGLE_ADMIN_EMAIL,
 		VITE_APP_TITLE: import.meta.env.VITE_APP_TITLE,
 		VITE_AUTH_BRIDGE_MODE: import.meta.env.VITE_AUTH_BRIDGE_MODE,
 		VITE_CONVEX_URL: import.meta.env.VITE_CONVEX_URL,
@@ -70,6 +72,7 @@ export const env = createEnv({
 		VITE_LOGTO_SCOPES: import.meta.env.VITE_LOGTO_SCOPES,
 		VITE_LOGTO_DIRECT_SIGN_IN_TARGET: import.meta.env
 			.VITE_LOGTO_DIRECT_SIGN_IN_TARGET,
+		VITE_GOOGLE_MAPS_API_KEY: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
 	},
 	emptyStringAsUndefined: true,
 });

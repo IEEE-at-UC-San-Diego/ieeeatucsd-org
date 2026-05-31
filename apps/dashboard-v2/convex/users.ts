@@ -244,12 +244,36 @@ export const upsertFromAuth = mutation({
       }
     }
 
-    // Check for accepted officer invitations
-    const acceptedInvitation = await ctx.db
-      .query("officerInvitations")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail || args.email))
-      .filter((q) => q.eq(q.field("status"), "accepted"))
-      .first();
+    // Check for accepted officer invitations. Older invitations may have been
+    // stored before email normalization, so check both forms.
+    const invitationMatches: any[] = [];
+    const addInvitation = (candidate: any) => {
+      if (!candidate) return;
+      if (invitationMatches.some((match) => match._id === candidate._id)) return;
+      invitationMatches.push(candidate);
+    };
+
+    if (normalizedEmail) {
+      addInvitation(
+        await ctx.db
+          .query("officerInvitations")
+          .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+          .filter((q) => q.eq(q.field("status"), "accepted"))
+          .first(),
+      );
+    }
+
+    if (args.email && args.email !== normalizedEmail) {
+      addInvitation(
+        await ctx.db
+          .query("officerInvitations")
+          .withIndex("by_email", (q) => q.eq("email", args.email))
+          .filter((q) => q.eq(q.field("status"), "accepted"))
+          .first(),
+      );
+    }
+
+    const acceptedInvitation = invitationMatches[0];
 
     if (acceptedInvitation && role === "Member") {
       role = acceptedInvitation.role;
@@ -477,7 +501,7 @@ export const list = query({
     );
     const count = Math.max(
       1,
-      Math.min(args.paginationOpts?.numItems ?? users.length, 500),
+      args.paginationOpts?.numItems ?? users.length,
     );
     return users.slice(start, start + count);
   },
@@ -537,6 +561,54 @@ export const updateRole = mutation({
     });
 
     return args.userId;
+  },
+});
+
+export const createPlaceholder = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    email: v.string(),
+    name: v.string(),
+    role: v.string(),
+    position: v.optional(v.string()),
+    team: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const admin = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const normalizedEmail = args.email.trim().toLowerCase();
+    const now = Date.now();
+
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+      .first();
+
+    if (existingUser) {
+      return existingUser._id;
+    }
+
+    return await ctx.db.insert("users", {
+      email: normalizedEmail,
+      emailVisibility: true,
+      verified: true,
+      name: args.name,
+      role: args.role as any,
+      position: args.position,
+      team: args.team as any,
+      status: "active",
+      signedUp: false,
+      requestedEmail: false,
+      joinDate: now,
+      invitedBy: admin.logtoId ?? admin.authUserId ?? "",
+      lastUpdated: now,
+      lastUpdatedBy: admin.logtoId ?? admin.authUserId ?? "",
+      notificationPreferences: {},
+      displayPreferences: {},
+      accessibilitySettings: {},
+      eventsAttended: 0,
+      points: 0,
+    });
   },
 });
 

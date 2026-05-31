@@ -1,35 +1,15 @@
 ---
-import "../../styles/global.css";
-import AcceptInvitationContent from "../../components/accept-invitation/AcceptInvitationContent.tsx";
-
 const { inviteId } = Astro.params;
 
 if (!inviteId) {
   return Astro.redirect("/");
 }
 
-const title = "Accept Invitation - IEEE UCSD";
----
+const dashboardBaseUrl = (
+  import.meta.env.PUBLIC_DASHBOARD_URL || "https://dashboard.ieeeatucsd.org"
+)
+  .trim()
+  .replace(/\/$/, "");
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{title}</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <style>
-      body {
-        font-family:
-          system-ui,
-          -apple-system,
-          sans-serif;
-        margin: 0;
-        padding: 0;
-      }
-    </style>
-  </head>
-  <body>
-    <AcceptInvitationContent inviteId={inviteId} client:load />
-  </body>
-</html>
+return Astro.redirect(`${dashboardBaseUrl}/accept-invitation/${inviteId}`, 302);
+---

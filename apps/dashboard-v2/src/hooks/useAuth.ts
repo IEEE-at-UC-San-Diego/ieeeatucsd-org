@@ -358,9 +358,6 @@ function useSharedAuthClient(options: {
             isExpired,
             error: errorMessage(error),
           });
-          if (isExpired) {
-            markAuthFailure("session_mint_failed");
-          }
         } finally {
           refreshInFlightRef.current = false;
         }
@@ -375,7 +372,6 @@ function useSharedAuthClient(options: {
     convexSessionToken,
     isAuthenticated,
     logtoId,
-    markAuthFailure,
     mode,
     refreshSession,
   ]);
@@ -386,6 +382,7 @@ function useSharedAuthClient(options: {
       ? { logtoId, authToken: convexSessionToken }
       : "skip",
   );
+
   const stableAuthUser = resolveStableAuthUser({
     logtoId,
     convexUser,
@@ -394,6 +391,7 @@ function useSharedAuthClient(options: {
       user: NonNullable<typeof convexUser>;
     } | null,
   });
+
   lastResolvedUserRef.current = stableAuthUser.lastResolvedUser;
   const stableConvexUser = stableAuthUser.user as typeof convexUser;
 
@@ -511,6 +509,7 @@ function useSharedAuthClient(options: {
   const userRole: UserRole = (stableConvexUser?.role as UserRole) ?? "Member";
   const hasProvisioningAttempt =
     !!logtoId && lastProvisioningAttemptRef.current === logtoId;
+
   const { isAuthResolved, isLoading } = resolveAuthState({
     logtoLoading,
     isAuthenticated,

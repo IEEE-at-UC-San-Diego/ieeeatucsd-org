@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { sendInvitationEmail } from "@/server/email-templates";
+import { sendRejectionEmail } from "@/server/email-templates";
 import { requireApiAuth } from "@/server/auth";
 
 async function handle({ request }: { request: Request }) {
@@ -11,46 +11,47 @@ async function handle({ request }: { request: Request }) {
       });
     }
 
-    const authResult = await requireApiAuth(request, { requiredRoles: ["Administrator", "Executive Officer"] });
+    const authResult = await requireApiAuth(request, {
+      requiredRoles: ["Administrator", "Executive Officer"],
+    });
     if (authResult instanceof Response) return authResult;
-    const data = authResult.body;
-    const { inviteId, name, email, role, position, acceptanceDeadline, message, leaderName } = data as Record<string, string | undefined>;
-    const offeredPositions = Array.isArray(data.offeredPositions)
-      ? data.offeredPositions.filter((value): value is string => typeof value === "string")
-      : undefined;
 
-    if (!inviteId || !name || !email || !role || !position) {
+    const data = authResult.body;
+    const name = typeof data.name === "string" ? data.name : "";
+    const email = typeof data.email === "string" ? data.email : "";
+    const customMessage =
+      typeof data.customMessage === "string" ? data.customMessage : undefined;
+    const positions = Array.isArray(data.positions)
+      ? data.positions.filter((value): value is string => typeof value === "string")
+      : [];
+
+    if (!name || !email) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
 
-    const success = await sendInvitationEmail({
-      inviteId,
+    const success = await sendRejectionEmail({
       name,
       email,
-      role,
-      position,
-      offeredPositions,
-      acceptanceDeadline,
-      message,
-      leaderName,
+      positions,
+      customMessage,
     });
 
     if (!success) {
       return new Response(
-        JSON.stringify({ error: "Failed to send invitation email" }),
+        JSON.stringify({ error: "Failed to send rejection email" }),
         { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: "Invitation email sent successfully" }),
+      JSON.stringify({ success: true, message: "Rejection email sent successfully" }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   } catch (error) {
-    console.error("Error in send-invitation API:", error);
+    console.error("Error in send-rejection API:", error);
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Internal server error",
@@ -60,7 +61,7 @@ async function handle({ request }: { request: Request }) {
   }
 }
 
-export const Route = createFileRoute("/api/onboarding/send-invitation")({
+export const Route = createFileRoute("/api/onboarding/send-rejection")({
   server: {
     handlers: {
       POST: handle,

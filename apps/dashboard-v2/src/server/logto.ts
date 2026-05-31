@@ -12,6 +12,12 @@ const ROLE_NAMES = [
 
 type AppRole = (typeof ROLE_NAMES)[number];
 
+const MUTUALLY_EXCLUSIVE_OFFICER_ROLES: AppRole[] = [
+  "General Officer",
+  "Executive Officer",
+  "Past Officer",
+];
+
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 function getConfig() {
@@ -162,6 +168,19 @@ export async function assignRoleToUser(logtoUserId: string, roleId: string) {
   throw new Error(`Failed to assign Logto role: ${response.status} ${text}`);
 }
 
+export async function removeRoleFromUser(logtoUserId: string, roleId: string) {
+  const response = await logtoApi(`/roles/${roleId}/users/${logtoUserId}`, {
+    method: "DELETE",
+  });
+
+  if (response.ok || response.status === 404) {
+    return;
+  }
+
+  const text = await response.text();
+  throw new Error(`Failed to remove Logto role: ${response.status} ${text}`);
+}
+
 export async function ensureRoleOnLogtoUser(logtoUserId: string, role: AppRole) {
   const roleMap = await ensureLogtoRoles();
   const roleId = roleMap.get(role);
@@ -171,6 +190,28 @@ export async function ensureRoleOnLogtoUser(logtoUserId: string, role: AppRole) 
   }
 
   await assignRoleToUser(logtoUserId, roleId);
+}
+
+export async function syncOfficerRolesOnLogtoUser(logtoUserId: string, newRole: AppRole) {
+  const roleMap = await ensureLogtoRoles();
+
+  const roleId = roleMap.get(newRole);
+  if (!roleId) {
+    throw new Error(`Role '${newRole}' not found in Logto role map`);
+  }
+  await assignRoleToUser(logtoUserId, roleId);
+
+  const rolesToRemove = MUTUALLY_EXCLUSIVE_OFFICER_ROLES.filter((r) => r !== newRole);
+  for (const roleName of rolesToRemove) {
+    const staleRoleId = roleMap.get(roleName);
+    if (staleRoleId) {
+      try {
+        await removeRoleFromUser(logtoUserId, staleRoleId);
+      } catch {
+        // Non-fatal: user may not have this role
+      }
+    }
+  }
 }
 
 export function isSupportedRole(role: string): role is AppRole {

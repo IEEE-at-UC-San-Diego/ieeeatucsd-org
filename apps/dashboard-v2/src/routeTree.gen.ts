@@ -22,6 +22,7 @@ import { Route as ApiExtractPaymentDetailsRouteImport } from './routes/api/extra
 import { Route as ApiCreateIeeeEmailRouteImport } from './routes/api/create-ieee-email'
 import { Route as ApiCheckEmailExistsRouteImport } from './routes/api/check-email-exists'
 import { Route as ApiSplatRouteImport } from './routes/api.$'
+import { Route as AcceptInvitationInviteIdRouteImport } from './routes/accept-invitation.$inviteId'
 import { Route as DashboardSlackAccessRouteImport } from './routes/_dashboard/slack-access'
 import { Route as DashboardSettingsRouteImport } from './routes/_dashboard/settings'
 import { Route as DashboardReimbursementRouteImport } from './routes/_dashboard/reimbursement'
@@ -43,9 +44,11 @@ import { Route as DashboardConstitutionPreviewRouteImport } from './routes/_dash
 import { Route as DashboardConstitutionBuilderRouteImport } from './routes/_dashboard/constitution-builder'
 import { Route as ApiUsersUpdateRoleRouteImport } from './routes/api/users/update-role'
 import { Route as ApiRpcSplatRouteImport } from './routes/api.rpc.$'
+import { Route as ApiOnboardingSendRejectionRouteImport } from './routes/api/onboarding/send-rejection'
 import { Route as ApiOnboardingSendInvitationRouteImport } from './routes/api/onboarding/send-invitation'
 import { Route as ApiOnboardingSendDirectOnboardingRouteImport } from './routes/api/onboarding/send-direct-onboarding'
 import { Route as ApiOnboardingResendInvitationRouteImport } from './routes/api/onboarding/resend-invitation'
+import { Route as ApiOnboardingAcceptInvitationRouteImport } from './routes/api/onboarding/accept-invitation'
 import { Route as ApiIeeeEmailFetchEmailsRouteImport } from './routes/api/ieee-email/fetch-emails'
 import { Route as ApiIeeeEmailFetchContentRouteImport } from './routes/api/ieee-email/fetch-content'
 import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
@@ -120,6 +123,12 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AcceptInvitationInviteIdRoute =
+  AcceptInvitationInviteIdRouteImport.update({
+    id: '/accept-invitation/$inviteId',
+    path: '/accept-invitation/$inviteId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DashboardSlackAccessRoute = DashboardSlackAccessRouteImport.update({
   id: '/slack-access',
   path: '/slack-access',
@@ -231,6 +240,12 @@ const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
   path: '/api/rpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOnboardingSendRejectionRoute =
+  ApiOnboardingSendRejectionRouteImport.update({
+    id: '/api/onboarding/send-rejection',
+    path: '/api/onboarding/send-rejection',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiOnboardingSendInvitationRoute =
   ApiOnboardingSendInvitationRouteImport.update({
     id: '/api/onboarding/send-invitation',
@@ -247,6 +262,12 @@ const ApiOnboardingResendInvitationRoute =
   ApiOnboardingResendInvitationRouteImport.update({
     id: '/api/onboarding/resend-invitation',
     path: '/api/onboarding/resend-invitation',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOnboardingAcceptInvitationRoute =
+  ApiOnboardingAcceptInvitationRouteImport.update({
+    id: '/api/onboarding/accept-invitation',
+    path: '/api/onboarding/accept-invitation',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiIeeeEmailFetchEmailsRoute = ApiIeeeEmailFetchEmailsRouteImport.update({
@@ -318,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/reimbursement': typeof DashboardReimbursementRoute
   '/settings': typeof DashboardSettingsRoute
   '/slack-access': typeof DashboardSlackAccessRoute
+  '/accept-invitation/$inviteId': typeof AcceptInvitationInviteIdRoute
   '/api/$': typeof ApiSplatRoute
   '/api/check-email-exists': typeof ApiCheckEmailExistsRoute
   '/api/create-ieee-email': typeof ApiCreateIeeeEmailRoute
@@ -333,9 +355,11 @@ export interface FileRoutesByFullPath {
   '/api/email/send': typeof ApiEmailSendRoute
   '/api/ieee-email/fetch-content': typeof ApiIeeeEmailFetchContentRoute
   '/api/ieee-email/fetch-emails': typeof ApiIeeeEmailFetchEmailsRoute
+  '/api/onboarding/accept-invitation': typeof ApiOnboardingAcceptInvitationRoute
   '/api/onboarding/resend-invitation': typeof ApiOnboardingResendInvitationRoute
   '/api/onboarding/send-direct-onboarding': typeof ApiOnboardingSendDirectOnboardingRoute
   '/api/onboarding/send-invitation': typeof ApiOnboardingSendInvitationRoute
+  '/api/onboarding/send-rejection': typeof ApiOnboardingSendRejectionRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
 }
@@ -364,6 +388,7 @@ export interface FileRoutesByTo {
   '/reimbursement': typeof DashboardReimbursementRoute
   '/settings': typeof DashboardSettingsRoute
   '/slack-access': typeof DashboardSlackAccessRoute
+  '/accept-invitation/$inviteId': typeof AcceptInvitationInviteIdRoute
   '/api/$': typeof ApiSplatRoute
   '/api/check-email-exists': typeof ApiCheckEmailExistsRoute
   '/api/create-ieee-email': typeof ApiCreateIeeeEmailRoute
@@ -379,9 +404,11 @@ export interface FileRoutesByTo {
   '/api/email/send': typeof ApiEmailSendRoute
   '/api/ieee-email/fetch-content': typeof ApiIeeeEmailFetchContentRoute
   '/api/ieee-email/fetch-emails': typeof ApiIeeeEmailFetchEmailsRoute
+  '/api/onboarding/accept-invitation': typeof ApiOnboardingAcceptInvitationRoute
   '/api/onboarding/resend-invitation': typeof ApiOnboardingResendInvitationRoute
   '/api/onboarding/send-direct-onboarding': typeof ApiOnboardingSendDirectOnboardingRoute
   '/api/onboarding/send-invitation': typeof ApiOnboardingSendInvitationRoute
+  '/api/onboarding/send-rejection': typeof ApiOnboardingSendRejectionRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
 }
@@ -412,6 +439,7 @@ export interface FileRoutesById {
   '/_dashboard/reimbursement': typeof DashboardReimbursementRoute
   '/_dashboard/settings': typeof DashboardSettingsRoute
   '/_dashboard/slack-access': typeof DashboardSlackAccessRoute
+  '/accept-invitation/$inviteId': typeof AcceptInvitationInviteIdRoute
   '/api/$': typeof ApiSplatRoute
   '/api/check-email-exists': typeof ApiCheckEmailExistsRoute
   '/api/create-ieee-email': typeof ApiCreateIeeeEmailRoute
@@ -427,9 +455,11 @@ export interface FileRoutesById {
   '/api/email/send': typeof ApiEmailSendRoute
   '/api/ieee-email/fetch-content': typeof ApiIeeeEmailFetchContentRoute
   '/api/ieee-email/fetch-emails': typeof ApiIeeeEmailFetchEmailsRoute
+  '/api/onboarding/accept-invitation': typeof ApiOnboardingAcceptInvitationRoute
   '/api/onboarding/resend-invitation': typeof ApiOnboardingResendInvitationRoute
   '/api/onboarding/send-direct-onboarding': typeof ApiOnboardingSendDirectOnboardingRoute
   '/api/onboarding/send-invitation': typeof ApiOnboardingSendInvitationRoute
+  '/api/onboarding/send-rejection': typeof ApiOnboardingSendRejectionRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
 }
@@ -460,6 +490,7 @@ export interface FileRouteTypes {
     | '/reimbursement'
     | '/settings'
     | '/slack-access'
+    | '/accept-invitation/$inviteId'
     | '/api/$'
     | '/api/check-email-exists'
     | '/api/create-ieee-email'
@@ -475,9 +506,11 @@ export interface FileRouteTypes {
     | '/api/email/send'
     | '/api/ieee-email/fetch-content'
     | '/api/ieee-email/fetch-emails'
+    | '/api/onboarding/accept-invitation'
     | '/api/onboarding/resend-invitation'
     | '/api/onboarding/send-direct-onboarding'
     | '/api/onboarding/send-invitation'
+    | '/api/onboarding/send-rejection'
     | '/api/rpc/$'
     | '/api/users/update-role'
   fileRoutesByTo: FileRoutesByTo
@@ -506,6 +539,7 @@ export interface FileRouteTypes {
     | '/reimbursement'
     | '/settings'
     | '/slack-access'
+    | '/accept-invitation/$inviteId'
     | '/api/$'
     | '/api/check-email-exists'
     | '/api/create-ieee-email'
@@ -521,9 +555,11 @@ export interface FileRouteTypes {
     | '/api/email/send'
     | '/api/ieee-email/fetch-content'
     | '/api/ieee-email/fetch-emails'
+    | '/api/onboarding/accept-invitation'
     | '/api/onboarding/resend-invitation'
     | '/api/onboarding/send-direct-onboarding'
     | '/api/onboarding/send-invitation'
+    | '/api/onboarding/send-rejection'
     | '/api/rpc/$'
     | '/api/users/update-role'
   id:
@@ -553,6 +589,7 @@ export interface FileRouteTypes {
     | '/_dashboard/reimbursement'
     | '/_dashboard/settings'
     | '/_dashboard/slack-access'
+    | '/accept-invitation/$inviteId'
     | '/api/$'
     | '/api/check-email-exists'
     | '/api/create-ieee-email'
@@ -568,9 +605,11 @@ export interface FileRouteTypes {
     | '/api/email/send'
     | '/api/ieee-email/fetch-content'
     | '/api/ieee-email/fetch-emails'
+    | '/api/onboarding/accept-invitation'
     | '/api/onboarding/resend-invitation'
     | '/api/onboarding/send-direct-onboarding'
     | '/api/onboarding/send-invitation'
+    | '/api/onboarding/send-rejection'
     | '/api/rpc/$'
     | '/api/users/update-role'
   fileRoutesById: FileRoutesById
@@ -582,6 +621,7 @@ export interface RootRouteChildren {
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   SigninRoute: typeof SigninRoute
   TermsOfServiceRoute: typeof TermsOfServiceRoute
+  AcceptInvitationInviteIdRoute: typeof AcceptInvitationInviteIdRoute
   ApiSplatRoute: typeof ApiSplatRoute
   ApiCheckEmailExistsRoute: typeof ApiCheckEmailExistsRoute
   ApiCreateIeeeEmailRoute: typeof ApiCreateIeeeEmailRoute
@@ -595,9 +635,11 @@ export interface RootRouteChildren {
   ApiEmailSendRoute: typeof ApiEmailSendRoute
   ApiIeeeEmailFetchContentRoute: typeof ApiIeeeEmailFetchContentRoute
   ApiIeeeEmailFetchEmailsRoute: typeof ApiIeeeEmailFetchEmailsRoute
+  ApiOnboardingAcceptInvitationRoute: typeof ApiOnboardingAcceptInvitationRoute
   ApiOnboardingResendInvitationRoute: typeof ApiOnboardingResendInvitationRoute
   ApiOnboardingSendDirectOnboardingRoute: typeof ApiOnboardingSendDirectOnboardingRoute
   ApiOnboardingSendInvitationRoute: typeof ApiOnboardingSendInvitationRoute
+  ApiOnboardingSendRejectionRoute: typeof ApiOnboardingSendRejectionRoute
   ApiRpcSplatRoute: typeof ApiRpcSplatRoute
   ApiUsersUpdateRoleRoute: typeof ApiUsersUpdateRoleRoute
 }
@@ -693,6 +735,13 @@ declare module '@tanstack/react-router' {
       path: '/api/$'
       fullPath: '/api/$'
       preLoaderRoute: typeof ApiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accept-invitation/$inviteId': {
+      id: '/accept-invitation/$inviteId'
+      path: '/accept-invitation/$inviteId'
+      fullPath: '/accept-invitation/$inviteId'
+      preLoaderRoute: typeof AcceptInvitationInviteIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_dashboard/slack-access': {
@@ -842,6 +891,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRpcSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/onboarding/send-rejection': {
+      id: '/api/onboarding/send-rejection'
+      path: '/api/onboarding/send-rejection'
+      fullPath: '/api/onboarding/send-rejection'
+      preLoaderRoute: typeof ApiOnboardingSendRejectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/onboarding/send-invitation': {
       id: '/api/onboarding/send-invitation'
       path: '/api/onboarding/send-invitation'
@@ -861,6 +917,13 @@ declare module '@tanstack/react-router' {
       path: '/api/onboarding/resend-invitation'
       fullPath: '/api/onboarding/resend-invitation'
       preLoaderRoute: typeof ApiOnboardingResendInvitationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/onboarding/accept-invitation': {
+      id: '/api/onboarding/accept-invitation'
+      path: '/api/onboarding/accept-invitation'
+      fullPath: '/api/onboarding/accept-invitation'
+      preLoaderRoute: typeof ApiOnboardingAcceptInvitationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ieee-email/fetch-emails': {
@@ -981,6 +1044,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   SigninRoute: SigninRoute,
   TermsOfServiceRoute: TermsOfServiceRoute,
+  AcceptInvitationInviteIdRoute: AcceptInvitationInviteIdRoute,
   ApiSplatRoute: ApiSplatRoute,
   ApiCheckEmailExistsRoute: ApiCheckEmailExistsRoute,
   ApiCreateIeeeEmailRoute: ApiCreateIeeeEmailRoute,
@@ -994,10 +1058,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiEmailSendRoute: ApiEmailSendRoute,
   ApiIeeeEmailFetchContentRoute: ApiIeeeEmailFetchContentRoute,
   ApiIeeeEmailFetchEmailsRoute: ApiIeeeEmailFetchEmailsRoute,
+  ApiOnboardingAcceptInvitationRoute: ApiOnboardingAcceptInvitationRoute,
   ApiOnboardingResendInvitationRoute: ApiOnboardingResendInvitationRoute,
   ApiOnboardingSendDirectOnboardingRoute:
     ApiOnboardingSendDirectOnboardingRoute,
   ApiOnboardingSendInvitationRoute: ApiOnboardingSendInvitationRoute,
+  ApiOnboardingSendRejectionRoute: ApiOnboardingSendRejectionRoute,
   ApiRpcSplatRoute: ApiRpcSplatRoute,
   ApiUsersUpdateRoleRoute: ApiUsersUpdateRoleRoute,
 }

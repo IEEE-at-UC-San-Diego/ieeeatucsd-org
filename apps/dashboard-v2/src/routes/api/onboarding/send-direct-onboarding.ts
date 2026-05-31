@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE } from "@/lib/onboarding-template";
 import { sendDirectOnboardingEmail } from "@/server/email-templates";
 import { requireApiAuth } from "@/server/auth";
 
@@ -25,7 +26,7 @@ async function handle({ request }: { request: Request }) {
       googleSheetsUrl,
     } = data as Record<string, string | undefined>;
 
-    if (!name || !email || !role || !position || !emailTemplate) {
+    if (!name || !email || !role || !position) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { "Content-Type": "application/json" } },
@@ -40,7 +41,7 @@ async function handle({ request }: { request: Request }) {
         position,
         leaderName,
         customMessage,
-        emailTemplate,
+        emailTemplate: emailTemplate || DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE,
       },
       googleSheetsUrl,
     );

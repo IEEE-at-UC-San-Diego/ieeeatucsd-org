@@ -14,8 +14,6 @@
     "check": "biome check"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.45",
-    "@anthropic-ai/claude-code": "^2.1.45",
     "@convex-dev/react-query": "0.1.0",
     "@hookform/resolvers": "^5.2.2",
     "@logto/react": "^4.0.12",
@@ -51,6 +49,7 @@
     "convex": "1.27.3",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.33.0",
+    "googleapis": "^171.4.0",
     "heic2any": "^0.0.4",
     "imapflow": "^1.2.9",
     "input-otp": "^1.4.2",
@@ -77,6 +76,7 @@
     "@tanstack/devtools-vite": "^0.3.11",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
+    "@types/google.maps": "^3.58.1",
     "@types/node": "^22.10.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

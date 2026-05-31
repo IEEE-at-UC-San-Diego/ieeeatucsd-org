@@ -34,3 +34,21 @@ export const create = mutation({
     });
   },
 });
+
+export const updateGoogleGroup = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    id: v.id("directOnboardings"),
+    googleGroupAssigned: v.boolean(),
+    googleGroup: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    await ctx.db.patch(args.id, {
+      googleGroupAssigned: args.googleGroupAssigned,
+      googleGroup: args.googleGroup,
+    });
+    return args.id;
+  },
+});

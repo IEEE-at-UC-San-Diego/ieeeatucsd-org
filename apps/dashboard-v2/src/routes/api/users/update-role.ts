@@ -5,10 +5,11 @@ import type { FunctionReference } from "convex/server";
 import { env } from "@/env";
 import { requireApiAuth } from "@/server/auth";
 import { createConvexSessionToken } from "@/server/convex-session";
+import { syncGoogleGroupsForRoleWithAudit } from "@/server/google-group-sync";
 import {
-  ensureRoleOnLogtoUser,
   findLogtoUserByEmail,
   isSupportedRole,
+  syncOfficerRolesOnLogtoUser,
 } from "@/server/logto";
 import type { UserRole } from "@/types/roles";
 
@@ -52,6 +53,7 @@ async function handle({ request }: { request: Request }) {
     const role = body.role as string | undefined;
     const source = (body.source as Source | undefined) || "manage-users";
     const email = body.email as string | undefined;
+    const name = body.name as string | undefined;
     const userId = body.userId as string | undefined;
     const position = body.position as string | undefined;
     const rawTeam = body.team as string | undefined;
@@ -152,6 +154,19 @@ async function handle({ request }: { request: Request }) {
           team: team as OfficerTeam | undefined,
         });
         convexUpdated = true;
+      } else if (source === "onboarding" && resolvedEmail) {
+        const createPlaceholderFn = "users:createPlaceholder" as unknown as FunctionReference<"mutation">;
+        const newUserId = await convex.mutation(createPlaceholderFn, {
+          logtoId,
+          authToken: token,
+          email: resolvedEmail,
+          name: name || resolvedEmail.split("@")[0],
+          role,
+          position: position || undefined,
+          team: team as OfficerTeam | undefined,
+        });
+        targetUser = { _id: newUserId as string, email: resolvedEmail };
+        convexUpdated = true;
       } else {
         warnings.push(`No Convex user found for email '${resolvedEmail}'`);
       }
@@ -164,7 +179,7 @@ async function handle({ request }: { request: Request }) {
 
     if (resolvedLogtoUserId) {
       try {
-        await ensureRoleOnLogtoUser(resolvedLogtoUserId, role as AppRole);
+        await syncOfficerRolesOnLogtoUser(resolvedLogtoUserId, role as AppRole);
         logtoUpdated = true;
       } catch (error) {
         warnings.push(
@@ -179,7 +194,7 @@ async function handle({ request }: { request: Request }) {
         if (!logtoUser) {
           warnings.push(`No Logto user found for email '${resolvedEmail}'`);
         } else {
-          await ensureRoleOnLogtoUser(logtoUser.id, role as AppRole);
+          await syncOfficerRolesOnLogtoUser(logtoUser.id, role as AppRole);
           logtoUpdated = true;
         }
       } catch (error) {
@@ -189,6 +204,19 @@ async function handle({ request }: { request: Request }) {
             : "Failed to sync role to Logto",
         );
       }
+    }
+
+    let googleGroupUpdated = false;
+    let googleGroup: string | null = null;
+    if (resolvedEmail) {
+      const googleGroupResult = await syncGoogleGroupsForRoleWithAudit(
+        convex,
+        resolvedEmail,
+        role,
+      );
+      googleGroupUpdated = googleGroupResult.googleGroupUpdated;
+      googleGroup = googleGroupResult.googleGroup;
+      warnings.push(...googleGroupResult.warnings);
     }
 
     if (!convexUpdated && source === "manage-users") {
@@ -206,6 +234,8 @@ async function handle({ request }: { request: Request }) {
         success: true,
         convexUpdated,
         logtoUpdated,
+        googleGroupUpdated,
+        googleGroup,
         warnings,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },

@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import {
   requireCurrentUser,
@@ -81,6 +82,15 @@ function eventMatchesCode(
   return false;
 }
 
+function isEventCurrentlyActive(event: {
+  published?: boolean;
+  startDate: number;
+  endDate: number;
+}) {
+  const now = Date.now();
+  return Boolean(event.published) && event.startDate <= now && event.endDate >= now;
+}
+
 function getPublicCalendarMeta(eventId: string) {
   const publicCalendarId = process.env.PUBLIC_GOOGLE_CALENDAR_ID;
   if (!publicCalendarId) {
@@ -125,6 +135,34 @@ function getPrivateCalendarMeta(eventType: "published" | "internal", eventId: st
   };
 }
 
+async function enqueuePublishedEventGoogleCalendarDeletion(
+  ctx: MutationCtx,
+  eventId: string,
+  reason: "event_unpublished" | "event_deleted",
+) {
+  const googleEventId = generateGoogleCalendarEventId("published", eventId);
+  const createdAt = Date.now();
+
+  await Promise.all([
+    ctx.db.insert("googleCalendarDeletionQueue", {
+      calendar: "private",
+      googleEventId,
+      reason,
+      sourceTable: "events",
+      sourceId: eventId,
+      createdAt,
+    }),
+    ctx.db.insert("googleCalendarDeletionQueue", {
+      calendar: "public",
+      googleEventId,
+      reason,
+      sourceTable: "events",
+      sourceId: eventId,
+      createdAt,
+    }),
+  ]);
+}
+
 // ── Queries ──────────────────────────────────────────────────────────────────
 
 export const listPublished = query({
@@ -143,10 +181,10 @@ export const listPublished = query({
           .withIndex("by_eventId", (q) => q.eq("eventId", event._id))
           .collect();
         const legacyAttendeeIds = getLegacyAttendeeIds(event as Record<string, unknown>);
-        const attendeeCount =
-          attendees.length > 0
-            ? new Set(attendees.map((a) => a.userId)).size
-            : new Set(legacyAttendeeIds).size;
+        const attendeeCount = new Set([
+          ...attendees.map((attendee) => attendee.userId),
+          ...legacyAttendeeIds,
+        ]).size;
 
         return {
           ...event,
@@ -345,7 +383,18 @@ export const getAttendedEventIds = query({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .collect();
 
-    return attendees.map((a) => a.eventId);
+    const legacyEvents = await ctx.db.query("events").collect();
+
+    return [
+      ...new Set([
+        ...attendees.map((attendee) => attendee.eventId),
+        ...legacyEvents
+          .filter((event) =>
+            getLegacyAttendeeIds(event as Record<string, unknown>).includes(userId),
+          )
+          .map((event) => event._id),
+      ]),
+    ];
   },
 });
 
@@ -564,7 +613,15 @@ export const update = mutation({
       }
     }
 
+    const shouldQueueCalendarDeletion =
+      Boolean(event.published) && cleanUpdates.published === false;
+
     await ctx.db.patch(id, cleanUpdates);
+
+    if (shouldQueueCalendarDeletion) {
+      await enqueuePublishedEventGoogleCalendarDeletion(ctx, id, "event_unpublished");
+    }
+
     return id;
   },
 });
@@ -581,6 +638,9 @@ export const remove = mutation({
     // Admins and Executive Officers can delete any event
     if (hasAdminAccess(user.role)) {
       await ctx.db.delete(args.id);
+      if (event.published) {
+        await enqueuePublishedEventGoogleCalendarDeletion(ctx, args.id, "event_deleted");
+      }
       return args.id;
     }
 
@@ -594,6 +654,9 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(args.id);
+    if (event.published) {
+      await enqueuePublishedEventGoogleCalendarDeletion(ctx, args.id, "event_deleted");
+    }
     return args.id;
   },
 });
@@ -664,6 +727,7 @@ export const checkIn = mutation({
   args: {
     logtoId: v.string(),
     authToken: v.string(),
+    eventId: v.optional(v.id("events")),
     eventCode: v.string(),
     food: v.optional(v.string()),
   },
@@ -676,23 +740,44 @@ export const checkIn = mutation({
       throw new ConvexError("Invalid event code. Please check the code and try again.");
     }
 
-    // Look up event by normalized code via index first.
-    let event = await ctx.db
-      .query("events")
-      .withIndex("by_eventCode", (q) => q.eq("eventCode", normalizedInputCode))
-      .first();
+    let event = null;
 
-    if (!event) {
-      // Backward-compat fallback for legacy events with mixed formatting.
-      const allEvents = await ctx.db.query("events").collect();
-      event =
-        allEvents.find((candidate) =>
-          eventMatchesCode(
-            { _id: candidate._id as string, eventCode: candidate.eventCode },
-            normalizedInputCode,
-            canonicalInputCode,
-          ),
-        ) ?? null;
+    if (args.eventId) {
+      const selectedEvent = await ctx.db.get(args.eventId);
+      if (!selectedEvent) {
+        throw new ConvexError("Event not found.");
+      }
+
+      const matchesSelectedEvent = eventMatchesCode(
+        { _id: selectedEvent._id as string, eventCode: selectedEvent.eventCode },
+        normalizedInputCode,
+        canonicalInputCode,
+      );
+
+      if (!matchesSelectedEvent) {
+        throw new ConvexError("Incorrect event code for this event.");
+      }
+
+      event = selectedEvent;
+    } else {
+      // Look up event by normalized code via index first.
+      event = await ctx.db
+        .query("events")
+        .withIndex("by_eventCode", (q) => q.eq("eventCode", normalizedInputCode))
+        .first();
+
+      if (!event) {
+        // Backward-compat fallback for legacy events with mixed formatting.
+        const allEvents = await ctx.db.query("events").collect();
+        event =
+          allEvents.find((candidate) =>
+            eventMatchesCode(
+              { _id: candidate._id as string, eventCode: candidate.eventCode },
+              normalizedInputCode,
+              canonicalInputCode,
+            ),
+          ) ?? null;
+      }
     }
 
     if (!event) {
@@ -703,18 +788,29 @@ export const checkIn = mutation({
       throw new ConvexError("This event is not currently published for check-in.");
     }
 
+    if (!isEventCurrentlyActive(event)) {
+      if (Date.now() < event.startDate) {
+        throw new ConvexError("This event has not started yet.");
+      }
+      throw new ConvexError("This event has already ended.");
+    }
+
     // Check if already checked in
+    const userId = user.logtoId ?? user.authUserId ?? "";
     const existing = await ctx.db
       .query("attendees")
       .withIndex("by_eventId", (q) => q.eq("eventId", event._id))
-      .filter((q) => q.eq(q.field("userId"), user.logtoId ?? user.authUserId ?? ""))
+      .filter((q) => q.eq(q.field("userId"), userId))
       .first();
 
     if (existing) {
       throw new ConvexError("You have already checked in to this event.");
     }
 
-    const userId = user.logtoId ?? user.authUserId ?? "";
+    const legacyAttendeeIds = getLegacyAttendeeIds(event as Record<string, unknown>);
+    if (legacyAttendeeIds.includes(userId)) {
+      throw new ConvexError("You have already checked in to this event.");
+    }
 
     await ctx.db.insert("attendees", {
       eventId: event._id,

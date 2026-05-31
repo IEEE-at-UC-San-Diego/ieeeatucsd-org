@@ -38,7 +38,8 @@ export async function sendInvitationEmail(
   data: InvitationEmailData,
 ): Promise<boolean> {
   try {
-    const baseUrl = import.meta.env.PUBLIC_SITE_URL || "https://ieeeatucsd.org";
+    const baseUrl =
+      import.meta.env.PUBLIC_DASHBOARD_URL || "https://dashboard.ieeeatucsd.org";
     const acceptLink = `${baseUrl}/accept-invitation/${data.inviteId}`;
 
     const subject = `You've been elected as ${data.position} for IEEE at UCSD!`;

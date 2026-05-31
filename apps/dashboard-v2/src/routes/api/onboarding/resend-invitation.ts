@@ -15,6 +15,9 @@ async function handle({ request }: { request: Request }) {
     if (authResult instanceof Response) return authResult;
     const data = authResult.body;
     const { invitationId, name, email, role, position, acceptanceDeadline, message, leaderName } = data as Record<string, string | undefined>;
+    const offeredPositions = Array.isArray(data.offeredPositions)
+      ? data.offeredPositions.filter((value): value is string => typeof value === "string")
+      : undefined;
 
     if (!invitationId || !name || !email) {
       return new Response(
@@ -29,6 +32,7 @@ async function handle({ request }: { request: Request }) {
       email,
       role: role || "",
       position: position || "",
+      offeredPositions,
       acceptanceDeadline,
       message,
       leaderName,

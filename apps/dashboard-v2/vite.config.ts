@@ -9,6 +9,38 @@ import tailwindcss from "@tailwindcss/vite";
 import { nitro } from "nitro/vite";
 
 const appRoot = fileURLToPath(new URL(".", import.meta.url));
+const serverExternalPackages = [
+	/^@radix-ui\//,
+	/^@tanstack\//,
+	/^@tiptap\//,
+	/^@orpc\//,
+	/^prosemirror-/,
+	"@convex-dev/react-query",
+	"@logto/react",
+	"@vitejs/plugin-react",
+	"babel-plugin-react-compiler",
+	"convex",
+	"framer-motion",
+	"googleapis",
+	"heic2any",
+	"imapflow",
+	"lucide-react",
+	"radix-ui",
+	"react",
+	"react-dom",
+	"react-dom/server",
+	"react/jsx-runtime",
+	"recharts",
+	"sonner",
+];
+
+function shouldExternalizeServerPackage(id: string) {
+	return serverExternalPackages.some((entry) =>
+		typeof entry === "string"
+			? id === entry || id.startsWith(`${entry}/`)
+			: entry.test(id),
+	);
+}
 
 const config = defineConfig({
 	root: appRoot,
@@ -23,7 +55,16 @@ const config = defineConfig({
 	},
 	plugins: [
 		devtools() as PluginOption,
-		nitro() as PluginOption,
+		nitro({
+			preset: "node-server",
+			externals: {
+				trace: false,
+				external: serverExternalPackages,
+			},
+			rollupConfig: {
+				external: shouldExternalizeServerPackage,
+			},
+		}) as PluginOption,
 		// this is the plugin that enables path aliases
 		viteTsConfigPaths({
 			projects: ["./tsconfig.json"],
