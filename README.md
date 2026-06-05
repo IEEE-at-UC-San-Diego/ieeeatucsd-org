@@ -55,16 +55,15 @@ The project includes Docker support for all services:
 docker-compose up
 
 # Start specific service
-docker-compose up website       # Port 4321
-docker-compose up dashboard     # Port 4322
-docker-compose up dashboard-v2  # Port 4323
+docker-compose up website    # Port 4321
+docker-compose up dashboard  # Port 4323
 
 # Build and run a specific service
-docker build -t dashboard-v2 . --target dashboard_v2
-docker run -p 4323:4323 --env-file .env dashboard-v2
+docker build -t dashboard . --target dashboard
+docker run -p 4323:4323 --env-file .env dashboard
 ```
 
-See [`apps/dashboard-v2/DEPLOYMENT.md`](apps/dashboard-v2/DEPLOYMENT.md) for detailed dashboard-v2 deployment instructions.
+See [`apps/dashboard/docs/DEPLOYMENT.md`](apps/dashboard/docs/DEPLOYMENT.md) for detailed dashboard deployment instructions.
 
 ## Built with:
 
