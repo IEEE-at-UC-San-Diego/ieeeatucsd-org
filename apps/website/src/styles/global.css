@@ -88,7 +88,7 @@
   body {
     @apply bg-background text-foreground;
     font-family:
-      "Inter",
+      "Geist",
       ui-sans-serif,
       system-ui,
       -apple-system,
@@ -97,20 +97,49 @@
       Helvetica,
       Arial,
       sans-serif;
+    line-height: 1.65;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* Stylistic set + contextual alternates for a cleaner, modern read */
+    font-feature-settings: "ss01", "cv01", "cv11";
+    font-variant-ligatures: contextual;
   }
 
-  /* Tighter, more intentional display typography */
+  /* Display typography — Bricolage Grotesque, optically sized & tightly set */
   h1,
   h2,
   h3,
   h4,
   h5,
-  h6 {
+  h6,
+  .font-display {
+    font-family:
+      "Bricolage Grotesque",
+      "Geist",
+      ui-sans-serif,
+      system-ui,
+      sans-serif;
     letter-spacing: -0.02em;
+    line-height: 1.08;
+    font-optical-sizing: auto;
+    text-wrap: balance;
+  }
+
+  h1 {
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+  }
+
+  h2 {
+    letter-spacing: -0.03em;
+  }
+
+  /* Tabular figures wherever numbers should line up */
+  table,
+  time,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
   }
 
   /* Branded text selection */
@@ -137,6 +166,32 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+/* Typographic Utilities */
+@layer utilities {
+  /* Monospace technical labels / eyebrows — instrument-panel precision */
+  .font-mono-tech {
+    font-family:
+      "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  }
+
+  /* Eyebrow: small uppercase mono kicker above headings */
+  .eyebrow {
+    font-family:
+      "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-weight: 500;
+    font-feature-settings: "ss01";
+  }
+
+  /* Lead paragraph — slightly larger, airier body copy */
+  .text-lead {
+    font-size: 1.125em;
+    line-height: 1.7;
+    font-weight: 350;
   }
 }
 

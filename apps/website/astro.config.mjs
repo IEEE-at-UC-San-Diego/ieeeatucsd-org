@@ -17,6 +17,12 @@ import sitemap from "@astrojs/sitemap";
 
 // import AstroPWA from "@vite-pwa/astro";
 
+// During `astro dev`, Vite's module runner inlines SSR modules and chokes on
+// react-dom's CommonJS `server.node.js` ("require is not defined"). Only bundle
+// React into the SSR build for production, where standalone Docker deploys need
+// it. https://astro.build/config
+const isDev = process.argv.includes("dev");
+
 // https://astro.build/config
 export default defineConfig({
   site: "https://ieeeatucsd.org",
@@ -86,7 +92,8 @@ export default defineConfig({
     ssr: {
       // Bundle React into the server build so standalone deploys don't need
       // hoisted workspace node_modules for bare `import 'react'` in renderers.mjs.
-      noExternal: ["react", "react-dom"],
+      // Skip in dev: the Vite module runner can't execute react-dom's CJS server entry.
+      noExternal: isDev ? [] : ["react", "react-dom"],
       optimizeDeps: {
         include: [
           "react",

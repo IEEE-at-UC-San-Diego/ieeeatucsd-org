@@ -11,7 +11,7 @@ const { title, text, link, number, delay } = Astro.props;
     class="rounded-full aspect-square w-[7vw] md:w-[5.5vw] absolute bg-gradient-to-b from-ieee-blue-100 to-ieee-blue-300 -top-[10%] shadow-xl shadow-ieee-blue-300 ring-1 ring-white/20 transition-transform duration-500 ease-out group-hover:scale-110"
   >
   </div>
-  <p class="text-[2.7vw] md:text-[1.7vw] font-bold text-center">
+  <p class="font-display text-[2.7vw] md:text-[1.7vw] font-bold tracking-tight text-center">
     {title}
   </p>
   <p
@@ -30,7 +30,8 @@ const { title, text, link, number, delay } = Astro.props;
     />
   </a>
   <p
-    class="text-[7vw] md:text-[3.7vw] font-bold text-ieee-blue-300/50 absolute bottom-[5%]"
+    data-numeric
+    class="font-display text-[7vw] md:text-[3.7vw] font-extrabold tracking-tight text-ieee-blue-300/50 absolute bottom-[5%]"
   >
     {number}
   </p>
