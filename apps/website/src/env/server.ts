@@ -26,9 +26,7 @@ function loadLocalEnvFiles() {
   }
 
   for (const [key, value] of Object.entries(shellEnv)) {
-    if (value !== undefined && value !== "") {
-      process.env[key] = value;
-    }
+    process.env[key] = value;
   }
 }
 
@@ -41,11 +39,8 @@ function readEnv(key: string): string | undefined {
     return fromProcess;
   }
 
-  const meta =
-    typeof import.meta !== "undefined"
-      ? (import.meta.env as Record<string, string | undefined>)
-      : undefined;
-  const fromMeta = meta?.[key];
+  const meta = import.meta.env as Record<string, string | undefined>;
+  const fromMeta = meta[key];
   if (fromMeta !== undefined && fromMeta !== "") {
     return fromMeta;
   }
