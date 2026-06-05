@@ -8,6 +8,7 @@ COPY . .
 RUN bunx turbo prune @ieeeatucsd/website --docker
 
 FROM base AS website_deps
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/bun.lock ./bun.lock
 RUN --mount=type=cache,target=/root/.bun/install/cache \
@@ -64,9 +65,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       libxrandr2 \
       xdg-utils
 
-FROM website_system AS website_prod_deps
-COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/bun.lock ./bun.lock
+FROM website_deps AS website_prod_deps
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --production
 
@@ -125,9 +124,7 @@ COPY --from=dashboard_pruner /app/out/full/ .
 RUN --mount=type=cache,target=/app/.turbo,id=turbo-dashboard \
     bunx turbo run build --filter=@ieeeatucsd/dashboard
 
-FROM base AS dashboard_prod_deps
-COPY --from=dashboard_pruner /app/out/json/ .
-COPY --from=dashboard_pruner /app/out/bun.lock ./bun.lock
+FROM dashboard_deps AS dashboard_prod_deps
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --production
 
