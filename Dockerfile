@@ -33,7 +33,8 @@ ENV PUBLIC_FIREBASE_WEB_API_KEY=$PUBLIC_FIREBASE_WEB_API_KEY \
     PUBLIC_GOOGLE_CALENDAR_ID=$PUBLIC_GOOGLE_CALENDAR_ID
 
 COPY --from=pruner /app/out/full/ .
-RUN bunx turbo run build --filter=@ieeeatucsd/website
+RUN --mount=type=cache,target=/app/.turbo,id=turbo-website \
+    bunx turbo run build --filter=@ieeeatucsd/website
 
 FROM base AS website_system
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
@@ -121,7 +122,8 @@ ENV VITE_APP_TITLE=$VITE_APP_TITLE \
     VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 
 COPY --from=dashboard_pruner /app/out/full/ .
-RUN bunx turbo run build --filter=@ieeeatucsd/dashboard
+RUN --mount=type=cache,target=/app/.turbo,id=turbo-dashboard \
+    bunx turbo run build --filter=@ieeeatucsd/dashboard
 
 FROM base AS dashboard_prod_deps
 COPY --from=dashboard_pruner /app/out/json/ .
