@@ -24,7 +24,7 @@ import {
   type EmailType,
 } from "./sample-data";
 
-// ── Import the actual template from dashboard-v2 ──────────────────────────────
+// ── Import the actual template from dashboard ──────────────────────────────
 // We resolve relative to this script's location in the monorepo.
 
 import {
@@ -36,7 +36,7 @@ import {
   type StatusVariant,
   type DetailRow,
   type NotesBox,
-} from "../../../apps/dashboard-v2/src/server/email-template";
+} from "../../../apps/dashboard/src/server/email-template";
 
 // ── CLI Args ───────────────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ function statusLabel(status: string): string {
 }
 
 // ── Email Builders ─────────────────────────────────────────────────────────────
-// These mirror the notification functions in dashboard-v2/src/server/notifications.ts
+// These mirror the notification functions in apps/dashboard/src/server/notifications.ts
 // but return { subject, html } instead of sending directly.
 
 interface EmailResult {

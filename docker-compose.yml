@@ -76,11 +76,11 @@ services:
       - MXROUTE_SERVER_URL=${MXROUTE_SERVER_URL}
 
   
-  dashboard-v2:
+  dashboard:
     build:
       context: .
       dockerfile: Dockerfile
-      target: dashboard_v2
+      target: dashboard
       args:
         - CONVEX_SELF_HOSTED_URL=${CONVEX_SELF_HOSTED_URL}
         - CONVEX_SELF_HOSTED_ADMIN_KEY=${CONVEX_SELF_HOSTED_ADMIN_KEY}

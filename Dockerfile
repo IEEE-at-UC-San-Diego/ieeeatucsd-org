@@ -31,18 +31,17 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 WORKDIR /app
 
-FROM system AS deps
+FROM system AS website_deps
 
 COPY package.json bun.lock ./
 COPY packages/config/package.json packages/config/package.json
 COPY apps/dashboard/package.json apps/dashboard/package.json
-COPY apps/dashboard-v2/package.json apps/dashboard-v2/package.json
 COPY apps/website/package.json apps/website/package.json
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install
+    bun install --frozen-lockfile
 
-FROM deps AS website_builder
+FROM website_deps AS website_builder
 
 ARG PUBLIC_FIREBASE_WEB_API_KEY
 ARG PUBLIC_FIREBASE_AUTH_DOMAIN
@@ -107,12 +106,14 @@ ENV PUBLIC_FIREBASE_WEB_API_KEY=$PUBLIC_FIREBASE_WEB_API_KEY \
     MXROUTE_SERVER_URL=$MXROUTE_SERVER_URL
 
 COPY packages ./packages
-COPY apps/website ./apps/website
+COPY apps/website/astro.config.mjs apps/website/tailwind.config.mjs apps/website/tsconfig.json ./apps/website/
+COPY apps/website/public ./apps/website/public
+COPY apps/website/src ./apps/website/src
 
 WORKDIR /app/apps/website
 RUN bun run build
 
-FROM deps AS website
+FROM website_deps AS website
 
 COPY packages ./packages
 COPY apps/website/package.json apps/website/package.json
@@ -122,7 +123,17 @@ WORKDIR /app/apps/website
 EXPOSE 4321
 CMD ["bun", "run", "start"]
 
-FROM deps AS dashboard_v2_builder
+FROM system AS dashboard_deps
+
+COPY package.json bun.lock ./
+COPY packages/config/package.json packages/config/package.json
+COPY apps/website/package.json apps/website/package.json
+COPY apps/dashboard/package.json apps/dashboard/package.json
+
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
+
+FROM dashboard_deps AS dashboard_builder
 
 ARG CONVEX_SELF_HOSTED_URL
 ARG CONVEX_SELF_HOSTED_ADMIN_KEY
@@ -176,17 +187,46 @@ ENV CONVEX_SELF_HOSTED_URL=$CONVEX_SELF_HOSTED_URL \
     VITE_CONVEX_SITE_URL=$VITE_CONVEX_SITE_URL \
     CONVEX_SESSION_SECRET=$CONVEX_SESSION_SECRET
 
-COPY apps/dashboard-v2 ./apps/dashboard-v2
+COPY apps/dashboard/biome.json apps/dashboard/components.json apps/dashboard/tsconfig.json apps/dashboard/vite.config.ts ./apps/dashboard/
+COPY apps/dashboard/convex ./apps/dashboard/convex
+COPY apps/dashboard/public ./apps/dashboard/public
+COPY apps/dashboard/src ./apps/dashboard/src
 
-WORKDIR /app/apps/dashboard-v2
+WORKDIR /app/apps/dashboard
 RUN bun run build
 
-FROM deps AS dashboard_v2
+FROM dashboard_deps AS dashboard
 
-COPY apps/dashboard-v2/package.json apps/dashboard-v2/package.json
-COPY --from=dashboard_v2_builder /app/apps/dashboard-v2/.output /app/apps/dashboard-v2/.output
+ARG CONVEX_SELF_HOSTED_URL
+ARG CONVEX_SELF_HOSTED_ADMIN_KEY
+ARG AUTH_BRIDGE_MODE
+ARG VITE_AUTH_BRIDGE_MODE
+ARG LOGTO_ENDPOINT
+ARG LOGTO_APP_ID
+ARG LOGTO_M2M_APP_ID
+ARG LOGTO_M2M_APP_SECRET
+ARG VITE_LOGTO_ENDPOINT
+ARG VITE_LOGTO_APP_ID
+ARG VITE_LOGTO_REDIRECT_URI
+ARG VITE_LOGTO_SCOPES
+ARG REPLY_TO_EMAIL
+ARG RESEND_API_KEY
+ARG FROM_EMAIL
+ARG MXROUTE_EMAIL_DOMAIN
+ARG MXROUTE_EMAIL_OUTBOUND_LIMIT
+ARG MXROUTE_EMAIL_QUOTA
+ARG MXROUTE_LOGIN_KEY
+ARG MXROUTE_SERVER_LOGIN
+ARG MXROUTE_SERVER_URL
+ARG OPENROUTER_API_KEY
+ARG VITE_CONVEX_URL
+ARG VITE_CONVEX_SITE_URL
+ARG CONVEX_SESSION_SECRET
 
-WORKDIR /app/apps/dashboard-v2
+COPY apps/dashboard/package.json apps/dashboard/package.json
+COPY --from=dashboard_builder /app/apps/dashboard/.output /app/apps/dashboard/.output
+
+WORKDIR /app/apps/dashboard
 EXPOSE 4323
 
 ENV CONVEX_SELF_HOSTED_URL=${CONVEX_SELF_HOSTED_URL:-} \

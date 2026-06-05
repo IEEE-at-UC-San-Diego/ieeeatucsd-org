@@ -35,8 +35,6 @@ export default defineConfig({
         !page.includes("/api/") &&
         !page.includes("/accept-invitation/"),
     }),
-    // PWA support is implemented manually for dashboard-only scope
-    // See public/dashboard/sw.js and src/components/dashboard/shared/DashboardHead.astro
   ],
 
   adapter: node({
