@@ -1,14 +1,13 @@
 ---
 import { LiaDotCircle } from "react-icons/lia";
 import { Image } from "astro:assets";
-import Link from "next/link";
 import qp from "../../images/qp.webp";
 import { IoIosArrowDroprightCircle } from "react-icons/io";
 ---
 
 <div class="text-white flex flex-col items-center md:my-[7%] my-[12%] relative">
   <div class="flex items-center md:text-[2.7vw] text-[4.5vw] mb-[4%]">
-    <LiaDotCircle className=" mr-[1vw] pt-[0.5%]" />
+    <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
     <p>Quarterly Project</p>
   </div>
   <div class="w-[70vw] aspect-[2.5/1] relative">
@@ -21,14 +20,14 @@ import { IoIosArrowDroprightCircle } from "react-icons/io";
       />
     </div>
   </div>
-  <Link
+  <a
     data-inview
     href="/projects/quarterly"
-    className="in-view:animate-fade-left absolute top-[25%] md:right-[15%] right-[10%] w-fit px-[1%] py-[0.4%] bg-white rounded-full text-black flex items-center md:text-[1.3vw] text-[2vw] hover:bg-ieee-yellow duration-300 shadow-md"
+    class="in-view:animate-fade-left absolute top-[25%] md:right-[15%] right-[10%] w-fit px-[1%] py-[0.4%] bg-white rounded-full text-black flex items-center md:text-[1.3vw] text-[2vw] hover:bg-ieee-yellow duration-300 shadow-md"
   >
     more details
     <IoIosArrowDroprightCircle className="ml-[0.5vw] text-[1.7vw] mt-[1%]" />
-  </Link>
+  </a>
   <div
     data-inview
     class="in-view:animate-fade-right md:w-[45%] w-[70%] text-[1.8vw] md:text-[1vw] font-semibold bg-white/50 backdrop-blur text-black absolute md:-bottom-[6%] -bottom-[15%] md:left-[15%] left-[5%] px-[1.5%] py-[1%] rounded-[1.5vw]"

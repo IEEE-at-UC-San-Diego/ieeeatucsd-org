@@ -1,5 +1,4 @@
 ---
-import Link from "next/link";
 import { GoArrowDownRight } from "react-icons/go";
 import { FaGear } from "react-icons/fa6";
 import { IoMdCalendar } from "react-icons/io";
@@ -16,10 +15,10 @@ const { image, text, link, delay } = Astro.props;
     alt="involvement background"
     class="opacity-70 aspect-[230/425] object-cover rounded-[2vw] group-hover:opacity-50 duration-300"
   />
-  <Link
+  <a
     href={link}
     target={text === "H.A.R.D. HACK" ? "_blank" : "_self"}
-    className="absolute top-0 md:w-[15vw] w-[25vw] pt-[5%] aspect-[230/425] flex flex-col justify-between"
+    class="absolute top-0 md:w-[15vw] w-[25vw] pt-[5%] aspect-[230/425] flex flex-col justify-between"
   >
     <div class="w-full flex justify-end md:pr-[5%] pr-[2vw]">
       <div
@@ -49,7 +48,7 @@ const { image, text, link, delay } = Astro.props;
           {text}
         </p>
         <GoArrowDownRight
-          className="text-[5vw] md:text-[3vw] leading-none group-hover:text-ieee-yellow"
+          class="text-[5vw] md:text-[3vw] leading-none group-hover:text-ieee-yellow"
         />
       </div>
 
@@ -62,5 +61,5 @@ const { image, text, link, delay } = Astro.props;
         )
       }
     </div>
-  </Link>
+  </a>
 </div>

@@ -1,4 +1,66 @@
+import { config } from "dotenv";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
+
+const currentDir = dirname(fileURLToPath(import.meta.url));
+const websiteRoot = resolve(currentDir, "../..");
+const monorepoRoot = resolve(currentDir, "../../..");
+
+function loadLocalEnvFiles() {
+  if (typeof process === "undefined") {
+    return;
+  }
+
+  // Astro dev runs SSR modules in Vite's module runner, which does not inherit
+  // .env values into process.env. Load env files explicitly for local development.
+  for (const envPath of [
+    resolve(monorepoRoot, ".env"),
+    resolve(monorepoRoot, ".env.local"),
+    resolve(websiteRoot, ".env"),
+    resolve(websiteRoot, ".env.local"),
+  ]) {
+    config({ path: envPath, override: false, quiet: true });
+  }
+}
+
+loadLocalEnvFiles();
+
+function readEnv(key: string): string | undefined {
+  const fromProcess =
+    typeof process !== "undefined" ? process.env[key] : undefined;
+  if (fromProcess !== undefined && fromProcess !== "") {
+    return fromProcess;
+  }
+
+  const meta =
+    typeof import.meta !== "undefined"
+      ? (import.meta.env as Record<string, string | undefined>)
+      : undefined;
+  const fromMeta = meta?.[key];
+  if (fromMeta !== undefined && fromMeta !== "") {
+    return fromMeta;
+  }
+
+  return undefined;
+}
+
+export function normalizeFirebasePrivateKey(raw: string | undefined): string {
+  if (!raw) {
+    return "";
+  }
+
+  let privateKey = raw;
+  if (!privateKey.includes("BEGIN PRIVATE KEY")) {
+    try {
+      privateKey = Buffer.from(privateKey, "base64").toString("utf8");
+    } catch {
+      privateKey = raw;
+    }
+  }
+
+  return privateKey.replace(/\\n/g, "\n");
+}
 
 const serverSchema = z.object({
   CONVEX_SELF_HOSTED_URL: z.string().url().optional(),
@@ -30,28 +92,29 @@ function readServerEnv() {
   }
 
   return serverSchema.parse({
-    CONVEX_SELF_HOSTED_URL: process.env.CONVEX_SELF_HOSTED_URL,
-    PUBLIC_GOOGLE_CALENDAR_ID: process.env.PUBLIC_GOOGLE_CALENDAR_ID,
-    FIREBASE_PRIVATE_KEY_ID: process.env.FIREBASE_PRIVATE_KEY_ID,
-    FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
-    PUBLIC_FIREBASE_PROJECT_ID: process.env.PUBLIC_FIREBASE_PROJECT_ID,
-    FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
-    FIREBASE_CLIENT_ID: process.env.FIREBASE_CLIENT_ID,
-    FIREBASE_AUTH_URL: process.env.FIREBASE_AUTH_URL,
-    FIREBASE_TOKEN_URL: process.env.FIREBASE_TOKEN_URL,
-    FIREBASE_AUTH_CERT_URL: process.env.FIREBASE_AUTH_CERT_URL,
-    FIREBASE_CLIENT_CERT_URL: process.env.FIREBASE_CLIENT_CERT_URL,
-    PUBLIC_FIREBASE_WEB_API_KEY: process.env.PUBLIC_FIREBASE_WEB_API_KEY,
-    PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
-    PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
-    PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
-      process.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    PUBLIC_FIREBASE_APP_ID: process.env.PUBLIC_FIREBASE_APP_ID,
-    API_BASE_URL: process.env.API_BASE_URL,
-    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
-    RESEND_API_KEY: process.env.RESEND_API_KEY,
-    FROM_EMAIL: process.env.FROM_EMAIL,
-    REPLY_TO_EMAIL: process.env.REPLY_TO_EMAIL,
+    CONVEX_SELF_HOSTED_URL: readEnv("CONVEX_SELF_HOSTED_URL"),
+    PUBLIC_GOOGLE_CALENDAR_ID: readEnv("PUBLIC_GOOGLE_CALENDAR_ID"),
+    FIREBASE_PRIVATE_KEY_ID: readEnv("FIREBASE_PRIVATE_KEY_ID"),
+    FIREBASE_PRIVATE_KEY: readEnv("FIREBASE_PRIVATE_KEY"),
+    PUBLIC_FIREBASE_PROJECT_ID: readEnv("PUBLIC_FIREBASE_PROJECT_ID"),
+    FIREBASE_CLIENT_EMAIL: readEnv("FIREBASE_CLIENT_EMAIL"),
+    FIREBASE_CLIENT_ID: readEnv("FIREBASE_CLIENT_ID"),
+    FIREBASE_AUTH_URL: readEnv("FIREBASE_AUTH_URL"),
+    FIREBASE_TOKEN_URL: readEnv("FIREBASE_TOKEN_URL"),
+    FIREBASE_AUTH_CERT_URL: readEnv("FIREBASE_AUTH_CERT_URL"),
+    FIREBASE_CLIENT_CERT_URL: readEnv("FIREBASE_CLIENT_CERT_URL"),
+    PUBLIC_FIREBASE_WEB_API_KEY: readEnv("PUBLIC_FIREBASE_WEB_API_KEY"),
+    PUBLIC_FIREBASE_AUTH_DOMAIN: readEnv("PUBLIC_FIREBASE_AUTH_DOMAIN"),
+    PUBLIC_FIREBASE_STORAGE_BUCKET: readEnv("PUBLIC_FIREBASE_STORAGE_BUCKET"),
+    PUBLIC_FIREBASE_MESSAGING_SENDER_ID: readEnv(
+      "PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    ),
+    PUBLIC_FIREBASE_APP_ID: readEnv("PUBLIC_FIREBASE_APP_ID"),
+    API_BASE_URL: readEnv("API_BASE_URL"),
+    OPENROUTER_API_KEY: readEnv("OPENROUTER_API_KEY"),
+    RESEND_API_KEY: readEnv("RESEND_API_KEY"),
+    FROM_EMAIL: readEnv("FROM_EMAIL"),
+    REPLY_TO_EMAIL: readEnv("REPLY_TO_EMAIL"),
   });
 }
 
@@ -60,7 +123,7 @@ export const serverEnv = readServerEnv();
 export const firebaseServerEnv = {
   projectId: serverEnv.PUBLIC_FIREBASE_PROJECT_ID ?? "",
   privateKeyId: serverEnv.FIREBASE_PRIVATE_KEY_ID ?? "",
-  privateKey: serverEnv.FIREBASE_PRIVATE_KEY ?? "",
+  privateKey: normalizeFirebasePrivateKey(serverEnv.FIREBASE_PRIVATE_KEY),
   clientEmail: serverEnv.FIREBASE_CLIENT_EMAIL ?? "",
   clientId: serverEnv.FIREBASE_CLIENT_ID ?? "",
   authUri:

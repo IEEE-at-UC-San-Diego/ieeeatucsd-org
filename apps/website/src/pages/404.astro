@@ -1,6 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import Link from "next/link";
 ---
 
 <Layout>
@@ -35,9 +34,9 @@ import Link from "next/link";
         > $ ERROR: Connection_Not_Found();
         <br />
       </p>
-      <Link
+      <a
         href="/"
-        className="font-bold md:text-[1.2vw] text-[2.5vw] mt-[5%] text-slate-800/90 hover:text-ieee-yellow duration-300 select-none font-mono border-2 border-slate-800/90 rounded-lg px-8 py-3 hover:border-ieee-yellow flex items-center gap-3 group relative overflow-hidden bg-white/5 backdrop-blur-sm hover:bg-ieee-yellow/10 shadow-lg hover:shadow-ieee-yellow/20 transition-all"
+        class="font-bold md:text-[1.2vw] text-[2.5vw] mt-[5%] text-slate-800/90 hover:text-ieee-yellow duration-300 select-none font-mono border-2 border-slate-800/90 rounded-lg px-8 py-3 hover:border-ieee-yellow flex items-center gap-3 group relative overflow-hidden bg-white/5 backdrop-blur-sm hover:bg-ieee-yellow/10 shadow-lg hover:shadow-ieee-yellow/20 transition-all"
         style={{ textShadow: "0vw 0vw 0.2vw #88BFEC" }}
       >
         <span
@@ -60,7 +59,7 @@ import Link from "next/link";
           class="absolute inset-0 bg-gradient-to-r from-slate-800/0 via-slate-800/5 to-slate-800/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
         >
         </div>
-      </Link>
+      </a>
     </div>
   </div>
 </Layout>

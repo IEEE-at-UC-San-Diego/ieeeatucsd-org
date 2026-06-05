@@ -4,7 +4,6 @@ import Questions from "../../components/core/Questions.astro";
 import roboFaq from "../../data/roboFaq.json";
 import About from "../../components/core/About.astro";
 import RoboTitle from "../../components/robocub/RoboTitle.astro";
-import Link from "next/link";
 import { Image } from "astro:assets";
 import roboborder from "../../images/roboborder.webp";
 import Subteams from "../../components/robocub/Subteams.astro";
@@ -53,14 +52,14 @@ const seoProps = {
     <div class="w-3/5 flex justify-between mb-[15%]">
       {
         roboLinks.map((roboLink) => (
-          <Link
+          <a
             data-inview
             href={roboLink.link}
             target="_blank"
-            className={`hover:font-semibold in-view:animate-fade-down animate-de animate-delay-${roboLink.delay} w-[30%] text-center z-10 cursor-pointer px-[2%] py-[1%] md:text-[1.2vw] text-[2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:bg-ieee-yellow/80 duration-300 font-light flex items-center justify-center`}
+            class={`hover:font-semibold in-view:animate-fade-down animate-de animate-delay-${roboLink.delay} w-[30%] text-center z-10 cursor-pointer px-[2%] py-[1%] md:text-[1.2vw] text-[2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:bg-ieee-yellow/80 duration-300 font-light flex items-center justify-center`}
           >
             {roboLink.text}
-          </Link>
+          </a>
         ))
       }
     </div>
