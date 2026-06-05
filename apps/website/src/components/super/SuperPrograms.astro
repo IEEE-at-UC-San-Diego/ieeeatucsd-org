@@ -3,12 +3,11 @@ import SuperProgram from "../../components/super/SuperProgram.astro";
 import Subtitle from "../core/Subtitle.astro";
 import programs from "../../data/programs.json";
 ---
-  <div class="max-w-5xl mx-auto">
-    <div class="flex flex-col items-center pb-[5%]">
-        <Subtitle title = "Our Programs" />
-    </div>
 
-    {programs.map((program) => (
-      <SuperProgram {...program} />
-    ))}
+<div class="max-w-5xl mx-auto">
+  <div class="flex flex-col items-center pb-[5%]">
+    <Subtitle title="Our Programs" />
   </div>
+
+  {programs.map((program) => <SuperProgram {...program} />)}
+</div>

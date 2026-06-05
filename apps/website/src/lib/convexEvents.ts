@@ -11,7 +11,13 @@ export interface PublishedConvexEvent {
   startDate: number;
   endDate: number;
   published: boolean;
-  eventType: "social" | "technical" | "outreach" | "professional" | "projects" | "other";
+  eventType:
+    | "social"
+    | "technical"
+    | "outreach"
+    | "professional"
+    | "projects"
+    | "other";
   hasFood?: boolean;
   attendeeCount?: number;
   publicGoogleEventId?: string | null;
@@ -21,10 +27,16 @@ export interface PublishedConvexEvent {
   publicGoogleCalendarIcsUrl?: string | null;
 }
 
-export async function fetchPublishedEventsFromConvex(): Promise<PublishedConvexEvent[]> {
-  const convexUrl = process.env.CONVEX_SELF_HOSTED_URL || import.meta.env.CONVEX_SELF_HOSTED_URL;
+export async function fetchPublishedEventsFromConvex(): Promise<
+  PublishedConvexEvent[]
+> {
+  const convexUrl =
+    process.env.CONVEX_SELF_HOSTED_URL ||
+    import.meta.env.CONVEX_SELF_HOSTED_URL;
   if (!convexUrl) {
-    console.warn("CONVEX_SELF_HOSTED_URL is not configured for website events.");
+    console.warn(
+      "CONVEX_SELF_HOSTED_URL is not configured for website events.",
+    );
     return [];
   }
 
@@ -33,7 +45,9 @@ export async function fetchPublishedEventsFromConvex(): Promise<PublishedConvexE
     const events = await client.query("events:listPublished" as any, {});
     if (!Array.isArray(events)) return [];
 
-    return events.filter((event) => event && typeof event === "object") as PublishedConvexEvent[];
+    return events.filter(
+      (event) => event && typeof event === "object",
+    ) as PublishedConvexEvent[];
   } catch (error) {
     console.error("Failed to fetch published events from Convex:", error);
     return [];

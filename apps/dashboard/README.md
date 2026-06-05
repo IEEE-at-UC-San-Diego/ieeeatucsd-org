@@ -1,11 +1,17 @@
-# Dashboard-v2
+# IEEE at UC San Diego Dashboard
 
-TanStack Start application for IEEE UCSD dashboard management.
+TanStack Start application for IEEE UCSD dashboard management (`@ieeeatucsd/dashboard`).
 
-## Quick Start
+From the repository root:
 
 ```bash
 bun install
+bun run dev:dashboard
+```
+
+App-local commands from `apps/dashboard`:
+
+```bash
 bun run dev
 ```
 

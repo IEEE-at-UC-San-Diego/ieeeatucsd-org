@@ -15,7 +15,10 @@ export function downloadEventIcs(event: {
   endDate: number;
 }): void {
   const formatUtc = (timestamp: number) =>
-    new Date(timestamp).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+    new Date(timestamp)
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d{3}Z$/, "Z");
 
   const escapeIcs = (value = "") =>
     value

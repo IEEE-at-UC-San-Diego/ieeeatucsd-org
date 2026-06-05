@@ -7,7 +7,14 @@ export interface UserWithResume extends Doc<"users"> {
 	major?: string;
 	graduationYear?: number;
 	resume?: string;
-	role: "Member" | "General Officer" | "Executive Officer" | "Member at Large" | "Past Officer" | "Sponsor" | "Administrator";
+	role:
+		| "Member"
+		| "General Officer"
+		| "Executive Officer"
+		| "Member at Large"
+		| "Past Officer"
+		| "Sponsor"
+		| "Administrator";
 	position?: string;
 	sponsorTier?: "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond";
 }

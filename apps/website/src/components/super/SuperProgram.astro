@@ -2,9 +2,10 @@
 const { title, abbr, description, image, imageLeft, projects } = Astro.props;
 ---
 
-<div class={`flex flex-col ${imageLeft ? 'md:flex-row' : 'md:flex-row-reverse'} gap-8 mb-20 items-center`}>
-  
-  <img 
+<div
+  class={`flex flex-col ${imageLeft ? "md:flex-row" : "md:flex-row-reverse"} gap-8 mb-20 items-center`}
+>
+  <img
     src={image}
     alt={title}
     class="w-full md:w-1/3 aspect-video object-contain"
@@ -12,20 +13,22 @@ const { title, abbr, description, image, imageLeft, projects } = Astro.props;
 
   <div class="w-full md:w-2/3">
     <h3 class="text-3xl mb-4">
-      {title} {abbr && <span class="text-ieee-yellow">({abbr})</span>}
+      {title}
+      {abbr && <span class="text-ieee-yellow">({abbr})</span>}
     </h3>
-    
+
     <p class="text-white">
       {description}
     </p>
 
-    {projects && (
-      <div class="mt-4">
-        {projects.map((project: string) => (
-          <p class="text-white">◇{project}</p>
-        ))}
-      </div>
-    )}
+    {
+      projects && (
+        <div class="mt-4">
+          {projects.map((project: string) => (
+            <p class="text-white">◇{project}</p>
+          ))}
+        </div>
+      )
+    }
   </div>
-
 </div>

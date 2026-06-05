@@ -1,23 +1,23 @@
-import { useEffect, useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface UseGlobalImagePasteOptions {
-  /**
-   * Callback function to handle pasted image files
-   */
-  onImagePasted: (files: File[]) => void;
+	/**
+	 * Callback function to handle pasted image files
+	 */
+	onImagePasted: (files: File[]) => void;
 
-  /**
-   * Whether the paste handler is enabled
-   * @default true
-   */
-  enabled?: boolean;
+	/**
+	 * Whether the paste handler is enabled
+	 * @default true
+	 */
+	enabled?: boolean;
 }
 
 interface UseGlobalImagePasteReturn {
-  /**
-   * Whether the hook is currently listening for paste events
-   */
-  isListening: boolean;
+	/**
+	 * Whether the hook is currently listening for paste events
+	 */
+	isListening: boolean;
 }
 
 /**
@@ -45,116 +45,116 @@ interface UseGlobalImagePasteReturn {
  * ```
  */
 export function useGlobalImagePaste({
-  onImagePasted,
-  enabled = true,
+	onImagePasted,
+	enabled = true,
 }: UseGlobalImagePasteOptions): UseGlobalImagePasteReturn {
-  const [isListening, setIsListening] = useState(false);
+	const [isListening, setIsListening] = useState(false);
 
-  const handlePaste = useCallback(
-    (event: ClipboardEvent) => {
-      // Only process if enabled
-      if (!enabled) {
-        return;
-      }
+	const handlePaste = useCallback(
+		(event: ClipboardEvent) => {
+			// Only process if enabled
+			if (!enabled) {
+				return;
+			}
 
-      // Check if the paste event is happening in a text input, textarea, or contenteditable element
-      const target = event.target as HTMLElement;
-      const isTextInput =
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable ||
-        target.getAttribute("contenteditable") === "true";
+			// Check if the paste event is happening in a text input, textarea, or contenteditable element
+			const target = event.target as HTMLElement;
+			const isTextInput =
+				target.tagName === "INPUT" ||
+				target.tagName === "TEXTAREA" ||
+				target.isContentEditable ||
+				target.getAttribute("contenteditable") === "true";
 
-      // If pasting in a text field, let the default behavior happen
-      if (isTextInput) {
-        return;
-      }
+			// If pasting in a text field, let the default behavior happen
+			if (isTextInput) {
+				return;
+			}
 
-      // Get clipboard data
-      const clipboardData = event.clipboardData;
-      if (!clipboardData) {
-        return;
-      }
+			// Get clipboard data
+			const clipboardData = event.clipboardData;
+			if (!clipboardData) {
+				return;
+			}
 
-      // Look for image data in clipboard
-      const items = clipboardData.items;
-      const imageFiles: File[] = [];
+			// Look for image data in clipboard
+			const items = clipboardData.items;
+			const imageFiles: File[] = [];
 
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
+			for (let i = 0; i < items.length; i++) {
+				const item = items[i];
 
-        // Check if the item is an image
-        if (item.type.indexOf("image") !== -1) {
-          // Get the image file
-          const file = item.getAsFile();
+				// Check if the item is an image
+				if (item.type.indexOf("image") !== -1) {
+					// Get the image file
+					const file = item.getAsFile();
 
-          if (file) {
-            imageFiles.push(file);
-          }
-        }
-      }
+					if (file) {
+						imageFiles.push(file);
+					}
+				}
+			}
 
-      // If images were found, prevent default and call handler
-      if (imageFiles.length > 0) {
-        event.preventDefault();
-        event.stopPropagation();
-        onImagePasted(imageFiles);
-      }
-    },
-    [enabled, onImagePasted]
-  );
+			// If images were found, prevent default and call handler
+			if (imageFiles.length > 0) {
+				event.preventDefault();
+				event.stopPropagation();
+				onImagePasted(imageFiles);
+			}
+		},
+		[enabled, onImagePasted],
+	);
 
-  useEffect(() => {
-    // Update listening state
-    setIsListening(enabled);
+	useEffect(() => {
+		// Update listening state
+		setIsListening(enabled);
 
-    // Only add listener if enabled
-    if (!enabled) {
-      return;
-    }
+		// Only add listener if enabled
+		if (!enabled) {
+			return;
+		}
 
-    // Add global paste event listener
-    document.addEventListener("paste", handlePaste);
+		// Add global paste event listener
+		document.addEventListener("paste", handlePaste);
 
-    // Cleanup
-    return () => {
-      document.removeEventListener("paste", handlePaste);
-    };
-  }, [enabled, handlePaste]);
+		// Cleanup
+		return () => {
+			document.removeEventListener("paste", handlePaste);
+		};
+	}, [enabled, handlePaste]);
 
-  return { isListening };
+	return { isListening };
 }
 
 /**
  * Helper function to check if a file is an image
  */
 export function isImageFile(file: File): boolean {
-  return file.type.startsWith("image/");
+	return file.type.startsWith("image/");
 }
 
 /**
  * Helper function to validate image file size
  */
 export function validateImageSize(file: File, maxSizeMB: number = 10): boolean {
-  const maxSizeBytes = maxSizeMB * 1024 * 1024;
-  return file.size <= maxSizeBytes;
+	const maxSizeBytes = maxSizeMB * 1024 * 1024;
+	return file.size <= maxSizeBytes;
 }
 
 /**
  * Helper function to get a preview URL for an image file
  */
 export function getImagePreviewUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
 
-    reader.onloadend = () => {
-      resolve(reader.result as string);
-    };
+		reader.onloadend = () => {
+			resolve(reader.result as string);
+		};
 
-    reader.onerror = () => {
-      reject(new Error("Failed to read file"));
-    };
+		reader.onerror = () => {
+			reject(new Error("Failed to read file"));
+		};
 
-    reader.readAsDataURL(file);
-  });
+		reader.readAsDataURL(file);
+	});
 }

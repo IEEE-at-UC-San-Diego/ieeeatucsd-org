@@ -1,0 +1,45 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "PUBLIC_FIREBASE_WEB_API_KEY",
+    "PUBLIC_FIREBASE_AUTH_DOMAIN",
+    "PUBLIC_FIREBASE_PROJECT_ID",
+    "PUBLIC_FIREBASE_STORAGE_BUCKET",
+    "PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+    "PUBLIC_FIREBASE_APP_ID",
+    "PUBLIC_DASHBOARD_URL",
+    "PUBLIC_GOOGLE_CALENDAR_ID",
+    "VITE_APP_TITLE",
+    "VITE_AUTH_BRIDGE_MODE",
+    "VITE_CONVEX_URL",
+    "VITE_LOGTO_ENDPOINT",
+    "VITE_LOGTO_APP_ID",
+    "VITE_LOGTO_REDIRECT_URI",
+    "VITE_LOGTO_SCOPES",
+    "VITE_LOGTO_DIRECT_SIGN_IN_TARGET",
+    "VITE_GOOGLE_MAPS_API_KEY"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".output/**", "build/**"]
+    },
+    "check": {
+      "dependsOn": ["^check"]
+    },
+    "format": {},
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
+    "test": {
+      "dependsOn": ["^test"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

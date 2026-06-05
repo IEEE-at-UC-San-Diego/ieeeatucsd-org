@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { format } from "date-fns";
 import {
-	ChevronUp,
 	ChevronDown,
+	ChevronUp,
 	Eye,
-	Pencil,
-	Trash2,
+	Image,
 	MapPin,
+	Pencil,
+	Printer,
+	Trash2,
 	Users,
 	Utensils,
-	Image,
-	Printer,
 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -21,10 +22,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { StatusBadge } from "../filters/StatusBadge";
 import { formatEventTypeLabel } from "../constants";
+import { StatusBadge } from "../filters/StatusBadge";
 import type { EventRequest, SortConfig } from "../types";
-import { format } from "date-fns";
 
 interface EventsDataTableProps {
 	events: EventRequest[];

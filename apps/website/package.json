@@ -1,5 +1,5 @@
 {
-  "name": "website",
+  "name": "@ieeeatucsd/website",
   "type": "module",
   "version": "0.0.1",
   "engines": {
@@ -10,7 +10,12 @@
     "start": "node ./dist/server/entry.mjs",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "format": "prettier --write .",
+    "lint": "prettier --check .",
+    "check": "prettier --check . && astro check",
+    "typecheck": "astro check",
+    "test": "vitest run"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -65,11 +70,11 @@
     "astro-expressive-code": "^0.40.2",
     "astro-icon": "^1.1.5",
     "chart.js": "^4.4.7",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
     "cmdk": "^1.1.1",
-    "convex": "1.27.3",
-    "date-fns": "^4.1.0",
+    "convex": "catalog:",
+    "date-fns": "catalog:",
     "dexie": "^4.0.11",
     "dotenv": "^17.2.0",
     "embla-carousel-react": "^8.6.0",
@@ -81,7 +86,7 @@
     "highlight.js": "^11.11.1",
     "html2pdf.js": "^0.10.3",
     "imapflow": "^1.0.193",
-    "input-otp": "^1.4.2",
+    "input-otp": "catalog:",
     "js-yaml": "^4.1.0",
     "jspdf": "^3.0.1",
     "jszip": "^3.10.1",
@@ -98,7 +103,7 @@
     "react-day-picker": "^9.7.0",
     "react-dom": "^18.3.1",
     "react-firebase-hooks": "^5.1.1",
-    "react-hook-form": "^7.59.0",
+    "react-hook-form": "catalog:",
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.4.0",
     "react-resizable-panels": "^3.0.3",
@@ -107,12 +112,12 @@
     "rehype-expressive-code": "^0.40.2",
     "resend": "^4.5.1",
     "sharp": "^0.34.5",
-    "sonner": "^2.0.5",
+    "sonner": "catalog:",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^3.4.16",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.3",
-    "vaul": "^1.1.2",
+    "vaul": "catalog:",
     "zod": "^3.25.69"
   },
   "devDependencies": {
@@ -124,6 +129,7 @@
     "prettier-plugin-astro": "^0.14.1",
     "tailwindcss-animated": "^1.1.2",
     "tailwindcss-motion": "^1.0.0",
+    "vitest": "^3.0.5",
     "workbox-window": "^7.3.0"
   }
 }

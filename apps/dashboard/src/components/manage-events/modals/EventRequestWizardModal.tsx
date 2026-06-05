@@ -1,24 +1,24 @@
-import { useState, useEffect } from "react";
-import { CheckCircle } from "lucide-react";
-import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { api } from "@convex/_generated/api";
+import { CheckCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { DisclaimerSection } from "../wizard/DisclaimerSection";
+import { useAuthedMutation } from "@/hooks/useAuthedConvex";
+import { normalizeDepartment, normalizeEventType } from "../constants";
+import type { EventFormData, EventRequest } from "../types";
 import { BasicInfoSection } from "../wizard/BasicInfoSection";
+import { DisclaimerSection } from "../wizard/DisclaimerSection";
+import { EventReviewSection } from "../wizard/EventReviewSection";
+import { FundingSection } from "../wizard/FundingSection";
 import { LogisticsSection } from "../wizard/LogisticsSection";
 import { MarketingSection } from "../wizard/MarketingSection";
-import { FundingSection } from "../wizard/FundingSection";
-import { EventReviewSection } from "../wizard/EventReviewSection";
-import type { EventRequest, EventFormData } from "../types";
-import { normalizeDepartment, normalizeEventType } from "../constants";
 
 interface EventRequestWizardModalProps {
 	isOpen: boolean;

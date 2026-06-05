@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiResetEmailPasswordRouteImport } from './routes/api/reset-email-password'
 import { Route as ApiParseReceiptRouteImport } from './routes/api/parse-receipt'
 import { Route as ApiParseInvoiceRouteImport } from './routes/api/parse-invoice'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiExtractPaymentDetailsRouteImport } from './routes/api/extract-payment-details'
 import { Route as ApiCreateIeeeEmailRouteImport } from './routes/api/create-ieee-email'
 import { Route as ApiCheckEmailExistsRouteImport } from './routes/api/check-email-exists'
@@ -100,6 +101,11 @@ const ApiParseReceiptRoute = ApiParseReceiptRouteImport.update({
 const ApiParseInvoiceRoute = ApiParseInvoiceRouteImport.update({
   id: '/api/parse-invoice',
   path: '/api/parse-invoice',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExtractPaymentDetailsRoute =
@@ -344,6 +350,7 @@ export interface FileRoutesByFullPath {
   '/api/check-email-exists': typeof ApiCheckEmailExistsRoute
   '/api/create-ieee-email': typeof ApiCreateIeeeEmailRoute
   '/api/extract-payment-details': typeof ApiExtractPaymentDetailsRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/parse-invoice': typeof ApiParseInvoiceRoute
   '/api/parse-receipt': typeof ApiParseReceiptRoute
   '/api/reset-email-password': typeof ApiResetEmailPasswordRoute
@@ -393,6 +400,7 @@ export interface FileRoutesByTo {
   '/api/check-email-exists': typeof ApiCheckEmailExistsRoute
   '/api/create-ieee-email': typeof ApiCreateIeeeEmailRoute
   '/api/extract-payment-details': typeof ApiExtractPaymentDetailsRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/parse-invoice': typeof ApiParseInvoiceRoute
   '/api/parse-receipt': typeof ApiParseReceiptRoute
   '/api/reset-email-password': typeof ApiResetEmailPasswordRoute
@@ -444,6 +452,7 @@ export interface FileRoutesById {
   '/api/check-email-exists': typeof ApiCheckEmailExistsRoute
   '/api/create-ieee-email': typeof ApiCreateIeeeEmailRoute
   '/api/extract-payment-details': typeof ApiExtractPaymentDetailsRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/parse-invoice': typeof ApiParseInvoiceRoute
   '/api/parse-receipt': typeof ApiParseReceiptRoute
   '/api/reset-email-password': typeof ApiResetEmailPasswordRoute
@@ -495,6 +504,7 @@ export interface FileRouteTypes {
     | '/api/check-email-exists'
     | '/api/create-ieee-email'
     | '/api/extract-payment-details'
+    | '/api/health'
     | '/api/parse-invoice'
     | '/api/parse-receipt'
     | '/api/reset-email-password'
@@ -544,6 +554,7 @@ export interface FileRouteTypes {
     | '/api/check-email-exists'
     | '/api/create-ieee-email'
     | '/api/extract-payment-details'
+    | '/api/health'
     | '/api/parse-invoice'
     | '/api/parse-receipt'
     | '/api/reset-email-password'
@@ -594,6 +605,7 @@ export interface FileRouteTypes {
     | '/api/check-email-exists'
     | '/api/create-ieee-email'
     | '/api/extract-payment-details'
+    | '/api/health'
     | '/api/parse-invoice'
     | '/api/parse-receipt'
     | '/api/reset-email-password'
@@ -626,6 +638,7 @@ export interface RootRouteChildren {
   ApiCheckEmailExistsRoute: typeof ApiCheckEmailExistsRoute
   ApiCreateIeeeEmailRoute: typeof ApiCreateIeeeEmailRoute
   ApiExtractPaymentDetailsRoute: typeof ApiExtractPaymentDetailsRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiParseInvoiceRoute: typeof ApiParseInvoiceRoute
   ApiParseReceiptRoute: typeof ApiParseReceiptRoute
   ApiResetEmailPasswordRoute: typeof ApiResetEmailPasswordRoute
@@ -707,6 +720,13 @@ declare module '@tanstack/react-router' {
       path: '/api/parse-invoice'
       fullPath: '/api/parse-invoice'
       preLoaderRoute: typeof ApiParseInvoiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/extract-payment-details': {
@@ -1049,6 +1069,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCheckEmailExistsRoute: ApiCheckEmailExistsRoute,
   ApiCreateIeeeEmailRoute: ApiCreateIeeeEmailRoute,
   ApiExtractPaymentDetailsRoute: ApiExtractPaymentDetailsRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiParseInvoiceRoute: ApiParseInvoiceRoute,
   ApiParseReceiptRoute: ApiParseReceiptRoute,
   ApiResetEmailPasswordRoute: ApiResetEmailPasswordRoute,

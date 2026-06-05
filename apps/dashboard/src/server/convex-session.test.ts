@@ -6,10 +6,9 @@ describe("convex session token signing", () => {
 	});
 
 	it("accepts a valid token", async () => {
-		const {
-			createConvexSessionToken,
-			verifyConvexSessionToken,
-		} = await import("./convex-session");
+		const { createConvexSessionToken, verifyConvexSessionToken } = await import(
+			"./convex-session"
+		);
 
 		const { token, payload } = createConvexSessionToken({
 			sub: "logto|valid-user",
@@ -39,19 +38,19 @@ describe("convex session token signing", () => {
 	});
 
 	it("rejects a token with tampered payload", async () => {
-		const {
-			createConvexSessionToken,
-			verifyConvexSessionToken,
-		} = await import("./convex-session");
+		const { createConvexSessionToken, verifyConvexSessionToken } = await import(
+			"./convex-session"
+		);
 
 		const { token } = createConvexSessionToken({
 			sub: "logto|original-user",
 		});
 
 		const [encodedPayload, signature] = token.split(".");
-		const payload = JSON.parse(
-			decodeURIComponent(encodedPayload),
-		) as Record<string, unknown>;
+		const payload = JSON.parse(decodeURIComponent(encodedPayload)) as Record<
+			string,
+			unknown
+		>;
 		payload.sub = "logto|attacker";
 		const tamperedPayload = encodeURIComponent(JSON.stringify(payload));
 		const tamperedToken = `${tamperedPayload}.${signature}`;
@@ -60,10 +59,9 @@ describe("convex session token signing", () => {
 	});
 
 	it("rejects a token with tampered signature", async () => {
-		const {
-			createConvexSessionToken,
-			verifyConvexSessionToken,
-		} = await import("./convex-session");
+		const { createConvexSessionToken, verifyConvexSessionToken } = await import(
+			"./convex-session"
+		);
 
 		const { token } = createConvexSessionToken({
 			sub: "logto|valid-user",

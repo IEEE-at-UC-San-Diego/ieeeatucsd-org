@@ -1,13 +1,13 @@
-import React from 'react';
-import { Skeleton } from '@heroui/react';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { Skeleton } from "@heroui/react";
+import { cn } from "@/lib/utils";
 
 interface TableSkeletonProps {
   rows?: number;
   columns?: number;
   showHeader?: boolean;
   className?: string;
-  variant?: 'default' | 'compact' | 'detailed';
+  variant?: "default" | "compact" | "detailed";
 }
 
 export function TableSkeleton({
@@ -15,25 +15,26 @@ export function TableSkeleton({
   columns = 4,
   showHeader = true,
   className,
-  variant = 'default'
+  variant = "default",
 }: TableSkeletonProps) {
   const getColumnWidths = () => {
     // Generate varied column widths for more realistic appearance
     const widths = [];
     for (let i = 0; i < columns; i++) {
       if (i === 0) {
-        widths.push('w-1/4'); // First column typically wider
+        widths.push("w-1/4"); // First column typically wider
       } else if (i === columns - 1) {
-        widths.push('w-20'); // Last column typically actions
+        widths.push("w-20"); // Last column typically actions
       } else {
-        widths.push('w-1/6');
+        widths.push("w-1/6");
       }
     }
     return widths;
   };
 
   const columnWidths = getColumnWidths();
-  const rowHeight = variant === 'compact' ? 'h-10' : variant === 'detailed' ? 'h-16' : 'h-12';
+  const rowHeight =
+    variant === "compact" ? "h-10" : variant === "detailed" ? "h-16" : "h-12";
 
   return (
     <div
@@ -74,7 +75,7 @@ export function TableSkeleton({
                         // First column - often has more content
                         <div className="space-y-1">
                           <Skeleton className="h-4 w-full" />
-                          {variant === 'detailed' && (
+                          {variant === "detailed" && (
                             <Skeleton className="h-3 w-2/3" />
                           )}
                         </div>
@@ -94,15 +95,16 @@ export function TableSkeleton({
       {/* Mobile Card View */}
       <div className="md:hidden space-y-4">
         {Array.from({ length: rows }).map((_, index) => (
-          <div key={index} className="bg-white rounded-lg border border-gray-200 p-4">
+          <div
+            key={index}
+            className="bg-white rounded-lg border border-gray-200 p-4"
+          >
             <div className="space-y-3">
               {/* Main content */}
               <div className="space-y-2">
                 <Skeleton className="h-5 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
-                {variant === 'detailed' && (
-                  <Skeleton className="h-3 w-2/3" />
-                )}
+                {variant === "detailed" && <Skeleton className="h-3 w-2/3" />}
               </div>
 
               {/* Metadata */}

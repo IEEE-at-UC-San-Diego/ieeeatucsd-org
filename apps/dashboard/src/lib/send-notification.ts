@@ -4,28 +4,28 @@
  */
 
 export async function sendNotification(
-  authHeaders: Record<string, string>,
-  type: string,
-  data: Record<string, unknown>,
+	authHeaders: Record<string, string>,
+	type: string,
+	data: Record<string, unknown>,
 ): Promise<void> {
-  try {
-    const res = await fetch("/api/email/notify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeaders,
-      },
-      body: JSON.stringify({
-        type,
-        ...data,
-      }),
-    });
+	try {
+		const res = await fetch("/api/email/notify", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				...authHeaders,
+			},
+			body: JSON.stringify({
+				type,
+				...data,
+			}),
+		});
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: "Unknown error" }));
-      console.error(`[email-notify] ${type} failed:`, err);
-    }
-  } catch (error) {
-    console.error(`[email-notify] ${type} network error:`, error);
-  }
+		if (!res.ok) {
+			const err = await res.json().catch(() => ({ error: "Unknown error" }));
+			console.error(`[email-notify] ${type} failed:`, err);
+		}
+	} catch (error) {
+		console.error(`[email-notify] ${type} network error:`, error);
+	}
 }

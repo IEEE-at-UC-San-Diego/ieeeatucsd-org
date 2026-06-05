@@ -74,7 +74,9 @@ function invitationUnavailableResponse(invitation: PublicInvitation | null) {
 	return null;
 }
 
-function invitationLookupUnavailableResponse(invitation: PublicInvitation | null) {
+function invitationLookupUnavailableResponse(
+	invitation: PublicInvitation | null,
+) {
 	if (!invitation) {
 		return json({ error: "Invitation not found" }, 404);
 	}
@@ -141,7 +143,9 @@ async function handlePost({ request }: { request: Request }) {
 		const inviteId = getInviteId(request, body);
 		const action = typeof body.action === "string" ? body.action : "";
 		const selectedPosition =
-			typeof body.selectedPosition === "string" ? body.selectedPosition : undefined;
+			typeof body.selectedPosition === "string"
+				? body.selectedPosition
+				: undefined;
 
 		if (!inviteId) {
 			return json({ error: "Missing inviteId" }, 400);
@@ -198,7 +202,10 @@ async function handlePost({ request }: { request: Request }) {
 			try {
 				const logtoUser = await findLogtoUserByEmail(acceptedInvitation.email);
 				if (logtoUser) {
-					await syncOfficerRolesOnLogtoUser(logtoUser.id, acceptedInvitation.role);
+					await syncOfficerRolesOnLogtoUser(
+						logtoUser.id,
+						acceptedInvitation.role,
+					);
 					logtoUpdated = true;
 				} else {
 					warnings.push(

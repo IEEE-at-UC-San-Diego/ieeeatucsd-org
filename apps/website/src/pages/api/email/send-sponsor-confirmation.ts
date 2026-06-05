@@ -56,7 +56,10 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     // return back to contact page
-    return new Response(null, { status: 303, headers: { Location: "/sponsors?sent=1" } });
+    return new Response(null, {
+      status: 303,
+      headers: { Location: "/sponsors?sent=1" },
+    });
   } catch (err) {
     console.error("Contact email failed:", err);
     return new Response("Failed to send", { status: 500 });

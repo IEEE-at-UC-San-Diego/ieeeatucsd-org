@@ -1,5 +1,7 @@
 # Dashboard Deployment
 
+Shared Docker targets, Dokploy fields, and build-time vs runtime variable policy live in the root guide: [`docs/deployment.md`](../../../docs/deployment.md).
+
 ## Quick Start
 
 ```bash

@@ -4,20 +4,20 @@ import heicConvert from "heic-convert";
 
 /**
  * POST /api/convert-heic-to-jpg
- * 
+ *
  * Converts HEIC/HEIF image files to JPEG format server-side.
  * This endpoint handles HEIC conversion to avoid browser compatibility issues
  * with the heic-convert package which requires Node.js APIs.
- * 
+ *
  * Authentication: Required (Firebase Auth session)
- * 
+ *
  * Request: multipart/form-data with 'file' field containing HEIC file
- * 
+ *
  * Success Response (200):
  * - Returns converted JPEG file with appropriate headers
  * - Content-Type: image/jpeg
  * - Content-Disposition: attachment with .jpg filename
- * 
+ *
  * Error Responses:
  * - 401: Unauthorized (not authenticated)
  * - 400: Bad request (no file or invalid file type)
@@ -27,14 +27,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     // Authenticate user via session cookie
     const sessionCookie = cookies.get("session")?.value;
-    
+
     if (!sessionCookie) {
       return new Response(
         JSON.stringify({ error: "Unauthorized: No session found" }),
         {
           status: 401,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -47,7 +47,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         {
           status: 401,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -56,13 +56,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const file = formData.get("file");
 
     if (!file || !(file instanceof File)) {
-      return new Response(
-        JSON.stringify({ error: "No file provided" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      return new Response(JSON.stringify({ error: "No file provided" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Validate file type
@@ -75,7 +72,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         {
           status: 400,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -111,7 +108,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       {
         status: 500,
         headers: { "Content-Type": "application/json" },
-      }
+      },
     );
   }
 };

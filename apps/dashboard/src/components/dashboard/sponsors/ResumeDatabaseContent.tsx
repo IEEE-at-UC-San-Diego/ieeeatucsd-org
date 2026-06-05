@@ -1,5 +1,4 @@
 import { api } from "@convex/_generated/api";
-import { useAuthedQuery } from "@/hooks/useAuthedConvex";
 import {
 	ArrowLeft,
 	Briefcase,
@@ -32,6 +31,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthedQuery } from "@/hooks/useAuthedConvex";
 import {
 	getMajorNormalizationMap,
 	getUniqueNormalizedMajors,
@@ -56,7 +56,10 @@ export default function ResumeDatabaseContent() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [itemsPerPage, setItemsPerPage] = useState(10);
 
-	const allUsers = useAuthedQuery(api.users.list, logtoId ? { logtoId } : "skip");
+	const allUsers = useAuthedQuery(
+		api.users.list,
+		logtoId ? { logtoId } : "skip",
+	);
 
 	useEffect(() => {
 		if (!allUsers) return;

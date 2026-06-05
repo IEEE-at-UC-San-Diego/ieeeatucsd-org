@@ -19,25 +19,27 @@ const { name, position, picture, email, eager = false } = Astro.props as Props;
     class="group md:w-[20vw] w-[35vw] aspect-[334/440] bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[10%] flex flex-col items-center relative border border-white/10 shadow-sm hover:shadow-glow transition-all duration-300 hover:-translate-y-[0.3vw] focus-within:shadow-glow"
   >
     <div
-        class="relative md:w-[18vw] w-[31vw] aspect-[334/440] md:rounded-[1.5vw] rounded-[3vw] overflow-hidden mt-[5%] mb-[3%]"
+      class="relative md:w-[18vw] w-[31vw] aspect-[334/440] md:rounded-[1.5vw] rounded-[3vw] overflow-hidden mt-[5%] mb-[3%]"
     >
-    {picture ? (
-      <Image
-        src={picture}
-        alt={`${name} portrait`}
-        class="w-full h-full object-cover"
-        width={334}
-        height={440}
-        widths={[160, 240, 334, 440]}
-        sizes="(max-width: 768px) 31vw, 18vw"
-        loading={eager ? "eager" : "lazy"}
-        decoding="async"
-    />
-    ) : (
-      <div class="w-full aspect-[334/440] bg-white/10 flex items-center justify-center">
-        <span class="text-white/70 text-sm">No photo</span>
-      </div>
-    )}
+      {
+        picture ? (
+          <Image
+            src={picture}
+            alt={`${name} portrait`}
+            class="w-full h-full object-cover"
+            width={334}
+            height={440}
+            widths={[160, 240, 334, 440]}
+            sizes="(max-width: 768px) 31vw, 18vw"
+            loading={eager ? "eager" : "lazy"}
+            decoding="async"
+          />
+        ) : (
+          <div class="w-full aspect-[334/440] bg-white/10 flex items-center justify-center">
+            <span class="text-white/70 text-sm">No photo</span>
+          </div>
+        )
+      }
       <div
         class="absolute inset-0 pointer-events-none"
         style="background:

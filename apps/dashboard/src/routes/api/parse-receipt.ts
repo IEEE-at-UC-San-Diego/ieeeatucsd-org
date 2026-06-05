@@ -136,11 +136,11 @@ Rules:
 			},
 			...(isPdf
 				? [
-					{
-						type: "file",
-						file: { filename: "receipt.pdf", file_data: finalUrl },
-					},
-				]
+						{
+							type: "file",
+							file: { filename: "receipt.pdf", file_data: finalUrl },
+						},
+					]
 				: [{ type: "image_url", image_url: { url: finalUrl } }]),
 		];
 
@@ -228,38 +228,38 @@ Rules:
 					: "",
 			lineItems: Array.isArray(parsedData.lineItems)
 				? parsedData.lineItems.map((rawItem, index: number) => {
-					const item = (rawItem || {}) as Record<string, unknown>;
-					return {
-						description:
-							(typeof item.description === "string" && item.description) ||
-							`Item ${index + 1}`,
-						category:
-							typeof item.category === "string" &&
-								RECEIPT_CATEGORIES.includes(item.category)
-								? item.category
-								: "Other",
-						amount: roundToTwo(
-							(item.amount as number | string | undefined) ??
-							(item.total as number | string | undefined) ??
-							(item.unitPrice as number | string | undefined),
-						),
-					};
-				})
-				: Array.isArray(parsedData.items)
-					? parsedData.items.map((rawItem, index: number) => {
 						const item = (rawItem || {}) as Record<string, unknown>;
 						return {
 							description:
 								(typeof item.description === "string" && item.description) ||
 								`Item ${index + 1}`,
-							category: "Other",
+							category:
+								typeof item.category === "string" &&
+								RECEIPT_CATEGORIES.includes(item.category)
+									? item.category
+									: "Other",
 							amount: roundToTwo(
-								(item.total as number | string | undefined) ??
 								(item.amount as number | string | undefined) ??
-								(item.unitPrice as number | string | undefined),
+									(item.total as number | string | undefined) ??
+									(item.unitPrice as number | string | undefined),
 							),
 						};
 					})
+				: Array.isArray(parsedData.items)
+					? parsedData.items.map((rawItem, index: number) => {
+							const item = (rawItem || {}) as Record<string, unknown>;
+							return {
+								description:
+									(typeof item.description === "string" && item.description) ||
+									`Item ${index + 1}`,
+								category: "Other",
+								amount: roundToTwo(
+									(item.total as number | string | undefined) ??
+										(item.amount as number | string | undefined) ??
+										(item.unitPrice as number | string | undefined),
+								),
+							};
+						})
 					: [],
 			subtotal: roundToTwo(parsedData.subtotal as number | string | undefined),
 			tax: roundToTwo(parsedData.tax as number | string | undefined),
@@ -287,9 +287,9 @@ Rules:
 		if (normalized.total === 0) {
 			normalized.total = roundToTwo(
 				normalized.subtotal +
-				normalized.tax +
-				normalized.tip +
-				normalized.shipping,
+					normalized.tax +
+					normalized.tip +
+					normalized.shipping,
 			);
 		}
 

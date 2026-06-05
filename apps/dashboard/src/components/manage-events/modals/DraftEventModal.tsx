@@ -1,16 +1,15 @@
-import { useState, useEffect } from "react";
 import { ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
 	Select,
 	SelectContent,
@@ -18,20 +17,21 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import {
-	parseFlexibleTime,
-	parseFlexibleDate,
-	formatDateShort,
-	formatTimeShort,
-	combineDateAndTime,
-} from "../utils/parseTime";
-import type { EventRequest } from "../types";
+import { Textarea } from "@/components/ui/textarea";
 import {
 	DEPARTMENT_OPTIONS,
 	EVENT_TYPE_OPTIONS,
 	normalizeDepartment,
 	normalizeEventType,
 } from "../constants";
+import type { EventRequest } from "../types";
+import {
+	combineDateAndTime,
+	formatDateShort,
+	formatTimeShort,
+	parseFlexibleDate,
+	parseFlexibleTime,
+} from "../utils/parseTime";
 
 interface DraftEventModalProps {
 	isOpen: boolean;

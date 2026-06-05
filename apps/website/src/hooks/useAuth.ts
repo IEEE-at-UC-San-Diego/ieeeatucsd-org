@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, db } from "../firebase/client";
 import { doc, onSnapshot } from "firebase/firestore";
-import type { UserRole } from "../components/dashboard/shared/types/firestore";
+import type { UserRole } from "../types/roles";
 import type { User } from "firebase/auth";
 
 interface UseAuthResult {
