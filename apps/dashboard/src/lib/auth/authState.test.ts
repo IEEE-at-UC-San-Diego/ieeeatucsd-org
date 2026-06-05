@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveAuthState, shouldAttemptProvisioning } from "./authState";
+import {
+  resolveAuthState,
+  resolveStableAuthUser,
+  shouldAttemptProvisioning,
+} from "./authState";
 
 describe("shouldAttemptProvisioning", () => {
   it("returns true for first null-user attempt", () => {
@@ -128,5 +132,75 @@ describe("resolveAuthState", () => {
 
     expect(state.isLoading).toBe(false);
     expect(state.isAuthResolved).toBe(true);
+  });
+});
+
+describe("resolveStableAuthUser", () => {
+  it("keeps auth resolved during a transient user refetch", () => {
+    const stableUser = resolveStableAuthUser({
+      logtoId: "logto|member",
+      convexUser: undefined,
+      lastResolvedUser: {
+        logtoId: "logto|member",
+        user: { role: "General Officer" },
+      },
+    });
+    const state = resolveAuthState({
+      logtoLoading: false,
+      isAuthenticated: true,
+      logtoId: "logto|member",
+      accessToken: "access-token",
+      convexSessionToken: "session-token",
+      convexUser: stableUser.user,
+      isProvisioningUser: false,
+      hasProvisioningAttempt: true,
+      authFailureReason: null,
+    });
+
+    expect(state.isLoading).toBe(false);
+    expect(state.isAuthResolved).toBe(true);
+  });
+
+  it("keeps the last resolved user during a transient refetch", () => {
+    const cachedUser = { role: "General Officer", name: "Resolved User" };
+    const state = resolveStableAuthUser({
+      logtoId: "logto|member",
+      convexUser: undefined,
+      lastResolvedUser: {
+        logtoId: "logto|member",
+        user: cachedUser,
+      },
+    });
+
+    expect(state.user).toBe(cachedUser);
+    expect(state.lastResolvedUser?.user).toBe(cachedUser);
+  });
+
+  it("treats a null Convex user as an explicit missing-user result", () => {
+    const state = resolveStableAuthUser({
+      logtoId: "logto|member",
+      convexUser: null,
+      lastResolvedUser: {
+        logtoId: "logto|member",
+        user: { role: "Administrator" },
+      },
+    });
+
+    expect(state.user).toBeNull();
+    expect(state.lastResolvedUser).toBeNull();
+  });
+
+  it("does not reuse a cached user for a different Logto user", () => {
+    const state = resolveStableAuthUser({
+      logtoId: "logto|next-user",
+      convexUser: undefined,
+      lastResolvedUser: {
+        logtoId: "logto|previous-user",
+        user: { role: "Executive Officer" },
+      },
+    });
+
+    expect(state.user).toBeUndefined();
+    expect(state.lastResolvedUser).toBeNull();
   });
 });

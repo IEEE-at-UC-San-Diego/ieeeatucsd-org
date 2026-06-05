@@ -412,7 +412,12 @@ export function EventViewModal({
 	};
 
 	return (
-		<Dialog open={isOpen} onOpenChange={onClose}>
+		<Dialog
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open) onClose();
+			}}
+		>
 			<DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto p-0 gap-0 overflow-hidden flex flex-col">
 				<DialogHeader className="p-6 pb-2 space-y-4">
 					<div className="flex items-start justify-between">

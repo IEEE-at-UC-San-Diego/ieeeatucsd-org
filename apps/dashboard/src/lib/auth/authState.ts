@@ -10,6 +10,59 @@ interface ResolveAuthStateInput {
   authFailureReason: string | null;
 }
 
+interface ResolvedAuthUser<TUser> {
+  logtoId: string;
+  user: TUser;
+}
+
+interface ResolveStableAuthUserInput<TUser> {
+  logtoId: string | null;
+  convexUser: TUser | null | undefined;
+  lastResolvedUser: ResolvedAuthUser<TUser> | null;
+}
+
+export function resolveStableAuthUser<TUser>({
+  logtoId,
+  convexUser,
+  lastResolvedUser,
+}: ResolveStableAuthUserInput<TUser>) {
+  if (!logtoId) {
+    return {
+      user: null,
+      lastResolvedUser: null,
+    };
+  }
+
+  if (convexUser === null) {
+    return {
+      user: null,
+      lastResolvedUser: null,
+    };
+  }
+
+  if (convexUser !== undefined) {
+    return {
+      user: convexUser,
+      lastResolvedUser: {
+        logtoId,
+        user: convexUser,
+      },
+    };
+  }
+
+  if (lastResolvedUser?.logtoId === logtoId) {
+    return {
+      user: lastResolvedUser.user,
+      lastResolvedUser,
+    };
+  }
+
+  return {
+    user: undefined,
+    lastResolvedUser: null,
+  };
+}
+
 export function resolveAuthState({
   logtoLoading,
   isAuthenticated,
