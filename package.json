@@ -9,6 +9,7 @@
     "dev:website": "bun run --cwd apps/website dev",
     "build:website": "bun run --cwd apps/website build",
     "dev:dashboard": "bun run --cwd apps/dashboard dev",
+    "dev:dashboard-v2": "bun run --cwd apps/dashboard-v2 dev",
     "build:dashboard": "bun run --cwd apps/dashboard build"
   },
   "devDependencies": {
