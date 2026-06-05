@@ -25,10 +25,6 @@ const serverExternalPackages = [
 	"imapflow",
 	"lucide-react",
 	"radix-ui",
-	"react",
-	"react-dom",
-	"react-dom/server",
-	"react/jsx-runtime",
 	"recharts",
 	"sonner",
 ];
@@ -50,7 +46,8 @@ const config = defineConfig({
 		dedupe: ["react", "react-dom"],
 	},
 	ssr: {
-		noExternal: [/^@tanstack\//],
+		// Bundle React so standalone Docker deploys don't need hoisted workspace node_modules.
+		noExternal: [/^@tanstack\//, "react", "react-dom"],
 	},
 	plugins: [
 		devtools() as PluginOption,

@@ -84,6 +84,9 @@ export default defineConfig({
       ],
     },
     ssr: {
+      // Bundle React into the server build so standalone deploys don't need
+      // hoisted workspace node_modules for bare `import 'react'` in renderers.mjs.
+      noExternal: ["react", "react-dom"],
       optimizeDeps: {
         include: [
           "react",
