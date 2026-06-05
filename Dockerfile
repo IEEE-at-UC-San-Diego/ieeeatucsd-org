@@ -11,7 +11,7 @@ FROM base AS website_deps
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/bun.lock ./bun.lock
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile
+    bun install
 
 FROM website_deps AS website_builder
 ARG PUBLIC_FIREBASE_WEB_API_KEY
@@ -68,7 +68,7 @@ FROM website_system AS website_prod_deps
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/bun.lock ./bun.lock
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile --production
+    bun install --production
 
 FROM website_system AS website
 WORKDIR /app
@@ -98,7 +98,7 @@ FROM base AS dashboard_deps
 COPY --from=dashboard_pruner /app/out/json/ .
 COPY --from=dashboard_pruner /app/out/bun.lock ./bun.lock
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile
+    bun install
 
 FROM dashboard_deps AS dashboard_builder
 ARG VITE_APP_TITLE
@@ -129,7 +129,7 @@ FROM base AS dashboard_prod_deps
 COPY --from=dashboard_pruner /app/out/json/ .
 COPY --from=dashboard_pruner /app/out/bun.lock ./bun.lock
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile --production
+    bun install --production
 
 FROM base AS dashboard
 WORKDIR /app
