@@ -5,6 +5,7 @@ import join from "../images/join.webp";
 import Title from "@/components/core/Title.astro";
 import { LiaDotCircle } from "react-icons/lia";
 import sponsors from "../data/sponsors.json";
+import { resolveImage } from "../lib/images";
 ---
 
 <Layout>
@@ -69,7 +70,11 @@ import sponsors from "../data/sponsors.json";
       {
         sponsors.map((sponsor) => (
           <div class="flex items-center justify-center p-[1vw] aspect-video w-[20vw]">
-            <img src={sponsor} alt={sponsor} class="object-contain" />
+            <Image
+              src={resolveImage(sponsor)}
+              alt={sponsor}
+              class="object-contain"
+            />
           </div>
         ))
       }

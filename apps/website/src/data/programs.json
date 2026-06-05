@@ -3,21 +3,21 @@
     "title": "Student Cluster Competition",
     "abbr": "SCC",
     "description": "The Student Cluster Competition takes place annually at the International Conference for High Performance Computing. Teams of 6-8 students travel with a small cluster we sourced and built to run scientific applications and benchmarks. The UCSD team has consistently placed first in North America for the past four years and won second place worldwide in MLPerf! Registration opens in March.",
-    "image": "/scc.jpg",
+    "image": "/src/images/scc.jpg",
     "imageLeft": true
   },
   {
     "title": "Single Board Cluster competition",
     "abbr": "SBCC",
     "description": "The Single Board Cluster competition is an annual event where teams of 6-8 students create the most efficient single-board computer cluster that can perform complex tasks while using the least amount of power and resources.",
-    "image": "/sbcc.jpg",
+    "image": "/src/images/sbcc.jpg",
     "imageLeft": false
   },
   {
     "title": "Projects",
     "abbr": "",
     "description": "The club organizes multiple projects during the winter and spring quarter. Projects starting winter 2025 are:",
-    "image": "/projects.png",
+    "image": "/src/images/projects.png",
     "imageLeft": true,
     "projects": [
       "FPGA design",

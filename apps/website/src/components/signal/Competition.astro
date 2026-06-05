@@ -1,10 +1,11 @@
 ---
 import { LiaDotCircle } from "react-icons/lia";
+import { Image } from "astro:assets";
 const { picture, name, description, link, linktext } = Astro.props;
 ---
 
 <div class="text-white relative my-[3%]">
-  <img
+  <Image
     src={picture}
     alt="signal"
     class="w-full object-cover md:aspect-[1300/526] aspect-[2/1] opacity-25"

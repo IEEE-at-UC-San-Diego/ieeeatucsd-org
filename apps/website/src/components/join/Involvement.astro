@@ -3,15 +3,18 @@ import { GoArrowDownRight } from "react-icons/go";
 import { FaGear } from "react-icons/fa6";
 import { IoMdCalendar } from "react-icons/io";
 import { RiRobot2Fill } from "react-icons/ri";
+import { Image } from "astro:assets";
+import { resolveImage } from "../../lib/images";
 const { image, text, link, delay } = Astro.props;
+const resolvedImage = resolveImage(image);
 ---
 
 <div
   data-inview
   class={` animate-ease-in-out md:w-[15vw] w-[24vw] relative group in-view:animate-fade-up animate-delay-${delay} animate-duration-1000`}
 >
-  <img
-    src={image}
+  <Image
+    src={resolvedImage}
     alt="involvement background"
     class="opacity-70 aspect-[230/425] object-cover rounded-[2vw] group-hover:opacity-50 duration-300"
   />

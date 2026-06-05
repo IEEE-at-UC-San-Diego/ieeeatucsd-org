@@ -1,6 +1,9 @@
 ---
-const { title, link, image, col } = Astro.props;
 import { GoArrowDownRight } from "react-icons/go";
+import { Image } from "astro:assets";
+import { resolveImage } from "../../lib/images";
+const { title, link, image, col } = Astro.props;
+const resolvedImage = resolveImage(image);
 ---
 
 <a
@@ -8,8 +11,8 @@ import { GoArrowDownRight } from "react-icons/go";
   target="_blank"
   class={`ease-in-out group relative col-span-${col} text-white`}
 >
-  <img
-    src={image}
+  <Image
+    src={resolvedImage}
     alt="past projects image"
     class="md:h-[30vh] h-[15vh] object-cover w-full rounded-[1.5vw] opacity-80 group-hover:opacity-40 duration-300"
   />

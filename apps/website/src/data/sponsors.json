@@ -1,9 +1,9 @@
 [
-  "/logos/RTX_Logo.png",
-  "/logos/Northrop_Grumman_Logo.png",
-  "/logos/Rivian_Logo.png",
-  "/logos/Lockheed_Martin_Logo.png",
-  "/logos/Qualcomm.png",
-  "/logos/Tsmc_Logo.png",
-  "/logos/Unity_Logo.png"
+  "/src/images/logos/RTX_logo.png",
+  "/src/images/logos/Northrop_Grumman_Logo.png",
+  "/src/images/logos/Rivian_logo.png",
+  "/src/images/logos/Lockheed_Martin_logo.png",
+  "/src/images/logos/Qualcomm.png",
+  "/src/images/logos/Tsmc_logo.png",
+  "/src/images/logos/Unity_logo.png"
 ]
