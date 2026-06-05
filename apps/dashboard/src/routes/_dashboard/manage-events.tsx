@@ -136,6 +136,25 @@ function ManageEventsPage() {
 		api.events.listAll,
 		logtoId ? { logtoId } : "skip",
 	);
+	const cachedEventsDataRef = useRef<{
+		logtoId: string;
+		events: NonNullable<typeof eventsData>;
+	} | null>(null);
+
+	if (eventsData !== undefined && logtoId) {
+		cachedEventsDataRef.current = {
+			logtoId,
+			events: eventsData,
+		};
+	}
+
+	// A refreshed auth token briefly creates a new Convex subscription. Keep the
+	// resolved data mounted during that handoff so calendar and modal state survive.
+	const stableEventsData =
+		eventsData ??
+		(cachedEventsDataRef.current?.logtoId === logtoId
+			? cachedEventsDataRef.current.events
+			: undefined);
 
 	// Convex mutations (all unified under api.events)
 	const createEvent = useAuthedMutation(api.events.create);
@@ -219,8 +238,8 @@ function ManageEventsPage() {
 
 	// Transform data to EventRequest type — single query, no merge needed
 	const allEvents: EventRequest[] = useMemo(() => {
-		return (eventsData || []).map(mapEventToType);
-	}, [eventsData]);
+		return (stableEventsData || []).map(mapEventToType);
+	}, [stableEventsData]);
 
 	// Filter events
 	const filteredEvents = useMemo(() => {
@@ -984,7 +1003,7 @@ function ManageEventsPage() {
 			/>
 
 			{/* Loading State */}
-			{!eventsData && (
+			{!stableEventsData && (
 				<div className="space-y-4">
 					<div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
 					<div className="h-64 bg-gray-200 rounded animate-pulse" />
@@ -992,7 +1011,7 @@ function ManageEventsPage() {
 			)}
 
 			{/* Content */}
-			{eventsData && (
+			{stableEventsData && (
 				<>
 					{viewMode === "list" ? (
 						<EventsDataTable
