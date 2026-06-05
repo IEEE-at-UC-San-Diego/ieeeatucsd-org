@@ -1,5 +1,4 @@
 ---
-import Link from "next/link";
 import { IoIosArrowDroprightCircle } from "react-icons/io";
 const { title, text, link, number, delay } = Astro.props;
 ---
@@ -21,15 +20,13 @@ const { title, text, link, number, delay } = Astro.props;
     {text}
   </p>
 
-  <Link
+  <a
     href={link}
-    className="flex items-center text-[2vw] md:text-[1.2vw] mb-[3%] absolute md:bottom-[22%] bottom-[25%] hover:text-ieee-yellow duration-300"
+    class="flex items-center text-[2vw] md:text-[1.2vw] mb-[3%] absolute md:bottom-[22%] bottom-[25%] hover:text-ieee-yellow duration-300"
   >
     more details
-    <IoIosArrowDroprightCircle
-      className="ml-[0.5vw] text-[2vw] md:text-[1.4vw]"
-    />
-  </Link>
+    <IoIosArrowDroprightCircle className="ml-[0.5vw] text-[2vw] md:text-[1.4vw]" />
+  </a>
   <p
     class="text-[7vw] md:text-[3.7vw] font-bold text-ieee-blue-300/50 absolute bottom-[5%]"
   >

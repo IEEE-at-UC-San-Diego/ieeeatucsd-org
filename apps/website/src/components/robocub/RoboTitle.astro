@@ -2,7 +2,6 @@
 import { Image } from "astro:assets";
 import background from "../../images/robocup_bg.jpeg";
 import roboLogo from "../../images/triton_bots_logo.png";
-import Link from "next/link";
 ---
 
 <div
@@ -28,14 +27,14 @@ import Link from "next/link";
     <div class="flex flex-col">
       <p>TritonBots RoboCup SSL Team</p>
       <div class="-mt-[2vw]">
-        <Link
-          className="text-[1.2vw]"
+        <a
+          class="text-[1.2vw]"
           href="https://docs.google.com/forms/d/e/1FAIpQLSdigg2WPFvAGwaeY_i7uTEPkDplRUkPFb3w5SJLEQeZYNviXw/viewform?usp=sharing&ouid=108575348199269065111"
           target="_blank"
-          className="md:text-[1.2vw] text-[2vw] font-light border-white/70 border-[0.1vw] py-[1.5%] px-[10%] rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300"
+          class="md:text-[1.2vw] text-[2vw] font-light border-white/70 border-[0.1vw] py-[1.5%] px-[10%] rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300"
         >
           Interested? Apply Here
-        </Link>
+        </a>
       </div>
     </div>
   </div>

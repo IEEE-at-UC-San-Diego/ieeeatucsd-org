@@ -72,10 +72,26 @@ export default defineConfig({
       dedupe: ["react", "react-dom"],
     },
     optimizeDeps: {
+      include: [
+        "react",
+        "react-dom",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
+      ],
       exclude: [
         "chunk-GP4JL5D5.js",
         // Avoid scanning Node-only scripts that contain require/module usage
       ],
+    },
+    ssr: {
+      optimizeDeps: {
+        include: [
+          "react",
+          "react-dom",
+          "react/jsx-runtime",
+          "react/jsx-dev-runtime",
+        ],
+      },
     },
   },
 });

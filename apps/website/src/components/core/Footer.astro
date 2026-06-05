@@ -1,6 +1,5 @@
 ---
 import { Image } from "astro:assets";
-import Link from "next/link";
 import whiteLogoHorizontal from "../../images/logos/white_logo_horizontal.svg";
 import { IoHeart } from "react-icons/io5";
 ---
@@ -9,13 +8,13 @@ import { IoHeart } from "react-icons/io5";
   <div
     class="w-[95%] bg-black/40 md:py-[1%] py-[2vw] px-[1.5%] rounded-[2vw] border-[0.1vw] border-white/10 ring-1 ring-inset ring-white/5 flex flex-col md:flex-row justify-between items-center gap-2"
   >
-    <Link href="/" className="hover:opacity-70 duration-300">
+    <a href="/" class="hover:opacity-70 duration-300">
       <Image
         class="md:w-[15vw] w-[35vw]"
         src={whiteLogoHorizontal}
         alt="IEEE UCSD Logo"
       />
-    </Link>
+    </a>
     <div class="flex items-center gap-4 md:gap-6">
       <a
         href="/terms-of-service"
@@ -34,9 +33,7 @@ import { IoHeart } from "react-icons/io5";
       <p class="text-white md:text-[1.2vw] text-[2.7vw]">
         made by IEEE@UCSD webmasters with
       </p>
-      <IoHeart
-        className=" text-ieee-blue-100 ml-[1vw] md:text-[1.5vw] text-[4vw]"
-      />
+      <IoHeart className="text-ieee-blue-100 ml-[1vw] md:text-[1.5vw] text-[4vw]" />
     </div>
   </div>
 </div>

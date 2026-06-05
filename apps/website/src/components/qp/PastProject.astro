@@ -1,13 +1,12 @@
 ---
 const { title, link, image, col } = Astro.props;
 import { GoArrowDownRight } from "react-icons/go";
-import Link from "next/link";
 ---
 
-<Link
+<a
   href={link}
   target="_blank"
-  className={`ease-in-out group relative col-span-${col} text-white`}
+  class={`ease-in-out group relative col-span-${col} text-white`}
 >
   <img
     src={image}
@@ -27,8 +26,8 @@ import Link from "next/link";
         {title}
       </p>
       <GoArrowDownRight
-        className="text-[3vw] leading-none group-hover:text-ieee-yellow duration-300 "
+        class="text-[3vw] leading-none group-hover:text-ieee-yellow duration-300"
       />
     </div>
   </div>
-</Link>
+</a>

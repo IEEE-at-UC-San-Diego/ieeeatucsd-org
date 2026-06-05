@@ -4,7 +4,6 @@ import { Image } from "astro:assets";
 import join from "../images/join.webp";
 import Title from "@/components/core/Title.astro";
 import { LiaDotCircle } from "react-icons/lia";
-import Link from "next/link";
 import sponsors from "../data/sponsors.json";
 ---
 
@@ -41,7 +40,7 @@ import sponsors from "../data/sponsors.json";
 
   <div class="flex flex-col items-center text-white my-[5vw]">
     <div class="flex items-center text-[4.5vw] md:text-[2.5vw] mb-[3%]">
-      <LiaDotCircle className=" mr-[1vw] pt-[0.5%]" />
+      <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
       <p
         class="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ieee-black"
       >
@@ -49,17 +48,16 @@ import sponsors from "../data/sponsors.json";
       </p>
     </div>
 
-    <Link
+    <a
       data-inview
-      href="ieee@ucsd.edu"
-      target="_blank"
-      className="in-view:animate-jump-in border-white/70 border-[0.1vw] py-[1%] px-[3%] rounded-[0.7vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 md:text-[1.2vw] text-[2vw]"
+      href="mailto:ieee@ucsd.edu"
+      class="in-view:animate-jump-in border-white/70 border-[0.1vw] py-[1%] px-[3%] rounded-[0.7vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 md:text-[1.2vw] text-[2vw]"
     >
       Please email ieee@ucsd.edu
-    </Link>
+    </a>
 
     <div class="flex items-center text-[4.5vw] md:text-[2.5vw] mt-[10vw]">
-      <LiaDotCircle className=" mr-[1vw] pt-[0.5%]" />
+      <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
       <p
         class="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ieee-black"
       >
@@ -80,7 +78,7 @@ import sponsors from "../data/sponsors.json";
     <div class="flex">
       <div class="w-2/5 flex flex-col items-end mr-[5%]">
         <div class="flex items-center text-[4.7vw] md:text-[2.5vw] mb-[15%]">
-          <LiaDotCircle className=" mr-[1vw] pt-[0.5%]" />
+          <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
           <p
             class="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ieee-black"
           >
