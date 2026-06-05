@@ -74,6 +74,7 @@ WORKDIR /app
 USER bun
 
 COPY --chown=bun:bun --from=website_prod_deps /app/node_modules ./node_modules
+COPY --chown=bun:bun --from=website_prod_deps /app/apps/website/node_modules ./apps/website/node_modules
 COPY --chown=bun:bun --from=website_builder /app/apps/website/dist ./apps/website/dist
 COPY --chown=bun:bun --from=website_builder /app/apps/website/package.json ./apps/website/package.json
 COPY --chown=bun:bun --from=website_builder /app/packages ./packages
@@ -133,6 +134,7 @@ WORKDIR /app
 USER bun
 
 COPY --chown=bun:bun --from=dashboard_prod_deps /app/node_modules ./node_modules
+COPY --chown=bun:bun --from=dashboard_prod_deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
 COPY --chown=bun:bun --from=dashboard_builder /app/apps/dashboard/.output ./apps/dashboard/.output
 COPY --chown=bun:bun --from=dashboard_builder /app/apps/dashboard/package.json ./apps/dashboard/package.json
 
