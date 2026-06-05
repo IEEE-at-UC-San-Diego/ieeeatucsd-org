@@ -1,14 +1,33 @@
 import puppeteer from "puppeteer";
-const EXE="/Users/daniel/.cache/puppeteer/chrome-headless-shell/mac_arm-148.0.7778.97/chrome-headless-shell-mac-arm64/chrome-headless-shell";
+const EXE =
+  "/Users/daniel/.cache/puppeteer/chrome-headless-shell/mac_arm-148.0.7778.97/chrome-headless-shell-mac-arm64/chrome-headless-shell";
 const url = process.argv[2] || "http://localhost:4321/";
 const out = process.argv[3] || "/tmp/shot.png";
 const w = Number(process.argv[4] || 1440);
-const b = await puppeteer.launch({ headless: "shell", executablePath: EXE, args:["--no-sandbox"] });
+const b = await puppeteer.launch({
+  headless: "shell",
+  executablePath: EXE,
+  args: ["--no-sandbox"],
+});
 const p = await b.newPage();
 await p.setViewport({ width: w, height: 900, deviceScaleFactor: 1 });
 await p.goto(url, { waitUntil: "networkidle0", timeout: 60000 });
-await new Promise(r=>setTimeout(r,1000));
-await p.evaluate(async () => { await new Promise(res => { let t=0; const i=setInterval(()=>{window.scrollBy(0,700); t+=700; if(t>document.body.scrollHeight){clearInterval(i);res();}},50);}); window.scrollTo(0,0); });
-await new Promise(r=>setTimeout(r,600));
+await new Promise((r) => setTimeout(r, 1000));
+await p.evaluate(async () => {
+  await new Promise((res) => {
+    let t = 0;
+    const i = setInterval(() => {
+      window.scrollBy(0, 700);
+      t += 700;
+      if (t > document.body.scrollHeight) {
+        clearInterval(i);
+        res();
+      }
+    }, 50);
+  });
+  window.scrollTo(0, 0);
+});
+await new Promise((r) => setTimeout(r, 600));
 await p.screenshot({ path: out, fullPage: true });
-await b.close(); console.log("done", out);
+await b.close();
+console.log("done", out);

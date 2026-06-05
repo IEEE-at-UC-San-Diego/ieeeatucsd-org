@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { firebaseEnv } from "../env";
+import { firebaseClientEnv as firebaseEnv } from "../env/client";
 import {
   getAuth,
   signInWithEmailAndPassword,

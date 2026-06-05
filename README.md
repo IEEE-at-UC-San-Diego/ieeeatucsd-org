@@ -1,83 +1,79 @@
-# ieeeucsd-dev
+# IEEE at UC San Diego Monorepo
 
-Development version of the IEEE UC San Diego student branch website.
+Official monorepo for the IEEE UC San Diego student branch website and internal dashboard.
 
-## Figma Design
+## Repository layout
 
-- [IEEE UCSD Website Design](https://www.figma.com/design/AihoR936yUmYrMoCZJ0LF7/UCSD-IEEE?node-id=0-1&t=ajK9lKroQFJbokFS-1)
-
-## Getting Started
-
-Prerequisites:
-
-- [Bun](https://bun.sh) - Fast all-in-one JavaScript runtime & toolkit
-
-### Installation
-
-1. Clone the repository
-
-```bash
-git clone https://github.com/IEEE-UCSD/ieeeucsd-dev.git
-cd ieeeucsd-dev
+```text
+apps/
+  dashboard/   # TanStack Start dashboard (@ieeeatucsd/dashboard)
+  website/     # Astro public website (@ieeeatucsd/website)
+packages/
+  config/      # Shared Tailwind preset (@ieeeatucsd/config)
+  email/       # Shared email rendering (@ieeeatucsd/email)
+tools/
+  migrate-firebase-to-convex/
+  test-emails/
+scripts/
+  verify-google-auth.ts
+docs/
+  deployment.md
 ```
 
-2. Install dependencies
+## Prerequisites
+
+- [Bun 1.3.14](https://bun.sh)
+
+Install Bun, then from the repository root:
 
 ```bash
 bun install
 ```
 
-### Development
+## Root commands
 
-To start the development server:
+| Command | Description |
+| --- | --- |
+| `bun run dev` | Start all dev servers via Turborepo |
+| `bun run dev:website` | Website only |
+| `bun run dev:dashboard` | Dashboard only |
+| `bun run build` | Build all packages and apps |
+| `bun run check` | Non-mutating format/lint/check across the workspace |
+| `bun run typecheck` | Typecheck all workspaces |
+| `bun run test` | Run all test suites |
+| `bun run format` | Apply formatters locally |
+| `bun run verify:google-auth` | Diagnose Google Workspace auth setup |
+
+## Environment setup
+
+Copy `.env.example` to `.env` and fill in values for the apps you are running. See:
+
+- [`.env.example`](.env.example) for variable ownership and aliases
+- [`apps/website/.env.example`](apps/website/.env.example) for website-specific notes
+- [`docs/deployment.md`](docs/deployment.md) for production build-time vs runtime variables
+
+## Docker
+
+Both production images build from the repository root:
 
 ```bash
-bun run dev
+docker compose build
+docker compose up website   # http://localhost:4321
+docker compose up dashboard # http://localhost:4323
 ```
 
-This will start the server at `http://localhost:4321`. The page will reload automatically when you make changes.
+Health endpoints: `/api/health` on both services.
 
-### Production
+See [`docs/deployment.md`](docs/deployment.md) for Dokploy configuration and rollout steps.
 
-To build and start the production server:
+## Package ownership
 
-```bash
-bun run build
-bun run start
-```
+- Apps declare their own runtime dependencies. Do not add app dependencies at the repository root.
+- Cross-workspace imports must use scoped package names and `workspace:*` dependencies.
+- Shared rendering logic belongs in `packages/email`, not in app `src/` trees.
+- Tools under `tools/` are workspace members with their own `package.json` files.
 
-### Docker Deployment
+## App documentation
 
-The project includes Docker support for all services:
-
-```bash
-# Start all services
-docker-compose up
-
-# Start specific service
-docker-compose up website    # Port 4321
-docker-compose up dashboard  # Port 4323
-
-# Build and run a specific service
-docker build -t dashboard . --target dashboard
-docker run -p 4323:4323 --env-file .env dashboard
-```
-
-See [`apps/dashboard/docs/DEPLOYMENT.md`](apps/dashboard/docs/DEPLOYMENT.md) for detailed dashboard deployment instructions.
-
-## Built with:
-
-- [Astro](https://astro.build) - Web framework for content-driven websites
-- [React](https://react.dev) - UI components
-- [TailwindCSS](https://tailwindcss.com) - Styling
-  - This manifests as one line CSS like `class="flex border-white/40 border-[0.1vw] rounded-[2vw] h-[85vh] px-[10%] py-[3%] bg-gradient-to-t to-ieee-blue-100/30 via-ieee-black from-ieee-black"`
-- [TailwindAnimated](https://www.tailwindcss-animated.com/)
-  - This is what we use for all of our nice animations!
-- [MDX](https://mdxjs.com) - Enhanced Markdown
-- [Expressive Code](https://expressive-code.com) - Beautiful code blocks
-- [Node.js Adapter](https://docs.astro.build/en/guides/integrations-guide/node/) - Server-side rendering
-
-## Contributors:
-
-- Charles Nguyen
-- Shing Hung
+- Dashboard: [`apps/dashboard/README.md`](apps/dashboard/README.md)
+- Deployment: [`docs/deployment.md`](docs/deployment.md)

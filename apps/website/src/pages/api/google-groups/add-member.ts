@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { google } from "googleapis";
 import { app } from "../../../firebase/server";
 import { getFirestore } from "firebase-admin/firestore";
-import { firebaseEnv } from "../../../env";
+import { firebaseServerEnv as firebaseEnv } from "../../../env/server";
 
 export const POST: APIRoute = async ({ request }) => {
   try {

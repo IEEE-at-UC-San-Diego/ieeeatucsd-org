@@ -7,6 +7,7 @@ node_modules
 **/node_modules
 apps/*/node_modules
 packages/*/node_modules
+tools/*/node_modules
 **/.astro
 **/.tanstack
 **/.vite
@@ -16,8 +17,7 @@ packages/*/node_modules
 **/dist
 **/build
 **/coverage
-
-scripts
+tools/test-emails/preview
 
 .env
 .env.*
@@ -31,7 +31,6 @@ yarn-debug.log*
 yarn-error.log*
 bun-debug.log*
 
-README.md
-**/*.md
-!apps/**/src/**/*.md
-!apps/**/src/**/*.mdx
+plans
+docs
+LICENSE.md

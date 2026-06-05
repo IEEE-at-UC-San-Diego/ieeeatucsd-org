@@ -1,42 +1,40 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { api } from "@convex/_generated/api";
 import { format } from "date-fns";
 import {
-	MapPin,
 	Calendar,
+	Check,
+	Clock,
+	Copy,
+	DollarSign,
+	ExternalLink,
+	FileText,
+	Globe,
+	History,
+	Image as ImageIcon,
+	Link as LinkIcon,
+	Loader2,
+	MapPin,
+	Pencil,
+	Printer,
+	Trash2,
+	Upload,
+	User,
 	Users,
 	Utensils,
-	Printer,
-	Image as ImageIcon,
-	DollarSign,
-	Clock,
-	User,
-	FileText,
-	History,
-	Pencil,
-	Trash2,
-	Globe,
-	Check,
-	Copy,
-	ExternalLink,
-	Upload,
-	Loader2,
-	Link as LinkIcon,
 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogFooter,
-	DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -44,8 +42,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { StatusBadge } from "../filters/StatusBadge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { formatDepartmentLabel, formatEventTypeLabel } from "../constants";
+import { StatusBadge } from "../filters/StatusBadge";
 import type { EventRequest, EventStatus } from "../types";
 
 interface EventViewModalProps {

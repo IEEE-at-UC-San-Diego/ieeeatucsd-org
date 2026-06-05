@@ -1,19 +1,19 @@
-import React from 'react';
-import { Skeleton } from '@heroui/react';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { Skeleton } from "@heroui/react";
+import { cn } from "@/lib/utils";
 
 interface PageSkeletonProps {
-  layout?: 'dashboard' | 'table' | 'form' | 'content';
+  layout?: "dashboard" | "table" | "form" | "content";
   showHeader?: boolean;
   showSidebar?: boolean;
   className?: string;
 }
 
 export function PageSkeleton({
-  layout = 'content',
+  layout = "content",
   showHeader = true,
   showSidebar = false,
-  className
+  className,
 }: PageSkeletonProps) {
   const renderDashboardLayout = () => (
     <div className="space-y-6">
@@ -36,7 +36,10 @@ export function PageSkeleton({
       {/* Metrics cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="bg-white rounded-lg border border-gray-200 p-6">
+          <div
+            key={index}
+            className="bg-white rounded-lg border border-gray-200 p-6"
+          >
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <Skeleton className="w-8 h-8 rounded" />
@@ -113,7 +116,7 @@ export function PageSkeleton({
         <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
           <div className="flex space-x-4">
             {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className={index === 0 ? 'w-1/4' : 'w-1/6'}>
+              <div key={index} className={index === 0 ? "w-1/4" : "w-1/6"}>
                 <Skeleton className="h-4 w-3/4" />
               </div>
             ))}
@@ -126,7 +129,10 @@ export function PageSkeleton({
             <div key={index} className="px-6 py-4">
               <div className="flex items-center space-x-4">
                 {Array.from({ length: 5 }).map((_, colIndex) => (
-                  <div key={colIndex} className={colIndex === 0 ? 'w-1/4' : 'w-1/6'}>
+                  <div
+                    key={colIndex}
+                    className={colIndex === 0 ? "w-1/4" : "w-1/6"}
+                  >
                     {colIndex === 4 ? (
                       <div className="flex space-x-2">
                         <Skeleton className="h-8 w-16 rounded" />
@@ -224,11 +230,11 @@ export function PageSkeleton({
 
   const renderLayout = () => {
     switch (layout) {
-      case 'dashboard':
+      case "dashboard":
         return renderDashboardLayout();
-      case 'table':
+      case "table":
         return renderTableLayout();
-      case 'form':
+      case "form":
         return renderFormLayout();
       default:
         return renderContentLayout();
@@ -241,9 +247,7 @@ export function PageSkeleton({
       role="status"
       aria-label="Loading page content"
     >
-      <div className="p-4 md:p-6">
-        {renderLayout()}
-      </div>
+      <div className="p-4 md:p-6">{renderLayout()}</div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import React from 'react';
-import { Skeleton } from '@heroui/react';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { Skeleton } from "@heroui/react";
+import { cn } from "@/lib/utils";
 
 interface ListSkeletonProps {
   items?: number;
@@ -8,7 +8,7 @@ interface ListSkeletonProps {
   showAvatar?: boolean;
   showMetadata?: boolean;
   showActions?: boolean;
-  variant?: 'default' | 'compact' | 'detailed' | 'audit' | 'notification';
+  variant?: "default" | "compact" | "detailed" | "audit" | "notification";
   className?: string;
 }
 
@@ -18,8 +18,8 @@ export function ListSkeleton({
   showAvatar = false,
   showMetadata = false,
   showActions = false,
-  variant = 'default',
-  className
+  variant = "default",
+  className,
 }: ListSkeletonProps) {
   const renderDefaultItem = () => (
     <div className="flex items-center space-x-3 p-4">
@@ -147,13 +147,13 @@ export function ListSkeleton({
 
   const renderItem = () => {
     switch (variant) {
-      case 'compact':
+      case "compact":
         return renderCompactItem();
-      case 'detailed':
+      case "detailed":
         return renderDetailedItem();
-      case 'audit':
+      case "audit":
         return renderAuditItem();
-      case 'notification':
+      case "notification":
         return renderNotificationItem();
       default:
         return renderDefaultItem();
@@ -171,7 +171,7 @@ export function ListSkeleton({
           key={index}
           className={cn(
             "border-b border-gray-100 last:border-b-0",
-            variant === 'compact' && "border-b-0"
+            variant === "compact" && "border-b-0",
           )}
         >
           {renderItem()}

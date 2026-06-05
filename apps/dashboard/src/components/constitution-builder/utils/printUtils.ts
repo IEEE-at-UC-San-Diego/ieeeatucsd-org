@@ -1,17 +1,17 @@
-import { Constitution, ConstitutionSection } from "../types";
-import { toRomanNumeral, getSectionDisplayTitle } from "./constitutionUtils";
+import type { Constitution, ConstitutionSection } from "../types";
+import { getSectionDisplayTitle, toRomanNumeral } from "./constitutionUtils";
 
 // Legacy interface for backward compatibility
 export interface TableOfContentsEntry {
-  section: ConstitutionSection;
-  pageNum: number;
+	section: ConstitutionSection;
+	pageNum: number;
 }
 
 // New hierarchical TOC entry interface
 export interface TOCEntry {
-  section: ConstitutionSection;
-  depth: number;
-  children: TOCEntry[];
+	section: ConstitutionSection;
+	depth: number;
+	children: TOCEntry[];
 }
 
 /**
@@ -19,472 +19,472 @@ export interface TOCEntry {
  * Handles preamble, articles with nested sections/subsections, and amendments
  */
 export const generateTOCStructure = (
-  sections: ConstitutionSection[],
+	sections: ConstitutionSection[],
 ): TOCEntry[] => {
-  const tocEntries: TOCEntry[] = [];
+	const tocEntries: TOCEntry[] = [];
 
-  // Helper function to recursively build subsection hierarchy
-  const buildSubsectionHierarchy = (
-    parentId: string,
-    currentDepth: number,
-  ): TOCEntry[] => {
-    const subsections = sections
-      .filter((s) => s.parentId === parentId && s.type === "subsection")
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
+	// Helper function to recursively build subsection hierarchy
+	const buildSubsectionHierarchy = (
+		parentId: string,
+		currentDepth: number,
+	): TOCEntry[] => {
+		const subsections = sections
+			.filter((s) => s.parentId === parentId && s.type === "subsection")
+			.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    return subsections.map((subsection) => ({
-      section: subsection,
-      depth: currentDepth,
-      children: buildSubsectionHierarchy(subsection.id, currentDepth + 1),
-    }));
-  };
+		return subsections.map((subsection) => ({
+			section: subsection,
+			depth: currentDepth,
+			children: buildSubsectionHierarchy(subsection.id, currentDepth + 1),
+		}));
+	};
 
-  // Group sections by type for proper ordering
-  const preamble = sections.find((s) => s.type === "preamble");
-  const articles = sections
-    .filter((s) => s.type === "article")
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
-  const amendments = sections
-    .filter((s) => s.type === "amendment")
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+	// Group sections by type for proper ordering
+	const preamble = sections.find((s) => s.type === "preamble");
+	const articles = sections
+		.filter((s) => s.type === "article")
+		.sort((a, b) => (a.order || 0) - (b.order || 0));
+	const amendments = sections
+		.filter((s) => s.type === "amendment")
+		.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  // Add preamble to TOC structure
-  if (preamble) {
-    tocEntries.push({
-      section: preamble,
-      depth: 0,
-      children: [],
-    });
-  }
+	// Add preamble to TOC structure
+	if (preamble) {
+		tocEntries.push({
+			section: preamble,
+			depth: 0,
+			children: [],
+		});
+	}
 
-  // Add articles with their sections and subsections
-  articles.forEach((article) => {
-    const articleSections = sections
-      .filter((s) => s.parentId === article.id && s.type === "section")
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
+	// Add articles with their sections and subsections
+	articles.forEach((article) => {
+		const articleSections = sections
+			.filter((s) => s.parentId === article.id && s.type === "section")
+			.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    const sectionChildren: TOCEntry[] = articleSections.map((section) => ({
-      section,
-      depth: 1,
-      children: buildSubsectionHierarchy(section.id, 2),
-    }));
+		const sectionChildren: TOCEntry[] = articleSections.map((section) => ({
+			section,
+			depth: 1,
+			children: buildSubsectionHierarchy(section.id, 2),
+		}));
 
-    tocEntries.push({
-      section: article,
-      depth: 0,
-      children: sectionChildren,
-    });
-  });
+		tocEntries.push({
+			section: article,
+			depth: 0,
+			children: sectionChildren,
+		});
+	});
 
-  // Add amendments to TOC structure
-  amendments.forEach((amendment) => {
-    tocEntries.push({
-      section: amendment,
-      depth: 0,
-      children: [],
-    });
-  });
+	// Add amendments to TOC structure
+	amendments.forEach((amendment) => {
+		tocEntries.push({
+			section: amendment,
+			depth: 0,
+			children: [],
+		});
+	});
 
-  return tocEntries;
+	return tocEntries;
 };
 
 /**
  * Flatten TOC structure for backward compatibility
  */
 export const flattenTOCStructure = (tocStructure: TOCEntry[]): TOCEntry[] => {
-  const flattened: TOCEntry[] = [];
+	const flattened: TOCEntry[] = [];
 
-  const flatten = (entries: TOCEntry[]) => {
-    entries.forEach((entry) => {
-      flattened.push(entry);
-      if (entry.children.length > 0) {
-        flatten(entry.children);
-      }
-    });
-  };
+	const flatten = (entries: TOCEntry[]) => {
+		entries.forEach((entry) => {
+			flattened.push(entry);
+			if (entry.children.length > 0) {
+				flatten(entry.children);
+			}
+		});
+	};
 
-  flatten(tocStructure);
-  return flattened;
+	flatten(tocStructure);
+	return flattened;
 };
 
 // Helper function to calculate TOC pages needed
 const calculateTocPagesNeeded = (sections: ConstitutionSection[]): number => {
-  const estimatedTocEntries = sections.filter(
-    (s) =>
-      s.type === "preamble" ||
-      s.type === "article" ||
-      s.type === "section" ||
-      s.type === "subsection" ||
-      s.type === "amendment",
-  ).length;
-  return Math.ceil(estimatedTocEntries / 30); // 30 entries per page to match PDF density
+	const estimatedTocEntries = sections.filter(
+		(s) =>
+			s.type === "preamble" ||
+			s.type === "article" ||
+			s.type === "section" ||
+			s.type === "subsection" ||
+			s.type === "amendment",
+	).length;
+	return Math.ceil(estimatedTocEntries / 30); // 30 entries per page to match PDF density
 };
 
 // Estimate content height in points (approximate) - matching SectionRenderer styles
 const estimateContentHeight = (section: ConstitutionSection): number => {
-  let height = 0;
+	let height = 0;
 
-  // Title height based on section type
-  switch (section.type) {
-    case "preamble":
-    case "article":
-    case "amendment":
-      // 18pt font + marginTop (20px) + marginBottom (8px) = ~46px = ~34pt
-      height += 34;
-      break;
-    case "section":
-      // 12pt font + marginTop (12px) + marginBottom (8px) = ~32px = ~24pt
-      height += 24;
-      break;
-    case "subsection":
-      // 11pt font + marginTop (10px) + marginBottom (6px) = ~27px = ~20pt
-      height += 20;
-      break;
-  }
+	// Title height based on section type
+	switch (section.type) {
+		case "preamble":
+		case "article":
+		case "amendment":
+			// 18pt font + marginTop (20px) + marginBottom (8px) = ~46px = ~34pt
+			height += 34;
+			break;
+		case "section":
+			// 12pt font + marginTop (12px) + marginBottom (8px) = ~32px = ~24pt
+			height += 24;
+			break;
+		case "subsection":
+			// 11pt font + marginTop (10px) + marginBottom (6px) = ~27px = ~20pt
+			height += 20;
+			break;
+	}
 
-  // Content height (if any)
-  if (section.content && section.type !== "article") {
-    const contentLines = section.content.split("\n").length;
-    const wordsPerLine = 12;
-    const words = section.content
-      .split(/\s+/)
-      .filter((word) => word.length > 0).length;
-    const estimatedLines = Math.max(
-      contentLines,
-      Math.ceil(words / wordsPerLine),
-    );
-    // 11pt font with 1.5 line height = 16.5pt per line, plus extra margin
-    height += estimatedLines * 17;
-  }
+	// Content height (if any)
+	if (section.content && section.type !== "article") {
+		const contentLines = section.content.split("\n").length;
+		const wordsPerLine = 12;
+		const words = section.content
+			.split(/\s+/)
+			.filter((word) => word.length > 0).length;
+		const estimatedLines = Math.max(
+			contentLines,
+			Math.ceil(words / wordsPerLine),
+		);
+		// 11pt font with 1.5 line height = 16.5pt per line, plus extra margin
+		height += estimatedLines * 17;
+	}
 
-  // Bottom margin
-  height += 10;
+	// Bottom margin
+	height += 10;
 
-  return height;
+	return height;
 };
 
 export const generateContentPages = (
-  sections: ConstitutionSection[],
+	sections: ConstitutionSection[],
 ): ConstitutionSection[][] => {
-  const pages: ConstitutionSection[][] = [];
-  const PAGE_HEIGHT = 625;
-  const SECTION_BREAK_THRESHOLD = 85;
+	const pages: ConstitutionSection[][] = [];
+	const PAGE_HEIGHT = 625;
+	const SECTION_BREAK_THRESHOLD = 85;
 
-  // Group sections by type for proper page breaks
-  const preamble = sections.find((s) => s.type === "preamble");
-  const articles = sections
-    .filter((s) => s.type === "article")
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
-  const amendments = sections
-    .filter((s) => s.type === "amendment")
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+	// Group sections by type for proper page breaks
+	const preamble = sections.find((s) => s.type === "preamble");
+	const articles = sections
+		.filter((s) => s.type === "article")
+		.sort((a, b) => (a.order || 0) - (b.order || 0));
+	const amendments = sections
+		.filter((s) => s.type === "amendment")
+		.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  // Preamble page
-  if (preamble) {
-    pages.push([preamble]);
-  }
+	// Preamble page
+	if (preamble) {
+		pages.push([preamble]);
+	}
 
-  // Process articles with dynamic page breaks
-  articles.forEach((article) => {
-    const articleSections = sections
-      .filter((s) => s.parentId === article.id && s.type === "section")
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
+	// Process articles with dynamic page breaks
+	articles.forEach((article) => {
+		const articleSections = sections
+			.filter((s) => s.parentId === article.id && s.type === "section")
+			.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    // Collect all sections and subsections in order
-    const allSectionsAndSubsections: ConstitutionSection[] = [article];
-    articleSections.forEach((section) => {
-      allSectionsAndSubsections.push(section);
+		// Collect all sections and subsections in order
+		const allSectionsAndSubsections: ConstitutionSection[] = [article];
+		articleSections.forEach((section) => {
+			allSectionsAndSubsections.push(section);
 
-      const getSubsections = (parentId: string): ConstitutionSection[] => {
-        const subsections = sections
-          .filter((s) => s.parentId === parentId && s.type === "subsection")
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
+			const getSubsections = (parentId: string): ConstitutionSection[] => {
+				const subsections = sections
+					.filter((s) => s.parentId === parentId && s.type === "subsection")
+					.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-        let result: ConstitutionSection[] = [];
-        subsections.forEach((subsection) => {
-          result.push(subsection);
-          result.push(...getSubsections(subsection.id));
-        });
-        return result;
-      };
+				const result: ConstitutionSection[] = [];
+				subsections.forEach((subsection) => {
+					result.push(subsection);
+					result.push(...getSubsections(subsection.id));
+				});
+				return result;
+			};
 
-      allSectionsAndSubsections.push(...getSubsections(section.id));
-    });
+			allSectionsAndSubsections.push(...getSubsections(section.id));
+		});
 
-    // Split into pages based on estimated height
-    let currentPage: ConstitutionSection[] = [];
-    let currentPageHeight = 0;
+		// Split into pages based on estimated height
+		let currentPage: ConstitutionSection[] = [];
+		let currentPageHeight = 0;
 
-    allSectionsAndSubsections.forEach((section) => {
-      const sectionHeight = estimateContentHeight(section);
+		allSectionsAndSubsections.forEach((section) => {
+			const sectionHeight = estimateContentHeight(section);
 
-      // Check if we need a new page
-      if (
-        currentPage.length > 0 &&
-        (currentPageHeight + sectionHeight > PAGE_HEIGHT ||
-          (section.type === "section" &&
-            currentPageHeight > PAGE_HEIGHT - SECTION_BREAK_THRESHOLD))
-      ) {
-        // Start new page
-        pages.push(currentPage);
-        currentPage = [section];
-        currentPageHeight = sectionHeight;
-      } else {
-        // Add to current page
-        currentPage.push(section);
-        currentPageHeight += sectionHeight;
-      }
-    });
+			// Check if we need a new page
+			if (
+				currentPage.length > 0 &&
+				(currentPageHeight + sectionHeight > PAGE_HEIGHT ||
+					(section.type === "section" &&
+						currentPageHeight > PAGE_HEIGHT - SECTION_BREAK_THRESHOLD))
+			) {
+				// Start new page
+				pages.push(currentPage);
+				currentPage = [section];
+				currentPageHeight = sectionHeight;
+			} else {
+				// Add to current page
+				currentPage.push(section);
+				currentPageHeight += sectionHeight;
+			}
+		});
 
-    // Add the last page if it has content
-    if (currentPage.length > 0) {
-      pages.push(currentPage);
-    }
-  });
+		// Add the last page if it has content
+		if (currentPage.length > 0) {
+			pages.push(currentPage);
+		}
+	});
 
-  // Amendment pages (each amendment on its own page)
-  amendments.forEach((amendment) => {
-    pages.push([amendment]);
-  });
+	// Amendment pages (each amendment on its own page)
+	amendments.forEach((amendment) => {
+		pages.push([amendment]);
+	});
 
-  return pages;
+	return pages;
 };
 
 /**
  * Legacy function: generates flat TOC with real page numbers
  */
 export const generateTableOfContents = (
-  sections: ConstitutionSection[],
+	sections: ConstitutionSection[],
 ): TableOfContentsEntry[] => {
-  const tocStructure = generateTOCStructure(sections);
-  const flattenedTOC = flattenTOCStructure(tocStructure);
+	const tocStructure = generateTOCStructure(sections);
+	const flattenedTOC = flattenTOCStructure(tocStructure);
 
-  const tocPagesNeeded = calculateTocPagesNeeded(sections);
-  const contentStartPage = 2 + tocPagesNeeded; // cover + TOC pages
+	const tocPagesNeeded = calculateTocPagesNeeded(sections);
+	const contentStartPage = 2 + tocPagesNeeded; // cover + TOC pages
 
-  const contentPages = generateContentPages(sections);
-  const sectionToPageMap = new Map<string, number>();
+	const contentPages = generateContentPages(sections);
+	const sectionToPageMap = new Map<string, number>();
 
-  contentPages.forEach((page, pageIndex) => {
-    const actualPageNumber = contentStartPage + pageIndex;
-    page.forEach((section) => {
-      sectionToPageMap.set(section.id, actualPageNumber);
-    });
-  });
+	contentPages.forEach((page, pageIndex) => {
+		const actualPageNumber = contentStartPage + pageIndex;
+		page.forEach((section) => {
+			sectionToPageMap.set(section.id, actualPageNumber);
+		});
+	});
 
-  const toc: TableOfContentsEntry[] = [];
-  flattenedTOC.forEach((entry) => {
-    const pageNum = sectionToPageMap.get(entry.section.id);
-    if (pageNum) {
-      toc.push({ section: entry.section, pageNum });
-    }
-  });
+	const toc: TableOfContentsEntry[] = [];
+	flattenedTOC.forEach((entry) => {
+		const pageNum = sectionToPageMap.get(entry.section.id);
+		if (pageNum) {
+			toc.push({ section: entry.section, pageNum });
+		}
+	});
 
-  return toc;
+	return toc;
 };
 
 export const calculateTotalPages = (
-  sections: ConstitutionSection[],
-  showTOC: boolean,
+	sections: ConstitutionSection[],
+	showTOC: boolean,
 ) => {
-  let pageCount = 1; // Cover page
+	let pageCount = 1; // Cover page
 
-  if (showTOC) {
-    const tocPagesNeeded = calculateTocPagesNeeded(sections);
-    pageCount += tocPagesNeeded;
-  }
+	if (showTOC) {
+		const tocPagesNeeded = calculateTocPagesNeeded(sections);
+		pageCount += tocPagesNeeded;
+	}
 
-  const contentPages = generateContentPages(sections);
-  pageCount += contentPages.length;
+	const contentPages = generateContentPages(sections);
+	pageCount += contentPages.length;
 
-  return pageCount;
+	return pageCount;
 };
 
 export const getSectionPrintTitle = (
-  section: ConstitutionSection,
-  index: number,
-  sections: ConstitutionSection[],
+	section: ConstitutionSection,
+	index: number,
+	sections: ConstitutionSection[],
 ) => {
-  switch (section.type) {
-    case "preamble":
-      return "PREAMBLE";
-    case "article":
-      return section.title
-        ? `Article ${toRomanNumeral(index + 1)}: ${section.title}`
-        : `Article ${toRomanNumeral(index + 1)}`;
-    case "section": {
-      const siblingSections = sections
-        .filter((s) => s.parentId === section.parentId && s.type === "section")
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-      const sectionIndex =
-        siblingSections.findIndex((s) => s.id === section.id) + 1;
-      return section.title
-        ? `Section ${sectionIndex}: ${section.title}`
-        : `Section ${sectionIndex}`;
-    }
-    case "subsection":
-      return getSectionDisplayTitle(section, sections);
-    case "amendment":
-      return section.title
-        ? `AMENDMENT ${index + 1}: ${section.title.toUpperCase()}`
-        : `AMENDMENT ${index + 1}`;
-    default:
-      return section.title || "Untitled Section";
-  }
+	switch (section.type) {
+		case "preamble":
+			return "PREAMBLE";
+		case "article":
+			return section.title
+				? `Article ${toRomanNumeral(index + 1)}: ${section.title}`
+				: `Article ${toRomanNumeral(index + 1)}`;
+		case "section": {
+			const siblingSections = sections
+				.filter((s) => s.parentId === section.parentId && s.type === "section")
+				.sort((a, b) => (a.order || 0) - (b.order || 0));
+			const sectionIndex =
+				siblingSections.findIndex((s) => s.id === section.id) + 1;
+			return section.title
+				? `Section ${sectionIndex}: ${section.title}`
+				: `Section ${sectionIndex}`;
+		}
+		case "subsection":
+			return getSectionDisplayTitle(section, sections);
+		case "amendment":
+			return section.title
+				? `AMENDMENT ${index + 1}: ${section.title.toUpperCase()}`
+				: `AMENDMENT ${index + 1}`;
+		default:
+			return section.title || "Untitled Section";
+	}
 };
 
 // --- Print/PDF HTML generation ---
 
 // Format inline text with bold, italics, etc. for print
 const formatInlineTextForPrint = (text: string) => {
-  text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-  text = text.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, "<em>$1</em>");
-  return text;
+	text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+	text = text.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, "<em>$1</em>");
+	return text;
 };
 
 // Enhanced content parsing for print output
 const parseContentForPrint = (content: string) => {
-  const parts = content.split(/(\[IMAGE:[^\]]*\])/g);
-  let html = "";
+	const parts = content.split(/(\[IMAGE:[^\]]*\])/g);
+	let html = "";
 
-  parts.forEach((part) => {
-    if (part.match(/^\[IMAGE:[^\]]*\]$/)) {
-      const description = part.replace(/^\[IMAGE:/, "").replace(/\]$/, "");
-      html += `<div class="image-placeholder">
+	parts.forEach((part) => {
+		if (part.match(/^\[IMAGE:[^\]]*\]$/)) {
+			const description = part.replace(/^\[IMAGE:/, "").replace(/\]$/, "");
+			html += `<div class="image-placeholder">
                 <strong>Image:</strong> ${description || "Add image description"}
               </div>`;
-    } else if (part.trim()) {
-      const paragraphs = part.split("\n\n").filter((p) => p.trim());
+		} else if (part.trim()) {
+			const paragraphs = part.split("\n\n").filter((p) => p.trim());
 
-      paragraphs.forEach((paragraph) => {
-        const trimmed = paragraph.trim();
+			paragraphs.forEach((paragraph) => {
+				const trimmed = paragraph.trim();
 
-        if (/^\d+\.\s/.test(trimmed)) {
-          const listItems = trimmed.split("\n").filter((line) => line.trim());
-          html += '<ol class="numbered-list">';
-          listItems.forEach((item) => {
-            const match = item.match(/^(\d+)\.\s(.+)$/);
-            if (match) {
-              html += `<li>${formatInlineTextForPrint(match[2])}</li>`;
-            } else {
-              html += `<li>${formatInlineTextForPrint(item)}</li>`;
-            }
-          });
-          html += "</ol>";
-        } else if (/^[-*]\s/.test(trimmed)) {
-          const listItems = trimmed.split("\n").filter((line) => line.trim());
-          html += '<ul class="bullet-list">';
-          listItems.forEach((item) => {
-            const match = item.match(/^[-*]\s(.+)$/);
-            if (match) {
-              html += `<li>${formatInlineTextForPrint(match[1])}</li>`;
-            } else {
-              html += `<li>${formatInlineTextForPrint(item)}</li>`;
-            }
-          });
-          html += "</ul>";
-        } else if (trimmed.includes("├──") || trimmed.includes("└──")) {
-          const safe = trimmed
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
-          html += `<pre class="org-tree-pre">${safe}</pre>`;
-        } else {
-          html += `<p>${formatInlineTextForPrint(trimmed)}</p>`;
-        }
-      });
-    }
-  });
+				if (/^\d+\.\s/.test(trimmed)) {
+					const listItems = trimmed.split("\n").filter((line) => line.trim());
+					html += '<ol class="numbered-list">';
+					listItems.forEach((item) => {
+						const match = item.match(/^(\d+)\.\s(.+)$/);
+						if (match) {
+							html += `<li>${formatInlineTextForPrint(match[2])}</li>`;
+						} else {
+							html += `<li>${formatInlineTextForPrint(item)}</li>`;
+						}
+					});
+					html += "</ol>";
+				} else if (/^[-*]\s/.test(trimmed)) {
+					const listItems = trimmed.split("\n").filter((line) => line.trim());
+					html += '<ul class="bullet-list">';
+					listItems.forEach((item) => {
+						const match = item.match(/^[-*]\s(.+)$/);
+						if (match) {
+							html += `<li>${formatInlineTextForPrint(match[1])}</li>`;
+						} else {
+							html += `<li>${formatInlineTextForPrint(item)}</li>`;
+						}
+					});
+					html += "</ul>";
+				} else if (trimmed.includes("├──") || trimmed.includes("└──")) {
+					const safe = trimmed
+						.replace(/&/g, "&amp;")
+						.replace(/</g, "&lt;")
+						.replace(/>/g, "&gt;");
+					html += `<pre class="org-tree-pre">${safe}</pre>`;
+				} else {
+					html += `<p>${formatInlineTextForPrint(trimmed)}</p>`;
+				}
+			});
+		}
+	});
 
-  return html;
+	return html;
 };
 
 export const renderSectionContent = (section: ConstitutionSection) => {
-  return parseContentForPrint(section.content || "");
+	return parseContentForPrint(section.content || "");
 };
 
 /**
  * Generate TOC HTML using logical grouping strategy
  */
 const generateTOCHTML = (sections: ConstitutionSection[]): string => {
-  const tocStructure = generateTOCStructure(sections);
-  const contentPages = generateContentPages(sections);
-  const tocPagesNeeded = calculateTocPagesNeeded(sections);
-  const contentStartPage = 2 + tocPagesNeeded;
+	const tocStructure = generateTOCStructure(sections);
+	const contentPages = generateContentPages(sections);
+	const tocPagesNeeded = calculateTocPagesNeeded(sections);
+	const contentStartPage = 2 + tocPagesNeeded;
 
-  const sectionToPageMap = new Map<string, number>();
-  contentPages.forEach((page, pageIndex) => {
-    const actualPageNumber = contentStartPage + pageIndex;
-    page.forEach((section) => {
-      sectionToPageMap.set(section.id, actualPageNumber);
-    });
-  });
+	const sectionToPageMap = new Map<string, number>();
+	contentPages.forEach((page, pageIndex) => {
+		const actualPageNumber = contentStartPage + pageIndex;
+		page.forEach((section) => {
+			sectionToPageMap.set(section.id, actualPageNumber);
+		});
+	});
 
-  const renderEntries = (entries: TOCEntry[], depth: number = 0): string => {
-    return entries
-      .map((entry) => {
-        const indentPx = depth * 24;
-        let title = "";
-        if (entry.section.type === "article") {
-          const articles = sections
-            .filter((s) => s.type === "article")
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-          const articleIndex = articles.findIndex(
-            (a) => a.id === entry.section.id,
-          );
-          title = getSectionPrintTitle(entry.section, articleIndex, sections);
-        } else if (entry.section.type === "amendment") {
-          const amendments = sections
-            .filter((s) => s.type === "amendment")
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-          const amendmentIndex = amendments.findIndex(
-            (a) => a.id === entry.section.id,
-          );
-          title = getSectionPrintTitle(entry.section, amendmentIndex, sections);
-        } else {
-          title = getSectionDisplayTitle(entry.section, sections);
-        }
+	const renderEntries = (entries: TOCEntry[], depth: number = 0): string => {
+		return entries
+			.map((entry) => {
+				const indentPx = depth * 24;
+				let title = "";
+				if (entry.section.type === "article") {
+					const articles = sections
+						.filter((s) => s.type === "article")
+						.sort((a, b) => (a.order || 0) - (b.order || 0));
+					const articleIndex = articles.findIndex(
+						(a) => a.id === entry.section.id,
+					);
+					title = getSectionPrintTitle(entry.section, articleIndex, sections);
+				} else if (entry.section.type === "amendment") {
+					const amendments = sections
+						.filter((s) => s.type === "amendment")
+						.sort((a, b) => (a.order || 0) - (b.order || 0));
+					const amendmentIndex = amendments.findIndex(
+						(a) => a.id === entry.section.id,
+					);
+					title = getSectionPrintTitle(entry.section, amendmentIndex, sections);
+				} else {
+					title = getSectionDisplayTitle(entry.section, sections);
+				}
 
-        const pageNum = sectionToPageMap.get(entry.section.id) || "?";
+				const pageNum = sectionToPageMap.get(entry.section.id) || "?";
 
-        let html = `<div class="toc-entry" style="padding-left:${indentPx}px;">
+				let html = `<div class="toc-entry" style="padding-left:${indentPx}px;">
           <span style="flex:1;">${title}</span>
           <span style="margin-left: auto;">${pageNum}</span>
         </div>`;
 
-        if (entry.children.length > 0) {
-          html += renderEntries(entry.children, depth + 1);
-        }
+				if (entry.children.length > 0) {
+					html += renderEntries(entry.children, depth + 1);
+				}
 
-        return html;
-      })
-      .join("");
-  };
+				return html;
+			})
+			.join("");
+	};
 
-  return renderEntries(tocStructure);
+	return renderEntries(tocStructure);
 };
 
 export const generatePrintContent = (
-  _constitution: Constitution | null,
-  sections: ConstitutionSection[],
-  /** Use absolute URLs (e.g. window.location.origin) so the logo loads in about:blank print windows */
-  assetOrigin: string = "",
+	_constitution: Constitution | null,
+	sections: ConstitutionSection[],
+	/** Use absolute URLs (e.g. window.location.origin) so the logo loads in about:blank print windows */
+	assetOrigin: string = "",
 ) => {
-  const logoSrc = assetOrigin
-    ? `${assetOrigin.replace(/\/$/, "")}/logos/blue_logo_only.svg`
-    : "/logos/blue_logo_only.svg";
-  const preamble = sections.find((s) => s.type === "preamble");
-  const articles = sections
-    .filter((s) => s.type === "article")
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
-  const amendments = sections
-    .filter((s) => s.type === "amendment")
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+	const logoSrc = assetOrigin
+		? `${assetOrigin.replace(/\/$/, "")}/logos/blue_logo_only.svg`
+		: "/logos/blue_logo_only.svg";
+	const preamble = sections.find((s) => s.type === "preamble");
+	const articles = sections
+		.filter((s) => s.type === "article")
+		.sort((a, b) => (a.order || 0) - (b.order || 0));
+	const amendments = sections
+		.filter((s) => s.type === "amendment")
+		.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  let content = "";
+	let content = "";
 
-  // Cover Page
-  content += `
+	// Cover Page
+	content += `
     <div class="constitution-page cover-page" style="display:flex; flex-direction:column; align-items:center; text-align:center;">
         <div class="logo-container" style="text-align: center; margin: 48px 0; width:100%;">
             <img src="${logoSrc}" alt="IEEE Logo" style="width: 120px; height: 120px; object-fit: contain; margin: 0 auto; display: block;" />
@@ -501,92 +501,96 @@ export const generatePrintContent = (
         </div>
     </div>`;
 
-  // Table of Contents
-  content += `
+	// Table of Contents
+	content += `
     <div class="constitution-page">
         <h2>TABLE OF CONTENTS</h2>
         ${generateTOCHTML(sections)}
     </div>`;
 
-  // Preamble
-  if (preamble) {
-    content += `
+	// Preamble
+	if (preamble) {
+		content += `
         <div class="constitution-page">
             <div class="constitution-section" id="section-${preamble.id}">
                 <h2 class="article-title">${getSectionPrintTitle(preamble, 0, sections)}</h2>
                 ${renderSectionContent(preamble)}
             </div>
         </div>`;
-  }
+	}
 
-  // Articles
-  articles.forEach((article, index) => {
-    const articleSections = sections
-      .filter((s) => s.parentId === article.id && s.type === "section")
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
+	// Articles
+	articles.forEach((article, index) => {
+		const articleSections = sections
+			.filter((s) => s.parentId === article.id && s.type === "section")
+			.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    content += `
+		content += `
         <div class="constitution-page">
             <div class="constitution-section" id="section-${article.id}">
                 <h2 class="article-title">${getSectionPrintTitle(article, index, sections)}</h2>
             </div>`;
 
-    articleSections.forEach((section) => {
-      content += `
+		articleSections.forEach((section) => {
+			content += `
             <div class="constitution-section" id="section-${section.id}">
                 <h3 class="section-title">${getSectionPrintTitle(section, 0, sections)}</h3>
                 ${renderSectionContent(section)}
             </div>`;
 
-      const renderSubsections = (parentId: string, indentLevel: number = 0) => {
-        const subsections = sections
-          .filter((s) => s.parentId === parentId && s.type === "subsection")
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
+			const renderSubsections = (parentId: string, indentLevel: number = 0) => {
+				const subsections = sections
+					.filter((s) => s.parentId === parentId && s.type === "subsection")
+					.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-        subsections.forEach((subsection) => {
-          const indentStyle =
-            indentLevel > 0 ? `margin-left: ${indentLevel * 24}px;` : "";
-          content += `
+				subsections.forEach((subsection) => {
+					const indentStyle =
+						indentLevel > 0 ? `margin-left: ${indentLevel * 24}px;` : "";
+					content += `
             <div class="constitution-section" id="section-${subsection.id}" style="${indentStyle}">
                 <h4 class="subsection-title">${getSectionPrintTitle(subsection, 0, sections)}</h4>
                 ${renderSectionContent(subsection)}
             </div>`;
 
-          renderSubsections(subsection.id, indentLevel + 1);
-        });
-      };
+					renderSubsections(subsection.id, indentLevel + 1);
+				});
+			};
 
-      renderSubsections(section.id, 1);
-    });
+			renderSubsections(section.id, 1);
+		});
 
-    content += `</div>`;
-  });
+		content += `</div>`;
+	});
 
-  // Amendments
-  amendments.forEach((amendment, index) => {
-    content += `
+	// Amendments
+	amendments.forEach((amendment, index) => {
+		content += `
         <div class="constitution-page">
             <div class="constitution-section" id="section-${amendment.id}">
                 <h2 class="article-title">${getSectionPrintTitle(amendment, index, sections)}</h2>
                 ${renderSectionContent(amendment)}
             </div>
         </div>`;
-  });
+	});
 
-  return content;
+	return content;
 };
 
 export const generatePrintHTML = (
-  constitution: Constitution | null,
-  sections: ConstitutionSection[],
+	constitution: Constitution | null,
+	sections: ConstitutionSection[],
 ) => {
-  const assetOrigin =
-    typeof window !== "undefined" && window.location?.origin
-      ? window.location.origin
-      : "";
-  const printContent = generatePrintContent(constitution, sections, assetOrigin);
+	const assetOrigin =
+		typeof window !== "undefined" && window.location?.origin
+			? window.location.origin
+			: "";
+	const printContent = generatePrintContent(
+		constitution,
+		sections,
+		assetOrigin,
+	);
 
-  return `<!DOCTYPE html>
+	return `<!DOCTYPE html>
 <html>
 <head>
     <title>IEEE at UC San Diego Constitution</title>

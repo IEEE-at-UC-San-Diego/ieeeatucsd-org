@@ -19,6 +19,11 @@
     "description": "The club organizes multiple projects during the winter and spring quarter. Projects starting winter 2025 are:",
     "image": "/projects.png",
     "imageLeft": true,
-    "projects": ["FPGA design", "2$ RISC-V Cluster", "NASA NAS Parallel Benchmarks", "Linux From Scratch!"]
+    "projects": [
+      "FPGA design",
+      "2$ RISC-V Cluster",
+      "NASA NAS Parallel Benchmarks",
+      "Linux From Scratch!"
+    ]
   }
 ]

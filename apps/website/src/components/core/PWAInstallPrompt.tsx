@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
-import { X, Download, Share, Plus } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { X, Download, Share, Plus } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
 /**
  * PWA Install Prompt Component
- * 
+ *
  * Features:
  * - Detects when the app is installable
  * - Shows install prompt for Chrome/Edge (beforeinstallprompt)
@@ -17,7 +17,8 @@ interface BeforeInstallPromptEvent extends Event {
  * - Responsive design with smooth animations
  */
 export default function PWAInstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -26,9 +27,9 @@ export default function PWAInstallPrompt() {
     // Check if running in standalone mode (already installed)
     const isInStandaloneMode = () => {
       return (
-        window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia("(display-mode: standalone)").matches ||
         (window.navigator as any).standalone ||
-        document.referrer.includes('android-app://')
+        document.referrer.includes("android-app://")
       );
     };
 
@@ -42,9 +43,13 @@ export default function PWAInstallPrompt() {
     const checkIsMobile = () => {
       const userAgent = window.navigator.userAgent.toLowerCase();
       // Check for mobile devices (phones and tablets)
-      return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet/i.test(userAgent) ||
+      return (
+        /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet/i.test(
+          userAgent,
+        ) ||
         // Also check screen width as a fallback
-        window.innerWidth <= 768;
+        window.innerWidth <= 768
+      );
     };
 
     const standalone = isInStandaloneMode();
@@ -65,9 +70,10 @@ export default function PWAInstallPrompt() {
     }
 
     // Check if user previously dismissed the prompt
-    const dismissed = localStorage.getItem('pwa-install-dismissed');
+    const dismissed = localStorage.getItem("pwa-install-dismissed");
     const dismissedTime = dismissed ? parseInt(dismissed) : 0;
-    const daysSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
+    const daysSinceDismissed =
+      (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
 
     // Show prompt again after 7 days
     if (daysSinceDismissed < 7) {
@@ -94,10 +100,13 @@ export default function PWAInstallPrompt() {
       }, 3000);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt,
+      );
     };
   }, []);
 
@@ -112,10 +121,10 @@ export default function PWAInstallPrompt() {
     // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
 
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
+    if (outcome === "accepted") {
+      console.log("User accepted the install prompt");
     } else {
-      console.log('User dismissed the install prompt');
+      console.log("User dismissed the install prompt");
     }
 
     // Clear the deferredPrompt
@@ -125,7 +134,7 @@ export default function PWAInstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+    localStorage.setItem("pwa-install-dismissed", Date.now().toString());
   };
 
   // Don't render if already installed or prompt shouldn't be shown
@@ -161,7 +170,9 @@ export default function PWAInstallPrompt() {
             </div>
             <div>
               <h3 className="font-bold text-lg">Install IEEE UCSD</h3>
-              <p className="text-sm text-white/90">Quick access from your home screen</p>
+              <p className="text-sm text-white/90">
+                Quick access from your home screen
+              </p>
             </div>
           </div>
 
@@ -175,13 +186,15 @@ export default function PWAInstallPrompt() {
                 <li className="flex items-start gap-2">
                   <span className="font-bold min-w-[20px]">1.</span>
                   <span>
-                    Tap the <Share className="inline w-4 h-4 mx-1" /> Share button in Safari
+                    Tap the <Share className="inline w-4 h-4 mx-1" /> Share
+                    button in Safari
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="font-bold min-w-[20px]">2.</span>
                   <span>
-                    Scroll down and tap <Plus className="inline w-4 h-4 mx-1" /> "Add to Home Screen"
+                    Scroll down and tap <Plus className="inline w-4 h-4 mx-1" />{" "}
+                    "Add to Home Screen"
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
@@ -200,7 +213,8 @@ export default function PWAInstallPrompt() {
             /* Chrome/Edge Install Button */
             <div className="mt-4 space-y-2">
               <p className="text-sm text-white/95 mb-3">
-                Install for faster access, offline support, and a native app experience.
+                Install for faster access, offline support, and a native app
+                experience.
               </p>
               <button
                 onClick={handleInstallClick}
@@ -240,4 +254,3 @@ export default function PWAInstallPrompt() {
     </div>
   );
 }
-

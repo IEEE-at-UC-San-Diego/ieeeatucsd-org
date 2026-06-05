@@ -10,21 +10,29 @@ export async function sendFundDepositSubmissionEmail(
   try {
     const db = getFirestore(app);
 
-    const depositDoc = await db.collection("fundDeposits").doc(data.depositId).get();
+    const depositDoc = await db
+      .collection("fundDeposits")
+      .doc(data.depositId)
+      .get();
     if (!depositDoc.exists) return false;
     const deposit = { id: depositDoc.id, ...depositDoc.data() } as any;
 
     const userDoc = deposit.depositedBy
       ? await db.collection("users").doc(deposit.depositedBy).get()
       : null;
-    const user = userDoc?.exists ? { id: userDoc!.id, ...userDoc!.data() } : { email: deposit.depositedByEmail || "" } as any;
+    const user = userDoc?.exists
+      ? { id: userDoc!.id, ...userDoc!.data() }
+      : ({ email: deposit.depositedByEmail || "" } as any);
 
     const financeEmail = "treasurer@ieeeatucsd.org";
     const subjectFinance = `New Fund Deposit Submitted: ${deposit.title}`;
     const subjectUser = `Deposit Submitted: ${deposit.title}`;
 
     const formatCurrency = (n: number) =>
-      new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n || 0);
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      }).format(n || 0);
 
     const detailsHtml = `
       <table style="width:100%;border-collapse:collapse">
@@ -95,14 +103,19 @@ export async function sendFundDepositStatusChangeEmail(
   try {
     const db = getFirestore(app);
 
-    const depositDoc = await db.collection("fundDeposits").doc(data.depositId).get();
+    const depositDoc = await db
+      .collection("fundDeposits")
+      .doc(data.depositId)
+      .get();
     if (!depositDoc.exists) return false;
     const deposit = { id: depositDoc.id, ...depositDoc.data() } as any;
 
     const userDoc = deposit.depositedBy
       ? await db.collection("users").doc(deposit.depositedBy).get()
       : null;
-    const user = userDoc?.exists ? { id: userDoc!.id, ...userDoc!.data() } : { email: deposit.depositedByEmail || "" } as any;
+    const user = userDoc?.exists
+      ? { id: userDoc!.id, ...userDoc!.data() }
+      : ({ email: deposit.depositedByEmail || "" } as any);
 
     const subject = `Deposit ${data.newStatus === "verified" ? "Verified" : data.newStatus === "rejected" ? "Rejected" : data.newStatus}: ${deposit.title}`;
 
@@ -127,4 +140,3 @@ export async function sendFundDepositStatusChangeEmail(
     return false;
   }
 }
-

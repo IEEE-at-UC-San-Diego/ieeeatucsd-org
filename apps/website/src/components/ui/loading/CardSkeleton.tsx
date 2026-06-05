@@ -1,26 +1,26 @@
-import React from 'react';
-import { Skeleton } from '@heroui/react';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { Skeleton } from "@heroui/react";
+import { cn } from "@/lib/utils";
 
 interface CardSkeletonProps {
-  variant?: 'default' | 'metric' | 'content' | 'event' | 'profile';
+  variant?: "default" | "metric" | "content" | "event" | "profile";
   showImage?: boolean;
   showActions?: boolean;
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
 }
 
 export function CardSkeleton({
-  variant = 'default',
+  variant = "default",
   showImage = false,
   showActions = false,
   className,
-  size = 'md'
+  size = "md",
 }: CardSkeletonProps) {
   const sizeClasses = {
-    sm: 'p-4',
-    md: 'p-6',
-    lg: 'p-8'
+    sm: "p-4",
+    md: "p-6",
+    lg: "p-8",
   };
 
   const renderMetricCard = () => (
@@ -48,9 +48,7 @@ export function CardSkeleton({
       </div>
 
       {/* Image if requested */}
-      {showImage && (
-        <Skeleton className="h-48 w-full rounded" />
-      )}
+      {showImage && <Skeleton className="h-48 w-full rounded" />}
 
       {/* Content lines */}
       <div className="space-y-2">
@@ -151,13 +149,13 @@ export function CardSkeleton({
 
   const renderCardContent = () => {
     switch (variant) {
-      case 'metric':
+      case "metric":
         return renderMetricCard();
-      case 'content':
+      case "content":
         return renderContentCard();
-      case 'event':
+      case "event":
         return renderEventCard();
-      case 'profile':
+      case "profile":
         return renderProfileCard();
       default:
         return renderDefaultCard();
@@ -169,7 +167,7 @@ export function CardSkeleton({
       className={cn(
         "bg-white rounded-lg border border-gray-200 shadow-sm",
         sizeClasses[size],
-        className
+        className,
       )}
       role="status"
       aria-label="Loading card content"
@@ -181,39 +179,21 @@ export function CardSkeleton({
 
 // Specialized card skeletons for common use cases
 export function MetricCardSkeleton({ className }: { className?: string }) {
-  return (
-    <CardSkeleton
-      variant="metric"
-      size="md"
-      className={className}
-    />
-  );
+  return <CardSkeleton variant="metric" size="md" className={className} />;
 }
 
 export function EventCardSkeleton({ className }: { className?: string }) {
-  return (
-    <CardSkeleton
-      variant="event"
-      size="md"
-      className={className}
-    />
-  );
+  return <CardSkeleton variant="event" size="md" className={className} />;
 }
 
 export function ProfileCardSkeleton({ className }: { className?: string }) {
-  return (
-    <CardSkeleton
-      variant="profile"
-      size="md"
-      className={className}
-    />
-  );
+  return <CardSkeleton variant="profile" size="md" className={className} />;
 }
 
 export function ContentCardSkeleton({
   showImage = false,
   showActions = false,
-  className
+  className,
 }: {
   showImage?: boolean;
   showActions?: boolean;

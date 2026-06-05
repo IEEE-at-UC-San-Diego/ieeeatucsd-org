@@ -1,19 +1,42 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useAuthedQuery, useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { api } from "@convex/_generated/api";
-import { usePermissions } from "@/hooks/usePermissions";
-import { Skeleton } from "@/components/ui/skeleton";
+import { createFileRoute } from "@tanstack/react-router";
+import { format, formatDistanceToNow } from "date-fns";
+import {
+	AlertCircle,
+	ArrowLeft,
+	Car,
+	CheckCircle,
+	ChevronDown,
+	ChevronsUpDown,
+	ChevronUp,
+	Clock,
+	CreditCard,
+	DollarSign,
+	Eye,
+	FileText,
+	Loader2,
+	Receipt,
+	Search,
+	Sparkles,
+	UploadCloud,
+	XCircle,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import ReceiptViewer from "@/components/reimbursement/ReceiptViewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
 	Dialog,
 	DialogContent,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Pagination } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
 	TableBody,
@@ -24,37 +47,14 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Pagination } from "@/components/ui/pagination";
-import ReceiptViewer from "@/components/reimbursement/ReceiptViewer";
+import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
-	Search,
-	ChevronUp,
-	ChevronDown,
-	ChevronsUpDown,
-	Loader2,
-	Receipt,
-	Clock,
-	DollarSign,
-	CheckCircle,
-	XCircle,
-	CreditCard,
-	Eye,
-	AlertCircle,
-	ArrowLeft,
-	Sparkles,
-	UploadCloud,
-	FileText,
-	Car,
-} from "lucide-react";
-import { useState, useMemo, useCallback, useEffect } from "react";
-import { toast } from "sonner";
-import { sendNotification } from "@/lib/send-notification";
-import { format, formatDistanceToNow } from "date-fns";
-import {
-	MILEAGE_RATE_PER_MILE,
 	computeMileageTotal,
 	formatMileageRoute,
+	MILEAGE_RATE_PER_MILE,
 } from "@/lib/reimbursement-mileage";
+import { sendNotification } from "@/lib/send-notification";
 
 function formatAuditAction(action: string): {
 	label: string;
@@ -317,9 +317,11 @@ function ManageReimbursementsPage() {
 					r.title.toLowerCase().includes(search.toLowerCase()) ||
 					r.department.toLowerCase().includes(search.toLowerCase()) ||
 					r.additionalInfo.toLowerCase().includes(search.toLowerCase()) ||
-					(r.submittedByName && r.submittedByName.toLowerCase().includes(search.toLowerCase())) ||
+					(r.submittedByName &&
+						r.submittedByName.toLowerCase().includes(search.toLowerCase())) ||
 					r.submittedBy.toLowerCase().includes(search.toLowerCase()) ||
-					(r.submittedByZelle && r.submittedByZelle.toLowerCase().includes(search.toLowerCase()));
+					(r.submittedByZelle &&
+						r.submittedByZelle.toLowerCase().includes(search.toLowerCase()));
 				const matchesStatus =
 					statusFilter.size === 0 || statusFilter.has(r.status);
 				return matchesSearch && matchesStatus;
@@ -701,7 +703,10 @@ function ManageReimbursementsPage() {
 								</Badge>
 							</div>
 							<div className="flex items-center gap-2 mt-0.5 text-sm text-muted-foreground">
-								<span>{selectedReimbursement.submittedByName || selectedReimbursement.submittedBy}</span>
+								<span>
+									{selectedReimbursement.submittedByName ||
+										selectedReimbursement.submittedBy}
+								</span>
 								<span className="text-muted-foreground/40">·</span>
 								<span className="capitalize">
 									{selectedReimbursement.department}
@@ -816,7 +821,8 @@ function ManageReimbursementsPage() {
 											Submitted By
 										</span>
 										<span className="col-span-2 text-gray-900">
-											{selectedReimbursement.submittedByName || selectedReimbursement.submittedBy}
+											{selectedReimbursement.submittedByName ||
+												selectedReimbursement.submittedBy}
 										</span>
 									</div>
 									{selectedReimbursement.submittedByZelle && (
@@ -920,10 +926,7 @@ function ManageReimbursementsPage() {
 																		)}
 																	</>
 																) : receipt.dateOfPurchase ? (
-																	format(
-																		receipt.dateOfPurchase,
-																		"MMM d, yyyy",
-																	)
+																	format(receipt.dateOfPurchase, "MMM d, yyyy")
 																) : (
 																	"No date"
 																)}
@@ -1083,10 +1086,7 @@ function ManageReimbursementsPage() {
 										</h3>
 										<p className="mt-1 text-sm text-gray-500">
 											{currentReceipt.dateOfPurchase
-												? format(
-														currentReceipt.dateOfPurchase,
-														"MMM d, yyyy",
-													)
+												? format(currentReceipt.dateOfPurchase, "MMM d, yyyy")
 												: "No date"}
 										</p>
 										<p className="mt-3 text-sm text-gray-600">
@@ -1101,8 +1101,7 @@ function ManageReimbursementsPage() {
 											/mi
 										</p>
 										<p className="mt-4 font-mono text-3xl font-bold tabular-nums text-gray-900">
-											$
-											{calculateReceiptTotal(currentReceipt).toFixed(2)}
+											${calculateReceiptTotal(currentReceipt).toFixed(2)}
 										</p>
 										<p className="mt-4 max-w-md text-sm leading-snug text-gray-700">
 											{formatMileageRoute(
@@ -1127,7 +1126,9 @@ function ManageReimbursementsPage() {
 													</p>
 												</div>
 												<div>
-													<span className="font-semibold text-gray-500">To</span>
+													<span className="font-semibold text-gray-500">
+														To
+													</span>
 													<p className="mt-0.5">
 														{currentReceipt.mileageTo?.trim() || "—"}
 													</p>
@@ -1152,170 +1153,172 @@ function ManageReimbursementsPage() {
 									</div>
 								</div>
 							) : (
-							<Tabs defaultValue="image" className="h-full flex flex-col">
-								<TabsList className="mx-4 mt-4 justify-start shrink-0">
-									<TabsTrigger value="image">Receipt Image</TabsTrigger>
-									<TabsTrigger value="invoice">Itemized Invoice</TabsTrigger>
-								</TabsList>
-								<TabsContent
-									value="image"
-									className="flex-1 p-4 m-0 overflow-hidden"
-								>
-									<ReceiptViewer
-										receiptUrl={currentReceipt.receiptFile || ""}
-										receiptName={`Receipt ${activeReceiptIndex + 1}`}
-										className="h-full"
-									/>
-								</TabsContent>
-								<TabsContent
-									value="invoice"
-									className="flex-1 p-4 m-0 overflow-auto"
-								>
-									<div className="h-full flex flex-col">
-										<div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col h-full">
-											{/* Header */}
-											<div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white">
-												<div className="flex justify-between items-center">
-													<div>
-														<h3 className="text-base font-semibold text-gray-900">
-															{currentReceipt.vendorName || "Unknown Vendor"}
-														</h3>
-														<p className="text-sm text-gray-500 mt-0.5">
-															{currentReceipt.dateOfPurchase
-																? format(
-																		currentReceipt.dateOfPurchase,
-																		"MMM d, yyyy",
-																	)
-																: "No date"}
-														</p>
+								<Tabs defaultValue="image" className="h-full flex flex-col">
+									<TabsList className="mx-4 mt-4 justify-start shrink-0">
+										<TabsTrigger value="image">Receipt Image</TabsTrigger>
+										<TabsTrigger value="invoice">Itemized Invoice</TabsTrigger>
+									</TabsList>
+									<TabsContent
+										value="image"
+										className="flex-1 p-4 m-0 overflow-hidden"
+									>
+										<ReceiptViewer
+											receiptUrl={currentReceipt.receiptFile || ""}
+											receiptName={`Receipt ${activeReceiptIndex + 1}`}
+											className="h-full"
+										/>
+									</TabsContent>
+									<TabsContent
+										value="invoice"
+										className="flex-1 p-4 m-0 overflow-auto"
+									>
+										<div className="h-full flex flex-col">
+											<div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col h-full">
+												{/* Header */}
+												<div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white">
+													<div className="flex justify-between items-center">
+														<div>
+															<h3 className="text-base font-semibold text-gray-900">
+																{currentReceipt.vendorName || "Unknown Vendor"}
+															</h3>
+															<p className="text-sm text-gray-500 mt-0.5">
+																{currentReceipt.dateOfPurchase
+																	? format(
+																			currentReceipt.dateOfPurchase,
+																			"MMM d, yyyy",
+																		)
+																	: "No date"}
+															</p>
+														</div>
+														<Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-indigo-200">
+															AI Extracted
+														</Badge>
 													</div>
-													<Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-indigo-200">
-														AI Extracted
-													</Badge>
 												</div>
-											</div>
 
-											{/* Line Items */}
-											<div className="flex-1 overflow-auto">
-												<table className="w-full">
-													<thead className="sticky top-0 bg-slate-50 border-b border-gray-200 z-10">
-														<tr>
-															<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-																Description
-															</th>
-															<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
-																Category
-															</th>
-															<th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">
-																Qty
-															</th>
-															<th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">
-																Amount
-															</th>
-														</tr>
-													</thead>
-													<tbody className="divide-y divide-gray-100">
-														{currentReceipt.lineItems?.map(
-															(item: any, i: number) => (
-																<tr
-																	key={i}
-																	className="hover:bg-slate-50/50 transition-colors group"
-																>
-																	<td className="px-4 py-3">
-																		<span
-																			className="block text-sm font-medium text-gray-900 truncate max-w-[220px]"
-																			title={item.description}
-																		>
-																			{item.description}
-																		</span>
-																	</td>
-																	<td className="px-4 py-3">
-																		<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-																			{item.category}
-																		</span>
-																	</td>
-																	<td className="px-4 py-3 text-right text-sm text-gray-500 tabular-nums">
-																		{item.quantity || 1}
-																	</td>
-																	<td className="px-4 py-3 text-right text-sm font-mono font-medium text-gray-900 tabular-nums">
-																		${(item.amount || 0).toFixed(2)}
+												{/* Line Items */}
+												<div className="flex-1 overflow-auto">
+													<table className="w-full">
+														<thead className="sticky top-0 bg-slate-50 border-b border-gray-200 z-10">
+															<tr>
+																<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+																	Description
+																</th>
+																<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
+																	Category
+																</th>
+																<th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">
+																	Qty
+																</th>
+																<th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">
+																	Amount
+																</th>
+															</tr>
+														</thead>
+														<tbody className="divide-y divide-gray-100">
+															{currentReceipt.lineItems?.map(
+																(item: any, i: number) => (
+																	<tr
+																		key={i}
+																		className="hover:bg-slate-50/50 transition-colors group"
+																	>
+																		<td className="px-4 py-3">
+																			<span
+																				className="block text-sm font-medium text-gray-900 truncate max-w-[220px]"
+																				title={item.description}
+																			>
+																				{item.description}
+																			</span>
+																		</td>
+																		<td className="px-4 py-3">
+																			<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+																				{item.category}
+																			</span>
+																		</td>
+																		<td className="px-4 py-3 text-right text-sm text-gray-500 tabular-nums">
+																			{item.quantity || 1}
+																		</td>
+																		<td className="px-4 py-3 text-right text-sm font-mono font-medium text-gray-900 tabular-nums">
+																			${(item.amount || 0).toFixed(2)}
+																		</td>
+																	</tr>
+																),
+															)}
+															{(!currentReceipt.lineItems ||
+																currentReceipt.lineItems.length === 0) && (
+																<tr>
+																	<td
+																		colSpan={4}
+																		className="px-4 py-12 text-center text-gray-400"
+																	>
+																		<div className="flex flex-col items-center gap-2">
+																			<Receipt className="w-8 h-8 opacity-50" />
+																			<span className="text-sm">
+																				No line items found
+																			</span>
+																		</div>
 																	</td>
 																</tr>
-															),
-														)}
-														{(!currentReceipt.lineItems ||
-															currentReceipt.lineItems.length === 0) && (
-															<tr>
-																<td
-																	colSpan={4}
-																	className="px-4 py-12 text-center text-gray-400"
-																>
-																	<div className="flex flex-col items-center gap-2">
-																		<Receipt className="w-8 h-8 opacity-50" />
-																		<span className="text-sm">
-																			No line items found
-																		</span>
-																	</div>
-																</td>
-															</tr>
-														)}
-													</tbody>
-												</table>
-											</div>
+															)}
+														</tbody>
+													</table>
+												</div>
 
-											{/* Totals */}
-											<div className="border-t border-gray-200 bg-slate-50/50">
-												<div className="px-5 py-4 space-y-2">
-													<div className="flex justify-between text-sm">
-														<span className="text-gray-500">Subtotal</span>
-														<span className="font-mono tabular-nums text-gray-700">
-															${(currentReceipt.subtotal || 0).toFixed(2)}
-														</span>
-													</div>
-													{currentReceipt.tax && currentReceipt.tax > 0 && (
+												{/* Totals */}
+												<div className="border-t border-gray-200 bg-slate-50/50">
+													<div className="px-5 py-4 space-y-2">
 														<div className="flex justify-between text-sm">
-															<span className="text-gray-500">Tax</span>
+															<span className="text-gray-500">Subtotal</span>
 															<span className="font-mono tabular-nums text-gray-700">
-																${currentReceipt.tax.toFixed(2)}
+																${(currentReceipt.subtotal || 0).toFixed(2)}
 															</span>
 														</div>
-													)}
-													{currentReceipt.tip && currentReceipt.tip > 0 && (
-														<div className="flex justify-between text-sm">
-															<span className="text-gray-500">Tip</span>
-															<span className="font-mono tabular-nums text-gray-700">
-																${currentReceipt.tip.toFixed(2)}
-															</span>
-														</div>
-													)}
-													{currentReceipt.shipping &&
-														currentReceipt.shipping > 0 && (
+														{currentReceipt.tax && currentReceipt.tax > 0 && (
 															<div className="flex justify-between text-sm">
-																<span className="text-gray-500">Shipping</span>
+																<span className="text-gray-500">Tax</span>
 																<span className="font-mono tabular-nums text-gray-700">
-																	${currentReceipt.shipping.toFixed(2)}
+																	${currentReceipt.tax.toFixed(2)}
 																</span>
 															</div>
 														)}
-													<div className="pt-3 mt-2 border-t border-gray-200">
-														<div className="flex justify-between">
-															<span className="text-sm font-semibold text-gray-900">
-																Total
-															</span>
-															<span className="text-base font-bold font-mono tabular-nums text-gray-900">
-																$
-																{calculateReceiptTotal(currentReceipt).toFixed(
-																	2,
-																)}
-															</span>
+														{currentReceipt.tip && currentReceipt.tip > 0 && (
+															<div className="flex justify-between text-sm">
+																<span className="text-gray-500">Tip</span>
+																<span className="font-mono tabular-nums text-gray-700">
+																	${currentReceipt.tip.toFixed(2)}
+																</span>
+															</div>
+														)}
+														{currentReceipt.shipping &&
+															currentReceipt.shipping > 0 && (
+																<div className="flex justify-between text-sm">
+																	<span className="text-gray-500">
+																		Shipping
+																	</span>
+																	<span className="font-mono tabular-nums text-gray-700">
+																		${currentReceipt.shipping.toFixed(2)}
+																	</span>
+																</div>
+															)}
+														<div className="pt-3 mt-2 border-t border-gray-200">
+															<div className="flex justify-between">
+																<span className="text-sm font-semibold text-gray-900">
+																	Total
+																</span>
+																<span className="text-base font-bold font-mono tabular-nums text-gray-900">
+																	$
+																	{calculateReceiptTotal(
+																		currentReceipt,
+																	).toFixed(2)}
+																</span>
+															</div>
 														</div>
 													</div>
 												</div>
 											</div>
 										</div>
-									</div>
-								</TabsContent>
-							</Tabs>
+									</TabsContent>
+								</Tabs>
 							)
 						) : (
 							<div className="flex items-center justify-center h-full text-muted-foreground">

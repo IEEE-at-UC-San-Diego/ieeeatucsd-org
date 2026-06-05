@@ -1,15 +1,14 @@
 import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
-import { useAuthedQuery } from "@/hooks/useAuthedConvex";
 import {
 	Activity,
 	CalendarDays,
 	Gauge,
+	Loader2,
 	Target,
 	TrendingDown,
 	TrendingUp,
 	Users,
-	Loader2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -41,6 +40,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 
 export const Route = createFileRoute("/_dashboard/executive-analytics")({

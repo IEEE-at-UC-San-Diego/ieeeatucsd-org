@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { createFileRoute } from "@tanstack/react-router";
 import {
 	AlertCircle,
@@ -11,6 +10,7 @@ import {
 	XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/accept-invitation/$inviteId")({
 	component: AcceptInvitationPage,
@@ -216,7 +216,9 @@ function AcceptInvitationPage() {
 					<ul className="list-disc space-y-2 pl-5 text-sm">
 						<li>Check your email for detailed onboarding instructions.</li>
 						<li>Your officer invitation has been recorded.</li>
-						<li>Sign in to the dashboard and complete your onboarding steps.</li>
+						<li>
+							Sign in to the dashboard and complete your onboarding steps.
+						</li>
 					</ul>
 				</div>
 				<Button asChild className="w-full">
@@ -262,7 +264,9 @@ function AcceptInvitationPage() {
 								</div>
 								<div>
 									<p className="text-sm text-muted-foreground">
-										{hasMultiplePositions ? "Available Positions" : "Your Position"}
+										{hasMultiplePositions
+											? "Available Positions"
+											: "Your Position"}
 									</p>
 									<h2 className="text-2xl font-bold">
 										{hasMultiplePositions

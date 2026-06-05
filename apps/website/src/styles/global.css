@@ -88,8 +88,15 @@
   body {
     @apply bg-background text-foreground;
     font-family:
-      "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-      Helvetica, Arial, sans-serif;
+      "Inter",
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -97,7 +104,12 @@
   }
 
   /* Tighter, more intentional display typography */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     letter-spacing: -0.02em;
   }
 
@@ -130,7 +142,6 @@
 
 /* Mobile-Specific Utilities */
 @layer utilities {
-
   /* Touch-friendly interactions */
   .touch-manipulation {
     touch-action: manipulation;
@@ -194,7 +205,6 @@
 
 /* Mobile-specific responsive breakpoints */
 @media (max-width: 320px) {
-
   /* Extra small mobile devices */
   .text-responsive {
     font-size: 14px;
@@ -202,7 +212,6 @@
 }
 
 @media (max-width: 375px) {
-
   /* Small mobile devices */
   .container-mobile {
     padding-left: 1rem;
@@ -211,7 +220,6 @@
 }
 
 @media (max-width: 414px) {
-
   /* Medium mobile devices */
   .grid-mobile-stack {
     grid-template-columns: 1fr;
@@ -219,7 +227,6 @@
 }
 
 @media (max-width: 768px) {
-
   /* Large mobile devices and tablets */
   .hide-mobile {
     display: none;
@@ -271,7 +278,6 @@ section[data-slot="base"] {
 
 /* Constitution Print Styles - Hide everything except constitution content when printing */
 @media print {
-
   /* When in constitution print mode, hide all elements by default */
   body.constitution-print-mode * {
     visibility: hidden !important;
@@ -476,7 +482,8 @@ section[data-slot="base"] {
   background: rgba(255, 255, 255, 0.2) !important;
 }
 
-.dark [data-sidebar="content"].sidebar-thin-scroll::-webkit-scrollbar-thumb:hover {
+.dark
+  [data-sidebar="content"].sidebar-thin-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.35) !important;
 }
 
@@ -508,8 +515,8 @@ section[data-slot="base"] {
 }
 
 /* Target the modal wrapper to ensure proper overflow handling */
-[role="dialog"][aria-modal="true"]>section,
-[role="dialog"][aria-modal="true"]>div[data-slot="base"] {
+[role="dialog"][aria-modal="true"] > section,
+[role="dialog"][aria-modal="true"] > div[data-slot="base"] {
   border-radius: 14px !important;
   overflow: hidden !important;
 }

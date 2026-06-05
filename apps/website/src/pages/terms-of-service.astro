@@ -15,8 +15,6 @@ const lastUpdated = formatEffectiveDate(LEGAL_VERSIONS.TOS_EFFECTIVE_DATE);
 
 <Layout title={pageData.title} description={pageData.description}>
   <main class="min-h-screen bg-ieee-black">
-
-
     <!-- Table of Contents (Mobile Only) -->
     <section class="py-8 bg-base-300/30 lg:hidden">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -121,37 +119,69 @@ const lastUpdated = formatEffectiveDate(LEGAL_VERSIONS.TOS_EFFECTIVE_DATE);
           <!-- Desktop Sidebar -->
           <div class="hidden lg:block lg:col-span-3">
             <nav class="sticky top-24 space-y-1">
-              <h2 class="text-xs font-bold text-white/40 uppercase tracking-widest mb-6 px-3">
+              <h2
+                class="text-xs font-bold text-white/40 uppercase tracking-widest mb-6 px-3"
+              >
                 On this page
               </h2>
-              <a href="#acceptance" class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50">
+              <a
+                href="#acceptance"
+                class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50"
+              >
                 1. Acceptance
               </a>
-              <a href="#user-accounts" class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50">
+              <a
+                href="#user-accounts"
+                class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50"
+              >
                 2. User Accounts
               </a>
-              <a href="#permitted-use" class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50">
+              <a
+                href="#permitted-use"
+                class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50"
+              >
                 3. Permitted Use
               </a>
-              <a href="#prohibited-conduct" class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50">
+              <a
+                href="#prohibited-conduct"
+                class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50"
+              >
                 4. Prohibited Conduct
               </a>
-              <a href="#intellectual-property" class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50">
+              <a
+                href="#intellectual-property"
+                class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50"
+              >
                 5. Intellectual Property
               </a>
-              <a href="#user-content" class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50">
+              <a
+                href="#user-content"
+                class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50"
+              >
                 6. User Content
               </a>
-              <a href="#disclaimers" class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50">
+              <a
+                href="#disclaimers"
+                class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50"
+              >
                 7. Disclaimers
               </a>
-              <a href="#limitation-liability" class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50">
+              <a
+                href="#limitation-liability"
+                class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50"
+              >
                 8. Limitation of Liability
               </a>
-              <a href="#changes-terms" class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50">
+              <a
+                href="#changes-terms"
+                class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50"
+              >
                 9. Changes to Terms
               </a>
-              <a href="#contact-tos" class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50">
+              <a
+                href="#contact-tos"
+                class="block text-sm text-white/70 hover:text-white hover:bg-white/5 px-3 py-2 rounded-lg transition-colors border-l-2 border-transparent hover:border-ieee-yellow/50"
+              >
                 10. Contact
               </a>
             </nav>
@@ -161,757 +191,771 @@ const lastUpdated = formatEffectiveDate(LEGAL_VERSIONS.TOS_EFFECTIVE_DATE);
           <div class="lg:col-span-9 space-y-12">
             <!-- Page Header -->
             <div class="space-y-6 mb-12">
-              <div class="inline-flex items-center gap-2 px-3 py-1 bg-ieee-yellow/10 border border-ieee-yellow/20 rounded-full">
-                <span class="text-xs font-medium text-ieee-yellow">Legal Agreement</span>
+              <div
+                class="inline-flex items-center gap-2 px-3 py-1 bg-ieee-yellow/10 border border-ieee-yellow/20 rounded-full"
+              >
+                <span class="text-xs font-medium text-ieee-yellow"
+                  >Legal Agreement</span
+                >
               </div>
-              <h1 class="text-4xl md:text-5xl font-bold text-white">Terms of Service</h1>
+              <h1 class="text-4xl md:text-5xl font-bold text-white">
+                Terms of Service
+              </h1>
               <p class="text-white/60">Last updated: {lastUpdated}</p>
               <p class="text-lg text-white/80 leading-relaxed max-w-3xl">
-                Welcome to IEEE UC San Diego Student Branch. By accessing or using our services, you agree to be bound by these Terms of Service. Please read them carefully before using our platform.
+                Welcome to IEEE UC San Diego Student Branch. By accessing or
+                using our services, you agree to be bound by these Terms of
+                Service. Please read them carefully before using our platform.
               </p>
             </div>
-        <!-- 1. Acceptance of Terms -->
-        <div
-          class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
-          id="acceptance"
-        >
-          <div class="flex items-start gap-4 mb-6">
-            <div class="p-3 bg-ieee-yellow/10 rounded-xl">
-              <svg
-                class="w-6 h-6 text-ieee-yellow"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                ></path>
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-white">
-                1. Acceptance of Terms
-              </h2>
-              <p class="text-white/60 text-sm mt-1">
-                Your agreement to these terms
-              </p>
-            </div>
-          </div>
-
-          <div class="space-y-4 text-white/80">
-            <p>
-              By accessing or using the IEEE UC San Diego Student Branch website, dashboard, and
-              related services (collectively, the "Services"), you agree to be
-              bound by these Terms of Service ("Terms"). If you do not agree to
-              these Terms, please do not use our Services.
-            </p>
-            <p>
-              These Terms constitute a legally binding agreement between you and
-              IEEE UC San Diego Student Branch ("IEEE UCSD"), a registered student organization at the University
-              of California, San Diego and an official IEEE Student Branch.
-            </p>
-            <div class="bg-base-300/50 rounded-lg p-4 border border-white/5">
-              <p class="text-sm">
-                <strong class="text-white">Important:</strong> You must be at least
-                18 years old or have parental/guardian consent to use our Services.
-                By using our Services, you represent that you meet this requirement.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. User Accounts -->
-        <div
-          class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
-          id="user-accounts"
-        >
-          <div class="flex items-start gap-4 mb-6">
-            <div class="p-3 bg-ieee-yellow/10 rounded-xl">
-              <svg
-                class="w-6 h-6 text-ieee-yellow"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                ></path>
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-white">2. User Accounts</h2>
-              <p class="text-white/60 text-sm mt-1">
-                Account registration and security
-              </p>
-            </div>
-          </div>
-
-          <div class="space-y-4 text-white/80">
-            <p>
-              To access certain features of our Services, you may need to create
-              an account. When creating an account, you agree to:
-            </p>
-            <ul class="space-y-2 ml-6">
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span
-                  >Provide accurate, current, and complete information during
-                  registration</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span
-                  >Maintain and update your information to keep it accurate</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span
-                  >Maintain the security of your account credentials and not
-                  share them with others</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span
-                  >Notify us immediately of any unauthorized access to your
-                  account</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span
-                  >Accept responsibility for all activities that occur under
-                  your account</span
-                >
-              </li>
-            </ul>
-            <p>
-              We reserve the right to suspend or terminate accounts that violate
-              these Terms or for any other reason at our discretion.
-            </p>
-          </div>
-        </div>
-
-        <!-- 3. Permitted Use -->
-        <div
-          class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
-          id="permitted-use"
-        >
-          <div class="flex items-start gap-4 mb-6">
-            <div class="p-3 bg-ieee-yellow/10 rounded-xl">
-              <svg
-                class="w-6 h-6 text-ieee-yellow"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"></path>
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-white">3. Permitted Use</h2>
-              <p class="text-white/60 text-sm mt-1">
-                How you may use our Services
-              </p>
-            </div>
-          </div>
-
-          <div class="space-y-4 text-white/80">
-            <p>You may use our Services for the following purposes:</p>
-            <div class="grid gap-4">
-              <div
-                class="bg-base-300/50 rounded-lg p-4 border border-white/5 flex items-start gap-3"
-              >
-                <svg
-                  class="w-5 h-5 text-ieee-yellow mt-0.5 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  ></path>
-                </svg>
-                <div>
-                  <strong class="text-white">Event Participation:</strong>
-                  <span>
-                    Registering for, checking into, and participating in IEEE
-                    UC San Diego Student Branch events</span
-                  >
-                </div>
-              </div>
-              <div
-                class="bg-base-300/50 rounded-lg p-4 border border-white/5 flex items-start gap-3"
-              >
-                <svg
-                  class="w-5 h-5 text-ieee-yellow mt-0.5 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  ></path>
-                </svg>
-                <div>
-                  <strong class="text-white">Financial Services:</strong>
-                  <span>
-                    Submitting reimbursement requests and managing fund deposits</span
-                  >
-                </div>
-              </div>
-              <div
-                class="bg-base-300/50 rounded-lg p-4 border border-white/5 flex items-start gap-3"
-              >
-                <svg
-                  class="w-5 h-5 text-ieee-yellow mt-0.5 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  ></path>
-                </svg>
-                <div>
-                  <strong class="text-white">Member Features:</strong>
-                  <span>
-                    Accessing your profile, viewing leaderboards, and connecting
-                    with the community</span
-                  >
-                </div>
-              </div>
-              <div
-                class="bg-base-300/50 rounded-lg p-4 border border-white/5 flex items-start gap-3"
-              >
-                <svg
-                  class="w-5 h-5 text-ieee-yellow mt-0.5 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  ></path>
-                </svg>
-                <div>
-                  <strong class="text-white">Career Development:</strong>
-                  <span>
-                    Uploading resumes and connecting with sponsors (with your
-                    consent)</span
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4. Prohibited Conduct -->
-        <div
-          class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
-          id="prohibited-conduct"
-        >
-          <div class="flex items-start gap-4 mb-6">
-            <div class="p-3 bg-red-500/10 rounded-xl">
-              <svg
-                class="w-6 h-6 text-red-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                ></path>
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-white">
-                4. Prohibited Conduct
-              </h2>
-              <p class="text-white/60 text-sm mt-1">
-                Actions that are not allowed
-              </p>
-            </div>
-          </div>
-
-          <div class="space-y-4 text-white/80">
-            <p>When using our Services, you agree NOT to:</p>
-            <ul class="space-y-2 ml-6">
-              <li class="flex items-start gap-2">
-                <span class="text-red-400 mt-1">✕</span>
-                <span
-                  >Violate any applicable laws, regulations, or university
-                  policies</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-red-400 mt-1">✕</span>
-                <span
-                  >Impersonate any person or entity or misrepresent your
-                  affiliation</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-red-400 mt-1">✕</span>
-                <span
-                  >Submit false or fraudulent information, including fake
-                  receipts or event check-ins</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-red-400 mt-1">✕</span>
-                <span
-                  >Attempt to gain unauthorized access to other users' accounts
-                  or our systems</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-red-400 mt-1">✕</span>
-                <span
-                  >Interfere with or disrupt the Services or servers/networks
-                  connected to them</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-red-400 mt-1">✕</span>
-                <span
-                  >Upload viruses, malware, or other malicious code</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-red-400 mt-1">✕</span>
-                <span
-                  >Harass, abuse, or harm other users or organization members</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-red-400 mt-1">✕</span>
-                <span
-                  >Use the Services for any commercial purpose without our
-                  written consent</span
-                >
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- 5. Intellectual Property -->
-        <div
-          class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
-          id="intellectual-property"
-        >
-          <div class="flex items-start gap-4 mb-6">
-            <div class="p-3 bg-ieee-yellow/10 rounded-xl">
-              <svg
-                class="w-6 h-6 text-ieee-yellow"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                ></path>
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-white">
-                5. Intellectual Property
-              </h2>
-              <p class="text-white/60 text-sm mt-1">Ownership and rights</p>
-            </div>
-          </div>
-
-          <div class="space-y-4 text-white/80">
-            <p>
-              The IEEE UC San Diego Student Branch name, logo, and all content and materials
-              available through our Services, including text, graphics, website
-              name, code, images, and logos, are the property of IEEE UC San Diego Student Branch or
-              its licensors and are protected by applicable intellectual
-              property laws.
-            </p>
-            <p>
-              The IEEE name and logo are trademarks of the Institute of
-              Electrical and Electronics Engineers, Inc. and are used with permission
-              under license from IEEE.
-            </p>
-            <p>
-              UC San Diego logos and trademarks are used with permission from the
-              University of California, San Diego.
-            </p>
-            <p>
-              Other company logos displayed on our platform are used solely to
-              represent partnerships and sponsorships with those organizations.
-            </p>
-            <div class="bg-base-300/50 rounded-lg p-4 border border-white/5">
-              <p class="text-sm">
-                You are granted a limited, non-exclusive, non-transferable
-                license to access and use our Services for personal,
-                non-commercial purposes in accordance with these Terms.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 6. User Content -->
-        <div
-          class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
-          id="user-content"
-        >
-          <div class="flex items-start gap-4 mb-6">
-            <div class="p-3 bg-ieee-yellow/10 rounded-xl">
-              <svg
-                class="w-6 h-6 text-ieee-yellow"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                ></path>
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-white">6. User Content</h2>
-              <p class="text-white/60 text-sm mt-1">
-                Content you submit to our Services
-              </p>
-            </div>
-          </div>
-
-          <div class="space-y-4 text-white/80">
-            <p>
-              You may submit content to our Services, including profile
-              information, resumes, receipts, and other materials ("User
-              Content"). By submitting User Content, you:
-            </p>
-            <ul class="space-y-2 ml-6">
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span
-                  >Retain ownership of your User Content</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span
-                  >Grant IEEE UC San Diego Student Branch a license to use, store, and process your
-                  content as necessary to provide the Services</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span
-                  >Represent that you have the right to submit the content and
-                  that it does not violate any third-party rights</span
-                >
-              </li>
-            </ul>
-            
-            <div class="bg-ieee-yellow/10 rounded-lg p-4 border border-ieee-yellow/20">
-              <p class="text-sm font-medium text-white mb-2">Resume Sharing Consent</p>
-              <p class="text-sm">
-                By uploading your resume to our platform, you grant IEEE UC San Diego Student Branch
-                permission to share your resume with our sponsors and partner organizations for
-                recruiting and networking purposes. Your resume may be shared at career fairs,
-                networking events, and through sponsor portals. If you do not wish to have your
-                resume shared, please do not upload it to our platform.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 7. Disclaimers -->
-        <div
-          class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
-          id="disclaimers"
-        >
-          <div class="flex items-start gap-4 mb-6">
-            <div class="p-3 bg-ieee-yellow/10 rounded-xl">
-              <svg
-                class="w-6 h-6 text-ieee-yellow"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                ></path>
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-white">7. Disclaimers</h2>
-              <p class="text-white/60 text-sm mt-1">
-                Limitations on our guarantees
-              </p>
-            </div>
-          </div>
-
-          <div class="space-y-4 text-white/80">
-            <div class="bg-base-300/50 rounded-lg p-4 border border-white/5">
-              <p class="text-sm uppercase tracking-wide text-white font-medium mb-2">
-                As-Is Basis
-              </p>
-              <p class="text-sm">
-                THE SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT
-                WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT
-                NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
-                FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
-              </p>
-            </div>
-            <p>
-              IEEE UC San Diego Student Branch is a student organization run by volunteers. We do
-              not guarantee that the Services will be uninterrupted, secure, or
-              error-free.
-            </p>
-          </div>
-        </div>
-
-        <!-- 7.5 Data Retention -->
-        <div
-          class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
-          id="data-retention"
-        >
-          <div class="flex items-start gap-4 mb-6">
-            <div class="p-3 bg-ieee-yellow/10 rounded-xl">
-              <svg
-                class="w-6 h-6 text-ieee-yellow"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
-                ></path>
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-white">Data Retention</h2>
-              <p class="text-white/60 text-sm mt-1">How long we keep your data</p>
-            </div>
-          </div>
-
-          <div class="space-y-4 text-white/80">
-            <p>
-              IEEE UC San Diego Student Branch retains user data indefinitely to maintain
-              historical records for our organization, including event attendance history,
-              membership records, and participation tracking.
-            </p>
-            <p>
-              Data may be affected in the following circumstances:
-            </p>
-            <ul class="space-y-2 ml-6">
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span>System resets or migrations that require data restructuring</span>
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span>Technical issues or circumstances that may result in data loss</span>
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span>User requests for data deletion (subject to our operational requirements)</span>
-              </li>
-            </ul>
-            <div class="bg-base-300/50 rounded-lg p-4 border border-white/5">
-              <p class="text-sm">
-                While we make reasonable efforts to maintain data integrity, we cannot guarantee
-                the permanent preservation of all data and are not liable for any data loss
-                that may occur.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 8. Limitation of Liability -->
-        <div
-          class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
-          id="limitation-liability"
-        >
-          <div class="flex items-start gap-4 mb-6">
-            <div class="p-3 bg-ieee-yellow/10 rounded-xl">
-              <svg
-                class="w-6 h-6 text-ieee-yellow"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
-                ></path>
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-white">
-                8. Limitation of Liability
-              </h2>
-              <p class="text-white/60 text-sm mt-1">Limits on our liability</p>
-            </div>
-          </div>
-
-          <div class="space-y-4 text-white/80">
-            <p>
-              TO THE MAXIMUM EXTENT PERMITTED BY LAW, IEEE UC SAN DIEGO STUDENT BRANCH, ITS
-              OFFICERS, MEMBERS, AND AFFILIATES SHALL NOT BE LIABLE FOR ANY
-              INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES,
-              INCLUDING LOSS OF DATA, PROFITS, OR GOODWILL, ARISING FROM YOUR
-              USE OF THE SERVICES.
-            </p>
-            <p>
-              Our total liability for any claims arising from or related to
-              these Terms or the Services shall not exceed the amount you have
-              paid to IEEE UC San Diego Student Branch, if any, in the twelve months preceding the
-              claim.
-            </p>
-          </div>
-        </div>
-
-        <!-- 9. Changes to Terms -->
-        <div
-          class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
-          id="changes-terms"
-        >
-          <div class="flex items-start gap-4 mb-6">
-            <div class="p-3 bg-ieee-yellow/10 rounded-xl">
-              <svg
-                class="w-6 h-6 text-ieee-yellow"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                ></path>
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-white">
-                9. Changes to Terms
-              </h2>
-              <p class="text-white/60 text-sm mt-1">How we update these terms</p>
-            </div>
-          </div>
-
-          <div class="space-y-4 text-white/80">
-            <p>
-              We may update these Terms from time to time. When we make changes,
-              we will:
-            </p>
-            <ul class="space-y-2 ml-6">
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span
-                  >Update the "Last updated" date at the top of this page</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span
-                  >Notify you of significant changes through the dashboard or
-                  email</span
-                >
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-ieee-yellow mt-1">•</span>
-                <span
-                  >Require you to accept the updated terms before continuing to
-                  use the Services</span
-                >
-              </li>
-            </ul>
-            <p>
-              Your continued use of the Services after changes are posted
-              constitutes your acceptance of the updated Terms.
-            </p>
-          </div>
-        </div>
-
-        <!-- 10. Contact Information -->
-        <div
-          class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
-          id="contact-tos"
-        >
-          <div class="flex items-start gap-4 mb-6">
-            <div class="p-3 bg-ieee-yellow/10 rounded-xl">
-              <svg
-                class="w-6 h-6 text-ieee-yellow"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                ></path>
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-2xl font-bold text-white">
-                10. Contact Information
-              </h2>
-              <p class="text-white/60 text-sm mt-1">How to reach us</p>
-            </div>
-          </div>
-
-          <div class="space-y-4 text-white/80">
-            <p>
-              If you have any questions about these Terms of Service, please
-              contact us:
-            </p>
-            <div class="grid md:grid-cols-2 gap-4">
-              <div
-                class="bg-base-300/50 rounded-lg p-4 border border-white/5"
-              >
-                <div class="flex items-center gap-2 mb-2">
+            <!-- 1. Acceptance of Terms -->
+            <div
+              class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
+              id="acceptance"
+            >
+              <div class="flex items-start gap-4 mb-6">
+                <div class="p-3 bg-ieee-yellow/10 rounded-xl">
                   <svg
-                    class="w-4 h-4 text-ieee-yellow"
+                    class="w-6 h-6 text-ieee-yellow"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-bold text-white">
+                    1. Acceptance of Terms
+                  </h2>
+                  <p class="text-white/60 text-sm mt-1">
+                    Your agreement to these terms
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-4 text-white/80">
+                <p>
+                  By accessing or using the IEEE UC San Diego Student Branch
+                  website, dashboard, and related services (collectively, the
+                  "Services"), you agree to be bound by these Terms of Service
+                  ("Terms"). If you do not agree to these Terms, please do not
+                  use our Services.
+                </p>
+                <p>
+                  These Terms constitute a legally binding agreement between you
+                  and IEEE UC San Diego Student Branch ("IEEE UCSD"), a
+                  registered student organization at the University of
+                  California, San Diego and an official IEEE Student Branch.
+                </p>
+                <div
+                  class="bg-base-300/50 rounded-lg p-4 border border-white/5"
+                >
+                  <p class="text-sm">
+                    <strong class="text-white">Important:</strong> You must be at
+                    least 18 years old or have parental/guardian consent to use our
+                    Services. By using our Services, you represent that you meet this
+                    requirement.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. User Accounts -->
+            <div
+              class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
+              id="user-accounts"
+            >
+              <div class="flex items-start gap-4 mb-6">
+                <div class="p-3 bg-ieee-yellow/10 rounded-xl">
+                  <svg
+                    class="w-6 h-6 text-ieee-yellow"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-bold text-white">
+                    2. User Accounts
+                  </h2>
+                  <p class="text-white/60 text-sm mt-1">
+                    Account registration and security
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-4 text-white/80">
+                <p>
+                  To access certain features of our Services, you may need to
+                  create an account. When creating an account, you agree to:
+                </p>
+                <ul class="space-y-2 ml-6">
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >Provide accurate, current, and complete information
+                      during registration</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >Maintain and update your information to keep it accurate</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >Maintain the security of your account credentials and not
+                      share them with others</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >Notify us immediately of any unauthorized access to your
+                      account</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >Accept responsibility for all activities that occur under
+                      your account</span
+                    >
+                  </li>
+                </ul>
+                <p>
+                  We reserve the right to suspend or terminate accounts that
+                  violate these Terms or for any other reason at our discretion.
+                </p>
+              </div>
+            </div>
+
+            <!-- 3. Permitted Use -->
+            <div
+              class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
+              id="permitted-use"
+            >
+              <div class="flex items-start gap-4 mb-6">
+                <div class="p-3 bg-ieee-yellow/10 rounded-xl">
+                  <svg
+                    class="w-6 h-6 text-ieee-yellow"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-bold text-white">
+                    3. Permitted Use
+                  </h2>
+                  <p class="text-white/60 text-sm mt-1">
+                    How you may use our Services
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-4 text-white/80">
+                <p>You may use our Services for the following purposes:</p>
+                <div class="grid gap-4">
+                  <div
+                    class="bg-base-300/50 rounded-lg p-4 border border-white/5 flex items-start gap-3"
+                  >
+                    <svg
+                      class="w-5 h-5 text-ieee-yellow mt-0.5 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      ></path>
+                    </svg>
+                    <div>
+                      <strong class="text-white">Event Participation:</strong>
+                      <span>
+                        Registering for, checking into, and participating in
+                        IEEE UC San Diego Student Branch events</span
+                      >
+                    </div>
+                  </div>
+                  <div
+                    class="bg-base-300/50 rounded-lg p-4 border border-white/5 flex items-start gap-3"
+                  >
+                    <svg
+                      class="w-5 h-5 text-ieee-yellow mt-0.5 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      ></path>
+                    </svg>
+                    <div>
+                      <strong class="text-white">Financial Services:</strong>
+                      <span>
+                        Submitting reimbursement requests and managing fund
+                        deposits</span
+                      >
+                    </div>
+                  </div>
+                  <div
+                    class="bg-base-300/50 rounded-lg p-4 border border-white/5 flex items-start gap-3"
+                  >
+                    <svg
+                      class="w-5 h-5 text-ieee-yellow mt-0.5 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                      ></path>
+                    </svg>
+                    <div>
+                      <strong class="text-white">Member Features:</strong>
+                      <span>
+                        Accessing your profile, viewing leaderboards, and
+                        connecting with the community</span
+                      >
+                    </div>
+                  </div>
+                  <div
+                    class="bg-base-300/50 rounded-lg p-4 border border-white/5 flex items-start gap-3"
+                  >
+                    <svg
+                      class="w-5 h-5 text-ieee-yellow mt-0.5 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      ></path>
+                    </svg>
+                    <div>
+                      <strong class="text-white">Career Development:</strong>
+                      <span>
+                        Uploading resumes and connecting with sponsors (with
+                        your consent)</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Prohibited Conduct -->
+            <div
+              class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
+              id="prohibited-conduct"
+            >
+              <div class="flex items-start gap-4 mb-6">
+                <div class="p-3 bg-red-500/10 rounded-xl">
+                  <svg
+                    class="w-6 h-6 text-red-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-bold text-white">
+                    4. Prohibited Conduct
+                  </h2>
+                  <p class="text-white/60 text-sm mt-1">
+                    Actions that are not allowed
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-4 text-white/80">
+                <p>When using our Services, you agree NOT to:</p>
+                <ul class="space-y-2 ml-6">
+                  <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✕</span>
+                    <span
+                      >Violate any applicable laws, regulations, or university
+                      policies</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✕</span>
+                    <span
+                      >Impersonate any person or entity or misrepresent your
+                      affiliation</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✕</span>
+                    <span
+                      >Submit false or fraudulent information, including fake
+                      receipts or event check-ins</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✕</span>
+                    <span
+                      >Attempt to gain unauthorized access to other users'
+                      accounts or our systems</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✕</span>
+                    <span
+                      >Interfere with or disrupt the Services or
+                      servers/networks connected to them</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✕</span>
+                    <span>Upload viruses, malware, or other malicious code</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✕</span>
+                    <span
+                      >Harass, abuse, or harm other users or organization
+                      members</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-red-400 mt-1">✕</span>
+                    <span
+                      >Use the Services for any commercial purpose without our
+                      written consent</span
+                    >
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- 5. Intellectual Property -->
+            <div
+              class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
+              id="intellectual-property"
+            >
+              <div class="flex items-start gap-4 mb-6">
+                <div class="p-3 bg-ieee-yellow/10 rounded-xl">
+                  <svg
+                    class="w-6 h-6 text-ieee-yellow"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-bold text-white">
+                    5. Intellectual Property
+                  </h2>
+                  <p class="text-white/60 text-sm mt-1">Ownership and rights</p>
+                </div>
+              </div>
+
+              <div class="space-y-4 text-white/80">
+                <p>
+                  The IEEE UC San Diego Student Branch name, logo, and all
+                  content and materials available through our Services,
+                  including text, graphics, website name, code, images, and
+                  logos, are the property of IEEE UC San Diego Student Branch or
+                  its licensors and are protected by applicable intellectual
+                  property laws.
+                </p>
+                <p>
+                  The IEEE name and logo are trademarks of the Institute of
+                  Electrical and Electronics Engineers, Inc. and are used with
+                  permission under license from IEEE.
+                </p>
+                <p>
+                  UC San Diego logos and trademarks are used with permission
+                  from the University of California, San Diego.
+                </p>
+                <p>
+                  Other company logos displayed on our platform are used solely
+                  to represent partnerships and sponsorships with those
+                  organizations.
+                </p>
+                <div
+                  class="bg-base-300/50 rounded-lg p-4 border border-white/5"
+                >
+                  <p class="text-sm">
+                    You are granted a limited, non-exclusive, non-transferable
+                    license to access and use our Services for personal,
+                    non-commercial purposes in accordance with these Terms.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 6. User Content -->
+            <div
+              class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
+              id="user-content"
+            >
+              <div class="flex items-start gap-4 mb-6">
+                <div class="p-3 bg-ieee-yellow/10 rounded-xl">
+                  <svg
+                    class="w-6 h-6 text-ieee-yellow"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-bold text-white">6. User Content</h2>
+                  <p class="text-white/60 text-sm mt-1">
+                    Content you submit to our Services
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-4 text-white/80">
+                <p>
+                  You may submit content to our Services, including profile
+                  information, resumes, receipts, and other materials ("User
+                  Content"). By submitting User Content, you:
+                </p>
+                <ul class="space-y-2 ml-6">
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span>Retain ownership of your User Content</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >Grant IEEE UC San Diego Student Branch a license to use,
+                      store, and process your content as necessary to provide
+                      the Services</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >Represent that you have the right to submit the content
+                      and that it does not violate any third-party rights</span
+                    >
+                  </li>
+                </ul>
+
+                <div
+                  class="bg-ieee-yellow/10 rounded-lg p-4 border border-ieee-yellow/20"
+                >
+                  <p class="text-sm font-medium text-white mb-2">
+                    Resume Sharing Consent
+                  </p>
+                  <p class="text-sm">
+                    By uploading your resume to our platform, you grant IEEE UC
+                    San Diego Student Branch permission to share your resume
+                    with our sponsors and partner organizations for recruiting
+                    and networking purposes. Your resume may be shared at career
+                    fairs, networking events, and through sponsor portals. If
+                    you do not wish to have your resume shared, please do not
+                    upload it to our platform.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 7. Disclaimers -->
+            <div
+              class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
+              id="disclaimers"
+            >
+              <div class="flex items-start gap-4 mb-6">
+                <div class="p-3 bg-ieee-yellow/10 rounded-xl">
+                  <svg
+                    class="w-6 h-6 text-ieee-yellow"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-bold text-white">7. Disclaimers</h2>
+                  <p class="text-white/60 text-sm mt-1">
+                    Limitations on our guarantees
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-4 text-white/80">
+                <div
+                  class="bg-base-300/50 rounded-lg p-4 border border-white/5"
+                >
+                  <p
+                    class="text-sm uppercase tracking-wide text-white font-medium mb-2"
+                  >
+                    As-Is Basis
+                  </p>
+                  <p class="text-sm">
+                    THE SERVICES ARE PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT
+                    WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+                    BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY,
+                    FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+                  </p>
+                </div>
+                <p>
+                  IEEE UC San Diego Student Branch is a student organization run
+                  by volunteers. We do not guarantee that the Services will be
+                  uninterrupted, secure, or error-free.
+                </p>
+              </div>
+            </div>
+
+            <!-- 7.5 Data Retention -->
+            <div
+              class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
+              id="data-retention"
+            >
+              <div class="flex items-start gap-4 mb-6">
+                <div class="p-3 bg-ieee-yellow/10 rounded-xl">
+                  <svg
+                    class="w-6 h-6 text-ieee-yellow"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-bold text-white">Data Retention</h2>
+                  <p class="text-white/60 text-sm mt-1">
+                    How long we keep your data
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-4 text-white/80">
+                <p>
+                  IEEE UC San Diego Student Branch retains user data
+                  indefinitely to maintain historical records for our
+                  organization, including event attendance history, membership
+                  records, and participation tracking.
+                </p>
+                <p>Data may be affected in the following circumstances:</p>
+                <ul class="space-y-2 ml-6">
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >System resets or migrations that require data
+                      restructuring</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >Technical issues or circumstances that may result in data
+                      loss</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >User requests for data deletion (subject to our
+                      operational requirements)</span
+                    >
+                  </li>
+                </ul>
+                <div
+                  class="bg-base-300/50 rounded-lg p-4 border border-white/5"
+                >
+                  <p class="text-sm">
+                    While we make reasonable efforts to maintain data integrity,
+                    we cannot guarantee the permanent preservation of all data
+                    and are not liable for any data loss that may occur.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 8. Limitation of Liability -->
+            <div
+              class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
+              id="limitation-liability"
+            >
+              <div class="flex items-start gap-4 mb-6">
+                <div class="p-3 bg-ieee-yellow/10 rounded-xl">
+                  <svg
+                    class="w-6 h-6 text-ieee-yellow"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-bold text-white">
+                    8. Limitation of Liability
+                  </h2>
+                  <p class="text-white/60 text-sm mt-1">
+                    Limits on our liability
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-4 text-white/80">
+                <p>
+                  TO THE MAXIMUM EXTENT PERMITTED BY LAW, IEEE UC SAN DIEGO
+                  STUDENT BRANCH, ITS OFFICERS, MEMBERS, AND AFFILIATES SHALL
+                  NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+                  CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF DATA,
+                  PROFITS, OR GOODWILL, ARISING FROM YOUR USE OF THE SERVICES.
+                </p>
+                <p>
+                  Our total liability for any claims arising from or related to
+                  these Terms or the Services shall not exceed the amount you
+                  have paid to IEEE UC San Diego Student Branch, if any, in the
+                  twelve months preceding the claim.
+                </p>
+              </div>
+            </div>
+
+            <!-- 9. Changes to Terms -->
+            <div
+              class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
+              id="changes-terms"
+            >
+              <div class="flex items-start gap-4 mb-6">
+                <div class="p-3 bg-ieee-yellow/10 rounded-xl">
+                  <svg
+                    class="w-6 h-6 text-ieee-yellow"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    ></path>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-2xl font-bold text-white">
+                    9. Changes to Terms
+                  </h2>
+                  <p class="text-white/60 text-sm mt-1">
+                    How we update these terms
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-4 text-white/80">
+                <p>
+                  We may update these Terms from time to time. When we make
+                  changes, we will:
+                </p>
+                <ul class="space-y-2 ml-6">
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >Update the "Last updated" date at the top of this page</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >Notify you of significant changes through the dashboard
+                      or email</span
+                    >
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="text-ieee-yellow mt-1">•</span>
+                    <span
+                      >Require you to accept the updated terms before continuing
+                      to use the Services</span
+                    >
+                  </li>
+                </ul>
+                <p>
+                  Your continued use of the Services after changes are posted
+                  constitutes your acceptance of the updated Terms.
+                </p>
+              </div>
+            </div>
+
+            <!-- 10. Contact Information -->
+            <div
+              class="bg-base-200/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/10 p-8 hover:border-ieee-yellow/30 transition-colors"
+              id="contact-tos"
+            >
+              <div class="flex items-start gap-4 mb-6">
+                <div class="p-3 bg-ieee-yellow/10 rounded-xl">
+                  <svg
+                    class="w-6 h-6 text-ieee-yellow"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -923,72 +967,104 @@ const lastUpdated = formatEffectiveDate(LEGAL_VERSIONS.TOS_EFFECTIVE_DATE);
                       d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                     ></path>
                   </svg>
-                  <strong class="text-white">Email</strong>
                 </div>
-                <a
-                  href="mailto:ieee@ucsd.edu"
-                  class="text-ieee-yellow hover:underline"
-                  >ieee@ucsd.edu</a
-                >
+                <div>
+                  <h2 class="text-2xl font-bold text-white">
+                    10. Contact Information
+                  </h2>
+                  <p class="text-white/60 text-sm mt-1">How to reach us</p>
+                </div>
               </div>
-              <div
-                class="bg-base-300/50 rounded-lg p-4 border border-white/5"
-              >
-                <div class="flex items-center gap-2 mb-2">
-                  <svg
-                    class="w-4 h-4 text-ieee-yellow"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+
+              <div class="space-y-4 text-white/80">
+                <p>
+                  If you have any questions about these Terms of Service, please
+                  contact us:
+                </p>
+                <div class="grid md:grid-cols-2 gap-4">
+                  <div
+                    class="bg-base-300/50 rounded-lg p-4 border border-white/5"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-                    ></path>
-                  </svg>
-                  <strong class="text-white">Website</strong>
+                    <div class="flex items-center gap-2 mb-2">
+                      <svg
+                        class="w-4 h-4 text-ieee-yellow"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        ></path>
+                      </svg>
+                      <strong class="text-white">Email</strong>
+                    </div>
+                    <a
+                      href="mailto:ieee@ucsd.edu"
+                      class="text-ieee-yellow hover:underline">ieee@ucsd.edu</a
+                    >
+                  </div>
+                  <div
+                    class="bg-base-300/50 rounded-lg p-4 border border-white/5"
+                  >
+                    <div class="flex items-center gap-2 mb-2">
+                      <svg
+                        class="w-4 h-4 text-ieee-yellow"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                        ></path>
+                      </svg>
+                      <strong class="text-white">Website</strong>
+                    </div>
+                    <a
+                      href="https://ieeeatucsd.org"
+                      class="text-ieee-yellow hover:underline">ieeeatucsd.org</a
+                    >
+                  </div>
                 </div>
-                <a
-                  href="https://ieeeatucsd.org"
-                  class="text-ieee-yellow hover:underline"
-                  >ieeeatucsd.org</a
+                <div
+                  class="bg-base-300/50 rounded-lg p-4 border border-white/5"
                 >
+                  <div class="flex items-center gap-2 mb-2">
+                    <svg
+                      class="w-4 h-4 text-ieee-yellow"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      ></path>
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <strong class="text-white">Address</strong>
+                  </div>
+                  <p>
+                    IEEE UC San Diego Student Branch<br />
+                    University of California, San Diego<br />
+                    9500 Gilman Drive<br />
+                    La Jolla, CA 92093
+                  </p>
+                </div>
               </div>
-            </div>
-            <div class="bg-base-300/50 rounded-lg p-4 border border-white/5">
-              <div class="flex items-center gap-2 mb-2">
-                <svg
-                  class="w-4 h-4 text-ieee-yellow"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                  ></path>
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                </svg>
-                <strong class="text-white">Address</strong>
-              </div>
-              <p>
-                IEEE UC San Diego Student Branch<br />
-                University of California, San Diego<br />
-                9500 Gilman Drive<br />
-                La Jolla, CA 92093
-              </p>
             </div>
           </div>
-        </div>
-        </div>
         </div>
       </div>
     </section>

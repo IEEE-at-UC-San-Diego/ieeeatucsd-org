@@ -1,3 +1,3 @@
-declare module 'firebase/storage' {
-  export * from '@firebase/storage';
+declare module "firebase/storage" {
+  export * from "@firebase/storage";
 }

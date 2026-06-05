@@ -1,6 +1,6 @@
 import type { ServiceAccount } from "firebase-admin";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
-import { firebaseEnv } from "../env";
+import { firebaseServerEnv as firebaseEnv } from "../env/server";
 import { getAuth } from "firebase-admin/auth";
 
 const activeApps = getApps();

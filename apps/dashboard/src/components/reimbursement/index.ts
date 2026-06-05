@@ -1,1 +1,1 @@
-export { default as ReceiptViewer } from './ReceiptViewer';
+export { default as ReceiptViewer } from "./ReceiptViewer";

@@ -1,340 +1,340 @@
-import React, { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
-import { Constitution, ConstitutionSection } from "./types";
-import { getSectionDisplayTitle, toRomanNumeral } from "./utils/constitutionUtils";
-import {
-  generateContentPages,
-  generateTableOfContents,
-  calculateTotalPages,
-} from "./utils/printUtils";
-import SectionRenderer from "./SectionRenderer";
+import type React from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import SectionRenderer from "./SectionRenderer";
+import type { Constitution, ConstitutionSection } from "./types";
+import {
+	getSectionDisplayTitle,
+	toRomanNumeral,
+} from "./utils/constitutionUtils";
+import {
+	calculateTotalPages,
+	generateContentPages,
+	generateTableOfContents,
+} from "./utils/printUtils";
 
 interface ConstitutionPreviewProps {
-  constitution: Constitution | null;
-  sections: ConstitutionSection[];
-  onPrint: () => void;
-  currentPage?: number;
-  onPageChange?: (page: number) => void;
-  highlightedSectionId?: string;
+	constitution: Constitution | null;
+	sections: ConstitutionSection[];
+	onPrint: () => void;
+	currentPage?: number;
+	onPageChange?: (page: number) => void;
+	highlightedSectionId?: string;
 }
 
 const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
-  constitution: _constitution,
-  sections,
-  onPrint,
-  currentPage: externalCurrentPage,
-  onPageChange: externalOnPageChange,
-  highlightedSectionId = "",
+	constitution: _constitution,
+	sections,
+	onPrint,
+	currentPage: externalCurrentPage,
+	onPageChange: externalOnPageChange,
+	highlightedSectionId = "",
 }) => {
-  const [internalCurrentPage, setInternalCurrentPage] = useState(1);
-  const [showTableOfContents] = useState(true);
+	const [internalCurrentPage, setInternalCurrentPage] = useState(1);
+	const [showTableOfContents] = useState(true);
 
-  // Use external page state if provided, otherwise use internal
-  const currentPage = externalCurrentPage ?? internalCurrentPage;
-  const setCurrentPage = externalOnPageChange ?? setInternalCurrentPage;
+	// Use external page state if provided, otherwise use internal
+	const currentPage = externalCurrentPage ?? internalCurrentPage;
+	const setCurrentPage = externalOnPageChange ?? setInternalCurrentPage;
 
-  const totalPages = useMemo(
-    () => calculateTotalPages(sections, showTableOfContents),
-    [sections, showTableOfContents],
-  );
+	const totalPages = useMemo(
+		() => calculateTotalPages(sections, showTableOfContents),
+		[sections, showTableOfContents],
+	);
 
-  const tableOfContents = useMemo(
-    () => generateTableOfContents(sections),
-    [sections],
-  );
+	const tableOfContents = useMemo(
+		() => generateTableOfContents(sections),
+		[sections],
+	);
 
-  const contentPages = useMemo(
-    () => generateContentPages(sections),
-    [sections],
-  );
+	const contentPages = useMemo(
+		() => generateContentPages(sections),
+		[sections],
+	);
 
-  // Calculate TOC pages needed
-  const tocPagesNeeded = useMemo(
-    () => Math.ceil(tableOfContents.length / 30),
-    [tableOfContents],
-  );
+	// Calculate TOC pages needed
+	const tocPagesNeeded = useMemo(
+		() => Math.ceil(tableOfContents.length / 30),
+		[tableOfContents],
+	);
 
-  const renderCurrentPage = () => {
-    if (currentPage === 1) {
-      return renderCoverPage();
-    } else if (showTableOfContents) {
-      if (currentPage >= 2 && currentPage <= 1 + tocPagesNeeded) {
-        const tocPageIndex = currentPage - 2;
-        return renderTableOfContentsPage(tocPageIndex);
-      } else {
-        const contentPageIndex = currentPage - 2 - tocPagesNeeded;
-        return renderContentPage(contentPageIndex);
-      }
-    } else {
-      const contentPageIndex = currentPage - 2;
-      return renderContentPage(contentPageIndex);
-    }
-  };
+	const renderCurrentPage = () => {
+		if (currentPage === 1) {
+			return renderCoverPage();
+		} else if (showTableOfContents) {
+			if (currentPage >= 2 && currentPage <= 1 + tocPagesNeeded) {
+				const tocPageIndex = currentPage - 2;
+				return renderTableOfContentsPage(tocPageIndex);
+			} else {
+				const contentPageIndex = currentPage - 2 - tocPagesNeeded;
+				return renderContentPage(contentPageIndex);
+			}
+		} else {
+			const contentPageIndex = currentPage - 2;
+			return renderContentPage(contentPageIndex);
+		}
+	};
 
-  const renderCoverPage = () => (
-    <div
-      className="constitution-page"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        textAlign: "center",
-        position: "relative",
-      }}
-    >
-      {/* Logo */}
-      <div
-        style={{
-          margin: "48px 0",
-          textAlign: "center",
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
-        <img
-          src="/logos/blue_logo_only.svg"
-          alt="IEEE Logo"
-          style={{
-            width: "120px",
-            height: "120px",
-            objectFit: "contain",
-            display: "block",
-            margin: "0 auto",
-          }}
-        />
-      </div>
+	const renderCoverPage = () => (
+		<div
+			className="constitution-page"
+			style={{
+				display: "flex",
+				flexDirection: "column",
+				justifyContent: "center",
+				textAlign: "center",
+				position: "relative",
+			}}
+		>
+			{/* Logo */}
+			<div
+				style={{
+					margin: "48px 0",
+					textAlign: "center",
+					display: "flex",
+					justifyContent: "center",
+				}}
+			>
+				<img
+					src="/logos/blue_logo_only.svg"
+					alt="IEEE Logo"
+					style={{
+						width: "120px",
+						height: "120px",
+						objectFit: "contain",
+						display: "block",
+						margin: "0 auto",
+					}}
+				/>
+			</div>
 
-      <h1
-        style={{
-          fontFamily:
-            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          fontSize: "28pt",
-          textAlign: "center",
-          lineHeight: "1.1",
-          fontWeight: "bold",
-          color: "#000",
-          marginBottom: "24px",
-        }}
-      >
-        IEEE at UC San Diego
-      </h1>
+			<h1
+				style={{
+					fontFamily:
+						'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+					fontSize: "28pt",
+					textAlign: "center",
+					lineHeight: "1.1",
+					fontWeight: "bold",
+					color: "#000",
+					marginBottom: "24px",
+				}}
+			>
+				IEEE at UC San Diego
+			</h1>
 
-      <h2
-        style={{
-          fontFamily:
-            'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          fontSize: "16pt",
-          textAlign: "center",
-          lineHeight: "1.3",
-          fontWeight: "600",
-          color: "#000",
-          marginBottom: "24px",
-        }}
-      >
-        The Institute of Electrical and Electronics Engineers at UC San Diego
-        Constitution
-      </h2>
+			<h2
+				style={{
+					fontFamily:
+						'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+					fontSize: "16pt",
+					textAlign: "center",
+					lineHeight: "1.3",
+					fontWeight: "600",
+					color: "#000",
+					marginBottom: "24px",
+				}}
+			>
+				The Institute of Electrical and Electronics Engineers at UC San Diego
+				Constitution
+			</h2>
 
-      <div style={{ textAlign: "center", marginTop: "24px" }}>
-        <p
-          style={{
-            fontFamily:
-              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            fontSize: "14pt",
-            textAlign: "center",
-            textIndent: "0",
-            marginBottom: "12px",
-            color: "#000",
-          }}
-        >
-          Last Updated:{" "}
-          {new Date().toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </p>
+			<div style={{ textAlign: "center", marginTop: "24px" }}>
+				<p
+					style={{
+						fontFamily:
+							'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+						fontSize: "14pt",
+						textAlign: "center",
+						textIndent: "0",
+						marginBottom: "12px",
+						color: "#000",
+					}}
+				>
+					Last Updated:{" "}
+					{new Date().toLocaleDateString("en-US", {
+						year: "numeric",
+						month: "long",
+						day: "numeric",
+					})}
+				</p>
 
-        <p
-          style={{
-            fontFamily:
-              'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            fontSize: "11pt",
-            textAlign: "center",
-            textIndent: "0",
-            color: "#888",
-            marginTop: "8px",
-          }}
-        >
-          Adopted since September 2006
-        </p>
-      </div>
-    </div>
-  );
+				<p
+					style={{
+						fontFamily:
+							'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+						fontSize: "11pt",
+						textAlign: "center",
+						textIndent: "0",
+						color: "#888",
+						marginTop: "8px",
+					}}
+				>
+					Adopted since September 2006
+				</p>
+			</div>
+		</div>
+	);
 
-  const renderTableOfContentsPage = (tocPageIndex: number) => {
-    const entriesPerPage = 30;
-    const pageEntries = tableOfContents.slice(
-      tocPageIndex * entriesPerPage,
-      (tocPageIndex + 1) * entriesPerPage,
-    );
-    const isFirstPage = tocPageIndex === 0;
+	const renderTableOfContentsPage = (tocPageIndex: number) => {
+		const entriesPerPage = 30;
+		const pageEntries = tableOfContents.slice(
+			tocPageIndex * entriesPerPage,
+			(tocPageIndex + 1) * entriesPerPage,
+		);
+		const isFirstPage = tocPageIndex === 0;
 
-    const getIndentClass = (section: ConstitutionSection) => {
-      if (section.type === "section") return "ml-6";
-      if (section.type === "subsection") {
-        // Calculate nesting depth for subsections
-        let depth = 1;
-        let currentParentId = section.parentId;
+		const getIndentClass = (section: ConstitutionSection) => {
+			if (section.type === "section") return "ml-6";
+			if (section.type === "subsection") {
+				// Calculate nesting depth for subsections
+				let depth = 1;
+				let currentParentId = section.parentId;
 
-        while (currentParentId) {
-          const parent = sections.find((s) => s.id === currentParentId);
-          if (parent && parent.type === "subsection") {
-            depth++;
-            currentParentId = parent.parentId;
-          } else if (parent && parent.type === "section") {
-            depth++;
-            break;
-          } else {
-            break;
-          }
-        }
-        const indentClasses = ["ml-6", "ml-12", "ml-16", "ml-20", "ml-24"];
-        return indentClasses[Math.min(depth, indentClasses.length - 1)] || "ml-24";
-      }
-      return "";
-    };
+				while (currentParentId) {
+					const parent = sections.find((s) => s.id === currentParentId);
+					if (parent && parent.type === "subsection") {
+						depth++;
+						currentParentId = parent.parentId;
+					} else if (parent && parent.type === "section") {
+						depth++;
+						break;
+					} else {
+						break;
+					}
+				}
+				const indentClasses = ["ml-6", "ml-12", "ml-16", "ml-20", "ml-24"];
+				return (
+					indentClasses[Math.min(depth, indentClasses.length - 1)] || "ml-24"
+				);
+			}
+			return "";
+		};
 
-    const getDisplayTitle = (section: ConstitutionSection) => {
-      if (section.type === "preamble") return "Preamble";
-      if (section.type === "article") {
-        const articles = sections
-          .filter((s) => s.type === "article")
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
-        const articleIndex =
-          articles.findIndex((a) => a.id === section.id) + 1;
-        return `Article ${toRomanNumeral(articleIndex)} - ${section.title}`;
-      }
-      if (section.type === "section") {
-        const siblingSections = sections
-          .filter(
-            (s) => s.parentId === section.parentId && s.type === "section",
-          )
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
-        const sectionIndex =
-          siblingSections.findIndex((s) => s.id === section.id) + 1;
-        return `Section ${sectionIndex} - ${section.title}`;
-      }
-      if (section.type === "amendment") {
-        const amendments = sections
-          .filter((s) => s.type === "amendment")
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
-        const amendmentIndex =
-          amendments.findIndex((a) => a.id === section.id) + 1;
-        return `Amendment ${amendmentIndex}`;
-      }
-      return getSectionDisplayTitle(section, sections);
-    };
+		const getDisplayTitle = (section: ConstitutionSection) => {
+			if (section.type === "preamble") return "Preamble";
+			if (section.type === "article") {
+				const articles = sections
+					.filter((s) => s.type === "article")
+					.sort((a, b) => (a.order || 0) - (b.order || 0));
+				const articleIndex = articles.findIndex((a) => a.id === section.id) + 1;
+				return `Article ${toRomanNumeral(articleIndex)} - ${section.title}`;
+			}
+			if (section.type === "section") {
+				const siblingSections = sections
+					.filter(
+						(s) => s.parentId === section.parentId && s.type === "section",
+					)
+					.sort((a, b) => (a.order || 0) - (b.order || 0));
+				const sectionIndex =
+					siblingSections.findIndex((s) => s.id === section.id) + 1;
+				return `Section ${sectionIndex} - ${section.title}`;
+			}
+			if (section.type === "amendment") {
+				const amendments = sections
+					.filter((s) => s.type === "amendment")
+					.sort((a, b) => (a.order || 0) - (b.order || 0));
+				const amendmentIndex =
+					amendments.findIndex((a) => a.id === section.id) + 1;
+				return `Amendment ${amendmentIndex}`;
+			}
+			return getSectionDisplayTitle(section, sections);
+		};
 
-    return (
-      <div className="constitution-page p-12 relative">
-        <h2
-          className="text-2xl font-bold text-gray-900 mb-8 text-center"
-          style={{ fontFamily: "Arial, sans-serif", fontSize: "18pt" }}
-        >
-          {isFirstPage
-            ? "Table of Contents"
-            : "Table of Contents (continued)"}
-        </h2>
+		return (
+			<div className="constitution-page p-12 relative">
+				<h2
+					className="text-2xl font-bold text-gray-900 mb-8 text-center"
+					style={{ fontFamily: "Arial, sans-serif", fontSize: "18pt" }}
+				>
+					{isFirstPage ? "Table of Contents" : "Table of Contents (continued)"}
+				</h2>
 
-        <div className="space-y-2" style={{ fontSize: "12pt" }}>
-          {pageEntries.map(({ section, pageNum }) => (
-            <div
-              key={section.id}
-              className="flex justify-between items-start"
-            >
-              <div className={`flex-1 ${getIndentClass(section)}`}>
-                <button
-                  onClick={() => setCurrentPage(pageNum)}
-                  className="text-left text-gray-900 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
-                  style={{ fontSize: "inherit", fontFamily: "inherit" }}
-                >
-                  {getDisplayTitle(section)}
-                </button>
-              </div>
-              <div className="flex-shrink-0 ml-4">
-                <button
-                  onClick={() => setCurrentPage(pageNum)}
-                  className="text-gray-700 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
-                  style={{ fontSize: "inherit", fontFamily: "inherit" }}
-                >
-                  {pageNum}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
+				<div className="space-y-2" style={{ fontSize: "12pt" }}>
+					{pageEntries.map(({ section, pageNum }) => (
+						<div key={section.id} className="flex justify-between items-start">
+							<div className={`flex-1 ${getIndentClass(section)}`}>
+								<button
+									onClick={() => setCurrentPage(pageNum)}
+									className="text-left text-gray-900 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
+									style={{ fontSize: "inherit", fontFamily: "inherit" }}
+								>
+									{getDisplayTitle(section)}
+								</button>
+							</div>
+							<div className="flex-shrink-0 ml-4">
+								<button
+									onClick={() => setCurrentPage(pageNum)}
+									className="text-gray-700 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
+									style={{ fontSize: "inherit", fontFamily: "inherit" }}
+								>
+									{pageNum}
+								</button>
+							</div>
+						</div>
+					))}
+				</div>
+			</div>
+		);
+	};
 
-  const renderContentPage = (pageIndex: number) => {
-    const page = contentPages[pageIndex];
+	const renderContentPage = (pageIndex: number) => {
+		const page = contentPages[pageIndex];
 
-    if (!page) {
-      return (
-        <div
-          className="constitution-page"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              color: "#666",
-              fontFamily: "Arial, sans-serif",
-              fontSize: "12pt",
-            }}
-          >
-            Page not found
-          </div>
-        </div>
-      );
-    }
+		if (!page) {
+			return (
+				<div
+					className="constitution-page"
+					style={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						textAlign: "center",
+					}}
+				>
+					<div
+						style={{
+							color: "#666",
+							fontFamily: "Arial, sans-serif",
+							fontSize: "12pt",
+						}}
+					>
+						Page not found
+					</div>
+				</div>
+			);
+		}
 
-    return (
-      <div className="constitution-page" style={{ position: "relative" }}>
-        {page.map((section) => (
-          <SectionRenderer
-            key={section.id}
-            section={section}
-            allSections={sections}
-            highlightedSectionId={highlightedSectionId}
-          />
-        ))}
-      </div>
-    );
-  };
+		return (
+			<div className="constitution-page" style={{ position: "relative" }}>
+				{page.map((section) => (
+					<SectionRenderer
+						key={section.id}
+						section={section}
+						allSections={sections}
+						highlightedSectionId={highlightedSectionId}
+					/>
+				))}
+			</div>
+		);
+	};
 
-  return (
-    <div
-      className="bg-white constitution-document shadow-lg"
-      style={{
-        fontFamily: "Arial, sans-serif",
-        fontSize: "11pt",
-        lineHeight: "1.5",
-        width: "8.5in",
-        margin: "0 auto",
-      }}
-    >
-      {/* Print & Page Styles */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
+	return (
+		<div
+			className="bg-white constitution-document shadow-lg"
+			style={{
+				fontFamily: "Arial, sans-serif",
+				fontSize: "11pt",
+				lineHeight: "1.5",
+				width: "8.5in",
+				margin: "0 auto",
+			}}
+		>
+			{/* Print & Page Styles */}
+			<style
+				dangerouslySetInnerHTML={{
+					__html: `
             * {
               box-sizing: border-box;
             }
@@ -534,138 +534,138 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
               }
             }
           `,
-        }}
-      />
+				}}
+			/>
 
-      {/* Page Navigation Header */}
-      <div className="no-print bg-gray-50 border-b border-gray-200 p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            variant="default"
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Previous
-          </Button>
+			{/* Page Navigation Header */}
+			<div className="no-print bg-gray-50 border-b border-gray-200 p-4 flex items-center justify-between">
+				<div className="flex items-center gap-4">
+					<Button
+						onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+						disabled={currentPage === 1}
+						variant="default"
+						className="bg-blue-600 hover:bg-blue-700"
+					>
+						<ChevronLeft className="h-4 w-4 mr-1" />
+						Previous
+					</Button>
 
-          <span className="text-sm text-gray-600">
-            Page {currentPage} of {totalPages}
-          </span>
+					<span className="text-sm text-gray-600">
+						Page {currentPage} of {totalPages}
+					</span>
 
-          <Button
-            onClick={() =>
-              setCurrentPage(Math.min(totalPages, currentPage + 1))
-            }
-            disabled={currentPage === totalPages}
-            variant="default"
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            Next
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
+					<Button
+						onClick={() =>
+							setCurrentPage(Math.min(totalPages, currentPage + 1))
+						}
+						disabled={currentPage === totalPages}
+						variant="default"
+						className="bg-blue-600 hover:bg-blue-700"
+					>
+						Next
+						<ChevronRight className="h-4 w-4 ml-1" />
+					</Button>
+				</div>
 
-        <Button onClick={onPrint} variant="outline">
-          <Printer className="h-4 w-4 mr-2" />
-          Print / Save as PDF
-        </Button>
-      </div>
+				<Button onClick={onPrint} variant="outline">
+					<Printer className="h-4 w-4 mr-2" />
+					Print / Save as PDF
+				</Button>
+			</div>
 
-      {/* Screen Content - Current Page Only */}
-      <div className="relative screen-only">
-        <div className="page-indicator no-print">Page {currentPage}</div>
-        {renderCurrentPage()}
-      </div>
+			{/* Screen Content - Current Page Only */}
+			<div className="relative screen-only">
+				<div className="page-indicator no-print">Page {currentPage}</div>
+				{renderCurrentPage()}
+			</div>
 
-      {/* Page Navigation Footer */}
-      <div className="no-print bg-gray-50 border-t border-gray-200 p-4 flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          {/* Previous button */}
-          <button
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300"
-          >
-            ‹
-          </button>
+			{/* Page Navigation Footer */}
+			<div className="no-print bg-gray-50 border-t border-gray-200 p-4 flex items-center justify-center">
+				<div className="flex items-center gap-2">
+					{/* Previous button */}
+					<button
+						onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+						disabled={currentPage === 1}
+						className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300"
+					>
+						‹
+					</button>
 
-          {/* Page numbers with smart truncation */}
-          {(() => {
-            const maxVisiblePages = 10;
-            const pages: (number | string)[] = [];
+					{/* Page numbers with smart truncation */}
+					{(() => {
+						const maxVisiblePages = 10;
+						const pages: (number | string)[] = [];
 
-            if (totalPages <= maxVisiblePages) {
-              for (let i = 1; i <= totalPages; i++) {
-                pages.push(i);
-              }
-            } else {
-              const startPage = Math.max(1, currentPage - 4);
-              const endPage = Math.min(totalPages, currentPage + 4);
+						if (totalPages <= maxVisiblePages) {
+							for (let i = 1; i <= totalPages; i++) {
+								pages.push(i);
+							}
+						} else {
+							const startPage = Math.max(1, currentPage - 4);
+							const endPage = Math.min(totalPages, currentPage + 4);
 
-              if (startPage > 1) {
-                pages.push(1);
-                if (startPage > 2) pages.push("...");
-              }
+							if (startPage > 1) {
+								pages.push(1);
+								if (startPage > 2) pages.push("...");
+							}
 
-              for (let i = startPage; i <= endPage; i++) {
-                pages.push(i);
-              }
+							for (let i = startPage; i <= endPage; i++) {
+								pages.push(i);
+							}
 
-              if (endPage < totalPages) {
-                if (endPage < totalPages - 1) pages.push("...");
-                pages.push(totalPages);
-              }
-            }
+							if (endPage < totalPages) {
+								if (endPage < totalPages - 1) pages.push("...");
+								pages.push(totalPages);
+							}
+						}
 
-            return pages.map((pageNum, index) => {
-              if (pageNum === "...") {
-                return (
-                  <span
-                    key={`ellipsis-${index}`}
-                    className="px-2 py-1 text-gray-500"
-                  >
-                    ...
-                  </span>
-                );
-              }
+						return pages.map((pageNum, index) => {
+							if (pageNum === "...") {
+								return (
+									<span
+										key={`ellipsis-${index}`}
+										className="px-2 py-1 text-gray-500"
+									>
+										...
+									</span>
+								);
+							}
 
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setCurrentPage(pageNum as number)}
-                  className={`w-8 h-8 rounded text-sm font-medium transition-colors ${
-                    pageNum === currentPage
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              );
-            });
-          })()}
+							return (
+								<button
+									key={pageNum}
+									onClick={() => setCurrentPage(pageNum as number)}
+									className={`w-8 h-8 rounded text-sm font-medium transition-colors ${
+										pageNum === currentPage
+											? "bg-blue-600 text-white"
+											: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+									}`}
+								>
+									{pageNum}
+								</button>
+							);
+						});
+					})()}
 
-          {/* Next button */}
-          <button
-            onClick={() =>
-              setCurrentPage(Math.min(totalPages, currentPage + 1))
-            }
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300"
-          >
-            ›
-          </button>
+					{/* Next button */}
+					<button
+						onClick={() =>
+							setCurrentPage(Math.min(totalPages, currentPage + 1))
+						}
+						disabled={currentPage === totalPages}
+						className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300"
+					>
+						›
+					</button>
 
-          {/* Page info */}
-          <span className="ml-4 text-sm text-gray-600">
-            Page {currentPage} of {totalPages}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
+					{/* Page info */}
+					<span className="ml-4 text-sm text-gray-600">
+						Page {currentPage} of {totalPages}
+					</span>
+				</div>
+			</div>
+		</div>
+	);
 };
 
 export default ConstitutionPreview;

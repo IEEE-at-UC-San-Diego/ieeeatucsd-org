@@ -105,11 +105,11 @@ Rules:
 			},
 			...(isPdf
 				? [
-					{
-						type: "file",
-						file: { filename: "payment-proof.pdf", file_data: finalUrl },
-					},
-				]
+						{
+							type: "file",
+							file: { filename: "payment-proof.pdf", file_data: finalUrl },
+						},
+					]
 				: [{ type: "image_url", image_url: { url: finalUrl } }]),
 		];
 
