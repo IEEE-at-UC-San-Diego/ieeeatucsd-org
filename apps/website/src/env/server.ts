@@ -14,13 +14,21 @@ function loadLocalEnvFiles() {
 
   // Astro dev runs SSR modules in Vite's module runner, which does not inherit
   // .env values into process.env. Load env files explicitly for local development.
+  const shellEnv = { ...process.env };
+
   for (const envPath of [
     resolve(monorepoRoot, ".env"),
     resolve(monorepoRoot, ".env.local"),
     resolve(websiteRoot, ".env"),
     resolve(websiteRoot, ".env.local"),
   ]) {
-    config({ path: envPath, override: false, quiet: true });
+    config({ path: envPath, override: true, quiet: true });
+  }
+
+  for (const [key, value] of Object.entries(shellEnv)) {
+    if (value !== undefined && value !== "") {
+      process.env[key] = value;
+    }
   }
 }
 
@@ -52,10 +60,9 @@ export function normalizeFirebasePrivateKey(raw: string | undefined): string {
 
   let privateKey = raw;
   if (!privateKey.includes("BEGIN PRIVATE KEY")) {
-    try {
-      privateKey = Buffer.from(privateKey, "base64").toString("utf8");
-    } catch {
-      privateKey = raw;
+    const decoded = Buffer.from(privateKey, "base64").toString("utf8");
+    if (decoded.includes("BEGIN PRIVATE KEY")) {
+      privateKey = decoded;
     }
   }
 
