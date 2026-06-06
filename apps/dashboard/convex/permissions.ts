@@ -263,6 +263,21 @@ export async function requireAdmin(
 }
 
 /**
+ * Require access to the sponsor resume database (admin or non-Bronze sponsor).
+ */
+export async function requireResumeDatabaseAccess(
+  ctx: AuthContext,
+  logtoId?: string,
+  authToken?: string,
+) {
+  const user = await requireCurrentUser(ctx, logtoId, authToken);
+  if (!canAccessResumeDatabase(user.role, user.sponsorTier)) {
+    throw new Error("Insufficient permissions: resume database access required");
+  }
+  return user;
+}
+
+/**
  * Require the current user to be a Sponsor.
  */
 export async function requireSponsor(
