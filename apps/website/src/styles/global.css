@@ -115,11 +115,7 @@
   h6,
   .font-display {
     font-family:
-      "Bricolage Grotesque",
-      "Geist",
-      ui-sans-serif,
-      system-ui,
-      sans-serif;
+      "Bricolage Grotesque", "Geist", ui-sans-serif, system-ui, sans-serif;
     letter-spacing: -0.02em;
     line-height: 1.08;
     font-optical-sizing: auto;
