@@ -71,6 +71,7 @@ function SettingsPage() {
 	const [uploadingResume, setUploadingResume] = useState(false);
 	const [downloadingResume, setDownloadingResume] = useState(false);
 	const [removingResume, setRemovingResume] = useState(false);
+	const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
 
 	const resumeUrl = user?.resumeUrl;
 
@@ -189,7 +190,7 @@ function SettingsPage() {
 	};
 
 	const handleResumeRemove = async () => {
-		if (!logtoId || !user?.resume) return;
+		if (!logtoId || !user?.resume) return false;
 
 		setRemovingResume(true);
 		setError(null);
@@ -199,9 +200,11 @@ function SettingsPage() {
 			await deleteResume({ logtoId });
 			setSuccess("Resume removed successfully!");
 			toast.success("Resume removed successfully");
+			return true;
 		} catch (err: any) {
 			setError("Failed to remove resume: " + (err.message || "Unknown error"));
 			toast.error("Failed to remove resume");
+			return false;
 		} finally {
 			setRemovingResume(false);
 		}
@@ -561,7 +564,10 @@ function SettingsPage() {
 												Resume link unavailable. Try refreshing the page.
 											</p>
 										)}
-										<AlertDialog>
+										<AlertDialog
+											open={removeDialogOpen}
+											onOpenChange={setRemoveDialogOpen}
+										>
 											<AlertDialogTrigger asChild>
 												<Button
 													variant="outline"
@@ -581,10 +587,19 @@ function SettingsPage() {
 													</AlertDialogDescription>
 												</AlertDialogHeader>
 												<AlertDialogFooter>
-													<AlertDialogCancel>Cancel</AlertDialogCancel>
+													<AlertDialogCancel disabled={removingResume}>
+														Cancel
+													</AlertDialogCancel>
 													<AlertDialogAction
-														onClick={handleResumeRemove}
+														disabled={removingResume}
 														className="bg-red-600 hover:bg-red-700"
+														onClick={async (e) => {
+															e.preventDefault();
+															const removed = await handleResumeRemove();
+															if (removed) {
+																setRemoveDialogOpen(false);
+															}
+														}}
 													>
 														{removingResume ? "Removing..." : "Remove"}
 													</AlertDialogAction>

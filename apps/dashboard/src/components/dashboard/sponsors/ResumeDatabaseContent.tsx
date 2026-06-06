@@ -207,7 +207,7 @@ export default function ResumeDatabaseContent() {
 			"Email",
 			"Major",
 			"Year Graduating",
-			"Resume Link",
+			"Resume File",
 		];
 
 		const csvData = usersToExport.map((user) => {
@@ -215,7 +215,8 @@ export default function ResumeDatabaseContent() {
 			const email = user.email || "";
 			const major = getNormalizedMajor(user.major) || "";
 			const year = user.graduationYear?.toString() || "";
-			const resumeLink = user.resume || "";
+			const resumeFile =
+				user.fileName ?? `${user.name.replace(/\s+/g, "_")}_Resume.pdf`;
 
 			const escapeField = (field: string): string => {
 				if (
@@ -233,11 +234,13 @@ export default function ResumeDatabaseContent() {
 				escapeField(email),
 				escapeField(major),
 				escapeField(year),
-				escapeField(resumeLink),
+				escapeField(resumeFile),
 			].join(",");
 		});
 
-		return [headers.join(","), ...csvData].join("\n");
+		const note =
+			"Note: Resume files are available in the IEEE dashboard Resume Database. Storage links expire and are not included in CSV exports.";
+		return [note, headers.join(","), ...csvData].join("\n");
 	};
 
 	const downloadCSV = (csvContent: string, filename: string) => {
