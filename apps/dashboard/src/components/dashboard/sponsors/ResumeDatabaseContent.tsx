@@ -10,6 +10,7 @@ import {
 	Users,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,12 +38,11 @@ import {
 	getUniqueNormalizedMajors,
 	normalizeMajorName,
 } from "@/lib/majorNormalization";
+import { downloadFileFromUrl } from "@/lib/resumeUpload";
 import type { UserWithResume } from "./types";
 
 export default function ResumeDatabaseContent() {
 	const { logtoId } = useAuth();
-	const [users, setUsers] = useState<UserWithResume[]>([]);
-	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [selectedMajors, setSelectedMajors] = useState<Set<string>>(new Set());
@@ -61,14 +61,11 @@ export default function ResumeDatabaseContent() {
 		logtoId ? { logtoId } : "skip",
 	);
 
-	useEffect(() => {
-		if (!resumeUsers) return;
-
-		setLoading(true);
-		setError(null);
-		setUsers(resumeUsers.filter((u) => u.resume));
-		setLoading(false);
-	}, [resumeUsers]);
+	const loading = resumeUsers === undefined;
+	const users = useMemo(
+		() => (resumeUsers ?? []).filter((u) => u.resume),
+		[resumeUsers],
+	);
 
 	const majorNormalizationMap = useMemo(() => {
 		const allMajors = users.map((u) => u.major).filter((m): m is string => !!m);
@@ -256,7 +253,7 @@ export default function ResumeDatabaseContent() {
 		URL.revokeObjectURL(url);
 	};
 
-	const handleDownloadSelected = () => {
+	const handleDownloadSelected = async () => {
 		const selectedUsersList = filteredUsers.filter((u) =>
 			selectedUsers.has(u.id),
 		);
@@ -266,14 +263,15 @@ export default function ResumeDatabaseContent() {
 		if (selectedUsersList.length === 1) {
 			const user = selectedUsersList[0];
 			if (user.resume) {
-				const link = document.createElement("a");
-				link.href = user.resume;
-				link.download =
-					user.fileName ?? `${user.name.replace(/\s+/g, "_")}_Resume.pdf`;
-				link.target = "_blank";
-				document.body.appendChild(link);
-				link.click();
-				document.body.removeChild(link);
+				try {
+					await downloadFileFromUrl(
+						user.resume,
+						user.fileName ?? `${user.name.replace(/\s+/g, "_")}_Resume.pdf`,
+					);
+				} catch (err) {
+					console.error("Failed to download resume:", err);
+					toast.error("Failed to download resume");
+				}
 			}
 		} else {
 			try {

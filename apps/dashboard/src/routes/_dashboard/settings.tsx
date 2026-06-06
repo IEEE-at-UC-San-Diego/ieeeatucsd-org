@@ -31,7 +31,11 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { formatDateDisplay } from "@/lib/formatters";
-import { uploadResumeToStorage, validateResumeFile } from "@/lib/resumeUpload";
+import {
+	downloadFileFromUrl,
+	uploadResumeToStorage,
+	validateResumeFile,
+} from "@/lib/resumeUpload";
 
 export const Route = createFileRoute("/_dashboard/settings")({
 	component: SettingsPage,
@@ -65,6 +69,7 @@ function SettingsPage() {
 	// Resume state
 	const [resumeFile, setResumeFile] = useState<File | null>(null);
 	const [uploadingResume, setUploadingResume] = useState(false);
+	const [downloadingResume, setDownloadingResume] = useState(false);
 	const [removingResume, setRemovingResume] = useState(false);
 
 	const resumeUrl = user?.resumeUrl;
@@ -166,6 +171,20 @@ function SettingsPage() {
 			toast.error("Failed to upload resume");
 		} finally {
 			setUploadingResume(false);
+		}
+	};
+
+	const handleResumeDownload = async () => {
+		if (!resumeUrl || !user?.resume) return;
+
+		setDownloadingResume(true);
+		try {
+			await downloadFileFromUrl(resumeUrl, user.resume.fileName);
+		} catch {
+			setError("Failed to download resume");
+			toast.error("Failed to download resume");
+		} finally {
+			setDownloadingResume(false);
 		}
 	};
 
@@ -528,15 +547,13 @@ function SettingsPage() {
 														View
 													</a>
 												</Button>
-												<Button variant="outline" size="sm" asChild>
-													<a
-														href={resumeUrl}
-														download={user.resume.fileName}
-														target="_blank"
-														rel="noopener noreferrer"
-													>
-														Download
-													</a>
+												<Button
+													variant="outline"
+													size="sm"
+													onClick={handleResumeDownload}
+													disabled={downloadingResume}
+												>
+													{downloadingResume ? "Downloading..." : "Download"}
 												</Button>
 											</>
 										) : (
