@@ -238,9 +238,7 @@ export default function ResumeDatabaseContent() {
 			].join(",");
 		});
 
-		const note =
-			"Note: Resume files are available in the IEEE dashboard Resume Database. Storage links expire and are not included in CSV exports.";
-		return [note, headers.join(","), ...csvData].join("\n");
+		return [headers.join(","), ...csvData].join("\n");
 	};
 
 	const downloadCSV = (csvContent: string, filename: string) => {
