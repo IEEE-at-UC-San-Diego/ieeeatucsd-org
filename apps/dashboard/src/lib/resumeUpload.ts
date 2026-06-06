@@ -26,7 +26,7 @@ export async function uploadResumeToStorage(
 	const uploadUrl = await generateUploadUrl();
 	const uploadResponse = await fetch(uploadUrl, {
 		method: "POST",
-		headers: { "Content-Type": "application/pdf" },
+		headers: { "Content-Type": file.type || "application/pdf" },
 		body: file,
 	});
 

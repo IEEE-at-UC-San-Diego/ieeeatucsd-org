@@ -185,11 +185,6 @@ function GetStartedPage() {
 			let resumeFileName;
 
 			if (resumeFile) {
-				const validationError = validateResumeFile(resumeFile);
-				if (validationError) {
-					throw new Error(validationError);
-				}
-
 				resumeStorageId = await uploadResumeToStorage(resumeFile, () =>
 					generateResumeUploadUrl({ logtoId: logtoId! }),
 				);
@@ -215,6 +210,7 @@ function GetStartedPage() {
 		} catch (err: any) {
 			setError(err.message);
 			setLoading(false);
+			setIsAnimating(false);
 		}
 	};
 
@@ -281,7 +277,7 @@ function GetStartedPage() {
 									const validationError = validateResumeFile(file);
 									if (validationError) {
 										setError(validationError);
-										handleInputChange(null);
+										e.target.value = "";
 										return;
 									}
 								}

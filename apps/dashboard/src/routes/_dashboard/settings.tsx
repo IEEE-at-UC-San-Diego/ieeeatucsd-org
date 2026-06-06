@@ -67,10 +67,7 @@ function SettingsPage() {
 	const [uploadingResume, setUploadingResume] = useState(false);
 	const [removingResume, setRemovingResume] = useState(false);
 
-	const resumeUrl =
-		user && "resumeUrl" in user
-			? (user.resumeUrl as string | undefined)
-			: undefined;
+	const resumeUrl = user?.resumeUrl;
 
 	// Initialize form when user data loads
 	useEffect(() => {
@@ -520,7 +517,7 @@ function SettingsPage() {
 										</div>
 									</div>
 									<div className="flex flex-wrap items-center gap-2">
-										{resumeUrl && (
+										{resumeUrl ? (
 											<>
 												<Button variant="outline" size="sm" asChild>
 													<a
@@ -542,6 +539,10 @@ function SettingsPage() {
 													</a>
 												</Button>
 											</>
+										) : (
+											<p className="text-sm text-muted-foreground">
+												Resume link unavailable. Try refreshing the page.
+											</p>
 										)}
 										<AlertDialog>
 											<AlertDialogTrigger asChild>
