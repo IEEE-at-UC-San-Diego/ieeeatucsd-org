@@ -1,8 +1,9 @@
 import { internalMutation } from "../_generated/server";
 
 /**
- * Clears legacy string `resume` values before deploying the structured resume schema.
- * Run once via the Convex dashboard or CLI before pushing the schema change.
+ * One-time migration: clears legacy string `resume` values before the object schema.
+ *
+ *   bunx convex run migrations/clearLegacyResumes:clearLegacyResumeStrings '{}'
  */
 export const clearLegacyResumeStrings = internalMutation({
   args: {},

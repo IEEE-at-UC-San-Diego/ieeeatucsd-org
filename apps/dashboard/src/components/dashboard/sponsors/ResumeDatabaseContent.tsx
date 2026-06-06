@@ -10,6 +10,7 @@ import {
 	Users,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,12 +38,11 @@ import {
 	getUniqueNormalizedMajors,
 	normalizeMajorName,
 } from "@/lib/majorNormalization";
+import { downloadFileFromUrl } from "@/lib/resumeUpload";
 import type { UserWithResume } from "./types";
 
 export default function ResumeDatabaseContent() {
 	const { logtoId } = useAuth();
-	const [users, setUsers] = useState<UserWithResume[]>([]);
-	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [selectedMajors, setSelectedMajors] = useState<Set<string>>(new Set());
@@ -56,27 +56,16 @@ export default function ResumeDatabaseContent() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [itemsPerPage, setItemsPerPage] = useState(10);
 
-	const allUsers = useAuthedQuery(
-		api.users.list,
+	const resumeUsers = useAuthedQuery(
+		api.users.listResumes,
 		logtoId ? { logtoId } : "skip",
 	);
 
-	useEffect(() => {
-		if (!allUsers) return;
-
-		setLoading(true);
-		setError(null);
-
-		const usersWithResumes: UserWithResume[] = allUsers
-			.filter((u) => u.resume)
-			.map((u) => ({
-				...u,
-				id: u._id,
-			}));
-
-		setUsers(usersWithResumes);
-		setLoading(false);
-	}, [allUsers]);
+	const loading = resumeUsers === undefined;
+	const users = useMemo(
+		() => (resumeUsers ?? []).filter((u) => u.resume),
+		[resumeUsers],
+	);
 
 	const majorNormalizationMap = useMemo(() => {
 		const allMajors = users.map((u) => u.major).filter((m): m is string => !!m);
@@ -218,7 +207,8 @@ export default function ResumeDatabaseContent() {
 			"Email",
 			"Major",
 			"Year Graduating",
-			"Firebase Resume Link",
+			"Resume File",
+			"Resume URL",
 		];
 
 		const csvData = usersToExport.map((user) => {
@@ -226,7 +216,9 @@ export default function ResumeDatabaseContent() {
 			const email = user.email || "";
 			const major = getNormalizedMajor(user.major) || "";
 			const year = user.graduationYear?.toString() || "";
-			const resumeLink = user.resume || "";
+			const resumeFile =
+				user.fileName ?? `${user.name.replace(/\s+/g, "_")}_Resume.pdf`;
+			const resumeUrl = user.resume || "";
 
 			const escapeField = (field: string): string => {
 				if (
@@ -244,7 +236,8 @@ export default function ResumeDatabaseContent() {
 				escapeField(email),
 				escapeField(major),
 				escapeField(year),
-				escapeField(resumeLink),
+				escapeField(resumeFile),
+				escapeField(resumeUrl),
 			].join(",");
 		});
 
@@ -264,7 +257,7 @@ export default function ResumeDatabaseContent() {
 		URL.revokeObjectURL(url);
 	};
 
-	const handleDownloadSelected = () => {
+	const handleDownloadSelected = async () => {
 		const selectedUsersList = filteredUsers.filter((u) =>
 			selectedUsers.has(u.id),
 		);
@@ -274,13 +267,15 @@ export default function ResumeDatabaseContent() {
 		if (selectedUsersList.length === 1) {
 			const user = selectedUsersList[0];
 			if (user.resume) {
-				const link = document.createElement("a");
-				link.href = user.resume;
-				link.download = `${user.name.replace(/\s+/g, "_")}_Resume.pdf`;
-				link.target = "_blank";
-				document.body.appendChild(link);
-				link.click();
-				document.body.removeChild(link);
+				try {
+					await downloadFileFromUrl(
+						user.resume,
+						user.fileName ?? `${user.name.replace(/\s+/g, "_")}_Resume.pdf`,
+					);
+				} catch (err) {
+					console.error("Failed to download resume:", err);
+					toast.error("Failed to download resume");
+				}
 			}
 		} else {
 			try {
@@ -582,7 +577,7 @@ export default function ResumeDatabaseContent() {
 								selectedYears.size > 0 ||
 								selectedOfficerStatus !== "all"
 									? "Try adjusting your filters."
-									: "No members have opted in to share resumes yet."}
+									: "No members have uploaded resumes yet."}
 							</p>
 						</CardContent>
 					</Card>
