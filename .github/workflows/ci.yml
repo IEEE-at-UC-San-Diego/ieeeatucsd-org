@@ -49,12 +49,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            PUBLIC_FIREBASE_WEB_API_KEY=placeholder
-            PUBLIC_FIREBASE_AUTH_DOMAIN=placeholder.firebaseapp.com
-            PUBLIC_FIREBASE_PROJECT_ID=placeholder
-            PUBLIC_FIREBASE_STORAGE_BUCKET=placeholder.firebasestorage.app
-            PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
-            PUBLIC_FIREBASE_APP_ID=1:123456789:web:placeholder
             PUBLIC_DASHBOARD_URL=https://dashboard.example.com
             PUBLIC_GOOGLE_CALENDAR_ID=placeholder@group.calendar.google.com
             VITE_APP_TITLE=IEEE at UC San Diego Dashboard

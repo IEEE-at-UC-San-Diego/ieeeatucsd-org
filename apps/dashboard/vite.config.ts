@@ -37,7 +37,7 @@ function shouldExternalizeServerPackage(id: string) {
 	);
 }
 
-const config = defineConfig({
+const config = defineConfig(({ command }) => ({
 	root: appRoot,
 	resolve: {
 		alias: {
@@ -46,8 +46,14 @@ const config = defineConfig({
 		dedupe: ["react", "react-dom"],
 	},
 	ssr: {
-		// Bundle React so standalone Docker deploys don't need hoisted workspace node_modules.
-		noExternal: [/^@tanstack\//, "react", "react-dom"],
+		// Bundle React so standalone Docker deploys don't need hoisted workspace
+		// node_modules. Only do this for builds: during `vite dev` the SSR module
+		// runner inline-evaluates React's CJS jsx-runtime, where `module` is
+		// undefined, so React must stay external in dev.
+		noExternal:
+			command === "build"
+				? [/^@tanstack\//, "react", "react-dom"]
+				: [/^@tanstack\//],
 	},
 	plugins: [
 		devtools() as PluginOption,
@@ -73,6 +79,6 @@ const config = defineConfig({
 			},
 		}),
 	],
-});
+}));
 
 export default config;

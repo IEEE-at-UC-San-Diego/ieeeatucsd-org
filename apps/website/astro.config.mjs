@@ -53,27 +53,6 @@ export default defineConfig({
   },
   // Define environment variables that should be available to client components
   vite: {
-    define: {
-      // Firebase client config
-      "import.meta.env.PUBLIC_FIREBASE_WEB_API_KEY": JSON.stringify(
-        process.env.PUBLIC_FIREBASE_WEB_API_KEY,
-      ),
-      "import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN": JSON.stringify(
-        process.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
-      ),
-      "import.meta.env.PUBLIC_FIREBASE_PROJECT_ID": JSON.stringify(
-        process.env.PUBLIC_FIREBASE_PROJECT_ID,
-      ),
-      "import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET": JSON.stringify(
-        process.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
-      ),
-      "import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID": JSON.stringify(
-        process.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      ),
-      "import.meta.env.PUBLIC_FIREBASE_APP_ID": JSON.stringify(
-        process.env.PUBLIC_FIREBASE_APP_ID,
-      ),
-    },
     resolve: {
       dedupe: ["react", "react-dom"],
     },

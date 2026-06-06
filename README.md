@@ -12,10 +12,7 @@ packages/
   config/      # Shared Tailwind preset (@ieeeatucsd/config)
   email/       # Shared email rendering (@ieeeatucsd/email)
 tools/
-  migrate-firebase-to-convex/
   test-emails/
-scripts/
-  verify-google-auth.ts
 docs/
   deployment.md
 ```

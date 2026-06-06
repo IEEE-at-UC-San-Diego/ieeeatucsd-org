@@ -17,12 +17,6 @@ Build context: `.` (repository root)
 
 Configure these in Dokploy **Build Time Arguments** or Docker Compose `build.args`:
 
-- `PUBLIC_FIREBASE_WEB_API_KEY`
-- `PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `PUBLIC_FIREBASE_PROJECT_ID`
-- `PUBLIC_FIREBASE_STORAGE_BUCKET`
-- `PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-- `PUBLIC_FIREBASE_APP_ID`
 - `PUBLIC_DASHBOARD_URL`
 - `PUBLIC_GOOGLE_CALENDAR_ID`
 
@@ -42,7 +36,6 @@ Configure these in Dokploy **Build Time Arguments** or Docker Compose `build.arg
 
 Never pass these as Docker `ARG` values. Configure them as Dokploy runtime **Environment Variables** or Compose `environment` / `env_file`:
 
-- Firebase private key and service account fields
 - `RESEND_API_KEY`
 - `LOGTO_M2M_APP_SECRET`
 - `CONVEX_SELF_HOSTED_ADMIN_KEY`
@@ -115,4 +108,4 @@ Both services expose `GET /api/health` returning JSON:
 { "service": "website", "status": "ok" }
 ```
 
-Checks are independent of Firebase, Convex, Logto, Resend, and Google availability.
+Checks are independent of Convex, Logto, Resend, and Google availability.

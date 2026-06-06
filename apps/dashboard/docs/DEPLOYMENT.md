@@ -77,8 +77,8 @@ docker build -t dashboard . --target dashboard
 
 ```bash
 docker build -t dashboard . --target dashboard \
-  --build-arg PUBLIC_FIREBASE_WEB_API_KEY=${PUBLIC_FIREBASE_WEB_API_KEY} \
-  --build-arg PUBLIC_FIREBASE_AUTH_DOMAIN=${PUBLIC_FIREBASE_AUTH_DOMAIN} \
+  --build-arg VITE_CONVEX_URL=${VITE_CONVEX_URL} \
+  --build-arg VITE_LOGTO_ENDPOINT=${VITE_LOGTO_ENDPOINT} \
   # ... additional build args
 ```
 
@@ -166,7 +166,7 @@ dashboard:
   environment:
     - PORT=4323
     - HOST=0.0.0.0
-    # Firebase, Calendar, Email, AI, MXRoute env vars...
+    # Convex, Logto, Calendar, Email, AI, MXRoute env vars...
 ```
 
 ## Health Check

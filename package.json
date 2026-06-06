@@ -28,8 +28,7 @@
     "dev:website": "turbo run dev --filter=@ieeeatucsd/website",
     "dev:dashboard": "turbo run dev --filter=@ieeeatucsd/dashboard",
     "build:website": "turbo run build --filter=@ieeeatucsd/website",
-    "build:dashboard": "turbo run build --filter=@ieeeatucsd/dashboard",
-    "verify:google-auth": "bun run scripts/verify-google-auth.ts"
+    "build:dashboard": "turbo run build --filter=@ieeeatucsd/dashboard"
   },
   "devDependencies": {
     "prettier": "^3.4.2",
