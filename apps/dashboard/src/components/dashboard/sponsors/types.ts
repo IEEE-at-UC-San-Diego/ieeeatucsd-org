@@ -1,12 +1,11 @@
-import type { Doc } from "@convex/_generated/dataModel";
-
-export interface UserWithResume extends Doc<"users"> {
+export interface UserWithResume {
 	id: string;
 	name: string;
 	email: string;
 	major?: string;
 	graduationYear?: number;
 	resume?: string;
+	fileName?: string;
 	role:
 		| "Member"
 		| "General Officer"
@@ -16,5 +15,4 @@ export interface UserWithResume extends Doc<"users"> {
 		| "Sponsor"
 		| "Administrator";
 	position?: string;
-	sponsorTier?: "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond";
 }
