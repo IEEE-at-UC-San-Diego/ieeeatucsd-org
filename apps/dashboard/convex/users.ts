@@ -3,8 +3,13 @@ import { v } from "convex/values";
 import {
   requireCurrentUser,
   requireAdminAccess,
+  requireResumeDatabaseAccess,
   getCurrentUser,
 } from "./permissions";
+import {
+  deleteResumeStorage,
+  validateAndBuildResume,
+} from "./resume";
 import { buildAuthUpsertResult } from "./userProvisioning";
 
 const FISCAL_YEAR_START_MONTH = 6; // July
@@ -87,7 +92,14 @@ export function buildAdminProfilePatch<
 export const getMe = query({
   args: { logtoId: v.string(), authToken: v.string() },
   handler: async (ctx, args) => {
-    return await getCurrentUser(ctx, args.logtoId, args.authToken);
+    const user = await getCurrentUser(ctx, args.logtoId, args.authToken);
+    if (!user) return null;
+
+    const resumeUrl = user.resume
+      ? ((await ctx.storage.getUrl(user.resume.storageId)) ?? undefined)
+      : undefined;
+
+    return { ...user, resumeUrl };
   },
 });
 
@@ -324,13 +336,23 @@ export const completeOnboarding = mutation({
     graduationYear: v.number(),
     memberId: v.optional(v.string()),
     zelleInformation: v.optional(v.string()),
-    resume: v.optional(v.string()),
+    resumeStorageId: v.optional(v.id("_storage")),
+    resumeFileName: v.optional(v.string()),
     tosVersion: v.string(),
     privacyPolicyVersion: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const now = Date.now();
+
+    let resume;
+    if (args.resumeStorageId) {
+      resume = await validateAndBuildResume(
+        ctx,
+        args.resumeStorageId,
+        args.resumeFileName ?? "resume.pdf",
+      );
+    }
 
     await ctx.db.patch(user._id, {
       pid: args.pid,
@@ -344,7 +366,7 @@ export const completeOnboarding = mutation({
       privacyPolicyVersion: args.privacyPolicyVersion,
       ...(args.memberId && { memberId: args.memberId }),
       ...(args.zelleInformation && { zelleInformation: args.zelleInformation }),
-      ...(args.resume && { resume: args.resume }),
+      ...(resume && { resume }),
     });
 
     // Create/update public profile
@@ -385,7 +407,6 @@ export const updateProfile = mutation({
     zelleInformation: v.optional(v.string()),
     avatar: v.optional(v.string()),
     pid: v.optional(v.string()),
-    resume: v.optional(v.string()),
     emailVisibility: v.optional(v.boolean()),
     notificationPreferences: v.optional(v.any()),
     displayPreferences: v.optional(v.any()),
@@ -480,6 +501,76 @@ export const acceptPolicyUpdate = mutation({
     });
 
     return user._id;
+  },
+});
+
+export const generateResumeUploadUrl = mutation({
+  args: { logtoId: v.string(), authToken: v.string() },
+  handler: async (ctx, args) => {
+    await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const setResume = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    storageId: v.id("_storage"),
+    fileName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const resume = await validateAndBuildResume(
+      ctx,
+      args.storageId,
+      args.fileName,
+    );
+
+    if (user.resume?.storageId) {
+      await deleteResumeStorage(ctx, user.resume.storageId);
+    }
+
+    await ctx.db.patch(user._id, { resume, lastUpdated: Date.now() });
+    return user._id;
+  },
+});
+
+export const deleteResume = mutation({
+  args: { logtoId: v.string(), authToken: v.string() },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+
+    if (user.resume?.storageId) {
+      await deleteResumeStorage(ctx, user.resume.storageId);
+    }
+
+    await ctx.db.patch(user._id, { resume: undefined, lastUpdated: Date.now() });
+    return user._id;
+  },
+});
+
+export const listResumes = query({
+  args: { logtoId: v.string(), authToken: v.string() },
+  handler: async (ctx, args) => {
+    await requireResumeDatabaseAccess(ctx, args.logtoId, args.authToken);
+
+    const users = await ctx.db.query("users").collect();
+    const usersWithResumes = users.filter((u) => u.resume);
+
+    return Promise.all(
+      usersWithResumes.map(async (u) => ({
+        id: u._id,
+        name: u.name,
+        email: u.email,
+        major: u.major,
+        graduationYear: u.graduationYear,
+        role: u.role,
+        position: u.position,
+        resume: (await ctx.storage.getUrl(u.resume!.storageId)) ?? undefined,
+        fileName: u.resume!.fileName,
+      })),
+    );
   },
 });
 

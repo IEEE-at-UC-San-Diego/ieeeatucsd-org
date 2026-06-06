@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { resumeObject } from "./resume";
 
 const userRole = v.union(
   v.literal("Member"),
@@ -167,7 +168,7 @@ export default defineSchema({
     displayPreferences: v.optional(v.any()),
     accessibilitySettings: v.optional(v.any()),
     aiFeaturesEnabled: v.optional(v.boolean()),
-    resume: v.optional(v.string()),
+    resume: v.optional(resumeObject),
     signedUp: v.boolean(),
     requestedEmail: v.boolean(),
     role: userRole,
