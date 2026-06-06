@@ -29,8 +29,10 @@ import {
 } from "@/components/ui/select";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/manage-users")({
+	loader: (ctx) => prefetchAuthedQuery(api.users.list, undefined, ctx),
 	component: ManageUsersPage,
 });
 

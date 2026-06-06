@@ -44,6 +44,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { useGoogleMapsPlacesLoader } from "@/hooks/useGoogleMapsPlacesLoader";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import {
 	computeMileageTotal,
 	formatMileageRoute,
@@ -134,6 +135,8 @@ const AUDIT_ICONS = {
 };
 
 export const Route = createFileRoute("/_dashboard/reimbursement")({
+	loader: (ctx) =>
+		prefetchAuthedQuery(api.reimbursements.listMine, undefined, ctx),
 	component: ReimbursementPage,
 });
 

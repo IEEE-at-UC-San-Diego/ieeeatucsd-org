@@ -6,8 +6,11 @@ import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedQuery } from "@/hooks/useAuthedConvex";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/leaderboard")({
+	loader: (ctx) =>
+		prefetchAuthedQuery(api.users.getLeaderboard, undefined, ctx),
 	component: LeaderboardPage,
 });
 

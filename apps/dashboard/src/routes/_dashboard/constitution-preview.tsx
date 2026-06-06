@@ -7,8 +7,11 @@ import { exportConstitutionToPdf } from "@/components/constitution-builder/utils
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/constitution-preview")({
+	loader: (ctx) =>
+		prefetchAuthedQuery(api.constitutions.getDefault, undefined, ctx),
 	component: ConstitutionPreviewPage,
 });
 

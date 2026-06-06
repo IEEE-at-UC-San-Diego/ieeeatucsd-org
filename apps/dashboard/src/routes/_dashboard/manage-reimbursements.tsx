@@ -49,6 +49,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import {
 	computeMileageTotal,
 	formatMileageRoute,
@@ -119,6 +120,8 @@ function formatAuditAction(action: string): {
 }
 
 export const Route = createFileRoute("/_dashboard/manage-reimbursements")({
+	loader: (ctx) =>
+		prefetchAuthedQuery(api.reimbursements.listAll, undefined, ctx),
 	component: ManageReimbursementsPage,
 });
 

@@ -42,8 +42,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/executive-analytics")({
+	loader: (ctx) =>
+		prefetchAuthedQuery(api.users.getExecutiveAnalytics, undefined, ctx),
 	component: ExecutiveAnalyticsPage,
 });
 
