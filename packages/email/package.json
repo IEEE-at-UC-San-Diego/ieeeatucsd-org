@@ -8,11 +8,12 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "check": "vitest run"
+    "test": "vp test",
+    "check": "tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.7.2",
-    "vitest": "^3.0.5"
+    "vitest": "catalog:",
+    "vite-plus": "catalog:"
   }
 }

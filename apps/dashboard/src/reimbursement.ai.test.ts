@@ -1,21 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
-	isAiFeatureEnabled,
-	shouldAutoParseReceipt,
+  isAiFeatureEnabled,
+  shouldAutoParseReceipt,
 } from "./routes/_dashboard/reimbursement";
 
 describe("reimbursement AI gating", () => {
-	it("treats undefined preference as enabled", () => {
-		expect(isAiFeatureEnabled(undefined)).toBe(true);
-	});
+  it("treats undefined preference as enabled", () => {
+    expect(isAiFeatureEnabled(undefined)).toBe(true);
+  });
 
-	it("disables AI only when preference is false", () => {
-		expect(isAiFeatureEnabled(false)).toBe(false);
-		expect(isAiFeatureEnabled(true)).toBe(true);
-	});
+  it("disables AI only when preference is false", () => {
+    expect(isAiFeatureEnabled(false)).toBe(false);
+    expect(isAiFeatureEnabled(true)).toBe(true);
+  });
 
-	it("auto parsing follows aiEnabled gate", () => {
-		expect(shouldAutoParseReceipt(true)).toBe(true);
-		expect(shouldAutoParseReceipt(false)).toBe(false);
-	});
+  it("auto parsing follows aiEnabled gate", () => {
+    expect(shouldAutoParseReceipt(true)).toBe(true);
+    expect(shouldAutoParseReceipt(false)).toBe(false);
+  });
 });

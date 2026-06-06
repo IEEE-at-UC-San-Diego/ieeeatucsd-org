@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import {
   getGoogleCalendarEventTimeRangeError,
   normalizeGoogleCalendarEventsForSync,
@@ -32,20 +32,23 @@ describe("normalizeGoogleCalendarEventsForSync", () => {
   it("replaces an invalid end time with a three-hour duration", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const normalizedEvents = normalizeGoogleCalendarEventsForSync("calendar-id", [
-      {
-        id: "ieee-valid",
-        summary: "Valid event",
-        start: { dateTime: "2026-03-31T18:00:00.000Z" },
-        end: { dateTime: "2026-03-31T19:00:00.000Z" },
-      },
-      {
-        id: "ieee-invalid",
-        summary: "Invalid event",
-        start: { dateTime: "2026-03-31T20:00:00.000Z" },
-        end: { dateTime: "2026-03-31T19:00:00.000Z" },
-      },
-    ]);
+    const normalizedEvents = normalizeGoogleCalendarEventsForSync(
+      "calendar-id",
+      [
+        {
+          id: "ieee-valid",
+          summary: "Valid event",
+          start: { dateTime: "2026-03-31T18:00:00.000Z" },
+          end: { dateTime: "2026-03-31T19:00:00.000Z" },
+        },
+        {
+          id: "ieee-invalid",
+          summary: "Invalid event",
+          start: { dateTime: "2026-03-31T20:00:00.000Z" },
+          end: { dateTime: "2026-03-31T19:00:00.000Z" },
+        },
+      ],
+    );
 
     expect(normalizedEvents).toHaveLength(2);
     expect(normalizedEvents[0]?.id).toBe("ieee-valid");
@@ -58,14 +61,17 @@ describe("normalizeGoogleCalendarEventsForSync", () => {
   it("still skips events with an invalid start time", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const normalizedEvents = normalizeGoogleCalendarEventsForSync("calendar-id", [
-      {
-        id: "ieee-invalid-start",
-        summary: "Invalid start",
-        start: { dateTime: "not-a-date" },
-        end: { dateTime: "2026-03-31T19:00:00.000Z" },
-      },
-    ]);
+    const normalizedEvents = normalizeGoogleCalendarEventsForSync(
+      "calendar-id",
+      [
+        {
+          id: "ieee-invalid-start",
+          summary: "Invalid start",
+          start: { dateTime: "not-a-date" },
+          end: { dateTime: "2026-03-31T19:00:00.000Z" },
+        },
+      ],
+    );
 
     expect(normalizedEvents).toHaveLength(0);
     expect(errorSpy).toHaveBeenCalledOnce();

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { isManagedGoogleCalendarEventId } from "./googleCalendarIds";
 
 describe("isManagedGoogleCalendarEventId", () => {
@@ -9,7 +9,9 @@ describe("isManagedGoogleCalendarEventId", () => {
 
   it("does not claim unrelated Google Calendar event IDs", () => {
     expect(isManagedGoogleCalendarEventId("ieee-office-hours")).toBe(false);
-    expect(isManagedGoogleCalendarEventId("not-ieeeinternalabc123")).toBe(false);
+    expect(isManagedGoogleCalendarEventId("not-ieeeinternalabc123")).toBe(
+      false,
+    );
     expect(isManagedGoogleCalendarEventId("abc123")).toBe(false);
   });
 });

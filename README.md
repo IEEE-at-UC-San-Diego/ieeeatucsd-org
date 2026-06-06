@@ -19,27 +19,26 @@ docs/
 
 ## Prerequisites
 
-- [Bun 1.3.14](https://bun.sh)
+- [Vite+](https://viteplus.dev/)
 
-Install Bun, then from the repository root:
+From the repository root:
 
 ```bash
-bun install
+vp install
 ```
 
 ## Root commands
 
-| Command | Description |
-| --- | --- |
-| `bun run dev` | Start all dev servers via Turborepo |
-| `bun run dev:website` | Website only |
-| `bun run dev:dashboard` | Dashboard only |
-| `bun run build` | Build all packages and apps |
-| `bun run check` | Non-mutating format/lint/check across the workspace |
-| `bun run typecheck` | Typecheck all workspaces |
-| `bun run test` | Run all test suites |
-| `bun run format` | Apply formatters locally |
-| `bun run verify:google-auth` | Diagnose Google Workspace auth setup |
+| Command                | Description                 |
+| ---------------------- | --------------------------- |
+| `vp run dev`           | Start all dev servers       |
+| `vp run dev:website`   | Website only                |
+| `vp run dev:dashboard` | Dashboard only              |
+| `vp run build`         | Build all packages and apps |
+| `vp run check`         | Run workspace checks        |
+| `vp run typecheck`     | Typecheck all workspaces    |
+| `vp run test`          | Run all test suites         |
+| `vp run format`        | Apply formatters locally    |
 
 ## Environment setup
 

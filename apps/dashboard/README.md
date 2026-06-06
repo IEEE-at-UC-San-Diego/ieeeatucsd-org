@@ -5,21 +5,21 @@ TanStack Start application for IEEE UCSD dashboard management (`@ieeeatucsd/dash
 From the repository root:
 
 ```bash
-bun install
-bun run dev:dashboard
+vp install
+vp run dev:dashboard
 ```
 
 App-local commands from `apps/dashboard`:
 
 ```bash
-bun run dev
+vp run dev
 ```
 
 ## Building For Production
 
 ```bash
-bun run build
-bun run start
+vp run build
+vp run start
 ```
 
 ## Deployment
@@ -31,24 +31,22 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for Docker deployment instructions, environ
 This project uses [Vitest](https://vitest.dev/) for testing:
 
 ```bash
-bun run test
+vp run test
 ```
 
 ## Styling
 
 This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
 
-
 ## Linting & Formatting
 
-This project uses [Biome](https://biomejs.dev/) for linting and formatting:
+This project uses Vite+ with Oxlint and Oxfmt:
 
 ```bash
-bun run lint
-bun run format
-bun run check
+vp run lint
+vp run format
+vp run check
 ```
-
 
 ## Setting up Convex
 
@@ -59,7 +57,6 @@ Set `VITE_CONVEX_URL` and `CONVEX_DEPLOYMENT` environment variables in `.env.loc
 bunx convex dev
 ```
 
-
 ## Shadcn
 
 Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
@@ -67,7 +64,6 @@ Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
 ```bash
 bunx shadcn@latest add button
 ```
-
 
 ## T3Env
 
@@ -83,12 +79,8 @@ import { env } from "@/env";
 console.log(env.VITE_APP_TITLE);
 ```
 
-
-
-
-
-
 ## Routing
+
 This project uses [TanStack Router](https://tanstack.com/router). The initial setup is a file based router. Which means that the routes are managed as files in `src/routes`.
 
 ### Adding A Route
@@ -124,8 +116,8 @@ In the File Based Routing setup the layout is located in `src/routes/__root.tsx`
 Here is an example layout that includes a header:
 
 ```tsx
-import { Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import { Link } from "@tanstack/react-router";
 
@@ -142,13 +134,12 @@ export const Route = createRootRoute({
       <TanStackRouterDevtools />
     </>
   ),
-})
+});
 ```
 
 The `<TanStackRouterDevtools />` component is not required so you can remove it if you don't want it in your layout.
 
 More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
 
 ## Data Fetching
 
@@ -210,7 +201,7 @@ if (!rootElement.innerHTML) {
   root.render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 ```

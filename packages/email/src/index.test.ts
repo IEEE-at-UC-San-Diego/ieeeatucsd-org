@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
   escapeHtml,
   formatCurrency,
@@ -26,7 +26,7 @@ describe("sanitizeUrl", () => {
   });
 
   it("escapes safe URLs", () => {
-    expect(sanitizeUrl("https://example.com?q=\"1\"")).toBe(
+    expect(sanitizeUrl('https://example.com?q="1"')).toBe(
       "https://example.com?q=&quot;1&quot;",
     );
   });

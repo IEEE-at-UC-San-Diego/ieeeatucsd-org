@@ -2,28 +2,29 @@
 
 FROM oven/bun:1.3.14 AS base
 WORKDIR /app
+RUN bun install --global vite-plus
 
-FROM base AS pruner
-COPY . .
-RUN bunx turbo prune @ieeeatucsd/website --docker
-
-FROM base AS website_deps
+FROM base AS deps
 ENV PUPPETEER_SKIP_DOWNLOAD=true
-COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/bun.lock ./bun.lock
+COPY . .
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install
+    vp install --frozen-lockfile
 
-FROM website_deps AS website_builder
+FROM base AS prod_deps
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+COPY . .
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    vp install --production --frozen-lockfile
+
+FROM deps AS website_builder
 ARG PUBLIC_DASHBOARD_URL
 ARG PUBLIC_GOOGLE_CALENDAR_ID
 
 ENV PUBLIC_DASHBOARD_URL=$PUBLIC_DASHBOARD_URL \
     PUBLIC_GOOGLE_CALENDAR_ID=$PUBLIC_GOOGLE_CALENDAR_ID
 
-COPY --from=pruner /app/out/full/ .
-RUN --mount=type=cache,target=/app/.turbo,id=turbo-website \
-    bunx turbo run build --filter=@ieeeatucsd/website
+RUN --mount=type=cache,target=/app/.vite,id=vite-plus-website \
+    vp run --filter @ieeeatucsd/website build
 
 FROM base AS website_system
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
@@ -53,16 +54,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       libxrandr2 \
       xdg-utils
 
-FROM website_deps AS website_prod_deps
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --production
-
 FROM website_system AS website
 WORKDIR /app
 USER bun
 
-COPY --chown=bun:bun --from=website_prod_deps /app/node_modules ./node_modules
-COPY --chown=bun:bun --from=website_prod_deps /app/apps/website/node_modules ./apps/website/node_modules
+COPY --chown=bun:bun --from=prod_deps /app/node_modules ./node_modules
+COPY --chown=bun:bun --from=prod_deps /app/apps/website/node_modules ./apps/website/node_modules
 COPY --chown=bun:bun --from=website_builder /app/apps/website/dist ./apps/website/dist
 COPY --chown=bun:bun --from=website_builder /app/apps/website/package.json ./apps/website/package.json
 COPY --chown=bun:bun --from=website_builder /app/packages ./packages
@@ -78,17 +75,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 
 CMD ["bun", "run", "start"]
 
-FROM base AS dashboard_pruner
-COPY . .
-RUN bunx turbo prune @ieeeatucsd/dashboard --docker
-
-FROM base AS dashboard_deps
-COPY --from=dashboard_pruner /app/out/json/ .
-COPY --from=dashboard_pruner /app/out/bun.lock ./bun.lock
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install
-
-FROM dashboard_deps AS dashboard_builder
+FROM deps AS dashboard_builder
 ARG VITE_APP_TITLE
 ARG VITE_AUTH_BRIDGE_MODE
 ARG VITE_CONVEX_URL
@@ -109,20 +96,15 @@ ENV VITE_APP_TITLE=$VITE_APP_TITLE \
     VITE_LOGTO_DIRECT_SIGN_IN_TARGET=$VITE_LOGTO_DIRECT_SIGN_IN_TARGET \
     VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 
-COPY --from=dashboard_pruner /app/out/full/ .
-RUN --mount=type=cache,target=/app/.turbo,id=turbo-dashboard \
-    bunx turbo run build --filter=@ieeeatucsd/dashboard
-
-FROM dashboard_deps AS dashboard_prod_deps
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --production
+RUN --mount=type=cache,target=/app/.vite,id=vite-plus-dashboard \
+    vp run --filter @ieeeatucsd/dashboard build
 
 FROM base AS dashboard
 WORKDIR /app
 USER bun
 
-COPY --chown=bun:bun --from=dashboard_prod_deps /app/node_modules ./node_modules
-COPY --chown=bun:bun --from=dashboard_prod_deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
+COPY --chown=bun:bun --from=prod_deps /app/node_modules ./node_modules
+COPY --chown=bun:bun --from=prod_deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
 COPY --chown=bun:bun --from=dashboard_builder /app/apps/dashboard/.output ./apps/dashboard/.output
 COPY --chown=bun:bun --from=dashboard_builder /app/apps/dashboard/package.json ./apps/dashboard/package.json
 
