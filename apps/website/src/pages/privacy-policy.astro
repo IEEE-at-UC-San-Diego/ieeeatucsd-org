@@ -396,7 +396,7 @@ const lastUpdated = formatEffectiveDate(
                     <li class="flex items-start gap-2">
                       <span class="text-ieee-yellow mt-1">•</span>
                       <span
-                        >Authentication method (Google OAuth or email/password)</span
+                        >Authentication method (Logto social login or email)</span
                       >
                     </li>
                     <li class="flex items-start gap-2">
@@ -734,17 +734,45 @@ const lastUpdated = formatEffectiveDate(
                         >
                           <path d="M10 2a8 8 0 100 16 8 8 0 000-16z"></path>
                         </svg>
-                        <strong class="text-white">Google Firebase</strong>
+                        <strong class="text-white">Convex (Self-Hosted)</strong>
                       </div>
                       <p class="text-white/70 text-sm">
-                        <strong>Purpose:</strong> Primary data storage, authentication,
-                        and file hosting<br />
-                        <strong>Data Shared:</strong> All user data, files, and authentication
-                        credentials<br />
-                        <strong>Location:</strong> United States (Google Cloud)<br
+                        <strong>Purpose:</strong> Primary database and file storage
+                        for the member dashboard<br />
+                        <strong>Data Shared:</strong> User profiles, event data,
+                        reimbursements, resumes, and uploaded files<br />
+                        <strong>Location:</strong> United States (self-hosted deployment)<br
                         />
-                        <strong>Services Used:</strong> Firestore (database), Cloud
-                        Storage (files), Authentication
+                        <strong>Services Used:</strong> Convex database and file storage
+                      </p>
+                    </div>
+
+                    <div
+                      class="bg-base-200/50 rounded-lg p-4 border border-white/5"
+                    >
+                      <div class="flex items-center gap-2 mb-2">
+                        <svg
+                          class="w-4 h-4 text-ieee-yellow"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M10 2a8 8 0 100 16 8 8 0 000-16z"></path>
+                        </svg>
+                        <strong class="text-white">Logto</strong>
+                      </div>
+                      <p class="text-white/70 text-sm">
+                        <strong>Purpose:</strong> Authentication and identity management
+                        for the member dashboard<br />
+                        <strong>Data Shared:</strong> Name, email, profile picture,
+                        and authentication session data<br />
+                        <strong>Privacy Policy:</strong>
+                        <a
+                          href="https://logto.io/privacy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-ieee-yellow hover:underline"
+                          >logto.io/privacy</a
+                        >
                       </p>
                     </div>
 
@@ -989,9 +1017,9 @@ const lastUpdated = formatEffectiveDate(
                     <div class="flex items-start gap-2">
                       <span class="text-ieee-yellow mt-1">•</span>
                       <div>
-                        <strong class="text-white">Primary Storage:</strong> Google
-                        Firebase (Firestore database and Cloud Storage) with data
-                        centers in the United States
+                        <strong class="text-white">Primary Storage:</strong> Self-hosted
+                        Convex deployment (database and file storage) operated in the
+                        United States
                       </div>
                     </div>
                     <div class="flex items-start gap-2">
@@ -1005,8 +1033,8 @@ const lastUpdated = formatEffectiveDate(
                     <div class="flex items-start gap-2">
                       <span class="text-ieee-yellow mt-1">•</span>
                       <div>
-                        <strong class="text-white">Backups:</strong> Automated encrypted
-                        backups maintained by Firebase for disaster recovery
+                        <strong class="text-white">Backups:</strong> Encrypted backups
+                        of the self-hosted Convex deployment for disaster recovery
                       </div>
                     </div>
                   </div>
@@ -1044,8 +1072,8 @@ const lastUpdated = formatEffectiveDate(
                     <div class="flex items-start gap-2">
                       <span class="text-ieee-yellow mt-1">•</span>
                       <span
-                        >Role-based access controls enforced through Firebase
-                        Security Rules</span
+                        >Role-based access controls enforced through server-side
+                        Convex functions and dashboard permissions</span
                       >
                     </div>
                     <div class="flex items-start gap-2">
@@ -1056,8 +1084,8 @@ const lastUpdated = formatEffectiveDate(
                     <div class="flex items-start gap-2">
                       <span class="text-ieee-yellow mt-1">•</span>
                       <span
-                        >Secure authentication using Google OAuth 2.0 and
-                        Firebase Authentication</span
+                        >Secure authentication using Logto (OpenID Connect / OAuth
+                        2.0)</span
                       >
                     </div>
                     <div class="flex items-start gap-2">
@@ -1540,8 +1568,8 @@ const lastUpdated = formatEffectiveDate(
                   <p class="text-white/80 mb-4">
                     Our primary data storage is located in the <strong
                       class="text-white">United States</strong
-                    > through Google Firebase services. By using our services, you
-                    consent to the transfer of your information to the United States.
+                    > through our self-hosted Convex deployment. By using our services,
+                    you consent to the transfer of your information to the United States.
                   </p>
                   <p class="text-white/80">
                     We ensure that any international data transfers comply with
@@ -1553,7 +1581,8 @@ const lastUpdated = formatEffectiveDate(
                     <li class="flex items-start gap-2">
                       <span class="text-ieee-yellow mt-1">•</span>
                       <span
-                        >Google's compliance with EU-U.S. Data Privacy Framework</span
+                        >Standard contractual clauses and provider privacy commitments
+                        with third-party service providers</span
                       >
                     </li>
                     <li class="flex items-start gap-2">
