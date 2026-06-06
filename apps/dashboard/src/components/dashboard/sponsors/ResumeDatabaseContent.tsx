@@ -208,6 +208,7 @@ export default function ResumeDatabaseContent() {
 			"Major",
 			"Year Graduating",
 			"Resume File",
+			"Resume URL",
 		];
 
 		const csvData = usersToExport.map((user) => {
@@ -217,6 +218,7 @@ export default function ResumeDatabaseContent() {
 			const year = user.graduationYear?.toString() || "";
 			const resumeFile =
 				user.fileName ?? `${user.name.replace(/\s+/g, "_")}_Resume.pdf`;
+			const resumeUrl = user.resume || "";
 
 			const escapeField = (field: string): string => {
 				if (
@@ -235,6 +237,7 @@ export default function ResumeDatabaseContent() {
 				escapeField(major),
 				escapeField(year),
 				escapeField(resumeFile),
+				escapeField(resumeUrl),
 			].join(",");
 		});
 
