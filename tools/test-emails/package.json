@@ -1,0 +1,20 @@
+{
+  "name": "@ieeeatucsd/test-emails",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "preview": "bun run src/index.ts --preview",
+    "typecheck": "tsc --noEmit",
+    "check": "tsc --noEmit",
+    "test": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ieeeatucsd/email": "workspace:*",
+    "resend": "^4.1.2"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "typescript": "^5.7.2"
+  }
+}

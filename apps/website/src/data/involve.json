@@ -1,19 +1,19 @@
 [
   {
     "text": "PROJECTS",
-    "image": "/project.webp",
+    "image": "/src/images/project.webp",
     "link": "/projects",
     "delay": "100"
   },
   {
     "text": "EVENTS",
-    "image": "/halloween.webp",
+    "image": "/src/images/halloween.webp",
     "link": "/events",
     "delay": "300"
   },
   {
     "text": "H.A.R.D. HACK",
-    "image": "/hardhack.webp",
+    "image": "/src/images/hardhack.webp",
     "link": "https://hardhack.dev/",
     "delay": "500"
   }

@@ -1,32 +1,42 @@
 ---
 import { LiaDotCircle } from "react-icons/lia";
-import Link from "next/link";
-const {picture, name, description, link, linktext} = Astro.props;
+import { Image } from "astro:assets";
+const { picture, name, description, link, linktext } = Astro.props;
 ---
-<div class = "text-white relative my-[3%]" >
-    
-    <img src = {picture} alt = "signal" class = " w-full object-cover md:aspect-[1300/526] aspect-[2/1] opacity-25">
 
-    <div class = "w-full flex justify-evenly absolute bottom-[20%] left-[4%]">
-        <div data-inview class = "in-view:animate-fade-right flex items-center md:text-[2.5vw] text-[4vw]">
-            <LiaDotCircle className=" mr-[1vw] md:text-[2.6vw]"/>
-            <p>
-                Competition
-            </p>
-        </div>
-    
-        <div data-inview class = "md:text-[1.6vw] text-[2.2vw] tracking-wider in-view:animate-flip-up max-w-[60%]">
-            <p class = "w-[35vw] md:mt-[25vw] mt-[35vw]">
-                {name}
-            </p>
-            <p class = "mb-[5%]">
-                {description}
-            </p>
-            <Link href = {link} target="_blank" className="md:text-[1.2vw] text-[2vw] font-light border-white/70 border-[0.1vw] py-[1.5%] px-[9%] rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300">
-                {linktext}
-            </Link>
-        </div>
-        
+<div class="text-white relative my-[3%]">
+  <Image
+    src={picture}
+    alt="signal"
+    class="w-full object-cover md:aspect-[1300/526] aspect-[2/1] opacity-25"
+  />
+
+  <div class="w-full flex justify-evenly absolute bottom-[20%] left-[4%]">
+    <div
+      data-inview
+      class="in-view:animate-fade-right flex items-center md:text-[2.5vw] text-[4vw]"
+    >
+      <LiaDotCircle className="mr-[1vw] md:text-[2.6vw]" />
+      <p>Competition</p>
     </div>
-    
+
+    <div
+      data-inview
+      class="md:text-[1.6vw] text-[2.2vw] tracking-wider in-view:animate-flip-up max-w-[60%]"
+    >
+      <p class="w-[35vw] md:mt-[25vw] mt-[35vw]">
+        {name}
+      </p>
+      <p class="mb-[5%]">
+        {description}
+      </p>
+      <a
+        href={link}
+        target="_blank"
+        class="md:text-[1.2vw] text-[2vw] font-light border-white/70 border-[0.1vw] py-[1.5%] px-[9%] rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300"
+      >
+        {linktext}
+      </a>
+    </div>
+  </div>
 </div>

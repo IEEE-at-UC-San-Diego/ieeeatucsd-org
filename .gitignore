@@ -10,6 +10,10 @@ final_review_gate.py
 # dependencies
 node_modules/
 
+# turborepo
+.turbo
+**/.turbo
+
 # logs
 npm-debug.log*
 yarn-debug.log*
@@ -27,3 +31,5 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+out/

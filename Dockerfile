@@ -1,9 +1,34 @@
 # syntax=docker/dockerfile:1.7
 
-FROM oven/bun:1.1 AS system
+FROM oven/bun:1.3.14 AS base
+WORKDIR /app
 
+FROM base AS pruner
+COPY . .
+RUN bunx turbo prune @ieeeatucsd/website --docker
+
+FROM base AS website_deps
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/bun.lock ./bun.lock
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install
+
+FROM website_deps AS website_builder
+ARG PUBLIC_DASHBOARD_URL
+ARG PUBLIC_GOOGLE_CALENDAR_ID
+
+ENV PUBLIC_DASHBOARD_URL=$PUBLIC_DASHBOARD_URL \
+    PUBLIC_GOOGLE_CALENDAR_ID=$PUBLIC_GOOGLE_CALENDAR_ID
+
+COPY --from=pruner /app/out/full/ .
+RUN --mount=type=cache,target=/app/.turbo,id=turbo-website \
+    bunx turbo run build --filter=@ieeeatucsd/website
+
+FROM base AS website_system
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    NODE_OPTIONS=--max-old-space-size=6144
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
@@ -28,199 +53,86 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       libxrandr2 \
       xdg-utils
 
+FROM website_deps AS website_prod_deps
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --production
+
+FROM website_system AS website
 WORKDIR /app
+USER bun
 
-FROM system AS deps
+COPY --chown=bun:bun --from=website_prod_deps /app/node_modules ./node_modules
+COPY --chown=bun:bun --from=website_prod_deps /app/apps/website/node_modules ./apps/website/node_modules
+COPY --chown=bun:bun --from=website_builder /app/apps/website/dist ./apps/website/dist
+COPY --chown=bun:bun --from=website_builder /app/apps/website/package.json ./apps/website/package.json
+COPY --chown=bun:bun --from=website_builder /app/packages ./packages
 
-COPY package.json bun.lock ./
-COPY packages/config/package.json packages/config/package.json
-COPY apps/dashboard/package.json apps/dashboard/package.json
-COPY apps/dashboard-v2/package.json apps/dashboard-v2/package.json
-COPY apps/website/package.json apps/website/package.json
+WORKDIR /app/apps/website
+ENV PORT=4321 \
+    HOST=0.0.0.0
 
+EXPOSE 4321
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD ["bun", "-e", "fetch('http://127.0.0.1:4321/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+
+CMD ["bun", "run", "start"]
+
+FROM base AS dashboard_pruner
+COPY . .
+RUN bunx turbo prune @ieeeatucsd/dashboard --docker
+
+FROM base AS dashboard_deps
+COPY --from=dashboard_pruner /app/out/json/ .
+COPY --from=dashboard_pruner /app/out/bun.lock ./bun.lock
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install
 
-FROM deps AS website_builder
-
-ARG PUBLIC_FIREBASE_WEB_API_KEY
-ARG PUBLIC_FIREBASE_AUTH_DOMAIN
-ARG PUBLIC_FIREBASE_PROJECT_ID
-ARG PUBLIC_FIREBASE_STORAGE_BUCKET
-ARG PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-ARG PUBLIC_FIREBASE_APP_ID
-ARG FIREBASE_PRIVATE_KEY_ID
-ARG FIREBASE_PRIVATE_KEY
-ARG FIREBASE_CLIENT_EMAIL
-ARG FIREBASE_CLIENT_ID
-ARG FIREBASE_AUTH_URL
-ARG FIREBASE_TOKEN_URL
-ARG FIREBASE_AUTH_CERT_URL
-ARG FIREBASE_CLIENT_CERT_URL
-ARG PUBLIC_DASHBOARD_URL
-ARG API_BASE_URL
-ARG CONVEX_SELF_HOSTED_URL
-ARG PUBLIC_GOOGLE_CALENDAR_ID
-ARG CALENDAR_API_KEY
-ARG EVENT_CALENDAR_ID
-ARG FROM_EMAIL
-ARG REPLY_TO_EMAIL
-ARG RESEND_API_KEY
-ARG OPENROUTER_API_KEY
-ARG MXROUTE_EMAIL_DOMAIN
-ARG MXROUTE_EMAIL_OUTBOUND_LIMIT
-ARG MXROUTE_EMAIL_QUOTA
-ARG MXROUTE_LOGIN_KEY
-ARG MXROUTE_SERVER_LOGIN
-ARG MXROUTE_SERVER_URL
-
-ENV PUBLIC_FIREBASE_WEB_API_KEY=$PUBLIC_FIREBASE_WEB_API_KEY \
-    PUBLIC_FIREBASE_AUTH_DOMAIN=$PUBLIC_FIREBASE_AUTH_DOMAIN \
-    PUBLIC_FIREBASE_PROJECT_ID=$PUBLIC_FIREBASE_PROJECT_ID \
-    PUBLIC_FIREBASE_STORAGE_BUCKET=$PUBLIC_FIREBASE_STORAGE_BUCKET \
-    PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$PUBLIC_FIREBASE_MESSAGING_SENDER_ID \
-    PUBLIC_FIREBASE_APP_ID=$PUBLIC_FIREBASE_APP_ID \
-    FIREBASE_PRIVATE_KEY_ID=$FIREBASE_PRIVATE_KEY_ID \
-    FIREBASE_PRIVATE_KEY=$FIREBASE_PRIVATE_KEY \
-    FIREBASE_CLIENT_EMAIL=$FIREBASE_CLIENT_EMAIL \
-    FIREBASE_CLIENT_ID=$FIREBASE_CLIENT_ID \
-    FIREBASE_AUTH_URL=$FIREBASE_AUTH_URL \
-    FIREBASE_TOKEN_URL=$FIREBASE_TOKEN_URL \
-    FIREBASE_AUTH_CERT_URL=$FIREBASE_AUTH_CERT_URL \
-    FIREBASE_CLIENT_CERT_URL=$FIREBASE_CLIENT_CERT_URL \
-    PUBLIC_DASHBOARD_URL=$PUBLIC_DASHBOARD_URL \
-    API_BASE_URL=$API_BASE_URL \
-    CONVEX_SELF_HOSTED_URL=$CONVEX_SELF_HOSTED_URL \
-    PUBLIC_GOOGLE_CALENDAR_ID=$PUBLIC_GOOGLE_CALENDAR_ID \
-    CALENDAR_API_KEY=$CALENDAR_API_KEY \
-    EVENT_CALENDAR_ID=$EVENT_CALENDAR_ID \
-    FROM_EMAIL=$FROM_EMAIL \
-    REPLY_TO_EMAIL=$REPLY_TO_EMAIL \
-    RESEND_API_KEY=$RESEND_API_KEY \
-    OPENROUTER_API_KEY=$OPENROUTER_API_KEY \
-    MXROUTE_EMAIL_DOMAIN=$MXROUTE_EMAIL_DOMAIN \
-    MXROUTE_EMAIL_OUTBOUND_LIMIT=$MXROUTE_EMAIL_OUTBOUND_LIMIT \
-    MXROUTE_EMAIL_QUOTA=$MXROUTE_EMAIL_QUOTA \
-    MXROUTE_LOGIN_KEY=$MXROUTE_LOGIN_KEY \
-    MXROUTE_SERVER_LOGIN=$MXROUTE_SERVER_LOGIN \
-    MXROUTE_SERVER_URL=$MXROUTE_SERVER_URL
-
-COPY packages ./packages
-COPY apps/website ./apps/website
-
-WORKDIR /app/apps/website
-RUN bun run build
-
-FROM deps AS website
-
-COPY packages ./packages
-COPY apps/website/package.json apps/website/package.json
-COPY --from=website_builder /app/apps/website/dist /app/apps/website/dist
-
-WORKDIR /app/apps/website
-EXPOSE 4321
-CMD ["bun", "run", "start"]
-
-FROM deps AS dashboard_v2_builder
-
-ARG CONVEX_SELF_HOSTED_URL
-ARG CONVEX_SELF_HOSTED_ADMIN_KEY
-ARG AUTH_BRIDGE_MODE
+FROM dashboard_deps AS dashboard_builder
+ARG VITE_APP_TITLE
 ARG VITE_AUTH_BRIDGE_MODE
-ARG LOGTO_ENDPOINT
-ARG LOGTO_APP_ID
-ARG LOGTO_M2M_APP_ID
-ARG LOGTO_M2M_APP_SECRET
+ARG VITE_CONVEX_URL
 ARG VITE_LOGTO_ENDPOINT
 ARG VITE_LOGTO_APP_ID
 ARG VITE_LOGTO_REDIRECT_URI
 ARG VITE_LOGTO_SCOPES
-ARG REPLY_TO_EMAIL
-ARG RESEND_API_KEY
-ARG FROM_EMAIL
-ARG MXROUTE_EMAIL_DOMAIN
-ARG MXROUTE_EMAIL_OUTBOUND_LIMIT
-ARG MXROUTE_EMAIL_QUOTA
-ARG MXROUTE_LOGIN_KEY
-ARG MXROUTE_SERVER_LOGIN
-ARG MXROUTE_SERVER_URL
-ARG OPENROUTER_API_KEY
-ARG ANTHROPIC_AUTH_TOKEN
-ARG ANTHROPIC_BASE_URL
-ARG ANTHROPIC_API_KEY
-ARG VITE_CONVEX_URL
-ARG VITE_CONVEX_SITE_URL
-ARG CONVEX_SESSION_SECRET
+ARG VITE_LOGTO_DIRECT_SIGN_IN_TARGET
+ARG VITE_GOOGLE_MAPS_API_KEY
 
-ENV CONVEX_SELF_HOSTED_URL=$CONVEX_SELF_HOSTED_URL \
-    CONVEX_SELF_HOSTED_ADMIN_KEY=$CONVEX_SELF_HOSTED_ADMIN_KEY \
-    AUTH_BRIDGE_MODE=$AUTH_BRIDGE_MODE \
+ENV VITE_APP_TITLE=$VITE_APP_TITLE \
     VITE_AUTH_BRIDGE_MODE=$VITE_AUTH_BRIDGE_MODE \
-    LOGTO_ENDPOINT=$LOGTO_ENDPOINT \
-    LOGTO_APP_ID=$LOGTO_APP_ID \
-    LOGTO_M2M_APP_ID=$LOGTO_M2M_APP_ID \
-    LOGTO_M2M_APP_SECRET=$LOGTO_M2M_APP_SECRET \
+    VITE_CONVEX_URL=$VITE_CONVEX_URL \
     VITE_LOGTO_ENDPOINT=$VITE_LOGTO_ENDPOINT \
     VITE_LOGTO_APP_ID=$VITE_LOGTO_APP_ID \
     VITE_LOGTO_REDIRECT_URI=$VITE_LOGTO_REDIRECT_URI \
     VITE_LOGTO_SCOPES=$VITE_LOGTO_SCOPES \
-    REPLY_TO_EMAIL=$REPLY_TO_EMAIL \
-    RESEND_API_KEY=$RESEND_API_KEY \
-    FROM_EMAIL=$FROM_EMAIL \
-    MXROUTE_EMAIL_DOMAIN=$MXROUTE_EMAIL_DOMAIN \
-    MXROUTE_EMAIL_OUTBOUND_LIMIT=$MXROUTE_EMAIL_OUTBOUND_LIMIT \
-    MXROUTE_EMAIL_QUOTA=$MXROUTE_EMAIL_QUOTA \
-    MXROUTE_LOGIN_KEY=$MXROUTE_LOGIN_KEY \
-    MXROUTE_SERVER_LOGIN=$MXROUTE_SERVER_LOGIN \
-    MXROUTE_SERVER_URL=$MXROUTE_SERVER_URL \
-    OPENROUTER_API_KEY=$OPENROUTER_API_KEY \
-    ANTHROPIC_AUTH_TOKEN=$ANTHROPIC_AUTH_TOKEN \
-    ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL \
-    ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
-    VITE_CONVEX_URL=$VITE_CONVEX_URL \
-    VITE_CONVEX_SITE_URL=$VITE_CONVEX_SITE_URL \
-    CONVEX_SESSION_SECRET=$CONVEX_SESSION_SECRET
+    VITE_LOGTO_DIRECT_SIGN_IN_TARGET=$VITE_LOGTO_DIRECT_SIGN_IN_TARGET \
+    VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
 
-COPY apps/dashboard-v2 ./apps/dashboard-v2
+COPY --from=dashboard_pruner /app/out/full/ .
+RUN --mount=type=cache,target=/app/.turbo,id=turbo-dashboard \
+    bunx turbo run build --filter=@ieeeatucsd/dashboard
 
-WORKDIR /app/apps/dashboard-v2
-RUN bun run build
+FROM dashboard_deps AS dashboard_prod_deps
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --production
 
-FROM deps AS dashboard_v2
+FROM base AS dashboard
+WORKDIR /app
+USER bun
 
-COPY apps/dashboard-v2/package.json apps/dashboard-v2/package.json
-COPY --from=dashboard_v2_builder /app/apps/dashboard-v2/.output /app/apps/dashboard-v2/.output
+COPY --chown=bun:bun --from=dashboard_prod_deps /app/node_modules ./node_modules
+COPY --chown=bun:bun --from=dashboard_prod_deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
+COPY --chown=bun:bun --from=dashboard_builder /app/apps/dashboard/.output ./apps/dashboard/.output
+COPY --chown=bun:bun --from=dashboard_builder /app/apps/dashboard/package.json ./apps/dashboard/package.json
 
-WORKDIR /app/apps/dashboard-v2
+WORKDIR /app/apps/dashboard
+ENV PORT=4323 \
+    HOST=0.0.0.0
+
 EXPOSE 4323
 
-ENV CONVEX_SELF_HOSTED_URL=${CONVEX_SELF_HOSTED_URL:-} \
-    CONVEX_SELF_HOSTED_ADMIN_KEY=${CONVEX_SELF_HOSTED_ADMIN_KEY:-} \
-    AUTH_BRIDGE_MODE=${AUTH_BRIDGE_MODE:-legacy} \
-    VITE_AUTH_BRIDGE_MODE=${VITE_AUTH_BRIDGE_MODE:-legacy} \
-    LOGTO_ENDPOINT=${LOGTO_ENDPOINT:-} \
-    LOGTO_APP_ID=${LOGTO_APP_ID:-} \
-    LOGTO_M2M_APP_ID=${LOGTO_M2M_APP_ID:-} \
-    LOGTO_M2M_APP_SECRET=${LOGTO_M2M_APP_SECRET:-} \
-    VITE_LOGTO_ENDPOINT=${VITE_LOGTO_ENDPOINT:-} \
-    VITE_LOGTO_APP_ID=${VITE_LOGTO_APP_ID:-} \
-    VITE_LOGTO_REDIRECT_URI=${VITE_LOGTO_REDIRECT_URI:-} \
-    VITE_LOGTO_SCOPES=${VITE_LOGTO_SCOPES:-} \
-    REPLY_TO_EMAIL=${REPLY_TO_EMAIL:-} \
-    RESEND_API_KEY=${RESEND_API_KEY:-} \
-    FROM_EMAIL=${FROM_EMAIL:-} \
-    MXROUTE_EMAIL_DOMAIN=${MXROUTE_EMAIL_DOMAIN:-} \
-    MXROUTE_EMAIL_OUTBOUND_LIMIT=${MXROUTE_EMAIL_OUTBOUND_LIMIT:-} \
-    MXROUTE_EMAIL_QUOTA=${MXROUTE_EMAIL_QUOTA:-} \
-    MXROUTE_LOGIN_KEY=${MXROUTE_LOGIN_KEY:-} \
-    MXROUTE_SERVER_LOGIN=${MXROUTE_SERVER_LOGIN:-} \
-    MXROUTE_SERVER_URL=${MXROUTE_SERVER_URL:-} \
-    OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-} \
-    ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN:-} \
-    ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-} \
-    ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-} \
-    VITE_CONVEX_URL=${VITE_CONVEX_URL:-} \
-    VITE_CONVEX_SITE_URL=${VITE_CONVEX_SITE_URL:-} \
-    CONVEX_SESSION_SECRET=${CONVEX_SESSION_SECRET:-}
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD ["bun", "-e", "fetch('http://127.0.0.1:4323/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 
 CMD ["bun", "run", "start"]

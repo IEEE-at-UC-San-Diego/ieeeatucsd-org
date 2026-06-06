@@ -1,45 +1,45 @@
 ---
-import Link from "next/link";
 import { GoArrowDownRight } from "react-icons/go";
 import { Image } from "astro:assets";
 import robocup from "../../images/robocup.webp";
 ---
 
 <div class="flex flex-col items-center relative my-[10%]">
-    <Image
-        src={robocup}
-        alt="robocub competition image"
-        class="md:w-3/5 w-[90%] rounded-[2vw] object-cover aspect-[8/5] opacity-40"
-    />
-    <Link
-        href="https://docs.google.com/forms/d/e/1FAIpQLSex5VejEiClvgcfhSBQJ9IH5Q008j-HWC5Y9YAa56yIHgGBvw/viewform?usp=sf_link"
-        target="_blank"
-        className="absolute aspect-[8/5] md:w-3/5 w-[90%] p-[5%] group -bottom-[3%]"
+  <Image
+    src={robocup}
+    alt="robocub competition image"
+    class="md:w-3/5 w-[90%] rounded-[2vw] object-cover aspect-[8/5] opacity-40"
+  />
+  <a
+    href="https://docs.google.com/forms/d/e/1FAIpQLSex5VejEiClvgcfhSBQJ9IH5Q008j-HWC5Y9YAa56yIHgGBvw/viewform?usp=sf_link"
+    target="_blank"
+    class="absolute aspect-[8/5] md:w-3/5 w-[90%] p-[5%] group -bottom-[3%]"
+  >
+    <div class="w-full flex justify-end items-center h-4/5">
+      <p class="md:text-[4.5vw] text-[7vw] font-bold w-fit">
+        We Are<br />
+        Hiring
+      </p>
+    </div>
+    <div class="md:text-[1vw] text-[1.5vw] md:pt-[3%]">
+      <p>
+        Join a community of novice to experienced engineers from a wide range of
+        disciplines and backgrounds.
+      </p>
+      <p>
+        Fill out this application form (due week 2 of each quarter if space
+        permits)
+      </p>
+    </div>
+    <div
+      class="flex w-full justify-end items-end md:text-[3.5vw] text-[6vw] mt-[3%] group-hover:text-ieee-yellow duration-300"
     >
-        <div class="w-full flex justify-end items-center h-4/5">
-            <p class="md:text-[4.5vw] text-[7vw] font-bold w-fit">
-                We Are<br />
-                Hiring
-            </p>
-        </div>
-        <div class="md:text-[1vw] text-[1.5vw] md:pt-[3%]">
-            <p>
-                Join a community of novice to experienced engineers from a wide range of disciplines and backgrounds.
-            </p>
-            <p>
-                Fill out this application form (due week 2 of each quarter if
-                space permits)
-            </p>
-        </div>
-        <div
-            class="flex w-full justify-end items-end md:text-[3.5vw] text-[6vw] mt-[3%] group-hover:text-ieee-yellow duration-300"
-        >
-            <p
-                class="mr-[2%] w-fit py-[1%] px-[2%] md:text-[1.2vw] text-[2vw] border-[0.1vw] group-hover:text-ieee-yellow border-white rounded-full group-hover:border-ieee-yellow duration-300 font-light"
-            >
-                Application form
-            </p>
-            <GoArrowDownRight />
-        </div>
-    </Link>
+      <p
+        class="mr-[2%] w-fit py-[1%] px-[2%] md:text-[1.2vw] text-[2vw] border-[0.1vw] group-hover:text-ieee-yellow border-white rounded-full group-hover:border-ieee-yellow duration-300 font-light"
+      >
+        Application form
+      </p>
+      <GoArrowDownRight />
+    </div>
+  </a>
 </div>

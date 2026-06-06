@@ -26,6 +26,24 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Geist", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: [
+          "Bricolage Grotesque",
+          "Geist",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+        ],
+        mono: [
+          "Geist Mono",
+          "ui-monospace",
+          "SF Mono",
+          "Cascadia Code",
+          "Menlo",
+          "monospace",
+        ],
+      },
       boxShadow: {
         glow: "0 0 0.5vw 0.1vw rgba(255, 255, 255, 0.3), 0 0 1vw 0.5vw rgba(255, 255, 255, 0.1)",
       },

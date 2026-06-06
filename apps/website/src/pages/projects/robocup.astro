@@ -4,9 +4,9 @@ import Questions from "../../components/core/Questions.astro";
 import roboFaq from "../../data/roboFaq.json";
 import About from "../../components/core/About.astro";
 import RoboTitle from "../../components/robocub/RoboTitle.astro";
-import Link from "next/link";
 import { Image } from "astro:assets";
 import roboborder from "../../images/roboborder.webp";
+import robocupImage from "../../images/robocup.webp";
 import Subteams from "../../components/robocub/Subteams.astro";
 import Timeline from "../../components/qp/Timeline.astro";
 import Competition from "../../components/signal/Competition.astro";
@@ -53,20 +53,20 @@ const seoProps = {
     <div class="w-3/5 flex justify-between mb-[15%]">
       {
         roboLinks.map((roboLink) => (
-          <Link
+          <a
             data-inview
             href={roboLink.link}
             target="_blank"
-            className={`hover:font-semibold in-view:animate-fade-down animate-de animate-delay-${roboLink.delay} w-[30%] text-center z-10 cursor-pointer px-[2%] py-[1%] md:text-[1.2vw] text-[2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:bg-ieee-yellow/80 duration-300 font-light flex items-center justify-center`}
+            class={`hover:font-semibold in-view:animate-fade-down animate-de animate-delay-${roboLink.delay} w-[30%] text-center z-10 cursor-pointer px-[2%] py-[1%] md:text-[1.2vw] text-[2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:bg-ieee-yellow/80 duration-300 font-light flex items-center justify-center`}
           >
             {roboLink.text}
-          </Link>
+          </a>
         ))
       }
     </div>
   </div>
   <Competition
-    picture="/robocup.webp"
+    picture={robocupImage}
     name="Preparing for RoboCup 2026"
     description="Our team submitted this year’s qualification video to compete in the RoboCup 2026 International Competition held in Incheon, Korea."
     link="https://drive.google.com/file/d/1dX9MjNjK_A-GmBK_ELF-zYO38qwvRm0L/view?usp=drive_link"

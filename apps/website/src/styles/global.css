@@ -80,14 +80,119 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-family:
+      "Geist",
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Stylistic set + contextual alternates for a cleaner, modern read */
+    font-feature-settings: "ss01", "cv01", "cv11";
+    font-variant-ligatures: contextual;
+  }
+
+  /* Display typography — Bricolage Grotesque, optically sized & tightly set */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-display {
+    font-family:
+      "Bricolage Grotesque", "Geist", ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    font-optical-sizing: auto;
+    text-wrap: balance;
+  }
+
+  h1 {
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+  }
+
+  h2 {
+    letter-spacing: -0.03em;
+  }
+
+  /* Tabular figures wherever numbers should line up */
+  table,
+  time,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Branded text selection */
+  ::selection {
+    background-color: rgba(136, 191, 236, 0.3);
+    color: #ffffff;
+  }
+
+  /* Accessible, on-brand focus rings */
+  :focus-visible {
+    outline: 2px solid rgba(136, 191, 236, 0.7);
+    outline-offset: 2px;
+  }
+
+  /* Respect reduced-motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Typographic Utilities */
+@layer utilities {
+  /* Monospace technical labels / eyebrows — instrument-panel precision */
+  .font-mono-tech {
+    font-family:
+      "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  }
+
+  /* Eyebrow: small uppercase mono kicker above headings */
+  .eyebrow {
+    font-family:
+      "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-weight: 500;
+    font-feature-settings: "ss01";
+  }
+
+  /* Lead paragraph — slightly larger, airier body copy */
+  .text-lead {
+    font-size: 1.125em;
+    line-height: 1.7;
+    font-weight: 350;
   }
 }
 
 /* Mobile-Specific Utilities */
 @layer utilities {
-
   /* Touch-friendly interactions */
   .touch-manipulation {
     touch-action: manipulation;
@@ -151,7 +256,6 @@
 
 /* Mobile-specific responsive breakpoints */
 @media (max-width: 320px) {
-
   /* Extra small mobile devices */
   .text-responsive {
     font-size: 14px;
@@ -159,7 +263,6 @@
 }
 
 @media (max-width: 375px) {
-
   /* Small mobile devices */
   .container-mobile {
     padding-left: 1rem;
@@ -168,7 +271,6 @@
 }
 
 @media (max-width: 414px) {
-
   /* Medium mobile devices */
   .grid-mobile-stack {
     grid-template-columns: 1fr;
@@ -176,7 +278,6 @@
 }
 
 @media (max-width: 768px) {
-
   /* Large mobile devices and tablets */
   .hide-mobile {
     display: none;
@@ -228,7 +329,6 @@ section[data-slot="base"] {
 
 /* Constitution Print Styles - Hide everything except constitution content when printing */
 @media print {
-
   /* When in constitution print mode, hide all elements by default */
   body.constitution-print-mode * {
     visibility: hidden !important;
@@ -433,7 +533,8 @@ section[data-slot="base"] {
   background: rgba(255, 255, 255, 0.2) !important;
 }
 
-.dark [data-sidebar="content"].sidebar-thin-scroll::-webkit-scrollbar-thumb:hover {
+.dark
+  [data-sidebar="content"].sidebar-thin-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.35) !important;
 }
 
@@ -465,8 +566,8 @@ section[data-slot="base"] {
 }
 
 /* Target the modal wrapper to ensure proper overflow handling */
-[role="dialog"][aria-modal="true"]>section,
-[role="dialog"][aria-modal="true"]>div[data-slot="base"] {
+[role="dialog"][aria-modal="true"] > section,
+[role="dialog"][aria-modal="true"] > div[data-slot="base"] {
   border-radius: 14px !important;
   overflow: hidden !important;
 }
