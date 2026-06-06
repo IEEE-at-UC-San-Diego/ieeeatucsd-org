@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { LEGAL_VERSIONS } from "@/config/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
+import { uploadResumeToStorage, validateResumeFile } from "@/lib/resumeUpload";
 
 export const Route = createFileRoute("/_dashboard/get-started")({
 	component: GetStartedPage,
@@ -102,13 +103,16 @@ const questions: Question[] = [
 		icon: Upload,
 		required: false,
 		type: "file",
-		accept: ".pdf,.doc,.docx",
+		accept: ".pdf,application/pdf",
 	},
 ];
 
 function GetStartedPage() {
 	const { user, logtoId } = useAuth();
 	const completeOnboarding = useAuthedMutation(api.users.completeOnboarding);
+	const generateResumeUploadUrl = useAuthedMutation(
+		api.users.generateResumeUploadUrl,
+	);
 	const [currentStep, setCurrentStep] = useState(0);
 	const [answers, setAnswers] = useState<Record<string, any>>({});
 	const [error, setError] = useState<string | null>(null);
@@ -176,6 +180,22 @@ function GetStartedPage() {
 		setLoading(true);
 		setError(null);
 		try {
+			const resumeFile = answers.resume as File | null | undefined;
+			let resumeStorageId;
+			let resumeFileName;
+
+			if (resumeFile) {
+				const validationError = validateResumeFile(resumeFile);
+				if (validationError) {
+					throw new Error(validationError);
+				}
+
+				resumeStorageId = await uploadResumeToStorage(resumeFile, () =>
+					generateResumeUploadUrl({ logtoId: logtoId! }),
+				);
+				resumeFileName = resumeFile.name;
+			}
+
 			await completeOnboarding({
 				logtoId: logtoId!,
 				pid: answers.pid,
@@ -183,6 +203,8 @@ function GetStartedPage() {
 				graduationYear: parseInt(answers.graduationYear),
 				memberId: answers.memberId || undefined,
 				zelleInformation: answers.zelle || undefined,
+				resumeStorageId,
+				resumeFileName,
 				tosVersion: LEGAL_VERSIONS.TOS_VERSION,
 				privacyPolicyVersion: LEGAL_VERSIONS.PRIVACY_POLICY_VERSION,
 			});
@@ -253,7 +275,18 @@ function GetStartedPage() {
 						<Input
 							type="file"
 							accept={question.accept}
-							onChange={(e) => handleInputChange(e.target.files?.[0] || null)}
+							onChange={(e) => {
+								const file = e.target.files?.[0] || null;
+								if (file) {
+									const validationError = validateResumeFile(file);
+									if (validationError) {
+										setError(validationError);
+										handleInputChange(null);
+										return;
+									}
+								}
+								handleInputChange(file);
+							}}
 						/>
 						{value && (
 							<p className="text-green-600 font-medium flex items-center gap-2">
@@ -261,6 +294,10 @@ function GetStartedPage() {
 								{value.name} selected
 							</p>
 						)}
+						<p className="text-xs text-muted-foreground">
+							PDF only, maximum 5MB. Your resume will be visible to IEEE
+							sponsors and officers.
+						</p>
 					</div>
 				);
 			case "legal-acceptance": {

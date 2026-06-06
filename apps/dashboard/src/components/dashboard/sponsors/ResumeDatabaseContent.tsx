@@ -56,27 +56,19 @@ export default function ResumeDatabaseContent() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [itemsPerPage, setItemsPerPage] = useState(10);
 
-	const allUsers = useAuthedQuery(
-		api.users.list,
+	const resumeUsers = useAuthedQuery(
+		api.users.listResumes,
 		logtoId ? { logtoId } : "skip",
 	);
 
 	useEffect(() => {
-		if (!allUsers) return;
+		if (!resumeUsers) return;
 
 		setLoading(true);
 		setError(null);
-
-		const usersWithResumes: UserWithResume[] = allUsers
-			.filter((u) => u.resume)
-			.map((u) => ({
-				...u,
-				id: u._id,
-			}));
-
-		setUsers(usersWithResumes);
+		setUsers(resumeUsers.filter((u) => u.resume));
 		setLoading(false);
-	}, [allUsers]);
+	}, [resumeUsers]);
 
 	const majorNormalizationMap = useMemo(() => {
 		const allMajors = users.map((u) => u.major).filter((m): m is string => !!m);
@@ -218,7 +210,7 @@ export default function ResumeDatabaseContent() {
 			"Email",
 			"Major",
 			"Year Graduating",
-			"Firebase Resume Link",
+			"Resume Link",
 		];
 
 		const csvData = usersToExport.map((user) => {
@@ -276,7 +268,8 @@ export default function ResumeDatabaseContent() {
 			if (user.resume) {
 				const link = document.createElement("a");
 				link.href = user.resume;
-				link.download = `${user.name.replace(/\s+/g, "_")}_Resume.pdf`;
+				link.download =
+					user.fileName ?? `${user.name.replace(/\s+/g, "_")}_Resume.pdf`;
 				link.target = "_blank";
 				document.body.appendChild(link);
 				link.click();
@@ -582,7 +575,7 @@ export default function ResumeDatabaseContent() {
 								selectedYears.size > 0 ||
 								selectedOfficerStatus !== "all"
 									? "Try adjusting your filters."
-									: "No members have opted in to share resumes yet."}
+									: "No members have uploaded resumes yet."}
 							</p>
 						</CardContent>
 					</Card>

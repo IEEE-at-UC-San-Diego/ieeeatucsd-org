@@ -12,6 +12,17 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +30,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
+import { formatDateDisplay } from "@/lib/formatters";
+import { uploadResumeToStorage, validateResumeFile } from "@/lib/resumeUpload";
 
 export const Route = createFileRoute("/_dashboard/settings")({
 	component: SettingsPage,
@@ -27,6 +40,11 @@ export const Route = createFileRoute("/_dashboard/settings")({
 function SettingsPage() {
 	const { user, isLoading, logtoId } = useAuth();
 	const updateProfile = useAuthedMutation(api.users.updateProfile);
+	const generateResumeUploadUrl = useAuthedMutation(
+		api.users.generateResumeUploadUrl,
+	);
+	const setResume = useAuthedMutation(api.users.setResume);
+	const deleteResume = useAuthedMutation(api.users.deleteResume);
 	const [saving, setSaving] = useState(false);
 	const [savingAiPreference, setSavingAiPreference] = useState(false);
 
@@ -47,6 +65,12 @@ function SettingsPage() {
 	// Resume state
 	const [resumeFile, setResumeFile] = useState<File | null>(null);
 	const [uploadingResume, setUploadingResume] = useState(false);
+	const [removingResume, setRemovingResume] = useState(false);
+
+	const resumeUrl =
+		user && "resumeUrl" in user
+			? (user.resumeUrl as string | undefined)
+			: undefined;
 
 	// Initialize form when user data loads
 	useEffect(() => {
@@ -101,6 +125,24 @@ function SettingsPage() {
 		}
 	};
 
+	const handleResumeFileChange = (file: File | null) => {
+		if (!file) {
+			setResumeFile(null);
+			return;
+		}
+
+		const validationError = validateResumeFile(file);
+		if (validationError) {
+			setError(validationError);
+			toast.error(validationError);
+			setResumeFile(null);
+			return;
+		}
+
+		setResumeFile(file);
+		setError(null);
+	};
+
 	const handleResumeUpload = async () => {
 		if (!resumeFile || !logtoId) return;
 
@@ -109,14 +151,14 @@ function SettingsPage() {
 		setSuccess(null);
 
 		try {
-			// In a real implementation, you'd upload to Convex storage or an external service
-			// For now, we'll store a placeholder URL
-			const resumeUrl = `https://example.com/resumes/${logtoId}/${resumeFile.name}`;
+			const storageId = await uploadResumeToStorage(resumeFile, () =>
+				generateResumeUploadUrl({ logtoId }),
+			);
 
-			await updateProfile({
+			await setResume({
 				logtoId,
-				resume: resumeUrl,
-				syncPublicProfile: false,
+				storageId,
+				fileName: resumeFile.name,
 			});
 
 			setResumeFile(null);
@@ -133,25 +175,19 @@ function SettingsPage() {
 	const handleResumeRemove = async () => {
 		if (!logtoId || !user?.resume) return;
 
-		if (!confirm("Are you sure you want to remove your resume?")) return;
-
-		setSaving(true);
+		setRemovingResume(true);
 		setError(null);
 		setSuccess(null);
 
 		try {
-			await updateProfile({
-				logtoId,
-				resume: undefined,
-				syncPublicProfile: false,
-			});
+			await deleteResume({ logtoId });
 			setSuccess("Resume removed successfully!");
 			toast.success("Resume removed successfully");
 		} catch (err: any) {
 			setError("Failed to remove resume: " + (err.message || "Unknown error"));
 			toast.error("Failed to remove resume");
 		} finally {
-			setSaving(false);
+			setRemovingResume(false);
 		}
 	};
 
@@ -467,45 +503,87 @@ function SettingsPage() {
 							<h2 className="text-lg font-semibold">Resume</h2>
 						</div>
 
+						<p className="text-sm text-muted-foreground mb-4">
+							Your resume will be visible to IEEE sponsors and officers.
+						</p>
+
 						{user?.resume ? (
 							<div className="space-y-4">
-								<div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+								<div className="flex flex-col gap-4 p-4 bg-muted rounded-lg sm:flex-row sm:items-center sm:justify-between">
 									<div className="flex items-center space-x-3">
-										<FileText className="w-8 h-8 text-muted-foreground" />
+										<FileText className="w-8 h-8 text-muted-foreground shrink-0" />
 										<div>
-											<p className="font-medium">Current Resume</p>
+											<p className="font-medium">{user.resume.fileName}</p>
 											<p className="text-sm text-muted-foreground">
-												Uploaded resume file
+												Uploaded {formatDateDisplay(user.resume.uploadedAt)}
 											</p>
 										</div>
 									</div>
-									<div className="flex items-center space-x-2">
-										<a
-											href={user.resume}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-										>
-											View
-										</a>
-										<button
-											onClick={handleResumeRemove}
-											disabled={saving}
-											className="text-sm text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
-										>
-											Remove
-										</button>
+									<div className="flex flex-wrap items-center gap-2">
+										{resumeUrl && (
+											<>
+												<Button variant="outline" size="sm" asChild>
+													<a
+														href={resumeUrl}
+														target="_blank"
+														rel="noopener noreferrer"
+													>
+														View
+													</a>
+												</Button>
+												<Button variant="outline" size="sm" asChild>
+													<a
+														href={resumeUrl}
+														download={user.resume.fileName}
+														target="_blank"
+														rel="noopener noreferrer"
+													>
+														Download
+													</a>
+												</Button>
+											</>
+										)}
+										<AlertDialog>
+											<AlertDialogTrigger asChild>
+												<Button
+													variant="outline"
+													size="sm"
+													className="text-red-600 hover:text-red-700"
+													disabled={removingResume}
+												>
+													Remove
+												</Button>
+											</AlertDialogTrigger>
+											<AlertDialogContent>
+												<AlertDialogHeader>
+													<AlertDialogTitle>Remove resume?</AlertDialogTitle>
+													<AlertDialogDescription>
+														This will permanently delete your resume file. You
+														can upload a new one at any time.
+													</AlertDialogDescription>
+												</AlertDialogHeader>
+												<AlertDialogFooter>
+													<AlertDialogCancel>Cancel</AlertDialogCancel>
+													<AlertDialogAction
+														onClick={handleResumeRemove}
+														className="bg-red-600 hover:bg-red-700"
+													>
+														{removingResume ? "Removing..." : "Remove"}
+													</AlertDialogAction>
+												</AlertDialogFooter>
+											</AlertDialogContent>
+										</AlertDialog>
 									</div>
 								</div>
 
 								<div className="border-t pt-4">
 									<h3 className="font-medium mb-2">Replace Resume</h3>
-									<div className="flex items-center space-x-4">
+									<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
 										<input
 											type="file"
-											accept=".pdf,.doc,.docx"
+											accept=".pdf,application/pdf"
 											onChange={(e) =>
-												setResumeFile(e.target.files?.[0] || null)
+												handleResumeFileChange(e.target.files?.[0] || null)
 											}
 											className="flex-1 text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
 										/>
@@ -521,27 +599,32 @@ function SettingsPage() {
 							</div>
 						) : (
 							<div className="space-y-4">
-								<p className="text-muted-foreground">
-									No resume uploaded. Upload your resume for networking
-									opportunities.
-								</p>
-								<div className="flex items-center space-x-4">
-									<input
-										type="file"
-										accept=".pdf,.doc,.docx"
-										onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-										className="flex-1 text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-									/>
-									<Button
-										onClick={handleResumeUpload}
-										disabled={!resumeFile || uploadingResume}
-									>
-										<Upload className="h-4 w-4 mr-2" />
-										{uploadingResume ? "Uploading..." : "Upload"}
-									</Button>
+								<div className="border-2 border-dashed rounded-lg p-8 text-center">
+									<Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+									<p className="text-muted-foreground mb-4">
+										No resume uploaded. Upload your resume for networking
+										opportunities.
+									</p>
+									<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
+										<input
+											type="file"
+											accept=".pdf,application/pdf"
+											onChange={(e) =>
+												handleResumeFileChange(e.target.files?.[0] || null)
+											}
+											className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+										/>
+										<Button
+											onClick={handleResumeUpload}
+											disabled={!resumeFile || uploadingResume}
+										>
+											<Upload className="h-4 w-4 mr-2" />
+											{uploadingResume ? "Uploading..." : "Upload"}
+										</Button>
+									</div>
 								</div>
 								<p className="text-xs text-muted-foreground">
-									Accepted formats: PDF, DOC, DOCX
+									PDF only, maximum 5MB
 								</p>
 							</div>
 						)}
