@@ -20,8 +20,10 @@ import { Button } from "@/components/ui/button";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { buildGoogleCalendarSubscribeUrl } from "@/lib/calendarLinks";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/officer-calendar")({
+	loader: (ctx) => prefetchAuthedQuery(api.events.listAll, undefined, ctx),
 	component: OfficerCalendarPage,
 });
 

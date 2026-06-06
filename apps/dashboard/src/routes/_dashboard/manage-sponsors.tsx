@@ -24,8 +24,10 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/manage-sponsors")({
+	loader: (ctx) => prefetchAuthedQuery(api.sponsorDomains.list, undefined, ctx),
 	component: ManageSponsorsPage,
 });
 

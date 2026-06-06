@@ -28,8 +28,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/links")({
+	loader: (ctx) => prefetchAuthedQuery(api.links.list, undefined, ctx),
 	component: LinksPage,
 });
 

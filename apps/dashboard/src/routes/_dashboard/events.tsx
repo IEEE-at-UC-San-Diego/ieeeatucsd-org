@@ -21,8 +21,10 @@ import {
 	buildGoogleCalendarIcsUrl,
 	buildGoogleCalendarSubscribeUrl,
 } from "@/lib/calendarLinks";
+import { prefetchQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/events")({
+	loader: (ctx) => prefetchQuery(api.events.listPublished, undefined, ctx),
 	component: EventsPage,
 });
 

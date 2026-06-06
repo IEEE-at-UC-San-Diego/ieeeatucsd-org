@@ -55,8 +55,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE } from "@/lib/onboarding-template";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/onboarding")({
+	loader: (ctx) =>
+		prefetchAuthedQuery(api.officerInvitations.list, undefined, ctx),
 	component: OnboardingPage,
 });
 

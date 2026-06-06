@@ -47,9 +47,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import { sendNotification } from "@/lib/send-notification";
 
 export const Route = createFileRoute("/_dashboard/manage-events")({
+	loader: (ctx) => prefetchAuthedQuery(api.events.listAll, undefined, ctx),
 	component: ManageEventsPage,
 });
 

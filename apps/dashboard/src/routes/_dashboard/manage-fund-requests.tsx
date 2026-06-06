@@ -39,10 +39,13 @@ import {
 	formatDateDisplay,
 	formatDateTimeDisplay,
 } from "@/lib/formatters";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import { sendNotification } from "@/lib/send-notification";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_dashboard/manage-fund-requests")({
+	loader: (ctx) =>
+		prefetchAuthedQuery(api.fundRequests.listAll, undefined, ctx),
 	component: ManageFundRequestsPage,
 });
 

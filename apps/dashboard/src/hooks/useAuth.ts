@@ -23,6 +23,7 @@ import {
 import { isNativeAuthBridgeMode } from "@/lib/auth/mode";
 import { refreshSessionWithRetry } from "@/lib/auth/sessionRefresh";
 import { buildLogtoSignInOptions, type SignInOptions } from "@/lib/auth/signIn";
+import { setAuthTokens } from "@/lib/prefetch/authTokens";
 import type { UserRole } from "@/types/roles";
 import { api } from "../../convex/_generated/api";
 
@@ -234,7 +235,17 @@ function useSharedAuthClient(options: {
 		refreshInFlightRef.current = false;
 		authInitializedRef.current = false;
 		lastResolvedUserRef.current = null;
+		setAuthTokens(null);
 	}, []);
+
+	useEffect(() => {
+		if (logtoId && convexSessionToken) {
+			setAuthTokens({ logtoId, convexSessionToken });
+			return;
+		}
+
+		setAuthTokens(null);
+	}, [logtoId, convexSessionToken]);
 
 	const markAuthFailure = useCallback(
 		(reason: Exclude<AuthFailureReason, null>) => {

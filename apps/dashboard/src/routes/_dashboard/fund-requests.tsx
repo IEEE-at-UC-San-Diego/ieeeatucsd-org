@@ -35,6 +35,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import { cn } from "@/lib/utils";
 import {
 	CATEGORY_LABELS,
@@ -49,6 +50,8 @@ import {
 } from "@/types/fund-requests";
 
 export const Route = createFileRoute("/_dashboard/fund-requests")({
+	loader: (ctx) =>
+		prefetchAuthedQuery(api.fundRequests.listMine, undefined, ctx),
 	component: FundRequestsPage,
 });
 
