@@ -1,8 +1,8 @@
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, Plus } from "lucide-react";
-import { useState } from "react";
+import { ImageIcon, Loader2, Plus, Upload } from "lucide-react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { uploadMerchImageToStorage } from "@/lib/merchImageUpload";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/manage-store/products")({
@@ -25,6 +26,68 @@ export const Route = createFileRoute("/_dashboard/manage-store/products")({
 		prefetchAuthedQuery(api.merch.products.listProducts, undefined, ctx),
 	component: ManageStoreProductsPage,
 });
+
+type ProductRow = {
+	_id: Id<"merchProducts">;
+	name: string;
+	shortDescription: string;
+	status: "active" | "archived";
+	featured: boolean;
+	imageUrl: string | null;
+};
+
+function ProductImageUploadButton({
+	label,
+	disabled,
+	onUpload,
+}: {
+	label: string;
+	disabled?: boolean;
+	onUpload: (file: File) => Promise<void>;
+}) {
+	const inputRef = useRef<HTMLInputElement>(null);
+	const [uploading, setUploading] = useState(false);
+
+	const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		setUploading(true);
+		try {
+			await onUpload(file);
+		} finally {
+			setUploading(false);
+			if (inputRef.current) inputRef.current.value = "";
+		}
+	};
+
+	return (
+		<>
+			<input
+				ref={inputRef}
+				type="file"
+				accept="image/jpeg,image/png,image/webp,image/gif"
+				className="hidden"
+				onChange={handleChange}
+			/>
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				disabled={disabled || uploading}
+				onClick={() => inputRef.current?.click()}
+			>
+				{uploading ? (
+					<Loader2 className="h-4 w-4 animate-spin" />
+				) : (
+					<>
+						<Upload className="h-4 w-4 mr-1.5" />
+						{label}
+					</>
+				)}
+			</Button>
+		</>
+	);
+}
 
 function ManageStoreProductsPage() {
 	const { hasOfficerAccess, hasAdminAccess, logtoId } = usePermissions();
@@ -38,12 +101,20 @@ function ManageStoreProductsPage() {
 	);
 	const createProduct = useAuthedMutation(api.merch.products.createProduct);
 	const createCategory = useAuthedMutation(api.merch.categories.create);
+	const setProductImage = useAuthedMutation(api.merch.products.setProductImage);
+	const generateUploadUrl = useAuthedMutation(
+		api.merch.products.generateUploadUrl,
+	);
 
 	const [showForm, setShowForm] = useState(false);
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [categoryId, setCategoryId] = useState("");
 	const [price, setPrice] = useState("");
+	const [imageAlt, setImageAlt] = useState("");
+	const [imagePreview, setImagePreview] = useState<string | null>(null);
+	const [pendingImageStorageId, setPendingImageStorageId] =
+		useState<Id<"_storage"> | null>(null);
 	const [saving, setSaving] = useState(false);
 
 	const [newCategoryName, setNewCategoryName] = useState("");
@@ -56,6 +127,51 @@ function ManageStoreProductsPage() {
 	}
 
 	const activeCategories = categories ?? [];
+
+	const uploadImage = async (file: File) => {
+		return uploadMerchImageToStorage(file, () => generateUploadUrl({}));
+	};
+
+	const handleCreateFormImage = async (file: File) => {
+		try {
+			const storageId = await uploadImage(file);
+			setPendingImageStorageId(storageId);
+			setImagePreview(URL.createObjectURL(file));
+			if (!imageAlt) setImageAlt(name || file.name.replace(/\.[^.]+$/, ""));
+			toast.success("Image uploaded.");
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : "Upload failed");
+		}
+	};
+
+	const handleProductImage = async (
+		productId: Id<"merchProducts">,
+		productName: string,
+		file: File,
+	) => {
+		try {
+			const storageId = await uploadImage(file);
+			await setProductImage({
+				productId,
+				primaryImageStorageId: storageId,
+				primaryImageAlt: productName,
+			});
+			toast.success("Product image updated.");
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : "Upload failed");
+		}
+	};
+
+	const resetCreateForm = () => {
+		setName("");
+		setDescription("");
+		setPrice("");
+		setCategoryId("");
+		setImageAlt("");
+		setPendingImageStorageId(null);
+		if (imagePreview) URL.revokeObjectURL(imagePreview);
+		setImagePreview(null);
+	};
 
 	const handleCreateCategory = async () => {
 		const trimmed = newCategoryName.trim();
@@ -89,21 +205,23 @@ function ManageStoreProductsPage() {
 				name,
 				shortDescription: description,
 				categoryId: categoryId as Id<"merchCategories">,
-				primaryImageAlt: name,
+				primaryImageAlt: imageAlt.trim() || name,
+				...(pendingImageStorageId && {
+					primaryImageStorageId: pendingImageStorageId,
+				}),
 				defaultPointPrice: Number(price),
 			});
 			toast.success("Product created.");
 			setShowForm(false);
-			setName("");
-			setDescription("");
-			setPrice("");
-			setCategoryId("");
+			resetCreateForm();
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "Failed to create");
 		} finally {
 			setSaving(false);
 		}
 	};
+
+	const productRows = (products ?? []) as ProductRow[];
 
 	return (
 		<div className="flex-1 overflow-auto bg-[#F8F9FB] min-h-screen">
@@ -223,6 +341,41 @@ function ManageStoreProductsPage() {
 									onChange={(e) => setPrice(e.target.value)}
 								/>
 							</div>
+							<div className="space-y-2">
+								<Label>Image alt text</Label>
+								<Input
+									placeholder="Defaults to product name"
+									value={imageAlt}
+									onChange={(e) => setImageAlt(e.target.value)}
+								/>
+							</div>
+							<div className="space-y-2 sm:col-span-2">
+								<Label>Product image</Label>
+								<div className="flex items-start gap-4">
+									<div className="h-24 w-24 rounded-lg border bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+										{imagePreview ? (
+											<img
+												src={imagePreview}
+												alt={imageAlt || name || "Preview"}
+												className="h-full w-full object-cover"
+											/>
+										) : (
+											<ImageIcon className="h-8 w-8 text-muted-foreground" />
+										)}
+									</div>
+									<div className="space-y-2">
+										<ProductImageUploadButton
+											label={
+												pendingImageStorageId ? "Replace image" : "Upload image"
+											}
+											onUpload={handleCreateFormImage}
+										/>
+										<p className="text-xs text-muted-foreground">
+											JPEG, PNG, WebP, or GIF up to 5MB.
+										</p>
+									</div>
+								</div>
+							</div>
 						</div>
 						<Button
 							onClick={handleCreate}
@@ -239,22 +392,41 @@ function ManageStoreProductsPage() {
 
 				{products === undefined ? (
 					<Skeleton className="h-64 w-full" />
-				) : products.length === 0 ? (
+				) : productRows.length === 0 ? (
 					<p className="text-muted-foreground">No products yet.</p>
 				) : (
 					<ul className="divide-y rounded-xl border bg-white">
-						{products.map((product) => (
+						{productRows.map((product) => (
 							<li
 								key={product._id}
-								className="px-5 py-4 flex items-center justify-between gap-4"
+								className="px-5 py-4 flex items-center gap-4"
 							>
-								<div>
+								<div className="h-16 w-16 rounded-lg border bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+									{product.imageUrl ? (
+										<img
+											src={product.imageUrl}
+											alt={product.name}
+											className="h-full w-full object-cover"
+										/>
+									) : (
+										<ImageIcon className="h-6 w-6 text-muted-foreground" />
+									)}
+								</div>
+								<div className="flex-1 min-w-0">
 									<p className="font-medium">{product.name}</p>
-									<p className="text-sm text-muted-foreground">
+									<p className="text-sm text-muted-foreground line-clamp-1">
 										{product.shortDescription}
 									</p>
 								</div>
-								<div className="flex items-center gap-2">
+								<div className="flex items-center gap-2 shrink-0">
+									{hasAdminAccess && (
+										<ProductImageUploadButton
+											label={product.imageUrl ? "Change" : "Add image"}
+											onUpload={(file) =>
+												handleProductImage(product._id, product.name, file)
+											}
+										/>
+									)}
 									<Badge
 										variant={
 											product.status === "active" ? "default" : "secondary"

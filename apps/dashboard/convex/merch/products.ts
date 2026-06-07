@@ -1,5 +1,7 @@
 import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
+import type { Id } from "../_generated/dataModel";
+import type { MutationCtx } from "../_generated/server";
 import {
   buildVariantLabel,
   cartesianProduct,
@@ -9,6 +11,33 @@ import {
   requireMerchCatalogAdmin,
   requireMerchOfficer,
 } from "./helpers";
+
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+async function validateProductImageStorage(
+  ctx: MutationCtx,
+  storageId: Id<"_storage">,
+) {
+  const metadata = await ctx.db.system.get(storageId);
+  if (!metadata) {
+    throw new Error("Uploaded image not found");
+  }
+  const contentType = metadata.contentType ?? "";
+  if (contentType && !ALLOWED_IMAGE_TYPES.has(contentType)) {
+    await ctx.storage.delete(storageId);
+    throw new Error("Image must be JPEG, PNG, WebP, or GIF");
+  }
+  if (metadata.size > MAX_IMAGE_BYTES) {
+    await ctx.storage.delete(storageId);
+    throw new Error("Image must be 5MB or smaller");
+  }
+}
 
 async function getSettings(ctx: { db: { query: (table: "merchSettings") => { first: () => Promise<{ storeEnabled: boolean } | null> } } }) {
   const settings = await ctx.db.query("merchSettings").first();
@@ -31,9 +60,18 @@ export const listProducts = query({
   handler: async (ctx, args) => {
     await requireMerchOfficer(ctx, args.logtoId, args.authToken);
     const products = await ctx.db.query("merchProducts").collect();
-    return products
+    const filtered = products
       .filter((p) => args.includeArchived || p.status === "active")
       .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    return Promise.all(
+      filtered.map(async (product) => ({
+        ...product,
+        imageUrl: product.primaryImageStorageId
+          ? await ctx.storage.getUrl(product.primaryImageStorageId)
+          : null,
+      })),
+    );
   },
 });
 
@@ -103,6 +141,7 @@ export const createProduct = mutation({
     shortDescription: v.string(),
     categoryId: v.id("merchCategories"),
     primaryImageAlt: v.string(),
+    primaryImageStorageId: v.optional(v.id("_storage")),
     defaultPointPrice: v.number(),
     releasePurchaseLimit: v.optional(v.number()),
     optionGroups: v.optional(
@@ -111,6 +150,9 @@ export const createProduct = mutation({
   },
   handler: async (ctx, args) => {
     const admin = await requireMerchCatalogAdmin(ctx, args.logtoId, args.authToken);
+    if (args.primaryImageStorageId) {
+      await validateProductImageStorage(ctx, args.primaryImageStorageId);
+    }
     const now = Date.now();
     const all = await ctx.db.query("merchProducts").collect();
     const maxOrder = all.reduce((max, p) => Math.max(max, p.sortOrder), 0);
@@ -119,6 +161,9 @@ export const createProduct = mutation({
       name: args.name.trim(),
       shortDescription: args.shortDescription.trim(),
       primaryImageAlt: args.primaryImageAlt.trim(),
+      ...(args.primaryImageStorageId && {
+        primaryImageStorageId: args.primaryImageStorageId,
+      }),
       categoryId: args.categoryId,
       featured: false,
       sortOrder: maxOrder + 1,
@@ -185,6 +230,32 @@ export const updateProduct = mutation({
     await requireMerchOfficer(ctx, args.logtoId, args.authToken);
     const { productId, logtoId: _l, authToken: _a, ...updates } = args;
     await ctx.db.patch(productId, { ...updates, updatedAt: Date.now() });
+  },
+});
+
+export const setProductImage = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    productId: v.id("merchProducts"),
+    primaryImageStorageId: v.id("_storage"),
+    primaryImageAlt: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireMerchCatalogAdmin(ctx, args.logtoId, args.authToken);
+    const product = await ctx.db.get(args.productId);
+    if (!product) throw new Error("Product not found");
+
+    await validateProductImageStorage(ctx, args.primaryImageStorageId);
+
+    const alt =
+      args.primaryImageAlt?.trim() || product.primaryImageAlt || product.name;
+
+    await ctx.db.patch(args.productId, {
+      primaryImageStorageId: args.primaryImageStorageId,
+      primaryImageAlt: alt,
+      updatedAt: Date.now(),
+    });
   },
 });
 
