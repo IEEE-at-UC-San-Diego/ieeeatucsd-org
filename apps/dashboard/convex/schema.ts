@@ -242,6 +242,8 @@ export default defineSchema({
     storeEnabled: v.boolean(),
     updatedAt: v.number(),
     updatedBy: v.optional(v.id("users")),
+    lastToggleReason: v.optional(v.string()),
+    lastReadinessCheckAt: v.optional(v.number()),
   }),
 
   merchCategories: defineTable({
@@ -1248,4 +1250,34 @@ export default defineSchema({
     .index("by_orderId", ["orderId"])
     .index("by_userId", ["userId"])
     .index("by_status", ["status"]),
+
+  merchPolicies: defineTable({
+    version: v.string(),
+    content: v.string(),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("published"),
+      v.literal("archived"),
+    ),
+    changeSummary: v.optional(v.string()),
+    effectiveAt: v.optional(v.number()),
+    requiresReacceptance: v.boolean(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    publishedBy: v.optional(v.id("users")),
+    publishedAt: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_version", ["version"]),
+
+  merchAnnouncements: defineTable({
+    message: v.string(),
+    linkUrl: v.optional(v.string()),
+    linkLabel: v.optional(v.string()),
+    activeFrom: v.optional(v.number()),
+    activeUntil: v.optional(v.number()),
+    active: v.boolean(),
+    createdBy: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_active", ["active"]),
 });

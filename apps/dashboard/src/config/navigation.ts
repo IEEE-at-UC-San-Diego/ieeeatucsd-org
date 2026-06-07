@@ -12,6 +12,7 @@ import {
 	Link as LinkIcon,
 	type LucideIcon,
 	MessageSquare,
+	Settings,
 	ShoppingBag,
 	Trophy,
 	UserPlus,
@@ -62,6 +63,8 @@ export const NAVIGATION_PATHS = {
 	MANAGE_STORE_INVENTORY: "/manage-store/inventory",
 	MANAGE_STORE_PICKUPS: "/manage-store/pickups",
 	MANAGE_STORE_ORDERS: "/manage-store/orders",
+	MANAGE_STORE_POLICIES: "/manage-store/policies",
+	MANAGE_STORE_SETTINGS: "/manage-store/settings",
 	MANAGE_STORE_POINTS: "/manage-store/points",
 } as const;
 
@@ -192,6 +195,16 @@ export const navigationCategories: NavigationCategory[] = [
 				label: "Manage Store Points",
 				href: NAVIGATION_PATHS.MANAGE_STORE_POINTS,
 			},
+			{
+				icon: FileText,
+				label: "Store Policies",
+				href: NAVIGATION_PATHS.MANAGE_STORE_POLICIES,
+			},
+			{
+				icon: Settings,
+				label: "Store Settings",
+				href: NAVIGATION_PATHS.MANAGE_STORE_SETTINGS,
+			},
 		],
 	},
 	{
@@ -240,6 +253,8 @@ export const PATH_LABELS: Record<string, string> = {
 	"/store/points": "Points",
 	"/manage-store/pickups": "Manage Store Pickups",
 	"/manage-store/orders": "Store Orders",
+	"/manage-store/policies": "Store Policies",
+	"/manage-store/settings": "Store Settings",
 	"/manage-store/points": "Manage Store Points",
 };
 
