@@ -1,3 +1,4 @@
+import { api } from "@convex/_generated/api";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, ChevronRight, LogOut, Settings } from "lucide-react";
 import { useState } from "react";
@@ -22,6 +23,7 @@ import {
 	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
+	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
@@ -32,9 +34,19 @@ import {
 	navigationCategories,
 } from "@/config/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthedQuery } from "@/hooks/useAuthedConvex";
 
 interface AppSidebarProps {
 	currentPath?: string;
+}
+
+function CartCountBadge({ canAccessStore }: { canAccessStore: boolean }) {
+	const cart = useAuthedQuery(
+		api.merch.cart.getCart,
+		canAccessStore ? undefined : "skip",
+	);
+	if (!cart || cart.itemCount <= 0) return null;
+	return <SidebarMenuBadge>{cart.itemCount}</SidebarMenuBadge>;
 }
 
 export function AppSidebar({ currentPath = "" }: AppSidebarProps) {
@@ -141,6 +153,11 @@ export function AppSidebar({ currentPath = "" }: AppSidebarProps) {
 															<span>{item.label}</span>
 														</Link>
 													</SidebarMenuButton>
+													{item.href === NAVIGATION_PATHS.STORE_CART && (
+														<CartCountBadge
+															canAccessStore={userRole !== "Sponsor"}
+														/>
+													)}
 												</SidebarMenuItem>
 											);
 										})}

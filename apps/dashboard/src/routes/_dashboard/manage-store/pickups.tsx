@@ -1,7 +1,7 @@
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { createFileRoute } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Loader2, ScanLine } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -506,6 +506,17 @@ function ManageStorePickupsPage() {
 											>
 												{option.status}
 											</Badge>
+											{option.status === "active" && (
+												<Link
+													to="/manage-store/pickup/$pickupId"
+													params={{ pickupId: option._id }}
+												>
+													<Button size="sm" variant="outline">
+														<ScanLine className="h-4 w-4 mr-1.5" />
+														Pickup mode
+													</Button>
+												</Link>
+											)}
 											{option.status === "active" && (
 												<Button
 													size="sm"

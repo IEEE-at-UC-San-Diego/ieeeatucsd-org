@@ -133,6 +133,86 @@ export const listStorefront = query({
   },
 });
 
+export const getStorefrontProduct = query({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    productId: v.id("merchProducts"),
+  },
+  handler: async (ctx, args) => {
+    await requireMerchOfficer(ctx, args.logtoId, args.authToken);
+    const settings = await getSettings(ctx);
+
+    const product = await ctx.db.get(args.productId);
+    if (!product || product.status !== "active") return null;
+
+    const releases = await ctx.db
+      .query("merchReleases")
+      .withIndex("by_productId", (q) => q.eq("productId", product._id))
+      .collect();
+    const activeRelease = releases.find((r) => r.status === "active");
+    if (!activeRelease) return null;
+
+    const variants = await ctx.db
+      .query("merchVariants")
+      .withIndex("by_releaseId", (q) => q.eq("releaseId", activeRelease._id))
+      .collect();
+
+    const enabledVariants = variants
+      .filter((variant) => variant.enabled)
+      .map((variant) => {
+        const available = Math.max(0, variant.onHand - variant.reserved);
+        return {
+          _id: variant._id,
+          sku: variant.sku,
+          label: variant.label,
+          optionValues: variant.optionValues,
+          pointPrice: variant.pointPriceOverride ?? activeRelease.defaultPointPrice,
+          available,
+          stockDisplay: getStockDisplay(available, variant.lowStockThreshold),
+        };
+      });
+
+    const primaryImageUrl = product.primaryImageStorageId
+      ? await ctx.storage.getUrl(product.primaryImageStorageId)
+      : null;
+
+    const additionalImages = await Promise.all(
+      (product.additionalImages ?? [])
+        .slice()
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map(async (image) => ({
+          alt: image.alt,
+          url: await ctx.storage.getUrl(image.storageId),
+        })),
+    );
+
+    return {
+      mode: settings.storeEnabled ? ("live" as const) : ("preview" as const),
+      product: {
+        _id: product._id,
+        name: product.name,
+        shortDescription: product.shortDescription,
+        detailedDescription: product.detailedDescription ?? null,
+        sizingGuide: product.sizingGuide ?? null,
+        fulfillmentNotes: product.fulfillmentNotes ?? null,
+        primaryImageUrl,
+        primaryImageAlt: product.primaryImageAlt,
+        additionalImages: additionalImages.filter(
+          (image): image is { alt: string; url: string } => image.url !== null,
+        ),
+      },
+      release: {
+        _id: activeRelease._id,
+        defaultPointPrice: activeRelease.defaultPointPrice,
+        releasePurchaseLimit: activeRelease.releasePurchaseLimit ?? null,
+        optionGroups: activeRelease.optionGroups,
+      },
+      variants: enabledVariants,
+    };
+  },
+});
+
 export const createProduct = mutation({
   args: {
     logtoId: v.string(),

@@ -1,6 +1,6 @@
 import { api } from "@convex/_generated/api";
-import { createFileRoute } from "@tanstack/react-router";
-import { Package, ShoppingBag } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Package, ShoppingBag, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthedQuery } from "@/hooks/useAuthedConvex";
@@ -25,6 +25,7 @@ function stockLabel(display: string) {
 
 function StorePage() {
 	const storefront = useAuthedQuery(api.merch.products.listStorefront);
+	const ledger = useAuthedQuery(api.pointLedger.getMyLedger);
 
 	if (storefront === undefined) {
 		return (
@@ -62,9 +63,20 @@ function StorePage() {
 							Exchange event points for IEEE UCSD merchandise.
 						</p>
 					</div>
-					{storefront.mode === "preview" && (
-						<Badge variant="secondary">Officer preview</Badge>
-					)}
+					<div className="flex items-center gap-3 shrink-0">
+						{ledger && (
+							<div className="rounded-lg border bg-white px-4 py-2 flex items-center gap-2 shadow-sm">
+								<Wallet className="h-4 w-4 text-muted-foreground" />
+								<span className="text-sm text-muted-foreground">Spendable</span>
+								<span className="font-bold tabular-nums">
+									{ledger.totals.spendablePoints} pts
+								</span>
+							</div>
+						)}
+						{storefront.mode === "preview" && (
+							<Badge variant="secondary">Officer preview</Badge>
+						)}
+					</div>
 				</div>
 
 				{storefront.products.length === 0 ? (
@@ -75,9 +87,11 @@ function StorePage() {
 				) : (
 					<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 						{storefront.products.map((product) => (
-							<div
+							<Link
 								key={product._id}
-								className="rounded-xl border bg-white overflow-hidden shadow-sm"
+								to="/store/products/$productId"
+								params={{ productId: product._id }}
+								className="rounded-xl border bg-white overflow-hidden shadow-sm transition-shadow hover:shadow-md"
 							>
 								<div className="aspect-square bg-gray-100 flex items-center justify-center">
 									{product.imageUrl ? (
@@ -111,7 +125,7 @@ function StorePage() {
 										</span>
 									</div>
 								</div>
-							</div>
+							</Link>
 						))}
 					</div>
 				)}

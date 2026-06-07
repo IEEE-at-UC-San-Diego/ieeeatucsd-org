@@ -1,11 +1,12 @@
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Loader2, MapPin, Package, QrCode } from "lucide-react";
+import { AlertTriangle, Loader2, MapPin, Package, QrCode } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -14,6 +15,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
@@ -43,10 +45,26 @@ function StoreOrderDetailPage() {
 	);
 	const cancelOrder = useAuthedMutation(api.merch.orders.cancelOrder);
 	const changePickup = useAuthedMutation(api.merch.orders.changePickup);
+	const substitutions = useAuthedQuery(api.merch.substitutions.listForOrder, {
+		orderId: orderId as Id<"merchOrders">,
+	});
+	const issues = useAuthedQuery(api.merch.pickupIssues.listForOrder, {
+		orderId: orderId as Id<"merchOrders">,
+	});
+	const acceptSubstitution = useAuthedMutation(api.merch.substitutions.accept);
+	const declineSubstitution = useAuthedMutation(api.merch.substitutions.decline);
+	const reportIssue = useAuthedMutation(api.merch.pickupIssues.memberReport);
 
 	const [newPickupOptionId, setNewPickupOptionId] = useState("");
 	const [canceling, setCanceling] = useState(false);
 	const [changingPickup, setChangingPickup] = useState(false);
+	const [respondingId, setRespondingId] =
+		useState<Id<"merchSubstitutionProposals"> | null>(null);
+	const [showReportForm, setShowReportForm] = useState(false);
+	const [issueType, setIssueType] = useState("missing_item");
+	const [issueDescription, setIssueDescription] = useState("");
+	const [issueItemIds, setIssueItemIds] = useState<Id<"merchOrderItems">[]>([]);
+	const [reporting, setReporting] = useState(false);
 
 	if (orderData === undefined) {
 		return (
@@ -58,6 +76,77 @@ function StoreOrderDetailPage() {
 	}
 
 	const { order, items, auditLog } = orderData;
+
+	const pendingProposals = (substitutions ?? []).filter(
+		(proposal) => proposal.status === "pending",
+	);
+
+	const handleAcceptSubstitution = async (
+		proposalId: Id<"merchSubstitutionProposals">,
+	) => {
+		setRespondingId(proposalId);
+		try {
+			await acceptSubstitution({
+				proposalId,
+				idempotencyKey: `sub-accept:${proposalId}:${crypto.randomUUID()}`,
+			});
+			toast.success("Substitution accepted");
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : "Failed");
+		} finally {
+			setRespondingId(null);
+		}
+	};
+
+	const handleDeclineSubstitution = async (
+		proposalId: Id<"merchSubstitutionProposals">,
+	) => {
+		setRespondingId(proposalId);
+		try {
+			await declineSubstitution({
+				proposalId,
+				idempotencyKey: `sub-decline:${proposalId}:${crypto.randomUUID()}`,
+			});
+			toast.success("Substitution declined");
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : "Failed");
+		} finally {
+			setRespondingId(null);
+		}
+	};
+
+	const handleReportIssue = async () => {
+		if (issueItemIds.length === 0) {
+			toast.error("Select at least one item");
+			return;
+		}
+		if (!issueDescription.trim()) {
+			toast.error("Describe the problem");
+			return;
+		}
+		setReporting(true);
+		try {
+			await reportIssue({
+				orderId: order._id,
+				orderItemIds: issueItemIds,
+				issueType: issueType as
+					| "missing_item"
+					| "wrong_variant"
+					| "damaged_item"
+					| "pickup_marked_incorrectly"
+					| "other",
+				description: issueDescription.trim(),
+			});
+			toast.success("Problem reported");
+			setShowReportForm(false);
+			setIssueDescription("");
+			setIssueItemIds([]);
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : "Failed to report");
+		} finally {
+			setReporting(false);
+		}
+	};
 
 	const handleCancel = async () => {
 		setCanceling(true);
@@ -257,6 +346,142 @@ function StoreOrderDetailPage() {
 						)}
 					</Button>
 				)}
+
+				{pendingProposals.length > 0 && (
+					<div className="rounded-xl border border-amber-200 bg-amber-50 p-5 space-y-3">
+						<h2 className="font-semibold">Substitution proposals</h2>
+						{pendingProposals.map((proposal) => (
+							<div
+								key={proposal._id}
+								className="rounded-lg border bg-white p-4 space-y-3"
+							>
+								<p className="text-sm">
+									An officer proposed a replacement for {proposal.quantity} unit
+									{proposal.quantity === 1 ? "" : "s"}.{" "}
+									{proposal.priceDifference > 0
+										? `You will be charged ${proposal.priceDifference} extra pts.`
+										: proposal.priceDifference < 0
+											? `You will be refunded ${Math.abs(proposal.priceDifference)} pts.`
+											: "No price change."}
+								</p>
+								<div className="flex gap-2">
+									<Button
+										size="sm"
+										disabled={respondingId === proposal._id}
+										onClick={() => handleAcceptSubstitution(proposal._id)}
+									>
+										Accept
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										disabled={respondingId === proposal._id}
+										onClick={() => handleDeclineSubstitution(proposal._id)}
+									>
+										Decline
+									</Button>
+								</div>
+							</div>
+						))}
+					</div>
+				)}
+
+				<div className="rounded-xl border bg-white p-5 shadow-sm space-y-3">
+					<div className="flex items-center justify-between">
+						<h2 className="font-semibold flex items-center gap-2">
+							<AlertTriangle className="h-4 w-4 text-muted-foreground" />
+							Report a problem
+						</h2>
+						{!showReportForm && (
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => setShowReportForm(true)}
+							>
+								Report
+							</Button>
+						)}
+					</div>
+
+					{(issues ?? []).length > 0 && (
+						<ul className="text-sm space-y-1">
+							{(issues ?? []).map((issue) => (
+								<li key={issue._id} className="text-muted-foreground">
+									{issue.issueType.replace(/_/g, " ")} —{" "}
+									<span className="capitalize">{issue.status}</span>
+								</li>
+							))}
+						</ul>
+					)}
+
+					{showReportForm && (
+						<div className="space-y-3 pt-2 border-t">
+							<div className="space-y-2">
+								<Label>Issue type</Label>
+								<Select value={issueType} onValueChange={setIssueType}>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="missing_item">Missing item</SelectItem>
+										<SelectItem value="wrong_variant">Wrong variant</SelectItem>
+										<SelectItem value="damaged_item">Damaged item</SelectItem>
+										<SelectItem value="pickup_marked_incorrectly">
+											Pickup marked incorrectly
+										</SelectItem>
+										<SelectItem value="other">Other</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="space-y-2">
+								<Label>Affected items</Label>
+								<div className="space-y-1">
+									{items.map((item) => (
+										<label
+											key={item._id}
+											className="flex items-center gap-2 text-sm"
+										>
+											<input
+												type="checkbox"
+												checked={issueItemIds.includes(item._id)}
+												onChange={(e) =>
+													setIssueItemIds((prev) =>
+														e.target.checked
+															? [...prev, item._id]
+															: prev.filter((id) => id !== item._id),
+													)
+												}
+											/>
+											{item.productName} ({item.variantLabel})
+										</label>
+									))}
+								</div>
+							</div>
+							<div className="space-y-2">
+								<Label>Description</Label>
+								<Textarea
+									value={issueDescription}
+									onChange={(e) => setIssueDescription(e.target.value)}
+									placeholder="What went wrong?"
+								/>
+							</div>
+							<div className="flex gap-2">
+								<Button onClick={handleReportIssue} disabled={reporting}>
+									{reporting ? (
+										<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+									) : null}
+									Submit report
+								</Button>
+								<Button
+									variant="ghost"
+									onClick={() => setShowReportForm(false)}
+								>
+									Cancel
+								</Button>
+							</div>
+						</div>
+					)}
+				</div>
 
 				{auditLog.length > 0 && (
 					<div className="rounded-xl border bg-white p-5 shadow-sm">
