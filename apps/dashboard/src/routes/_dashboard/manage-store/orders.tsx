@@ -1,7 +1,8 @@
 import { api } from "@convex/_generated/api";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useState } from "react";
+import { OfficerOrderForm } from "@/components/dashboard/store/OfficerOrderForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,9 +33,10 @@ function statusVariant(status: string) {
 }
 
 function ManageStoreOrdersPage() {
-	const { hasOfficerAccess, logtoId } = usePermissions();
+	const { hasOfficerAccess, hasAdminAccess, logtoId } = usePermissions();
 	const [search, setSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState("");
+	const [showOrderForm, setShowOrderForm] = useState(false);
 
 	const orders = useAuthedQuery(
 		api.merch.fulfillment.listOrdersForOfficer,
@@ -56,12 +58,26 @@ function ManageStoreOrdersPage() {
 	return (
 		<div className="flex-1 overflow-auto bg-[#F8F9FB] min-h-screen">
 			<main className="max-w-5xl mx-auto px-5 py-10 space-y-6">
-				<div>
-					<h1 className="text-[34px] font-bold tracking-[-0.5px]">Orders</h1>
-					<p className="text-muted-foreground mt-1">
-						Fulfillment queue for merchandise orders.
-					</p>
+				<div className="flex items-start justify-between gap-4">
+					<div>
+						<h1 className="text-[34px] font-bold tracking-[-0.5px]">Orders</h1>
+						<p className="text-muted-foreground mt-1">
+							Fulfillment queue for merchandise orders.
+						</p>
+					</div>
+					<Button onClick={() => setShowOrderForm((open) => !open)}>
+						<Plus className="h-4 w-4 mr-2" />
+						Officer order
+					</Button>
 				</div>
+
+				{showOrderForm && logtoId && (
+					<OfficerOrderForm
+						logtoId={logtoId}
+						canCreateComplimentary={hasAdminAccess}
+						onClose={() => setShowOrderForm(false)}
+					/>
+				)}
 
 				<div className="flex flex-col sm:flex-row gap-3">
 					<div className="relative flex-1">
