@@ -11,6 +11,7 @@ import {
   validateAndBuildResume,
 } from "./resume";
 import { buildAuthUpsertResult } from "./userProvisioning";
+import { getUserPointTotals } from "./points/helpers";
 
 const FISCAL_YEAR_START_MONTH = 6; // July
 const FISCAL_MONTH_LABELS = [
@@ -885,13 +886,21 @@ export const getOverviewData = query({
     const allUsers = await ctx.db.query("users").collect();
     const activeUsers = allUsers
       .filter((u) => u.signedUp && u.status === "active")
-      .sort((a, b) => (b.points || 0) - (a.points || 0));
+      .sort(
+        (a, b) =>
+          getUserPointTotals(b).lifetimePointsEarned -
+          getUserPointTotals(a).lifetimePointsEarned,
+      );
     const rank = activeUsers.findIndex((u) => u._id === user._id) + 1;
+
+    const totals = getUserPointTotals(user);
 
     return {
       user: {
         name: user.name,
-        points: user.points || 0,
+        points: totals.lifetimePointsEarned,
+        spendablePoints: totals.spendablePoints,
+        pendingPointCorrection: totals.pendingPointCorrection,
         eventsAttended: user.eventsAttended || 0,
         role: user.role,
         joinDate: user.joinDate,
@@ -916,15 +925,18 @@ export const getLeaderboard = query({
     const users = await ctx.db.query("users").collect();
     return users
       .filter((u) => u.signedUp && u.status === "active")
-      .map((u) => ({
-        _id: u._id,
-        name: u.name,
-        points: u.points || 0,
-        eventsAttended: u.eventsAttended || 0,
-        major: u.major,
-        graduationYear: u.graduationYear,
-        avatar: u.avatar,
-      }))
+      .map((u) => {
+        const totals = getUserPointTotals(u);
+        return {
+          _id: u._id,
+          name: u.name,
+          points: totals.lifetimePointsEarned,
+          eventsAttended: u.eventsAttended || 0,
+          major: u.major,
+          graduationYear: u.graduationYear,
+          avatar: u.avatar,
+        };
+      })
       .sort((a, b) => b.points - a.points);
   },
 });

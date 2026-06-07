@@ -181,6 +181,12 @@ export default defineSchema({
     joinDate: v.number(),
     eventsAttended: v.optional(v.number()),
     points: v.optional(v.number()),
+    lifetimePointsEarned: v.optional(v.number()),
+    spendablePoints: v.optional(v.number()),
+    pendingPointCorrection: v.optional(v.number()),
+    merchPolicyAcceptedAt: v.optional(v.number()),
+    merchPolicyVersion: v.optional(v.string()),
+    merchReminderEmailsEnabled: v.optional(v.boolean()),
     team: v.optional(officerTeam),
     invitedBy: v.optional(v.string()),
     inviteAccepted: v.optional(v.number()),
@@ -201,7 +207,36 @@ export default defineSchema({
     .index("by_logtoId", ["logtoId"])
     .index("by_email", ["email"])
     .index("by_role", ["role"])
-    .index("by_points", ["points"]),
+    .index("by_points", ["points"])
+    .index("by_lifetimePointsEarned", ["lifetimePointsEarned"]),
+
+  pointLedger: defineTable({
+    userId: v.id("users"),
+    spendableAmount: v.number(),
+    lifetimeAmount: v.optional(v.number()),
+    category: v.union(
+      v.literal("opening_balance_migration"),
+      v.literal("event_attendance_award"),
+      v.literal("attendance_reversal"),
+      v.literal("merchandise_purchase"),
+      v.literal("merchandise_refund"),
+      v.literal("officer_award"),
+      v.literal("officer_correction"),
+      v.literal("pending_correction_repayment"),
+    ),
+    sourceType: v.string(),
+    sourceId: v.string(),
+    publicDescription: v.string(),
+    privateNote: v.optional(v.string()),
+    actorUserId: v.optional(v.id("users")),
+    actorLabel: v.string(),
+    timestamp: v.number(),
+    reversesLedgerEntryId: v.optional(v.id("pointLedger")),
+    idempotencyKey: v.string(),
+  })
+    .index("by_userId_timestamp", ["userId", "timestamp"])
+    .index("by_idempotencyKey", ["idempotencyKey"])
+    .index("by_source", ["sourceType", "sourceId"]),
 
   publicProfiles: defineTable({
     userId: v.id("users"),

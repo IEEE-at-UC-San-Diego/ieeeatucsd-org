@@ -15,6 +15,7 @@ import {
   generateGoogleCalendarEventId,
 } from "./googleCalendarIds";
 import { assertValidEventTimeRange } from "./eventTimeRange";
+import { awardEventAttendancePoints } from "./points/service";
 
 function getLegacyAttendeeIds(event: Record<string, unknown>): string[] {
   const legacy = (event as { attendees?: unknown }).attendees;
@@ -820,10 +821,16 @@ export const checkIn = mutation({
       pointsEarned: event.pointsToReward ?? 0,
     });
 
-    // Update user points and events attended
     const pts = event.pointsToReward ?? 0;
+    await awardEventAttendancePoints(ctx, {
+      userId: user._id,
+      amount: pts,
+      eventId: event._id,
+      eventName: event.eventName,
+      idempotencyKey: `checkin:${event._id}:${userId}`,
+    });
+
     await ctx.db.patch(user._id, {
-      points: (user.points || 0) + pts,
       eventsAttended: (user.eventsAttended || 0) + 1,
     });
 

@@ -4,6 +4,7 @@ import {
 	Building2,
 	Calendar,
 	ClipboardList,
+	Coins,
 	CreditCard,
 	DollarSign,
 	FileText,
@@ -11,6 +12,7 @@ import {
 	Link as LinkIcon,
 	type LucideIcon,
 	MessageSquare,
+	ShoppingBag,
 	Trophy,
 	UserPlus,
 	Users,
@@ -51,6 +53,8 @@ export const NAVIGATION_PATHS = {
 	SIGNOUT: "/signout",
 	GET_STARTED: "/get-started",
 	OFFICER_CALENDAR: "/officer-calendar",
+	STORE_POINTS: "/store/points",
+	MANAGE_STORE_POINTS: "/manage-store/points",
 } as const;
 
 export type NavigationPath =
@@ -72,6 +76,11 @@ export const navigationCategories: NavigationCategory[] = [
 				icon: Trophy,
 				label: "Leaderboard",
 				href: NAVIGATION_PATHS.LEADERBOARD,
+			},
+			{
+				icon: Coins,
+				label: "Points",
+				href: NAVIGATION_PATHS.STORE_POINTS,
 			},
 		],
 	},
@@ -140,6 +149,11 @@ export const navigationCategories: NavigationCategory[] = [
 				label: "Executive Analytics",
 				href: NAVIGATION_PATHS.EXECUTIVE_ANALYTICS,
 			},
+			{
+				icon: ShoppingBag,
+				label: "Manage Store Points",
+				href: NAVIGATION_PATHS.MANAGE_STORE_POINTS,
+			},
 		],
 	},
 	{
@@ -181,6 +195,8 @@ export const PATH_LABELS: Record<string, string> = {
 	"/settings": "Settings",
 	"/get-started": "Get Started",
 	"/officer-calendar": "Officer Calendar",
+	"/store/points": "Points",
+	"/manage-store/points": "Manage Store Points",
 };
 
 export const LEGAL_VERSIONS = {
