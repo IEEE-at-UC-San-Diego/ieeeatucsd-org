@@ -34,6 +34,36 @@ export const listPending = query({
   },
 });
 
+export const listAwaitingInspection = query({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireMerchOfficer(ctx, args.logtoId, args.authToken);
+    const limit = args.limit ?? 50;
+
+    const received = await ctx.db
+      .query("merchReturns")
+      .withIndex("by_status", (q) => q.eq("status", "received"))
+      .take(limit);
+
+    return Promise.all(
+      received.map(async (ret) => {
+        const order = await ctx.db.get(ret.orderId);
+        const item = await ctx.db.get(ret.orderItemId);
+        return {
+          ...ret,
+          displayNumber: order?.displayNumber,
+          productName: item?.productName,
+          variantLabel: item?.variantLabel,
+        };
+      }),
+    );
+  },
+});
+
 export const receiveReturn = mutation({
   args: {
     logtoId: v.string(),

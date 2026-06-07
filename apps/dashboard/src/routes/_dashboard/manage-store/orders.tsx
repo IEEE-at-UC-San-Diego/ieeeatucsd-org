@@ -2,6 +2,7 @@ import { api } from "@convex/_generated/api";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus, Search } from "lucide-react";
 import { useState } from "react";
+import { OfficerOrderActions } from "@/components/dashboard/store/OfficerOrderActions";
 import { OfficerOrderForm } from "@/components/dashboard/store/OfficerOrderForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ function ManageStoreOrdersPage() {
 	const [search, setSearch] = useState("");
 	const [statusFilter, setStatusFilter] = useState("");
 	const [showOrderForm, setShowOrderForm] = useState(false);
+	const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
 	const orders = useAuthedQuery(
 		api.merch.fulfillment.listOrdersForOfficer,
@@ -126,9 +128,22 @@ function ManageStoreOrdersPage() {
 											Placed {formatDateTime(order.createdAt)}
 										</p>
 									</div>
-									<Badge variant={statusVariant(order.status)}>
-										{order.status.replaceAll("_", " ")}
-									</Badge>
+									<div className="flex flex-col items-end gap-2 shrink-0">
+										<Badge variant={statusVariant(order.status)}>
+											{order.status.replaceAll("_", " ")}
+										</Badge>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() =>
+												setExpandedOrderId((prev) =>
+													prev === order._id ? null : order._id,
+												)
+											}
+										>
+											{expandedOrderId === order._id ? "Hide actions" : "Actions"}
+										</Button>
+									</div>
 								</div>
 								<ul className="text-sm space-y-1 pl-2 border-l-2">
 									{order.items.map((item) => (
@@ -141,6 +156,9 @@ function ManageStoreOrdersPage() {
 										</li>
 									))}
 								</ul>
+								{expandedOrderId === order._id && (
+									<OfficerOrderActions order={order} />
+								)}
 							</li>
 						))}
 					</ul>
