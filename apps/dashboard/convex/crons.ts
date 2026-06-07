@@ -21,4 +21,10 @@ crons.daily(
   internal.merch.pickupJobs.processClosedPickups,
 );
 
+crons.interval(
+  "expire merch substitution proposals",
+  { hours: 1 },
+  internal.merch.substitutions.expire,
+);
+
 export default crons;

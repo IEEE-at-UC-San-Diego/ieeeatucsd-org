@@ -1162,4 +1162,90 @@ export default defineSchema({
     year: v.number(),
     lastSequence: v.number(),
   }).index("by_year", ["year"]),
+
+  merchSubstitutionProposals: defineTable({
+    orderId: v.id("merchOrders"),
+    orderItemId: v.id("merchOrderItems"),
+    originalVariantId: v.id("merchVariants"),
+    replacementVariantId: v.id("merchVariants"),
+    quantity: v.number(),
+    priceDifference: v.number(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("accepted"),
+      v.literal("declined"),
+      v.literal("expired"),
+    ),
+    proposedBy: v.id("users"),
+    proposedAt: v.number(),
+    expiresAt: v.number(),
+    respondedAt: v.optional(v.number()),
+    idempotencyKey: v.string(),
+  })
+    .index("by_orderItemId", ["orderItemId"])
+    .index("by_status_expiresAt", ["status", "expiresAt"])
+    .index("by_idempotencyKey", ["idempotencyKey"]),
+
+  merchReturns: defineTable({
+    orderId: v.id("merchOrders"),
+    orderItemId: v.id("merchOrderItems"),
+    quantity: v.number(),
+    status: v.union(
+      v.literal("pending_return"),
+      v.literal("received"),
+      v.literal("restocked"),
+      v.literal("written_off"),
+    ),
+    returnRequired: v.boolean(),
+    conditionNote: v.optional(v.string()),
+    photoStorageId: v.optional(v.id("_storage")),
+    refundAmount: v.number(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+    receivedBy: v.optional(v.id("users")),
+    receivedAt: v.optional(v.number()),
+    inspectedBy: v.optional(v.id("users")),
+    inspectedAt: v.optional(v.number()),
+    idempotencyKey: v.string(),
+  })
+    .index("by_orderId", ["orderId"])
+    .index("by_status", ["status"])
+    .index("by_idempotencyKey", ["idempotencyKey"]),
+
+  merchPickupIssues: defineTable({
+    orderId: v.id("merchOrders"),
+    orderItemIds: v.array(v.id("merchOrderItems")),
+    userId: v.id("users"),
+    issueType: v.union(
+      v.literal("missing_item"),
+      v.literal("wrong_variant"),
+      v.literal("damaged_item"),
+      v.literal("pickup_marked_incorrectly"),
+      v.literal("other"),
+    ),
+    description: v.string(),
+    photoStorageId: v.optional(v.id("_storage")),
+    status: v.union(
+      v.literal("open"),
+      v.literal("investigating"),
+      v.literal("resolved"),
+      v.literal("no_action"),
+    ),
+    resolution: v.optional(
+      v.union(
+        v.literal("no_action"),
+        v.literal("replacement"),
+        v.literal("partial_refund"),
+        v.literal("full_item_refund"),
+        v.literal("correct_fulfillment_record"),
+      ),
+    ),
+    reportedAt: v.number(),
+    resolvedBy: v.optional(v.id("users")),
+    resolvedAt: v.optional(v.number()),
+    resolutionNote: v.optional(v.string()),
+  })
+    .index("by_orderId", ["orderId"])
+    .index("by_userId", ["userId"])
+    .index("by_status", ["status"]),
 });
