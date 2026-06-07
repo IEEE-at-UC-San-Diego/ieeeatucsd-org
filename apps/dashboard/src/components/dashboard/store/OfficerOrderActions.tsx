@@ -47,7 +47,9 @@ export function OfficerOrderActions({ order }: { order: OfficerOrder }) {
 		api.merch.refunds.refundOrderItems,
 	);
 	const refundFullOrder = useAuthedMutation(api.merch.refunds.refundFullOrder);
-	const proposeSubstitution = useAuthedMutation(api.merch.substitutions.propose);
+	const proposeSubstitution = useAuthedMutation(
+		api.merch.substitutions.propose,
+	);
 	const resolveIssue = useAuthedMutation(api.merch.pickupIssues.officerResolve);
 
 	const requireReason = () => {
@@ -219,7 +221,8 @@ export function OfficerOrderActions({ order }: { order: OfficerOrder }) {
 					{order.items
 						.filter(
 							(item) =>
-								item.status === "confirmed" || item.status === "action_required",
+								item.status === "confirmed" ||
+								item.status === "action_required",
 						)
 						.map((item) => (
 							<option key={item._id} value={item._id}>

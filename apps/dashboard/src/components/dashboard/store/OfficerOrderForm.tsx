@@ -328,7 +328,10 @@ export function OfficerOrderForm({
 												l.variantId === line.variantId
 													? {
 															...l,
-															quantity: Math.max(1, Number(e.target.value) || 1),
+															quantity: Math.max(
+																1,
+																Number(e.target.value) || 1,
+															),
 														}
 													: l,
 											),

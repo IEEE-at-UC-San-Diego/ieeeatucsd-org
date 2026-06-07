@@ -35,10 +35,13 @@ function StoreCheckoutPage() {
 		api.merch.checkout.listCompatiblePickupOptions,
 	);
 	const confirmCheckout = useAuthedMutation(api.merch.checkout.confirmCheckout);
+	const publishedPolicy = useAuthedQuery(api.merch.policies.getPublished);
+	const acceptPolicy = useAuthedMutation(api.merch.policies.accept);
 
 	const [pickupOptionId, setPickupOptionId] = useState("");
 	const [acceptRevised, setAcceptRevised] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
+	const [acceptingPolicy, setAcceptingPolicy] = useState(false);
 
 	const validation = useAuthedQuery(
 		api.merch.checkout.validateCheckout,
@@ -72,11 +75,35 @@ function StoreCheckoutPage() {
 		);
 	}
 
+	const storeDisabled = validation ? validation.storeEnabled === false : false;
+	const needsPolicyAcceptance = Boolean(
+		validation &&
+			!validation.policyAccepted &&
+			validation.publishedPolicyVersion,
+	);
+
+	const handleAcceptPolicy = async () => {
+		if (!validation?.publishedPolicyVersion) return;
+		setAcceptingPolicy(true);
+		try {
+			await acceptPolicy({ policyVersion: validation.publishedPolicyVersion });
+			toast.success("Policy accepted");
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Failed to accept policy",
+			);
+		} finally {
+			setAcceptingPolicy(false);
+		}
+	};
+
 	const canSubmit =
 		pickupOptionId &&
 		validation &&
 		validation.validLines.length > 0 &&
 		!validation.insufficientPoints &&
+		!storeDisabled &&
+		!needsPolicyAcceptance &&
 		(validation.ready || (validation.requiresConfirmation && acceptRevised));
 
 	const handleConfirm = async () => {
@@ -178,6 +205,35 @@ function StoreCheckoutPage() {
 						<span className="tabular-nums">{cart.pointTotal} pts</span>
 					</div>
 				</div>
+
+				{storeDisabled && (
+					<div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 flex gap-2">
+						<AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+						<p>
+							The merch store is not currently open for checkout. Orders cannot
+							be placed yet.
+						</p>
+					</div>
+				)}
+
+				{needsPolicyAcceptance && (
+					<div className="rounded-xl border bg-white p-5 shadow-sm space-y-3">
+						<h2 className="font-semibold">Merch store policy</h2>
+						<div className="max-h-60 overflow-auto rounded-md border bg-gray-50 p-3 text-sm whitespace-pre-line">
+							{publishedPolicy?.content ?? "Loading policy…"}
+						</div>
+						<label className="flex items-center gap-2 text-sm">
+							<input
+								type="checkbox"
+								checked={false}
+								disabled={acceptingPolicy || !publishedPolicy}
+								onChange={handleAcceptPolicy}
+							/>
+							I have read and accept the merch store policy (v
+							{validation?.publishedPolicyVersion}).
+						</label>
+					</div>
+				)}
 
 				{validation && pickupOptionId && (
 					<div className="space-y-3">

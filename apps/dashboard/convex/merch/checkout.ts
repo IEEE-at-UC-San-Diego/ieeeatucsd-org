@@ -52,6 +52,28 @@ type ValidationIssue = {
   allowedQuantity: number;
 };
 
+async function getCheckoutGuards(ctx: QueryCtx, user: Doc<"users">) {
+  const settings = await ctx.db.query("merchSettings").first();
+  const storeEnabled = settings?.storeEnabled ?? false;
+
+  const now = Date.now();
+  const published = (
+    await ctx.db
+      .query("merchPolicies")
+      .withIndex("by_status", (q) => q.eq("status", "published"))
+      .collect()
+  )
+    .filter((policy) => (policy.effectiveAt ?? 0) <= now)
+    .sort((a, b) => (b.effectiveAt ?? 0) - (a.effectiveAt ?? 0))[0];
+
+  const publishedPolicyVersion = published?.version ?? null;
+  const policyAccepted =
+    publishedPolicyVersion === null ||
+    user.merchPolicyVersion === publishedPolicyVersion;
+
+  return { storeEnabled, publishedPolicyVersion, policyAccepted };
+}
+
 async function validateCheckoutLines(
   ctx: QueryCtx,
   userId: Id<"users">,
@@ -182,11 +204,16 @@ export const validateCheckout = query({
 
     const cartItems = args.items ?? cart?.items ?? [];
     if (cartItems.length === 0) {
+      const guards = await getCheckoutGuards(ctx, user);
       return {
         ready: false,
         requiresConfirmation: false,
+        storeEnabled: guards.storeEnabled,
+        policyAccepted: guards.policyAccepted,
+        publishedPolicyVersion: guards.publishedPolicyVersion,
         pointTotal: 0,
         spendablePoints: getUserPointTotals(user).spendablePoints,
+        insufficientPoints: false,
         issues: [{ code: "empty_cart", message: "Cart is empty" }],
         validLines: [],
         pickup: null,
@@ -200,15 +227,21 @@ export const validateCheckout = query({
       args.pickupOptionId,
     );
     const totals = getUserPointTotals(user);
+    const guards = await getCheckoutGuards(ctx, user);
     const requiresConfirmation = result.issues.length > 0;
     const ready =
       result.validLines.length > 0 &&
       !requiresConfirmation &&
-      totals.spendablePoints >= result.pointTotal;
+      totals.spendablePoints >= result.pointTotal &&
+      guards.storeEnabled &&
+      guards.policyAccepted;
 
     return {
       ready,
       requiresConfirmation,
+      storeEnabled: guards.storeEnabled,
+      policyAccepted: guards.policyAccepted,
+      publishedPolicyVersion: guards.publishedPolicyVersion,
       pointTotal: result.pointTotal,
       spendablePoints: totals.spendablePoints,
       insufficientPoints: totals.spendablePoints < result.pointTotal,
@@ -300,6 +333,14 @@ export const confirmCheckout = mutation({
       .first();
     if (existingOrder) {
       return { orderId: existingOrder._id, displayNumber: existingOrder.displayNumber };
+    }
+
+    const guards = await getCheckoutGuards(ctx, user);
+    if (!guards.storeEnabled) {
+      throw new Error("The merch store is not currently open for checkout");
+    }
+    if (!guards.policyAccepted) {
+      throw new Error("You must accept the current merch policy before checking out");
     }
 
     const cart = await ctx.db

@@ -63,6 +63,7 @@ import { Route as DashboardStoreCartRouteImport } from './routes/_dashboard/stor
 import { Route as DashboardSponsorsResumeDatabaseRouteImport } from './routes/_dashboard/sponsors/resume-database'
 import { Route as DashboardSponsorsInformationRouteImport } from './routes/_dashboard/sponsors/information'
 import { Route as DashboardManageStoreSettingsRouteImport } from './routes/_dashboard/manage-store/settings'
+import { Route as DashboardManageStoreReturnsRouteImport } from './routes/_dashboard/manage-store/returns'
 import { Route as DashboardManageStoreProductsRouteImport } from './routes/_dashboard/manage-store/products'
 import { Route as DashboardManageStorePoliciesRouteImport } from './routes/_dashboard/manage-store/policies'
 import { Route as DashboardManageStorePointsRouteImport } from './routes/_dashboard/manage-store/points'
@@ -70,6 +71,7 @@ import { Route as DashboardManageStorePickupsRouteImport } from './routes/_dashb
 import { Route as DashboardManageStoreOrdersRouteImport } from './routes/_dashboard/manage-store/orders'
 import { Route as DashboardManageStoreInventoryRouteImport } from './routes/_dashboard/manage-store/inventory'
 import { Route as DashboardStoreOrdersIndexRouteImport } from './routes/_dashboard/store/orders/index'
+import { Route as DashboardStoreProductsProductIdRouteImport } from './routes/_dashboard/store/products/$productId'
 import { Route as DashboardStoreOrdersOrderIdRouteImport } from './routes/_dashboard/store/orders/$orderId'
 import { Route as DashboardManageStorePickupPickupIdRouteImport } from './routes/_dashboard/manage-store/pickup/$pickupId'
 
@@ -359,6 +361,12 @@ const DashboardManageStoreSettingsRoute =
     path: '/manage-store/settings',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardManageStoreReturnsRoute =
+  DashboardManageStoreReturnsRouteImport.update({
+    id: '/manage-store/returns',
+    path: '/manage-store/returns',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardManageStoreProductsRoute =
   DashboardManageStoreProductsRouteImport.update({
     id: '/manage-store/products',
@@ -399,6 +407,12 @@ const DashboardStoreOrdersIndexRoute =
   DashboardStoreOrdersIndexRouteImport.update({
     id: '/store/orders/',
     path: '/store/orders/',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardStoreProductsProductIdRoute =
+  DashboardStoreProductsProductIdRouteImport.update({
+    id: '/store/products/$productId',
+    path: '/store/products/$productId',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardStoreOrdersOrderIdRoute =
@@ -454,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/manage-store/points': typeof DashboardManageStorePointsRoute
   '/manage-store/policies': typeof DashboardManageStorePoliciesRoute
   '/manage-store/products': typeof DashboardManageStoreProductsRoute
+  '/manage-store/returns': typeof DashboardManageStoreReturnsRoute
   '/manage-store/settings': typeof DashboardManageStoreSettingsRoute
   '/sponsors/information': typeof DashboardSponsorsInformationRoute
   '/sponsors/resume-database': typeof DashboardSponsorsResumeDatabaseRoute
@@ -476,6 +491,7 @@ export interface FileRoutesByFullPath {
   '/store/': typeof DashboardStoreIndexRoute
   '/manage-store/pickup/$pickupId': typeof DashboardManageStorePickupPickupIdRoute
   '/store/orders/$orderId': typeof DashboardStoreOrdersOrderIdRoute
+  '/store/products/$productId': typeof DashboardStoreProductsProductIdRoute
   '/store/orders/': typeof DashboardStoreOrdersIndexRoute
 }
 export interface FileRoutesByTo {
@@ -518,6 +534,7 @@ export interface FileRoutesByTo {
   '/manage-store/points': typeof DashboardManageStorePointsRoute
   '/manage-store/policies': typeof DashboardManageStorePoliciesRoute
   '/manage-store/products': typeof DashboardManageStoreProductsRoute
+  '/manage-store/returns': typeof DashboardManageStoreReturnsRoute
   '/manage-store/settings': typeof DashboardManageStoreSettingsRoute
   '/sponsors/information': typeof DashboardSponsorsInformationRoute
   '/sponsors/resume-database': typeof DashboardSponsorsResumeDatabaseRoute
@@ -540,6 +557,7 @@ export interface FileRoutesByTo {
   '/store': typeof DashboardStoreIndexRoute
   '/manage-store/pickup/$pickupId': typeof DashboardManageStorePickupPickupIdRoute
   '/store/orders/$orderId': typeof DashboardStoreOrdersOrderIdRoute
+  '/store/products/$productId': typeof DashboardStoreProductsProductIdRoute
   '/store/orders': typeof DashboardStoreOrdersIndexRoute
 }
 export interface FileRoutesById {
@@ -584,6 +602,7 @@ export interface FileRoutesById {
   '/_dashboard/manage-store/points': typeof DashboardManageStorePointsRoute
   '/_dashboard/manage-store/policies': typeof DashboardManageStorePoliciesRoute
   '/_dashboard/manage-store/products': typeof DashboardManageStoreProductsRoute
+  '/_dashboard/manage-store/returns': typeof DashboardManageStoreReturnsRoute
   '/_dashboard/manage-store/settings': typeof DashboardManageStoreSettingsRoute
   '/_dashboard/sponsors/information': typeof DashboardSponsorsInformationRoute
   '/_dashboard/sponsors/resume-database': typeof DashboardSponsorsResumeDatabaseRoute
@@ -606,6 +625,7 @@ export interface FileRoutesById {
   '/_dashboard/store/': typeof DashboardStoreIndexRoute
   '/_dashboard/manage-store/pickup/$pickupId': typeof DashboardManageStorePickupPickupIdRoute
   '/_dashboard/store/orders/$orderId': typeof DashboardStoreOrdersOrderIdRoute
+  '/_dashboard/store/products/$productId': typeof DashboardStoreProductsProductIdRoute
   '/_dashboard/store/orders/': typeof DashboardStoreOrdersIndexRoute
 }
 export interface FileRouteTypes {
@@ -650,6 +670,7 @@ export interface FileRouteTypes {
     | '/manage-store/points'
     | '/manage-store/policies'
     | '/manage-store/products'
+    | '/manage-store/returns'
     | '/manage-store/settings'
     | '/sponsors/information'
     | '/sponsors/resume-database'
@@ -672,6 +693,7 @@ export interface FileRouteTypes {
     | '/store/'
     | '/manage-store/pickup/$pickupId'
     | '/store/orders/$orderId'
+    | '/store/products/$productId'
     | '/store/orders/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -714,6 +736,7 @@ export interface FileRouteTypes {
     | '/manage-store/points'
     | '/manage-store/policies'
     | '/manage-store/products'
+    | '/manage-store/returns'
     | '/manage-store/settings'
     | '/sponsors/information'
     | '/sponsors/resume-database'
@@ -736,6 +759,7 @@ export interface FileRouteTypes {
     | '/store'
     | '/manage-store/pickup/$pickupId'
     | '/store/orders/$orderId'
+    | '/store/products/$productId'
     | '/store/orders'
   id:
     | '__root__'
@@ -779,6 +803,7 @@ export interface FileRouteTypes {
     | '/_dashboard/manage-store/points'
     | '/_dashboard/manage-store/policies'
     | '/_dashboard/manage-store/products'
+    | '/_dashboard/manage-store/returns'
     | '/_dashboard/manage-store/settings'
     | '/_dashboard/sponsors/information'
     | '/_dashboard/sponsors/resume-database'
@@ -801,6 +826,7 @@ export interface FileRouteTypes {
     | '/_dashboard/store/'
     | '/_dashboard/manage-store/pickup/$pickupId'
     | '/_dashboard/store/orders/$orderId'
+    | '/_dashboard/store/products/$productId'
     | '/_dashboard/store/orders/'
   fileRoutesById: FileRoutesById
 }
@@ -1215,6 +1241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardManageStoreSettingsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/manage-store/returns': {
+      id: '/_dashboard/manage-store/returns'
+      path: '/manage-store/returns'
+      fullPath: '/manage-store/returns'
+      preLoaderRoute: typeof DashboardManageStoreReturnsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/manage-store/products': {
       id: '/_dashboard/manage-store/products'
       path: '/manage-store/products'
@@ -1264,6 +1297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardStoreOrdersIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/store/products/$productId': {
+      id: '/_dashboard/store/products/$productId'
+      path: '/store/products/$productId'
+      fullPath: '/store/products/$productId'
+      preLoaderRoute: typeof DashboardStoreProductsProductIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/store/orders/$orderId': {
       id: '/_dashboard/store/orders/$orderId'
       path: '/store/orders/$orderId'
@@ -1307,6 +1347,7 @@ interface DashboardRouteChildren {
   DashboardManageStorePointsRoute: typeof DashboardManageStorePointsRoute
   DashboardManageStorePoliciesRoute: typeof DashboardManageStorePoliciesRoute
   DashboardManageStoreProductsRoute: typeof DashboardManageStoreProductsRoute
+  DashboardManageStoreReturnsRoute: typeof DashboardManageStoreReturnsRoute
   DashboardManageStoreSettingsRoute: typeof DashboardManageStoreSettingsRoute
   DashboardSponsorsInformationRoute: typeof DashboardSponsorsInformationRoute
   DashboardSponsorsResumeDatabaseRoute: typeof DashboardSponsorsResumeDatabaseRoute
@@ -1316,6 +1357,7 @@ interface DashboardRouteChildren {
   DashboardStoreIndexRoute: typeof DashboardStoreIndexRoute
   DashboardManageStorePickupPickupIdRoute: typeof DashboardManageStorePickupPickupIdRoute
   DashboardStoreOrdersOrderIdRoute: typeof DashboardStoreOrdersOrderIdRoute
+  DashboardStoreProductsProductIdRoute: typeof DashboardStoreProductsProductIdRoute
   DashboardStoreOrdersIndexRoute: typeof DashboardStoreOrdersIndexRoute
 }
 
@@ -1345,6 +1387,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardManageStorePointsRoute: DashboardManageStorePointsRoute,
   DashboardManageStorePoliciesRoute: DashboardManageStorePoliciesRoute,
   DashboardManageStoreProductsRoute: DashboardManageStoreProductsRoute,
+  DashboardManageStoreReturnsRoute: DashboardManageStoreReturnsRoute,
   DashboardManageStoreSettingsRoute: DashboardManageStoreSettingsRoute,
   DashboardSponsorsInformationRoute: DashboardSponsorsInformationRoute,
   DashboardSponsorsResumeDatabaseRoute: DashboardSponsorsResumeDatabaseRoute,
@@ -1355,6 +1398,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardManageStorePickupPickupIdRoute:
     DashboardManageStorePickupPickupIdRoute,
   DashboardStoreOrdersOrderIdRoute: DashboardStoreOrdersOrderIdRoute,
+  DashboardStoreProductsProductIdRoute: DashboardStoreProductsProductIdRoute,
   DashboardStoreOrdersIndexRoute: DashboardStoreOrdersIndexRoute,
 }
 
