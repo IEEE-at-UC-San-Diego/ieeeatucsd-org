@@ -53,7 +53,10 @@ export const NAVIGATION_PATHS = {
 	SIGNOUT: "/signout",
 	GET_STARTED: "/get-started",
 	OFFICER_CALENDAR: "/officer-calendar",
+	STORE: "/store",
 	STORE_POINTS: "/store/points",
+	MANAGE_STORE: "/manage-store/products",
+	MANAGE_STORE_INVENTORY: "/manage-store/inventory",
 	MANAGE_STORE_POINTS: "/manage-store/points",
 } as const;
 
@@ -82,6 +85,11 @@ export const navigationCategories: NavigationCategory[] = [
 				label: "Points",
 				href: NAVIGATION_PATHS.STORE_POINTS,
 			},
+			{
+				icon: ShoppingBag,
+				label: "Merch Store",
+				href: NAVIGATION_PATHS.STORE,
+			},
 		],
 	},
 	{
@@ -107,6 +115,11 @@ export const navigationCategories: NavigationCategory[] = [
 				icon: MessageSquare,
 				label: "Slack Access",
 				href: NAVIGATION_PATHS.SLACK_ACCESS,
+			},
+			{
+				icon: ShoppingBag,
+				label: "Manage Store",
+				href: NAVIGATION_PATHS.MANAGE_STORE,
 			},
 		],
 	},

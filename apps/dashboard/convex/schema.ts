@@ -238,6 +238,136 @@ export default defineSchema({
     .index("by_idempotencyKey", ["idempotencyKey"])
     .index("by_source", ["sourceType", "sourceId"]),
 
+  merchSettings: defineTable({
+    storeEnabled: v.boolean(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  }),
+
+  merchCategories: defineTable({
+    name: v.string(),
+    sortOrder: v.number(),
+    status: v.union(v.literal("active"), v.literal("archived")),
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+    updatedAt: v.number(),
+  })
+    .index("by_status_sortOrder", ["status", "sortOrder"])
+    .index("by_name", ["name"]),
+
+  merchProducts: defineTable({
+    name: v.string(),
+    shortDescription: v.string(),
+    detailedDescription: v.optional(v.string()),
+    primaryImageStorageId: v.optional(v.id("_storage")),
+    primaryImageAlt: v.string(),
+    additionalImages: v.optional(
+      v.array(
+        v.object({
+          storageId: v.id("_storage"),
+          alt: v.string(),
+          sortOrder: v.number(),
+        }),
+      ),
+    ),
+    sizingGuide: v.optional(v.string()),
+    fulfillmentNotes: v.optional(v.string()),
+    categoryId: v.id("merchCategories"),
+    featured: v.boolean(),
+    sortOrder: v.number(),
+    status: v.union(v.literal("active"), v.literal("archived")),
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+    updatedAt: v.number(),
+  })
+    .index("by_status_sortOrder", ["status", "sortOrder"])
+    .index("by_categoryId", ["categoryId"])
+    .index("by_featured", ["featured"]),
+
+  merchReleases: defineTable({
+    productId: v.id("merchProducts"),
+    releaseNumber: v.number(),
+    salesOpenAt: v.optional(v.number()),
+    salesCloseAt: v.optional(v.number()),
+    status: v.union(
+      v.literal("active"),
+      v.literal("paused"),
+      v.literal("archived"),
+    ),
+    defaultPointPrice: v.number(),
+    releasePurchaseLimit: v.optional(v.number()),
+    optionGroups: v.array(
+      v.object({
+        name: v.string(),
+        values: v.array(v.string()),
+      }),
+    ),
+    structureLocked: v.boolean(),
+    excludedPickupOptionIds: v.optional(v.array(v.string())),
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+    updatedAt: v.number(),
+  })
+    .index("by_productId", ["productId"])
+    .index("by_status", ["status"]),
+
+  merchVariants: defineTable({
+    releaseId: v.id("merchReleases"),
+    productId: v.id("merchProducts"),
+    sku: v.string(),
+    optionValues: v.array(v.string()),
+    label: v.string(),
+    enabled: v.boolean(),
+    pointPriceOverride: v.optional(v.number()),
+    onHand: v.number(),
+    reserved: v.number(),
+    returnedPendingInspection: v.number(),
+    lowStockThreshold: v.number(),
+    variantPurchaseLimit: v.optional(v.number()),
+    imageStorageId: v.optional(v.id("_storage")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_releaseId", ["releaseId"])
+    .index("by_productId", ["productId"])
+    .index("by_sku", ["sku"]),
+
+  merchInventoryLedger: defineTable({
+    variantId: v.id("merchVariants"),
+    releaseId: v.id("merchReleases"),
+    productId: v.id("merchProducts"),
+    deltaOnHand: v.number(),
+    reason: v.string(),
+    note: v.optional(v.string()),
+    photoStorageId: v.optional(v.id("_storage")),
+    actorUserId: v.id("users"),
+    timestamp: v.number(),
+    idempotencyKey: v.string(),
+  })
+    .index("by_variantId_timestamp", ["variantId", "timestamp"])
+    .index("by_idempotencyKey", ["idempotencyKey"]),
+
+  merchInventoryReconciliations: defineTable({
+    releaseId: v.id("merchReleases"),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("posted"),
+      v.literal("blocked"),
+    ),
+    entries: v.array(
+      v.object({
+        variantId: v.id("merchVariants"),
+        countedQuantity: v.number(),
+        previousOnHand: v.number(),
+        delta: v.number(),
+      }),
+    ),
+    reason: v.string(),
+    actorUserId: v.id("users"),
+    createdAt: v.number(),
+    postedAt: v.optional(v.number()),
+  }).index("by_releaseId", ["releaseId"]),
+
   publicProfiles: defineTable({
     userId: v.id("users"),
     name: v.string(),
