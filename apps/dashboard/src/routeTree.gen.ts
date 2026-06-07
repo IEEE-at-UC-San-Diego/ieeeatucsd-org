@@ -67,6 +67,7 @@ import { Route as DashboardManageStorePointsRouteImport } from './routes/_dashbo
 import { Route as DashboardManageStorePickupsRouteImport } from './routes/_dashboard/manage-store/pickups'
 import { Route as DashboardManageStoreInventoryRouteImport } from './routes/_dashboard/manage-store/inventory'
 import { Route as DashboardStoreOrdersIndexRouteImport } from './routes/_dashboard/store/orders/index'
+import { Route as DashboardStoreProductsProductIdRouteImport } from './routes/_dashboard/store/products/$productId'
 import { Route as DashboardStoreOrdersOrderIdRouteImport } from './routes/_dashboard/store/orders/$orderId'
 
 const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
@@ -379,6 +380,12 @@ const DashboardStoreOrdersIndexRoute =
     path: '/store/orders/',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardStoreProductsProductIdRoute =
+  DashboardStoreProductsProductIdRouteImport.update({
+    id: '/store/products/$productId',
+    path: '/store/products/$productId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardStoreOrdersOrderIdRoute =
   DashboardStoreOrdersOrderIdRouteImport.update({
     id: '/store/orders/$orderId',
@@ -444,6 +451,7 @@ export interface FileRoutesByFullPath {
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
   '/store/': typeof DashboardStoreIndexRoute
   '/store/orders/$orderId': typeof DashboardStoreOrdersOrderIdRoute
+  '/store/products/$productId': typeof DashboardStoreProductsProductIdRoute
   '/store/orders/': typeof DashboardStoreOrdersIndexRoute
 }
 export interface FileRoutesByTo {
@@ -504,6 +512,7 @@ export interface FileRoutesByTo {
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
   '/store': typeof DashboardStoreIndexRoute
   '/store/orders/$orderId': typeof DashboardStoreOrdersOrderIdRoute
+  '/store/products/$productId': typeof DashboardStoreProductsProductIdRoute
   '/store/orders': typeof DashboardStoreOrdersIndexRoute
 }
 export interface FileRoutesById {
@@ -566,6 +575,7 @@ export interface FileRoutesById {
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
   '/_dashboard/store/': typeof DashboardStoreIndexRoute
   '/_dashboard/store/orders/$orderId': typeof DashboardStoreOrdersOrderIdRoute
+  '/_dashboard/store/products/$productId': typeof DashboardStoreProductsProductIdRoute
   '/_dashboard/store/orders/': typeof DashboardStoreOrdersIndexRoute
 }
 export interface FileRouteTypes {
@@ -628,6 +638,7 @@ export interface FileRouteTypes {
     | '/api/users/update-role'
     | '/store/'
     | '/store/orders/$orderId'
+    | '/store/products/$productId'
     | '/store/orders/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -688,6 +699,7 @@ export interface FileRouteTypes {
     | '/api/users/update-role'
     | '/store'
     | '/store/orders/$orderId'
+    | '/store/products/$productId'
     | '/store/orders'
   id:
     | '__root__'
@@ -749,6 +761,7 @@ export interface FileRouteTypes {
     | '/api/users/update-role'
     | '/_dashboard/store/'
     | '/_dashboard/store/orders/$orderId'
+    | '/_dashboard/store/products/$productId'
     | '/_dashboard/store/orders/'
   fileRoutesById: FileRoutesById
 }
@@ -1191,6 +1204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardStoreOrdersIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/store/products/$productId': {
+      id: '/_dashboard/store/products/$productId'
+      path: '/store/products/$productId'
+      fullPath: '/store/products/$productId'
+      preLoaderRoute: typeof DashboardStoreProductsProductIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/store/orders/$orderId': {
       id: '/_dashboard/store/orders/$orderId'
       path: '/store/orders/$orderId'
@@ -1232,6 +1252,7 @@ interface DashboardRouteChildren {
   DashboardStorePointsRoute: typeof DashboardStorePointsRoute
   DashboardStoreIndexRoute: typeof DashboardStoreIndexRoute
   DashboardStoreOrdersOrderIdRoute: typeof DashboardStoreOrdersOrderIdRoute
+  DashboardStoreProductsProductIdRoute: typeof DashboardStoreProductsProductIdRoute
   DashboardStoreOrdersIndexRoute: typeof DashboardStoreOrdersIndexRoute
 }
 
@@ -1266,6 +1287,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardStorePointsRoute: DashboardStorePointsRoute,
   DashboardStoreIndexRoute: DashboardStoreIndexRoute,
   DashboardStoreOrdersOrderIdRoute: DashboardStoreOrdersOrderIdRoute,
+  DashboardStoreProductsProductIdRoute: DashboardStoreProductsProductIdRoute,
   DashboardStoreOrdersIndexRoute: DashboardStoreOrdersIndexRoute,
 }
 
