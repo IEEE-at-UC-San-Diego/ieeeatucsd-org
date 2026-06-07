@@ -450,12 +450,64 @@ export default defineSchema({
     graphicsCompleted: v.optional(v.boolean()),
     graphicsFiles: v.optional(v.array(v.string())),
     submittedAt: v.optional(v.number()),
+    merchPickupEnabled: v.optional(v.boolean()),
+    // Relative: hours before event start. Absolute: UTC cutoff timestamp.
+    merchPickupCutoffAt: v.optional(v.number()),
+    merchPickupCutoffType: v.optional(
+      v.union(v.literal("relative"), v.literal("absolute")),
+    ),
+    merchPickupCapacity: v.optional(v.number()),
   })
     .index("by_eventCode", ["eventCode"])
     .index("by_startDate", ["startDate"])
     .index("by_published", ["published"])
     .index("by_status", ["status"])
     .index("by_requestedUser", ["requestedUser"]),
+
+  merchPickupOptions: defineTable({
+    type: v.union(v.literal("event"), v.literal("project_space")),
+    eventId: v.optional(v.id("events")),
+    scheduleId: v.optional(v.id("merchPickupSchedules")),
+    windowStart: v.number(),
+    windowEnd: v.number(),
+    instructions: v.string(),
+    capacity: v.optional(v.number()),
+    cutoffAt: v.number(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("closed"),
+      v.literal("cancelled"),
+    ),
+    orderCount: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_eventId", ["eventId"])
+    .index("by_scheduleId", ["scheduleId"])
+    .index("by_status", ["status"])
+    .index("by_type_status", ["type", "status"])
+    .index("by_windowStart", ["windowStart"]),
+
+  merchPickupSchedules: defineTable({
+    dayOfWeek: v.number(),
+    startTimeMinutes: v.number(),
+    endTimeMinutes: v.number(),
+    instructions: v.string(),
+    capacity: v.optional(v.number()),
+    cutoffHoursBefore: v.number(),
+    visibilityWeeks: v.number(),
+    active: v.boolean(),
+    exceptions: v.array(
+      v.object({
+        date: v.string(),
+        type: v.union(v.literal("skip"), v.literal("override")),
+        startTimeMinutes: v.optional(v.number()),
+        endTimeMinutes: v.optional(v.number()),
+        instructions: v.optional(v.string()),
+        capacity: v.optional(v.number()),
+      }),
+    ),
+  }).index("by_active", ["active"]),
 
   // Internal events for officer calendar (meetings, tabling, etc.)
   internalEvents: defineTable({

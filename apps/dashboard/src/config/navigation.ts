@@ -57,6 +57,7 @@ export const NAVIGATION_PATHS = {
 	STORE_POINTS: "/store/points",
 	MANAGE_STORE: "/manage-store/products",
 	MANAGE_STORE_INVENTORY: "/manage-store/inventory",
+	MANAGE_STORE_PICKUPS: "/manage-store/pickups",
 	MANAGE_STORE_POINTS: "/manage-store/points",
 } as const;
 
@@ -120,6 +121,11 @@ export const navigationCategories: NavigationCategory[] = [
 				icon: ShoppingBag,
 				label: "Manage Store",
 				href: NAVIGATION_PATHS.MANAGE_STORE,
+			},
+			{
+				icon: Calendar,
+				label: "Store Pickups",
+				href: NAVIGATION_PATHS.MANAGE_STORE_PICKUPS,
 			},
 		],
 	},
@@ -209,6 +215,7 @@ export const PATH_LABELS: Record<string, string> = {
 	"/get-started": "Get Started",
 	"/officer-calendar": "Officer Calendar",
 	"/store/points": "Points",
+	"/manage-store/pickups": "Manage Store Pickups",
 	"/manage-store/points": "Manage Store Points",
 };
 

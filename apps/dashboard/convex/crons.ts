@@ -9,4 +9,16 @@ crons.interval(
   internal.googleCalendar.scheduledSync,
 );
 
+crons.daily(
+  "generate merch pickup windows",
+  { hourUTC: 14, minuteUTC: 0 }, // 6:00 AM America/Los_Angeles (PST)
+  internal.merch.pickupJobs.generateRollingWindows,
+);
+
+crons.daily(
+  "process closed merch pickups",
+  { hourUTC: 15, minuteUTC: 0 }, // 7:00 AM America/Los_Angeles (PST)
+  internal.merch.pickupJobs.processClosedPickups,
+);
+
 export default crons;
