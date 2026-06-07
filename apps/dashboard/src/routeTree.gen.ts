@@ -43,6 +43,7 @@ import { Route as DashboardExecutiveAnalyticsRouteImport } from './routes/_dashb
 import { Route as DashboardEventsRouteImport } from './routes/_dashboard/events'
 import { Route as DashboardConstitutionPreviewRouteImport } from './routes/_dashboard/constitution-preview'
 import { Route as DashboardConstitutionBuilderRouteImport } from './routes/_dashboard/constitution-builder'
+import { Route as DashboardStoreIndexRouteImport } from './routes/_dashboard/store/index'
 import { Route as ApiUsersUpdateRoleRouteImport } from './routes/api/users/update-role'
 import { Route as ApiRpcSplatRouteImport } from './routes/api.rpc.$'
 import { Route as ApiOnboardingSendRejectionRouteImport } from './routes/api/onboarding/send-rejection'
@@ -56,8 +57,17 @@ import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
 import { Route as ApiEmailNotifyRouteImport } from './routes/api/email/notify'
 import { Route as ApiAuthConvexSessionRouteImport } from './routes/api/auth/convex-session'
 import { Route as ApiAiQueryRouteImport } from './routes/api/ai/query'
+import { Route as DashboardStorePointsRouteImport } from './routes/_dashboard/store/points'
+import { Route as DashboardStoreCheckoutRouteImport } from './routes/_dashboard/store/checkout'
+import { Route as DashboardStoreCartRouteImport } from './routes/_dashboard/store/cart'
 import { Route as DashboardSponsorsResumeDatabaseRouteImport } from './routes/_dashboard/sponsors/resume-database'
 import { Route as DashboardSponsorsInformationRouteImport } from './routes/_dashboard/sponsors/information'
+import { Route as DashboardManageStoreProductsRouteImport } from './routes/_dashboard/manage-store/products'
+import { Route as DashboardManageStorePointsRouteImport } from './routes/_dashboard/manage-store/points'
+import { Route as DashboardManageStorePickupsRouteImport } from './routes/_dashboard/manage-store/pickups'
+import { Route as DashboardManageStoreInventoryRouteImport } from './routes/_dashboard/manage-store/inventory'
+import { Route as DashboardStoreOrdersIndexRouteImport } from './routes/_dashboard/store/orders/index'
+import { Route as DashboardStoreOrdersOrderIdRouteImport } from './routes/_dashboard/store/orders/$orderId'
 
 const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
   id: '/terms-of-service',
@@ -236,6 +246,11 @@ const DashboardConstitutionBuilderRoute =
     path: '/constitution-builder',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardStoreIndexRoute = DashboardStoreIndexRouteImport.update({
+  id: '/store/',
+  path: '/store/',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const ApiUsersUpdateRoleRoute = ApiUsersUpdateRoleRouteImport.update({
   id: '/api/users/update-role',
   path: '/api/users/update-role',
@@ -307,6 +322,21 @@ const ApiAiQueryRoute = ApiAiQueryRouteImport.update({
   path: '/api/ai/query',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardStorePointsRoute = DashboardStorePointsRouteImport.update({
+  id: '/store/points',
+  path: '/store/points',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardStoreCheckoutRoute = DashboardStoreCheckoutRouteImport.update({
+  id: '/store/checkout',
+  path: '/store/checkout',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardStoreCartRoute = DashboardStoreCartRouteImport.update({
+  id: '/store/cart',
+  path: '/store/cart',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardSponsorsResumeDatabaseRoute =
   DashboardSponsorsResumeDatabaseRouteImport.update({
     id: '/sponsors/resume-database',
@@ -317,6 +347,42 @@ const DashboardSponsorsInformationRoute =
   DashboardSponsorsInformationRouteImport.update({
     id: '/sponsors/information',
     path: '/sponsors/information',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardManageStoreProductsRoute =
+  DashboardManageStoreProductsRouteImport.update({
+    id: '/manage-store/products',
+    path: '/manage-store/products',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardManageStorePointsRoute =
+  DashboardManageStorePointsRouteImport.update({
+    id: '/manage-store/points',
+    path: '/manage-store/points',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardManageStorePickupsRoute =
+  DashboardManageStorePickupsRouteImport.update({
+    id: '/manage-store/pickups',
+    path: '/manage-store/pickups',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardManageStoreInventoryRoute =
+  DashboardManageStoreInventoryRouteImport.update({
+    id: '/manage-store/inventory',
+    path: '/manage-store/inventory',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardStoreOrdersIndexRoute =
+  DashboardStoreOrdersIndexRouteImport.update({
+    id: '/store/orders/',
+    path: '/store/orders/',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardStoreOrdersOrderIdRoute =
+  DashboardStoreOrdersOrderIdRouteImport.update({
+    id: '/store/orders/$orderId',
+    path: '/store/orders/$orderId',
     getParentRoute: () => DashboardRoute,
   } as any)
 
@@ -354,8 +420,15 @@ export interface FileRoutesByFullPath {
   '/api/parse-invoice': typeof ApiParseInvoiceRoute
   '/api/parse-receipt': typeof ApiParseReceiptRoute
   '/api/reset-email-password': typeof ApiResetEmailPasswordRoute
+  '/manage-store/inventory': typeof DashboardManageStoreInventoryRoute
+  '/manage-store/pickups': typeof DashboardManageStorePickupsRoute
+  '/manage-store/points': typeof DashboardManageStorePointsRoute
+  '/manage-store/products': typeof DashboardManageStoreProductsRoute
   '/sponsors/information': typeof DashboardSponsorsInformationRoute
   '/sponsors/resume-database': typeof DashboardSponsorsResumeDatabaseRoute
+  '/store/cart': typeof DashboardStoreCartRoute
+  '/store/checkout': typeof DashboardStoreCheckoutRoute
+  '/store/points': typeof DashboardStorePointsRoute
   '/api/ai/query': typeof ApiAiQueryRoute
   '/api/auth/convex-session': typeof ApiAuthConvexSessionRoute
   '/api/email/notify': typeof ApiEmailNotifyRoute
@@ -369,6 +442,9 @@ export interface FileRoutesByFullPath {
   '/api/onboarding/send-rejection': typeof ApiOnboardingSendRejectionRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
+  '/store/': typeof DashboardStoreIndexRoute
+  '/store/orders/$orderId': typeof DashboardStoreOrdersOrderIdRoute
+  '/store/orders/': typeof DashboardStoreOrdersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -404,8 +480,15 @@ export interface FileRoutesByTo {
   '/api/parse-invoice': typeof ApiParseInvoiceRoute
   '/api/parse-receipt': typeof ApiParseReceiptRoute
   '/api/reset-email-password': typeof ApiResetEmailPasswordRoute
+  '/manage-store/inventory': typeof DashboardManageStoreInventoryRoute
+  '/manage-store/pickups': typeof DashboardManageStorePickupsRoute
+  '/manage-store/points': typeof DashboardManageStorePointsRoute
+  '/manage-store/products': typeof DashboardManageStoreProductsRoute
   '/sponsors/information': typeof DashboardSponsorsInformationRoute
   '/sponsors/resume-database': typeof DashboardSponsorsResumeDatabaseRoute
+  '/store/cart': typeof DashboardStoreCartRoute
+  '/store/checkout': typeof DashboardStoreCheckoutRoute
+  '/store/points': typeof DashboardStorePointsRoute
   '/api/ai/query': typeof ApiAiQueryRoute
   '/api/auth/convex-session': typeof ApiAuthConvexSessionRoute
   '/api/email/notify': typeof ApiEmailNotifyRoute
@@ -419,6 +502,9 @@ export interface FileRoutesByTo {
   '/api/onboarding/send-rejection': typeof ApiOnboardingSendRejectionRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
+  '/store': typeof DashboardStoreIndexRoute
+  '/store/orders/$orderId': typeof DashboardStoreOrdersOrderIdRoute
+  '/store/orders': typeof DashboardStoreOrdersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -456,8 +542,15 @@ export interface FileRoutesById {
   '/api/parse-invoice': typeof ApiParseInvoiceRoute
   '/api/parse-receipt': typeof ApiParseReceiptRoute
   '/api/reset-email-password': typeof ApiResetEmailPasswordRoute
+  '/_dashboard/manage-store/inventory': typeof DashboardManageStoreInventoryRoute
+  '/_dashboard/manage-store/pickups': typeof DashboardManageStorePickupsRoute
+  '/_dashboard/manage-store/points': typeof DashboardManageStorePointsRoute
+  '/_dashboard/manage-store/products': typeof DashboardManageStoreProductsRoute
   '/_dashboard/sponsors/information': typeof DashboardSponsorsInformationRoute
   '/_dashboard/sponsors/resume-database': typeof DashboardSponsorsResumeDatabaseRoute
+  '/_dashboard/store/cart': typeof DashboardStoreCartRoute
+  '/_dashboard/store/checkout': typeof DashboardStoreCheckoutRoute
+  '/_dashboard/store/points': typeof DashboardStorePointsRoute
   '/api/ai/query': typeof ApiAiQueryRoute
   '/api/auth/convex-session': typeof ApiAuthConvexSessionRoute
   '/api/email/notify': typeof ApiEmailNotifyRoute
@@ -471,6 +564,9 @@ export interface FileRoutesById {
   '/api/onboarding/send-rejection': typeof ApiOnboardingSendRejectionRoute
   '/api/rpc/$': typeof ApiRpcSplatRoute
   '/api/users/update-role': typeof ApiUsersUpdateRoleRoute
+  '/_dashboard/store/': typeof DashboardStoreIndexRoute
+  '/_dashboard/store/orders/$orderId': typeof DashboardStoreOrdersOrderIdRoute
+  '/_dashboard/store/orders/': typeof DashboardStoreOrdersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -508,8 +604,15 @@ export interface FileRouteTypes {
     | '/api/parse-invoice'
     | '/api/parse-receipt'
     | '/api/reset-email-password'
+    | '/manage-store/inventory'
+    | '/manage-store/pickups'
+    | '/manage-store/points'
+    | '/manage-store/products'
     | '/sponsors/information'
     | '/sponsors/resume-database'
+    | '/store/cart'
+    | '/store/checkout'
+    | '/store/points'
     | '/api/ai/query'
     | '/api/auth/convex-session'
     | '/api/email/notify'
@@ -523,6 +626,9 @@ export interface FileRouteTypes {
     | '/api/onboarding/send-rejection'
     | '/api/rpc/$'
     | '/api/users/update-role'
+    | '/store/'
+    | '/store/orders/$orderId'
+    | '/store/orders/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -558,8 +664,15 @@ export interface FileRouteTypes {
     | '/api/parse-invoice'
     | '/api/parse-receipt'
     | '/api/reset-email-password'
+    | '/manage-store/inventory'
+    | '/manage-store/pickups'
+    | '/manage-store/points'
+    | '/manage-store/products'
     | '/sponsors/information'
     | '/sponsors/resume-database'
+    | '/store/cart'
+    | '/store/checkout'
+    | '/store/points'
     | '/api/ai/query'
     | '/api/auth/convex-session'
     | '/api/email/notify'
@@ -573,6 +686,9 @@ export interface FileRouteTypes {
     | '/api/onboarding/send-rejection'
     | '/api/rpc/$'
     | '/api/users/update-role'
+    | '/store'
+    | '/store/orders/$orderId'
+    | '/store/orders'
   id:
     | '__root__'
     | '/'
@@ -609,8 +725,15 @@ export interface FileRouteTypes {
     | '/api/parse-invoice'
     | '/api/parse-receipt'
     | '/api/reset-email-password'
+    | '/_dashboard/manage-store/inventory'
+    | '/_dashboard/manage-store/pickups'
+    | '/_dashboard/manage-store/points'
+    | '/_dashboard/manage-store/products'
     | '/_dashboard/sponsors/information'
     | '/_dashboard/sponsors/resume-database'
+    | '/_dashboard/store/cart'
+    | '/_dashboard/store/checkout'
+    | '/_dashboard/store/points'
     | '/api/ai/query'
     | '/api/auth/convex-session'
     | '/api/email/notify'
@@ -624,6 +747,9 @@ export interface FileRouteTypes {
     | '/api/onboarding/send-rejection'
     | '/api/rpc/$'
     | '/api/users/update-role'
+    | '/_dashboard/store/'
+    | '/_dashboard/store/orders/$orderId'
+    | '/_dashboard/store/orders/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -897,6 +1023,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardConstitutionBuilderRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/store/': {
+      id: '/_dashboard/store/'
+      path: '/store'
+      fullPath: '/store/'
+      preLoaderRoute: typeof DashboardStoreIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/api/users/update-role': {
       id: '/api/users/update-role'
       path: '/api/users/update-role'
@@ -988,6 +1121,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiQueryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_dashboard/store/points': {
+      id: '/_dashboard/store/points'
+      path: '/store/points'
+      fullPath: '/store/points'
+      preLoaderRoute: typeof DashboardStorePointsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/store/checkout': {
+      id: '/_dashboard/store/checkout'
+      path: '/store/checkout'
+      fullPath: '/store/checkout'
+      preLoaderRoute: typeof DashboardStoreCheckoutRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/store/cart': {
+      id: '/_dashboard/store/cart'
+      path: '/store/cart'
+      fullPath: '/store/cart'
+      preLoaderRoute: typeof DashboardStoreCartRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/sponsors/resume-database': {
       id: '/_dashboard/sponsors/resume-database'
       path: '/sponsors/resume-database'
@@ -1000,6 +1154,48 @@ declare module '@tanstack/react-router' {
       path: '/sponsors/information'
       fullPath: '/sponsors/information'
       preLoaderRoute: typeof DashboardSponsorsInformationRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/manage-store/products': {
+      id: '/_dashboard/manage-store/products'
+      path: '/manage-store/products'
+      fullPath: '/manage-store/products'
+      preLoaderRoute: typeof DashboardManageStoreProductsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/manage-store/points': {
+      id: '/_dashboard/manage-store/points'
+      path: '/manage-store/points'
+      fullPath: '/manage-store/points'
+      preLoaderRoute: typeof DashboardManageStorePointsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/manage-store/pickups': {
+      id: '/_dashboard/manage-store/pickups'
+      path: '/manage-store/pickups'
+      fullPath: '/manage-store/pickups'
+      preLoaderRoute: typeof DashboardManageStorePickupsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/manage-store/inventory': {
+      id: '/_dashboard/manage-store/inventory'
+      path: '/manage-store/inventory'
+      fullPath: '/manage-store/inventory'
+      preLoaderRoute: typeof DashboardManageStoreInventoryRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/store/orders/': {
+      id: '/_dashboard/store/orders/'
+      path: '/store/orders'
+      fullPath: '/store/orders/'
+      preLoaderRoute: typeof DashboardStoreOrdersIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/store/orders/$orderId': {
+      id: '/_dashboard/store/orders/$orderId'
+      path: '/store/orders/$orderId'
+      fullPath: '/store/orders/$orderId'
+      preLoaderRoute: typeof DashboardStoreOrdersOrderIdRouteImport
       parentRoute: typeof DashboardRoute
     }
   }
@@ -1025,8 +1221,18 @@ interface DashboardRouteChildren {
   DashboardReimbursementRoute: typeof DashboardReimbursementRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardSlackAccessRoute: typeof DashboardSlackAccessRoute
+  DashboardManageStoreInventoryRoute: typeof DashboardManageStoreInventoryRoute
+  DashboardManageStorePickupsRoute: typeof DashboardManageStorePickupsRoute
+  DashboardManageStorePointsRoute: typeof DashboardManageStorePointsRoute
+  DashboardManageStoreProductsRoute: typeof DashboardManageStoreProductsRoute
   DashboardSponsorsInformationRoute: typeof DashboardSponsorsInformationRoute
   DashboardSponsorsResumeDatabaseRoute: typeof DashboardSponsorsResumeDatabaseRoute
+  DashboardStoreCartRoute: typeof DashboardStoreCartRoute
+  DashboardStoreCheckoutRoute: typeof DashboardStoreCheckoutRoute
+  DashboardStorePointsRoute: typeof DashboardStorePointsRoute
+  DashboardStoreIndexRoute: typeof DashboardStoreIndexRoute
+  DashboardStoreOrdersOrderIdRoute: typeof DashboardStoreOrdersOrderIdRoute
+  DashboardStoreOrdersIndexRoute: typeof DashboardStoreOrdersIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
@@ -1049,8 +1255,18 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardReimbursementRoute: DashboardReimbursementRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardSlackAccessRoute: DashboardSlackAccessRoute,
+  DashboardManageStoreInventoryRoute: DashboardManageStoreInventoryRoute,
+  DashboardManageStorePickupsRoute: DashboardManageStorePickupsRoute,
+  DashboardManageStorePointsRoute: DashboardManageStorePointsRoute,
+  DashboardManageStoreProductsRoute: DashboardManageStoreProductsRoute,
   DashboardSponsorsInformationRoute: DashboardSponsorsInformationRoute,
   DashboardSponsorsResumeDatabaseRoute: DashboardSponsorsResumeDatabaseRoute,
+  DashboardStoreCartRoute: DashboardStoreCartRoute,
+  DashboardStoreCheckoutRoute: DashboardStoreCheckoutRoute,
+  DashboardStorePointsRoute: DashboardStorePointsRoute,
+  DashboardStoreIndexRoute: DashboardStoreIndexRoute,
+  DashboardStoreOrdersOrderIdRoute: DashboardStoreOrdersOrderIdRoute,
+  DashboardStoreOrdersIndexRoute: DashboardStoreOrdersIndexRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

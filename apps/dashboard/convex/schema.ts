@@ -1058,4 +1058,108 @@ export default defineSchema({
     createdByName: v.optional(v.string()),
   })
     .index("by_department", ["department"]),
+
+  merchCarts: defineTable({
+    userId: v.id("users"),
+    items: v.array(
+      v.object({
+        variantId: v.id("merchVariants"),
+        releaseId: v.id("merchReleases"),
+        productId: v.id("merchProducts"),
+        quantity: v.number(),
+      }),
+    ),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
+  merchOrders: defineTable({
+    userId: v.id("users"),
+    displayNumber: v.string(),
+    pickupCode: v.string(),
+    qrToken: v.string(),
+    checkoutGroupId: v.optional(v.string()),
+    pickupOptionId: v.string(),
+    pickupLabel: v.string(),
+    pickupType: v.union(v.literal("event"), v.literal("project_space")),
+    status: v.union(
+      v.literal("confirmed"),
+      v.literal("action_required"),
+      v.literal("pickup_missed"),
+      v.literal("partially_fulfilled"),
+      v.literal("fulfilled"),
+      v.literal("canceled"),
+      v.literal("mixed"),
+    ),
+    statusCounts: v.object({
+      confirmed: v.number(),
+      actionRequired: v.number(),
+      pickupMissed: v.number(),
+      partiallyFulfilled: v.number(),
+      fulfilled: v.number(),
+      canceled: v.number(),
+      refundPendingReturn: v.number(),
+      refunded: v.number(),
+      replacementPending: v.number(),
+    }),
+    pointTotal: v.number(),
+    itemQuantityTotal: v.number(),
+    pickupCutoffAt: v.number(),
+    idempotencyKey: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId_createdAt", ["userId", "createdAt"])
+    .index("by_displayNumber", ["displayNumber"])
+    .index("by_pickupCode", ["pickupCode"])
+    .index("by_qrToken", ["qrToken"])
+    .index("by_checkoutGroupId", ["checkoutGroupId"])
+    .index("by_idempotencyKey", ["idempotencyKey"])
+    .index("by_pickupOptionId", ["pickupOptionId"]),
+
+  merchOrderItems: defineTable({
+    orderId: v.id("merchOrders"),
+    productId: v.id("merchProducts"),
+    releaseId: v.id("merchReleases"),
+    variantId: v.id("merchVariants"),
+    productName: v.string(),
+    variantLabel: v.string(),
+    sku: v.string(),
+    pointPrice: v.number(),
+    quantity: v.number(),
+    imageStorageId: v.optional(v.id("_storage")),
+    status: v.union(
+      v.literal("confirmed"),
+      v.literal("action_required"),
+      v.literal("pickup_missed"),
+      v.literal("partially_fulfilled"),
+      v.literal("fulfilled"),
+      v.literal("canceled"),
+      v.literal("refund_pending_return"),
+      v.literal("refunded"),
+      v.literal("replacement_pending"),
+    ),
+    fulfilledQuantity: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_orderId", ["orderId"])
+    .index("by_variantId", ["variantId"])
+    .index("by_releaseId", ["releaseId"]),
+
+  merchOrderAuditLog: defineTable({
+    orderId: v.id("merchOrders"),
+    action: v.string(),
+    actorUserId: v.optional(v.id("users")),
+    actorLabel: v.string(),
+    timestamp: v.number(),
+    note: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+  })
+    .index("by_orderId_timestamp", ["orderId", "timestamp"])
+    .index("by_action", ["action"]),
+
+  merchOrderSequences: defineTable({
+    year: v.number(),
+    lastSequence: v.number(),
+  }).index("by_year", ["year"]),
 });

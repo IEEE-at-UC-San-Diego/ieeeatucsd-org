@@ -60,6 +60,31 @@ export async function requireStoreAccess(
   return user;
 }
 
+const PURCHASING_ROLES = new Set([
+  "Member",
+  "Member at Large",
+  "General Officer",
+  "Executive Officer",
+  "Past Officer",
+  "Administrator",
+]);
+
+export function canMemberPurchase(user: { role: string; status: string }) {
+  return user.status === "active" && PURCHASING_ROLES.has(user.role);
+}
+
+export async function requireStorePurchaseAccess(
+  ctx: AuthContext,
+  logtoId?: string,
+  authToken?: string,
+) {
+  const user = await requireStoreAccess(ctx, logtoId, authToken);
+  if (!canMemberPurchase(user)) {
+    throw new Error("Your account cannot place merchandise orders");
+  }
+  return user;
+}
+
 export type StockDisplay = "in_stock" | "low_stock" | "sold_out";
 
 export function getStockDisplay(
