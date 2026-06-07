@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Select,
 	SelectContent,
@@ -16,6 +15,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
@@ -37,7 +37,7 @@ function ManageStoreProductsPage() {
 		logtoId ? { logtoId } : "skip",
 	);
 	const createProduct = useAuthedMutation(api.merch.products.createProduct);
-	const pauseRelease = useAuthedMutation(api.merch.products.pauseRelease);
+	const createCategory = useAuthedMutation(api.merch.categories.create);
 
 	const [showForm, setShowForm] = useState(false);
 	const [name, setName] = useState("");
@@ -46,11 +46,37 @@ function ManageStoreProductsPage() {
 	const [price, setPrice] = useState("");
 	const [saving, setSaving] = useState(false);
 
+	const [newCategoryName, setNewCategoryName] = useState("");
+	const [creatingCategory, setCreatingCategory] = useState(false);
+
 	if (!hasOfficerAccess) {
 		return (
 			<div className="p-8 text-muted-foreground">Officer access required.</div>
 		);
 	}
+
+	const activeCategories = categories ?? [];
+
+	const handleCreateCategory = async () => {
+		const trimmed = newCategoryName.trim();
+		if (!trimmed) {
+			toast.error("Enter a category name.");
+			return;
+		}
+		setCreatingCategory(true);
+		try {
+			const id = await createCategory({ name: trimmed });
+			setCategoryId(id);
+			setNewCategoryName("");
+			toast.success(`Category "${trimmed}" created.`);
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Failed to create category",
+			);
+		} finally {
+			setCreatingCategory(false);
+		}
+	};
 
 	const handleCreate = async () => {
 		if (!name || !description || !categoryId || !price) {
@@ -71,6 +97,7 @@ function ManageStoreProductsPage() {
 			setName("");
 			setDescription("");
 			setPrice("");
+			setCategoryId("");
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "Failed to create");
 		} finally {
@@ -91,11 +118,66 @@ function ManageStoreProductsPage() {
 						</p>
 					</div>
 					{hasAdminAccess && (
-						<Button onClick={() => setShowForm(!showForm)}>
+						<Button
+							onClick={() => setShowForm(!showForm)}
+							disabled={activeCategories.length === 0}
+						>
 							<Plus className="h-4 w-4 mr-2" />
 							New product
 						</Button>
 					)}
+				</div>
+
+				<div className="rounded-xl border bg-white p-5 space-y-4">
+					<div>
+						<h2 className="font-semibold">Categories</h2>
+						<p className="text-sm text-muted-foreground mt-0.5">
+							Create at least one category before adding products.
+						</p>
+					</div>
+					{categories === undefined ? (
+						<Skeleton className="h-10 w-full" />
+					) : activeCategories.length > 0 ? (
+						<div className="flex flex-wrap gap-2">
+							{activeCategories.map((c) => (
+								<Badge key={c._id} variant="secondary">
+									{c.name}
+								</Badge>
+							))}
+						</div>
+					) : (
+						<p className="text-sm text-muted-foreground">
+							No categories yet. Create one below.
+						</p>
+					)}
+					<div className="flex gap-2 items-end">
+						<div className="space-y-2 flex-1">
+							<Label htmlFor="new-category">New category</Label>
+							<Input
+								id="new-category"
+								placeholder="e.g. Apparel"
+								value={newCategoryName}
+								onChange={(e) => setNewCategoryName(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") {
+										e.preventDefault();
+										void handleCreateCategory();
+									}
+								}}
+							/>
+						</div>
+						<Button
+							variant="outline"
+							onClick={handleCreateCategory}
+							disabled={creatingCategory}
+						>
+							{creatingCategory ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								"Add category"
+							)}
+						</Button>
+					</div>
 				</div>
 
 				{showForm && hasAdminAccess && (
@@ -107,18 +189,24 @@ function ManageStoreProductsPage() {
 							</div>
 							<div className="space-y-2">
 								<Label>Category</Label>
-								<Select value={categoryId} onValueChange={setCategoryId}>
-									<SelectTrigger>
-										<SelectValue placeholder="Select category" />
-									</SelectTrigger>
-									<SelectContent>
-										{categories?.map((c) => (
-											<SelectItem key={c._id} value={c._id}>
-												{c.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+								{activeCategories.length === 0 ? (
+									<p className="text-sm text-muted-foreground py-2">
+										Create a category above first.
+									</p>
+								) : (
+									<Select value={categoryId} onValueChange={setCategoryId}>
+										<SelectTrigger className="w-full">
+											<SelectValue placeholder="Select category" />
+										</SelectTrigger>
+										<SelectContent position="popper">
+											{activeCategories.map((c) => (
+												<SelectItem key={c._id} value={c._id}>
+													{c.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								)}
 							</div>
 							<div className="space-y-2 sm:col-span-2">
 								<Label>Short description</Label>
@@ -136,7 +224,10 @@ function ManageStoreProductsPage() {
 								/>
 							</div>
 						</div>
-						<Button onClick={handleCreate} disabled={saving}>
+						<Button
+							onClick={handleCreate}
+							disabled={saving || activeCategories.length === 0}
+						>
 							{saving ? (
 								<Loader2 className="h-4 w-4 animate-spin" />
 							) : (
