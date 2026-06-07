@@ -4,7 +4,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { getUserPointTotals } from "../points/helpers";
 import { deductMerchandisePoints } from "../points/service";
-import { requireMerchAdmin, requireMerchOfficer } from "./helpers";
+import { canMemberPurchase, requireMerchAdmin, requireMerchOfficer } from "./helpers";
 import {
   allocateDisplayNumber,
   appendOrderAuditLog,
@@ -174,6 +174,37 @@ export const lookupOrderForPickup = query({
 
     if (!order || order.pickupOptionId !== args.pickupOptionId) return null;
     return enrichOrderForOfficer(ctx, order);
+  },
+});
+
+export const searchMembers = query({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    search: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireMerchOfficer(ctx, args.logtoId, args.authToken);
+    const search = args.search.trim().toLowerCase();
+    if (search.length < 2) return [];
+
+    const users = await ctx.db.query("users").collect();
+    const matches = users
+      .filter(
+        (user) =>
+          canMemberPurchase(user) &&
+          (user.name.toLowerCase().includes(search) ||
+            user.email.toLowerCase().includes(search)),
+      )
+      .slice(0, 10);
+
+    return matches.map((user) => ({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      spendablePoints: getUserPointTotals(user).spendablePoints,
+    }));
   },
 });
 
