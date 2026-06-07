@@ -32,6 +32,7 @@ import type * as logs from "../logs.js";
 import type * as merch_cart from "../merch/cart.js";
 import type * as merch_categories from "../merch/categories.js";
 import type * as merch_checkout from "../merch/checkout.js";
+import type * as merch_fulfillment from "../merch/fulfillment.js";
 import type * as merch_helpers from "../merch/helpers.js";
 import type * as merch_inventory from "../merch/inventory.js";
 import type * as merch_orderHelpers from "../merch/orderHelpers.js";
@@ -85,6 +86,7 @@ declare const fullApi: ApiFromModules<{
   "merch/cart": typeof merch_cart;
   "merch/categories": typeof merch_categories;
   "merch/checkout": typeof merch_checkout;
+  "merch/fulfillment": typeof merch_fulfillment;
   "merch/helpers": typeof merch_helpers;
   "merch/inventory": typeof merch_inventory;
   "merch/orderHelpers": typeof merch_orderHelpers;
