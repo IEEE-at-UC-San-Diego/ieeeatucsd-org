@@ -1,7 +1,7 @@
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { createFileRoute } from "@tanstack/react-router";
-import { ImageIcon, Loader2, Plus, Upload } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Boxes, ImageIcon, Loader2, Plus, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -235,15 +235,23 @@ function ManageStoreProductsPage() {
 							Manage catalog, releases, and pricing.
 						</p>
 					</div>
-					{hasAdminAccess && (
-						<Button
-							onClick={() => setShowForm(!showForm)}
-							disabled={activeCategories.length === 0}
-						>
-							<Plus className="h-4 w-4 mr-2" />
-							New product
-						</Button>
-					)}
+					<div className="flex items-center gap-2">
+						<Link to="/manage-store/inventory">
+							<Button variant="outline">
+								<Boxes className="h-4 w-4 mr-2" />
+								Manage inventory
+							</Button>
+						</Link>
+						{hasAdminAccess && (
+							<Button
+								onClick={() => setShowForm(!showForm)}
+								disabled={activeCategories.length === 0}
+							>
+								<Plus className="h-4 w-4 mr-2" />
+								New product
+							</Button>
+						)}
+					</div>
 				</div>
 
 				<div className="rounded-xl border bg-white p-5 space-y-4">
