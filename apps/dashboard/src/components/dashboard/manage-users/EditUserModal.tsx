@@ -1,4 +1,5 @@
 import type { Id } from "@convex/_generated/dataModel";
+import { Link } from "@tanstack/react-router";
 import { Info, Loader2, Shield, Trash2, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { UserAvatarFallback } from "@/components/dashboard/UserAvatarFallback";
@@ -339,15 +340,21 @@ export function EditUserModal({
 									<h3 className="font-medium text-sm">Points Management</h3>
 								</div>
 								<div className="space-y-2">
-									<Label>Points</Label>
-									<Input
-										type="number"
-										value={formData.points?.toString() || "0"}
-										onChange={(e) =>
-											handleInputChange("points", parseInt(e.target.value) || 0)
-										}
-										placeholder="0"
-									/>
+									<Label>Spendable points</Label>
+									<p className="text-2xl font-semibold tabular-nums">
+										{formData.points ?? 0}
+									</p>
+									<p className="text-xs text-muted-foreground">
+										Point balances are ledger-backed and cannot be overwritten
+										directly. Use the audited Points tools in{" "}
+										<Link
+											className="font-medium text-primary underline"
+											to="/manage-merch"
+										>
+											Manage Merch
+										</Link>
+										.
+									</p>
 								</div>
 							</div>
 						)}

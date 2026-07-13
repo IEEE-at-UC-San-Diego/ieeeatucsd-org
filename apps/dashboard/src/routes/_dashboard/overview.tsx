@@ -143,8 +143,8 @@ function OverviewPage() {
 					<Skeleton className="h-9 w-72 mb-3" />
 					<Skeleton className="h-4 w-48" />
 				</div>
-				<div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-					{[1, 2, 3, 4].map((i) => (
+				<div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+					{[1, 2, 3, 4, 5].map((i) => (
 						<Skeleton key={i} className="h-20 w-full rounded-lg" />
 					))}
 				</div>
@@ -223,13 +223,21 @@ function OverviewPage() {
 			</div>
 
 			{/* ─── Compact Stats Row ─── */}
-			<div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+			<div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
 				<div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
 					<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-						Points
+						Spendable
 					</p>
 					<p className="text-xl font-bold tabular-nums mt-0.5">
-						{user.points || 0}
+						{overviewData?.user.points ?? 0}
+					</p>
+				</div>
+				<div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
+					<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+						Lifetime earned
+					</p>
+					<p className="text-xl font-bold tabular-nums mt-0.5">
+						{overviewData?.user.lifetimePointsEarned ?? 0}
 					</p>
 				</div>
 				<div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
@@ -276,7 +284,7 @@ function OverviewPage() {
 						<div>
 							<p className="font-semibold text-sm">Points over time</p>
 							<p className="text-xs text-muted-foreground mt-0.5">
-								Cumulative points earned
+								Lifetime points earned
 							</p>
 						</div>
 						{chartData.length >= 2 && (
@@ -357,7 +365,9 @@ function OverviewPage() {
 						</div>
 					) : (
 						<div className="h-56 flex flex-col items-center justify-center text-muted-foreground/60 space-y-2">
-							<p className="text-sm">Attend events to see your growth chart</p>
+							<p className="text-sm">
+								Your point history will appear here after more account activity
+							</p>
 						</div>
 					)}
 				</div>
@@ -392,9 +402,12 @@ function OverviewPage() {
 														{activity.title}
 													</p>
 													{typeof activity.points === "number" &&
-													activity.points > 0 ? (
-														<span className="text-[10px] font-bold text-primary tabular-nums shrink-0">
-															+{activity.points}
+													activity.points !== 0 ? (
+														<span
+															className={`text-[10px] font-bold tabular-nums shrink-0 ${activity.points > 0 ? "text-primary" : "text-destructive"}`}
+														>
+															{activity.points > 0 ? "+" : ""}
+															{activity.points}
 														</span>
 													) : null}
 												</div>
@@ -431,8 +444,8 @@ function OverviewPage() {
 							Complete Your Profile
 						</h3>
 						<p className="text-xs text-amber-800/80 max-w-2xl">
-							Finish setting up your account to access all features and start
-							earning points.
+							Finish setting up your account to access all features and view
+							your point activity.
 						</p>
 					</div>
 					<Link
