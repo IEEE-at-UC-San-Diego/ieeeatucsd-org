@@ -9,4 +9,16 @@ crons.interval(
   internal.googleCalendar.scheduledSync,
 );
 
+crons.daily(
+  "clean abandoned merch image uploads",
+  { hourUTC: 11, minuteUTC: 20 },
+  internal.merchCatalog.cleanupOrphanImageUploads,
+);
+
+crons.interval(
+  "process merch notification outbox",
+  { minutes: 2 },
+  internal.merchNotifications.scheduledProcess,
+);
+
 export default crons;
