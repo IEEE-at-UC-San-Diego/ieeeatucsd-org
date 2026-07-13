@@ -19,6 +19,9 @@ export function usePermissions() {
 
 	const hasAdminAccess = isAdmin || isExecutiveOfficer;
 	const hasOfficerAccess = hasAdminAccess || isGeneralOfficer;
+	const canShopMerch = Boolean(
+		user?.signedUp && user.status === "active" && !isSponsorRole,
+	);
 
 	const canAccessResumeDatabase =
 		isAdmin || (isSponsorRole && user?.sponsorTier !== "Bronze");
@@ -38,6 +41,9 @@ export function usePermissions() {
 		isSponsor: isSponsorRole,
 		hasAdminAccess,
 		hasOfficerAccess,
+		canShopMerch,
+		canManageMerch: hasAdminAccess,
+		canFulfillMerch: hasOfficerAccess,
 		canAccessResumeDatabase,
 	};
 }

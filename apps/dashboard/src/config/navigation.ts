@@ -11,6 +11,9 @@ import {
 	Link as LinkIcon,
 	type LucideIcon,
 	MessageSquare,
+	PackageCheck,
+	ScanLine,
+	ShoppingBag,
 	Trophy,
 	UserPlus,
 	Users,
@@ -51,6 +54,9 @@ export const NAVIGATION_PATHS = {
 	SIGNOUT: "/signout",
 	GET_STARTED: "/get-started",
 	OFFICER_CALENDAR: "/officer-calendar",
+	MERCH_STORE: "/merch-store",
+	MERCH_PICKUP: "/merch-pickup",
+	MANAGE_MERCH: "/manage-merch",
 } as const;
 
 export type NavigationPath =
@@ -72,6 +78,11 @@ export const navigationCategories: NavigationCategory[] = [
 				icon: Trophy,
 				label: "Leaderboard",
 				href: NAVIGATION_PATHS.LEADERBOARD,
+			},
+			{
+				icon: ShoppingBag,
+				label: "Merch Store",
+				href: NAVIGATION_PATHS.MERCH_STORE,
 			},
 		],
 	},
@@ -98,6 +109,11 @@ export const navigationCategories: NavigationCategory[] = [
 				icon: MessageSquare,
 				label: "Slack Access",
 				href: NAVIGATION_PATHS.SLACK_ACCESS,
+			},
+			{
+				icon: ScanLine,
+				label: "Merch Pickup",
+				href: NAVIGATION_PATHS.MERCH_PICKUP,
 			},
 		],
 	},
@@ -140,6 +156,11 @@ export const navigationCategories: NavigationCategory[] = [
 				label: "Executive Analytics",
 				href: NAVIGATION_PATHS.EXECUTIVE_ANALYTICS,
 			},
+			{
+				icon: PackageCheck,
+				label: "Manage Merch",
+				href: NAVIGATION_PATHS.MANAGE_MERCH,
+			},
 		],
 	},
 	{
@@ -181,6 +202,9 @@ export const PATH_LABELS: Record<string, string> = {
 	"/settings": "Settings",
 	"/get-started": "Get Started",
 	"/officer-calendar": "Officer Calendar",
+	"/merch-store": "Merch Store",
+	"/merch-pickup": "Merch Pickup",
+	"/manage-merch": "Manage Merch",
 };
 
 export const LEGAL_VERSIONS = {
