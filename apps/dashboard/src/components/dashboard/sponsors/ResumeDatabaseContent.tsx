@@ -43,7 +43,7 @@ import type { UserWithResume } from "./types";
 
 export default function ResumeDatabaseContent() {
 	const { logtoId } = useAuth();
-	const [error, setError] = useState<string | null>(null);
+	const [error] = useState<string | null>(null);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [selectedMajors, setSelectedMajors] = useState<Set<string>>(new Set());
 	const [selectedYears, setSelectedYears] = useState<Set<string>>(new Set());
