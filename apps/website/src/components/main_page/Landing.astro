@@ -1,70 +1,190 @@
 ---
 import { Image } from "astro:assets";
-import landingimg from "../../images/landing.webp";
 import { FaDiscord } from "react-icons/fa";
-import { RiInstagramFill } from "react-icons/ri";
 import { MdEmail } from "react-icons/md";
+import { RiInstagramFill } from "react-icons/ri";
+import landingimg from "../../images/landing.webp";
+
+const socialLinks = [
+  {
+    label: "Follow IEEE at UC San Diego on Instagram",
+    href: "https://www.instagram.com/ieee.at.ucsd",
+    icon: RiInstagramFill,
+    external: true,
+  },
+  {
+    label: "Join the IEEE at UC San Diego Discord",
+    href: "https://discord.gg/XxfjqZSjca",
+    icon: FaDiscord,
+    external: true,
+  },
+  {
+    label: "Email IEEE at UC San Diego",
+    href: "mailto:ieee@ucsd.edu",
+    icon: MdEmail,
+    external: false,
+  },
+];
 ---
 
-<div class="w-full flex justify-between space-x-2 pt-[2%]">
+<section
+  aria-labelledby="hero-title"
+  class="relative isolate mt-3 min-h-[calc(100svh-7rem)] overflow-hidden rounded-[2rem] border border-white/10 bg-[#08101f] shadow-2xl shadow-ieee-blue-300/20 ring-1 ring-inset ring-white/5 sm:mt-4 lg:min-h-[42rem] lg:rounded-[2.5rem]"
+>
   <div
-    class="md:pt-[5%] pt-[6%] bg-gradient-to-t to-ieee-blue-100/30 p-[5vw] via-ieee-black from-ieee-black md:w-[53%] w-[60%] md:h-[45vw] h-[65vw] border-white/15 border-[0.1vw] rounded-[3vw] shadow-2xl shadow-ieee-blue-300/20 ring-1 ring-inset ring-white/5"
+    aria-hidden="true"
+    class="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_15%_12%,rgba(35,51,99,0.95),transparent_38%),radial-gradient(circle_at_82%_28%,rgba(136,191,236,0.18),transparent_36%),linear-gradient(145deg,#0a0e1a_25%,#07182b_100%)]"
   >
-    <p
-      data-inview
-      class="eyebrow animate-ease-in-out text-ieee-yellow text-[2.4vw] md:text-[1.05vw] mb-[4%] in-view:animate-flip-down"
-    >
-      UC San Diego IEEE
-    </p>
-    <p
-      data-inview
-      class="font-display animate-ease-in-out font-bold text-[3.8vw] md:text-[2.9vw] text-white mb-[6%] in-view:animate-fade-right"
-    >
-      Join one of the largest IEEE student branches in the US!
-    </p>
-    <p class="text-white font-light text-[2vw] md:text-[1.3vw]">
-      IEEE @ UCSD is a pre-professional organization aiming to empower engineers
-      with practical experience through hands-on project opportunities,
-      insightful workshops, and panels with industry professionals. We are a
-      branch of the International IEEE organization.
-    </p>
+  </div>
+  <div
+    aria-hidden="true"
+    class="absolute inset-0 -z-10 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.8)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.8)_1px,transparent_1px)] [background-size:3rem_3rem] [mask-image:linear-gradient(to_right,black,transparent_78%)]"
+  >
+  </div>
 
-    <div class="flex justify-end w-full mt-[6%]">
+  <div
+    class="mx-auto grid min-h-[inherit] max-w-[96rem] items-center gap-10 px-6 py-14 sm:px-10 sm:py-16 lg:grid-cols-[1.08fr_0.92fr] lg:gap-6 lg:px-16 lg:py-20 xl:px-24"
+  >
+    <div class="relative z-10 max-w-3xl">
+      <p
+        data-inview
+        class="eyebrow mb-6 flex items-center gap-3 text-xs text-ieee-yellow in-view:animate-fade-down sm:text-sm"
+      >
+        <span class="relative flex size-2" aria-hidden="true">
+          <span
+            class="absolute inline-flex size-full animate-ping rounded-full bg-ieee-yellow opacity-50"
+          ></span>
+          <span class="relative inline-flex size-2 rounded-full bg-ieee-yellow"
+          ></span>
+        </span>
+        UC San Diego student branch
+      </p>
+
+      <h1
+        id="hero-title"
+        data-inview
+        class="font-display max-w-4xl text-[clamp(3rem,8.5vw,5.75rem)] font-bold leading-[0.95] tracking-[-0.055em] text-white in-view:animate-fade-right"
+      >
+        Build what comes next.
+        <span class="block text-ieee-blue-100">Together.</span>
+      </h1>
+
+      <p
+        data-inview
+        class="mt-7 max-w-2xl text-base font-light leading-relaxed text-white/72 in-view:animate-fade-right sm:text-lg lg:text-xl"
+      >
+        Turn ideas into working projects, learn alongside other engineers, and
+        meet the people shaping tomorrow's technology—no prior experience
+        required.
+      </p>
+
       <div
-        class="text-white text-[3.5vw] md:text-[2.5vw] w-1/2 flex justify-between"
+        data-inview
+        class="mt-9 flex flex-col gap-3 in-view:animate-fade-up min-[440px]:flex-row"
       >
         <a
-          href="https://www.instagram.com/ieee.at.ucsd"
-          target="_blank"
-          class="border-[0.15vw] border-white/60 rounded-full p-[5%] shadow-glow hover:scale-110 hover:border-ieee-blue-100 hover:text-ieee-blue-100 transition-all ease-out duration-300"
+          href="/join"
+          class="group inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-ieee-yellow px-7 py-3 font-semibold text-ieee-black shadow-lg shadow-ieee-yellow/15 transition duration-300 hover:-translate-y-0.5 hover:bg-[#ffd45b] hover:shadow-xl hover:shadow-ieee-yellow/20"
         >
-          <RiInstagramFill />
+          Find your place
+          <svg
+            aria-hidden="true"
+            class="size-4 transition-transform duration-300 group-hover:translate-x-1"
+            viewBox="0 0 20 20"
+            fill="none"
+          >
+            <path
+              d="M4 10h12m-5-5 5 5-5 5"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"></path>
+          </svg>
         </a>
         <a
-          href="https://discord.gg/XxfjqZSjca"
-          target="_blank"
-          class="border-[0.15vw] border-white/60 rounded-full p-[5%] shadow-glow hover:scale-110 hover:border-ieee-blue-100 hover:text-ieee-blue-100 transition-all ease-out duration-300"
+          href="/events"
+          class="inline-flex min-h-12 items-center justify-center rounded-full border border-white/25 bg-white/[0.04] px-7 py-3 font-medium text-white backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-ieee-blue-100/70 hover:bg-ieee-blue-100/10"
         >
-          <FaDiscord />
+          Explore upcoming events
         </a>
+      </div>
 
-        <a
-          href="mailto:ieee@ucsd.edu"
-          target="_blank"
-          class="border-[0.15vw] border-white/60 rounded-full p-[5%] shadow-glow hover:scale-110 hover:border-ieee-blue-100 hover:text-ieee-blue-100 transition-all ease-out duration-300"
+      <div
+        class="mt-10 flex flex-wrap items-center gap-x-8 gap-y-5 border-t border-white/10 pt-6"
+      >
+        <div
+          class="flex gap-2 text-sm text-white/55"
+          aria-label="What we offer"
         >
-          <MdEmail />
-        </a>
+          <span class="font-mono-tech text-ieee-blue-100">01</span>
+          <span>Build</span>
+          <span aria-hidden="true">·</span>
+          <span>Learn</span>
+          <span aria-hidden="true">·</span>
+          <span>Connect</span>
+        </div>
+
+        <nav aria-label="IEEE social links" class="flex items-center gap-2">
+          {
+            socialLinks.map(({ label, href, icon: Icon, external }) => (
+              <a
+                href={href}
+                target={external ? "_blank" : undefined}
+                rel={external ? "noreferrer" : undefined}
+                aria-label={label}
+                class="flex size-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xl text-white/75 transition duration-300 hover:border-ieee-blue-100/60 hover:bg-ieee-blue-100/10 hover:text-ieee-blue-100"
+              >
+                <Icon aria-hidden="true" />
+              </a>
+            ))
+          }
+        </nav>
+      </div>
+    </div>
+
+    <div
+      data-inview
+      class="relative mx-auto flex w-full max-w-[32rem] items-center justify-center in-view:animate-fade-left lg:max-w-[38rem]"
+    >
+      <div
+        aria-hidden="true"
+        class="absolute inset-[8%] rounded-full bg-ieee-blue-100/20 blur-[5rem]"
+      >
+      </div>
+      <div
+        class="relative aspect-square w-full overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-ieee-blue-300/30 via-[#0b1e35] to-ieee-black p-5 shadow-2xl shadow-black/40 ring-1 ring-inset ring-white/5 sm:p-8 lg:rounded-[2.5rem]"
+      >
+        <div
+          aria-hidden="true"
+          class="absolute left-8 top-8 font-mono-tech text-[0.65rem] uppercase tracking-[0.28em] text-white/35"
+        >
+          Ideas → impact
+        </div>
+        <Image
+          src={landingimg}
+          alt="A network of circuit traces representing connected ideas"
+          widths={[480, 640, 900]}
+          sizes="(max-width: 1023px) 80vw, 42vw"
+          class="h-full w-full scale-110 object-contain drop-shadow-[0_0_2rem_rgba(136,191,236,0.22)]"
+        />
+
+        <div
+          class="absolute bottom-5 left-5 right-5 grid grid-cols-3 gap-2 sm:bottom-7 sm:left-7 sm:right-7"
+        >
+          {
+            ["Projects", "Community", "Industry"].map((label, index) => (
+              <div class="rounded-xl border border-white/10 bg-ieee-black/75 px-2 py-3 text-center backdrop-blur-md sm:rounded-2xl sm:px-3 sm:py-4">
+                <span class="font-mono-tech block text-[0.6rem] text-ieee-yellow/80 sm:text-xs">
+                  0{index + 1}
+                </span>
+                <span class="mt-1 block text-[0.65rem] font-medium text-white/85 sm:text-sm">
+                  {label}
+                </span>
+              </div>
+            ))
+          }
+        </div>
       </div>
     </div>
   </div>
-  <div
-    class="md:w-[46%] w-[40%] md:h-[45vw] h-[65vw] border-white/15 border-[0.1vw] rounded-[3vw] bg-gradient-to-b to-ieee-blue-100/60 from-ieee-black shadow-2xl shadow-ieee-blue-300/20 ring-1 ring-inset ring-white/5 overflow-hidden"
-  >
-    <Image
-      src={landingimg}
-      alt="circuit"
-      class="w-[95%] md:h-[45vw] h-[60vw] object-contain"
-    />
-  </div>
-</div>
+</section>

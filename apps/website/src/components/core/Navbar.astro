@@ -4,7 +4,7 @@ import whiteLogoHorizontal from "../../images/logos/white_logo_horizontal.svg";
 import pages from "../../data/pages.json";
 ---
 
-<div class="w-full">
+<nav class="w-full" aria-label="Primary navigation">
   <div
     class="flex justify-between items-center bg-ieee-black/75 backdrop-blur-md supports-[backdrop-filter]:bg-ieee-black/60 my-[1%] mx-[2.5%] py-[0.5%] px-[1%] rounded-full md:border-[0.1vw] md:border-white/10 shadow-lg shadow-black/40"
   >
@@ -34,7 +34,7 @@ import pages from "../../data/pages.json";
                 {page.name}
               </a>
               <div class="absolute left-1/2 transform -translate-x-1/2 w-[12vw] top-full z-50">
-                <div class="rounded-xl bg-ieee-black/90 backdrop-blur-md border border-white/15 shadow-xl shadow-black/50 overflow-hidden mt-[0.4vw] hidden group-hover:block animate-fade-down animate-duration-200 animate-ease-in-out">
+                <div class="rounded-xl bg-ieee-black/90 backdrop-blur-md border border-white/15 shadow-xl shadow-black/50 overflow-hidden mt-[0.4vw] hidden group-hover:block group-focus-within:block animate-fade-down animate-duration-200 animate-ease-in-out">
                   {page.subpages.map((subpage) => (
                     <a
                       href={subpage.path}
@@ -68,6 +68,8 @@ import pages from "../../data/pages.json";
       id="menu-btn"
       class="md:hidden text-white p-2 flex justify-center items-center focus:outline-none relative z-[60] scale-150"
       aria-label="Toggle menu"
+      aria-controls="mobile-menu"
+      aria-expanded="false"
     >
       <!-- Hamburger Icon -->
       <svg
@@ -120,6 +122,7 @@ import pages from "../../data/pages.json";
                 <button
                   class="mobile-dropdown-toggle py-4 px-6 text-center rounded-[3rem] motion-safe:transition-all motion-safe:duration-200 uppercase font-bold text-2xl text-white hover:text-gray-300 border-white border-2 flex items-center justify-center"
                   aria-expanded="false"
+                  aria-label={`Toggle ${page.name} submenu`}
                 >
                   <svg
                     class="w-6 h-6 transform transition-transform duration-200 dropdown-icon"
@@ -164,7 +167,7 @@ import pages from "../../data/pages.json";
       }
     </div>
   </div>
-</div>
+</nav>
 
 <style>
   #mobile-menu.show {
@@ -284,6 +287,8 @@ import pages from "../../data/pages.json";
   const dropdownToggles = document.querySelectorAll(".mobile-dropdown-toggle");
 
   function toggleMenu(show: boolean) {
+    menuBtn?.setAttribute("aria-expanded", String(show));
+
     if (show) {
       mobileMenu?.classList.remove("hidden");
       menuIcon?.classList.add("hidden");
@@ -322,6 +327,13 @@ import pages from "../../data/pages.json";
   menuBtn?.addEventListener("click", () => {
     const isMenuHidden = mobileMenu?.classList.contains("hidden") ?? true;
     toggleMenu(isMenuHidden);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !mobileMenu?.classList.contains("hidden")) {
+      toggleMenu(false);
+      menuBtn?.focus();
+    }
   });
 
   // Handle dropdown toggles
