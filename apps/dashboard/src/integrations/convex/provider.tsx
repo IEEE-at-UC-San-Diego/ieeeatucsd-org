@@ -9,17 +9,21 @@ import { useCallback, useMemo, useRef } from "react";
 import { errorMessage, logAuthEvent } from "@/lib/auth/logging";
 import { isNativeAuthBridgeMode } from "@/lib/auth/mode";
 
-const CONVEX_URL = (
+const viteEnv = (
 	import.meta as ImportMeta & {
 		env?: Record<string, string | undefined>;
 	}
-).env?.VITE_CONVEX_URL;
+).env;
+const CONVEX_URL = viteEnv?.VITE_CONVEX_URL;
+const convexClientUrl =
+	CONVEX_URL ||
+	(viteEnv?.MODE === "test" ? "https://test-placeholder.convex.cloud" : "");
 
 if (!CONVEX_URL) {
 	console.error("missing envar VITE_CONVEX_URL");
 }
 
-const convexQueryClient = new ConvexQueryClient(CONVEX_URL ?? "");
+const convexQueryClient = new ConvexQueryClient(convexClientUrl);
 
 export { convexQueryClient };
 

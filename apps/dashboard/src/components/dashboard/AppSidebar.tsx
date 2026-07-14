@@ -32,6 +32,8 @@ import {
 	navigationCategories,
 } from "@/config/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthedQuery } from "@/hooks/useAuthedConvex";
+import { api } from "../../../convex/_generated/api";
 
 interface AppSidebarProps {
 	currentPath?: string;
@@ -39,6 +41,13 @@ interface AppSidebarProps {
 
 export function AppSidebar({ currentPath = "" }: AppSidebarProps) {
 	const { user, userRole, isLoading, signOut } = useAuth();
+	const canQueryMerchSettings = Boolean(
+		user?.signedUp && user.status === "active" && userRole !== "Sponsor",
+	);
+	const merchSettings = useAuthedQuery(
+		api.merchPickup.getSettings,
+		canQueryMerchSettings ? {} : "skip",
+	);
 	const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
 		new Set(navigationCategories.map((cat) => cat.title)),
 	);
@@ -60,6 +69,12 @@ export function AppSidebar({ currentPath = "" }: AppSidebarProps) {
 		items: NavigationCategory["items"],
 	): NavigationCategory["items"] => {
 		return items.filter((item) => {
+			if (
+				item.href === NAVIGATION_PATHS.MERCH_STORE &&
+				(!canQueryMerchSettings || merchSettings?.storeEnabled !== true)
+			) {
+				return false;
+			}
 			if (
 				item.href === NAVIGATION_PATHS.RESUME_DATABASE &&
 				userRole === "Sponsor" &&

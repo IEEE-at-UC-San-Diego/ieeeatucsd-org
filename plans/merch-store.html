@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard Merch Store — Implementation Plan</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #5d687d;
+      --line: #d9dfeb;
+      --panel: #f7f9fc;
+      --blue: #00629b;
+      --blue-soft: #e9f4fb;
+      --green: #176b47;
+      --green-soft: #eaf7f0;
+      --amber: #8a5200;
+      --amber-soft: #fff6df;
+      --red: #9e2f2f;
+      --red-soft: #fff0f0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #fff;
+      font: 16px/1.58 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 56px 0 96px;
+    }
+
+    h1, h2, h3, h4 { line-height: 1.2; }
+    h1 { margin: 0 0 8px; font-size: clamp(2rem, 5vw, 3.4rem); }
+    h2 { margin: 52px 0 18px; padding-bottom: 8px; border-bottom: 2px solid var(--line); }
+    h3 { margin: 30px 0 10px; }
+    h4 { margin: 20px 0 8px; }
+    p { margin: 8px 0 14px; }
+    ul, ol { padding-left: 24px; }
+    li + li { margin-top: 6px; }
+    code {
+      padding: 0.12em 0.32em;
+      border-radius: 4px;
+      background: #edf1f7;
+      font-size: 0.9em;
+    }
+
+    .subtitle { color: var(--muted); font-size: 1.15rem; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 30px; }
+    .tag {
+      padding: 5px 10px;
+      border: 1px solid #b9d5e5;
+      border-radius: 999px;
+      color: #064f78;
+      background: var(--blue-soft);
+      font-size: 0.86rem;
+      font-weight: 650;
+    }
+
+    .callout {
+      margin: 18px 0;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--blue);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    .callout.warning { border-left-color: #db8b00; background: var(--amber-soft); }
+    .callout.success { border-left-color: var(--green); background: var(--green-soft); }
+    .callout strong:first-child { display: block; margin-bottom: 4px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin: 16px 0;
+    }
+    .card {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+    .card h3, .card h4 { margin-top: 0; }
+
+    .table-wrap { overflow-x: auto; margin: 16px 0 24px; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding: 11px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: var(--panel); font-size: 0.9rem; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(130px, 1fr));
+      gap: 10px;
+      align-items: stretch;
+      margin: 20px 0;
+    }
+    .flow > div {
+      position: relative;
+      padding: 13px;
+      border: 1px solid #b9d5e5;
+      border-radius: 8px;
+      background: var(--blue-soft);
+      text-align: center;
+      font-size: 0.92rem;
+      font-weight: 650;
+    }
+    .flow > div:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -14px;
+      top: 50%;
+      z-index: 1;
+      color: var(--blue);
+      transform: translateY(-50%);
+    }
+
+    .pr {
+      margin: 22px 0;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 2px 10px rgb(25 46 76 / 5%);
+    }
+    .pr h3 { margin: 0 0 4px; }
+    .pr .goal { color: var(--muted); }
+    .pr .review { color: var(--green); font-weight: 650; }
+
+    .status-list { list-style: none; padding: 0; }
+    .status-list li { padding-left: 25px; position: relative; }
+    .status-list li::before { content: "✓"; position: absolute; left: 2px; color: var(--green); font-weight: 800; }
+
+    .small { color: var(--muted); font-size: 0.9rem; }
+
+    @media (max-width: 780px) {
+      main { width: min(100% - 24px, 1120px); padding-top: 30px; }
+      .flow { grid-template-columns: 1fr; }
+      .flow > div:not(:last-child)::after {
+        content: "↓";
+        right: 50%;
+        top: auto;
+        bottom: -17px;
+        transform: translateX(50%);
+      }
+    }
+
+    @media print {
+      main { width: 100%; padding: 0; }
+      .pr, .card { break-inside: avoid; box-shadow: none; }
+      h2 { break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Dashboard Merch Store</h1>
+    <p class="subtitle">Durable points ledger, inventory-safe checkout, scheduled pickup, QR fulfillment, and administrative operations.</p>
+    <div class="meta">
+      <span class="tag">Design approved</span>
+      <span class="tag">Scope: apps/dashboard</span>
+      <span class="tag">Backend: Convex</span>
+      <span class="tag">Delivery: 7 reviewable PRs</span>
+      <span class="tag">Timezone: America/Los_Angeles</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>1. Outcome and success criteria</h2>
+    <p>Add a points-funded merchandise store to the authenticated dashboard. Eligible members can browse merchandise, add variants to a cart, choose a pickup event or project-space time slot, complete an atomic checkout, and later present an order QR code. General Officers, Executive Officers, and Administrators can scan and fulfill orders. Executive Officers and Administrators manage the catalog, stock, pickup availability, orders, refunds, and point adjustments.</p>
+
+    <div class="grid">
+      <article class="card">
+        <h3>Members can</h3>
+        <ul>
+          <li>See spendable and lifetime-earned points separately.</li>
+          <li>Shop active products and variants without overselling stock.</li>
+          <li>Check out a multi-item cart with server-calculated pricing.</li>
+          <li>Choose an eligible event or project-space slot for pickup.</li>
+          <li>View order history, status, receipt, pickup details, and QR code.</li>
+          <li>Cancel an eligible pending order and receive an exact refund.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h3>Staff can</h3>
+        <ul>
+          <li>Scan or manually enter an order code and preview the order.</li>
+          <li>Confirm fulfillment exactly once, with a durable audit entry.</li>
+          <li>See clear already-fulfilled, canceled, invalid, and wrong-pickup warnings.</li>
+          <li>Reschedule affected pending orders without losing capacity accounting.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h3>Store managers can</h3>
+        <ul>
+          <li>Create products, images, variants, point prices, limits, and stock.</li>
+          <li>Designate pickup events and generate capacity-limited time slots.</li>
+          <li>Search orders and perform reason-required reversals or adjustments.</li>
+          <li>Reconcile ledger balances and inventory movement histories.</li>
+        </ul>
+      </article>
+    </div>
+
+    <div class="callout success">
+      <strong>Primary invariant</strong>
+      A completed mutation never records only half of a financial or inventory operation. Order creation, point debit, stock decrement, capacity booking, and their audit entries commit atomically in one Convex transaction—or none of them commit.
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Approved product decisions</h2>
+    <table>
+      <thead><tr><th>Area</th><th>Decision</th></tr></thead>
+      <tbody>
+        <tr><td>QR workflow</td><td>Each order has a non-guessable QR token. Staff scan, review a server-fetched order preview, and explicitly confirm pickup. A scan alone never mutates the order.</td></tr>
+        <tr><td>Fulfillment roles</td><td>General Officers, Executive Officers, and Administrators may scan and fulfill. Only Executive Officers and Administrators manage catalog, inventory, orders, pickup configuration, and balances.</td></tr>
+        <tr><td>Shopping eligibility</td><td>Active, fully onboarded organizational users may shop, including officers and administrators. Sponsors and inactive or suspended accounts may not check out.</td></tr>
+        <tr><td>Cart</td><td>One checkout may contain multiple variants and quantities. Order lines snapshot product name, variant, SKU, image, unit price, quantity, and line total.</td></tr>
+        <tr><td>Catalog</td><td>Products support images, description, active window, per-user limits, and variants such as size/color. Each variant owns its SKU, point price, active state, and stock.</td></tr>
+        <tr><td>Point semantics</td><td>Spendable balance decreases with purchases. Lifetime earned does not decrease when points are spent and remains the leaderboard basis.</td></tr>
+        <tr><td>Migration</td><td>Each current balance becomes one idempotent opening ledger entry. Historical attendance is not duplicated into synthetic per-event ledger entries.</td></tr>
+        <tr><td>Adjustments</td><td>Executive Officers and Administrators can make reason-required ledger adjustments. No UI directly overwrites a balance.</td></tr>
+        <tr><td>Pickup</td><td>Managers explicitly enable published events for pickup or create project-space windows that generate slots with optional capacity. Checkout stores an immutable pickup snapshot.</td></tr>
+        <tr><td>Notifications</td><td>The dashboard order is authoritative. In-app and email notifications are delivered from an outbox and may retry without affecting the committed order.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warning">
+      <strong>Documented operating assumptions</strong>
+      Members may self-cancel only while an order is pending and before its pickup start/cutoff. Managers may cancel any pending order. Orders do not auto-refund when a pickup is missed; they become overdue/action-required so staff can reschedule or cancel deliberately. Fulfilled orders are terminal in the first release; returns and post-fulfillment refunds require a separate policy and are out of scope.
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Current codebase findings</h2>
+    <ul>
+      <li><code>users.points</code> is currently a mutable optional number and is incremented directly by <code>events.checkIn</code>.</li>
+      <li>Attendance records provide event history, but there is no general points ledger, purchase transaction model, or reconciliation path.</li>
+      <li>The overview derives its points chart only from attendance; it cannot currently represent purchases, refunds, opening balances, or adjustments.</li>
+      <li>The leaderboard and public profiles currently use a single points value, so they must move to lifetime-earned points while the wallet uses spendable balance.</li>
+      <li>The Manage Users modal exposes a points field to Administrators, but its save flow does not persist that field. This should be replaced, not repaired as a direct overwrite.</li>
+      <li><code>requireAdminAccess</code> already means Executive Officer or Administrator; <code>requireOfficerAccess</code> also includes General Officers.</li>
+      <li>Events already have published state, location, and start/end timestamps. Pickup eligibility should be a separate store mapping so merch settings do not pollute the event workflow.</li>
+      <li>There is no project-space availability model. The known project-space location is EBU1-4710.</li>
+      <li>Convex mutations provide the transactional boundary needed for point, order, stock, and capacity consistency.</li>
+      <li>The app already uses Convex file storage, TanStack routes, shadcn/Radix components, Sonner, and Resend-based server email.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>4. Architecture and invariants</h2>
+
+    <h3>4.1 Checkout transaction</h3>
+    <div class="flow" aria-label="Checkout transaction flow">
+      <div>Validate user, cart, prices, limits, and pickup</div>
+      <div>Re-check balance, stock, and capacity</div>
+      <div>Create order and immutable line snapshots</div>
+      <div>Append point and inventory ledger entries</div>
+      <div>Update summaries, book pickup, enqueue notices</div>
+    </div>
+    <p>All five steps execute in one Convex mutation. Concurrent checkouts conflict and retry against the same variant/account/slot documents; the retried mutation revalidates availability. This prevents negative balances, oversold variants, and overbooked slots.</p>
+
+    <h3>4.2 Required invariants</h3>
+    <ul class="status-list">
+      <li>All point amounts, prices, quantities, stock counts, and capacities are safe integers; prices and quantities are positive.</li>
+      <li>Spendable balance never becomes negative through checkout.</li>
+      <li>Every account summary change has exactly one corresponding ledger entry with a stable idempotency key.</li>
+      <li>Every stock change has an inventory movement with a resulting balance.</li>
+      <li>Every order state transition is validated by a centralized state machine and appends an order event.</li>
+      <li>Refunds and restocks reverse original entries; history is never edited or deleted.</li>
+      <li>Prices, products, variants, member identity, and pickup details are snapshotted on the order.</li>
+      <li>Client totals, roles, balance values, fulfillment state, and stock values are never trusted.</li>
+      <li>A checkout idempotency key returns the original order on retries and cannot create a second debit.</li>
+      <li>A fulfillment confirmation is idempotent; repeat scans report the existing result.</li>
+    </ul>
+
+    <h3>4.3 Points accounting</h3>
+    <p>The ledger is the audit source of truth; <code>pointAccounts</code> is the transactionally maintained read model. Keep <code>users.points</code> temporarily as a compatibility mirror during rollout, then stop reading it once all dashboard queries have migrated.</p>
+    <table>
+      <thead><tr><th>Entry kind</th><th>Balance delta</th><th>Lifetime-earned delta</th><th>Idempotency source</th></tr></thead>
+      <tbody>
+        <tr><td>Opening balance</td><td>Current legacy balance</td><td>Same amount</td><td><code>opening:{userId}:v1</code></td></tr>
+        <tr><td>Event reward</td><td>Positive reward</td><td>Same amount</td><td><code>event:{eventId}:user:{userId}</code></td></tr>
+        <tr><td>Purchase</td><td>Negative order total</td><td>0</td><td><code>order:{orderId}:purchase</code></td></tr>
+        <tr><td>Cancellation refund</td><td>Positive original total</td><td>0</td><td><code>order:{orderId}:cancel-refund</code></td></tr>
+        <tr><td>Correction</td><td>Signed amount</td><td>Signed amount</td><td>Mutation request ID</td></tr>
+        <tr><td>Spendable-only adjustment</td><td>Signed amount</td><td>0</td><td>Mutation request ID</td></tr>
+      </tbody>
+    </table>
+    <p>Adjustment UI must make “correction” versus “spendable-only” explicit, show the resulting balance before confirmation, require a human-readable reason, and record the actor. Neither adjustment type may make the spendable balance negative.</p>
+
+    <h3>4.4 Order state model</h3>
+    <table>
+      <thead><tr><th>From</th><th>Action</th><th>To</th><th>Side effects</th></tr></thead>
+      <tbody>
+        <tr><td>—</td><td>Checkout</td><td><code>pending</code></td><td>Debit points, decrement stock, book pickup capacity, create order event.</td></tr>
+        <tr><td><code>pending</code></td><td>Reschedule</td><td><code>pending</code></td><td>Atomically release old capacity, book new capacity, replace pickup snapshot, audit reason/actor.</td></tr>
+        <tr><td><code>pending</code></td><td>Cancel</td><td><code>canceled</code></td><td>Exact point refund, stock restoration, capacity release, reversal links, notifications.</td></tr>
+        <tr><td><code>pending</code></td><td>Confirm pickup</td><td><code>fulfilled</code></td><td>Record staff actor/time and append fulfillment event; no additional stock or point mutation.</td></tr>
+        <tr><td><code>fulfilled</code> or <code>canceled</code></td><td>Any normal transition</td><td>Blocked</td><td>Return the existing terminal result without duplicate effects.</td></tr>
+      </tbody>
+    </table>
+    <p>Pickup health is separate from financial order state: pending orders can be <code>scheduled</code>, <code>overdue</code>, or <code>action_required</code>. A cron/query can derive overdue state from timestamps; it must not silently refund or restock.</p>
+  </section>
+
+  <section>
+    <h2>5. Data model</h2>
+    <p>Names below are proposed and can be adjusted to repository conventions during implementation. All user-facing records include <code>createdAt</code>/<code>updatedAt</code> timestamps where relevant, and all manager mutations record an actor.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Table / field</th><th>Important fields</th><th>Indexes and rules</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>pointAccounts</code></td>
+            <td><code>userId</code>, <code>balance</code>, <code>lifetimeEarned</code>, <code>initializedAt</code>, <code>updatedAt</code></td>
+            <td>Unique-by-convention index on <code>userId</code>. Only the shared ledger helper may patch it.</td>
+          </tr>
+          <tr>
+            <td><code>pointLedgerEntries</code></td>
+            <td><code>userId</code>, signed <code>balanceDelta</code>, signed <code>lifetimeDelta</code>, post-entry balances, kind, source type/id, idempotency key, actor, reason, reversal link, timestamp</td>
+            <td>Indexes by user/time, idempotency key, source, and reversal. Append-only; entries are never patched or deleted.</td>
+          </tr>
+          <tr>
+            <td><code>users</code> additions</td>
+            <td>Optional <code>lifetimePointsEarned</code> and temporary legacy <code>points</code> mirror</td>
+            <td>Compatibility only; normal reads move to <code>pointAccounts</code>. Public profile points become lifetime earned.</td>
+          </tr>
+          <tr>
+            <td><code>merchProducts</code></td>
+            <td>Name, description, image storage metadata, status (<code>draft</code>/<code>active</code>/<code>archived</code>), availability window, purchase limit, display order, revision</td>
+            <td>Indexes by status/display order. Ordered products are archived rather than deleted. Revision changes whenever checkout-relevant data changes.</td>
+          </tr>
+          <tr>
+            <td><code>merchVariants</code></td>
+            <td>Product, SKU, option name/value pairs, point price, available stock summary, active state, revision</td>
+            <td>Indexes by product and SKU. Ordered variants cannot be deleted. Stock is patched only with an inventory movement.</td>
+          </tr>
+          <tr>
+            <td><code>merchInventoryEntries</code></td>
+            <td>Variant, signed quantity delta, resulting quantity, kind, order/source, idempotency key, actor, reason, timestamp</td>
+            <td>Append-only; indexes by variant/time, order, and idempotency key. Supports initial stock, checkout, cancellation, and manual correction.</td>
+          </tr>
+          <tr>
+            <td><code>merchPickupEvents</code></td>
+            <td>Event ID, enabled state, optional order capacity, booked count, booking cutoff, manager notes</td>
+            <td>One mapping per event. Only suitable published upcoming events are offered. Existing bookings survive later event edits through order snapshots.</td>
+          </tr>
+          <tr>
+            <td><code>merchPickupWindows</code></td>
+            <td>Project-space location, local timezone, start/end, slot duration, default capacity, enabled state</td>
+            <td>Manager-owned definition used to generate explicit slots; reject invalid or overlapping definitions unless intentionally allowed.</td>
+          </tr>
+          <tr>
+            <td><code>merchPickupSlots</code></td>
+            <td>Window, start/end timestamps, capacity, booked count, enabled state</td>
+            <td>Indexes by time and window. A booked slot cannot be deleted; disabling it requires resolving impacted orders.</td>
+          </tr>
+          <tr>
+            <td><code>merchOrders</code></td>
+            <td>Order number, owner, status, line snapshots, totals, pickup type/reference/snapshot, pickup health, checkout idempotency key, QR token, fulfilled/canceled metadata</td>
+            <td>Indexes by owner/time, status/time, pickup reference, checkout key, order number, and QR token. Token is high entropy and never authorizes fulfillment by itself.</td>
+          </tr>
+          <tr>
+            <td><code>merchOrderEvents</code></td>
+            <td>Order, transition/action, actor, before/after status or pickup, reason, timestamp, related ledger entry IDs</td>
+            <td>Append-only index by order/time. Provides the operator-visible timeline.</td>
+          </tr>
+          <tr>
+            <td><code>merchNotificationOutbox</code></td>
+            <td>Order, recipient, template kind, payload snapshot, state, attempts, next attempt, last error, sent timestamp</td>
+            <td>Created in the business mutation; processed asynchronously with bounded retries and dead-letter visibility. Never blocks checkout or fulfillment.</td>
+          </tr>
+          <tr>
+            <td><code>organizationSettings</code> additions</td>
+            <td><code>merchStoreEnabled</code>, project-space display name/address, default timezone, member cancellation cutoff</td>
+            <td>Store can be read-only/configured before checkout is enabled.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. Backend API boundaries</h2>
+
+    <h3>Member-facing queries and mutations</h3>
+    <ul>
+      <li><code>merchCatalog.listActive</code>: public-to-authenticated catalog projection with resolved image URLs and current availability, but no private inventory audit data.</li>
+      <li><code>points.getMyAccount</code> and <code>points.listMyLedger</code>: wallet totals and paginated activity.</li>
+      <li><code>merchPickup.listAvailable</code>: eligible event mappings and future enabled slots with remaining capacity.</li>
+      <li><code>merchOrders.checkout</code>: accepts cart lines, expected product/variant revisions and prices, pickup choice, and a client-generated idempotency key. All totals are recomputed server-side.</li>
+      <li><code>merchOrders.listMine</code>/<code>getMine</code>: minimal member-safe projections, including QR data only for the owner.</li>
+      <li><code>merchOrders.cancelMine</code>: validates ownership, pending state, and cutoff; runs the exact reversal transaction.</li>
+    </ul>
+
+    <h3>Manager APIs (Executive Officer or Administrator)</h3>
+    <ul>
+      <li>Catalog create/update/archive, secure image upload/finalization, variant management, and inventory adjustment.</li>
+      <li>Pickup-event enable/disable and project-space window/slot creation and editing.</li>
+      <li>Paginated order search/filter/detail, cancel, reschedule, export, and action-required queues.</li>
+      <li>Reason-required point adjustment with an explicit correction or spendable-only mode.</li>
+      <li>Ledger/inventory reconciliation reports. Any repair is a new adjustment entry, never a historical rewrite.</li>
+    </ul>
+
+    <h3>Fulfillment APIs (General Officer or above)</h3>
+    <ul>
+      <li><code>merchFulfillment.previewByToken</code>: authenticated token lookup returning member name, order number, items, status, and expected pickup. It performs no mutation.</li>
+      <li><code>merchFulfillment.confirm</code>: requires token/order match plus a confirmation request ID. It accepts pending orders, records staff identity/time, and returns an idempotent already-fulfilled result on retries.</li>
+      <li>Manual lookup uses the same high-entropy fallback code printed below the QR; never expose sequential database IDs as redeemable codes.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>7. User experience</h2>
+
+    <h3>Member store</h3>
+    <ul>
+      <li>Add <strong>Merch Store</strong> under Member Actions and show spendable points in the page header/cart.</li>
+      <li>Catalog cards show active image, point price/range, stock state, limit, and available variant choices.</li>
+      <li>Cart is client-side and resilient across navigation; checkout always refreshes server state. Duplicate variants merge and invalid quantities are rejected.</li>
+      <li>If price/revision changed, checkout returns a structured conflict; the UI shows old versus new price and requires review rather than silently charging.</li>
+      <li>Pickup step offers two grouped choices: manager-enabled events or available project-space time slots, displayed in Pacific time with location and cutoff.</li>
+      <li>Final review shows immutable line totals, overall point cost, post-purchase balance, pickup selection, and cancellation policy.</li>
+      <li>Success page and <strong>My Orders</strong> show receipt, pickup details, status timeline, QR, and readable fallback code.</li>
+      <li>QR remains hidden for canceled orders and clearly stamped as used for fulfilled orders.</li>
+    </ul>
+
+    <h3>Manager dashboard</h3>
+    <ul>
+      <li>Add <strong>Manage Merch</strong> under Executive Officers with tabs for Catalog, Orders, Pickup, Inventory, and Points.</li>
+      <li>Product editor supports draft preview, image upload, variants, prices, stock, limits, and availability. Activation is blocked until at least one valid active variant and image exist.</li>
+      <li>Inventory changes require a signed quantity and reason, show resulting stock, and warn about pending demand.</li>
+      <li>Pickup event selector searches approved/published future events. Project-space window builder previews generated slots before save.</li>
+      <li>Disabling a booked pickup option opens an impact review and requires rescheduling/canceling affected orders instead of orphaning them.</li>
+      <li>Orders table filters by status, product/SKU, member, pickup event/slot, overdue state, and date; detail shows all order, ledger, and audit links.</li>
+      <li>Balance adjustment searches a member, displays current spendable/lifetime totals, requires adjustment type and reason, previews resulting totals, and confirms explicitly.</li>
+    </ul>
+
+    <h3>Scanner</h3>
+    <ul>
+      <li>Add <strong>Merch Pickup</strong> under General Officers and above.</li>
+      <li>Ask for camera permission only after an explicit action; support camera selection, pause/resume, and manual code entry.</li>
+      <li>After decode, pause scanning and fetch a server preview. Staff verify member name and items, then press Confirm Pickup.</li>
+      <li>Use distinct, accessible result states for success, already fulfilled (with who/when), canceled, invalid token, unauthorized, network failure, and pickup mismatch.</li>
+      <li>No offline fulfillment queue: without a confirmed server response, the UI must not claim an order is fulfilled.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>8. Edge-case contract</h2>
+    <table>
+      <thead><tr><th>Case</th><th>Required behavior</th></tr></thead>
+      <tbody>
+        <tr><td>Double-click, timeout, reconnect, or retry at checkout</td><td>Same idempotency key returns the same order and one debit.</td></tr>
+        <tr><td>Two members buy the last unit</td><td>One succeeds; the other retries against updated stock and receives an out-of-stock conflict without a debit.</td></tr>
+        <tr><td>Two members take the last pickup slot</td><td>One succeeds; the other receives a capacity conflict and retains the cart.</td></tr>
+        <tr><td>Balance changes while cart is open</td><td>Server rejects insufficient funds; no order, stock, or capacity records are committed.</td></tr>
+        <tr><td>Product price/variant changes while cart is open</td><td>Structured stale-cart response prompts review; client price is never honored silently.</td></tr>
+        <tr><td>Purchase limit across multiple orders</td><td>Count non-canceled historical quantities for that product/member inside checkout; concurrent attempts cannot bypass the limit.</td></tr>
+        <tr><td>Cancel repeated or retried</td><td>One refund/restock/release. Later calls return the canceled order.</td></tr>
+        <tr><td>Scan repeated by one or multiple officers</td><td>One fulfillment event. Later confirmations show who fulfilled it and when.</td></tr>
+        <tr><td>Stolen or photographed QR</td><td>Token only permits authenticated staff to retrieve a preview; it cannot self-fulfill. Staff must verify displayed member/order details.</td></tr>
+        <tr><td>Event edited or removed after checkout</td><td>Order retains its snapshot and is flagged for manager review if the live source is no longer valid; never silently move the member.</td></tr>
+        <tr><td>Pickup time passes</td><td>Order appears overdue/action-required; no automatic refund, stock change, or fulfillment.</td></tr>
+        <tr><td>Member becomes suspended after ordering</td><td>Block new checkout. Existing order remains visible to staff/managers for deliberate fulfill, reschedule, or cancel handling.</td></tr>
+        <tr><td>Product or variant has order history</td><td>Archive/deactivate rather than delete; order snapshots and audit links remain valid.</td></tr>
+        <tr><td>Email delivery fails</td><td>Order remains successful. Outbox retries with bounded backoff and exposes dead letters to managers.</td></tr>
+        <tr><td>Ledger/account mismatch</td><td>Reconciliation reports it. Repair requires a documented compensating entry; never overwrite history.</td></tr>
+        <tr><td>Image upload abandoned or invalid</td><td>Validate type/size server-side; periodically remove unclaimed uploads. Replacing an image does not break historical order display.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>9. Security, privacy, and authorization</h2>
+    <ul>
+      <li>Enforce every role and ownership rule in Convex functions. Sidebar visibility is only presentation.</li>
+      <li>Centralize <code>requireMerchShopper</code>, <code>requireMerchManager</code>, and <code>requireMerchFulfiller</code> helpers on top of existing authenticated-user/role helpers.</li>
+      <li>Generate at least 128 bits of cryptographically secure entropy for QR tokens; tokens are revocable by cancellation and are never logged in plaintext.</li>
+      <li>Rate-limit or throttle repeated invalid manual/token lookups where the hosting stack permits, and record security-relevant failures without storing camera frames.</li>
+      <li>Only order owner and authorized staff receive order data. Fulfillment preview returns the minimum necessary member identity; it does not expose PID, payment information, or unrelated profile data.</li>
+      <li>Validate uploaded image MIME metadata, decoded format where feasible, and size on the server; do not trust filename extensions.</li>
+      <li>Sanitize product text through React rendering; do not accept arbitrary HTML.</li>
+      <li>Record actor, reason, timestamp, and request ID for adjustments, cancellation, rescheduling, inventory changes, and fulfillment.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>10. Reviewable PR sequence</h2>
+    <p>Each PR is deployable behind <code>merchStoreEnabled = false</code>, contains its own tests, and avoids mixing broad visual refactors with accounting logic.</p>
+
+    <article class="pr">
+      <h3>PR 1 — Points ledger foundation and safe migration</h3>
+      <p class="goal"><strong>Goal:</strong> Establish one durable accounting path before merchandise can spend points.</p>
+      <h4>Changes</h4>
+      <ul>
+        <li>Add <code>pointAccounts</code>, <code>pointLedgerEntries</code>, optional compatibility fields, indexes, and shared accounting helpers.</li>
+        <li>Implement lazy, idempotent opening-balance initialization from the current <code>users.points</code>. This closes the race between migration and live event check-ins.</li>
+        <li>Update event check-in so attendance, event reward ledger entry, account summary, lifetime total, legacy mirror, and public profile update commit together.</li>
+        <li>Add idempotent batch migration and read-only reconciliation commands with progress reporting and resumable cursors.</li>
+        <li>Switch overview/leaderboard reads: wallet uses spendable balance; leaderboard and public profile use lifetime earned. Points history comes from the ledger.</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li>Opening migration rerun, legacy zero/missing/negative defense, event reward retry, duplicate attendance, and account/ledger invariants.</li>
+        <li>Existing event check-in and leaderboard behavior remain valid, except spending semantics are now representable.</li>
+      </ul>
+      <p class="review">Review boundary: accounting and migration only; no merch tables or UI.</p>
+    </article>
+
+    <article class="pr">
+      <h3>PR 2 — Catalog, media, and inventory backend</h3>
+      <p class="goal"><strong>Goal:</strong> Create auditable merchandise and stock primitives without checkout.</p>
+      <h4>Changes</h4>
+      <ul>
+        <li>Add product, variant, and inventory-ledger schema plus manager-only mutations and member-safe catalog queries.</li>
+        <li>Add Convex image upload/finalize/delete flow with file validation and orphan cleanup strategy.</li>
+        <li>Enforce draft/active/archive lifecycle, SKU uniqueness, positive integer prices, revisioning, and archive-instead-of-delete rules.</li>
+        <li>Add reason-required stock initialization/adjustment through append-only inventory entries.</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li>Role enforcement, invalid prices/stock, SKU conflicts, lifecycle transitions, image validation, and stock reconciliation.</li>
+      </ul>
+      <p class="review">Review boundary: catalog and inventory domain only; no orders, pickup, or pages.</p>
+    </article>
+
+    <article class="pr">
+      <h3>PR 3 — Pickup events and project-space scheduling</h3>
+      <p class="goal"><strong>Goal:</strong> Model explicit, capacity-safe pickup choices independently of checkout.</p>
+      <h4>Changes</h4>
+      <ul>
+        <li>Add pickup-event mappings, project-space windows, generated slots, organization settings, and availability queries.</li>
+        <li>Use absolute timestamps for storage and <code>America/Los_Angeles</code> for entry/display; cover daylight-saving boundaries.</li>
+        <li>Validate event published/upcoming state, cutoffs, slot duration/capacity, window overlaps, and safe disable/delete behavior.</li>
+        <li>Add manager impact queries that list bookings before a pickup option can be disabled later.</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li>Slot generation, DST dates, capacity boundaries, cutoff behavior, event eligibility, overlap validation, and authorization.</li>
+      </ul>
+      <p class="review">Review boundary: pickup availability only; booked counts remain zero until PR 4.</p>
+    </article>
+
+    <article class="pr">
+      <h3>PR 4 — Atomic order engine</h3>
+      <p class="goal"><strong>Goal:</strong> Implement checkout, cancellation, rescheduling, and all reversal semantics before adding pages.</p>
+      <h4>Changes</h4>
+      <ul>
+        <li>Add orders, order events, QR token, notification outbox, indexes, and centralized order transition helpers.</li>
+        <li>Implement idempotent atomic checkout with eligibility, cart, revision/price, balance, limit, stock, and pickup validation.</li>
+        <li>Implement member/manager cancellation and manager rescheduling with exact point, stock, and capacity reversals.</li>
+        <li>Add owner and manager order queries with strict projections and pagination.</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li>Retry/idempotency, last-item and last-slot contention, stale price, insufficient balance, limit races, cancellation retry, reschedule capacity, suspended user, and terminal-state rejection.</li>
+        <li>Assert after every failure that no partial ledger, order, stock, or capacity writes exist.</li>
+      </ul>
+      <p class="review">Review boundary: transactional backend only; callable from tests, not yet exposed in navigation.</p>
+    </article>
+
+    <article class="pr">
+      <h3>PR 5 — Member storefront, cart, checkout, and orders</h3>
+      <p class="goal"><strong>Goal:</strong> Deliver the complete member shopping and pickup-selection experience.</p>
+      <h4>Changes</h4>
+      <ul>
+        <li>Add Merch Store navigation/path labels, catalog and product UI, cart state, checkout review, and structured conflict recovery.</li>
+        <li>Add event/slot pickup selector, confirmation page, My Orders list/detail/timeline, QR rendering, fallback code, and eligible cancellation.</li>
+        <li>Show spendable versus lifetime points consistently in store, overview, and ledger activity.</li>
+        <li>Add responsive, keyboard-accessible empty/loading/error/out-of-stock states and preserve cart after recoverable checkout failures.</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li>Component tests for cart math and conflict states; route smoke tests; manual mobile/desktop checkout and cancellation matrix.</li>
+      </ul>
+      <p class="review">Review boundary: member-facing UI consuming the already-tested backend.</p>
+    </article>
+
+    <article class="pr">
+      <h3>PR 6 — Manager dashboard and balance adjustments</h3>
+      <p class="goal"><strong>Goal:</strong> Give Executive Officers and Administrators full store operations.</p>
+      <h4>Changes</h4>
+      <ul>
+        <li>Add Manage Merch navigation and Catalog, Orders, Pickup, Inventory, and Points sections.</li>
+        <li>Build product/image/variant editing, archive/activation, inventory adjustment, pickup-event configuration, and project-window slot preview.</li>
+        <li>Build paginated order operations, impacted-order workflow, reschedule/cancel actions, and ledger/inventory timelines.</li>
+        <li>Replace the ineffective Manage Users points input with a link/action to reason-required Executive Officer/Administrator ledger adjustment.</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li>Role matrix, validation, impacted pickup changes, adjustment modes, negative-result prevention, and audit rendering.</li>
+      </ul>
+      <p class="review">Review boundary: management UI and its thin API wiring; accounting rules remain centralized.</p>
+    </article>
+
+    <article class="pr">
+      <h3>PR 7 — QR fulfillment, notifications, operations, and launch</h3>
+      <p class="goal"><strong>Goal:</strong> Complete physical handoff and production hardening, then enable the store deliberately.</p>
+      <h4>Changes</h4>
+      <ul>
+        <li>Add General-Officer-accessible scanner route, camera/manual entry, non-mutating preview, confirmation, and explicit result states.</li>
+        <li>Add fulfillment mutation and repeat-scan behavior, plus overdue/action-required operational queues.</li>
+        <li>Process notification outbox for order confirmation, reschedule, cancellation/refund, and fulfillment; add bounded retry/dead-letter handling.</li>
+        <li>Add reconciliation UI/commands, structured logs and metrics, feature-flag rollout checklist, runbooks, and final generated Convex route/type updates.</li>
+      </ul>
+      <h4>Tests</h4>
+      <ul>
+        <li>QR token authorization, preview side-effect freedom, simultaneous scans, invalid/canceled tokens, camera denial, network failure, email failure, and outbox retry.</li>
+        <li>End-to-end pilot: initialize balance → event reward → purchase → reschedule → scan → verify immutable ledgers and summaries.</li>
+      </ul>
+      <p class="review">Review boundary: fulfillment and production operations; feature remains disabled until the launch checklist passes.</p>
+    </article>
+  </section>
+
+  <section>
+    <h2>11. File-level implementation map</h2>
+    <table>
+      <thead><tr><th>Area</th><th>Likely files</th></tr></thead>
+      <tbody>
+        <tr><td>Schema and migration</td><td><code>convex/schema.ts</code>, <code>convex/migrations/initializePointLedger.ts</code></td></tr>
+        <tr><td>Accounting</td><td><code>convex/points.ts</code>, <code>convex/lib/pointsLedger.ts</code>, updates to <code>convex/events.ts</code> and <code>convex/users.ts</code></td></tr>
+        <tr><td>Store backend</td><td><code>convex/merchCatalog.ts</code>, <code>convex/merchPickup.ts</code>, <code>convex/merchOrders.ts</code>, <code>convex/merchFulfillment.ts</code>, shared <code>convex/lib/merch*.ts</code></td></tr>
+        <tr><td>Notifications</td><td><code>convex/merchNotifications.ts</code>, <code>convex/crons.ts</code>, merch email templates using the existing email system</td></tr>
+        <tr><td>Member routes</td><td><code>src/routes/_dashboard/merch-store.tsx</code>, nested/detail routes or components under <code>src/components/dashboard/merch/</code></td></tr>
+        <tr><td>Manager route</td><td><code>src/routes/_dashboard/manage-merch.tsx</code>, components under <code>src/components/dashboard/manage-merch/</code></td></tr>
+        <tr><td>Scanner route</td><td><code>src/routes/_dashboard/merch-pickup.tsx</code>, scanner components/hooks, QR rendering/scanning dependencies</td></tr>
+        <tr><td>Navigation/permissions</td><td><code>src/config/navigation.ts</code>, <code>src/hooks/usePermissions.ts</code>, <code>convex/permissions.ts</code></td></tr>
+        <tr><td>Existing points UI</td><td><code>src/routes/_dashboard/overview.tsx</code>, <code>leaderboard.tsx</code>, <code>manage-users.tsx</code>, Edit User modal</td></tr>
+        <tr><td>Tests</td><td>Co-located pure tests plus Convex integration tests; add a Convex test harness dependency if required</td></tr>
+      </tbody>
+    </table>
+    <p class="small">Exact route nesting and module splits should follow generated TanStack Router conventions and keep generated files generated rather than hand-edited.</p>
+  </section>
+
+  <section>
+    <h2>12. Verification strategy</h2>
+    <h3>Automated gates per PR</h3>
+    <ul>
+      <li>Dashboard typecheck, Biome check, unit/integration tests, and production build.</li>
+      <li>Mutation tests assert both results and absence of partial writes on every rejected path.</li>
+      <li>Role table tests cover Member, General Officer, Executive Officer, Administrator, Sponsor, inactive, and suspended users.</li>
+      <li>Reconciliation tests recompute point and stock totals from ledger entries and compare summaries.</li>
+      <li>Accessibility tests cover labels, keyboard flow, focus recovery, status announcements, and non-color-only feedback.</li>
+    </ul>
+
+    <h3>Manual acceptance matrix</h3>
+    <ul>
+      <li>Desktop and mobile catalog/cart/checkout with event and project-space pickup.</li>
+      <li>Camera allowed, denied, unavailable, rear/front selection, invalid QR, and manual code.</li>
+      <li>Two simultaneous browsers competing for one unit and one slot.</li>
+      <li>Network interruption immediately after checkout/fulfillment submit followed by retry.</li>
+      <li>Manager archives a purchased product and edits/cancels a pickup source; historical order remains understandable.</li>
+      <li>Email provider unavailable; order and in-dashboard receipt remain correct.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>13. Migration and rollout</h2>
+    <ol>
+      <li>Deploy additive ledger schema and lazy initialization with checkout disabled.</li>
+      <li>Run resumable opening-balance migration; compare account count, total legacy points, total opening entries, and reconciliation output.</li>
+      <li>Verify every live point writer uses the shared helper. Repository search for direct <code>points:</code> patches becomes a release gate.</li>
+      <li>Deploy catalog, pickup, and order foundations behind the disabled flag; configure project-space address, sample slots, products, and stock.</li>
+      <li>Run a restricted officer pilot using test products and real scanner devices; inspect ledgers and retry behavior.</li>
+      <li>Enable read-only storefront preview, then enable checkout. Rollback means disabling new checkout while keeping orders, QR pickup, and manager operations available.</li>
+      <li>After a stable window, stop reading the legacy <code>users.points</code> mirror. Remove it only in a later dedicated cleanup after verifying no consumers remain.</li>
+    </ol>
+    <div class="callout">
+      <strong>Rollback principle</strong>
+      Never roll back by deleting orders or ledger rows. Disable new purchasing, keep existing fulfillment/cancellation paths operational, and correct bad state with compensating entries.
+    </div>
+  </section>
+
+  <section>
+    <h2>14. Definition of done</h2>
+    <ul class="status-list">
+      <li>All existing balances are represented by one opening ledger entry and reconcile exactly.</li>
+      <li>All future event rewards, purchases, refunds, and adjustments are ledger-backed and idempotent.</li>
+      <li>Leaderboard uses lifetime earned; store uses spendable balance.</li>
+      <li>Concurrent checkout cannot overspend, oversell, exceed limits, or overbook pickup.</li>
+      <li>Members can complete the full store/order/QR workflow on mobile and desktop.</li>
+      <li>General Officers can fulfill but cannot manage products, inventory, orders, pickup configuration, or balances.</li>
+      <li>Executive Officers and Administrators can operate the store and perform audited balance adjustments.</li>
+      <li>Event and project-space pickup choices remain understandable after source edits and can be rescheduled safely.</li>
+      <li>Repeat checkout, cancel, reschedule, and fulfillment requests do not duplicate side effects.</li>
+      <li>Notifications retry independently and never determine whether an order succeeded.</li>
+      <li>Reconciliation, audit history, operational runbook, and feature-flag rollback are available before launch.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>15. Explicitly out of scope</h2>
+    <ul>
+      <li>Cash/card payments, dollar conversion, point transfers between members, or points with monetary value.</li>
+      <li>Shipping, delivery addresses, taxes, external fulfillment providers, or multi-location inventory.</li>
+      <li>Waitlists, backorders, preorders, auctions, discount codes, or dynamic pricing.</li>
+      <li>Post-fulfillment returns/exchanges and automatic no-show forfeiture/refunds until an organization policy is approved.</li>
+      <li>Offline fulfillment. Physical pickup requires a successful authenticated server confirmation.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

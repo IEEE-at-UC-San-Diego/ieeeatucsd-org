@@ -11,6 +11,7 @@ import {
   validateAndBuildResume,
 } from "./resume";
 import { buildAuthUpsertResult } from "./userProvisioning";
+import { getPointAccountSnapshot } from "./lib/pointsLedger";
 
 const FISCAL_YEAR_START_MONTH = 6; // July
 const FISCAL_MONTH_LABELS = [
@@ -379,7 +380,7 @@ export const completeOnboarding = mutation({
       userId: user._id,
       name: user.name,
       major: args.major,
-      points: user.points || 0,
+      points: user.lifetimePointsEarned ?? user.points ?? 0,
       eventsAttended: user.eventsAttended || 0,
       position: user.position || user.role,
       graduationYear: args.graduationYear,
@@ -443,7 +444,7 @@ export const updateProfile = mutation({
       const profileData = {
         name: newName,
         major: newMajor,
-        points: user.points || 0,
+        points: user.lifetimePointsEarned ?? user.points ?? 0,
         eventsAttended: user.eventsAttended || 0,
         position: user.position || user.role,
         graduationYear: newGraduationYear,
@@ -769,7 +770,7 @@ export const updateProfileForAdmin = mutation({
     const profileData = {
       name: nextName,
       major: nextMajor,
-      points: targetUser.points || 0,
+      points: targetUser.lifetimePointsEarned ?? targetUser.points ?? 0,
       eventsAttended: targetUser.eventsAttended || 0,
       position: targetUser.position || targetUser.role,
       graduationYear: nextGraduationYear,
@@ -813,6 +814,26 @@ export const deleteUser = mutation({
       throw new Error("Executive Officers cannot delete Administrator accounts");
     }
 
+    const [pointAccount, pointLedgerEntry, merchOrder] = await Promise.all([
+      ctx.db
+        .query("pointAccounts")
+        .withIndex("by_userId", (q) => q.eq("userId", targetUser._id))
+        .first(),
+      ctx.db
+        .query("pointLedgerEntries")
+        .withIndex("by_user_createdAt", (q) => q.eq("userId", targetUser._id))
+        .first(),
+      ctx.db
+        .query("merchOrders")
+        .withIndex("by_owner_createdAt", (q) => q.eq("ownerId", targetUser._id))
+        .first(),
+    ]);
+    if (pointAccount || pointLedgerEntry || merchOrder) {
+      throw new Error(
+        "Users with point history or merchandise orders cannot be deleted; suspend the account instead",
+      );
+    }
+
     // Delete the user's public profile if it exists
     const publicProfile = await ctx.db
       .query("publicProfiles")
@@ -835,20 +856,19 @@ export const getOverviewData = query({
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const userId = user.logtoId ?? user.authUserId ?? "";
+    const [pointTotals, ledgerEntries] = await Promise.all([
+      getPointAccountSnapshot(ctx, user._id),
+      ctx.db
+        .query("pointLedgerEntries")
+        .withIndex("by_user_createdAt", (q) => q.eq("userId", user._id))
+        .collect(),
+    ]);
 
-    // Get user's attended events
-    const attendees = await ctx.db
-      .query("attendees")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
-
-    // Build points history
-    const sortedAttendees = [...attendees].sort((a, b) => a.timeCheckedIn - b.timeCheckedIn);
-    let cumulative = 0;
-    const pointsHistory = sortedAttendees.map((a) => {
-      cumulative += a.pointsEarned;
-      return { date: a.timeCheckedIn, points: a.pointsEarned, cumulative };
-    });
+    const pointsHistory = ledgerEntries.map((entry) => ({
+      date: entry.createdAt,
+      points: entry.lifetimeDelta,
+      cumulative: entry.lifetimeEarnedAfter,
+    }));
 
     // Get user's reimbursements
     const reimbursements = await ctx.db
@@ -859,14 +879,21 @@ export const getOverviewData = query({
     // Build recent activity
     const activities: { type: string; title: string; description: string; date: number; points?: number }[] = [];
 
-    for (const a of attendees) {
-      const event = await ctx.db.get(a.eventId);
+    for (const entry of ledgerEntries) {
+      const titles = {
+        opening_balance: "Opening Balance",
+        event_reward: "Event Reward",
+        purchase: "Merch Purchase",
+        refund: "Points Refund",
+        correction: "Points Correction",
+        spendable_adjustment: "Spendable Points Adjustment",
+      } as const;
       activities.push({
-        type: "event",
-        title: "Attended Event",
-        description: event?.eventName || "Event",
-        date: a.timeCheckedIn,
-        points: a.pointsEarned,
+        type: entry.kind,
+        title: titles[entry.kind],
+        description: entry.reason || "Points account activity",
+        date: entry.createdAt,
+        points: entry.balanceDelta,
       });
     }
 
@@ -885,13 +912,18 @@ export const getOverviewData = query({
     const allUsers = await ctx.db.query("users").collect();
     const activeUsers = allUsers
       .filter((u) => u.signedUp && u.status === "active")
-      .sort((a, b) => (b.points || 0) - (a.points || 0));
+      .sort(
+        (a, b) =>
+          (b.lifetimePointsEarned ?? b.points ?? 0) -
+          (a.lifetimePointsEarned ?? a.points ?? 0),
+      );
     const rank = activeUsers.findIndex((u) => u._id === user._id) + 1;
 
     return {
       user: {
         name: user.name,
-        points: user.points || 0,
+        points: pointTotals.balance,
+        lifetimePointsEarned: pointTotals.lifetimeEarned,
         eventsAttended: user.eventsAttended || 0,
         role: user.role,
         joinDate: user.joinDate,
@@ -919,7 +951,7 @@ export const getLeaderboard = query({
       .map((u) => ({
         _id: u._id,
         name: u.name,
-        points: u.points || 0,
+        points: u.lifetimePointsEarned ?? u.points ?? 0,
         eventsAttended: u.eventsAttended || 0,
         major: u.major,
         graduationYear: u.graduationYear,
@@ -1144,7 +1176,7 @@ export const getOfficerLeaderboard = query({
           role: officer.role,
           position: officer.position,
           team: officer.team || "Unassigned",
-          points: officer.points || 0,
+          points: officer.lifetimePointsEarned ?? officer.points ?? 0,
           eventsAttended: officer.eventsAttended || 0,
           totalAttendances: attendees.length,
         };

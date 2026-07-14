@@ -15,11 +15,20 @@ import {
   generateGoogleCalendarEventId,
 } from "./googleCalendarIds";
 import { assertValidEventTimeRange } from "./eventTimeRange";
+import { appendPointLedgerEntry } from "./lib/pointsLedger";
 
 function getLegacyAttendeeIds(event: Record<string, unknown>): string[] {
   const legacy = (event as { attendees?: unknown }).attendees;
   if (!Array.isArray(legacy)) return [];
   return legacy.filter((id): id is string => typeof id === "string");
+}
+
+export function isDuplicateEventAttendance(
+  existingAttendance: unknown,
+  event: Record<string, unknown>,
+  userId: string,
+) {
+  return Boolean(existingAttendance) || getLegacyAttendeeIds(event).includes(userId);
 }
 
 function normalizeEventCode(eventCode?: string): string | undefined {
@@ -803,12 +812,13 @@ export const checkIn = mutation({
       .filter((q) => q.eq(q.field("userId"), userId))
       .first();
 
-    if (existing) {
-      throw new ConvexError("You have already checked in to this event.");
-    }
-
-    const legacyAttendeeIds = getLegacyAttendeeIds(event as Record<string, unknown>);
-    if (legacyAttendeeIds.includes(userId)) {
+    if (
+      isDuplicateEventAttendance(
+        existing,
+        event as Record<string, unknown>,
+        userId,
+      )
+    ) {
       throw new ConvexError("You have already checked in to this event.");
     }
 
@@ -820,12 +830,35 @@ export const checkIn = mutation({
       pointsEarned: event.pointsToReward ?? 0,
     });
 
-    // Update user points and events attended
+    // Attendance, account summary, ledger, compatibility mirrors, and public
+    // profile all commit in the same Convex transaction.
     const pts = event.pointsToReward ?? 0;
+    if (!Number.isSafeInteger(pts) || pts < 0) {
+      throw new ConvexError("This event has an invalid point reward.");
+    }
+    const eventsAttended = (user.eventsAttended || 0) + 1;
     await ctx.db.patch(user._id, {
-      points: (user.points || 0) + pts,
-      eventsAttended: (user.eventsAttended || 0) + 1,
+      eventsAttended,
     });
+
+    await appendPointLedgerEntry(ctx, {
+      userId: user._id,
+      balanceDelta: pts,
+      lifetimeDelta: pts,
+      kind: "event_reward",
+      sourceType: "event",
+      sourceId: event._id,
+      idempotencyKey: `event:${event._id}:user:${user._id}`,
+      reason: `Reward for attending ${event.eventName}`,
+    });
+
+    const publicProfile = await ctx.db
+      .query("publicProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .unique();
+    if (publicProfile) {
+      await ctx.db.patch(publicProfile._id, { eventsAttended });
+    }
 
     return { points: pts };
   },

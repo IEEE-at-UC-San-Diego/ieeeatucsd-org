@@ -181,6 +181,7 @@ export default defineSchema({
     joinDate: v.number(),
     eventsAttended: v.optional(v.number()),
     points: v.optional(v.number()),
+    lifetimePointsEarned: v.optional(v.number()),
     team: v.optional(officerTeam),
     invitedBy: v.optional(v.string()),
     inviteAccepted: v.optional(v.number()),
@@ -213,6 +214,41 @@ export default defineSchema({
     graduationYear: v.optional(v.number()),
     joinDate: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
+
+  pointAccounts: defineTable({
+    userId: v.id("users"),
+    balance: v.number(),
+    lifetimeEarned: v.number(),
+    initializedAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
+  pointLedgerEntries: defineTable({
+    userId: v.id("users"),
+    balanceDelta: v.number(),
+    lifetimeDelta: v.number(),
+    balanceAfter: v.number(),
+    lifetimeEarnedAfter: v.number(),
+    kind: v.union(
+      v.literal("opening_balance"),
+      v.literal("event_reward"),
+      v.literal("purchase"),
+      v.literal("refund"),
+      v.literal("correction"),
+      v.literal("spendable_adjustment"),
+    ),
+    sourceType: v.string(),
+    sourceId: v.optional(v.string()),
+    idempotencyKey: v.string(),
+    actorId: v.optional(v.id("users")),
+    reason: v.optional(v.string()),
+    reversalOf: v.optional(v.id("pointLedgerEntries")),
+    createdAt: v.number(),
+  })
+    .index("by_user_createdAt", ["userId", "createdAt"])
+    .index("by_idempotencyKey", ["idempotencyKey"])
+    .index("by_source", ["sourceType", "sourceId"])
+    .index("by_reversalOf", ["reversalOf"]),
 
   events: defineTable({
     // Core event fields
@@ -745,8 +781,268 @@ export default defineSchema({
     fallWeek0Start: v.optional(v.string()),
     winterWeek1Start: v.optional(v.string()),
     springWeek1Start: v.optional(v.string()),
+    merchStoreEnabled: v.optional(v.boolean()),
+    merchCheckoutEnabled: v.optional(v.boolean()),
+    merchProjectSpaceName: v.optional(v.string()),
+    merchProjectSpaceAddress: v.optional(v.string()),
+    merchDefaultTimezone: v.optional(v.string()),
+    merchMemberCancellationCutoffMinutes: v.optional(v.number()),
     updatedBy: v.optional(v.string()),
   }),
+
+  merchProducts: defineTable({
+    name: v.string(),
+    description: v.string(),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("active"),
+      v.literal("archived"),
+    ),
+    imageStorageId: v.optional(v.id("_storage")),
+    imageContentType: v.optional(v.string()),
+    imageFileName: v.optional(v.string()),
+    availableFrom: v.optional(v.number()),
+    availableUntil: v.optional(v.number()),
+    purchaseLimit: v.optional(v.number()),
+    displayOrder: v.number(),
+    revision: v.number(),
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  })
+    .index("by_status_displayOrder", ["status", "displayOrder"])
+    .index("by_updatedAt", ["updatedAt"]),
+
+  merchVariants: defineTable({
+    productId: v.id("merchProducts"),
+    sku: v.string(),
+    normalizedSku: v.string(),
+    optionValues: v.array(
+      v.object({ name: v.string(), value: v.string() }),
+    ),
+    pointPrice: v.number(),
+    stockOnHand: v.number(),
+    active: v.boolean(),
+    revision: v.number(),
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  })
+    .index("by_product", ["productId"])
+    .index("by_normalizedSku", ["normalizedSku"]),
+
+  merchImageUploads: defineTable({
+    claimToken: v.string(),
+    managerId: v.id("users"),
+    storageId: v.optional(v.id("_storage")),
+    productId: v.optional(v.id("merchProducts")),
+    state: v.union(
+      v.literal("pending"),
+      v.literal("uploaded"),
+      v.literal("claimed"),
+      v.literal("deleted"),
+    ),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_claimToken", ["claimToken"])
+    .index("by_storageId", ["storageId"])
+    .index("by_state_expiresAt", ["state", "expiresAt"]),
+
+  merchInventoryEntries: defineTable({
+    variantId: v.id("merchVariants"),
+    quantityDelta: v.number(),
+    resultingQuantity: v.number(),
+    kind: v.union(
+      v.literal("initial"),
+      v.literal("purchase"),
+      v.literal("cancellation"),
+      v.literal("adjustment"),
+    ),
+    orderId: v.optional(v.id("merchOrders")),
+    sourceId: v.optional(v.string()),
+    idempotencyKey: v.string(),
+    actorId: v.id("users"),
+    reason: v.string(),
+    reversalOf: v.optional(v.id("merchInventoryEntries")),
+    createdAt: v.number(),
+  })
+    .index("by_variant_createdAt", ["variantId", "createdAt"])
+    .index("by_order", ["orderId"])
+    .index("by_reversalOf", ["reversalOf"])
+    .index("by_idempotencyKey", ["idempotencyKey"]),
+
+  merchPickupEvents: defineTable({
+    eventId: v.id("events"),
+    enabled: v.boolean(),
+    capacity: v.optional(v.number()),
+    bookedCount: v.number(),
+    bookingCutoffAt: v.optional(v.number()),
+    managerNotes: v.optional(v.string()),
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_enabled", ["enabled"]),
+
+  merchPickupWindows: defineTable({
+    requestId: v.string(),
+    displayName: v.string(),
+    address: v.string(),
+    timezone: v.string(),
+    startAt: v.number(),
+    endAt: v.number(),
+    slotDurationMinutes: v.number(),
+    defaultCapacity: v.optional(v.number()),
+    enabled: v.boolean(),
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  })
+    .index("by_startAt", ["startAt"])
+    .index("by_requestId", ["requestId"])
+    .index("by_enabled_startAt", ["enabled", "startAt"]),
+
+  merchPickupSlots: defineTable({
+    windowId: v.id("merchPickupWindows"),
+    startAt: v.number(),
+    endAt: v.number(),
+    capacity: v.optional(v.number()),
+    bookedCount: v.number(),
+    enabled: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    updatedBy: v.id("users"),
+  })
+    .index("by_window_startAt", ["windowId", "startAt"])
+    .index("by_enabled_startAt", ["enabled", "startAt"]),
+
+  merchOrders: defineTable({
+    orderNumber: v.string(),
+    ownerId: v.id("users"),
+    ownerName: v.string(),
+    ownerEmail: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("fulfilled"),
+      v.literal("canceled"),
+    ),
+    pickupHealth: v.union(
+      v.literal("scheduled"),
+      v.literal("overdue"),
+      v.literal("action_required"),
+    ),
+    lines: v.array(
+      v.object({
+        productId: v.id("merchProducts"),
+        variantId: v.id("merchVariants"),
+        productName: v.string(),
+        variantName: v.string(),
+        sku: v.string(),
+        imageStorageId: v.optional(v.id("_storage")),
+        unitPrice: v.number(),
+        quantity: v.number(),
+        lineTotal: v.number(),
+        productRevision: v.number(),
+        variantRevision: v.number(),
+        purchaseInventoryEntryId: v.optional(v.id("merchInventoryEntries")),
+      }),
+    ),
+    totalPoints: v.number(),
+    pickupType: v.union(v.literal("event"), v.literal("slot")),
+    pickupEventId: v.optional(v.id("merchPickupEvents")),
+    pickupSlotId: v.optional(v.id("merchPickupSlots")),
+    pickupSnapshot: v.object({
+      label: v.string(),
+      address: v.string(),
+      startAt: v.number(),
+      endAt: v.number(),
+      timezone: v.string(),
+      cutoffAt: v.optional(v.number()),
+    }),
+    checkoutIdempotencyKey: v.string(),
+    checkoutRequestFingerprint: v.optional(v.string()),
+    qrToken: v.string(),
+    purchaseLedgerEntryId: v.optional(v.id("pointLedgerEntries")),
+    refundLedgerEntryId: v.optional(v.id("pointLedgerEntries")),
+    fulfilledAt: v.optional(v.number()),
+    fulfilledBy: v.optional(v.id("users")),
+    fulfillmentRequestId: v.optional(v.string()),
+    canceledAt: v.optional(v.number()),
+    canceledBy: v.optional(v.id("users")),
+    cancellationReason: v.optional(v.string()),
+    lastRescheduleRequestId: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_owner_createdAt", ["ownerId", "createdAt"])
+    .index("by_status_createdAt", ["status", "createdAt"])
+    .index("by_owner_checkoutKey", ["ownerId", "checkoutIdempotencyKey"])
+    .index("by_orderNumber", ["orderNumber"])
+    .index("by_qrToken", ["qrToken"])
+    .index("by_pickupEvent", ["pickupEventId"])
+    .index("by_pickupSlot", ["pickupSlotId"]),
+
+  merchOrderEvents: defineTable({
+    orderId: v.id("merchOrders"),
+    action: v.union(
+      v.literal("checkout"),
+      v.literal("rescheduled"),
+      v.literal("canceled"),
+      v.literal("fulfilled"),
+      v.literal("pickup_attention"),
+    ),
+    actorId: v.id("users"),
+    beforeStatus: v.optional(v.string()),
+    afterStatus: v.optional(v.string()),
+    beforePickup: v.optional(v.any()),
+    afterPickup: v.optional(v.any()),
+    pickupEventId: v.optional(v.id("merchPickupEvents")),
+    pickupSlotId: v.optional(v.id("merchPickupSlots")),
+    reason: v.optional(v.string()),
+    requestId: v.string(),
+    pointLedgerEntryId: v.optional(v.id("pointLedgerEntries")),
+    createdAt: v.number(),
+  })
+    .index("by_order_createdAt", ["orderId", "createdAt"])
+    .index("by_requestId", ["requestId"]),
+
+  merchNotificationOutbox: defineTable({
+    orderId: v.id("merchOrders"),
+    recipientUserId: v.id("users"),
+    recipientEmail: v.string(),
+    kind: v.union(
+      v.literal("order_confirmation"),
+      v.literal("rescheduled"),
+      v.literal("canceled_refunded"),
+      v.literal("fulfilled"),
+    ),
+    payload: v.any(),
+    state: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("sent"),
+      v.literal("dead_letter"),
+    ),
+    attempts: v.number(),
+    nextAttemptAt: v.number(),
+    processingStartedAt: v.optional(v.number()),
+    inAppDeliveredAt: v.optional(v.number()),
+    lastError: v.optional(v.string()),
+    sentAt: v.optional(v.number()),
+    idempotencyKey: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_state_nextAttemptAt", ["state", "nextAttemptAt"])
+    .index("by_order", ["orderId"])
+    .index("by_idempotencyKey", ["idempotencyKey"]),
 
   emailTemplates: defineTable({
     templateId: v.string(),

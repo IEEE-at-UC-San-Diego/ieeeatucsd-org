@@ -30,9 +30,12 @@ import { Route as DashboardReimbursementRouteImport } from './routes/_dashboard/
 import { Route as DashboardOverviewRouteImport } from './routes/_dashboard/overview'
 import { Route as DashboardOnboardingRouteImport } from './routes/_dashboard/onboarding'
 import { Route as DashboardOfficerCalendarRouteImport } from './routes/_dashboard/officer-calendar'
+import { Route as DashboardMerchStoreRouteImport } from './routes/_dashboard/merch-store'
+import { Route as DashboardMerchPickupRouteImport } from './routes/_dashboard/merch-pickup'
 import { Route as DashboardManageUsersRouteImport } from './routes/_dashboard/manage-users'
 import { Route as DashboardManageSponsorsRouteImport } from './routes/_dashboard/manage-sponsors'
 import { Route as DashboardManageReimbursementsRouteImport } from './routes/_dashboard/manage-reimbursements'
+import { Route as DashboardManageMerchRouteImport } from './routes/_dashboard/manage-merch'
 import { Route as DashboardManageFundRequestsRouteImport } from './routes/_dashboard/manage-fund-requests'
 import { Route as DashboardManageEventsRouteImport } from './routes/_dashboard/manage-events'
 import { Route as DashboardLinksRouteImport } from './routes/_dashboard/links'
@@ -166,6 +169,16 @@ const DashboardOfficerCalendarRoute =
     path: '/officer-calendar',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardMerchStoreRoute = DashboardMerchStoreRouteImport.update({
+  id: '/merch-store',
+  path: '/merch-store',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardMerchPickupRoute = DashboardMerchPickupRouteImport.update({
+  id: '/merch-pickup',
+  path: '/merch-pickup',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardManageUsersRoute = DashboardManageUsersRouteImport.update({
   id: '/manage-users',
   path: '/manage-users',
@@ -182,6 +195,11 @@ const DashboardManageReimbursementsRoute =
     path: '/manage-reimbursements',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardManageMerchRoute = DashboardManageMerchRouteImport.update({
+  id: '/manage-merch',
+  path: '/manage-merch',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardManageFundRequestsRoute =
   DashboardManageFundRequestsRouteImport.update({
     id: '/manage-fund-requests',
@@ -336,9 +354,12 @@ export interface FileRoutesByFullPath {
   '/links': typeof DashboardLinksRoute
   '/manage-events': typeof DashboardManageEventsRoute
   '/manage-fund-requests': typeof DashboardManageFundRequestsRoute
+  '/manage-merch': typeof DashboardManageMerchRoute
   '/manage-reimbursements': typeof DashboardManageReimbursementsRoute
   '/manage-sponsors': typeof DashboardManageSponsorsRoute
   '/manage-users': typeof DashboardManageUsersRoute
+  '/merch-pickup': typeof DashboardMerchPickupRoute
+  '/merch-store': typeof DashboardMerchStoreRoute
   '/officer-calendar': typeof DashboardOfficerCalendarRoute
   '/onboarding': typeof DashboardOnboardingRoute
   '/overview': typeof DashboardOverviewRoute
@@ -386,9 +407,12 @@ export interface FileRoutesByTo {
   '/links': typeof DashboardLinksRoute
   '/manage-events': typeof DashboardManageEventsRoute
   '/manage-fund-requests': typeof DashboardManageFundRequestsRoute
+  '/manage-merch': typeof DashboardManageMerchRoute
   '/manage-reimbursements': typeof DashboardManageReimbursementsRoute
   '/manage-sponsors': typeof DashboardManageSponsorsRoute
   '/manage-users': typeof DashboardManageUsersRoute
+  '/merch-pickup': typeof DashboardMerchPickupRoute
+  '/merch-store': typeof DashboardMerchStoreRoute
   '/officer-calendar': typeof DashboardOfficerCalendarRoute
   '/onboarding': typeof DashboardOnboardingRoute
   '/overview': typeof DashboardOverviewRoute
@@ -438,9 +462,12 @@ export interface FileRoutesById {
   '/_dashboard/links': typeof DashboardLinksRoute
   '/_dashboard/manage-events': typeof DashboardManageEventsRoute
   '/_dashboard/manage-fund-requests': typeof DashboardManageFundRequestsRoute
+  '/_dashboard/manage-merch': typeof DashboardManageMerchRoute
   '/_dashboard/manage-reimbursements': typeof DashboardManageReimbursementsRoute
   '/_dashboard/manage-sponsors': typeof DashboardManageSponsorsRoute
   '/_dashboard/manage-users': typeof DashboardManageUsersRoute
+  '/_dashboard/merch-pickup': typeof DashboardMerchPickupRoute
+  '/_dashboard/merch-store': typeof DashboardMerchStoreRoute
   '/_dashboard/officer-calendar': typeof DashboardOfficerCalendarRoute
   '/_dashboard/onboarding': typeof DashboardOnboardingRoute
   '/_dashboard/overview': typeof DashboardOverviewRoute
@@ -490,9 +517,12 @@ export interface FileRouteTypes {
     | '/links'
     | '/manage-events'
     | '/manage-fund-requests'
+    | '/manage-merch'
     | '/manage-reimbursements'
     | '/manage-sponsors'
     | '/manage-users'
+    | '/merch-pickup'
+    | '/merch-store'
     | '/officer-calendar'
     | '/onboarding'
     | '/overview'
@@ -540,9 +570,12 @@ export interface FileRouteTypes {
     | '/links'
     | '/manage-events'
     | '/manage-fund-requests'
+    | '/manage-merch'
     | '/manage-reimbursements'
     | '/manage-sponsors'
     | '/manage-users'
+    | '/merch-pickup'
+    | '/merch-store'
     | '/officer-calendar'
     | '/onboarding'
     | '/overview'
@@ -591,9 +624,12 @@ export interface FileRouteTypes {
     | '/_dashboard/links'
     | '/_dashboard/manage-events'
     | '/_dashboard/manage-fund-requests'
+    | '/_dashboard/manage-merch'
     | '/_dashboard/manage-reimbursements'
     | '/_dashboard/manage-sponsors'
     | '/_dashboard/manage-users'
+    | '/_dashboard/merch-pickup'
+    | '/_dashboard/merch-store'
     | '/_dashboard/officer-calendar'
     | '/_dashboard/onboarding'
     | '/_dashboard/overview'
@@ -806,6 +842,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardOfficerCalendarRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/merch-store': {
+      id: '/_dashboard/merch-store'
+      path: '/merch-store'
+      fullPath: '/merch-store'
+      preLoaderRoute: typeof DashboardMerchStoreRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/merch-pickup': {
+      id: '/_dashboard/merch-pickup'
+      path: '/merch-pickup'
+      fullPath: '/merch-pickup'
+      preLoaderRoute: typeof DashboardMerchPickupRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/manage-users': {
       id: '/_dashboard/manage-users'
       path: '/manage-users'
@@ -825,6 +875,13 @@ declare module '@tanstack/react-router' {
       path: '/manage-reimbursements'
       fullPath: '/manage-reimbursements'
       preLoaderRoute: typeof DashboardManageReimbursementsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/manage-merch': {
+      id: '/_dashboard/manage-merch'
+      path: '/manage-merch'
+      fullPath: '/manage-merch'
+      preLoaderRoute: typeof DashboardManageMerchRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/manage-fund-requests': {
@@ -1016,9 +1073,12 @@ interface DashboardRouteChildren {
   DashboardLinksRoute: typeof DashboardLinksRoute
   DashboardManageEventsRoute: typeof DashboardManageEventsRoute
   DashboardManageFundRequestsRoute: typeof DashboardManageFundRequestsRoute
+  DashboardManageMerchRoute: typeof DashboardManageMerchRoute
   DashboardManageReimbursementsRoute: typeof DashboardManageReimbursementsRoute
   DashboardManageSponsorsRoute: typeof DashboardManageSponsorsRoute
   DashboardManageUsersRoute: typeof DashboardManageUsersRoute
+  DashboardMerchPickupRoute: typeof DashboardMerchPickupRoute
+  DashboardMerchStoreRoute: typeof DashboardMerchStoreRoute
   DashboardOfficerCalendarRoute: typeof DashboardOfficerCalendarRoute
   DashboardOnboardingRoute: typeof DashboardOnboardingRoute
   DashboardOverviewRoute: typeof DashboardOverviewRoute
@@ -1040,9 +1100,12 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardLinksRoute: DashboardLinksRoute,
   DashboardManageEventsRoute: DashboardManageEventsRoute,
   DashboardManageFundRequestsRoute: DashboardManageFundRequestsRoute,
+  DashboardManageMerchRoute: DashboardManageMerchRoute,
   DashboardManageReimbursementsRoute: DashboardManageReimbursementsRoute,
   DashboardManageSponsorsRoute: DashboardManageSponsorsRoute,
   DashboardManageUsersRoute: DashboardManageUsersRoute,
+  DashboardMerchPickupRoute: DashboardMerchPickupRoute,
+  DashboardMerchStoreRoute: DashboardMerchStoreRoute,
   DashboardOfficerCalendarRoute: DashboardOfficerCalendarRoute,
   DashboardOnboardingRoute: DashboardOnboardingRoute,
   DashboardOverviewRoute: DashboardOverviewRoute,

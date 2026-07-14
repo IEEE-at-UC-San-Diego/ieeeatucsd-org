@@ -623,7 +623,7 @@ function ManageUsersPage() {
 					canEditRole={true}
 					canEditPosition={true}
 					canEditStatus={true}
-					canEditPoints={currentUser?.role === "Administrator"}
+					canEditPoints={hasAdminAccess}
 					loading={saving}
 					currentUserId={currentUser?._id}
 					onDelete={handleDeleteUser}
