@@ -132,7 +132,7 @@ function RootComponent() {
 		return (
 			<>
 				<Outlet />
-				<Toaster richColors position="bottom-right" />
+				<Toaster theme="light" position="bottom-right" />
 			</>
 		);
 	}
@@ -142,7 +142,7 @@ function RootComponent() {
 			<ConvexProvider>
 				<AuthProvider>
 					<Outlet />
-					<Toaster richColors position="bottom-right" />
+					<Toaster theme="light" position="bottom-right" />
 				</AuthProvider>
 			</ConvexProvider>
 		</AppLogtoProvider>

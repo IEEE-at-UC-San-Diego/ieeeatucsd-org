@@ -157,10 +157,10 @@ export function InvoiceFileUpload({
 	return (
 		<div className="space-y-2">
 			{error && (
-				<div className="flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded-lg">
-					<AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+				<div className="flex items-start gap-2 p-2 bg-ds-red-100 border border-ds-red-100 rounded-lg">
+					<AlertCircle className="h-4 w-4 text-ds-red-800 mt-0.5 shrink-0" />
 					<div className="flex-1">
-						<p className="text-xs text-red-600">{error}</p>
+						<p className="text-xs text-ds-red-800">{error}</p>
 					</div>
 					<Button
 						type="button"
@@ -175,16 +175,16 @@ export function InvoiceFileUpload({
 			)}
 
 			{parseSuccess && (
-				<div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
-					<CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-					<p className="text-xs text-green-600">
+				<div className="flex items-center gap-2 p-2 bg-ds-green-100 border border-ds-green-100 rounded-lg">
+					<CheckCircle className="h-4 w-4 text-ds-green-700 shrink-0" />
+					<p className="text-xs text-ds-green-700">
 						Invoice parsed successfully! Please verify the extracted data below.
 					</p>
 				</div>
 			)}
 
 			{uploadedFileUrl && (
-				<div className="flex items-center gap-2 text-xs text-green-600">
+				<div className="flex items-center gap-2 text-xs text-ds-green-700">
 					<FileText className="h-3.5 w-3.5" />
 					<span>Invoice file attached</span>
 				</div>

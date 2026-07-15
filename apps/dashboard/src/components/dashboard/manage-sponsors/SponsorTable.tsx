@@ -10,11 +10,11 @@ interface SponsorTableProps {
 }
 
 const tierColors: Record<SponsorTier, string> = {
-	Bronze: "bg-orange-100 text-orange-800",
-	Silver: "bg-gray-100 text-gray-800",
-	Gold: "bg-yellow-100 text-yellow-800",
-	Platinum: "bg-purple-100 text-purple-800",
-	Diamond: "bg-blue-100 text-blue-800",
+	Bronze: "bg-ds-amber-100 text-ds-amber-900",
+	Silver: "bg-muted text-foreground",
+	Gold: "bg-ds-amber-100 text-ds-amber-900",
+	Platinum: "bg-ds-blue-100 text-ds-purple-700",
+	Diamond: "bg-ds-blue-100 text-ds-blue-700",
 };
 
 export function SponsorTable({
@@ -36,14 +36,14 @@ export function SponsorTable({
 
 	if (sponsors.length === 0) {
 		return (
-			<div className="bg-white rounded-xl border p-8 text-center">
-				<div className="text-gray-400 mb-4">
+			<div className="bg-background rounded-md border p-8 text-center">
+				<div className="text-muted-foreground mb-4">
 					<Building2 className="w-12 h-12 mx-auto" />
 				</div>
-				<h3 className="text-lg font-medium text-gray-900 mb-2">
+				<h3 className="text-lg font-medium text-foreground mb-2">
 					No sponsor domains found
 				</h3>
-				<p className="text-gray-500">
+				<p className="text-muted-foreground">
 					Add a sponsor domain to automatically assign sponsor status to users
 					with matching email addresses.
 				</p>
@@ -52,13 +52,13 @@ export function SponsorTable({
 	}
 
 	return (
-		<div className="bg-white rounded-xl border overflow-hidden">
+		<div className="bg-background rounded-md border overflow-hidden">
 			<div className="overflow-x-auto">
 				<table className="w-full text-sm">
 					<thead>
-						<tr className="border-b bg-gray-50/50">
+						<tr className="border-b bg-muted/50">
 							<th
-								className="text-left p-4 font-medium text-gray-500 cursor-pointer hover:bg-gray-100 transition-colors"
+								className="text-left p-4 font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors"
 								onClick={() => onSort("organizationName")}
 							>
 								<span className="flex items-center gap-1">
@@ -66,7 +66,7 @@ export function SponsorTable({
 								</span>
 							</th>
 							<th
-								className="text-left p-4 font-medium text-gray-500 cursor-pointer hover:bg-gray-100 transition-colors"
+								className="text-left p-4 font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors"
 								onClick={() => onSort("domain")}
 							>
 								<span className="flex items-center gap-1">
@@ -74,7 +74,7 @@ export function SponsorTable({
 								</span>
 							</th>
 							<th
-								className="text-left p-4 font-medium text-gray-500 cursor-pointer hover:bg-gray-100 transition-colors"
+								className="text-left p-4 font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors"
 								onClick={() => onSort("sponsorTier")}
 							>
 								<span className="flex items-center gap-1">
@@ -87,16 +87,16 @@ export function SponsorTable({
 						{sponsors.map((sponsor, idx) => (
 							<tr
 								key={sponsor._id}
-								className={`border-b last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer ${idx % 2 === 1 ? "bg-gray-50/30" : ""}`}
+								className={`border-b last:border-b-0 hover:bg-muted transition-colors cursor-pointer ${idx % 2 === 1 ? "bg-muted/30" : ""}`}
 								onClick={() => onRowClick?.(sponsor)}
 							>
 								<td className="p-4">
-									<div className="text-sm font-medium text-gray-900">
+									<div className="text-sm font-medium text-foreground">
 										{sponsor.organizationName}
 									</div>
 								</td>
 								<td className="p-4">
-									<div className="text-sm font-mono text-gray-900">
+									<div className="text-sm font-mono text-foreground">
 										{sponsor.domain}
 									</div>
 								</td>

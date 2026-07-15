@@ -120,7 +120,7 @@ export function CheckInModal({
 					) : (
 						<div className="space-y-3">
 							<div className="flex items-center gap-2 rounded-lg border px-3 py-2">
-								<div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+								<div className="w-1.5 h-1.5 rounded-full bg-ds-green-1000" />
 								<span className="text-xs font-medium">Code accepted</span>
 							</div>
 							<div className="space-y-2">

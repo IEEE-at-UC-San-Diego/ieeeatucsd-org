@@ -1,7 +1,18 @@
 import { api } from "@convex/_generated/api";
-import { CheckCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CheckCircle, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -23,7 +34,7 @@ import { MarketingSection } from "../wizard/MarketingSection";
 interface EventRequestWizardModalProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onSubmit: (data: EventFormData) => void;
+	onSubmit: (data: EventFormData) => void | Promise<void>;
 	initialData?: Partial<EventRequest>;
 	aiEnabled?: boolean;
 }
@@ -143,14 +154,26 @@ export function EventRequestWizardModal({
 	const [formData, setFormData] = useState<EventFormData>(
 		buildFormDataFromInitial(initialData),
 	);
+	const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [submissionSucceeded, setSubmissionSucceeded] = useState(false);
+	const openerRef = useRef<HTMLElement | null>(null);
+	const initialSnapshotRef = useRef(JSON.stringify(formData));
 
 	// Sync form data when initialData changes (e.g., opening edit for a different event)
 	useEffect(() => {
 		if (isOpen) {
-			setFormData(buildFormDataFromInitial(initialData));
+			const nextFormData = buildFormDataFromInitial(initialData);
+			openerRef.current = document.activeElement as HTMLElement | null;
+			setFormData(nextFormData);
+			initialSnapshotRef.current = JSON.stringify(nextFormData);
 			setCurrentStep(initialData ? 2 : 1);
 			setDirection("forward");
 			setDisclaimerAccepted(!!initialData);
+			setIsSubmitting(false);
+			setSubmitError(null);
+			setSubmissionSucceeded(false);
 		}
 	}, [isOpen, initialData]);
 
@@ -197,24 +220,59 @@ export function EventRequestWizardModal({
 		}
 	};
 
-	const handleSubmit = () => {
-		onSubmit(formData);
+	const resetAndClose = () => {
 		onClose();
 		setCurrentStep(1);
 		setDirection("forward");
 		setDisclaimerAccepted(false);
-		setFormData(defaultFormData);
+		setFormData({ ...defaultFormData });
+		setShowDiscardDialog(false);
 	};
+
+	const isDirty =
+		JSON.stringify(formData) !== initialSnapshotRef.current ||
+		(!isEditing && disclaimerAccepted);
+
+	const requestClose = () => {
+		if (isSubmitting) return;
+		if (isDirty && !submissionSucceeded) {
+			setShowDiscardDialog(true);
+			return;
+		}
+		resetAndClose();
+	};
+
+	const handleSubmit = async () => {
+		setIsSubmitting(true);
+		setSubmitError(null);
+		try {
+			await onSubmit(formData);
+			setSubmissionSucceeded(true);
+			window.setTimeout(resetAndClose, 700);
+		} catch (error) {
+			setSubmitError(
+				error instanceof Error
+					? error.message
+					: "The request could not be saved. Please try again.",
+			);
+			setIsSubmitting(false);
+		}
+	};
+
+	const blockedMessage = (() => {
+		if (currentStep === 1 && !disclaimerAccepted)
+			return "Accept the requirements to continue.";
+		if (currentStep === 2 && !canProceed())
+			return "Add the event name, description, and type to continue.";
+		if (currentStep === 3 && !canProceed())
+			return "Add a location, valid time range, and event code to continue.";
+		return null;
+	})();
 
 	const renderStepContent = () => {
 		switch (currentStep) {
 			case 1:
-				return (
-					<DisclaimerSection
-						checked={disclaimerAccepted}
-						onCheckedChange={setDisclaimerAccepted}
-					/>
-				);
+				return <DisclaimerSection />;
 			case 2:
 				return (
 					<BasicInfoSection
@@ -313,99 +371,185 @@ export function EventRequestWizardModal({
 	};
 
 	return (
-		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="sm:max-w-2xl overflow-hidden">
-				<form
-					onSubmit={(e) => e.preventDefault()}
-					className="flex max-h-[90vh] min-h-0 flex-col"
+		<>
+			<Dialog open={isOpen} onOpenChange={(open) => !open && requestClose()}>
+				<DialogContent
+					className="flex h-dvh w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none border-0 p-0 sm:h-[min(720px,calc(100vh-48px))] sm:w-[min(960px,calc(100vw-48px))] sm:max-w-none sm:rounded-md sm:border"
+					showCloseButton={!isSubmitting}
+					onOpenAutoFocus={() => {
+						const activeElement = document.activeElement as HTMLElement | null;
+						if (activeElement && !activeElement.closest('[role="dialog"]')) {
+							openerRef.current = activeElement;
+						}
+					}}
+					onCloseAutoFocus={(event) => {
+						event.preventDefault();
+						openerRef.current?.focus();
+					}}
 				>
-					<DialogHeader className="shrink-0">
-						<DialogTitle>
-							{isConvertingDraft
-								? "Convert Draft to Event Request"
-								: isEditing
-									? "Edit Event Request"
-									: "Create Event Request"}
-						</DialogTitle>
-					</DialogHeader>
+					<form
+						onSubmit={(e) => e.preventDefault()}
+						className="flex min-h-0 flex-1 flex-col"
+					>
+						<DialogHeader className="shrink-0 border-b px-5 py-4 pr-14 sm:px-6">
+							<DialogTitle>
+								{isConvertingDraft
+									? "Convert Draft to Event Request"
+									: isEditing
+										? "Edit Event Request"
+										: "Create Event Request"}
+							</DialogTitle>
+							<p className="text-sm text-muted-foreground">
+								Step {currentStep} of {steps.length}:{" "}
+								{steps[currentStep - 1].title}
+							</p>
+						</DialogHeader>
 
-					<div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
-						<div className="space-y-6">
-							<div className="space-y-2">
-								<div className="flex items-center justify-between text-sm">
-									<span className="font-medium text-gray-900">
-										Step {currentStep} of {steps.length}
-									</span>
-									<span className="text-gray-500">
-										{steps[currentStep - 1].title}
-									</span>
-								</div>
-								<Progress value={progress} className="h-2" />
-								<div className="flex justify-between text-xs text-gray-400">
-									{steps.map((step) => (
-										<span
-											key={step.id}
-											className={
-												step.id === currentStep
-													? "text-blue-600 font-medium"
-													: step.id < currentStep
-														? "text-green-600"
-														: ""
-											}
-										>
-											{step.id}
-										</span>
-									))}
-								</div>
-							</div>
-
-							<div
-								key={`${currentStep}-${direction}`}
-								className={`min-h-[300px] animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce ${
-									direction === "forward"
-										? "slide-in-from-right-4"
-										: "slide-in-from-left-4"
-								}`}
+						<div className="shrink-0 border-b bg-muted/20 px-5 py-3 sm:px-6">
+							<Progress value={progress} className="h-1" />
+							<ol
+								className="mt-3 hidden grid-cols-6 gap-2 sm:grid"
+								aria-label="Event request steps"
 							>
-								{renderStepContent()}
+								{steps.map((step) => (
+									<li
+										key={step.id}
+										aria-current={step.id === currentStep ? "step" : undefined}
+									>
+										<span
+											className={`block text-xs font-medium ${step.id === currentStep ? "text-foreground" : step.id < currentStep ? "text-ds-green-700" : "text-muted-foreground"}`}
+										>
+											{step.title}
+										</span>
+									</li>
+								))}
+							</ol>
+							<p className="mt-2 text-xs text-muted-foreground sm:hidden">
+								{currentStep < steps.length
+									? `Next: ${steps[currentStep].title}`
+									: "Final review"}
+							</p>
+						</div>
+
+						<div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+							<div className="mx-auto max-w-3xl">
+								{submissionSucceeded ? (
+									<div className="flex min-h-80 flex-col items-center justify-center text-center success-reveal">
+										<CheckCircle className="size-10 text-ds-green-700" />
+										<h2 className="mt-3 text-lg font-semibold">
+											Request saved
+										</h2>
+										<p className="mt-1 text-sm text-muted-foreground">
+											Your event request was submitted successfully.
+										</p>
+									</div>
+								) : (
+									<div
+										key={`${currentStep}-${direction}`}
+										className="min-h-[300px] animate-in fade-in duration-150 ease-[var(--ease-out)] motion-instant-reduce"
+									>
+										{renderStepContent()}
+									</div>
+								)}
 							</div>
 						</div>
-					</div>
 
-					<DialogFooter className="mt-6 flex shrink-0 justify-between">
-						<div>
-							{currentStep > 1 && (
-								<Button type="button" variant="outline" onClick={handleBack}>
-									Back
-								</Button>
-							)}
-						</div>
-						<div className="flex gap-2">
-							<Button type="button" variant="outline" onClick={onClose}>
-								Cancel
-							</Button>
-							{currentStep < steps.length ? (
-								<Button
-									type="button"
-									onClick={handleNext}
-									disabled={!canProceed()}
+						{currentStep === 1 && !submissionSucceeded && (
+							<div className="shrink-0 border-t bg-background px-5 py-3 sm:px-6">
+								<label
+									htmlFor="event-requirements"
+									className="mx-auto flex max-w-3xl cursor-pointer items-start gap-3 text-sm leading-5"
 								>
-									Next
-								</Button>
-							) : (
-								<Button type="button" onClick={handleSubmit}>
-									<CheckCircle className="h-4 w-4 mr-2" />
-									{isConvertingDraft
-										? "Submit Request"
-										: isEditing
-											? "Update Request"
-											: "Submit Request"}
-								</Button>
-							)}
-						</div>
-					</DialogFooter>
-				</form>
-			</DialogContent>
-		</Dialog>
+									<Checkbox
+										id="event-requirements"
+										checked={disclaimerAccepted}
+										onCheckedChange={(value) =>
+											setDisclaimerAccepted(value === true)
+										}
+										className="mt-0.5"
+									/>
+									<span>
+										I have read the requirements and agree to follow the event,
+										funding, and safety policies.
+									</span>
+								</label>
+							</div>
+						)}
+
+						<DialogFooter className="flex shrink-0 items-center justify-between border-t bg-background px-5 py-3 shadow-[0_-8px_16px_-16px_rgba(0,0,0,0.35)] sm:px-6">
+							<div>
+								{currentStep > 1 && !submissionSucceeded && (
+									<Button type="button" variant="outline" onClick={handleBack}>
+										Back
+									</Button>
+								)}
+							</div>
+							<div className="flex flex-1 items-center justify-end gap-2">
+								{(blockedMessage || submitError) && !submissionSucceeded && (
+									<p
+										className={`mr-auto hidden text-xs sm:block ${submitError ? "text-destructive" : "text-muted-foreground"}`}
+										role={submitError ? "alert" : undefined}
+									>
+										{submitError || blockedMessage}
+									</p>
+								)}
+								{!submissionSucceeded && (
+									<Button
+										type="button"
+										variant="outline"
+										onClick={requestClose}
+										disabled={isSubmitting}
+									>
+										Cancel
+									</Button>
+								)}
+								{!submissionSucceeded && currentStep < steps.length ? (
+									<Button
+										type="button"
+										onClick={handleNext}
+										disabled={!canProceed()}
+									>
+										Next
+									</Button>
+								) : !submissionSucceeded ? (
+									<Button
+										type="button"
+										onClick={handleSubmit}
+										disabled={isSubmitting}
+									>
+										{isSubmitting ? (
+											<Loader2 className="h-4 w-4 animate-spin" />
+										) : (
+											<CheckCircle className="h-4 w-4" />
+										)}
+										{isConvertingDraft
+											? "Submit Request"
+											: isEditing
+												? "Update Request"
+												: "Submit Request"}
+									</Button>
+								) : null}
+							</div>
+						</DialogFooter>
+					</form>
+				</DialogContent>
+			</Dialog>
+			<AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Discard this event request?</AlertDialogTitle>
+						<AlertDialogDescription>
+							Your changes have not been saved. This action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Keep editing</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onClick={resetAndClose}>
+							Discard changes
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
 	);
 }

@@ -234,12 +234,12 @@ function SponsorStatsCardsSkeleton() {
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 			{[...Array(4)].map((_, i) => (
-				<div key={i} className="bg-white rounded-xl border p-6">
+				<div key={i} className="bg-background rounded-md border p-6">
 					<div className="flex items-center gap-4">
-						<div className="w-12 h-12 rounded-lg bg-gray-200 animate-pulse" />
+						<div className="w-12 h-12 rounded-lg bg-muted animate-pulse" />
 						<div className="flex-1 space-y-2">
-							<div className="h-4 w-20 rounded bg-gray-200 animate-pulse" />
-							<div className="h-6 w-12 rounded bg-gray-200 animate-pulse" />
+							<div className="h-4 w-20 rounded bg-muted animate-pulse" />
+							<div className="h-6 w-12 rounded bg-muted animate-pulse" />
 						</div>
 					</div>
 				</div>
@@ -250,7 +250,7 @@ function SponsorStatsCardsSkeleton() {
 
 function SponsorTableSkeleton() {
 	return (
-		<div className="bg-white rounded-xl border p-8">
+		<div className="bg-background rounded-md border p-8">
 			<div className="space-y-3">
 				{[...Array(5)].map((_, i) => (
 					<Skeleton key={i} className="h-12 w-full rounded-lg" />

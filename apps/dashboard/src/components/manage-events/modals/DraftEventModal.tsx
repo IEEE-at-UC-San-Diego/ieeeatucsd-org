@@ -195,7 +195,7 @@ export function DraftEventModal({
 						<div className="flex-1 space-y-4 overflow-y-auto pr-1">
 							<div className="space-y-2">
 								<Label htmlFor="draft-name">
-									Event Name <span className="text-red-500">*</span>
+									Event Name <span className="text-ds-red-800">*</span>
 								</Label>
 								<Input
 									id="draft-name"
@@ -284,7 +284,7 @@ export function DraftEventModal({
 									placeholder="mm/dd/yy"
 								/>
 								{dateError && (
-									<p className="text-xs text-red-500">{dateError}</p>
+									<p className="text-xs text-ds-red-800">{dateError}</p>
 								)}
 							</div>
 
@@ -299,7 +299,7 @@ export function DraftEventModal({
 										placeholder="e.g., 9am, 9:00 AM"
 									/>
 									{startTimeError && (
-										<p className="text-xs text-red-500">{startTimeError}</p>
+										<p className="text-xs text-ds-red-800">{startTimeError}</p>
 									)}
 								</div>
 								<div className="space-y-2">
@@ -312,7 +312,7 @@ export function DraftEventModal({
 										placeholder="e.g., 2pm, 2:00 PM"
 									/>
 									{endTimeError && (
-										<p className="text-xs text-red-500">{endTimeError}</p>
+										<p className="text-xs text-ds-red-800">{endTimeError}</p>
 									)}
 								</div>
 							</div>
@@ -345,7 +345,7 @@ export function DraftEventModal({
 								</div>
 							</div>
 
-							<div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-600">
+							<div className="bg-muted p-3 rounded-lg text-sm text-muted-foreground">
 								<p>
 									{isEditing
 										? "Update your draft event. You can submit it for approval later through the full event request form."

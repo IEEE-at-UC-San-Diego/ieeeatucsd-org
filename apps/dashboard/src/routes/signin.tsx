@@ -40,34 +40,34 @@ function SignInPage() {
 	};
 
 	return (
-		<div className="min-h-screen relative flex flex-col justify-center items-center py-12 sm:px-6 lg:px-8 overflow-hidden bg-gray-50">
+		<div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-ds-background-200 px-4 py-12 sm:px-6 lg:px-8">
 			<div className="relative z-10 w-full max-w-md">
-				<div className="bg-white/90 backdrop-blur-sm py-10 px-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-gray-900/5 sm:rounded-2xl sm:px-10">
+				<div className="rounded-md border bg-card px-6 py-10 shadow-raised sm:px-10">
 					<div className="mb-8 text-center">
-						<div className="flex justify-center mb-6">
+						<div className="mb-6 flex justify-center">
 							<img
 								src="/logos/blue_logo_only.svg"
 								alt="IEEE UCSD Logo"
-								className="w-24 h-24"
+								className="h-20 w-20"
 							/>
 						</div>
-						<h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">
+						<h1 className="mb-2 text-2xl font-semibold tracking-[-0.04em] text-foreground">
 							Welcome
-						</h2>
-						<p className="text-sm text-gray-600">
+						</h1>
+						<p className="text-sm leading-5 text-muted-foreground">
 							Sign in to the{" "}
-							<span className="font-semibold text-gray-800">
+							<span className="font-medium text-foreground">
 								IEEE Student Branch at UC San Diego
 							</span>{" "}
 							dashboard
 						</p>
 						{reason === "session-init" && (
-							<p className="mt-3 text-sm text-amber-700">
-								Session initialization failed. Please sign in again.
+							<p className="mt-3 text-sm text-ds-amber-900">
+								Session initialization failed. Sign in again.
 							</p>
 						)}
 						{reason === "stale-callback" && (
-							<p className="mt-3 text-sm text-amber-700">
+							<p className="mt-3 text-sm text-ds-amber-900">
 								Your previous sign-in callback expired. Retrying sign-in now.
 							</p>
 						)}
@@ -77,13 +77,13 @@ function SignInPage() {
 						<Button
 							onClick={handleSignIn}
 							disabled={isLoading}
-							className="w-full py-3.5 text-sm font-medium rounded-xl shadow-md"
+							className="w-full"
 							size="lg"
 						>
 							{isLoading && isAuthenticated ? (
 								<>
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Finishing sign in...
+									Signing In…
 								</>
 							) : (
 								"Continue with Google"
@@ -91,18 +91,14 @@ function SignInPage() {
 						</Button>
 					</div>
 
-					<div className="mt-8 border-t border-gray-100 pt-6">
-						<div className="relative flex justify-center text-sm">
-							<span className="bg-white/50 px-2 text-gray-500">
-								Need access?{" "}
-								<a
-									href="mailto:ieee@ucsd.edu"
-									className="font-semibold text-blue-600 hover:text-blue-500"
-								>
-									Contact IEEE UCSD
-								</a>
-							</span>
-						</div>
+					<div className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
+						Need access?{" "}
+						<a
+							href="mailto:ieee@ucsd.edu"
+							className="font-medium text-ds-blue-700 hover:underline"
+						>
+							Contact IEEE UCSD
+						</a>
 					</div>
 				</div>
 			</div>

@@ -52,11 +52,11 @@ export const Route = createFileRoute("/_dashboard/manage-fund-requests")({
 const ITEMS_PER_PAGE = 10;
 
 const STATUS_COLORS: Record<string, string> = {
-	submitted: "bg-blue-100 text-blue-800",
-	needs_info: "bg-orange-100 text-orange-800",
-	approved: "bg-green-100 text-green-800",
-	denied: "bg-red-100 text-red-800",
-	completed: "bg-purple-100 text-purple-800",
+	submitted: "bg-ds-blue-100 text-ds-blue-700",
+	needs_info: "bg-ds-amber-100 text-ds-amber-900",
+	approved: "bg-ds-green-100 text-ds-green-900",
+	denied: "bg-ds-red-100 text-ds-red-800",
+	completed: "bg-ds-blue-100 text-ds-purple-700",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -266,7 +266,7 @@ function FundRequestDetailView({
 			{/* Content - Split Pane */}
 			<div className="grid grid-cols-1 lg:grid-cols-12 gap-0 flex-1 min-h-0 overflow-hidden">
 				{/* Left Panel: Details & Actions (5/12) */}
-				<div className="lg:col-span-5 border-r border-gray-200 overflow-y-auto">
+				<div className="lg:col-span-5 border-r border-border overflow-y-auto">
 					<div className="p-5 space-y-5">
 						{/* Officer Actions Section */}
 						<section className="space-y-4">
@@ -299,9 +299,9 @@ function FundRequestDetailView({
 									<Button
 										variant="outline"
 										className={cn(
-											"flex-1 border-green-200 text-green-700 hover:bg-green-50",
+											"flex-1 border-ds-green-100 text-ds-green-700 hover:bg-ds-green-100",
 											selectedStatus === "approve" &&
-												"bg-green-100 border-green-300",
+												"bg-ds-green-100 border-ds-green-400",
 										)}
 										onClick={() => setSelectedStatus("approve")}
 									>
@@ -311,9 +311,9 @@ function FundRequestDetailView({
 									<Button
 										variant="outline"
 										className={cn(
-											"flex-1 border-yellow-200 text-yellow-700 hover:bg-yellow-50",
+											"flex-1 border-ds-amber-100 text-ds-amber-900 hover:bg-ds-amber-100",
 											selectedStatus === "needs_info" &&
-												"bg-yellow-100 border-yellow-300",
+												"bg-ds-amber-100 border-ds-amber-400",
 										)}
 										onClick={() => setSelectedStatus("needs_info")}
 									>
@@ -323,8 +323,9 @@ function FundRequestDetailView({
 									<Button
 										variant="outline"
 										className={cn(
-											"flex-1 border-red-200 text-red-700 hover:bg-red-50",
-											selectedStatus === "deny" && "bg-red-100 border-red-300",
+											"flex-1 border-ds-red-100 text-ds-red-800 hover:bg-ds-red-100",
+											selectedStatus === "deny" &&
+												"bg-ds-red-100 border-ds-red-400",
 										)}
 										onClick={() => setSelectedStatus("deny")}
 									>
@@ -453,7 +454,7 @@ function FundRequestDetailView({
 									{request.auditLogs.map((entry) => (
 										<div
 											key={entry.id}
-											className="text-sm p-3 bg-gray-50 rounded-lg"
+											className="text-sm p-3 bg-muted rounded-lg"
 										>
 											<div className="flex items-center justify-between">
 												<span className="font-medium capitalize">
@@ -665,63 +666,63 @@ function ManageFundRequestsPage() {
 
 			{/* Stats Cards */}
 			<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-				<div className="rounded-xl border bg-card p-4">
+				<div className="rounded-md border bg-card p-4">
 					<div className="flex items-center justify-between">
 						<div>
 							<p className="text-xs text-muted-foreground font-medium">
 								Pending Review
 							</p>
-							<p className="text-xl font-bold mt-1 text-blue-600">
+							<p className="text-xl font-bold mt-1 text-ds-blue-700">
 								{stats.pendingCount}
 							</p>
 						</div>
-						<div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
-							<Clock className="w-4 h-4 text-blue-600" />
+						<div className="w-8 h-8 bg-ds-blue-100 rounded-lg flex items-center justify-center">
+							<Clock className="w-4 h-4 text-ds-blue-700" />
 						</div>
 					</div>
 				</div>
-				<div className="rounded-xl border bg-card p-4">
+				<div className="rounded-md border bg-card p-4">
 					<div className="flex items-center justify-between">
 						<div>
 							<p className="text-xs text-muted-foreground font-medium">
 								Needs Information
 							</p>
-							<p className="text-xl font-bold mt-1 text-orange-600">
+							<p className="text-xl font-bold mt-1 text-ds-amber-900">
 								{stats.needsInfoCount}
 							</p>
 						</div>
-						<div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
-							<AlertCircle className="w-4 h-4 text-orange-600" />
+						<div className="w-8 h-8 bg-ds-amber-100 rounded-lg flex items-center justify-center">
+							<AlertCircle className="w-4 h-4 text-ds-amber-900" />
 						</div>
 					</div>
 				</div>
-				<div className="rounded-xl border bg-card p-4">
+				<div className="rounded-md border bg-card p-4">
 					<div className="flex items-center justify-between">
 						<div>
 							<p className="text-xs text-muted-foreground font-medium">
 								Pending Amount
 							</p>
-							<p className="text-xl font-bold mt-1 text-gray-900">
+							<p className="text-xl font-bold mt-1 text-foreground">
 								{formatCurrencyUSD(stats.pendingValue)}
 							</p>
 						</div>
-						<div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-							<DollarSign className="w-4 h-4 text-gray-600" />
+						<div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
+							<DollarSign className="w-4 h-4 text-muted-foreground" />
 						</div>
 					</div>
 				</div>
-				<div className="rounded-xl border bg-card p-4">
+				<div className="rounded-md border bg-card p-4">
 					<div className="flex items-center justify-between">
 						<div>
 							<p className="text-xs text-muted-foreground font-medium">
 								Total Approved
 							</p>
-							<p className="text-xl font-bold mt-1 text-green-600">
+							<p className="text-xl font-bold mt-1 text-ds-green-700">
 								{formatCurrencyUSD(stats.approvedValue)}
 							</p>
 						</div>
-						<div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
-							<CheckCircle className="w-4 h-4 text-green-600" />
+						<div className="w-8 h-8 bg-ds-green-100 rounded-lg flex items-center justify-center">
+							<CheckCircle className="w-4 h-4 text-ds-green-700" />
 						</div>
 					</div>
 				</div>
@@ -858,7 +859,7 @@ function ManageFundRequestsPage() {
 			</div>
 
 			{/* Table */}
-			<div className="rounded-xl border bg-card overflow-hidden">
+			<div className="rounded-md border bg-card overflow-hidden">
 				{!allRequests ? (
 					<div className="p-6 space-y-4">
 						{[1, 2, 3, 4, 5].map((i) => (

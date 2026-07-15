@@ -26,7 +26,7 @@ interface EventCalendarProps {
 }
 
 const statusColors: Record<EventStatus, string> = {
-	draft: "bg-gray-400",
+	draft: "bg-ds-gray-600",
 	submitted: "bg-indigo-400",
 	pending: "bg-yellow-400",
 	needs_review: "bg-orange-400",
@@ -36,13 +36,13 @@ const statusColors: Record<EventStatus, string> = {
 };
 
 const statusBgColors: Record<EventStatus, string> = {
-	draft: "bg-gray-100 hover:bg-gray-200",
-	submitted: "bg-indigo-50 hover:bg-indigo-100",
-	pending: "bg-yellow-50 hover:bg-yellow-100",
-	needs_review: "bg-orange-50 hover:bg-orange-100",
-	approved: "bg-green-50 hover:bg-green-100",
-	declined: "bg-red-50 hover:bg-red-100",
-	published: "bg-pink-50 hover:bg-pink-100",
+	draft: "bg-muted hover:bg-ds-gray-300",
+	submitted: "bg-ds-purple-100 hover:bg-ds-purple-100",
+	pending: "bg-ds-amber-100 hover:bg-ds-amber-100",
+	needs_review: "bg-ds-amber-100 hover:bg-ds-amber-100",
+	approved: "bg-ds-green-100 hover:bg-ds-green-100",
+	declined: "bg-ds-red-100 hover:bg-ds-red-100",
+	published: "bg-ds-pink-100 hover:bg-ds-blue-100",
 };
 
 const legendItems: { status: EventStatus; label: string }[] = [
@@ -82,7 +82,7 @@ export function EventCalendar({
 	const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 	return (
-		<div className="bg-white rounded-xl border overflow-hidden">
+		<div className="bg-background rounded-md border overflow-hidden">
 			<div className="p-4 border-b flex items-center justify-between">
 				<div className="flex items-center gap-2">
 					<Button variant="outline" size="sm" onClick={goToPreviousMonth}>
@@ -95,24 +95,24 @@ export function EventCalendar({
 						Today
 					</Button>
 				</div>
-				<h2 className="text-lg font-semibold text-gray-900">
+				<h2 className="text-lg font-semibold text-foreground">
 					{format(currentMonth, "MMMM yyyy")}
 				</h2>
 				<div className="w-20" />
 			</div>
 
-			<div className="grid grid-cols-7 gap-px bg-gray-200">
+			<div className="grid grid-cols-7 gap-px bg-muted">
 				{weekDays.map((day) => (
 					<div
 						key={day}
-						className="bg-gray-50 p-2 text-center text-sm font-medium text-gray-600"
+						className="bg-muted p-2 text-center text-sm font-medium text-muted-foreground"
 					>
 						{day}
 					</div>
 				))}
 			</div>
 
-			<div className="grid grid-cols-7 gap-px bg-gray-200">
+			<div className="grid grid-cols-7 gap-px bg-muted">
 				{days.map((day) => {
 					const dayEvents = getEventsForDay(day);
 					const isCurrentMonth = isSameMonth(day, currentMonth);
@@ -127,8 +127,8 @@ export function EventCalendar({
 							key={day.toISOString()}
 							className={`min-h-[100px] p-2 cursor-pointer transition-colors ${
 								isTodayDate && todayHighlightMode === "background"
-									? "bg-blue-100 border border-blue-300 hover:bg-blue-100"
-									: "bg-white hover:bg-gray-50"
+									? "bg-ds-blue-100 border border-ds-blue-400 hover:bg-ds-blue-100"
+									: "bg-background hover:bg-muted"
 							} ${!isCurrentMonth ? "opacity-50" : ""}`}
 							onClick={() => onDateClick?.(day)}
 						>
@@ -137,8 +137,8 @@ export function EventCalendar({
 									<span
 										className={`text-sm font-medium ${
 											isTodayDate && todayHighlightMode === "text"
-												? "text-blue-600"
-												: "text-gray-700"
+												? "text-ds-blue-700"
+												: "text-foreground"
 										}`}
 									>
 										{format(day, "d")}
@@ -148,13 +148,15 @@ export function EventCalendar({
 											<div
 												className={`rounded-md px-2 py-1 ${
 													isFinalsWeekLabel
-														? "border border-red-300 bg-red-700/85"
-														: "border border-blue-200 bg-blue-500/85"
+														? "border border-ds-red-400 bg-red-700/85"
+														: "border border-ds-blue-100 bg-ds-blue-1000/85"
 												}`}
 											>
 												<span
 													className={`block truncate text-[10px] font-semibold tracking-normal ${
-														isFinalsWeekLabel ? "text-red-50" : "text-blue-50"
+														isFinalsWeekLabel
+															? "text-ds-red-100"
+															: "text-blue-50"
 													}`}
 												>
 													{sundayWeekLabel}
@@ -165,7 +167,7 @@ export function EventCalendar({
 								</div>
 								{isTodayDate && (
 									<span
-										className={`text-xs font-medium ${todayHighlightMode === "background" ? "text-blue-700" : "text-blue-600"}`}
+										className={`text-xs font-medium ${todayHighlightMode === "background" ? "text-ds-blue-700" : "text-ds-blue-700"}`}
 									>
 										Today
 									</span>
@@ -174,7 +176,8 @@ export function EventCalendar({
 
 							<div className="space-y-1">
 								{dayEvents.slice(0, 3).map((event) => (
-									<Button variant="ghost"
+									<Button
+										variant="ghost"
 										key={event._id}
 										className={`w-full text-left text-xs px-2 py-1 rounded truncate transition-shadow duration-150 ease-[ease] ${
 											statusBgColors[event.status]
@@ -200,7 +203,7 @@ export function EventCalendar({
 									</Button>
 								))}
 								{dayEvents.length > 3 && (
-									<div className="text-xs text-gray-500 px-2">
+									<div className="text-xs text-muted-foreground px-2">
 										+{dayEvents.length - 3} more
 									</div>
 								)}
@@ -210,16 +213,16 @@ export function EventCalendar({
 				})}
 			</div>
 
-			<div className="p-4 border-t bg-gray-50/50">
+			<div className="p-4 border-t bg-muted/50">
 				<div className="flex items-center gap-4 flex-wrap">
-					<div className="flex items-center gap-1.5 text-sm text-gray-600">
+					<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
 						<Info className="h-4 w-4" />
 						<span className="font-medium">Status:</span>
 					</div>
 					{legendItems.map((item) => (
 						<div
 							key={item.status}
-							className="flex items-center gap-1.5 text-xs text-gray-600"
+							className="flex items-center gap-1.5 text-xs text-muted-foreground"
 						>
 							<span
 								className={`w-2.5 h-2.5 rounded-full ${statusColors[item.status]}`}

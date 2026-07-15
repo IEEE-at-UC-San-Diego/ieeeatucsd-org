@@ -204,15 +204,15 @@ function AcceptInvitationPage() {
 	}
 
 	if (success) {
-			return (
-				<StatusShell
-					className="success-reveal"
-					icon={<CheckCircle className="h-12 w-12 text-green-600" />}
+		return (
+			<StatusShell
+				className="success-reveal"
+				icon={<CheckCircle className="h-12 w-12 text-ds-green-700" />}
 				title="Welcome to the Team!"
 				description="You've successfully accepted the position."
 				invitation={invitation}
 			>
-				<div className="rounded-lg border border-blue-200 bg-blue-50 p-5 text-left text-blue-900">
+				<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-5 text-left text-ds-blue-1000">
 					<h2 className="mb-3 font-semibold">What's next?</h2>
 					<ul className="list-disc space-y-2 pl-5 text-sm">
 						<li>Check your email for detailed onboarding instructions.</li>
@@ -247,7 +247,7 @@ function AcceptInvitationPage() {
 	return (
 		<main className="min-h-screen bg-muted/40 p-4">
 			<section className="mx-auto flex min-h-screen max-w-3xl items-center py-10">
-				<div className="w-full overflow-hidden rounded-xl border bg-background shadow-sm">
+				<div className="w-full overflow-hidden rounded-md border bg-background shadow-sm">
 					<div className="bg-primary px-8 py-10 text-center text-primary-foreground">
 						<h1 className="mb-2 text-3xl font-bold">
 							Congratulations, {invitation?.name}!
@@ -321,17 +321,17 @@ function AcceptInvitationPage() {
 						<InvitationDetails invitation={invitation} />
 
 						{invitation?.message && (
-							<div className="rounded-lg border border-blue-200 bg-blue-50 p-5">
-								<p className="mb-2 text-sm font-medium text-blue-900">
+							<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-5">
+								<p className="mb-2 text-sm font-medium text-ds-blue-1000">
 									Message from Leadership
 								</p>
-								<p className="text-sm leading-relaxed text-blue-800">
+								<p className="text-sm leading-relaxed text-ds-blue-700">
 									{invitation.message}
 								</p>
 							</div>
 						)}
 
-						<div className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+						<div className="rounded-lg border border-ds-amber-100 bg-ds-amber-100 p-5 text-sm text-ds-amber-900">
 							<p className="font-semibold">Important</p>
 							<p className="mt-1 leading-relaxed">
 								By accepting this position, you agree to fulfill the
@@ -377,7 +377,7 @@ function AcceptInvitationPage() {
 function CenteredShell({ children }: { children: React.ReactNode }) {
 	return (
 		<main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-			<div className="w-full max-w-md rounded-xl border bg-background p-8 text-center shadow-sm">
+			<div className="w-full max-w-md rounded-md border bg-background p-8 text-center shadow-sm">
 				{children}
 			</div>
 		</main>
@@ -402,7 +402,7 @@ function StatusShell({
 	return (
 		<main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
 			<div
-				className={`w-full max-w-2xl overflow-hidden rounded-xl border bg-background shadow-sm ${className}`}
+				className={`w-full max-w-2xl overflow-hidden rounded-md border bg-background shadow-sm ${className}`}
 			>
 				<div className="bg-muted px-8 py-10 text-center">
 					<div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-background">

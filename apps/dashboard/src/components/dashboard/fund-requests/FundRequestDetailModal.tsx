@@ -151,13 +151,13 @@ export function FundRequestDetailModal({
 					<div className="space-y-6">
 						{/* Alerts for Needs Info / Denied / Approved */}
 						{request.status === "needs_info" && request.infoRequestNotes && (
-							<div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 flex flex-row gap-3">
-								<AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+							<div className="rounded-md border border-ds-amber-100 bg-ds-amber-100 p-3 flex flex-row gap-3">
+								<AlertCircle className="w-4 h-4 text-ds-amber-900 flex-shrink-0 mt-0.5" />
 								<div>
-									<h4 className="font-semibold text-yellow-800 text-sm mb-0.5">
+									<h4 className="font-semibold text-ds-amber-900 text-sm mb-0.5">
 										Information Requested
 									</h4>
-									<p className="text-xs text-yellow-700 leading-relaxed">
+									<p className="text-xs text-ds-amber-900 leading-relaxed">
 										{request.infoRequestNotes}
 									</p>
 								</div>
@@ -165,13 +165,13 @@ export function FundRequestDetailModal({
 						)}
 
 						{request.status === "denied" && request.reviewNotes && (
-							<div className="rounded-xl border border-red-200 bg-red-50 p-4 flex flex-row gap-3">
-								<XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+							<div className="rounded-md border border-ds-red-100 bg-ds-red-100 p-4 flex flex-row gap-3">
+								<XCircle className="w-5 h-5 text-ds-red-800 flex-shrink-0 mt-0.5" />
 								<div>
-									<h4 className="font-semibold text-red-800 text-sm mb-1">
+									<h4 className="font-semibold text-ds-red-800 text-sm mb-1">
 										Request Denied
 									</h4>
-									<p className="text-sm text-red-700 leading-relaxed">
+									<p className="text-sm text-ds-red-800 leading-relaxed">
 										{request.reviewNotes}
 									</p>
 								</div>
@@ -179,15 +179,15 @@ export function FundRequestDetailModal({
 						)}
 
 						{request.status === "approved" && (
-							<div className="rounded-xl border border-green-200 bg-green-50 p-4 flex flex-row gap-3">
-								<CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+							<div className="rounded-md border border-ds-green-100 bg-ds-green-100 p-4 flex flex-row gap-3">
+								<CheckCircle className="w-5 h-5 text-ds-green-700 flex-shrink-0 mt-0.5" />
 								<div>
-									<h4 className="font-semibold text-green-800 text-sm mb-1">
+									<h4 className="font-semibold text-ds-green-900 text-sm mb-1">
 										Request Approved
 									</h4>
 									<div className="space-y-1">
 										{request.reviewNotes && (
-											<p className="text-sm text-green-700 leading-relaxed">
+											<p className="text-sm text-ds-green-700 leading-relaxed">
 												{request.reviewNotes}
 											</p>
 										)}
@@ -208,11 +208,11 @@ export function FundRequestDetailModal({
 
 						{request.infoResponseNotes && (
 							<div className="space-y-2">
-								<h3 className="text-sm font-semibold text-yellow-600 uppercase tracking-wide flex items-center gap-2">
+								<h3 className="text-sm font-semibold text-ds-amber-900 uppercase tracking-wide flex items-center gap-2">
 									<Briefcase className="w-4 h-4" /> Additional Context
 								</h3>
-								<div className="bg-yellow-50/30 p-4 rounded-xl border border-yellow-100">
-									<p className="text-xs font-semibold text-yellow-700 mb-2">
+								<div className="bg-ds-amber-100/30 p-4 rounded-md border border-ds-amber-100">
+									<p className="text-xs font-semibold text-ds-amber-900 mb-2">
 										Response to Info Request:
 									</p>
 									<p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
@@ -228,7 +228,7 @@ export function FundRequestDetailModal({
 								<span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
 									Amount
 								</span>
-								<div className="flex items-center gap-1 mt-0.5 text-green-600 font-bold text-base">
+								<div className="flex items-center gap-1 mt-0.5 text-ds-green-700 font-bold text-base">
 									{formatCurrency(request.amount)}
 								</div>
 							</div>

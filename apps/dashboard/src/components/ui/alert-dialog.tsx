@@ -33,7 +33,7 @@ function AlertDialogOverlay({
 		<AlertDialogPrimitive.Overlay
 			data-slot="alert-dialog-overlay"
 			className={cn(
-				"motion-surface data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 duration-200 ease-[var(--ease-out)]",
+				"motion-surface data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 ease-[var(--ease-geist)] data-[state=open]:duration-[var(--duration-panel)] data-[state=closed]:duration-[var(--duration-panel-exit)]",
 				className,
 			)}
 			{...props}
@@ -55,7 +55,7 @@ function AlertDialogContent({
 				data-slot="alert-dialog-content"
 				data-size={size}
 				className={cn(
-					"motion-surface bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 group/alert-dialog-content fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 ease-[var(--ease-out)] data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-lg",
+					"motion-surface bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 group/alert-dialog-content fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-md border p-6 shadow-modal ease-[var(--ease-geist)] data-[state=open]:duration-[var(--duration-panel)] data-[state=closed]:duration-[var(--duration-panel-exit)] data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-lg",
 					className,
 				)}
 				{...props}

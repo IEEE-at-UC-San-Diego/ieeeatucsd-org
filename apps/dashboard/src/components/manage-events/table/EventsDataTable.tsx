@@ -5,14 +5,20 @@ import {
 	Eye,
 	Image,
 	MapPin,
+	MoreHorizontal,
 	Pencil,
 	Printer,
 	Trash2,
 	Users,
 	Utensils,
 } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Pagination } from "@/components/ui/pagination";
 import {
 	Table,
@@ -50,8 +56,6 @@ export function EventsDataTable({
 	onDelete,
 	pagination,
 }: EventsDataTableProps) {
-	const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-
 	const getSortIcon = (field: string) => {
 		if (sortConfig.field === field) {
 			return sortConfig.direction === "asc" ? (
@@ -76,20 +80,20 @@ export function EventsDataTable({
 				reqs.push({
 					icon: Image,
 					label: "Graphics Submitted",
-					className: "bg-green-100 text-green-700 border-green-200",
+					className: "bg-ds-green-100 text-ds-green-700 border-ds-green-100",
 				});
 			} else {
 				reqs.push({
 					icon: Image,
 					label: "Graphics Needed",
-					className: "bg-red-100 text-red-700 border-red-200",
+					className: "bg-ds-red-100 text-ds-red-800 border-ds-red-100",
 				});
 			}
 		} else {
 			reqs.push({
 				icon: Image,
 				label: "Graphics N/A",
-				className: "bg-gray-100 text-gray-600 border-gray-200",
+				className: "bg-muted text-muted-foreground border-border",
 			});
 		}
 		return reqs;
@@ -97,14 +101,14 @@ export function EventsDataTable({
 
 	if (events.length === 0) {
 		return (
-			<div className="bg-white rounded-xl border p-8 text-center">
-				<div className="text-gray-400 mb-4">
+			<div className="bg-background rounded-md border p-8 text-center">
+				<div className="text-muted-foreground mb-4">
 					<MapPin className="w-12 h-12 mx-auto" />
 				</div>
-				<h3 className="text-lg font-medium text-gray-900 mb-2">
+				<h3 className="text-lg font-medium text-foreground mb-2">
 					No events found
 				</h3>
-				<p className="text-gray-500">
+				<p className="text-muted-foreground">
 					Create a new event or adjust your filters to see events here.
 				</p>
 			</div>
@@ -112,7 +116,7 @@ export function EventsDataTable({
 	}
 
 	return (
-		<div className="bg-white rounded-xl border overflow-hidden max-w-full">
+		<div className="bg-background rounded-md border overflow-hidden max-w-full">
 			<div className="overflow-x-auto scrollbar-thin">
 				<Table className="w-full">
 					<TableHeader>
@@ -151,20 +155,19 @@ export function EventsDataTable({
 					<TableBody>
 						{events.map((event) => {
 							const requirements = getRequirements(event);
-							const isHovered = hoveredRow === event._id;
-
 							return (
 								<TableRow
 									key={event._id}
-									className="border-b last:border-b-0 hover:bg-muted/40 transition-colors cursor-pointer"
-									onMouseEnter={() => setHoveredRow(event._id)}
-									onMouseLeave={() => setHoveredRow(null)}
-									onClick={() => onView(event)}
+									className="border-b last:border-b-0 transition-colors hover:bg-muted/40 focus-within:bg-muted/40"
 								>
 									<TableCell className="min-w-[180px] py-3 px-4 pl-6">
-										<div className="font-medium text-foreground truncate max-w-[200px]">
+										<button
+											type="button"
+											className="block max-w-[200px] truncate text-left font-medium text-foreground hover:underline"
+											onClick={() => onView(event)}
+										>
 											{event.eventName}
-										</div>
+										</button>
 										<div className="text-xs text-muted-foreground">
 											{formatEventTypeLabel(event.eventType)}
 										</div>
@@ -199,7 +202,7 @@ export function EventsDataTable({
 												requirements.map((req) => (
 													<span
 														key={req.label}
-														className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] uppercase font-medium border ${req.className || "bg-muted text-muted-foreground border-border"}`}
+														className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium ${req.className || "bg-muted text-muted-foreground border-border"}`}
 													>
 														<req.icon className="h-3 w-3" />
 														{req.label}
@@ -214,48 +217,38 @@ export function EventsDataTable({
 										</div>
 									</TableCell>
 									<TableCell className="py-3 px-4 pr-6 text-right">
-										<div
-											className={`flex items-center gap-1 justify-end transition-opacity duration-200 ${
-												isHovered ? "opacity-100" : "opacity-0"
-											}`}
-											onClick={(e) => e.stopPropagation()}
-										>
+										<div className="flex items-center justify-end gap-1">
 											<Button
 												variant="ghost"
-												size="icon"
-												className="h-8 w-8 text-muted-foreground hover:text-foreground"
-												onClick={(e) => {
-													e.stopPropagation();
-													onView(event);
-												}}
-												title="View"
+												size="sm"
+												className="text-muted-foreground hover:text-foreground"
+												onClick={() => onView(event)}
 											>
 												<Eye className="h-4 w-4" />
+												<span className="hidden xl:inline">View</span>
 											</Button>
-											<Button
-												variant="ghost"
-												size="icon"
-												className="h-8 w-8 text-muted-foreground hover:text-foreground"
-												onClick={(e) => {
-													e.stopPropagation();
-													onEdit(event);
-												}}
-												title="Edit"
-											>
-												<Pencil className="h-4 w-4" />
-											</Button>
-											<Button
-												variant="ghost"
-												size="icon"
-												className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-												onClick={(e) => {
-													e.stopPropagation();
-													onDelete(event);
-												}}
-												title="Delete"
-											>
-												<Trash2 className="h-4 w-4" />
-											</Button>
+											<DropdownMenu>
+												<DropdownMenuTrigger asChild>
+													<Button
+														variant="ghost"
+														size="icon-sm"
+														aria-label={`More actions for ${event.eventName}`}
+													>
+														<MoreHorizontal />
+													</Button>
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="end">
+													<DropdownMenuItem onSelect={() => onEdit(event)}>
+														<Pencil /> Edit
+													</DropdownMenuItem>
+													<DropdownMenuItem
+														variant="destructive"
+														onSelect={() => onDelete(event)}
+													>
+														<Trash2 /> Delete
+													</DropdownMenuItem>
+												</DropdownMenuContent>
+											</DropdownMenu>
 										</div>
 									</TableCell>
 								</TableRow>

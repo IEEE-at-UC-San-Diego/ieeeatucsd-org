@@ -5,29 +5,31 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-	"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity] duration-150 ease disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 aria-invalid:border-destructive",
+	"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[6px] text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 ease-[var(--ease-geist)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-ds-gray-100 disabled:text-ds-gray-700 disabled:opacity-100 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-transparent active:scale-[0.97] aria-invalid:ring-destructive/20 aria-invalid:border-destructive",
 	{
 		variants: {
 			variant: {
-				default: "bg-primary text-primary-foreground hover:bg-primary/90",
+				default:
+					"bg-primary text-primary-foreground hover:bg-ds-gray-900 active:bg-ds-gray-800",
 				destructive:
-					"bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20",
+					"bg-destructive text-white hover:bg-ds-red-800/90 focus-visible:shadow-[0_0_0_2px_var(--focus-ring-gap),0_0_0_4px_var(--ds-red-800)]",
 				outline:
-					"border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
+					"border border-[var(--ds-gray-alpha-400)] bg-background hover:bg-ds-gray-100 hover:border-[var(--ds-gray-alpha-500)] active:bg-ds-gray-200 active:border-[var(--ds-gray-alpha-600)]",
 				secondary:
-					"bg-secondary text-secondary-foreground hover:bg-secondary/80",
-				ghost: "hover:bg-accent hover:text-accent-foreground",
-				link: "text-primary underline-offset-4 hover:underline",
+					"border border-[var(--ds-gray-alpha-400)] bg-background text-foreground hover:bg-ds-gray-100 hover:border-[var(--ds-gray-alpha-500)] active:bg-ds-gray-200",
+				ghost:
+					"text-foreground hover:bg-[var(--ds-gray-alpha-200)] active:bg-[var(--ds-gray-alpha-300)]",
+				link: "text-ds-blue-700 underline-offset-4 hover:underline",
 			},
 			size: {
-				default: "h-9 px-4 py-2 has-[>svg]:px-3",
-				xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-				sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-				lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-				icon: "size-9",
-				"icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
+				default: "h-10 px-2.5 has-[>svg]:px-2",
+				xs: "h-6 gap-1 rounded-[6px] px-1.5 text-xs has-[>svg]:px-1 [&_svg:not([class*='size-'])]:size-3",
+				sm: "h-8 rounded-[6px] gap-1.5 px-1.5 has-[>svg]:px-1.5",
+				lg: "h-12 rounded-[6px] px-3.5 text-base has-[>svg]:px-3",
+				icon: "size-10",
+				"icon-xs": "size-6 rounded-[6px] [&_svg:not([class*='size-'])]:size-3",
 				"icon-sm": "size-8",
-				"icon-lg": "size-10",
+				"icon-lg": "size-12",
 			},
 		},
 		defaultVariants: {

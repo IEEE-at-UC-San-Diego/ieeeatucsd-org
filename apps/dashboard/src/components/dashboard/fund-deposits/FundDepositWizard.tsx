@@ -431,8 +431,8 @@ export function FundDepositWizard({
 											onClick={() =>
 												setFormData({ ...formData, depositMethod: method })
 											}
-										className={cn(
-											"cursor-pointer rounded-lg border p-3 flex items-center justify-between transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] hover:bg-muted/50",
+											className={cn(
+												"cursor-pointer rounded-lg border p-3 flex items-center justify-between transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] hover:bg-muted/50",
 												formData.depositMethod === method
 													? "border-primary bg-primary/5 ring-1 ring-primary"
 													: "border-input",

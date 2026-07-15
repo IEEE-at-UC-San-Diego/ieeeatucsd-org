@@ -5,6 +5,11 @@ import { Calendar, Clock, Download, ExternalLink, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+	DashboardPage,
+	EmptyState,
+	PageHeader,
+} from "@/components/dashboard/DashboardPage";
+import {
 	CheckInModal,
 	EventCard,
 	EventDetailModal,
@@ -13,9 +18,16 @@ import {
 	HappeningToday,
 } from "@/components/events";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import {
@@ -174,36 +186,43 @@ function EventsPage() {
 	}, [events]);
 
 	return (
-		<div className="p-6 space-y-6 w-full">
+		<DashboardPage>
 			{/* Header */}
-			<div>
-				<h1 className="text-2xl font-bold tracking-tight">Events</h1>
-				<p className="text-sm text-muted-foreground mt-1">
-					Browse and check in to IEEE UCSD events.
-				</p>
-				{publicCalendarMeta && (
-					<div className="mt-3 flex flex-wrap items-center gap-2">
-						<a
-							href={publicCalendarMeta.subscribeUrl}
-							target="_blank"
-							rel="noreferrer"
-							className="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-						>
-							<ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-							Subscribe to Public Calendar
-						</a>
-						<a
-							href={publicCalendarMeta.icsUrl}
-							target="_blank"
-							rel="noreferrer"
-							className="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-						>
-							<Download className="h-3.5 w-3.5 mr-1.5" />
-							Add Calendar via ICS
-						</a>
-					</div>
-				)}
-			</div>
+			<PageHeader
+				title="Events"
+				description="Browse and check in to IEEE UCSD events."
+				actions={
+					publicCalendarMeta ? (
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="outline">
+									<Calendar /> Add to calendar
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem asChild>
+									<a
+										href={publicCalendarMeta.subscribeUrl}
+										target="_blank"
+										rel="noreferrer"
+									>
+										<ExternalLink /> Subscribe to public calendar
+									</a>
+								</DropdownMenuItem>
+								<DropdownMenuItem asChild>
+									<a
+										href={publicCalendarMeta.icsUrl}
+										target="_blank"
+										rel="noreferrer"
+									>
+										<Download /> Add calendar via ICS
+									</a>
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					) : undefined
+				}
+			/>
 
 			{/* Happening Today */}
 			{liveEvents.length > 0 && (
@@ -227,45 +246,34 @@ function EventsPage() {
 						className="pl-9 h-9 text-sm"
 					/>
 				</div>
-				<div className="flex rounded-lg border bg-card p-0.5">
-					<Button
-						variant={activeTab === "upcoming" ? "default" : "ghost"}
-						className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-							activeTab === "upcoming"
-								? "bg-primary text-primary-foreground shadow-sm"
-								: "text-muted-foreground hover:text-foreground"
-						}`}
-						onClick={() => setActiveTab("upcoming")}
-					>
-						Upcoming ({upcomingEvents.length})
-					</Button>
-					<Button
-						variant={activeTab === "past" ? "default" : "ghost"}
-						className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-							activeTab === "past"
-								? "bg-primary text-primary-foreground shadow-sm"
-								: "text-muted-foreground hover:text-foreground"
-						}`}
-						onClick={() => {
-							setActiveTab("past");
-							setPastPage(1);
-						}}
-					>
-						Past ({pastEvents.length})
-					</Button>
-				</div>
+				<Tabs
+					value={activeTab}
+					onValueChange={(value) => {
+						setActiveTab(value as "upcoming" | "past");
+						if (value === "past") setPastPage(1);
+					}}
+				>
+					<TabsList>
+						<TabsTrigger value="upcoming">
+							Upcoming ({upcomingEvents.length})
+						</TabsTrigger>
+						<TabsTrigger value="past">Past ({pastEvents.length})</TabsTrigger>
+					</TabsList>
+				</Tabs>
 			</div>
 
 			{/* Events grid */}
 			{!events ? (
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
 					{[1, 2, 3, 4, 5, 6].map((i) => (
-						<Skeleton key={i} className="h-44 w-full rounded-xl" />
+						<Skeleton key={i} className="h-44 w-full rounded-md" />
 					))}
 				</div>
 			) : activeTab === "upcoming" ? (
 				upcomingEvents.length > 0 ? (
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+					<div
+						className={`grid grid-cols-1 gap-3 ${upcomingEvents.length >= 3 ? "md:grid-cols-2 lg:grid-cols-3" : "md:grid-cols-2"}`}
+					>
 						{upcomingEvents.map((event) => (
 							<EventCard
 								key={event._id}
@@ -279,13 +287,11 @@ function EventsPage() {
 						))}
 					</div>
 				) : (
-					<div className="text-center py-16 text-muted-foreground">
-						<Calendar className="mx-auto h-10 w-10 mb-3 opacity-30" />
-						<p className="text-sm font-medium">No upcoming events</p>
-						<p className="text-xs mt-1">
-							Check back later for upcoming events.
-						</p>
-					</div>
+					<EmptyState
+						icon={<Calendar />}
+						title="No upcoming events"
+						description="Check back later for upcoming IEEE UCSD events."
+					/>
 				)
 			) : paginatedPast.length > 0 ? (
 				<div className="space-y-4">
@@ -342,6 +348,6 @@ function EventsPage() {
 				eventName={checkInEvent?.eventName}
 				isSubmitting={isCheckingIn}
 			/>
-		</div>
+		</DashboardPage>
 	);
 }

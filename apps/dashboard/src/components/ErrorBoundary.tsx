@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<
 			return (
 				<div className="flex items-center justify-center min-h-[40vh] p-6">
 					<div className="max-w-md w-full text-center">
-						<div className="rounded-xl border bg-card p-8 shadow-sm">
+						<div className="rounded-md border bg-card p-8 shadow-sm">
 							<div className="w-14 h-14 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
 								<AlertTriangle className="w-7 h-7 text-destructive" />
 							</div>

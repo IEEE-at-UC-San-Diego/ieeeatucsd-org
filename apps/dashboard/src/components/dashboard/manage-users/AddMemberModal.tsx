@@ -164,7 +164,7 @@ export function AddMemberModal({
 											onClick={() => setSelectedMember(member)}
 											className={`p-4 cursor-pointer hover:bg-muted transition-colors ${
 												selectedMember?._id === member._id
-													? "bg-blue-50 border-l-4 border-l-blue-500"
+													? "bg-ds-blue-100 border-l-4 border-l-blue-500"
 													: ""
 											}`}
 										>

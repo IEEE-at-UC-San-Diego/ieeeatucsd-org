@@ -107,10 +107,10 @@ export function EventDetailModal({
 							</Badge>
 
 							{isLive && (
-								<Badge className="bg-emerald-600 text-white border-emerald-600">
+								<Badge className="bg-ds-green-700 text-white border-ds-green-700">
 									<span className="relative flex h-1.5 w-1.5 mr-1.5">
-										<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-										<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+										<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-background opacity-75" />
+										<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-background" />
 									</span>
 									Live Now
 								</Badge>
@@ -118,7 +118,7 @@ export function EventDetailModal({
 							{isUpcoming && (
 								<Badge
 									variant="secondary"
-									className="bg-blue-50 text-blue-700 border-blue-200"
+									className="bg-ds-blue-100 text-ds-blue-700 border-ds-blue-100"
 								>
 									Upcoming
 								</Badge>
@@ -132,7 +132,7 @@ export function EventDetailModal({
 							{userHasAttended && (
 								<Badge
 									variant="secondary"
-									className="bg-emerald-50 text-emerald-700 border-emerald-200"
+									className="bg-ds-green-100 text-ds-green-700 border-ds-green-100"
 								>
 									<UserCheck className="w-3 h-3 mr-1" />
 									Attended
@@ -281,7 +281,7 @@ export function EventDetailModal({
 														{fileType}
 													</p>
 												</div>
-												<div className="flex gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity">
+												<div className="flex gap-1">
 													<Button
 														variant="ghost"
 														size="icon"
@@ -290,6 +290,7 @@ export function EventDetailModal({
 															e.stopPropagation();
 															window.open(fileUrl, "_blank");
 														}}
+														aria-label={`Open event file ${index + 1}`}
 													>
 														<Eye className="w-3.5 h-3.5" />
 													</Button>
@@ -304,6 +305,7 @@ export function EventDetailModal({
 															a.download = `Event_File_${index + 1}`;
 															a.click();
 														}}
+														aria-label={`Download event file ${index + 1}`}
 													>
 														<Download className="w-3.5 h-3.5" />
 													</Button>

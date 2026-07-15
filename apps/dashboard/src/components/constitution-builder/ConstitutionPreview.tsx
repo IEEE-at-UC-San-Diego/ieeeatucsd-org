@@ -245,7 +245,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 		return (
 			<div className="constitution-page p-12 relative">
 				<h2
-					className="text-2xl font-bold text-gray-900 mb-8 text-center"
+					className="text-2xl font-bold text-foreground mb-8 text-center"
 					style={{ fontFamily: "Arial, sans-serif", fontSize: "18pt" }}
 				>
 					{isFirstPage ? "Table of Contents" : "Table of Contents (continued)"}
@@ -255,18 +255,20 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 					{pageEntries.map(({ section, pageNum }) => (
 						<div key={section.id} className="flex justify-between items-start">
 							<div className={`flex-1 ${getIndentClass(section)}`}>
-								<Button variant="link"
+								<Button
+									variant="link"
 									onClick={() => setCurrentPage(pageNum)}
-									className="text-left text-gray-900 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
+									className="text-left text-foreground hover:text-ds-blue-700 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
 									style={{ fontSize: "inherit", fontFamily: "inherit" }}
 								>
 									{getDisplayTitle(section)}
 								</Button>
 							</div>
 							<div className="flex-shrink-0 ml-4">
-								<Button variant="link"
+								<Button
+									variant="link"
 									onClick={() => setCurrentPage(pageNum)}
-									className="text-gray-700 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
+									className="text-foreground hover:text-ds-blue-700 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
 									style={{ fontSize: "inherit", fontFamily: "inherit" }}
 								>
 									{pageNum}
@@ -322,7 +324,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 
 	return (
 		<div
-			className="bg-white constitution-document shadow-lg"
+			className="bg-background constitution-document shadow-lg"
 			style={{
 				fontFamily: "Arial, sans-serif",
 				fontSize: "11pt",
@@ -538,19 +540,19 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 			/>
 
 			{/* Page Navigation Header */}
-			<div className="no-print bg-gray-50 border-b border-gray-200 p-4 flex items-center justify-between">
+			<div className="no-print bg-muted border-b border-border p-4 flex items-center justify-between">
 				<div className="flex items-center gap-4">
 					<Button
 						onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
 						disabled={currentPage === 1}
 						variant="default"
-						className="bg-blue-600 hover:bg-blue-700"
+						className="bg-ds-blue-700 hover:bg-ds-blue-800"
 					>
 						<ChevronLeft className="h-4 w-4 mr-1" />
 						Previous
 					</Button>
 
-					<span className="text-sm text-gray-600">
+					<span className="text-sm text-muted-foreground">
 						Page {currentPage} of {totalPages}
 					</span>
 
@@ -560,7 +562,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 						}
 						disabled={currentPage === totalPages}
 						variant="default"
-						className="bg-blue-600 hover:bg-blue-700"
+						className="bg-ds-blue-700 hover:bg-ds-blue-800"
 					>
 						Next
 						<ChevronRight className="h-4 w-4 ml-1" />
@@ -580,13 +582,14 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 			</div>
 
 			{/* Page Navigation Footer */}
-			<div className="no-print bg-gray-50 border-t border-gray-200 p-4 flex items-center justify-center">
+			<div className="no-print bg-muted border-t border-border p-4 flex items-center justify-center">
 				<div className="flex items-center gap-2">
 					{/* Previous button */}
-					<Button variant="outline"
+					<Button
+						variant="outline"
 						onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
 						disabled={currentPage === 1}
-						className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300"
+						className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-muted text-foreground hover:bg-ds-gray-300"
 					>
 						‹
 					</Button>
@@ -624,7 +627,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 								return (
 									<span
 										key={`ellipsis-${index}`}
-										className="px-2 py-1 text-gray-500"
+										className="px-2 py-1 text-muted-foreground"
 									>
 										...
 									</span>
@@ -632,13 +635,14 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 							}
 
 							return (
-								<Button variant="outline"
+								<Button
+									variant="outline"
 									key={pageNum}
 									onClick={() => setCurrentPage(pageNum as number)}
 									className={`w-8 h-8 rounded text-sm font-medium transition-colors ${
 										pageNum === currentPage
-											? "bg-blue-600 text-white"
-											: "bg-gray-200 text-gray-700 hover:bg-gray-300"
+											? "bg-ds-blue-700 text-white"
+											: "bg-muted text-foreground hover:bg-ds-gray-300"
 									}`}
 								>
 									{pageNum}
@@ -648,18 +652,19 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 					})()}
 
 					{/* Next button */}
-					<Button variant="outline"
+					<Button
+						variant="outline"
 						onClick={() =>
 							setCurrentPage(Math.min(totalPages, currentPage + 1))
 						}
 						disabled={currentPage === totalPages}
-						className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300"
+						className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-muted text-foreground hover:bg-ds-gray-300"
 					>
 						›
 					</Button>
 
 					{/* Page info */}
-					<span className="ml-4 text-sm text-gray-600">
+					<span className="ml-4 text-sm text-muted-foreground">
 						Page {currentPage} of {totalPages}
 					</span>
 				</div>

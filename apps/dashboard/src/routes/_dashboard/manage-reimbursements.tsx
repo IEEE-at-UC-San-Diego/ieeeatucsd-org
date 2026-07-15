@@ -75,37 +75,37 @@ function formatAuditAction(action: string): {
 		submitted: {
 			label: "Submitted",
 			description: "Reimbursement request was submitted for review",
-			color: "bg-blue-500",
+			color: "bg-ds-blue-1000",
 			icon: FileText,
 		},
 		status_changed_to_approved: {
 			label: "Approved",
 			description: "Request was reviewed and approved",
-			color: "bg-green-500",
+			color: "bg-ds-green-1000",
 			icon: CheckCircle,
 		},
 		status_changed_to_declined: {
 			label: "Declined",
 			description: "Request was reviewed and declined",
-			color: "bg-red-500",
+			color: "bg-ds-red-800",
 			icon: XCircle,
 		},
 		status_changed_to_paid: {
 			label: "Marked as Paid",
 			description: "Payment has been processed",
-			color: "bg-emerald-500",
+			color: "bg-ds-green-1000",
 			icon: DollarSign,
 		},
 		payment_details_added: {
 			label: "Payment Confirmed",
 			description: "Payment confirmation details were recorded",
-			color: "bg-emerald-600",
+			color: "bg-ds-green-700",
 			icon: CreditCard,
 		},
 		status_changed_to_submitted: {
 			label: "Re-submitted",
 			description: "Request was re-submitted for review",
-			color: "bg-blue-500",
+			color: "bg-ds-blue-1000",
 			icon: FileText,
 		},
 	};
@@ -113,7 +113,7 @@ function formatAuditAction(action: string): {
 		map[action] || {
 			label: action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
 			description: "",
-			color: "bg-gray-400",
+			color: "bg-ds-gray-600",
 			icon: Clock,
 		}
 	);
@@ -143,10 +143,10 @@ interface SortConfig {
 }
 
 const statusColors: Record<ReimbursementStatus, string> = {
-	submitted: "bg-amber-100 text-amber-800",
-	approved: "bg-green-100 text-green-800",
-	declined: "bg-red-100 text-red-800",
-	paid: "bg-purple-100 text-purple-800",
+	submitted: "bg-ds-amber-100 text-ds-amber-900",
+	approved: "bg-ds-green-100 text-ds-green-900",
+	declined: "bg-ds-red-100 text-ds-red-800",
+	paid: "bg-ds-blue-100 text-ds-purple-700",
 };
 
 const statusLabels: Record<ReimbursementStatus, string> = {
@@ -676,7 +676,7 @@ function ManageReimbursementsPage() {
 		return (
 			<div className="flex flex-col h-full bg-muted/50 absolute inset-0 z-10 overflow-hidden">
 				{/* Header */}
-				<div className="bg-white border-b px-6 py-4 flex items-center justify-between shrink-0 h-16 box-border">
+				<div className="bg-background border-b px-6 py-4 flex items-center justify-between shrink-0 h-16 box-border">
 					<div className="flex items-center gap-4 min-w-0">
 						<Button
 							variant="ghost"
@@ -736,13 +736,13 @@ function ManageReimbursementsPage() {
 				{/* Split Pane Content */}
 				<div className="flex-1 flex overflow-hidden">
 					{/* Left Panel (5/12) */}
-					<div className="w-5/12 flex flex-col border-r border-gray-200 bg-white overflow-y-auto">
+					<div className="w-5/12 flex flex-col border-r border-border bg-background overflow-y-auto">
 						<div className="p-6 space-y-8">
 							{/* Actions Section */}
 							{(selectedReimbursement.status === "submitted" ||
 								selectedReimbursement.status === "approved") && (
-								<section className="border-b border-gray-100 pb-6 space-y-3">
-									<h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+								<section className="border-b border-border pb-6 space-y-3">
+									<h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
 										Actions
 									</h3>
 									<div className="flex flex-wrap gap-2">
@@ -752,7 +752,7 @@ function ManageReimbursementsPage() {
 													size="sm"
 													onClick={handleApproveFull}
 													disabled={processingId === selectedReimbursement._id}
-													className="bg-green-600 hover:bg-green-700"
+													className="bg-ds-green-700 hover:bg-ds-green-800"
 												>
 													{processingId === selectedReimbursement._id ? (
 														<Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -779,7 +779,7 @@ function ManageReimbursementsPage() {
 												<Button
 													size="sm"
 													onClick={() => setIsPaidModalOpen(true)}
-													className="bg-purple-600 hover:bg-purple-700"
+													className="bg-ds-purple-700 hover:bg-ds-purple-800"
 												>
 													<DollarSign className="h-4 w-4 mr-1" />
 													Mark as Paid
@@ -791,59 +791,59 @@ function ManageReimbursementsPage() {
 
 							{/* Request Details */}
 							<section className="space-y-4">
-								<h3 className="text-sm font-bold text-gray-900">
+								<h3 className="text-sm font-bold text-foreground">
 									Request Details
 								</h3>
 								<div className="space-y-4 text-sm">
 									<div className="grid grid-cols-3 gap-2">
-										<span className="text-gray-500 font-medium">
+										<span className="text-muted-foreground font-medium">
 											Department
 										</span>
-										<span className="col-span-2 text-gray-900 capitalize">
+										<span className="col-span-2 text-foreground capitalize">
 											{selectedReimbursement.department}
 										</span>
 									</div>
 									<div className="grid grid-cols-3 gap-2">
-										<span className="text-gray-500 font-medium">
+										<span className="text-muted-foreground font-medium">
 											Payment Method
 										</span>
-										<span className="col-span-2 text-gray-900">
+										<span className="col-span-2 text-foreground">
 											{selectedReimbursement.paymentMethod}
 										</span>
 									</div>
 									<div className="grid grid-cols-3 gap-2">
-										<span className="text-gray-500 font-medium">
+										<span className="text-muted-foreground font-medium">
 											Total Amount
 										</span>
-										<span className="col-span-2 text-gray-900 tabular-nums font-medium">
+										<span className="col-span-2 text-foreground tabular-nums font-medium">
 											${calculateTotalAmount(selectedReimbursement).toFixed(2)}
 										</span>
 									</div>
 									<div className="grid grid-cols-3 gap-2">
-										<span className="text-gray-500 font-medium">
+										<span className="text-muted-foreground font-medium">
 											Submitted By
 										</span>
-										<span className="col-span-2 text-gray-900">
+										<span className="col-span-2 text-foreground">
 											{selectedReimbursement.submittedByName ||
 												selectedReimbursement.submittedBy}
 										</span>
 									</div>
 									{selectedReimbursement.submittedByZelle && (
 										<div className="grid grid-cols-3 gap-2">
-											<span className="text-gray-500 font-medium">
+											<span className="text-muted-foreground font-medium">
 												Zelle Info
 											</span>
-											<span className="col-span-2 text-gray-900 font-medium bg-green-50 px-2 py-0.5 rounded text-green-800">
+											<span className="col-span-2 text-foreground font-medium bg-ds-green-100 px-2 py-0.5 rounded text-ds-green-900">
 												{selectedReimbursement.submittedByZelle}
 											</span>
 										</div>
 									)}
 									{selectedReimbursement.additionalInfo && (
 										<div className="grid grid-cols-3 gap-2">
-											<span className="text-gray-500 font-medium">
+											<span className="text-muted-foreground font-medium">
 												Payment Info
 											</span>
-											<span className="col-span-2 text-gray-900 font-medium bg-blue-50 px-2 py-0.5 rounded text-blue-800">
+											<span className="col-span-2 text-foreground font-medium bg-ds-blue-100 px-2 py-0.5 rounded text-ds-blue-700">
 												{selectedReimbursement.additionalInfo}
 											</span>
 										</div>
@@ -855,9 +855,9 @@ function ManageReimbursementsPage() {
 							{selectedReimbursement.receipts &&
 								selectedReimbursement.receipts.length > 0 && (
 									<section className="space-y-4">
-										<h3 className="text-sm font-bold text-gray-900 flex justify-between">
+										<h3 className="text-sm font-bold text-foreground flex justify-between">
 											<span>Expenses</span>
-											<span className="text-gray-500 font-medium text-xs">
+											<span className="text-muted-foreground font-medium text-xs">
 												{selectedReimbursement.receipts.length} items
 											</span>
 										</h3>
@@ -867,15 +867,15 @@ function ManageReimbursementsPage() {
 													<div
 														key={idx}
 														onClick={() => setActiveReceiptIndex(idx)}
-															className={`p-3 rounded-xl border cursor-pointer transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
+														className={`p-3 rounded-md border cursor-pointer transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
 															activeReceiptIndex === idx
-																? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/20"
-																: "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+																? "border-ds-blue-700 bg-ds-blue-100 ring-1 ring-ds-blue-700/20"
+																: "border-border hover:border-border hover:bg-muted"
 														}`}
 													>
 														<div className="flex justify-between items-start mb-1 gap-2">
 															<div className="min-w-0 flex flex-wrap items-center gap-1.5">
-																<span className="font-semibold text-gray-900">
+																<span className="font-semibold text-foreground">
 																	{receipt.vendorName ||
 																		(receipt.expenseType === "mileage"
 																			? "Mileage"
@@ -890,11 +890,11 @@ function ManageReimbursementsPage() {
 																	</Badge>
 																)}
 															</div>
-															<span className="font-bold text-gray-900 tabular-nums shrink-0">
+															<span className="font-bold text-foreground tabular-nums shrink-0">
 																${(receipt.total || 0).toFixed(2)}
 															</span>
 														</div>
-														<div className="text-xs text-gray-500 flex justify-between gap-2">
+														<div className="text-xs text-muted-foreground flex justify-between gap-2">
 															<span className="min-w-0 flex flex-col gap-0.5">
 																{receipt.expenseType === "mileage" ? (
 																	<>
@@ -919,7 +919,7 @@ function ManageReimbursementsPage() {
 																			receipt.mileageStops,
 																		) ||
 																			receipt.location?.trim()) && (
-																			<span className="truncate text-gray-600">
+																			<span className="truncate text-muted-foreground">
 																				{formatMileageRoute(
 																					receipt.mileageFrom,
 																					receipt.mileageTo,
@@ -952,8 +952,8 @@ function ManageReimbursementsPage() {
 							{/* Audit History */}
 							{selectedReimbursement.auditLogs &&
 								selectedReimbursement.auditLogs.length > 0 && (
-									<section className="border-t border-gray-100 pt-6 space-y-4">
-										<h3 className="text-sm font-bold text-gray-900">
+									<section className="border-t border-border pt-6 space-y-4">
+										<h3 className="text-sm font-bold text-foreground">
 											Audit History
 										</h3>
 										<div className="space-y-0 relative ml-3">
@@ -969,7 +969,7 @@ function ManageReimbursementsPage() {
 															className="relative flex gap-3 pb-6 last:pb-0"
 														>
 															{!isLast && (
-																<div className="absolute left-[11px] top-7 bottom-0 w-px bg-gray-200" />
+																<div className="absolute left-[11px] top-7 bottom-0 w-px bg-muted" />
 															)}
 															<div
 																className={`relative z-10 flex-shrink-0 w-[23px] h-[23px] rounded-full ${info.color} flex items-center justify-center ring-4 ring-white`}
@@ -978,27 +978,27 @@ function ManageReimbursementsPage() {
 															</div>
 															<div className="flex-1 min-w-0 pt-0.5">
 																<div className="flex items-baseline justify-between gap-2">
-																	<span className="text-sm font-semibold text-gray-900">
+																	<span className="text-sm font-semibold text-foreground">
 																		{info.label}
 																	</span>
-																	<span className="text-[11px] text-gray-400 whitespace-nowrap">
+																	<span className="text-[11px] text-muted-foreground whitespace-nowrap">
 																		{formatDistanceToNow(log.timestamp, {
 																			addSuffix: true,
 																		})}
 																	</span>
 																</div>
 																{info.description && (
-																	<p className="text-xs text-gray-500 mt-0.5">
+																	<p className="text-xs text-muted-foreground mt-0.5">
 																		{info.description}
 																	</p>
 																)}
-																<p className="text-[11px] text-gray-400 mt-1">
+																<p className="text-[11px] text-muted-foreground mt-1">
 																	{format(
 																		log.timestamp,
 																		"MMM d, yyyy 'at' h:mm a",
 																	)}
 																	{log.createdBy && (
-																		<span className="ml-1.5 inline-flex items-center gap-1 bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded text-[10px] font-mono">
+																		<span className="ml-1.5 inline-flex items-center gap-1 bg-muted text-muted-foreground px-1.5 py-0.5 rounded text-[10px] font-mono">
 																			{log.createdBy}
 																		</span>
 																	)}
@@ -1013,16 +1013,16 @@ function ManageReimbursementsPage() {
 
 							{/* Payment Details */}
 							{selectedReimbursement.paymentDetails && (
-								<section className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
-									<div className="flex items-center gap-2 border-b border-green-100 pb-2">
-										<CheckCircle className="w-4 h-4 text-green-600" />
-										<h3 className="text-xs font-bold text-green-900 uppercase tracking-wide">
+								<section className="bg-ds-green-100 border border-ds-green-100 rounded-md p-4 space-y-3">
+									<div className="flex items-center gap-2 border-b border-ds-green-100 pb-2">
+										<CheckCircle className="w-4 h-4 text-ds-green-700" />
+										<h3 className="text-xs font-bold text-ds-green-900 uppercase tracking-wide">
 											Payment Confirmed
 										</h3>
 									</div>
 									<div className="grid grid-cols-2 gap-3">
 										<div className="space-y-0.5">
-											<p className="text-[11px] font-medium text-green-700 uppercase">
+											<p className="text-[11px] font-medium text-ds-green-700 uppercase">
 												Confirmation #
 											</p>
 											<p className="text-sm font-mono font-medium">
@@ -1033,7 +1033,7 @@ function ManageReimbursementsPage() {
 											</p>
 										</div>
 										<div className="space-y-0.5">
-											<p className="text-[11px] font-medium text-green-700 uppercase">
+											<p className="text-[11px] font-medium text-ds-green-700 uppercase">
 												Amount Paid
 											</p>
 											<p className="text-sm tabular-nums font-medium">
@@ -1045,7 +1045,7 @@ function ManageReimbursementsPage() {
 										</div>
 										{selectedReimbursement.paymentDetails.paymentDate && (
 											<div className="space-y-0.5">
-												<p className="text-[11px] font-medium text-green-700 uppercase">
+												<p className="text-[11px] font-medium text-ds-green-700 uppercase">
 													Payment Date
 												</p>
 												<p className="text-sm">
@@ -1058,7 +1058,7 @@ function ManageReimbursementsPage() {
 										)}
 										{selectedReimbursement.paymentDetails.memo && (
 											<div className="space-y-0.5 col-span-2">
-												<p className="text-[11px] font-medium text-green-700 uppercase">
+												<p className="text-[11px] font-medium text-ds-green-700 uppercase">
 													Memo
 												</p>
 												<p className="text-sm">
@@ -1073,26 +1073,26 @@ function ManageReimbursementsPage() {
 					</div>
 
 					{/* Right Panel (7/12) - Receipt file or mileage */}
-					<div className="w-7/12 bg-gray-100 flex flex-col border-l border-gray-200 overflow-hidden">
+					<div className="w-7/12 bg-muted flex flex-col border-l border-border overflow-hidden">
 						{currentReceipt ? (
 							currentIsMileage ? (
 								<div className="flex flex-1 flex-col overflow-auto p-6">
-									<div className="mx-auto flex w-full max-w-lg flex-col items-center rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center">
+									<div className="mx-auto flex w-full max-w-lg flex-col items-center rounded-md border border-dashed border-border bg-background p-8 text-center">
 										<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
 											<Car className="h-7 w-7 text-primary" />
 										</div>
 										<Badge variant="secondary" className="mb-2">
 											Mileage
 										</Badge>
-										<h3 className="text-base font-semibold text-gray-900">
+										<h3 className="text-base font-semibold text-foreground">
 											{currentReceipt.vendorName || "Mileage"}
 										</h3>
-										<p className="mt-1 text-sm text-gray-500">
+										<p className="mt-1 text-sm text-muted-foreground">
 											{currentReceipt.dateOfPurchase
 												? format(currentReceipt.dateOfPurchase, "MMM d, yyyy")
 												: "No date"}
 										</p>
-										<p className="mt-3 text-sm text-gray-600">
+										<p className="mt-3 text-sm text-muted-foreground">
 											{(currentReceipt.miles ?? 0).toLocaleString(undefined, {
 												maximumFractionDigits: 2,
 											})}{" "}
@@ -1103,10 +1103,10 @@ function ManageReimbursementsPage() {
 											).toFixed(2)}
 											/mi
 										</p>
-										<p className="mt-4 font-mono text-3xl font-bold tabular-nums text-gray-900">
+										<p className="mt-4 font-mono text-3xl font-bold tabular-nums text-foreground">
 											${calculateReceiptTotal(currentReceipt).toFixed(2)}
 										</p>
-										<p className="mt-4 max-w-md text-sm leading-snug text-gray-700">
+										<p className="mt-4 max-w-md text-sm leading-snug text-foreground">
 											{formatMileageRoute(
 												currentReceipt.mileageFrom,
 												currentReceipt.mileageTo,
@@ -1119,9 +1119,9 @@ function ManageReimbursementsPage() {
 											currentReceipt.mileageTo?.trim() ||
 											(currentReceipt.mileageStops &&
 												currentReceipt.mileageStops.length > 0)) && (
-											<div className="mt-4 w-full max-w-md space-y-2 border-t border-gray-100 pt-4 text-left text-xs text-gray-600">
+											<div className="mt-4 w-full max-w-md space-y-2 border-t border-border pt-4 text-left text-xs text-muted-foreground">
 												<div>
-													<span className="font-semibold text-gray-500">
+													<span className="font-semibold text-muted-foreground">
 														From
 													</span>
 													<p className="mt-0.5">
@@ -1129,7 +1129,7 @@ function ManageReimbursementsPage() {
 													</p>
 												</div>
 												<div>
-													<span className="font-semibold text-gray-500">
+													<span className="font-semibold text-muted-foreground">
 														To
 													</span>
 													<p className="mt-0.5">
@@ -1139,7 +1139,7 @@ function ManageReimbursementsPage() {
 												{currentReceipt.mileageStops &&
 													currentReceipt.mileageStops.length > 0 && (
 														<div>
-															<span className="font-semibold text-gray-500">
+															<span className="font-semibold text-muted-foreground">
 																Stops
 															</span>
 															<ol className="mt-0.5 list-decimal list-inside space-y-0.5">
@@ -1176,15 +1176,15 @@ function ManageReimbursementsPage() {
 										className="flex-1 p-4 m-0 overflow-auto"
 									>
 										<div className="h-full flex flex-col">
-											<div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col h-full">
+											<div className="bg-background border border-border rounded-lg overflow-hidden flex flex-col h-full">
 												{/* Header */}
-												<div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white">
+												<div className="px-5 py-4 border-b border-border bg-gradient-to-r from-slate-50 to-white">
 													<div className="flex justify-between items-center">
 														<div>
-															<h3 className="text-base font-semibold text-gray-900">
+															<h3 className="text-base font-semibold text-foreground">
 																{currentReceipt.vendorName || "Unknown Vendor"}
 															</h3>
-															<p className="text-sm text-gray-500 mt-0.5">
+															<p className="text-sm text-muted-foreground mt-0.5">
 																{currentReceipt.dateOfPurchase
 																	? format(
 																			currentReceipt.dateOfPurchase,
@@ -1193,7 +1193,7 @@ function ManageReimbursementsPage() {
 																	: "No date"}
 															</p>
 														</div>
-														<Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-indigo-200">
+														<Badge className="bg-ds-purple-100 text-ds-purple-700 hover:bg-ds-purple-100 border-ds-purple-100">
 															AI Extracted
 														</Badge>
 													</div>
@@ -1202,18 +1202,18 @@ function ManageReimbursementsPage() {
 												{/* Line Items */}
 												<div className="flex-1 overflow-auto">
 													<table className="w-full">
-														<thead className="sticky top-0 bg-slate-50 border-b border-gray-200 z-10">
+														<thead className="sticky top-0 bg-muted border-b border-border z-10">
 															<tr>
-																<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+																<th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
 																	Description
 																</th>
-																<th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
+																<th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-32">
 																	Category
 																</th>
-																<th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">
+																<th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">
 																	Qty
 																</th>
-																<th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">
+																<th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-28">
 																	Amount
 																</th>
 															</tr>
@@ -1223,25 +1223,25 @@ function ManageReimbursementsPage() {
 																(item: any, i: number) => (
 																	<tr
 																		key={i}
-																		className="hover:bg-slate-50/50 transition-colors group"
+																		className="hover:bg-muted/50 transition-colors group"
 																	>
 																		<td className="px-4 py-3">
 																			<span
-																				className="block text-sm font-medium text-gray-900 truncate max-w-[220px]"
+																				className="block text-sm font-medium text-foreground truncate max-w-[220px]"
 																				title={item.description}
 																			>
 																				{item.description}
 																			</span>
 																		</td>
 																		<td className="px-4 py-3">
-																			<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+																			<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-foreground border border-border">
 																				{item.category}
 																			</span>
 																		</td>
-																		<td className="px-4 py-3 text-right text-sm text-gray-500 tabular-nums">
+																		<td className="px-4 py-3 text-right text-sm text-muted-foreground tabular-nums">
 																			{item.quantity || 1}
 																		</td>
-																		<td className="px-4 py-3 text-right text-sm font-mono font-medium text-gray-900 tabular-nums">
+																		<td className="px-4 py-3 text-right text-sm font-mono font-medium text-foreground tabular-nums">
 																			${(item.amount || 0).toFixed(2)}
 																		</td>
 																	</tr>
@@ -1252,7 +1252,7 @@ function ManageReimbursementsPage() {
 																<tr>
 																	<td
 																		colSpan={4}
-																		className="px-4 py-12 text-center text-gray-400"
+																		className="px-4 py-12 text-center text-muted-foreground"
 																	>
 																		<div className="flex flex-col items-center gap-2">
 																			<Receipt className="w-8 h-8 opacity-50" />
@@ -1268,26 +1268,32 @@ function ManageReimbursementsPage() {
 												</div>
 
 												{/* Totals */}
-												<div className="border-t border-gray-200 bg-slate-50/50">
+												<div className="border-t border-border bg-muted/50">
 													<div className="px-5 py-4 space-y-2">
 														<div className="flex justify-between text-sm">
-															<span className="text-gray-500">Subtotal</span>
-															<span className="font-mono tabular-nums text-gray-700">
+															<span className="text-muted-foreground">
+																Subtotal
+															</span>
+															<span className="font-mono tabular-nums text-foreground">
 																${(currentReceipt.subtotal || 0).toFixed(2)}
 															</span>
 														</div>
 														{currentReceipt.tax && currentReceipt.tax > 0 && (
 															<div className="flex justify-between text-sm">
-																<span className="text-gray-500">Tax</span>
-																<span className="font-mono tabular-nums text-gray-700">
+																<span className="text-muted-foreground">
+																	Tax
+																</span>
+																<span className="font-mono tabular-nums text-foreground">
 																	${currentReceipt.tax.toFixed(2)}
 																</span>
 															</div>
 														)}
 														{currentReceipt.tip && currentReceipt.tip > 0 && (
 															<div className="flex justify-between text-sm">
-																<span className="text-gray-500">Tip</span>
-																<span className="font-mono tabular-nums text-gray-700">
+																<span className="text-muted-foreground">
+																	Tip
+																</span>
+																<span className="font-mono tabular-nums text-foreground">
 																	${currentReceipt.tip.toFixed(2)}
 																</span>
 															</div>
@@ -1295,20 +1301,20 @@ function ManageReimbursementsPage() {
 														{currentReceipt.shipping &&
 															currentReceipt.shipping > 0 && (
 																<div className="flex justify-between text-sm">
-																	<span className="text-gray-500">
+																	<span className="text-muted-foreground">
 																		Shipping
 																	</span>
-																	<span className="font-mono tabular-nums text-gray-700">
+																	<span className="font-mono tabular-nums text-foreground">
 																		${currentReceipt.shipping.toFixed(2)}
 																	</span>
 																</div>
 															)}
-														<div className="pt-3 mt-2 border-t border-gray-200">
+														<div className="pt-3 mt-2 border-t border-border">
 															<div className="flex justify-between">
-																<span className="text-sm font-semibold text-gray-900">
+																<span className="text-sm font-semibold text-foreground">
 																	Total
 																</span>
-																<span className="text-base font-bold font-mono tabular-nums text-gray-900">
+																<span className="text-base font-bold font-mono tabular-nums text-foreground">
 																	$
 																	{calculateReceiptTotal(
 																		currentReceipt,
@@ -1357,9 +1363,9 @@ function ManageReimbursementsPage() {
 								<div className="flex gap-6">
 									{/* Left: Inputs */}
 									<div className="flex-1 space-y-4">
-										<div className="bg-blue-50 border border-blue-100 p-3 rounded-lg flex items-start gap-3">
-											<Sparkles className="w-5 h-5 text-blue-600 mt-0.5" />
-											<div className="text-sm text-blue-800">
+										<div className="bg-ds-blue-100 border border-ds-blue-100 p-3 rounded-lg flex items-start gap-3">
+											<Sparkles className="w-5 h-5 text-ds-blue-700 mt-0.5" />
+											<div className="text-sm text-ds-blue-700">
 												<p className="font-semibold">
 													{aiEnabled
 														? "AI Extraction Complete"
@@ -1452,10 +1458,10 @@ function ManageReimbursementsPage() {
 							) : (
 								<div className="py-6">
 									<div
-										className={`border-2 border-dashed rounded-xl p-8 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
+										className={`border-2 border-dashed rounded-md p-8 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
 											paidProofFile
-												? "border-blue-500 bg-blue-50"
-												: "border-gray-300 hover:border-gray-400 bg-gray-50"
+												? "border-ds-blue-700 bg-ds-blue-100"
+												: "border-border hover:border-ds-gray-500 bg-muted"
 										}`}
 									>
 										<Input
@@ -1476,7 +1482,7 @@ function ManageReimbursementsPage() {
 										>
 											{paidProofFile ? (
 												<>
-													<CheckCircle className="w-12 h-12 text-blue-500 mx-auto" />
+													<CheckCircle className="w-12 h-12 text-ds-blue-700 mx-auto" />
 													<div>
 														<p className="font-bold">{paidProofFile.name}</p>
 														<p className="text-sm text-muted-foreground">
@@ -1496,7 +1502,7 @@ function ManageReimbursementsPage() {
 												</>
 											) : (
 												<>
-													<div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
+													<div className="w-12 h-12 bg-ds-blue-100 text-ds-blue-700 rounded-full flex items-center justify-center mx-auto mb-2">
 														<UploadCloud className="w-6 h-6" />
 													</div>
 													<div>
@@ -1517,7 +1523,7 @@ function ManageReimbursementsPage() {
 
 									{/* Info about AI */}
 									<div className="mt-6 flex gap-3 p-3 bg-muted/50 rounded-lg border items-start">
-										<Sparkles className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
+										<Sparkles className="w-5 h-5 text-ds-purple-700 shrink-0 mt-0.5" />
 										<div className="text-xs text-muted-foreground">
 											<p className="font-semibold text-foreground">
 												{aiEnabled ? "AI-Powered Extraction" : "Manual Mode"}
@@ -1547,7 +1553,7 @@ function ManageReimbursementsPage() {
 								disabled={
 									processingId === selectedReimbursement?._id || aiProcessing
 								}
-								className={aiProcessing ? "bg-purple-600" : ""}
+								className={aiProcessing ? "bg-ds-purple-700" : ""}
 							>
 								{processingId === selectedReimbursement?._id || aiProcessing ? (
 									<Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -1622,11 +1628,11 @@ function ManageReimbursementsPage() {
 			{!reimbursements ? (
 				<div className="space-y-3">
 					{[1, 2, 3].map((i) => (
-						<Skeleton key={i} className="h-16 w-full rounded-xl" />
+						<Skeleton key={i} className="h-16 w-full rounded-md" />
 					))}
 				</div>
 			) : paginated.length > 0 ? (
-				<div className="rounded-xl border bg-card overflow-hidden">
+				<div className="rounded-md border bg-card overflow-hidden">
 					<div className="overflow-x-auto">
 						<Table>
 							<TableHeader>
@@ -1688,14 +1694,14 @@ function ManageReimbursementsPage() {
 											onClick={() => handleViewDetails(r)}
 										>
 											<TableCell className="min-w-[200px]">
-												<div className="font-medium text-gray-900 truncate max-w-[250px]">
+												<div className="font-medium text-foreground truncate max-w-[250px]">
 													{r.title}
 												</div>
 												<div className="text-xs text-muted-foreground">
 													{r.submittedByName || r.submittedBy}
 												</div>
 												{r.submittedByZelle && (
-													<div className="text-xs text-blue-600 mt-0.5">
+													<div className="text-xs text-ds-blue-700 mt-0.5">
 														Zelle: {r.submittedByZelle}
 													</div>
 												)}
@@ -1725,7 +1731,7 @@ function ManageReimbursementsPage() {
 												</Badge>
 											</TableCell>
 											<TableCell>
-												<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+												<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
 													{r.department}
 												</span>
 											</TableCell>
@@ -1741,7 +1747,7 @@ function ManageReimbursementsPage() {
 															<Button
 																variant="ghost"
 																size="sm"
-																className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+																className="h-8 w-8 p-0 text-ds-green-700 hover:text-ds-green-700 hover:bg-ds-green-100"
 																onClick={() =>
 																	handleStatusChange(r._id, "approved")
 																}
@@ -1757,7 +1763,7 @@ function ManageReimbursementsPage() {
 															<Button
 																variant="ghost"
 																size="sm"
-																className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+																className="h-8 w-8 p-0 text-ds-red-800 hover:text-ds-red-800 hover:bg-ds-red-100"
 																onClick={() => handleDecline(r._id)}
 																disabled={processingId === r._id}
 																title="Decline"
@@ -1770,7 +1776,7 @@ function ManageReimbursementsPage() {
 														<Button
 															variant="ghost"
 															size="sm"
-															className="h-8 w-8 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+															className="h-8 w-8 p-0 text-ds-purple-700 hover:text-ds-blue-700 hover:bg-ds-purple-100"
 															onClick={() => handleViewDetails(r)}
 															title="Mark as Paid"
 														>

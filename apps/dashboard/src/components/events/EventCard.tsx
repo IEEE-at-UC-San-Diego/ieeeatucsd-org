@@ -41,7 +41,7 @@ export function EventCard({
 			return (
 				<Badge
 					variant="secondary"
-					className="bg-emerald-50 text-emerald-700 border-emerald-200"
+					className="bg-ds-green-100 text-ds-green-700 border-ds-green-100"
 				>
 					<UserCheck className="w-3 h-3 mr-1" />
 					Attended
@@ -50,10 +50,10 @@ export function EventCard({
 		}
 		if (isLive) {
 			return (
-				<Badge className="bg-emerald-600 text-white border-emerald-600">
+				<Badge className="bg-ds-green-700 text-white border-ds-green-700">
 					<span className="relative flex h-1.5 w-1.5 mr-1.5">
-						<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-						<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+						<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-background opacity-75" />
+						<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-background" />
 					</span>
 					Live
 				</Badge>
@@ -63,7 +63,7 @@ export function EventCard({
 			return (
 				<Badge
 					variant="secondary"
-					className="bg-blue-50 text-blue-700 border-blue-200"
+					className="bg-ds-blue-100 text-ds-blue-700 border-ds-blue-100"
 				>
 					Upcoming
 				</Badge>
@@ -118,9 +118,15 @@ export function EventCard({
 			);
 		}
 		return (
-			<Button variant="outline" size="sm" disabled className="w-full text-xs">
-				Check-in Not Open
-			</Button>
+			<div className="space-y-1.5 text-center">
+				<Button variant="outline" size="sm" disabled className="w-full text-xs">
+					Check-in not open
+				</Button>
+				<p className="text-xs text-muted-foreground tabular-nums">
+					Opens when the event begins, {formatEventDate(event.startDate)} at{" "}
+					{formatEventTime(event.startDate)}.
+				</p>
+			</div>
 		);
 	};
 
@@ -128,7 +134,7 @@ export function EventCard({
 
 	return (
 		<div
-			className={`group rounded-xl border bg-card shadow-sm hover:shadow-md transition-[box-shadow,opacity] duration-150 ease-[ease] cursor-pointer ${
+			className={`group rounded-md border bg-card shadow-sm hover:shadow-md transition-[box-shadow,opacity] duration-150 ease-[ease] cursor-pointer ${
 				isPast ? "opacity-70 hover:opacity-100" : ""
 			}`}
 			onClick={onClick}

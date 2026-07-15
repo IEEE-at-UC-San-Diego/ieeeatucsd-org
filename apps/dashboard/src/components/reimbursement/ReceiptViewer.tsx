@@ -318,10 +318,10 @@ export default function ReceiptViewer({
 	if (!receiptUrl) {
 		return (
 			<div
-				className={`flex flex-col items-center justify-center p-8 bg-gray-50 rounded-xl border border-gray-200 text-gray-400 h-full min-h-75 ${className}`}
+				className={`flex flex-col items-center justify-center p-8 bg-muted rounded-md border border-border text-muted-foreground h-full min-h-75 ${className}`}
 			>
 				<FileText className="w-12 h-12 mb-3 opacity-50" />
-				<p className="text-gray-500">No receipt file available</p>
+				<p className="text-muted-foreground">No receipt file available</p>
 			</div>
 		);
 	}
@@ -331,18 +331,18 @@ export default function ReceiptViewer({
 
 	return (
 		<div
-			className={`flex flex-col h-full bg-white rounded-xl overflow-hidden border border-gray-200 ${className}`}
+			className={`flex flex-col h-full bg-background rounded-md overflow-hidden border border-border ${className}`}
 		>
 			{/* Toolbar */}
-			<div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200 shrink-0">
+			<div className="flex items-center justify-between px-4 py-2 bg-muted border-b border-border shrink-0">
 				<div className="flex items-center gap-2 overflow-hidden">
 					{isPdf ? (
-						<FileText className="w-4 h-4 text-red-500 shrink-0" />
+						<FileText className="w-4 h-4 text-ds-red-800 shrink-0" />
 					) : (
-						<ImageIcon className="w-4 h-4 text-blue-500 shrink-0" />
+						<ImageIcon className="w-4 h-4 text-ds-blue-700 shrink-0" />
 					)}
 					<span
-						className="text-gray-700 text-xs font-medium truncate max-w-37.5"
+						className="text-foreground text-xs font-medium truncate max-w-37.5"
 						title={receiptName}
 					>
 						{receiptName || "Receipt Preview"}
@@ -350,7 +350,7 @@ export default function ReceiptViewer({
 					{!loading && (
 						<Badge
 							variant="secondary"
-							className="text-[10px] h-5 ml-1 bg-gray-100 text-gray-600 border-gray-200"
+							className="text-[10px] h-5 ml-1 bg-muted text-muted-foreground border-border"
 						>
 							{isPdf ? "PDF" : "Image"}
 						</Badge>
@@ -358,7 +358,7 @@ export default function ReceiptViewer({
 					{isConverting && (
 						<Badge
 							variant="secondary"
-							className="text-[10px] h-5 ml-1 bg-amber-50 text-amber-700 border-amber-200"
+							className="text-[10px] h-5 ml-1 bg-ds-amber-100 text-ds-amber-900 border-ds-amber-100"
 						>
 							Converting HEIC…
 						</Badge>
@@ -370,19 +370,19 @@ export default function ReceiptViewer({
 							<Button
 								variant="ghost"
 								size="icon"
-								className="h-8 w-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={handleZoomOut}
 								title="Zoom out"
 							>
 								<ZoomOut className="w-4 h-4" />
 							</Button>
-							<span className="text-gray-500 text-xs w-10 text-center tabular-nums">
+							<span className="text-muted-foreground text-xs w-10 text-center tabular-nums">
 								{Math.round(zoomLevel * 100)}%
 							</span>
 							<Button
 								variant="ghost"
 								size="icon"
-								className="h-8 w-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={handleZoomIn}
 								title="Zoom in"
 							>
@@ -391,7 +391,7 @@ export default function ReceiptViewer({
 							<Button
 								variant="ghost"
 								size="icon"
-								className="h-8 w-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={handleRotate}
 								title="Rotate"
 							>
@@ -400,7 +400,7 @@ export default function ReceiptViewer({
 							<Button
 								variant="ghost"
 								size="icon"
-								className="h-8 w-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={resetView}
 								title="Reset view"
 							>
@@ -408,11 +408,11 @@ export default function ReceiptViewer({
 							</Button>
 						</>
 					)}
-					<div className="w-px h-4 bg-gray-200 mx-1" />
+					<div className="w-px h-4 bg-muted mx-1" />
 					<Button
 						variant="ghost"
 						size="icon"
-						className="h-8 w-8 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+						className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 						onClick={() => {
 							const a = document.createElement("a");
 							a.href = receiptUrl;
@@ -427,7 +427,7 @@ export default function ReceiptViewer({
 					<Button
 						variant="ghost"
 						size="icon"
-						className="h-8 w-8 text-gray-500 hover:text-blue-600 hover:bg-gray-100"
+						className="h-8 w-8 text-muted-foreground hover:text-ds-blue-700 hover:bg-muted"
 						onClick={() => window.open(receiptUrl, "_blank")}
 						title="Open in new tab"
 					>
@@ -437,11 +437,11 @@ export default function ReceiptViewer({
 			</div>
 
 			{/* Content Viewer */}
-			<div className="flex-1 overflow-hidden relative bg-gray-100 flex items-center justify-center">
+			<div className="flex-1 overflow-hidden relative bg-muted flex items-center justify-center">
 				{/* Loading State */}
 				{loading && (
-					<div className="flex flex-col items-center gap-3 text-gray-500">
-						<Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+					<div className="flex flex-col items-center gap-3 text-muted-foreground">
+						<Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
 						<p className="text-sm">Loading receipt…</p>
 					</div>
 				)}
@@ -449,14 +449,14 @@ export default function ReceiptViewer({
 				{/* Error State */}
 				{!loading && imageError && (
 					<div className="flex flex-col items-center gap-4 text-center p-8 max-w-sm">
-						<div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
-							<AlertCircle className="w-7 h-7 text-red-400" />
+						<div className="w-14 h-14 rounded-full bg-ds-red-100 flex items-center justify-center">
+							<AlertCircle className="w-7 h-7 text-ds-red-800" />
 						</div>
 						<div>
-							<p className="text-sm font-medium text-gray-700 mb-1">
+							<p className="text-sm font-medium text-foreground mb-1">
 								Unable to display receipt
 							</p>
-							<p className="text-xs text-gray-500">{errorMessage}</p>
+							<p className="text-xs text-muted-foreground">{errorMessage}</p>
 						</div>
 						<div className="flex gap-2">
 							<Button
@@ -512,8 +512,8 @@ export default function ReceiptViewer({
 								title="PDF Receipt"
 							>
 								<div className="flex flex-col items-center gap-4 p-8 text-center">
-									<FileText className="w-12 h-12 text-gray-400" />
-									<p className="text-sm text-gray-600">
+									<FileText className="w-12 h-12 text-muted-foreground" />
+									<p className="text-sm text-muted-foreground">
 										Your browser cannot display this PDF.
 									</p>
 									<Button

@@ -583,19 +583,19 @@ const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
 
 	if (!editor) {
 		return (
-			<div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+			<div className="bg-background rounded-lg border border-border p-8 text-center">
 				<div className="animate-pulse space-y-4">
-					<div className="h-10 bg-gray-200 rounded" />
-					<div className="h-64 bg-gray-100 rounded" />
+					<div className="h-10 bg-muted rounded" />
+					<div className="h-64 bg-muted rounded" />
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+		<div className="bg-background rounded-lg border border-border overflow-hidden">
 			{/* Toolbar */}
-			<div className="border-b border-gray-200 bg-gray-50 px-3 py-2">
+			<div className="border-b border-border bg-muted px-3 py-2">
 				<div className="flex flex-wrap items-center gap-1">
 					{/* Text formatting */}
 					<ToolbarGroup>
@@ -763,15 +763,15 @@ const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
 							<span
 								className={`text-xs font-medium px-2 py-1 rounded ${
 									saveMessage.includes("Failed")
-										? "text-red-600 bg-red-50"
-										: "text-green-600 bg-green-50"
+										? "text-ds-red-800 bg-ds-red-100"
+										: "text-ds-green-700 bg-ds-green-100"
 								}`}
 							>
 								{saveMessage}
 							</span>
 						)}
 						{hasUnsavedChanges && (
-							<span className="text-xs text-orange-600 font-medium bg-orange-50 px-2 py-1 rounded border border-orange-200">
+							<span className="text-xs text-ds-amber-900 font-medium bg-ds-amber-100 px-2 py-1 rounded border border-ds-amber-100">
 								Unsaved changes
 							</span>
 						)}
@@ -801,7 +801,7 @@ const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
 							disabled={!hasUnsavedChanges || isSaving || isSavingVersion}
 							className={`h-8 text-xs ${
 								hasUnsavedChanges
-									? "bg-green-600 hover:bg-green-700 text-white"
+									? "bg-ds-green-700 hover:bg-ds-green-800 text-white"
 									: ""
 							}`}
 						>
@@ -833,7 +833,7 @@ const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
 					<div className="space-y-2">
 						<label
 							htmlFor="version-note"
-							className="text-sm font-medium text-gray-700"
+							className="text-sm font-medium text-foreground"
 						>
 							Note (optional)
 						</label>
@@ -845,7 +845,7 @@ const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
 							maxLength={120}
 						/>
 						{hasUnsavedChanges && (
-							<p className="text-xs text-amber-700">
+							<p className="text-xs text-ds-amber-900">
 								Unsaved changes will be saved first before creating this
 								version.
 							</p>
@@ -878,7 +878,7 @@ const ToolbarGroup: React.FC<{ children: React.ReactNode }> = ({
 }) => <div className="flex items-center gap-0.5">{children}</div>;
 
 const ToolbarDivider: React.FC = () => (
-	<div className="w-px h-6 bg-gray-300 mx-1.5" />
+	<div className="w-px h-6 bg-ds-gray-300 mx-1.5" />
 );
 
 interface ToolbarButtonProps {
@@ -896,7 +896,8 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 	title,
 	children,
 }) => (
-	<Button variant="ghost"
+	<Button
+		variant="ghost"
 		type="button"
 		onClick={onClick}
 		disabled={disabled}
@@ -906,8 +907,8 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
       transition-colors duration-150
       ${
 				isActive
-					? "bg-blue-100 text-blue-700 border border-blue-200"
-					: "text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+					? "bg-ds-blue-100 text-ds-blue-700 border border-ds-blue-100"
+					: "text-muted-foreground hover:bg-ds-gray-300 hover:text-foreground"
 			}
       ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
     `}

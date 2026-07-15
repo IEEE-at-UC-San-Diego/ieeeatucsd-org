@@ -68,11 +68,11 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 		<div className="space-y-6">
 			<div className="grid gap-6">
 				<div className="space-y-4">
-					<h3 className="text-sm font-medium text-gray-900">
+					<h3 className="text-sm font-medium text-foreground">
 						Marketing Materials
 					</h3>
 
-					<div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+					<div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted transition-colors">
 						<Checkbox
 							id="needsFlyers"
 							checked={data.needsFlyers}
@@ -82,7 +82,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 						/>
 						<div className="space-y-1 flex-1">
 							<div className="flex items-center gap-2">
-								<Printer className="h-4 w-4 text-gray-500" />
+								<Printer className="h-4 w-4 text-muted-foreground" />
 								<Label
 									htmlFor="needsFlyers"
 									className="cursor-pointer font-medium"
@@ -90,16 +90,16 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 									Flyers Needed
 								</Label>
 							</div>
-							<p className="text-xs text-gray-500 pl-6">
+							<p className="text-xs text-muted-foreground pl-6">
 								Physical flyers to be printed and distributed on campus.
 							</p>
 						</div>
 					</div>
 
 					{(data.needsFlyers || data.needsGraphics) && (
-						<div className="ml-7 space-y-4 p-4 border rounded-lg bg-gray-50/50">
+						<div className="ml-7 space-y-4 p-4 border rounded-lg bg-muted/50">
 							<div className="space-y-2">
-								<Label className="text-xs font-medium text-gray-700">
+								<Label className="text-xs font-medium text-foreground">
 									Graphics Needed
 								</Label>
 								<div className="flex flex-col space-y-2">
@@ -160,7 +160,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 											})
 										}
 									/>
-									<p className="text-xs text-gray-500">
+									<p className="text-xs text-muted-foreground">
 										When should flyer distribution begin?
 									</p>
 								</div>
@@ -183,7 +183,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 						</div>
 					)}
 
-					<div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+					<div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted transition-colors">
 						<Checkbox
 							id="needsGraphics"
 							checked={data.needsGraphics}
@@ -193,7 +193,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 						/>
 						<div className="space-y-1 flex-1">
 							<div className="flex items-center gap-2">
-								<Image className="h-4 w-4 text-gray-500" />
+								<Image className="h-4 w-4 text-muted-foreground" />
 								<Label
 									htmlFor="needsGraphics"
 									className="cursor-pointer font-medium"
@@ -201,7 +201,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 									Graphics Needed
 								</Label>
 							</div>
-							<p className="text-xs text-gray-500 pl-6">
+							<p className="text-xs text-muted-foreground pl-6">
 								Digital graphics for social media, website, and digital
 								displays.
 							</p>
@@ -209,7 +209,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 					</div>
 
 					{(data.needsFlyers || data.needsGraphics) && (
-						<div className="ml-7 space-y-4 p-4 border rounded-lg bg-gray-50/50">
+						<div className="ml-7 space-y-4 p-4 border rounded-lg bg-muted/50">
 							<div className="space-y-2">
 								<Label htmlFor="advertisingFormat">
 									Preferred file format for final graphics
@@ -266,7 +266,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 						</div>
 					)}
 
-					<div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+					<div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted transition-colors">
 						<Checkbox
 							id="photographyNeeded"
 							checked={data.photographyNeeded}
@@ -276,7 +276,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 						/>
 						<div className="space-y-1 flex-1">
 							<div className="flex items-center gap-2">
-								<Camera className="h-4 w-4 text-gray-500" />
+								<Camera className="h-4 w-4 text-muted-foreground" />
 								<Label
 									htmlFor="photographyNeeded"
 									className="cursor-pointer font-medium"
@@ -284,7 +284,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 									Photography Needed
 								</Label>
 							</div>
-							<p className="text-xs text-gray-500 pl-6">
+							<p className="text-xs text-muted-foreground pl-6">
 								Request a photographer for the event. Submit photos within 48
 								hours of the event.
 							</p>
@@ -293,7 +293,9 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 				</div>
 
 				<div className="space-y-4 pt-4 border-t">
-					<h3 className="text-sm font-medium text-gray-900">Required Logos</h3>
+					<h3 className="text-sm font-medium text-foreground">
+						Required Logos
+					</h3>
 					<div className="flex flex-col space-y-2">
 						{LOGO_OPTIONS.map((logo) => (
 							<div key={logo} className="flex items-center space-x-2">
@@ -315,13 +317,13 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 							</div>
 						))}
 					</div>
-					<p className="text-xs text-gray-500">
+					<p className="text-xs text-muted-foreground">
 						AS logo is required on all AS-funded materials.
 					</p>
 				</div>
 
 				<div className="space-y-4 pt-4 border-t">
-					<h3 className="text-sm font-medium text-gray-900">
+					<h3 className="text-sm font-medium text-foreground">
 						Expected Attendance
 					</h3>
 
@@ -344,7 +346,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 							placeholder="e.g., 50"
 							className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
 						/>
-						<p className="text-xs text-gray-500">
+						<p className="text-xs text-muted-foreground">
 							This helps us plan resources and capacity for your event.
 						</p>
 						<BudgetCalculation estimatedAttendance={data.estimatedAttendance} />

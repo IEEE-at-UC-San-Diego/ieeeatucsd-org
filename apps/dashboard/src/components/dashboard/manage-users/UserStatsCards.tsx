@@ -14,12 +14,12 @@ export function UserStatsCards({
 		return (
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 				{[...Array(4)].map((_, i) => (
-					<div key={i} className="bg-white rounded-xl border p-4">
+					<div key={i} className="bg-background rounded-md border p-4">
 						<div className="flex items-center gap-3">
-							<div className="w-10 h-10 rounded-lg bg-gray-200 animate-pulse" />
+							<div className="w-10 h-10 rounded-lg bg-muted animate-pulse" />
 							<div className="flex-1 space-y-2">
-								<div className="h-3 w-16 rounded bg-gray-200 animate-pulse" />
-								<div className="h-5 w-10 rounded bg-gray-200 animate-pulse" />
+								<div className="h-3 w-16 rounded bg-muted animate-pulse" />
+								<div className="h-5 w-10 rounded bg-muted animate-pulse" />
 							</div>
 						</div>
 					</div>
@@ -33,29 +33,29 @@ export function UserStatsCards({
 			title: "Total Members",
 			value: stats.totalMembers,
 			icon: Users,
-			color: "text-blue-600",
-			bgColor: "bg-blue-100",
+			color: "text-ds-blue-700",
+			bgColor: "bg-ds-blue-100",
 		},
 		{
 			title: "Active Members",
 			value: stats.activeMembers,
 			icon: UserCheck,
-			color: "text-green-600",
-			bgColor: "bg-green-100",
+			color: "text-ds-green-700",
+			bgColor: "bg-ds-green-100",
 		},
 		{
 			title: "Officers",
 			value: stats.officers,
 			icon: Shield,
-			color: "text-purple-600",
-			bgColor: "bg-purple-100",
+			color: "text-ds-purple-700",
+			bgColor: "bg-ds-blue-100",
 		},
 		{
 			title: "New This Month",
 			value: stats.newThisMonth,
 			icon: GraduationCap,
-			color: "text-orange-600",
-			bgColor: "bg-orange-100",
+			color: "text-ds-amber-900",
+			bgColor: "bg-ds-amber-100",
 		},
 	];
 
@@ -64,16 +64,16 @@ export function UserStatsCards({
 			{statCards.map((stat) => {
 				const IconComponent = stat.icon;
 				return (
-					<div key={stat.title} className="bg-white rounded-xl border p-4">
+					<div key={stat.title} className="bg-background rounded-md border p-4">
 						<div className="flex items-center gap-3">
 							<div className={`p-2 rounded-lg ${stat.bgColor} ${stat.color}`}>
 								<IconComponent className="h-5 w-5" />
 							</div>
 							<div>
-								<p className="text-xs font-medium text-gray-500">
+								<p className="text-xs font-medium text-muted-foreground">
 									{stat.title}
 								</p>
-								<p className="text-xl font-bold text-gray-900 leading-tight">
+								<p className="text-xl font-bold text-foreground leading-tight">
 									{stat.value}
 								</p>
 							</div>

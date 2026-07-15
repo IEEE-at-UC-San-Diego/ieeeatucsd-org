@@ -16,6 +16,10 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
+import {
+	DashboardPage,
+	PageHeader,
+} from "@/components/dashboard/DashboardPage";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,20 +40,14 @@ function ActiveDot(props: Record<string, unknown>) {
 	return (
 		<g style={{ transform: `translate(${cx}px, ${cy}px)` }}>
 			{/* Subtle outer ring */}
-			<circle
-				cx={0}
-				cy={0}
-				r={10}
-				fill={fill}
-				fillOpacity={0.12}
-			/>
+			<circle cx={0} cy={0} r={10} fill={fill} fillOpacity={0.12} />
 			{/* Main dot */}
 			<circle
 				cx={0}
 				cy={0}
 				r={4.5}
 				fill={fill}
-				stroke="hsl(var(--card))"
+				stroke="var(--card)"
 				strokeWidth={2}
 			/>
 		</g>
@@ -64,12 +62,11 @@ function ChartTooltip({ active, payload, label }: Record<string, unknown>) {
 	return (
 		<div
 			style={{
-				background: "hsl(var(--popover))",
-				border: "1px solid hsl(var(--border))",
-				borderRadius: "10px",
+				background: "var(--popover)",
+				border: "1px solid var(--border)",
+				borderRadius: "12px",
 				padding: "12px 16px",
-				boxShadow: "0 8px 24px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)",
-				backdropFilter: "blur(8px)",
+				boxShadow: "var(--shadow-popover)",
 				zIndex: 50,
 				pointerEvents: "none" as const,
 			}}
@@ -77,10 +74,9 @@ function ChartTooltip({ active, payload, label }: Record<string, unknown>) {
 			<p
 				style={{
 					fontSize: "12px",
-					fontWeight: 600,
-					color: "hsl(var(--muted-foreground))",
+					fontWeight: 500,
+					color: "var(--muted-foreground)",
 					marginBottom: "4px",
-					letterSpacing: "0.01em",
 				}}
 			>
 				{label as string}
@@ -88,13 +84,20 @@ function ChartTooltip({ active, payload, label }: Record<string, unknown>) {
 			<p
 				style={{
 					fontSize: "18px",
-					fontWeight: 800,
-					color: "hsl(var(--popover-foreground))",
+					fontWeight: 600,
+					color: "var(--popover-foreground)",
 					margin: 0,
+					fontVariantNumeric: "tabular-nums",
 				}}
 			>
 				{(data.value as number)?.toLocaleString()}{" "}
-				<span style={{ fontSize: "13px", fontWeight: 600, color: "#1e3a8a" }}>
+				<span
+					style={{
+						fontSize: "13px",
+						fontWeight: 500,
+						color: "var(--ds-blue-700)",
+					}}
+				>
 					pts
 				</span>
 			</p>
@@ -107,9 +110,9 @@ const activityConfig: Record<
 	string,
 	{ icon: React.ComponentType<{ className?: string }>; color: string }
 > = {
-	event: { icon: Calendar, color: "text-blue-600" },
-	reimbursement: { icon: CreditCard, color: "text-emerald-600" },
-	fund_deposit: { icon: DollarSign, color: "text-violet-600" },
+	event: { icon: Calendar, color: "text-ds-blue-700" },
+	reimbursement: { icon: CreditCard, color: "text-ds-green-700" },
+	fund_deposit: { icon: DollarSign, color: "text-ds-blue-700" },
 };
 
 /* ─── Main Page ─── */
@@ -123,8 +126,8 @@ function OverviewPage() {
 
 	if (isLoading) {
 		return (
-			<div className="p-6 md:p-8 space-y-8 w-full max-w-5xl mx-auto">
-				<div className="flex flex-col items-center text-center py-8">
+			<DashboardPage>
+				<div className="space-y-2 py-2">
 					<Skeleton className="h-9 w-72 mb-3" />
 					<Skeleton className="h-4 w-48" />
 				</div>
@@ -133,22 +136,22 @@ function OverviewPage() {
 						<Skeleton key={i} className="h-20 w-full rounded-lg" />
 					))}
 				</div>
-				<Skeleton className="h-72 w-full rounded-xl" />
-			</div>
+				<Skeleton className="h-72 w-full rounded-md" />
+			</DashboardPage>
 		);
 	}
 
 	if (!user) {
 		return (
-			<div className="p-6 md:p-8 w-full max-w-3xl mx-auto">
-				<div className="rounded-xl border border-amber-200/60 bg-amber-50/50 p-6 md:p-8">
+			<DashboardPage>
+				<div className="rounded-md border border-ds-amber-100/60 bg-ds-amber-100/50 p-6 md:p-8">
 					<div className="flex items-start gap-3">
-						<AlertCircle className="h-5 w-5 text-amber-700 mt-0.5" />
+						<AlertCircle className="h-5 w-5 text-ds-amber-900 mt-0.5" />
 						<div className="space-y-3">
-							<h2 className="text-lg font-semibold text-amber-900">
+							<h2 className="text-lg font-semibold text-ds-amber-900">
 								Finalizing account setup...
 							</h2>
-							<p className="text-sm text-amber-900/80">
+							<p className="text-sm text-ds-amber-900/80">
 								We are syncing your dashboard profile. This should only take a
 								moment.
 							</p>
@@ -173,18 +176,25 @@ function OverviewPage() {
 						</div>
 					</div>
 				</div>
-			</div>
+			</DashboardPage>
 		);
 	}
 
-	const chartData =
-		overviewData?.pointsHistory.map((p) => ({
-			date: new Date(p.date).toLocaleDateString(undefined, {
-				month: "short",
-				day: "numeric",
-			}),
-			points: p.cumulative,
-		})) || [];
+	const pointsByDate = new Map<string, number>();
+	for (const point of overviewData?.pointsHistory || []) {
+		const date = new Date(point.date).toLocaleDateString(undefined, {
+			month: "short",
+			day: "numeric",
+		});
+		pointsByDate.set(date, point.cumulative);
+	}
+	const chartData = [...pointsByDate].map(([date, points]) => ({
+		date,
+		points,
+	}));
+	const hasMeaningfulChart =
+		chartData.length >= 2 &&
+		new Set(chartData.map((point) => point.points)).size >= 2;
 
 	const firstName = user.name?.split(" ")[0] || "Member";
 	const currentHour = new Date().getHours();
@@ -196,39 +206,23 @@ function OverviewPage() {
 				: "Good evening";
 
 	return (
-		<div className="p-6 md:p-8 space-y-8 w-full max-w-5xl mx-auto">
+		<DashboardPage>
 			{/* ─── Welcome Section ─── */}
-			<div className="flex flex-col items-center text-center py-6">
-				<h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-					{greeting}, {firstName}
-				</h1>
-				<p className="text-muted-foreground text-sm mt-2 max-w-sm">
-					Here's a snapshot of your activity and progress.
-				</p>
-			</div>
+			<PageHeader
+				title={`${greeting}, ${firstName}`}
+				description={`Your activity and progress${user.joinDate ? ` · Member since ${new Date(user.joinDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : ""}`}
+			/>
 
 			{/* ─── Compact Stats Row ─── */}
-			<div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-				<div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
-					<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-						Points
-					</p>
-					<p className="text-xl font-bold tabular-nums mt-0.5">
+			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+				<div className="col-span-2 rounded-md border bg-card px-5 py-4 shadow-sm">
+					<p className="text-xs font-medium text-muted-foreground">Points</p>
+					<p className="mt-1 text-3xl font-semibold tracking-[-0.03em] tabular-nums">
 						{user.points || 0}
 					</p>
 				</div>
-				<div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
-					<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-						Events
-					</p>
-					<p className="text-xl font-bold tabular-nums mt-0.5">
-						{user.eventsAttended || 0}
-					</p>
-				</div>
-				<div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
-					<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-						Rank
-					</p>
+				<div className="rounded-md border bg-card px-4 py-3">
+					<p className="text-xs font-medium text-muted-foreground">Rank</p>
 					<p className="text-xl font-bold tabular-nums mt-0.5">
 						{overviewData?.rank ? `#${overviewData.rank}` : "--"}
 						{overviewData?.totalMembers && (
@@ -238,17 +232,12 @@ function OverviewPage() {
 						)}
 					</p>
 				</div>
-				<div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
-					<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-						Member Since
+				<div className="rounded-md border bg-card px-4 py-3">
+					<p className="text-xs font-medium text-muted-foreground">
+						Events attended
 					</p>
-					<p className="text-xl font-bold mt-0.5">
-						{user.joinDate
-							? new Date(user.joinDate).toLocaleDateString("en-US", {
-									month: "short",
-									year: "numeric",
-								})
-							: "--"}
+					<p className="text-xl font-bold tabular-nums mt-0.5">
+						{user.eventsAttended || 0}
 					</p>
 				</div>
 			</div>
@@ -256,7 +245,7 @@ function OverviewPage() {
 			{/* ─── Main Content Grid ─── */}
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				{/* Points Chart */}
-				<div className="lg:col-span-2 rounded-xl border bg-card p-5 shadow-sm">
+				<div className="lg:col-span-2 rounded-md border bg-card p-5 shadow-sm">
 					<div className="flex items-center justify-between mb-5">
 						<div>
 							<p className="font-semibold text-sm">Points over time</p>
@@ -270,7 +259,7 @@ function OverviewPage() {
 							</span>
 						)}
 					</div>
-					{chartData.length >= 2 ? (
+					{hasMeaningfulChart ? (
 						<div className="h-56">
 							<ResponsiveContainer
 								width="100%"
@@ -286,10 +275,14 @@ function OverviewPage() {
 										<linearGradient id="pointsFill" x1="0" y1="0" x2="0" y2="1">
 											<stop
 												offset="0%"
-												stopColor="#1e40af"
-												stopOpacity={0.25}
+												stopColor="var(--ds-blue-700)"
+												stopOpacity={0.2}
 											/>
-											<stop offset="100%" stopColor="#1e40af" stopOpacity={0} />
+											<stop
+												offset="100%"
+												stopColor="var(--ds-blue-700)"
+												stopOpacity={0}
+											/>
 										</linearGradient>
 									</defs>
 									<CartesianGrid
@@ -304,7 +297,7 @@ function OverviewPage() {
 										tickLine={false}
 										tick={{
 											fontSize: 10,
-											fill: "hsl(var(--muted-foreground))",
+											fill: "var(--muted-foreground)",
 										}}
 										dy={8}
 									/>
@@ -313,28 +306,28 @@ function OverviewPage() {
 										tickLine={false}
 										tick={{
 											fontSize: 10,
-											fill: "hsl(var(--muted-foreground))",
+											fill: "var(--muted-foreground)",
 										}}
 										width={40}
 									/>
 									<Tooltip
 										content={<ChartTooltip />}
-										cursor={{ stroke: "hsl(var(--border))", strokeWidth: 1 }}
+										cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
 									/>
 									<Area
 										type="monotone"
 										dataKey="points"
-										stroke="#1e3a8a"
+										stroke="var(--ds-blue-700)"
 										fill="url(#pointsFill)"
-										strokeWidth={2.5}
+										strokeWidth={2}
 										dot={{
-											r: 3.5,
-											fill: "#1e3a8a",
-											stroke: "hsl(var(--card))",
+											r: 3,
+											fill: "var(--ds-blue-700)",
+											stroke: "var(--card)",
 											strokeWidth: 2,
 										}}
-										activeDot={<ActiveDot fill="#1e3a8a" />}
-										animationDuration={600}
+										activeDot={<ActiveDot fill="var(--ds-blue-700)" />}
+										animationDuration={180}
 										animationEasing="ease-out"
 									/>
 								</AreaChart>
@@ -348,7 +341,7 @@ function OverviewPage() {
 				</div>
 
 				{/* Recent Activity */}
-				<div className="rounded-xl border bg-card p-5 shadow-sm flex flex-col">
+				<div className="rounded-md border bg-card p-5 shadow-sm flex flex-col">
 					<div className="mb-4">
 						<p className="font-semibold text-sm">Recent Activity</p>
 						<p className="text-xs text-muted-foreground mt-0.5">
@@ -378,7 +371,7 @@ function OverviewPage() {
 													</p>
 													{typeof activity.points === "number" &&
 													activity.points > 0 ? (
-														<span className="text-[10px] font-bold text-primary tabular-nums shrink-0">
+														<span className="shrink-0 text-xs font-bold text-primary tabular-nums">
 															+{activity.points}
 														</span>
 													) : null}
@@ -387,7 +380,7 @@ function OverviewPage() {
 													<p className="text-xs text-muted-foreground truncate">
 														{activity.description}
 													</p>
-													<p className="text-[10px] text-muted-foreground/60 shrink-0 ml-2 tabular-nums">
+													<p className="ml-2 shrink-0 text-xs text-muted-foreground/60 tabular-nums">
 														{new Date(activity.date).toLocaleDateString(
 															undefined,
 															{ month: "short", day: "numeric" },
@@ -410,24 +403,24 @@ function OverviewPage() {
 
 			{/* ─── Profile CTA ─── */}
 			{!user.signedUp && (
-				<div className="rounded-xl border border-amber-200/50 bg-amber-50/50 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+				<div className="rounded-md border border-ds-amber-100/50 bg-ds-amber-100/50 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
 					<div className="space-y-0.5">
-						<h3 className="text-sm font-semibold text-amber-900">
+						<h3 className="text-sm font-semibold text-ds-amber-900">
 							Complete Your Profile
 						</h3>
-						<p className="text-xs text-amber-800/80 max-w-2xl">
+						<p className="text-xs text-ds-amber-900/80 max-w-2xl">
 							Finish setting up your account to access all features and start
 							earning points.
 						</p>
 					</div>
 					<Link
 						to="/get-started"
-						className="inline-flex items-center justify-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-xs font-semibold shadow-sm shrink-0"
+						className="inline-flex items-center justify-center px-4 py-2 bg-ds-amber-700 text-white rounded-lg hover:bg-ds-amber-800 transition-colors text-xs font-semibold shadow-sm shrink-0"
 					>
 						Finish Setup
 					</Link>
 				</div>
 			)}
-		</div>
+		</DashboardPage>
 	);
 }

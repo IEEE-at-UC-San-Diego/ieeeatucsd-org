@@ -76,12 +76,12 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 			<Card className="border-0 shadow-none">
 				<CardHeader className="pb-3">
 					<CardTitle className="flex items-center gap-2 text-lg">
-						<History className="h-5 w-5 text-gray-400" />
+						<History className="h-5 w-5 text-muted-foreground" />
 						Version History
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="text-center py-12 text-gray-400">
+					<div className="text-center py-12 text-muted-foreground">
 						<History className="h-10 w-10 mx-auto mb-3 opacity-50" />
 						<p className="text-sm">No manual versions saved yet.</p>
 					</div>
@@ -95,10 +95,10 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 			<Card className="border-0 shadow-none">
 				<CardHeader className="pb-3">
 					<CardTitle className="flex items-center gap-2 text-lg">
-						<History className="h-5 w-5 text-gray-400" />
+						<History className="h-5 w-5 text-muted-foreground" />
 						Version History
 					</CardTitle>
-					<p className="text-sm text-gray-500 mt-1">
+					<p className="text-sm text-muted-foreground mt-1">
 						Manual checkpoints you can restore at any time.
 					</p>
 				</CardHeader>
@@ -110,11 +110,11 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 								return (
 									<div
 										key={version._id}
-										className="rounded-lg border border-gray-200 bg-white p-4 space-y-3"
+										className="rounded-lg border border-border bg-background p-4 space-y-3"
 									>
 										<div className="flex flex-wrap items-center justify-between gap-2">
 											<div className="flex items-center gap-2">
-												<span className="text-sm font-semibold text-gray-900">
+												<span className="text-sm font-semibold text-foreground">
 													{version.label}
 												</span>
 												{isCurrent && (
@@ -126,8 +126,8 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 													variant="outline"
 													className={`text-xs ${
 														version.source === "manual"
-															? "border-blue-200 bg-blue-50 text-blue-700"
-															: "border-amber-200 bg-amber-50 text-amber-700"
+															? "border-ds-blue-100 bg-ds-blue-100 text-ds-blue-700"
+															: "border-ds-amber-100 bg-ds-amber-100 text-ds-amber-900"
 													}`}
 												>
 													{version.source === "manual"
@@ -146,7 +146,7 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 											</Button>
 										</div>
 
-										<div className="space-y-1.5 text-xs text-gray-600">
+										<div className="space-y-1.5 text-xs text-muted-foreground">
 											<div className="flex items-center gap-1.5">
 												<User className="h-3.5 w-3.5" />
 												<span>{version.createdByName}</span>

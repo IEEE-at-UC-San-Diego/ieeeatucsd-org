@@ -1,7 +1,6 @@
 import { Eye, File, Lock, Trash2, Unlock, Upload, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
 	Dialog,
 	DialogContent,
@@ -9,6 +8,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import type { EventFile } from "../types";
 
 interface FileManagerModalProps {
@@ -91,17 +91,17 @@ export function FileManagerModal({
 					<div
 						className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
 							isDragging
-								? "border-blue-500 bg-blue-50"
-								: "border-gray-300 hover:border-gray-400"
+								? "border-ds-blue-700 bg-ds-blue-100"
+								: "border-border hover:border-ds-gray-500"
 						}`}
 						onDragOver={handleDragOver}
 						onDragLeave={handleDragLeave}
 						onDrop={handleDrop}
 					>
-						<Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-						<p className="text-sm text-gray-600 mb-2">
+						<Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+						<p className="text-sm text-muted-foreground mb-2">
 							Drag and drop files here, or{" "}
-							<label className="text-blue-600 hover:text-blue-700 cursor-pointer font-medium">
+							<label className="text-ds-blue-700 hover:text-ds-blue-700 cursor-pointer font-medium">
 								browse
 								<Input
 									type="file"
@@ -111,15 +111,15 @@ export function FileManagerModal({
 								/>
 							</label>
 						</p>
-						<p className="text-xs text-gray-400">
+						<p className="text-xs text-muted-foreground">
 							Supports images, documents, and PDFs up to 50MB
 						</p>
 					</div>
 
 					{selectedFiles && selectedFiles.length > 0 && (
-						<div className="bg-blue-50 rounded-lg p-4">
+						<div className="bg-ds-blue-100 rounded-lg p-4">
 							<div className="flex items-center justify-between">
-								<span className="text-sm text-blue-900">
+								<span className="text-sm text-ds-blue-1000">
 									{selectedFiles.length} file
 									{selectedFiles.length !== 1 ? "s" : ""} selected
 								</span>
@@ -142,7 +142,7 @@ export function FileManagerModal({
 								{Array.from(selectedFiles).map((file, idx) => (
 									<div
 										key={idx}
-										className="text-xs text-blue-700 flex items-center gap-2"
+										className="text-xs text-ds-blue-700 flex items-center gap-2"
 									>
 										<File className="h-3 w-3" />
 										{file.name} ({formatFileSize(file.size)})
@@ -153,15 +153,15 @@ export function FileManagerModal({
 					)}
 
 					<div className="border rounded-lg overflow-hidden">
-						<div className="bg-gray-50 px-4 py-2 border-b text-xs font-medium text-gray-500 uppercase">
+						<div className="bg-muted px-4 py-2 border-b text-xs font-medium text-muted-foreground uppercase">
 							{files.length} file{files.length !== 1 ? "s" : ""}
 						</div>
 
 						{files.length === 0 ? (
-							<div className="p-8 text-center text-gray-500">
+							<div className="p-8 text-center text-muted-foreground">
 								<File className="h-12 w-12 mx-auto mb-2 opacity-50" />
 								<p>No files uploaded yet</p>
-								<p className="text-xs text-gray-400 mt-1">
+								<p className="text-xs text-muted-foreground mt-1">
 									Upload files to share with event attendees
 								</p>
 							</div>
@@ -170,15 +170,15 @@ export function FileManagerModal({
 								{files.map((file) => (
 									<div
 										key={file._id}
-										className="flex items-center justify-between p-4 hover:bg-gray-50"
+										className="flex items-center justify-between p-4 hover:bg-muted"
 									>
 										<div className="flex items-center gap-3 min-w-0">
-											<File className="h-8 w-8 text-gray-400 flex-shrink-0" />
+											<File className="h-8 w-8 text-muted-foreground flex-shrink-0" />
 											<div className="min-w-0">
-												<p className="text-sm font-medium text-gray-900 truncate">
+												<p className="text-sm font-medium text-foreground truncate">
 													{file.name}
 												</p>
-												<div className="flex items-center gap-2 text-xs text-gray-500">
+												<div className="flex items-center gap-2 text-xs text-muted-foreground">
 													<span>Uploaded {formatDate(file.uploadedAt)}</span>
 													<span>•</span>
 													<span className="flex items-center gap-1">

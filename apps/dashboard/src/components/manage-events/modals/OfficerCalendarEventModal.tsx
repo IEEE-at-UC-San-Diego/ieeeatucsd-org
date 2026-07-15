@@ -45,10 +45,10 @@ export function OfficerCalendarEventModal({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="max-w-xl border border-slate-200 bg-white text-slate-900 shadow-xl">
+			<DialogContent className="max-w-xl border border-border bg-background text-foreground shadow-xl">
 				<DialogHeader className="space-y-3">
 					<div className="flex items-start justify-between gap-2">
-						<DialogTitle className="text-2xl font-black tracking-tight leading-tight text-slate-900">
+						<DialogTitle className="text-2xl font-black tracking-tight leading-tight text-foreground">
 							{event.eventName}
 						</DialogTitle>
 					</div>
@@ -56,16 +56,13 @@ export function OfficerCalendarEventModal({
 						<Badge
 							className={
 								isInternalEvent
-									? "border-amber-300 bg-amber-100 text-amber-900"
-									: "border-blue-300 bg-blue-100 text-blue-900"
+									? "border-amber-300 bg-ds-amber-100 text-ds-amber-900"
+									: "border-ds-blue-400 bg-ds-blue-100 text-ds-blue-1000"
 							}
 						>
 							{isInternalEvent ? "Internal Event" : "Published Event"}
 						</Badge>
-						<Badge
-							variant="outline"
-							className="border-slate-300 text-slate-700"
-						>
+						<Badge variant="outline" className="border-border text-foreground">
 							{event.status}
 						</Badge>
 					</div>
@@ -73,49 +70,49 @@ export function OfficerCalendarEventModal({
 
 				<div className="space-y-4">
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-							<div className="flex items-center gap-1.5 text-slate-500 text-xs uppercase tracking-wide">
+						<div className="rounded-md border border-border bg-muted px-3 py-2.5">
+							<div className="flex items-center gap-1.5 text-muted-foreground text-xs uppercase tracking-wide">
 								<Calendar className="h-3.5 w-3.5" />
 								Date
 							</div>
-							<p className="mt-1 text-sm text-slate-900">
+							<p className="mt-1 text-sm text-foreground">
 								{format(startDate, "EEEE, MMMM d, yyyy")}
 							</p>
 						</div>
-						<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-							<div className="flex items-center gap-1.5 text-slate-500 text-xs uppercase tracking-wide">
+						<div className="rounded-md border border-border bg-muted px-3 py-2.5">
+							<div className="flex items-center gap-1.5 text-muted-foreground text-xs uppercase tracking-wide">
 								<Clock3 className="h-3.5 w-3.5" />
 								Time
 							</div>
-							<p className="mt-1 text-sm text-slate-900">
+							<p className="mt-1 text-sm text-foreground">
 								{format(startDate, "h:mm a")} - {format(endDate, "h:mm a")}
 							</p>
 						</div>
 					</div>
 
-					<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-						<div className="flex items-center gap-1.5 text-slate-500 text-xs uppercase tracking-wide">
+					<div className="rounded-md border border-border bg-muted px-3 py-2.5">
+						<div className="flex items-center gap-1.5 text-muted-foreground text-xs uppercase tracking-wide">
 							<MapPin className="h-3.5 w-3.5" />
 							Location
 						</div>
-						<p className="mt-1 text-sm text-slate-900">
+						<p className="mt-1 text-sm text-foreground">
 							{event.location || "TBD"}
 						</p>
 					</div>
 
 					{event.eventDescription && (
-						<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-							<p className="text-slate-500 text-xs uppercase tracking-wide">
+						<div className="rounded-md border border-border bg-muted px-3 py-2.5">
+							<p className="text-muted-foreground text-xs uppercase tracking-wide">
 								Details
 							</p>
-							<p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">
+							<p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
 								{event.eventDescription}
 							</p>
 						</div>
 					)}
 
-					<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 space-y-2">
-						<p className="text-slate-500 text-xs uppercase tracking-wide">
+					<div className="rounded-md border border-border bg-muted px-3 py-3 space-y-2">
+						<p className="text-muted-foreground text-xs uppercase tracking-wide">
 							Add to Calendar
 						</p>
 						<div className="flex flex-wrap gap-2">

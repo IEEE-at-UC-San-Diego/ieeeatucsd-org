@@ -162,8 +162,8 @@ export function EventReviewSection({
 	return (
 		<div className="space-y-6">
 			{isEditing && changes.length > 0 ? (
-				<div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
-					<h4 className="text-sm font-semibold text-amber-800 mb-3">
+				<div className="border border-ds-amber-100 bg-ds-amber-100 rounded-lg p-4">
+					<h4 className="text-sm font-semibold text-ds-amber-900 mb-3">
 						Changes Summary ({changes.length} field
 						{changes.length !== 1 ? "s" : ""} modified)
 					</h4>
@@ -173,14 +173,14 @@ export function EventReviewSection({
 								key={change.label}
 								className="flex items-start gap-2 text-sm"
 							>
-								<span className="text-amber-700 font-medium min-w-30 shrink-0">
+								<span className="text-ds-amber-900 font-medium min-w-30 shrink-0">
 									{change.label}:
 								</span>
-								<span className="text-red-600 line-through wrap-break-word">
+								<span className="text-ds-red-800 line-through wrap-break-word">
 									{change.before}
 								</span>
-								<ArrowRight className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-								<span className="text-green-600 font-medium wrap-break-word">
+								<ArrowRight className="h-4 w-4 text-ds-amber-700 shrink-0 mt-0.5" />
+								<span className="text-ds-green-700 font-medium wrap-break-word">
 									{change.after}
 								</span>
 							</div>
@@ -188,14 +188,14 @@ export function EventReviewSection({
 					</div>
 				</div>
 			) : isEditing ? (
-				<div className="bg-green-50 border border-green-200 rounded-lg p-4">
-					<p className="text-sm text-green-700">
+				<div className="bg-ds-green-100 border border-ds-green-100 rounded-lg p-4">
+					<p className="text-sm text-ds-green-700">
 						No changes detected. The event request is unchanged.
 					</p>
 				</div>
 			) : (
-				<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-					<p className="text-sm text-blue-700">
+				<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-lg p-4">
+					<p className="text-sm text-ds-blue-700">
 						Please review all information before submitting. Once submitted,
 						your event request will be reviewed by officers.
 					</p>
@@ -246,14 +246,14 @@ export function EventReviewSection({
 				<ReviewSection title="Requirements & Marketing">
 					<div className="flex flex-wrap gap-2">
 						{getRequirements().length === 0 ? (
-							<span className="text-sm text-gray-500">
+							<span className="text-sm text-muted-foreground">
 								No special requirements
 							</span>
 						) : (
 							getRequirements().map((req) => (
 								<span
 									key={req.label}
-									className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-700"
+									className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-ds-blue-100 text-ds-blue-700"
 								>
 									<req.icon className="h-3.5 w-3.5" />
 									{req.label}
@@ -325,17 +325,17 @@ export function EventReviewSection({
 					/>
 					{data.invoices.length > 0 && (
 						<div className="mt-2">
-							<p className="text-sm font-medium text-gray-700 mb-2">
+							<p className="text-sm font-medium text-foreground mb-2">
 								Invoices ({data.invoices.length})
 							</p>
 							<div className="space-y-3">
 								{data.invoices.map((invoice, idx) => (
 									<div
 										key={invoice._id}
-										className="p-3 bg-gray-50 rounded-lg text-sm space-y-2"
+										className="p-3 bg-muted rounded-lg text-sm space-y-2"
 									>
 										<div className="flex items-center justify-between">
-											<span className="font-medium text-gray-700">
+											<span className="font-medium text-foreground">
 												#{idx + 1}: {invoice.vendor}
 											</span>
 											<span className="font-bold">
@@ -343,11 +343,11 @@ export function EventReviewSection({
 											</span>
 										</div>
 										{invoice.items.length > 0 && (
-											<div className="space-y-1 pl-2 border-l-2 border-gray-200">
+											<div className="space-y-1 pl-2 border-l-2 border-border">
 												{invoice.items.map((item, itemIdx) => (
 													<div
 														key={itemIdx}
-														className="flex justify-between text-xs text-gray-500"
+														className="flex justify-between text-xs text-muted-foreground"
 													>
 														<span>
 															{item.description} (x{item.quantity})
@@ -356,7 +356,7 @@ export function EventReviewSection({
 													</div>
 												))}
 												{(invoice.tax > 0 || invoice.tip > 0) && (
-													<div className="flex justify-between text-xs text-gray-400 pt-1 border-t border-gray-200">
+													<div className="flex justify-between text-xs text-muted-foreground pt-1 border-t border-border">
 														{invoice.tax > 0 && (
 															<span>Tax: ${invoice.tax.toFixed(2)}</span>
 														)}
@@ -368,7 +368,7 @@ export function EventReviewSection({
 											</div>
 										)}
 										{invoice.invoiceFile && (
-											<span className="text-xs text-green-600">
+											<span className="text-xs text-ds-green-700">
 												File attached
 											</span>
 										)}
@@ -398,7 +398,7 @@ function ReviewSection({
 }) {
 	return (
 		<div className="border rounded-lg p-4">
-			<h3 className="font-semibold text-gray-900 mb-3 pb-2 border-b">
+			<h3 className="font-semibold text-foreground mb-3 pb-2 border-b">
 				{title}
 			</h3>
 			<div className="space-y-3">{children}</div>
@@ -419,9 +419,9 @@ function ReviewItem({
 }) {
 	return (
 		<div>
-			<span className="text-sm text-gray-500">{label}</span>
+			<span className="text-sm text-muted-foreground">{label}</span>
 			<div
-				className={`flex items-center gap-2 text-sm font-medium text-gray-900 ${
+				className={`flex items-center gap-2 text-sm font-medium text-foreground ${
 					multiline ? "mt-1" : ""
 				}`}
 			>

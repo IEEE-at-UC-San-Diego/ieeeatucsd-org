@@ -407,7 +407,7 @@ function SlackAccessPage() {
 	return (
 		<div className="w-full">
 			<main className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 lg:px-6">
-				<section className="rounded-xl border bg-muted/20 p-4">
+				<section className="rounded-md border bg-muted/20 p-4">
 					<h3 className="mb-4 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground">
 						How to Join
 					</h3>
@@ -435,9 +435,9 @@ function SlackAccessPage() {
 				</section>
 
 				<section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-					<div className="rounded-xl border bg-card p-5 shadow-sm lg:col-span-5">
+					<div className="rounded-md border bg-card p-5 shadow-sm lg:col-span-5">
 						<div className="mb-4 flex items-center gap-3 border-b pb-3">
-							<div className="rounded-lg bg-blue-50 p-2">
+							<div className="rounded-lg bg-ds-blue-100 p-2">
 								<Mail className="h-5 w-5 text-ieee-blue" />
 							</div>
 							<div>
@@ -469,7 +469,10 @@ function SlackAccessPage() {
 									{hasIEEEEmail || ieeeEmail ? (
 										<span className="flex items-center gap-1.5 truncate font-medium text-ieee-blue">
 											{ieeeEmail}
-											<Button variant="ghost" size="icon" aria-label="Copy IEEE email"
+											<Button
+												variant="ghost"
+												size="icon"
+												aria-label="Copy IEEE email"
 												onClick={copyEmail}
 												className="text-muted-foreground hover:text-foreground"
 												type="button"
@@ -508,7 +511,10 @@ function SlackAccessPage() {
 											disabled={hasIEEEEmail && !canResetPassword}
 											className="h-10 pr-9 text-sm"
 										/>
-										<Button variant="ghost" size="icon" aria-label="Toggle password visibility"
+										<Button
+											variant="ghost"
+											size="icon"
+											aria-label="Toggle password visibility"
 											className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 											onClick={() => setShowPassword(!showPassword)}
 											type="button"
@@ -546,7 +552,7 @@ function SlackAccessPage() {
 											Reset Password
 										</Button>
 									) : (
-										<div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700">
+										<div className="rounded-md border border-ds-amber-100 bg-ds-amber-100 p-2.5 text-xs text-ds-amber-900">
 											Password reset is only available to officers and admins.
 										</div>
 									)
@@ -570,13 +576,13 @@ function SlackAccessPage() {
 								)}
 
 								{emailState.success && (
-									<div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-2.5 text-xs text-green-700">
+									<div className="flex items-center gap-2 rounded-md border border-ds-green-100 bg-ds-green-100 p-2.5 text-xs text-ds-green-700">
 										<CheckCircle className="h-3.5 w-3.5" />
 										{emailState.success}
 									</div>
 								)}
 								{emailState.error && (
-									<div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
+									<div className="flex items-center gap-2 rounded-md border border-ds-red-100 bg-ds-red-100 p-2.5 text-xs text-ds-red-800">
 										<AlertCircle className="h-3.5 w-3.5" />
 										{emailState.error}
 									</div>
@@ -584,10 +590,10 @@ function SlackAccessPage() {
 							</div>
 
 							<div className="space-y-3 border-t pt-4">
-								<div className="rounded-lg border bg-indigo-50/40 p-3">
+								<div className="rounded-lg border bg-ds-purple-100/40 p-3">
 									<div className="flex items-start gap-3">
-										<div className="rounded-md bg-indigo-100 p-2">
-											<MessageSquare className="h-4 w-4 text-indigo-700" />
+										<div className="rounded-md bg-ds-purple-100 p-2">
+											<MessageSquare className="h-4 w-4 text-ds-purple-700" />
 										</div>
 										<div className="space-y-1">
 											<h3 className="text-sm font-semibold">Slack Workspace</h3>
@@ -608,17 +614,17 @@ function SlackAccessPage() {
 									</div>
 								</div>
 
-								<div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+								<div className="rounded-lg border border-ds-amber-100 bg-ds-amber-100 p-3">
 									<div className="flex items-start gap-2.5">
-										<Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-700" />
+										<Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-ds-amber-900" />
 										<div className="space-y-1">
-											<p className="text-xs font-semibold text-amber-900">
+											<p className="text-xs font-semibold text-ds-amber-900">
 												Access Restriction
 											</p>
-											<p className="text-xs text-amber-800">
+											<p className="text-xs text-ds-amber-900">
 												This account is for Slack authentication only.
 											</p>
-											<div className="flex items-center gap-1.5 text-[11px] text-amber-900">
+											<div className="flex items-center gap-1.5 text-[11px] text-ds-amber-900">
 												<Info className="h-3.5 w-3.5" />
 												Do not use for external communication.
 											</div>
@@ -629,11 +635,11 @@ function SlackAccessPage() {
 						</div>
 					</div>
 
-					<div className="flex h-[560px] flex-col rounded-xl border bg-card p-5 shadow-sm lg:col-span-7">
+					<div className="flex h-[560px] flex-col rounded-md border bg-card p-5 shadow-sm lg:col-span-7">
 						<div className="mb-4 flex items-center justify-between border-b pb-3">
 							<div className="flex items-center gap-3">
-								<div className="rounded-lg bg-purple-50 p-2">
-									<Inbox className="h-5 w-5 text-purple-600" />
+								<div className="rounded-lg bg-ds-purple-100 p-2">
+									<Inbox className="h-5 w-5 text-ds-purple-700" />
 								</div>
 								<div>
 									<h2 className="text-base font-semibold">Inbox</h2>
@@ -651,9 +657,9 @@ function SlackAccessPage() {
 									className="h-8 w-8 p-0"
 								>
 									{inboxState.isRefreshing ? (
-										<Loader2 className="h-4 w-4 animate-spin text-purple-600" />
+										<Loader2 className="h-4 w-4 animate-spin text-ds-purple-700" />
 									) : (
-										<RefreshCw className="h-4 w-4 text-purple-600" />
+										<RefreshCw className="h-4 w-4 text-ds-purple-700" />
 									)}
 								</Button>
 							)}
@@ -671,8 +677,8 @@ function SlackAccessPage() {
 								<div className="flex flex-1 items-center justify-center p-6">
 									<div className="w-full max-w-[300px] space-y-4 rounded-lg border bg-muted/20 p-4">
 										<div className="text-center">
-											<div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-purple-100">
-												<Key className="h-5 w-5 text-purple-600" />
+											<div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-ds-blue-100">
+												<Key className="h-5 w-5 text-ds-purple-700" />
 											</div>
 											<h3 className="text-sm font-semibold">Login to Inbox</h3>
 											<p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -689,7 +695,10 @@ function SlackAccessPage() {
 													onKeyDown={handleInboxPasswordKeyDown}
 													className="h-10 pr-9 text-sm"
 												/>
-															<Button variant="ghost" size="icon" aria-label="Toggle inbox password visibility"
+												<Button
+													variant="ghost"
+													size="icon"
+													aria-label="Toggle inbox password visibility"
 													className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 													onClick={() =>
 														setShowInboxPassword(!showInboxPassword)
@@ -701,12 +710,12 @@ function SlackAccessPage() {
 													) : (
 														<Eye className="h-4 w-4" />
 													)}
-															</Button>
+												</Button>
 											</div>
 											<Button
 												onClick={authenticateInbox}
 												disabled={!inboxPassword.trim() || inboxState.isLoading}
-												className="h-10 w-full bg-purple-600 text-sm text-white hover:bg-purple-700"
+												className="h-10 w-full bg-ds-purple-700 text-sm text-white hover:bg-ds-purple-800"
 											>
 												{inboxState.isLoading ? (
 													<Loader2 className="h-4 w-4 animate-spin" />
@@ -730,23 +739,24 @@ function SlackAccessPage() {
 													email.subject.toLowerCase().includes("slack") ||
 													email.from.toLowerCase().includes("slack");
 												return (
-													<Button variant="outline"
+													<Button
+														variant="outline"
 														key={email.id}
 														onClick={() => setSelectedEmail(email)}
 														type="button"
 														className={`group cursor-pointer rounded-lg border p-3 transition-colors hover:shadow-sm ${
 															email.isRead
-																? "border-border bg-card hover:border-purple-300"
-																: "border-purple-100 bg-purple-50/60"
+																? "border-border bg-card hover:border-ds-purple-400"
+																: "border-ds-purple-100 bg-ds-purple-100/60"
 														}`}
 													>
 														<div className="mb-1 flex items-start justify-between gap-2">
 															<div className="flex min-w-0 items-center gap-2">
 																{!email.isRead && (
-																	<span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-purple-500" />
+																	<span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-ds-purple-1000" />
 																)}
 																{isSlackRelated && (
-																	<span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-700">
+																	<span className="rounded bg-ds-blue-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ds-blue-700">
 																		Slack
 																	</span>
 																)}
@@ -800,7 +810,7 @@ function SlackAccessPage() {
 								</>
 							)}
 							{inboxState.error && (
-								<div className="mt-2 flex items-center justify-center border-t border-red-200 bg-red-50 p-2.5 text-xs text-red-600">
+								<div className="mt-2 flex items-center justify-center border-t border-ds-red-100 bg-ds-red-100 p-2.5 text-xs text-ds-red-800">
 									{inboxState.error}
 								</div>
 							)}

@@ -1,8 +1,15 @@
 import type { Id } from "@convex/_generated/dataModel";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, MoreHorizontal, Pencil } from "lucide-react";
 import { UserAvatarFallback } from "@/components/dashboard/UserAvatarFallback";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { OfficerTeam, SortConfig, UserRole, UserStatus } from "./types";
 
 interface User {
@@ -33,13 +40,13 @@ interface UserTableProps {
 }
 
 const roleColors: Record<UserRole, string> = {
-	Member: "bg-gray-100 text-gray-800",
-	"General Officer": "bg-blue-100 text-blue-800",
-	"Executive Officer": "bg-purple-100 text-purple-800",
-	"Member at Large": "bg-teal-100 text-teal-800",
-	"Past Officer": "bg-orange-100 text-orange-800",
-	Sponsor: "bg-yellow-100 text-yellow-800",
-	Administrator: "bg-red-100 text-red-800",
+	Member: "bg-muted text-foreground",
+	"General Officer": "bg-ds-blue-100 text-ds-blue-700",
+	"Executive Officer": "bg-ds-blue-100 text-ds-purple-700",
+	"Member at Large": "bg-teal-100 text-ds-teal-700",
+	"Past Officer": "bg-ds-amber-100 text-ds-amber-900",
+	Sponsor: "bg-ds-amber-100 text-ds-amber-900",
+	Administrator: "bg-ds-red-100 text-ds-red-800",
 };
 
 const truncateMajor = (major: string, maxLength = 20) => {
@@ -70,8 +77,8 @@ export function UserTable({
 
 	if (users.length === 0) {
 		return (
-			<div className="bg-white rounded-xl border p-8 text-center">
-				<div className="text-gray-400 mb-4">
+			<div className="bg-background rounded-md border p-8 text-center">
+				<div className="text-muted-foreground mb-4">
 					<svg
 						className="w-12 h-12 mx-auto"
 						fill="none"
@@ -86,10 +93,10 @@ export function UserTable({
 						/>
 					</svg>
 				</div>
-				<h3 className="text-lg font-medium text-gray-900 mb-2">
+				<h3 className="text-lg font-medium text-foreground mb-2">
 					No users found
 				</h3>
-				<p className="text-gray-500">
+				<p className="text-muted-foreground">
 					Try adjusting your search or filter criteria.
 				</p>
 			</div>
@@ -97,21 +104,24 @@ export function UserTable({
 	}
 
 	return (
-		<div className="bg-white rounded-xl border overflow-hidden">
+		<div className="bg-background rounded-md border overflow-hidden">
 			<div className="overflow-x-auto">
 				<table className="w-full text-sm">
 					<thead>
-						<tr className="border-b bg-gray-50/50">
+						<tr className="border-b bg-muted/50">
 							<th
-								className="text-left p-4 font-medium text-gray-500 cursor-pointer hover:bg-gray-100 transition-colors"
+								className="text-left p-4 font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors"
 								onClick={() => onSort("name")}
 							>
 								<span className="flex items-center gap-1">
 									User {getSortIcon("name")}
 								</span>
 							</th>
+							<th className="w-14 p-4 text-right font-medium text-muted-foreground">
+								Actions
+							</th>
 							<th
-								className="text-left p-4 font-medium text-gray-500 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors"
+								className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell cursor-pointer hover:bg-muted transition-colors"
 								onClick={() => onSort("email")}
 							>
 								<span className="flex items-center gap-1">
@@ -119,7 +129,7 @@ export function UserTable({
 								</span>
 							</th>
 							<th
-								className="text-left p-4 font-medium text-gray-500 cursor-pointer hover:bg-gray-100 transition-colors"
+								className="text-left p-4 font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors"
 								onClick={() => onSort("role")}
 							>
 								<span className="flex items-center gap-1">
@@ -127,11 +137,11 @@ export function UserTable({
 								</span>
 							</th>
 
-							<th className="text-left p-4 font-medium text-gray-500 hidden xl:table-cell">
+							<th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">
 								Points
 							</th>
 							<th
-								className="text-left p-4 font-medium text-gray-500 hidden xl:table-cell cursor-pointer hover:bg-gray-100 transition-colors"
+								className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell cursor-pointer hover:bg-muted transition-colors"
 								onClick={() => onSort("lastLogin")}
 							>
 								<span className="flex items-center gap-1">
@@ -144,10 +154,9 @@ export function UserTable({
 						{users.map((user, idx) => (
 							<tr
 								key={user._id}
-								className={`border-b last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer ${
-									idx % 2 === 1 ? "bg-gray-50/30" : ""
+								className={`border-b last:border-b-0 transition-colors hover:bg-muted focus-within:bg-muted ${
+									idx % 2 === 1 ? "bg-muted/30" : ""
 								}`}
-								onClick={() => onRowClick?.(user)}
 							>
 								<td className="p-4">
 									<div className="flex items-center gap-3">
@@ -162,8 +171,14 @@ export function UserTable({
 											</AvatarFallback>
 										</Avatar>
 										<div>
-											<div className="text-sm font-medium text-gray-900 flex items-center gap-2">
-												{user.name}
+											<div className="flex items-center gap-2 text-sm font-medium text-foreground">
+												<button
+													type="button"
+													className="text-left hover:underline"
+													onClick={() => onRowClick?.(user)}
+												>
+													{user.name}
+												</button>
 												{user._id === currentUserId && (
 													<Badge
 														variant="outline"
@@ -174,7 +189,7 @@ export function UserTable({
 												)}
 											</div>
 											{user.pid && (
-												<div className="text-xs text-gray-500">
+												<div className="text-xs text-muted-foreground">
 													PID: {user.pid}
 												</div>
 											)}
@@ -182,9 +197,9 @@ export function UserTable({
 									</div>
 								</td>
 								<td className="p-4 hidden md:table-cell">
-									<div className="text-sm text-gray-900">{user.email}</div>
+									<div className="text-sm text-foreground">{user.email}</div>
 									{user.memberId && (
-										<div className="text-xs text-gray-500">
+										<div className="text-xs text-muted-foreground">
 											ID: {user.memberId}
 										</div>
 									)}
@@ -196,14 +211,32 @@ export function UserTable({
 								</td>
 
 								<td className="p-4 hidden xl:table-cell">
-									<Badge className="bg-yellow-100 text-yellow-800 font-mono">
+									<Badge className="bg-ds-amber-100 text-ds-amber-900 font-mono">
 										{user.points || 0}
 									</Badge>
 								</td>
-								<td className="p-4 hidden xl:table-cell text-gray-600">
+								<td className="p-4 hidden xl:table-cell text-muted-foreground">
 									{user.lastLogin
 										? new Date(user.lastLogin).toLocaleDateString()
 										: "Never"}
+								</td>
+								<td className="p-4 text-right">
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="ghost"
+												size="icon-sm"
+												aria-label={`Actions for ${user.name}`}
+											>
+												<MoreHorizontal />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end">
+											<DropdownMenuItem onSelect={() => onRowClick?.(user)}>
+												<Pencil /> View and edit
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
 								</td>
 							</tr>
 						))}

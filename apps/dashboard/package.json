@@ -16,6 +16,7 @@
   "dependencies": {
     "@convex-dev/react-query": "0.1.0",
     "@hookform/resolvers": "^5.2.2",
+    "@ieeeatucsd/email": "workspace:*",
     "@logto/react": "^4.0.12",
     "@orpc/client": "^1.13.0",
     "@orpc/json-schema": "^1.13.0",
@@ -43,7 +44,6 @@
     "@tiptap/pm": "^3.19.0",
     "@tiptap/react": "^3.19.0",
     "@tiptap/starter-kit": "^3.19.0",
-    "@ieeeatucsd/email": "workspace:*",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "cmdk": "^1.1.1",
@@ -51,6 +51,7 @@
     "date-fns": "catalog:",
     "dompurify": "^3.3.1",
     "framer-motion": "^12.33.0",
+    "geist": "^1.7.2",
     "googleapis": "^171.4.0",
     "heic2any": "^0.0.4",
     "imapflow": "^1.2.9",

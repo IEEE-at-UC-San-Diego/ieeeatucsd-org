@@ -206,7 +206,7 @@ export function MultiFileUpload({
 							return (
 								<div
 									key={index}
-									className="flex items-center justify-between gap-3 p-3 rounded-xl border"
+									className="flex items-center justify-between gap-3 p-3 rounded-md border"
 								>
 									<div className="flex items-center gap-3 flex-1 min-w-0">
 										<div className="text-primary flex-shrink-0">
@@ -257,7 +257,7 @@ export function MultiFileUpload({
 						{files.map((file, index) => (
 							<div
 								key={index}
-								className="flex items-center justify-between gap-3 p-3 rounded-xl border"
+								className="flex items-center justify-between gap-3 p-3 rounded-md border"
 							>
 								<div className="flex items-center gap-3 flex-1 min-w-0">
 									<div className="text-muted-foreground flex-shrink-0">
@@ -300,8 +300,8 @@ export function MultiFileUpload({
 					tabIndex={disabled ? -1 : 0}
 					role="button"
 					aria-label="Upload files by clicking or using drag and drop"
-						className={`
-            relative border-2 border-dashed rounded-xl p-6 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
+					className={`
+            relative border-2 border-dashed rounded-md p-6 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
             ${
 							isDragOver
 								? "border-primary bg-primary/5"

@@ -38,15 +38,15 @@ export const Route = createFileRoute("/_dashboard/links")({
 const ITEMS_PER_PAGE = 12;
 
 const categoryColors: Record<string, string> = {
-	General: "bg-blue-100 text-blue-800",
-	"Social Media": "bg-pink-100 text-pink-800",
-	Resources: "bg-green-100 text-green-800",
-	Events: "bg-purple-100 text-purple-800",
-	Projects: "bg-orange-100 text-orange-800",
+	General: "bg-ds-blue-100 text-ds-blue-700",
+	"Social Media": "bg-ds-blue-100 text-ds-pink-700",
+	Resources: "bg-ds-green-100 text-ds-green-900",
+	Events: "bg-ds-blue-100 text-ds-purple-700",
+	Projects: "bg-ds-amber-100 text-ds-amber-900",
 };
 
 function getCategoryColor(category: string) {
-	return categoryColors[category] || "bg-gray-100 text-gray-800";
+	return categoryColors[category] || "bg-muted text-foreground";
 }
 
 function LinksPage() {
@@ -243,7 +243,7 @@ function LinksPage() {
 			{!links ? (
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
 					{[1, 2, 3, 4, 5, 6].map((i) => (
-						<Skeleton key={i} className="h-24 w-full rounded-xl" />
+						<Skeleton key={i} className="h-24 w-full rounded-md" />
 					))}
 				</div>
 			) : paginated.length > 0 ? (
@@ -252,7 +252,7 @@ function LinksPage() {
 						{paginated.map((link) => (
 							<div
 								key={link._id}
-								className="flex items-start gap-3 rounded-xl border bg-card p-4 hover:bg-accent/50 transition-colors group relative"
+								className="flex items-start gap-3 rounded-md border bg-card p-4 hover:bg-accent/50 transition-colors group relative"
 							>
 								<a
 									href={link.url}
@@ -260,13 +260,16 @@ function LinksPage() {
 									rel="noopener noreferrer"
 									className="flex items-start gap-3 flex-1 min-w-0"
 								>
-									<div className="rounded-lg bg-blue-100 p-2 shrink-0">
-										<LinkIcon className="h-4 w-4 text-blue-600" />
+									<div className="rounded-lg bg-ds-blue-100 p-2 shrink-0">
+										<LinkIcon className="h-4 w-4 text-ds-blue-700" />
 									</div>
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center gap-2">
 											<p className="font-medium truncate">{link.title}</p>
-											<ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+											<ExternalLink
+												className="h-3 w-3 shrink-0 text-muted-foreground"
+												aria-hidden="true"
+											/>
 										</div>
 										{link.description && (
 											<p className="text-sm text-muted-foreground line-clamp-2 mt-1">
@@ -281,7 +284,7 @@ function LinksPage() {
 									</div>
 								</a>
 								{hasOfficerAccess && (
-									<div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+									<div className="flex shrink-0 gap-1">
 										<Button
 											variant="ghost"
 											size="sm"
@@ -290,6 +293,7 @@ function LinksPage() {
 												e.preventDefault();
 												openEditModal(link);
 											}}
+											aria-label={`Edit ${link.title}`}
 										>
 											<Pencil className="h-3 w-3" />
 										</Button>
@@ -302,6 +306,7 @@ function LinksPage() {
 												e.preventDefault();
 												handleDelete(link._id);
 											}}
+											aria-label={`Delete ${link.title}`}
 										>
 											{deletingId === link._id ? (
 												<Loader2 className="h-3 w-3 animate-spin" />

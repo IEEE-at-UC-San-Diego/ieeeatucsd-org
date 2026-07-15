@@ -205,11 +205,11 @@ function GetStartedPage() {
 	};
 
 	// Success screen
-		if (currentStep === questions.length) {
-			return (
-				<div className="min-h-screen bg-background flex items-center justify-center p-4">
-					<div className="text-center success-reveal">
-						<div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+	if (currentStep === questions.length) {
+		return (
+			<div className="min-h-screen bg-background flex items-center justify-center p-4">
+				<div className="text-center success-reveal">
+					<div className="w-24 h-24 bg-ds-green-1000 rounded-full flex items-center justify-center mx-auto mb-6">
 						<CheckCircle className="w-12 h-12 text-white" />
 					</div>
 					<h1 className="text-3xl font-bold mb-4">Welcome to IEEE UCSD!</h1>
@@ -275,7 +275,7 @@ function GetStartedPage() {
 							}}
 						/>
 						{value && (
-							<p className="text-green-600 font-medium flex items-center gap-2">
+							<p className="text-ds-green-700 font-medium flex items-center gap-2">
 								<CheckCircle className="w-4 h-4" />
 								{value.name} selected
 							</p>
@@ -301,9 +301,9 @@ function GetStartedPage() {
 								/>
 								<div className="flex-1">
 									<div className="flex items-center gap-2 mb-1">
-										<FileText className="w-4 h-4 text-blue-600" />
+										<FileText className="w-4 h-4 text-ds-blue-700" />
 										<span className="font-medium">Terms of Service</span>
-										<span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+										<span className="text-xs bg-ds-blue-100 text-ds-blue-700 px-2 py-0.5 rounded">
 											v{LEGAL_VERSIONS.TOS_VERSION}
 										</span>
 									</div>
@@ -314,7 +314,7 @@ function GetStartedPage() {
 										href={LEGAL_VERSIONS.TOS_URL}
 										target="_blank"
 										rel="noopener noreferrer"
-										className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+										className="inline-flex items-center gap-1 text-sm text-ds-blue-700 hover:underline"
 									>
 										Read Terms of Service
 										<ExternalLink className="w-3 h-3" />
@@ -332,9 +332,9 @@ function GetStartedPage() {
 								/>
 								<div className="flex-1">
 									<div className="flex items-center gap-2 mb-1">
-										<Shield className="w-4 h-4 text-green-600" />
+										<Shield className="w-4 h-4 text-ds-green-700" />
 										<span className="font-medium">Privacy Policy</span>
-										<span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+										<span className="text-xs bg-ds-green-100 text-ds-green-700 px-2 py-0.5 rounded">
 											v{LEGAL_VERSIONS.PRIVACY_POLICY_VERSION}
 										</span>
 									</div>
@@ -345,7 +345,7 @@ function GetStartedPage() {
 										href={LEGAL_VERSIONS.PRIVACY_POLICY_URL}
 										target="_blank"
 										rel="noopener noreferrer"
-										className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+										className="inline-flex items-center gap-1 text-sm text-ds-blue-700 hover:underline"
 									>
 										Read Privacy Policy
 										<ExternalLink className="w-3 h-3" />
@@ -381,7 +381,7 @@ function GetStartedPage() {
 					</p>
 				</div>
 
-				<div className="rounded-xl border bg-card shadow-lg overflow-hidden">
+				<div className="rounded-md border bg-card shadow-lg overflow-hidden">
 					<div className="px-6 py-4 border-b">
 						<div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
 							<span>
@@ -410,7 +410,7 @@ function GetStartedPage() {
 							<h2 className="text-2xl font-bold mb-2">
 								{currentQuestion.title}
 								{currentQuestion.required && (
-									<span className="text-red-500 ml-1">*</span>
+									<span className="text-ds-red-800 ml-1">*</span>
 								)}
 							</h2>
 							<p className="text-muted-foreground">
@@ -460,7 +460,8 @@ function GetStartedPage() {
 
 				{!currentQuestion.required && (
 					<div className="text-center mt-4">
-						<Button variant="link"
+						<Button
+							variant="link"
 							onClick={handleNext}
 							className="text-muted-foreground hover:text-foreground text-sm underline transition-colors"
 						>
@@ -474,7 +475,7 @@ function GetStartedPage() {
 						Need help? Contact us at{" "}
 						<a
 							href="mailto:ieee@ucsd.edu"
-							className="text-blue-600 hover:text-blue-700 transition-colors"
+							className="text-ds-blue-700 hover:text-ds-blue-700 transition-colors"
 						>
 							ieee@ucsd.edu
 						</a>

@@ -114,7 +114,7 @@ export function LogisticsSection({
 			<div className="grid gap-6">
 				<div className="space-y-2">
 					<Label htmlFor="location">
-						Location <span className="text-red-500">*</span>
+						Location <span className="text-ds-red-800">*</span>
 					</Label>
 					<Input
 						id="location"
@@ -127,7 +127,7 @@ export function LogisticsSection({
 
 				<div className="space-y-2">
 					<Label htmlFor="eventDate">
-						Event Date <span className="text-red-500">*</span>
+						Event Date <span className="text-ds-red-800">*</span>
 					</Label>
 					<Input
 						id="eventDate"
@@ -136,8 +136,8 @@ export function LogisticsSection({
 						onBlur={handleDateBlur}
 						placeholder="mm/dd/yy"
 					/>
-					{dateError && <p className="text-xs text-red-500">{dateError}</p>}
-					<p className="text-xs text-gray-500">
+					{dateError && <p className="text-xs text-ds-red-800">{dateError}</p>}
+					<p className="text-xs text-muted-foreground">
 						Type in mm/dd/yy format (e.g., 02/14/26)
 					</p>
 				</div>
@@ -145,7 +145,7 @@ export function LogisticsSection({
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="space-y-2">
 						<Label htmlFor="startTime">
-							Start Time <span className="text-red-500">*</span>
+							Start Time <span className="text-ds-red-800">*</span>
 						</Label>
 						<Input
 							id="startTime"
@@ -155,13 +155,13 @@ export function LogisticsSection({
 							placeholder="e.g., 9am, 9:00 AM, 14:00"
 						/>
 						{startTimeError && (
-							<p className="text-xs text-red-500">{startTimeError}</p>
+							<p className="text-xs text-ds-red-800">{startTimeError}</p>
 						)}
 					</div>
 
 					<div className="space-y-2">
 						<Label htmlFor="endTime">
-							End Time <span className="text-red-500">*</span>
+							End Time <span className="text-ds-red-800">*</span>
 						</Label>
 						<Input
 							id="endTime"
@@ -171,17 +171,17 @@ export function LogisticsSection({
 							placeholder="e.g., 2pm, 2:00 PM, 17:00"
 						/>
 						{endTimeError && (
-							<p className="text-xs text-red-500">{endTimeError}</p>
+							<p className="text-xs text-ds-red-800">{endTimeError}</p>
 						)}
 					</div>
 				</div>
 				{timeRangeError && (
-					<p className="text-xs text-red-500">{timeRangeError}</p>
+					<p className="text-xs text-ds-red-800">{timeRangeError}</p>
 				)}
 
 				<div className="space-y-2">
 					<Label htmlFor="eventCode">
-						Event Code <span className="text-red-500">*</span>
+						Event Code <span className="text-ds-red-800">*</span>
 					</Label>
 					<Input
 						id="eventCode"
@@ -190,7 +190,7 @@ export function LogisticsSection({
 						placeholder="e.g., TECH-WORKSHOP-2024"
 						required
 					/>
-					<p className="text-xs text-gray-500">
+					<p className="text-xs text-muted-foreground">
 						Used for check-in and tracking attendance.
 					</p>
 				</div>
@@ -208,7 +208,7 @@ export function LogisticsSection({
 							<Label htmlFor="willOrHaveRoomBooking" className="cursor-pointer">
 								Room booking secured or in progress
 							</Label>
-							<p className="text-xs text-gray-500">
+							<p className="text-xs text-muted-foreground">
 								Check this if you have or will have a room booking for this
 								event. Room bookings should be secured before submitting.
 							</p>
@@ -216,7 +216,7 @@ export function LogisticsSection({
 					</div>
 
 					{data.willOrHaveRoomBooking && (
-						<div className="ml-7 space-y-3 p-4 border rounded-lg bg-gray-50/50">
+						<div className="ml-7 space-y-3 p-4 border rounded-lg bg-muted/50">
 							<Label className="text-xs font-medium">Room Booking Files</Label>
 							{data.roomBookingFiles.length > 0 && (
 								<div className="space-y-2">
@@ -229,7 +229,7 @@ export function LogisticsSection({
 												className="flex items-center justify-between p-2 border rounded-lg text-sm"
 											>
 												<div className="flex items-center gap-2">
-													<FileText className="h-4 w-4 text-gray-400" />
+													<FileText className="h-4 w-4 text-muted-foreground" />
 													<span className="truncate max-w-50">{fileName}</span>
 												</div>
 												<Button
@@ -246,9 +246,9 @@ export function LogisticsSection({
 									})}
 								</div>
 							)}
-							<label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors">
-								<Upload className="h-4 w-4 text-gray-400" />
-								<span className="text-sm text-gray-500">
+							<label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:border-ds-blue-600 hover:bg-ds-blue-100/50 transition-colors">
+								<Upload className="h-4 w-4 text-muted-foreground" />
+								<span className="text-sm text-muted-foreground">
 									Upload room booking confirmation
 								</span>
 								<Input
@@ -265,7 +265,7 @@ export function LogisticsSection({
 					<div className="space-y-3 pt-2">
 						<Label className="text-sm font-medium">
 							Will you be serving food or drinks at this event?{" "}
-							<span className="text-red-500">*</span>
+							<span className="text-ds-red-800">*</span>
 						</Label>
 						<RadioGroup
 							value={data.foodDrinksBeingServed ? "yes" : "no"}
@@ -275,13 +275,13 @@ export function LogisticsSection({
 							}}
 							className="space-y-2"
 						>
-							<div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+							<div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted transition-colors">
 								<RadioGroupItem value="yes" id="food-yes" />
 								<Label htmlFor="food-yes" className="cursor-pointer flex-1">
 									Yes, we will serve food or drinks
 								</Label>
 							</div>
-							<div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+							<div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted transition-colors">
 								<RadioGroupItem value="no" id="food-no" />
 								<Label htmlFor="food-no" className="cursor-pointer flex-1">
 									No food or drinks will be served
@@ -289,10 +289,10 @@ export function LogisticsSection({
 							</div>
 						</RadioGroup>
 						{data.foodDrinksBeingServed && (
-							<div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+							<div className="bg-ds-amber-100 border border-ds-amber-100 rounded-lg p-3">
 								<div className="flex items-start gap-2">
-									<AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-									<p className="text-xs text-amber-700">
+									<AlertTriangle className="h-4 w-4 text-ds-amber-900 mt-0.5 shrink-0" />
+									<p className="text-xs text-ds-amber-900">
 										<strong>Important:</strong> If serving food/drinks, you may
 										need AS funding and must follow university guidelines. All
 										food must be from approved AS vendors. Home-cooked food is

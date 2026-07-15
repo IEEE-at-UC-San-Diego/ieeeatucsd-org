@@ -38,35 +38,35 @@ const getFileTypeIcon = (contentType: string, filename: string) => {
 		type.includes("image/") ||
 		["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)
 	) {
-		return <Image className="w-4 h-4 text-blue-500" />;
+		return <Image className="w-4 h-4 text-ds-blue-700" />;
 	}
 	if (
 		type.includes("video/") ||
 		["mp4", "avi", "mov", "wmv", "flv"].includes(ext)
 	) {
-		return <FileVideo className="w-4 h-4 text-purple-500" />;
+		return <FileVideo className="w-4 h-4 text-ds-purple-700" />;
 	}
 	if (type.includes("audio/") || ["mp3", "wav", "flac", "aac"].includes(ext)) {
-		return <FileAudio className="w-4 h-4 text-green-500" />;
+		return <FileAudio className="w-4 h-4 text-ds-green-700" />;
 	}
 	if (type.includes("application/pdf") || ext === "pdf") {
-		return <FileText className="w-4 h-4 text-red-500" />;
+		return <FileText className="w-4 h-4 text-ds-red-800" />;
 	}
 	if (
 		type.includes("application/zip") ||
 		type.includes("application/x-rar") ||
 		["zip", "rar", "7z", "tar"].includes(ext)
 	) {
-		return <Archive className="w-4 h-4 text-orange-500" />;
+		return <Archive className="w-4 h-4 text-ds-amber-700" />;
 	}
 	if (
 		type.includes("application/msword") ||
 		type.includes("application/vnd.openxmlformats-officedocument") ||
 		["doc", "docx", "xls", "xlsx", "ppt", "pptx"].includes(ext)
 	) {
-		return <FileText className="w-4 h-4 text-blue-600" />;
+		return <FileText className="w-4 h-4 text-ds-blue-700" />;
 	}
-	return <File className="w-4 h-4 text-gray-500" />;
+	return <File className="w-4 h-4 text-muted-foreground" />;
 };
 
 const formatFileSize = (bytes: number): string => {
@@ -205,11 +205,11 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 
 				<DialogHeader className="border-b border-border pb-4">
 					<div className="flex items-center space-x-3">
-						<div className="p-2 bg-blue-100 rounded-xl">
-							<Mail className="w-5 h-5 text-blue-600" />
+						<div className="p-2 bg-ds-blue-100 rounded-md">
+							<Mail className="w-5 h-5 text-ds-blue-700" />
 						</div>
 						<div className="flex-1 min-w-0">
-							<DialogTitle className="text-lg font-semibold text-gray-900 truncate">
+							<DialogTitle className="text-lg font-semibold text-foreground truncate">
 								{email.subject.length > 50
 									? `${email.subject.substring(0, 50)}...`
 									: email.subject}
@@ -223,10 +223,10 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 						<div className="flex flex-col items-center justify-center py-16 px-6 h-full">
 							<RefreshCw className="w-8 h-8 text-ieee-blue animate-spin mb-4" />
 							<div className="text-center">
-								<h3 className="text-lg font-medium text-gray-900 mb-2">
+								<h3 className="text-lg font-medium text-foreground mb-2">
 									Loading Email Content
 								</h3>
-								<p className="text-gray-600">
+								<p className="text-muted-foreground">
 									Please wait while we fetch your email...
 								</p>
 							</div>
@@ -234,13 +234,13 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 					) : error ? (
 						<div className="p-8 h-full flex items-center justify-center">
 							<div className="max-w-md mx-auto text-center">
-								<div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-									<AlertCircle className="w-8 h-8 text-red-600" />
+								<div className="w-16 h-16 bg-ds-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+									<AlertCircle className="w-8 h-8 text-ds-red-800" />
 								</div>
-								<h3 className="text-lg font-semibold text-gray-900 mb-2">
+								<h3 className="text-lg font-semibold text-foreground mb-2">
 									Unable to Load Email
 								</h3>
-								<p className="text-gray-600 mb-6">{error}</p>
+								<p className="text-muted-foreground mb-6">{error}</p>
 								<Button onClick={() => window.location.reload()}>
 									<RefreshCw className="w-4 h-4 mr-2" />
 									Try Again
@@ -250,22 +250,22 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 					) : emailContent ? (
 						<div className="p-6">
 							{/* Email Headers */}
-							<div className="mb-6 bg-muted/40 rounded-xl p-4 border border-border">
+							<div className="mb-6 bg-muted/40 rounded-md p-4 border border-border">
 								<div className="flex flex-col space-y-3">
 									<div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
 										<div className="flex-1 min-w-0">
-											<h3 className="text-lg font-semibold text-gray-900 leading-tight mb-1">
+											<h3 className="text-lg font-semibold text-foreground leading-tight mb-1">
 												{emailContent.subject}
 											</h3>
-											<div className="flex items-center space-x-2 text-sm text-gray-600">
+											<div className="flex items-center space-x-2 text-sm text-muted-foreground">
 												<span className="font-medium">From:</span>
-												<span className="text-gray-800">
+												<span className="text-foreground">
 													{emailContent.from}
 												</span>
 											</div>
 										</div>
 										<div className="shrink-0">
-											<div className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-border">
+											<div className="text-sm text-muted-foreground bg-background px-3 py-1 rounded-full border border-border">
 												{new Date(emailContent.date).toLocaleDateString(
 													"en-US",
 													{
@@ -280,9 +280,9 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 											</div>
 										</div>
 									</div>
-									<div className="flex items-center space-x-2 text-sm text-gray-600">
+									<div className="flex items-center space-x-2 text-sm text-muted-foreground">
 										<span className="font-medium">To:</span>
-										<span className="text-gray-800">{emailContent.to}</span>
+										<span className="text-foreground">{emailContent.to}</span>
 									</div>
 								</div>
 							</div>
@@ -292,10 +292,10 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 								emailContent.attachments.length > 0 && (
 									<div className="mb-6">
 										<div className="flex items-center space-x-2 mb-4">
-											<div className="p-1.5 bg-blue-100 rounded-xl">
-												<Paperclip className="w-4 h-4 text-blue-600" />
+											<div className="p-1.5 bg-ds-blue-100 rounded-md">
+												<Paperclip className="w-4 h-4 text-ds-blue-700" />
 											</div>
-											<h4 className="text-sm font-semibold text-gray-900">
+											<h4 className="text-sm font-semibold text-foreground">
 												{emailContent.attachments.length} Attachment
 												{emailContent.attachments.length > 1 ? "s" : ""}
 											</h4>
@@ -305,7 +305,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 												(attachment: any, index: number) => (
 													<div
 														key={index}
-													className="group flex items-center justify-between p-3 bg-muted/40 rounded-lg border border-border hover:border-ieee-blue hover:shadow-md transition-[border-color,box-shadow] duration-150 ease-[ease]"
+														className="group flex items-center justify-between p-3 bg-muted/40 rounded-lg border border-border hover:border-ieee-blue hover:shadow-md transition-[border-color,box-shadow] duration-150 ease-[ease]"
 													>
 														<div className="flex items-center space-x-3 flex-1 min-w-0">
 															<div className="shrink-0">
@@ -315,13 +315,13 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 																)}
 															</div>
 															<div className="min-w-0 flex-1">
-																<p className="text-sm font-medium text-gray-900 truncate group-hover:text-ieee-blue transition-colors">
+																<p className="text-sm font-medium text-foreground truncate group-hover:text-ieee-blue transition-colors">
 																	{attachment.filename.length > 25
 																		? `${attachment.filename.substring(0, 22)}...${attachment.filename.split(".").pop()}`
 																		: attachment.filename}
 																</p>
-																<div className="flex items-center space-x-2 text-xs text-gray-500">
-																	<span className="px-2 py-0.5 bg-white rounded-full border border-border text-xs">
+																<div className="flex items-center space-x-2 text-xs text-muted-foreground">
+																	<span className="px-2 py-0.5 bg-background rounded-full border border-border text-xs">
 																		{attachment.contentType
 																			.split("/")[1]
 																			?.toUpperCase() || "FILE"}
@@ -334,7 +334,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 															</div>
 														</div>
 														<Button variant="ghost" size="sm" disabled>
-															<Download className="w-4 h-4 text-gray-400 group-hover:text-ieee-blue" />
+															<Download className="w-4 h-4 text-muted-foreground group-hover:text-ieee-blue" />
 														</Button>
 													</div>
 												),
@@ -347,10 +347,10 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 							<div className="border-t border-border pt-6">
 								<div className="flex items-center justify-between mb-4">
 									<div className="flex items-center space-x-2">
-										<div className="p-1.5 bg-green-100 rounded-lg">
-											<Mail className="w-4 h-4 text-green-600" />
+										<div className="p-1.5 bg-ds-green-100 rounded-lg">
+											<Mail className="w-4 h-4 text-ds-green-700" />
 										</div>
-										<h4 className="text-sm font-semibold text-gray-900">
+										<h4 className="text-sm font-semibold text-foreground">
 											Message Content
 										</h4>
 									</div>
@@ -358,7 +358,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 										(emailContent.htmlContent || emailContent.textContent) &&
 										emailContent.htmlContent &&
 										emailContent.textContent && (
-											<div className="flex bg-gray-100 rounded-lg p-1">
+											<div className="flex bg-muted rounded-lg p-1">
 												<Button
 													size="sm"
 													variant={viewMode === "html" ? "default" : "ghost"}
@@ -381,7 +381,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 
 								{/* Content Display */}
 								{viewMode === "html" && emailContent.htmlContent ? (
-									<div className="bg-white border border-border rounded-xl overflow-hidden shadow-sm">
+									<div className="bg-background border border-border rounded-md overflow-hidden shadow-sm">
 										<div
 											className="prose prose-sm max-w-none p-6 email-content"
 											dangerouslySetInnerHTML={{
@@ -472,8 +472,8 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 										/>
 									</div>
 								) : (
-									<div className="bg-muted/40 p-6 rounded-xl border border-border">
-										<pre className="whitespace-pre-wrap text-sm text-gray-900 font-mono leading-relaxed">
+									<div className="bg-muted/40 p-6 rounded-md border border-border">
+										<pre className="whitespace-pre-wrap text-sm text-foreground font-mono leading-relaxed">
 											{emailContent.textContent || emailContent.htmlContent}
 										</pre>
 									</div>

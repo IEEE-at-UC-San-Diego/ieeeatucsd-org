@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Separator } from "@/components/ui/separator";
@@ -89,16 +89,10 @@ export function DashboardLayout() {
 				<header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
 					<SidebarTrigger className="-ml-1" />
 					<Separator orientation="vertical" className="mr-2 h-4" />
-					<nav className="flex items-center gap-1 text-sm flex-1">
-						<span className="font-medium text-muted-foreground">Dashboard</span>
-						{PATH_LABELS[location.pathname] && (
-							<>
-								<ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
-								<span className="font-medium text-foreground">
-									{PATH_LABELS[location.pathname]}
-								</span>
-							</>
-						)}
+					<nav className="flex flex-1 items-center gap-1 text-sm">
+						<span className="font-medium text-foreground">
+							{PATH_LABELS[location.pathname] || "Dashboard"}
+						</span>
 					</nav>
 					<NotificationBell />
 				</header>

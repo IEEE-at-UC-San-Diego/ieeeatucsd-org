@@ -244,10 +244,10 @@ function SettingsPage() {
 					</div>
 
 					{/* AI Features Settings */}
-					<div className="rounded-xl border bg-card p-4 md:p-6">
+					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
-							<div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<Sparkles className="w-5 h-5 text-amber-600" />
+							<div className="w-8 h-8 bg-ds-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+								<Sparkles className="w-5 h-5 text-ds-amber-900" />
 							</div>
 							<h2 className="text-base md:text-lg font-semibold">
 								AI Features
@@ -285,7 +285,7 @@ function SettingsPage() {
 					</div>
 
 					{/* Profile Settings Card */}
-					<div className="rounded-xl border bg-card p-6">
+					<div className="rounded-md border bg-card p-6">
 						<Skeleton className="h-6 w-32 mb-6" />
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 							<div className="space-y-4">
@@ -323,7 +323,7 @@ function SettingsPage() {
 					</div>
 
 					{/* Resume Upload Card */}
-					<div className="rounded-xl border bg-card p-6">
+					<div className="rounded-md border bg-card p-6">
 						<Skeleton className="h-6 w-24 mb-6" />
 						<div className="border-2 border-dashed rounded-lg p-8">
 							<div className="text-center space-y-4">
@@ -360,24 +360,24 @@ function SettingsPage() {
 				<div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
 					{/* Status Messages */}
 					{error && (
-						<div className="flex items-center space-x-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+						<div className="flex items-center space-x-2 p-4 bg-ds-red-100 border border-ds-red-100 rounded-lg text-ds-red-800">
 							<AlertCircle className="w-5 h-5 flex-shrink-0" />
 							<span className="text-sm md:text-base">{error}</span>
 						</div>
 					)}
 
 					{success && (
-						<div className="flex items-center space-x-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+						<div className="flex items-center space-x-2 p-4 bg-ds-green-100 border border-ds-green-100 rounded-lg text-ds-green-700">
 							<CheckCircle className="w-5 h-5 flex-shrink-0" />
 							<span className="text-sm md:text-base">{success}</span>
 						</div>
 					)}
 
 					{/* AI Features Settings */}
-					<div className="rounded-xl border bg-card p-4 md:p-6">
+					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
-							<div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<Sparkles className="w-5 h-5 text-amber-600" />
+							<div className="w-8 h-8 bg-ds-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+								<Sparkles className="w-5 h-5 text-ds-amber-900" />
 							</div>
 							<h2 className="text-base md:text-lg font-semibold">
 								AI Features
@@ -415,10 +415,10 @@ function SettingsPage() {
 					</div>
 
 					{/* Profile Settings */}
-					<div className="rounded-xl border bg-card p-4 md:p-6">
+					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
-							<div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<UserCircle className="w-5 h-5 text-blue-600" />
+							<div className="w-8 h-8 bg-ds-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+								<UserCircle className="w-5 h-5 text-ds-blue-700" />
 							</div>
 							<h2 className="text-base md:text-lg font-semibold">
 								Profile Settings
@@ -514,10 +514,10 @@ function SettingsPage() {
 					</div>
 
 					{/* Resume Settings */}
-					<div className="rounded-xl border bg-card p-6">
+					<div className="rounded-md border bg-card p-6">
 						<div className="flex items-center space-x-3 mb-6">
-							<div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-								<FileText className="w-5 h-5 text-green-600" />
+							<div className="w-8 h-8 bg-ds-green-100 rounded-lg flex items-center justify-center">
+								<FileText className="w-5 h-5 text-ds-green-700" />
 							</div>
 							<h2 className="text-lg font-semibold">Resume</h2>
 						</div>
@@ -572,7 +572,7 @@ function SettingsPage() {
 												<Button
 													variant="outline"
 													size="sm"
-													className="text-red-600 hover:text-red-700"
+													className="text-ds-red-800 hover:text-ds-red-800"
 													disabled={removingResume}
 												>
 													Remove
@@ -618,7 +618,7 @@ function SettingsPage() {
 											onChange={(e) =>
 												handleResumeFileChange(e.target.files?.[0] || null)
 											}
-											className="flex-1 text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+											className="flex-1 text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-ds-blue-700 hover:file:bg-ds-blue-200"
 										/>
 										<Button
 											onClick={handleResumeUpload}
@@ -645,7 +645,7 @@ function SettingsPage() {
 											onChange={(e) =>
 												handleResumeFileChange(e.target.files?.[0] || null)
 											}
-											className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+											className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-ds-blue-700 hover:file:bg-ds-blue-200"
 										/>
 										<Button
 											onClick={handleResumeUpload}
@@ -664,10 +664,10 @@ function SettingsPage() {
 					</div>
 
 					{/* Account Information */}
-					<div className="rounded-xl border bg-card p-4 md:p-6">
+					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
-							<div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<Shield className="w-5 h-5 text-purple-600" />
+							<div className="w-8 h-8 bg-ds-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+								<Shield className="w-5 h-5 text-ds-purple-700" />
 							</div>
 							<h2 className="text-base md:text-lg font-semibold">
 								Account Information
@@ -706,12 +706,12 @@ function SettingsPage() {
 
 					{/* Security Note for OAuth users */}
 					{isOAuthUser() && (
-						<div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-							<div className="flex items-center space-x-2 text-blue-700">
+						<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-lg p-6">
+							<div className="flex items-center space-x-2 text-ds-blue-700">
 								<Shield className="w-5 h-5" />
 								<span className="font-medium">OAuth Account</span>
 							</div>
-							<p className="text-blue-600 mt-2 text-sm">
+							<p className="text-ds-blue-700 mt-2 text-sm">
 								You signed in with OAuth. To change your password, please visit
 								your account settings in your OAuth provider.
 							</p>

@@ -363,7 +363,7 @@ export function EventViewModal({
 	const renderFileCards = (files: string[], sectionName: string) => {
 		if (files.length === 0) {
 			return (
-				<div className="text-center py-8 bg-muted/20 rounded-xl border border-dashed">
+				<div className="text-center py-8 bg-muted/20 rounded-md border border-dashed">
 					<p className="text-sm text-muted-foreground">
 						No {sectionName.toLowerCase()} attached
 					</p>
@@ -381,8 +381,8 @@ export function EventViewModal({
 							className="flex items-center justify-between p-3 border rounded-lg bg-card"
 						>
 							<div className="flex items-center gap-3 overflow-hidden">
-								<div className="p-2 bg-blue-50 rounded-md">
-									<FileText className="h-5 w-5 text-blue-500" />
+								<div className="p-2 bg-ds-blue-100 rounded-md">
+									<FileText className="h-5 w-5 text-ds-blue-700" />
 								</div>
 								<div className="min-w-0">
 									<p className="text-sm font-medium truncate">
@@ -486,7 +486,7 @@ export function EventViewModal({
 									htmlFor="can-publish"
 									className="text-sm cursor-pointer flex items-center gap-1.5 font-medium"
 								>
-									<Globe className="h-3.5 w-3.5 text-blue-500" />
+									<Globe className="h-3.5 w-3.5 text-ds-blue-700" />
 									Published
 								</Label>
 							</div>
@@ -509,10 +509,7 @@ export function EventViewModal({
 							<TabsTrigger value="history">History</TabsTrigger>
 						</TabsList>
 
-						<TabsContent
-							value="details"
-							className="space-y-6"
-						>
+						<TabsContent value="details" className="space-y-6">
 							<div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
 								<div className="space-y-1">
 									<div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -604,7 +601,7 @@ export function EventViewModal({
 												<req.icon className="h-3.5 w-3.5" />
 												{req.label}
 												{req.completed && (
-													<Check className="h-3 w-3.5 text-green-600 ml-0.5" />
+													<Check className="h-3 w-3.5 text-ds-green-700 ml-0.5" />
 												)}
 											</span>
 										))}
@@ -622,10 +619,7 @@ export function EventViewModal({
 							</div>
 						</TabsContent>
 
-						<TabsContent
-							value="files"
-							className="space-y-6"
-						>
+						<TabsContent value="files" className="space-y-6">
 							<div>
 								<h4 className="text-sm font-semibold mb-3">
 									Room Booking Files
@@ -644,18 +638,15 @@ export function EventViewModal({
 							</div>
 						</TabsContent>
 
-						<TabsContent
-							value="graphics"
-							className="space-y-6"
-						>
-							<div className="border rounded-xl p-4 bg-card">
+						<TabsContent value="graphics" className="space-y-6">
+							<div className="border rounded-md p-4 bg-card">
 								<h4 className="text-sm font-semibold mb-3">Graphics Needed</h4>
 								{graphicsNeeds.length > 0 ? (
 									<div className="flex flex-wrap gap-2">
 										{graphicsNeeds.map((need) => (
 											<span
 												key={need}
-												className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+												className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-ds-blue-100 text-ds-blue-700 border border-ds-blue-100"
 											>
 												<ImageIcon className="h-3 w-3" />
 												{need}
@@ -669,7 +660,7 @@ export function EventViewModal({
 								)}
 							</div>
 
-							<div className="border rounded-xl p-4 bg-card space-y-4">
+							<div className="border rounded-md p-4 bg-card space-y-4">
 								<div className="flex items-center justify-between">
 									<div>
 										<h4 className="text-sm font-semibold">Graphics Delivery</h4>
@@ -728,7 +719,7 @@ export function EventViewModal({
 															href={url.trim()}
 															target="_blank"
 															rel="noopener noreferrer"
-															className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline truncate"
+															className="flex items-center gap-2 text-sm text-ds-blue-700 hover:text-ds-blue-700 hover:underline truncate"
 														>
 															<LinkIcon className="h-3.5 w-3.5 shrink-0" />
 															<span className="truncate">{url.trim()}</span>
@@ -809,14 +800,11 @@ export function EventViewModal({
 							</div>
 						</TabsContent>
 
-						<TabsContent
-							value="funding"
-							className="space-y-6"
-						>
-							<div className="flex items-center justify-between p-4 border rounded-xl bg-gradient-to-r from-background to-muted/20">
+						<TabsContent value="funding" className="space-y-6">
+							<div className="flex items-center justify-between p-4 border rounded-md bg-gradient-to-r from-background to-muted/20">
 								<div className="flex items-center gap-4">
-									<div className="p-3 bg-green-100 rounded-full">
-										<DollarSign className="h-6 w-6 text-green-600" />
+									<div className="p-3 bg-ds-green-100 rounded-full">
+										<DollarSign className="h-6 w-6 text-ds-green-700" />
 									</div>
 									<div>
 										<p className="font-semibold">AS Funding Requested</p>
@@ -825,7 +813,7 @@ export function EventViewModal({
 											<span
 												className={
 													event.needsASFunding
-														? "text-green-600 font-medium"
+														? "text-ds-green-700 font-medium"
 														: "text-muted-foreground"
 												}
 											>
@@ -837,9 +825,9 @@ export function EventViewModal({
 							</div>
 
 							{event.invoices.length > 0 && (
-								<div className="bg-green-50 border border-green-200 rounded-xl p-4">
+								<div className="bg-ds-green-100 border border-ds-green-100 rounded-md p-4">
 									<div className="flex items-center justify-between mb-2">
-										<h4 className="text-sm font-semibold text-green-900">
+										<h4 className="text-sm font-semibold text-ds-green-900">
 											Formatted Invoice Data (Copyable)
 										</h4>
 										<Button
@@ -856,7 +844,7 @@ export function EventViewModal({
 											{copiedInvoice ? "Copied!" : "Copy"}
 										</Button>
 									</div>
-									<p className="text-xs font-mono text-green-900 bg-white/80 border rounded-md p-3 whitespace-pre-wrap break-words">
+									<p className="text-xs font-mono text-ds-green-900 bg-background/80 border rounded-md p-3 whitespace-pre-wrap break-words">
 										{formatInvoiceData(event)}
 									</p>
 								</div>
@@ -880,7 +868,7 @@ export function EventViewModal({
 											return (
 												<div
 													key={invoice._id}
-													className="border rounded-xl bg-card overflow-hidden shadow-sm"
+													className="border rounded-md bg-card overflow-hidden shadow-sm"
 												>
 													<div className="p-3 bg-muted/30 border-b flex justify-between items-center">
 														<span className="font-medium text-sm">
@@ -980,19 +968,19 @@ export function EventViewModal({
 
 						<TabsContent value="attendees" className="h-full">
 							<div className="space-y-4">
-								<div className="rounded-xl border p-4 bg-muted/20">
+								<div className="rounded-md border p-4 bg-muted/20">
 									<div className="flex flex-wrap items-center gap-3 text-sm">
-										<span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
+										<span className="inline-flex items-center px-2.5 py-1 rounded-full bg-ds-blue-100 text-ds-blue-700 font-medium">
 											Estimated: {event.estimatedAttendance}
 										</span>
-										<span className="inline-flex items-center px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">
+										<span className="inline-flex items-center px-2.5 py-1 rounded-full bg-ds-green-100 text-ds-green-700 font-medium">
 											Checked In: {event.attendeeCount || attendees.length}
 										</span>
 									</div>
 								</div>
 
 								{attendees.length === 0 ? (
-									<div className="h-full flex flex-col items-center justify-center p-8 text-center bg-muted/10 rounded-xl border border-dashed">
+									<div className="h-full flex flex-col items-center justify-center p-8 text-center bg-muted/10 rounded-md border border-dashed">
 										<Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground/40" />
 										<h3 className="font-medium text-foreground">
 											No attendees yet
@@ -1002,7 +990,7 @@ export function EventViewModal({
 										</p>
 									</div>
 								) : (
-									<div className="rounded-xl border overflow-hidden">
+									<div className="rounded-md border overflow-hidden">
 										<div className="grid grid-cols-12 bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
 											<div className="col-span-5">Attendee</div>
 											<div className="col-span-3">Checked In</div>

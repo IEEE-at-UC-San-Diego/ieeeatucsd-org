@@ -34,7 +34,7 @@ export function BudgetTrackingCard({
 			onClick={isConfigured ? onClick : undefined}
 			disabled={!isConfigured}
 			className={cn(
-				"h-full w-full rounded-lg border bg-card p-4 text-left shadow-sm transition-colors",
+				"h-full w-full rounded-md border bg-card p-4 text-left shadow-sm transition-colors",
 				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 				isConfigured
 					? "hover:border-primary/50 hover:bg-accent/40"
@@ -59,7 +59,7 @@ export function BudgetTrackingCard({
 					</span>
 				</div>
 				{!isConfigured && (
-					<span className="text-[10px] rounded-full px-1.5 py-0.5 bg-muted text-muted-foreground border">
+					<span className="rounded-full border bg-muted px-2 py-1 text-xs text-muted-foreground">
 						Not Configured
 					</span>
 				)}
@@ -72,25 +72,23 @@ export function BudgetTrackingCard({
 							<p className="text-xl font-bold leading-none">
 								{formatCurrency(remainingBudget)}
 							</p>
-							<p className="text-[10px] text-muted-foreground font-medium mt-1">
+							<p className="mt-1 text-xs font-medium text-muted-foreground">
 								of {formatCurrency(totalBudget)} remaining
 							</p>
 						</div>
 						{pendingBudget > 0 && (
-							<div className="text-right bg-yellow-50 px-1.5 py-0.5 rounded border border-yellow-100">
-								<p className="text-xs font-semibold text-yellow-700">
+							<div className="text-right bg-ds-amber-100 px-1.5 py-0.5 rounded border border-ds-amber-100">
+								<p className="text-xs font-semibold text-ds-amber-900">
 									-{formatCurrency(pendingBudget)}
 								</p>
-								<p className="text-[8px] uppercase font-medium text-yellow-600">
-									pending
-								</p>
+								<p className="text-xs font-medium text-ds-amber-900">pending</p>
 							</div>
 						)}
 					</div>
 
 					<div className="space-y-1">
 						<Progress value={Math.min(percentUsed, 100)} className="h-1.5" />
-						<div className="flex justify-between text-[10px] text-muted-foreground font-medium">
+						<div className="flex justify-between text-xs font-medium text-muted-foreground">
 							<span>0%</span>
 							<span>50%</span>
 							<span>100%</span>

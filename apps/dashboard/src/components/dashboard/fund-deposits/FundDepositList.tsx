@@ -190,20 +190,20 @@ export function FundDepositList({
 					value={stats.pending}
 					subValue={formatCurrency(stats.pendingAmount)}
 					icon={Clock}
-					color="text-yellow-600"
+					color="text-ds-amber-900"
 				/>
 				<StatCard
 					title="Verified Deposits"
 					value={stats.verified}
 					subValue={formatCurrency(stats.totalAmount)}
 					icon={CheckCircle}
-					color="text-emerald-600"
+					color="text-ds-green-700"
 				/>
 				<StatCard
 					title="Total Requests"
 					value={stats.total}
 					icon={TrendingUp}
-					color="text-blue-600"
+					color="text-ds-blue-700"
 				/>
 				{/* Placeholder for maybe 'Rejected' or 'This Month' */}
 				<Card className="border-dashed shadow-none bg-muted/30 flex items-center justify-center p-6">

@@ -183,20 +183,20 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 
 	return (
 		<div className="flex flex-col">
-			<div className="bg-white rounded-lg border border-gray-200 flex flex-col max-h-[500px] md:max-h-[450px] lg:max-h-[600px] min-h-[350px]">
-				<div className="flex flex-col gap-3 p-3 md:p-4 border-b border-gray-200 flex-shrink-0">
+			<div className="bg-background rounded-lg border border-border flex flex-col max-h-[500px] md:max-h-[450px] lg:max-h-[600px] min-h-[350px]">
+				<div className="flex flex-col gap-3 p-3 md:p-4 border-b border-border flex-shrink-0">
 					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-3">
 						<div className="min-w-0 flex-1">
-							<h2 className="font-semibold text-gray-900 text-sm md:text-base">
+							<h2 className="font-semibold text-foreground text-sm md:text-base">
 								Document Structure
 							</h2>
-							<p className="text-xs text-gray-400 hidden md:block">
+							<p className="text-xs text-muted-foreground hidden md:block">
 								Adopted since September 2006
 							</p>
 						</div>
 						<Button
 							onClick={() => setShowAddSection(true)}
-							className="lg:hidden inline-flex items-center justify-center px-2 md:px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm shadow-sm min-h-[40px] md:min-h-[44px] w-full sm:w-auto"
+							className="lg:hidden inline-flex items-center justify-center px-2 md:px-3 py-2 bg-ds-blue-700 text-white rounded-md hover:bg-ds-blue-800 transition-colors text-sm shadow-sm min-h-[40px] md:min-h-[44px] w-full sm:w-auto"
 						>
 							<Plus className="h-4 w-4 mr-1" />
 							<span className="hidden sm:inline">Add Section</span>
@@ -207,7 +207,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 					<div className="hidden lg:block">
 						<Button
 							onClick={() => setShowAddSection(true)}
-							className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm min-h-[44px]"
+							className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-ds-blue-700 text-white rounded-md hover:bg-ds-blue-800 transition-colors text-sm font-medium shadow-sm min-h-[44px]"
 						>
 							<Plus className="h-4 w-4 mr-2" />
 							Add Block
@@ -221,17 +221,17 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 				>
 					{sections.length === 0 ? (
 						<div className="text-center py-6 md:py-8">
-							<FileText className="h-10 w-10 md:h-12 md:w-12 text-gray-300 mx-auto mb-3 md:mb-4" />
-							<h3 className="text-sm font-medium text-gray-900 mb-2">
+							<FileText className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mx-auto mb-3 md:mb-4" />
+							<h3 className="text-sm font-medium text-foreground mb-2">
 								No sections yet
 							</h3>
-							<p className="text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
+							<p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
 								Start building your constitution by adding a preamble or first
 								article.
 							</p>
 							<Button
 								onClick={() => setShowAddSection(true)}
-								className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm min-h-[40px]"
+								className="inline-flex items-center px-3 py-2 bg-ds-blue-700 text-white rounded-md hover:bg-ds-blue-800 transition-colors text-sm min-h-[40px]"
 							>
 								<Plus className="h-4 w-4 mr-2" />
 								Add First Section
@@ -252,51 +252,65 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 					</DialogHeader>
 					<div className="space-y-4">
 						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-2">
+							<label className="block text-sm font-medium text-foreground mb-2">
 								Section Type
 							</label>
 							<Select
 								value={addSectionType}
 								onValueChange={(value) => {
-									handleTypeChange(
-										value as ConstitutionSection["type"],
-									);
+									handleTypeChange(value as ConstitutionSection["type"]);
 									setAddSectionParent("");
 								}}
 							>
-								<SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="preamble">Preamble - Opening statement of purpose</SelectItem>
-									<SelectItem value="article">Article - Main constitutional division</SelectItem>
-									<SelectItem value="section">Section - Must be under an article</SelectItem>
-									<SelectItem value="subsection">Subsection - Subdivision of a section</SelectItem>
-									<SelectItem value="amendment">Amendment - Constitutional modification</SelectItem>
+									<SelectItem value="preamble">
+										Preamble - Opening statement of purpose
+									</SelectItem>
+									<SelectItem value="article">
+										Article - Main constitutional division
+									</SelectItem>
+									<SelectItem value="section">
+										Section - Must be under an article
+									</SelectItem>
+									<SelectItem value="subsection">
+										Subsection - Subdivision of a section
+									</SelectItem>
+									<SelectItem value="amendment">
+										Amendment - Constitutional modification
+									</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
 
 						{parentOptions.length > 0 && (
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">
+								<label className="block text-sm font-medium text-foreground mb-2">
 									Parent Section
 								</label>
 								<Select
 									value={addSectionParent}
 									onValueChange={setAddSectionParent}
 								>
-									<SelectTrigger className="w-full"><SelectValue placeholder="Select parent..." /></SelectTrigger>
-									<SelectContent>{parentOptions.map((section) => (
-										<SelectItem key={section.id} value={section.id}>
-											{getSectionDisplayTitle(section, sections)}
-										</SelectItem>
-									))}</SelectContent>
+									<SelectTrigger className="w-full">
+										<SelectValue placeholder="Select parent..." />
+									</SelectTrigger>
+									<SelectContent>
+										{parentOptions.map((section) => (
+											<SelectItem key={section.id} value={section.id}>
+												{getSectionDisplayTitle(section, sections)}
+											</SelectItem>
+										))}
+									</SelectContent>
 								</Select>
 							</div>
 						)}
 
 						{addSectionType !== "preamble" && (
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">
+								<label className="block text-sm font-medium text-foreground mb-2">
 									Title{" "}
 									{addSectionType === "article" ? "(required)" : "(optional)"}
 								</label>
@@ -311,7 +325,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 						)}
 
 						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-2">
+							<label className="block text-sm font-medium text-foreground mb-2">
 								Content{" "}
 								{addSectionType === "preamble"
 									? "(required)"
@@ -391,42 +405,48 @@ const SectionNavigationItem: React.FC<{
 				}
 			}}
 			className={`flex items-center gap-1 md:gap-2 p-2 rounded-md cursor-pointer transition-colors ${
-				isSelected ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50"
+				isSelected ? "bg-ds-blue-100 text-ds-blue-700" : "hover:bg-muted"
 			}`}
 			onClick={() => onSelect(section.id)}
 		>
 			<div className="flex flex-col">
-				<Button variant="ghost" size="icon"
+				<Button
+					variant="ghost"
+					size="icon"
 					onClick={(e) => {
 						e.stopPropagation();
 						onMoveUp();
 					}}
 					disabled={!canMoveUp}
-					className="p-0.5 md:p-1 hover:bg-gray-200 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[24px] min-w-[24px] flex items-center justify-center"
+					className="p-0.5 md:p-1 hover:bg-ds-gray-300 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[24px] min-w-[24px] flex items-center justify-center"
 					title="Move up"
 				>
-					<ArrowUp className="h-3 w-3 text-gray-600" />
+					<ArrowUp className="h-3 w-3 text-muted-foreground" />
 				</Button>
-				<Button variant="ghost" size="icon"
+				<Button
+					variant="ghost"
+					size="icon"
 					onClick={(e) => {
 						e.stopPropagation();
 						onMoveDown();
 					}}
 					disabled={!canMoveDown}
-					className="p-0.5 md:p-1 hover:bg-gray-200 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[24px] min-w-[24px] flex items-center justify-center"
+					className="p-0.5 md:p-1 hover:bg-ds-gray-300 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[24px] min-w-[24px] flex items-center justify-center"
 					title="Move down"
 				>
-					<ArrowDown className="h-3 w-3 text-gray-600" />
+					<ArrowDown className="h-3 w-3 text-muted-foreground" />
 				</Button>
 			</div>
 
 			{hasChildren && (
-				<Button variant="ghost" size="icon"
+				<Button
+					variant="ghost"
+					size="icon"
 					onClick={(e) => {
 						e.stopPropagation();
 						onToggleExpand(section.id);
 					}}
-					className="p-0.5 md:p-1 hover:bg-gray-200 rounded min-h-[24px] min-w-[24px] flex items-center justify-center"
+					className="p-0.5 md:p-1 hover:bg-ds-gray-300 rounded min-h-[24px] min-w-[24px] flex items-center justify-center"
 				>
 					{isExpanded ? (
 						<ChevronDown className="h-3 w-3" />
@@ -440,7 +460,9 @@ const SectionNavigationItem: React.FC<{
 				<div className="text-xs md:text-sm font-medium truncate">
 					{getSectionDisplayTitle(section, allSections)}
 				</div>
-				<div className="text-xs text-gray-500 capitalize">{section.type}</div>
+				<div className="text-xs text-muted-foreground capitalize">
+					{section.type}
+				</div>
 			</div>
 		</div>
 	);

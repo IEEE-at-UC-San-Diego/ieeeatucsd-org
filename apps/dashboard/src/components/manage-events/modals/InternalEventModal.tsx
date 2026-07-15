@@ -72,7 +72,8 @@ const EVENT_TYPES: Array<{
 		value: "meeting",
 		label: "Meeting",
 		icon: Users,
-		color: "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100",
+		color:
+			"bg-ds-blue-100 text-ds-blue-700 border-ds-blue-100 hover:bg-ds-blue-100",
 		description: "Team meetings, planning sessions",
 	},
 	{
@@ -80,35 +81,38 @@ const EVENT_TYPES: Array<{
 		label: "Tabling",
 		icon: Presentation,
 		color:
-			"bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100",
+			"bg-ds-green-100 text-ds-green-700 border-ds-green-100 hover:bg-ds-green-100",
 		description: "Recruitment, info booths",
 	},
 	{
 		value: "workshop",
 		label: "Workshop",
 		icon: Wrench,
-		color: "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100",
+		color:
+			"bg-ds-amber-100 text-ds-amber-900 border-ds-amber-100 hover:bg-ds-amber-100",
 		description: "Technical workshops, tutorials",
 	},
 	{
 		value: "social",
 		label: "Social",
 		icon: PartyPopper,
-		color: "bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100",
+		color:
+			"bg-ds-pink-100 text-ds-pink-700 border-ds-pink-100 hover:bg-ds-blue-100",
 		description: "Social events, hangouts",
 	},
 	{
 		value: "outreach",
 		label: "Outreach",
 		icon: Heart,
-		color: "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100",
+		color:
+			"bg-ds-red-100 text-ds-red-800 border-ds-red-100 hover:bg-ds-red-200",
 		description: "Community service, outreach",
 	},
 	{
 		value: "other",
 		label: "Other",
 		icon: MoreHorizontal,
-		color: "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100",
+		color: "bg-muted text-muted-foreground border-border hover:bg-muted",
 		description: "Miscellaneous events",
 	},
 ];
@@ -263,7 +267,8 @@ export function InternalEventModal({
 								const Icon = type.icon;
 								const isSelected = formData.eventType === type.value;
 								return (
-									<Button variant="outline"
+									<Button
+										variant="outline"
 										key={type.value}
 										type="button"
 										onClick={() =>
@@ -273,7 +278,7 @@ export function InternalEventModal({
 											"flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md border transition-[background-color,border-color,color] duration-150 ease-[ease]",
 											isSelected
 												? type.color
-												: "bg-white border-slate-200 hover:border-slate-300 text-slate-500",
+												: "bg-background border-border hover:border-border text-muted-foreground",
 										)}
 										title={type.label}
 									>
@@ -379,11 +384,11 @@ export function InternalEventModal({
 							size="sm"
 							onClick={handleDelete}
 							disabled={isDeleting || isSubmitting}
-							className="text-red-600 hover:text-red-700 hover:bg-red-50 mr-auto h-8 px-2"
+							className="text-ds-red-800 hover:text-ds-red-800 hover:bg-ds-red-100 mr-auto h-8 px-2"
 						>
 							{isDeleting ? (
 								<span className="flex items-center gap-1.5 text-sm">
-									<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+									<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ds-red-800 border-t-transparent" />
 									Deleting...
 								</span>
 							) : (

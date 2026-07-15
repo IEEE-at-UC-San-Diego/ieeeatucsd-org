@@ -495,7 +495,7 @@ export function FundRequestFormModal({
 											{vendorLinks.map((link) => (
 												<div
 													key={link.id}
-												className="group relative bg-background border border-border/60 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-primary/20 transition-[border-color,box-shadow] duration-150 ease-[ease]"
+													className="group relative bg-background border border-border/60 rounded-md p-4 shadow-sm hover:shadow-md hover:border-primary/20 transition-[border-color,box-shadow] duration-150 ease-[ease]"
 												>
 													<div className="flex flex-col gap-3">
 														<div className="flex gap-3 items-start">
@@ -591,7 +591,7 @@ export function FundRequestFormModal({
 											))}
 
 											{vendorLinks.length === 0 && (
-												<div className="flex flex-col items-center justify-center py-10 text-muted-foreground bg-background/50 border border-dashed rounded-xl">
+												<div className="flex flex-col items-center justify-center py-10 text-muted-foreground bg-background/50 border border-dashed rounded-md">
 													<p className="text-sm">No items added yet</p>
 													<Button
 														variant="link"
@@ -736,7 +736,7 @@ export function FundRequestFormModal({
 											</Badge>
 										</div>
 									</div>
-									<p className="text-2xl font-bold text-green-600">
+									<p className="text-2xl font-bold text-ds-green-700">
 										{formatCurrency(parseFloat(amount) || 0)}
 									</p>
 								</div>

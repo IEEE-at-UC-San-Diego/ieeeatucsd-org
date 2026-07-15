@@ -44,8 +44,8 @@ const ConstitutionBuilderContent = () => {
 			<div className="w-full max-w-none p-4 md:p-6">
 				<div className="max-w-7xl mx-auto">
 					<div className="space-y-4">
-						<div className="h-10 bg-gray-200 rounded animate-pulse" />
-						<div className="h-64 bg-gray-100 rounded animate-pulse" />
+						<div className="h-10 bg-muted rounded animate-pulse" />
+						<div className="h-64 bg-muted rounded animate-pulse" />
 					</div>
 				</div>
 			</div>
@@ -59,8 +59,8 @@ const ConstitutionBuilderContent = () => {
 				<div className="mb-4 md:mb-6 lg:mb-8">
 					<div className="lg:hidden space-y-3 mb-4">
 						<div className="flex items-start justify-between gap-3">
-							<h1 className="text-xl font-bold text-gray-900 flex items-center gap-2 min-w-0">
-								<FileText className="h-6 w-6 text-blue-600 shrink-0" />
+							<h1 className="text-xl font-bold text-foreground flex items-center gap-2 min-w-0">
+								<FileText className="h-6 w-6 text-ds-blue-700 shrink-0" />
 								<span className="truncate">Constitution Builder</span>
 							</h1>
 							<Button variant="outline" size="sm" className="shrink-0" asChild>
@@ -83,27 +83,27 @@ const ConstitutionBuilderContent = () => {
 							/>
 						</div>
 						<div className="flex flex-wrap items-center gap-2">
-							<div className="flex items-center gap-2 text-xs text-gray-600 shrink-0">
+							<div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
 								{saveStatus === "saved" && (
 									<>
-										<Check className="h-3.5 w-3.5 text-green-500" />
-										<span className="text-green-600">Saved</span>
+										<Check className="h-3.5 w-3.5 text-ds-green-700" />
+										<span className="text-ds-green-700">Saved</span>
 									</>
 								)}
 								{saveStatus === "idle" && (
 									<>
-										<FileText className="h-3.5 w-3.5 text-gray-500" />
+										<FileText className="h-3.5 w-3.5 text-muted-foreground" />
 										<span>Ready</span>
 									</>
 								)}
 							</div>
-							<div className="flex flex-1 min-w-0 bg-gray-100 rounded-xl p-1">
+							<div className="flex flex-1 min-w-0 bg-muted rounded-md p-1">
 								<Button
 									onClick={() => setCurrentView("editor")}
 									className={`flex-1 px-2 py-2 rounded-md text-xs font-medium min-h-[44px] ${
 										currentView === "editor"
-											? "bg-white text-gray-900 shadow-sm"
-											: "text-gray-600 hover:text-gray-900"
+											? "bg-background text-foreground shadow-sm"
+											: "text-muted-foreground hover:text-foreground"
 									}`}
 									variant="ghost"
 								>
@@ -114,8 +114,8 @@ const ConstitutionBuilderContent = () => {
 									onClick={() => setCurrentView("versions")}
 									className={`flex-1 px-2 py-2 rounded-md text-xs font-medium min-h-[44px] ${
 										currentView === "versions"
-											? "bg-white text-gray-900 shadow-sm"
-											: "text-gray-600 hover:text-gray-900"
+											? "bg-background text-foreground shadow-sm"
+											: "text-muted-foreground hover:text-foreground"
 									}`}
 									variant="ghost"
 								>
@@ -126,8 +126,8 @@ const ConstitutionBuilderContent = () => {
 									onClick={() => setCurrentView("audit")}
 									className={`flex-1 px-2 py-2 rounded-md text-xs font-medium min-h-[44px] ${
 										currentView === "audit"
-											? "bg-white text-gray-900 shadow-sm"
-											: "text-gray-600 hover:text-gray-900"
+											? "bg-background text-foreground shadow-sm"
+											: "text-muted-foreground hover:text-foreground"
 									}`}
 									variant="ghost"
 								>
@@ -140,11 +140,11 @@ const ConstitutionBuilderContent = () => {
 
 					<div className="hidden lg:flex items-center justify-between">
 						<div className="flex-1 mr-8">
-							<h1 className="text-2xl xl:text-3xl font-bold text-gray-900 flex items-center gap-3">
-								<FileText className="h-7 w-7 xl:h-8 xl:w-8 text-blue-600" />
+							<h1 className="text-2xl xl:text-3xl font-bold text-foreground flex items-center gap-3">
+								<FileText className="h-7 w-7 xl:h-8 xl:w-8 text-ds-blue-700" />
 								Constitution Builder
 							</h1>
-							<p className="text-gray-600 mt-2 mb-4">
+							<p className="text-muted-foreground mt-2 mb-4">
 								Collaboratively build and manage the organization's constitution
 							</p>
 							<div className="max-w-md">
@@ -161,14 +161,14 @@ const ConstitutionBuilderContent = () => {
 							<div className="flex items-center gap-2 text-sm">
 								{saveStatus === "saved" && (
 									<>
-										<Check className="h-4 w-4 text-green-500" />
-										<span className="text-green-600">Changes saved</span>
+										<Check className="h-4 w-4 text-ds-green-700" />
+										<span className="text-ds-green-700">Changes saved</span>
 									</>
 								)}
 								{saveStatus === "idle" && (
 									<>
-										<FileText className="h-4 w-4 text-gray-500" />
-										<span className="text-gray-600">Ready to edit</span>
+										<FileText className="h-4 w-4 text-muted-foreground" />
+										<span className="text-muted-foreground">Ready to edit</span>
 									</>
 								)}
 							</div>
@@ -188,13 +188,13 @@ const ConstitutionBuilderContent = () => {
 								</Link>
 							</Button>
 
-							<div className="flex bg-gray-100 rounded-xl p-1">
+							<div className="flex bg-muted rounded-md p-1">
 								<Button
 									onClick={() => setCurrentView("editor")}
 									className={`px-3 py-2 rounded-md text-sm font-medium min-h-[44px] ${
 										currentView === "editor"
-											? "bg-white text-gray-900 shadow-sm"
-											: "text-gray-600 hover:text-gray-900"
+											? "bg-background text-foreground shadow-sm"
+											: "text-muted-foreground hover:text-foreground"
 									}`}
 									variant="ghost"
 								>
@@ -205,8 +205,8 @@ const ConstitutionBuilderContent = () => {
 									onClick={() => setCurrentView("versions")}
 									className={`px-3 py-2 rounded-md text-sm font-medium min-h-[44px] ${
 										currentView === "versions"
-											? "bg-white text-gray-900 shadow-sm"
-											: "text-gray-600 hover:text-gray-900"
+											? "bg-background text-foreground shadow-sm"
+											: "text-muted-foreground hover:text-foreground"
 									}`}
 									variant="ghost"
 								>
@@ -217,8 +217,8 @@ const ConstitutionBuilderContent = () => {
 									onClick={() => setCurrentView("audit")}
 									className={`px-3 py-2 rounded-md text-sm font-medium min-h-[44px] ${
 										currentView === "audit"
-											? "bg-white text-gray-900 shadow-sm"
-											: "text-gray-600 hover:text-gray-900"
+											? "bg-background text-foreground shadow-sm"
+											: "text-muted-foreground hover:text-foreground"
 									}`}
 									variant="ghost"
 								>
@@ -240,7 +240,7 @@ const ConstitutionBuilderContent = () => {
 						onSaveVersion={saveVersion}
 					/>
 				) : currentView === "versions" ? (
-					<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6">
+					<div className="bg-background rounded-md shadow-sm border border-border p-4 md:p-6">
 						<ConstitutionVersionHistory
 							versions={versions}
 							currentVersion={constitution?.version}
@@ -248,7 +248,7 @@ const ConstitutionBuilderContent = () => {
 						/>
 					</div>
 				) : (
-					<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6">
+					<div className="bg-background rounded-md shadow-sm border border-border p-4 md:p-6">
 						<ConstitutionAuditLog constitutionId={constitutionId || ""} />
 					</div>
 				)}

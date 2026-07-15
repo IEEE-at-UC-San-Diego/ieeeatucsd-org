@@ -31,19 +31,19 @@ export default function AIWarningStep({
 	return (
 		<Card className="max-w-2xl mx-auto">
 			<CardHeader className="text-center pb-2">
-				<div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6 mx-auto relative">
-					<Brain className="w-10 h-10 text-amber-600" />
-					<div className="absolute -bottom-1 -right-1 bg-yellow-100 p-1.5 rounded-full border-2 border-white">
-						<AlertTriangle className="w-4 h-4 text-yellow-600" />
+				<div className="w-20 h-20 bg-ds-amber-100 rounded-full flex items-center justify-center mb-6 mx-auto relative">
+					<Brain className="w-10 h-10 text-ds-amber-900" />
+					<div className="absolute -bottom-1 -right-1 bg-ds-amber-100 p-1.5 rounded-full border-2 border-white">
+						<AlertTriangle className="w-4 h-4 text-ds-amber-900" />
 					</div>
 				</div>
-				<CardTitle className="text-2xl font-bold text-gray-900">
+				<CardTitle className="text-2xl font-bold text-foreground">
 					AI-Powered Receipt Processing
 				</CardTitle>
-				<CardDescription className="text-gray-600 text-lg mt-2 leading-relaxed">
+				<CardDescription className="text-muted-foreground text-lg mt-2 leading-relaxed">
 					When uploading a receipt, it will be automatically parsed by our AI
 					system. While accurate,{" "}
-					<span className="font-semibold text-gray-900">
+					<span className="font-semibold text-foreground">
 						it is your responsibility to verify the data
 					</span>{" "}
 					and fix any discrepancies.
@@ -52,14 +52,14 @@ export default function AIWarningStep({
 
 			<CardContent className="space-y-6">
 				{/* Warning Alert */}
-				<div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+				<div className="bg-ds-amber-100 border border-ds-amber-100 rounded-md p-4">
 					<div className="flex items-start">
-						<AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
+						<AlertTriangle className="w-5 h-5 text-ds-amber-900 mt-0.5 mr-3 flex-shrink-0" />
 						<div>
-							<h4 className="font-semibold text-yellow-800 mb-1">
+							<h4 className="font-semibold text-ds-amber-900 mb-1">
 								Important Note
 							</h4>
-							<p className="text-yellow-700 text-sm">
+							<p className="text-ds-amber-900 text-sm">
 								Please double-check all extracted amounts, dates, and vendor
 								names.{" "}
 								<strong>Once submitted, the request cannot be changed.</strong>
@@ -70,25 +70,25 @@ export default function AIWarningStep({
 
 				{/* Data Processing Info */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-					<div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-						<FileText className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+					<div className="flex items-start space-x-3 p-4 bg-muted rounded-lg">
+						<FileText className="w-5 h-5 text-ds-blue-700 flex-shrink-0 mt-0.5" />
 						<div>
-							<h5 className="font-medium text-gray-900 text-sm">
+							<h5 className="font-medium text-foreground text-sm">
 								Receipt Data
 							</h5>
-							<p className="text-gray-600 text-xs mt-1">
+							<p className="text-muted-foreground text-xs mt-1">
 								Amounts, dates, and vendor information are extracted
 								automatically
 							</p>
 						</div>
 					</div>
-					<div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-						<Shield className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+					<div className="flex items-start space-x-3 p-4 bg-muted rounded-lg">
+						<Shield className="w-5 h-5 text-ds-green-700 flex-shrink-0 mt-0.5" />
 						<div>
-							<h5 className="font-medium text-gray-900 text-sm">
+							<h5 className="font-medium text-foreground text-sm">
 								Data Security
 							</h5>
-							<p className="text-gray-600 text-xs mt-1">
+							<p className="text-muted-foreground text-xs mt-1">
 								Your receipt data is processed securely and stored encrypted
 							</p>
 						</div>
@@ -96,7 +96,7 @@ export default function AIWarningStep({
 				</div>
 
 				{/* Acknowledgment Checkbox */}
-				<div className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg">
+				<div className="flex items-start space-x-3 p-4 border border-border rounded-lg">
 					<Checkbox
 						id="ai-acknowledgment"
 						checked={acknowledged}
@@ -105,7 +105,7 @@ export default function AIWarningStep({
 					/>
 					<label
 						htmlFor="ai-acknowledgment"
-						className="text-sm text-gray-700 cursor-pointer select-none"
+						className="text-sm text-foreground cursor-pointer select-none"
 					>
 						I understand that AI-generated data may contain errors and it is my
 						responsibility to verify all information before submission.
@@ -117,7 +117,7 @@ export default function AIWarningStep({
 				<Button
 					onClick={onContinue}
 					disabled={!acknowledged || isLoading}
-					className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg shadow-blue-600/20 px-8 py-6 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+					className="bg-ds-blue-700 hover:bg-ds-blue-800 text-white font-semibold shadow-lg shadow-none px-8 py-6 text-base disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					{isLoading ? (
 						<>

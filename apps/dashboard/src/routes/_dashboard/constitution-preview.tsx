@@ -53,8 +53,8 @@ function ConstitutionPreviewPage() {
 		return (
 			<div className="w-full p-6">
 				<div className="max-w-[8.5in] mx-auto space-y-4">
-					<div className="h-10 bg-gray-200 rounded animate-pulse" />
-					<div className="h-[11in] bg-gray-100 rounded animate-pulse" />
+					<div className="h-10 bg-muted rounded animate-pulse" />
+					<div className="h-[11in] bg-muted rounded animate-pulse" />
 				</div>
 			</div>
 		);
@@ -81,7 +81,7 @@ function ConstitutionPreviewPage() {
 	return (
 		<div className="w-full p-4 md:p-6">
 			<div className="max-w-[8.5in] mx-auto">
-				<div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-auto">
+				<div className="bg-background rounded-md shadow-sm border border-border overflow-auto">
 					<ConstitutionPreview
 						constitution={constitution}
 						sections={sections}

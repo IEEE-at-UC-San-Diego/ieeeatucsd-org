@@ -256,11 +256,11 @@ export function FundDepositDetail({
 
 								{/* IEEE Info */}
 								{deposit.isIeeeDeposit && (
-									<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-										<Label className="text-blue-700 font-semibold mb-1 block">
+									<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-lg p-4">
+										<Label className="text-ds-blue-700 font-semibold mb-1 block">
 											IEEE Deposit
 										</Label>
-										<p className="text-sm text-blue-600">
+										<p className="text-sm text-ds-blue-700">
 											Source:{" "}
 											<span className="uppercase">
 												{deposit.ieeeDepositSource}
@@ -322,7 +322,7 @@ export function FundDepositDetail({
 										</div>
 									</div>
 
-									<div className="flex-1 relative overflow-hidden flex items-center justify-center bg-gray-100">
+									<div className="flex-1 relative overflow-hidden flex items-center justify-center bg-muted">
 										{isPdf ? (
 											<iframe
 												src={currentFile}
@@ -384,7 +384,8 @@ export function FundDepositDetail({
 									{receiptFiles.length > 1 && (
 										<div className="p-2 border-t bg-background overflow-x-auto whitespace-nowrap gap-2 flex">
 											{receiptFiles.map((file, idx) => (
-												<Button variant="outline"
+												<Button
+													variant="outline"
 													key={idx}
 													onClick={() => {
 														setActiveImageIndex(idx);
@@ -459,7 +460,7 @@ export function FundDepositDetail({
 									<Button
 										variant="default"
 										onClick={handleApprove}
-										className="bg-emerald-600 hover:bg-emerald-700 flex-1 sm:flex-none"
+										className="bg-ds-green-700 hover:bg-ds-green-800 flex-1 sm:flex-none"
 									>
 										<Check className="w-4 h-4 mr-2" /> Verify
 									</Button>

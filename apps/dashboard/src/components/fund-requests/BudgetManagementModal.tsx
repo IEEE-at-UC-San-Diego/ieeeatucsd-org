@@ -253,7 +253,7 @@ export default function BudgetManagementModal({
 									</p>
 								</div>
 								{totalAdjustments > 0 && (
-									<span className="text-sm font-semibold text-orange-600">
+									<span className="text-sm font-semibold text-ds-amber-900">
 										Total: {formatCurrency(totalAdjustments)}
 									</span>
 								)}
@@ -310,7 +310,7 @@ export default function BudgetManagementModal({
 													</div>
 												</div>
 												<div className="flex items-center gap-3 ml-4">
-													<span className="font-semibold text-orange-600">
+													<span className="font-semibold text-ds-amber-900">
 														{formatCurrency(adj.amount)}
 													</span>
 													<Button

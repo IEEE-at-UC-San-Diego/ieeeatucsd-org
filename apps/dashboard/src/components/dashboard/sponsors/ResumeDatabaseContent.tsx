@@ -43,7 +43,6 @@ import type { UserWithResume } from "./types";
 
 export default function ResumeDatabaseContent() {
 	const { logtoId } = useAuth();
-	const [error, setError] = useState<string | null>(null);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [selectedMajors, setSelectedMajors] = useState<Set<string>>(new Set());
 	const [selectedYears, setSelectedYears] = useState<Set<string>>(new Set());
@@ -323,7 +322,7 @@ export default function ResumeDatabaseContent() {
 
 	if (view === "detail" && selectedUser) {
 		return (
-			<div className="w-full bg-slate-50 min-h-full">
+			<div className="w-full bg-muted min-h-full">
 				<div className="mx-auto max-w-7xl p-4 md:p-6 space-y-5">
 					<div className="flex flex-wrap items-center gap-3">
 						<Button variant="ghost" size="sm" onClick={handleBackToList}>
@@ -335,15 +334,17 @@ export default function ResumeDatabaseContent() {
 						</Badge>
 					</div>
 
-					<Card className="bg-white border-slate-200 shadow-sm">
+					<Card className="bg-background border-border shadow-sm">
 						<CardContent className="p-6 md:p-7">
 							<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 								<div className="space-y-2">
-									<h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+									<h1 className="text-2xl font-semibold tracking-tight text-foreground">
 										{selectedUser.name}
 									</h1>
-									<p className="text-sm text-slate-600">{selectedUser.email}</p>
-									<div className="flex flex-wrap gap-2 text-sm text-slate-700">
+									<p className="text-sm text-muted-foreground">
+										{selectedUser.email}
+									</p>
+									<div className="flex flex-wrap gap-2 text-sm text-foreground">
 										<Badge variant="outline">
 											{getNormalizedMajor(selectedUser.major) ||
 												"Major not listed"}
@@ -368,9 +369,9 @@ export default function ResumeDatabaseContent() {
 						</CardContent>
 					</Card>
 
-					<Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
-						<CardHeader className="border-b border-slate-100">
-							<CardTitle className="text-base text-slate-900">
+					<Card className="bg-background border-border shadow-sm overflow-hidden">
+						<CardHeader className="border-b border-border">
+							<CardTitle className="text-base text-foreground">
 								Resume Preview
 							</CardTitle>
 						</CardHeader>
@@ -388,68 +389,70 @@ export default function ResumeDatabaseContent() {
 	}
 
 	return (
-		<div className="w-full bg-slate-50 min-h-full">
+		<div className="w-full bg-muted min-h-full">
 			<div className="mx-auto max-w-7xl p-4 md:p-6 space-y-5">
 				<div className="space-y-1">
-					<h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+					<h1 className="text-2xl font-semibold tracking-tight text-foreground">
 						Resume Database
 					</h1>
-					<p className="text-sm text-slate-600">
+					<p className="text-sm text-muted-foreground">
 						Browse member resumes with consistent filters and quick in-page
 						review.
 					</p>
 				</div>
 
 				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-					<Card className="bg-white border-slate-200 shadow-sm">
+					<Card className="bg-background border-border shadow-sm">
 						<CardContent className="p-5 flex items-center gap-3">
-							<div className="rounded-xl p-2.5 bg-blue-50 text-blue-700">
+							<div className="rounded-md p-2.5 bg-ds-blue-100 text-ds-blue-700">
 								<FileText className="h-5 w-5" />
 							</div>
 							<div>
-								<p className="text-xs text-slate-500">Total Resumes</p>
-								<p className="text-2xl font-semibold text-slate-900">
+								<p className="text-xs text-muted-foreground">Total Resumes</p>
+								<p className="text-2xl font-semibold text-foreground">
 									{users.length}
 								</p>
 							</div>
 						</CardContent>
 					</Card>
-					<Card className="bg-white border-slate-200 shadow-sm">
+					<Card className="bg-background border-border shadow-sm">
 						<CardContent className="p-5 flex items-center gap-3">
-							<div className="rounded-xl p-2.5 bg-emerald-50 text-emerald-700">
+							<div className="rounded-md p-2.5 bg-ds-green-100 text-ds-green-700">
 								<Filter className="h-5 w-5" />
 							</div>
 							<div>
-								<p className="text-xs text-slate-500">Filtered Results</p>
-								<p className="text-2xl font-semibold text-slate-900">
+								<p className="text-xs text-muted-foreground">
+									Filtered Results
+								</p>
+								<p className="text-2xl font-semibold text-foreground">
 									{filteredUsers.length}
 								</p>
 							</div>
 						</CardContent>
 					</Card>
-					<Card className="bg-white border-slate-200 shadow-sm">
+					<Card className="bg-background border-border shadow-sm">
 						<CardContent className="p-5 flex items-center gap-3">
-							<div className="rounded-xl p-2.5 bg-indigo-50 text-indigo-700">
+							<div className="rounded-md p-2.5 bg-ds-purple-100 text-ds-purple-700">
 								<Briefcase className="h-5 w-5" />
 							</div>
 							<div>
-								<p className="text-xs text-slate-500">Officer Resumes</p>
-								<p className="text-2xl font-semibold text-slate-900">
+								<p className="text-xs text-muted-foreground">Officer Resumes</p>
+								<p className="text-2xl font-semibold text-foreground">
 									{officerCount}
 								</p>
 							</div>
 						</CardContent>
 					</Card>
-					<Card className="bg-white border-slate-200 shadow-sm">
+					<Card className="bg-background border-border shadow-sm">
 						<CardContent className="p-5 flex items-center gap-3">
-							<div className="rounded-xl p-2.5 bg-amber-50 text-amber-700">
+							<div className="rounded-md p-2.5 bg-ds-amber-100 text-ds-amber-900">
 								<GraduationCap className="h-5 w-5" />
 							</div>
 							<div>
-								<p className="text-xs text-slate-500">
+								<p className="text-xs text-muted-foreground">
 									Graduating by {currentYear + 1}
 								</p>
-								<p className="text-2xl font-semibold text-slate-900">
+								<p className="text-2xl font-semibold text-foreground">
 									{graduatingSoonCount}
 								</p>
 							</div>
@@ -457,11 +460,11 @@ export default function ResumeDatabaseContent() {
 					</Card>
 				</div>
 
-				<Card className="bg-white border-slate-200 shadow-sm">
+				<Card className="bg-background border-border shadow-sm">
 					<CardContent className="p-4 md:p-5">
 						<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
 							<div className="relative xl:col-span-2">
-								<Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+								<Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
 								<Input
 									type="text"
 									placeholder="Search by name, email, or major"
@@ -528,7 +531,7 @@ export default function ResumeDatabaseContent() {
 							>
 								<SelectTrigger className="h-10">
 									<div className="flex items-center gap-2 flex-1">
-										<Users className="w-4 h-4 text-slate-400" />
+										<Users className="w-4 h-4 text-muted-foreground" />
 										<SelectValue placeholder="All members" />
 									</div>
 								</SelectTrigger>
@@ -540,7 +543,7 @@ export default function ResumeDatabaseContent() {
 							</Select>
 						</div>
 						<div className="mt-3 flex items-center justify-between">
-							<p className="text-xs text-slate-500">
+							<p className="text-xs text-muted-foreground">
 								Click any user row to view their resume in-page.
 							</p>
 							<Button variant="outline" size="sm" onClick={clearFilters}>
@@ -551,42 +554,35 @@ export default function ResumeDatabaseContent() {
 				</Card>
 
 				{loading ? (
-					<Card className="bg-white border-slate-200 shadow-sm">
-						<CardContent className="p-12 text-center space-y-3">
-							<div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto" />
-							<p className="text-slate-600">Loading resumes...</p>
-						</CardContent>
-					</Card>
-				) : error ? (
-					<Card className="border-rose-200 bg-rose-50">
-						<CardContent className="p-6">
-							<p className="text-rose-800 font-medium">Error</p>
-							<p className="text-rose-700 text-sm">{error}</p>
+					<Card className="bg-background border-border shadow-raised">
+						<CardContent className="space-y-3 p-12 text-center">
+							<div className="mx-auto h-10 w-10 animate-spin rounded-full border-b-2 border-foreground" />
+							<p className="text-muted-foreground">Loading resumes…</p>
 						</CardContent>
 					</Card>
 				) : filteredUsers.length === 0 ? (
-					<Card className="bg-white border-slate-200 shadow-sm">
+					<Card className="bg-background border-border shadow-raised">
 						<CardContent className="p-12 text-center">
-							<FileText className="w-14 h-14 text-slate-300 mx-auto mb-3" />
-							<h3 className="text-base font-semibold text-slate-900">
+							<FileText className="mx-auto mb-3 h-14 w-14 text-muted-foreground" />
+							<h3 className="text-base font-semibold text-foreground">
 								No resumes found
 							</h3>
-							<p className="text-sm text-slate-600 mt-1">
+							<p className="mt-1 text-sm text-muted-foreground">
 								{searchTerm ||
 								selectedMajors.size > 0 ||
 								selectedYears.size > 0 ||
 								selectedOfficerStatus !== "all"
 									? "Try adjusting your filters."
-									: "No members have uploaded resumes yet."}
+									: "No members have uploaded resumes yet. Ask members to add one from Settings."}
 							</p>
 						</CardContent>
 					</Card>
 				) : (
 					<>
 						{selectedUsers.size > 0 && (
-							<Card className="border-blue-200 bg-blue-50">
+							<Card className="border-ds-blue-100 bg-ds-blue-100">
 								<CardContent className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-									<p className="text-sm text-blue-800">
+									<p className="text-sm text-ds-blue-700">
 										<strong>{selectedUsers.size}</strong> user
 										{selectedUsers.size !== 1 ? "s" : ""} selected
 									</p>
@@ -611,11 +607,11 @@ export default function ResumeDatabaseContent() {
 							</Card>
 						)}
 
-						<Card className="bg-white border-slate-200 shadow-sm overflow-hidden">
+						<Card className="bg-background border-border shadow-sm overflow-hidden">
 							<div className="overflow-x-auto">
 								<Table>
 									<TableHeader>
-										<TableRow className="bg-slate-50 hover:bg-slate-50">
+										<TableRow className="bg-muted hover:bg-muted">
 											<TableHead className="px-5 py-3 w-12">
 												<Checkbox
 													checked={
@@ -639,7 +635,7 @@ export default function ResumeDatabaseContent() {
 										{paginatedUsers.map((user) => (
 											<TableRow
 												key={user.id}
-												className="hover:bg-slate-50 cursor-pointer transition-colors"
+												className="hover:bg-muted cursor-pointer transition-colors"
 											>
 												<TableCell
 													className="px-5 py-4"
@@ -658,7 +654,7 @@ export default function ResumeDatabaseContent() {
 													className="px-5 py-4"
 													onClick={() => handleRowClick(user)}
 												>
-													<div className="text-sm font-medium text-slate-900">
+													<div className="text-sm font-medium text-foreground">
 														{user.name}
 													</div>
 												</TableCell>
@@ -666,7 +662,7 @@ export default function ResumeDatabaseContent() {
 													className="px-5 py-4"
 													onClick={() => handleRowClick(user)}
 												>
-													<div className="text-sm text-slate-600">
+													<div className="text-sm text-muted-foreground">
 														{user.email}
 													</div>
 												</TableCell>
@@ -675,7 +671,7 @@ export default function ResumeDatabaseContent() {
 													onClick={() => handleRowClick(user)}
 												>
 													<div
-														className="text-sm text-slate-900 max-w-[230px] truncate"
+														className="text-sm text-foreground max-w-[230px] truncate"
 														title={getNormalizedMajor(user.major) || "N/A"}
 													>
 														{getNormalizedMajor(user.major) || "N/A"}
@@ -685,7 +681,7 @@ export default function ResumeDatabaseContent() {
 													className="px-5 py-4"
 													onClick={() => handleRowClick(user)}
 												>
-													<div className="text-sm text-slate-900">
+													<div className="text-sm text-foreground">
 														{user.graduationYear || "N/A"}
 													</div>
 												</TableCell>
@@ -704,10 +700,10 @@ export default function ResumeDatabaseContent() {
 							</div>
 
 							{totalPages > 1 && (
-								<div className="bg-slate-50 px-5 py-4 border-t border-slate-200">
+								<div className="bg-muted px-5 py-4 border-t border-border">
 									<div className="flex flex-col lg:flex-row items-center justify-between gap-4">
 										<div className="flex flex-col sm:flex-row items-center gap-4">
-											<p className="text-sm text-slate-700">
+											<p className="text-sm text-foreground">
 												Showing{" "}
 												<span className="font-medium">{startIndex + 1}</span> to{" "}
 												<span className="font-medium">
@@ -719,14 +715,14 @@ export default function ResumeDatabaseContent() {
 												</span>
 											</p>
 											<div className="flex items-center gap-2">
-												<span className="text-sm text-slate-700">
+												<span className="text-sm text-foreground">
 													Per page:
 												</span>
 												<Select
 													value={itemsPerPage.toString()}
 													onValueChange={handleItemsPerPageChange}
 												>
-													<SelectTrigger className="w-20 h-8 bg-white">
+													<SelectTrigger className="w-20 h-8 bg-background">
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
@@ -748,7 +744,7 @@ export default function ResumeDatabaseContent() {
 											>
 												Previous
 											</Button>
-											<span className="text-sm text-slate-700">
+											<span className="text-sm text-foreground">
 												Page {currentPage} of {totalPages}
 											</span>
 											<Button

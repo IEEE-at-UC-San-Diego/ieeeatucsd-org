@@ -37,7 +37,7 @@ const ConstitutionSearch: React.FC<ConstitutionSearchProps> = ({
 	return (
 		<div className="relative">
 			<div className="relative">
-				<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+				<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 				<Input
 					type="text"
 					placeholder="Search sections..."
@@ -49,19 +49,20 @@ const ConstitutionSearch: React.FC<ConstitutionSearchProps> = ({
 			</div>
 
 			{showResults && filteredSections.length > 0 && (
-				<div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
+				<div className="absolute z-10 w-full mt-1 bg-background rounded-md shadow-lg border border-border max-h-64 overflow-y-auto">
 					{filteredSections.map((section: any) => (
-						<Button variant="ghost"
+						<Button
+							variant="ghost"
 							key={section.id}
 							onClick={() => {
 								onSelectSection(section.id);
 								setSearchQuery("");
 								setShowResults(false);
 							}}
-							className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700 border-b border-gray-100 last:border-0"
+							className="w-full text-left px-4 py-2 hover:bg-muted text-sm text-foreground border-b border-border last:border-0"
 						>
 							<div className="font-medium">{section.title || "Untitled"}</div>
-							<div className="text-xs text-gray-500 capitalize">
+							<div className="text-xs text-muted-foreground capitalize">
 								{section.type}
 							</div>
 						</Button>
@@ -70,8 +71,8 @@ const ConstitutionSearch: React.FC<ConstitutionSearchProps> = ({
 			)}
 
 			{showResults && searchQuery && filteredSections.length === 0 && (
-				<div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 p-4">
-					<div className="text-sm text-gray-500 text-center">
+				<div className="absolute z-10 w-full mt-1 bg-background rounded-md shadow-lg border border-border p-4">
+					<div className="text-sm text-muted-foreground text-center">
 						No sections found
 					</div>
 				</div>

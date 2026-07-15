@@ -140,7 +140,7 @@ function renderInlineMarkdown(text: string, keyPrefix: string) {
 					href={href}
 					target="_blank"
 					rel="noreferrer"
-					className="underline decoration-blue-500/60 underline-offset-2 hover:text-blue-600"
+					className="underline decoration-blue-500/60 underline-offset-2 hover:text-ds-blue-700"
 				>
 					{label}
 				</a>
@@ -151,7 +151,7 @@ function renderInlineMarkdown(text: string, keyPrefix: string) {
 			return (
 				<code
 					key={key}
-					className="rounded bg-gray-200 px-1 py-0.5 text-xs font-mono text-gray-900"
+					className="rounded bg-muted px-1 py-0.5 text-xs font-mono text-foreground"
 				>
 					{part.slice(1, -1)}
 				</code>
@@ -213,7 +213,7 @@ function CodeBlock({
 
 	if (inline) {
 		return (
-			<code className="rounded bg-gray-200 px-1 py-0.5 text-xs font-mono text-gray-900">
+			<code className="rounded bg-muted px-1 py-0.5 text-xs font-mono text-foreground">
 				{children}
 			</code>
 		);
@@ -223,14 +223,15 @@ function CodeBlock({
 		<div className="relative my-2 w-full max-w-full">
 			<div className="absolute right-2 top-2 flex items-center gap-2">
 				{language && (
-					<span className="text-[10px] uppercase tracking-wide text-gray-300">
+					<span className="text-[10px] uppercase tracking-wide text-muted-foreground">
 						{language}
 					</span>
 				)}
-				<Button variant="ghost"
+				<Button
+					variant="ghost"
 					type="button"
 					onClick={handleCopy}
-					className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-700 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm hover:bg-gray-600"
+					className="inline-flex items-center gap-1 rounded-md border border-border bg-ds-gray-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm hover:bg-ds-gray-800"
 					aria-label="Copy code"
 				>
 					{copied ? (
@@ -241,7 +242,7 @@ function CodeBlock({
 					{copied ? "Copied" : "Copy"}
 				</Button>
 			</div>
-			<pre className="max-w-full overflow-x-auto rounded-lg bg-gray-900 p-3 text-xs text-gray-100">
+			<pre className="max-w-full overflow-x-auto rounded-lg bg-foreground p-3 text-xs text-background">
 				<code className={className}>{codeText}</code>
 			</pre>
 		</div>
@@ -344,7 +345,7 @@ function MarkdownRenderer({ content }: { content: string }) {
 			rendered.push(
 				<blockquote
 					key={`quote-${i}`}
-					className="mb-2 border-l-2 border-blue-300 pl-3 text-gray-700"
+					className="mb-2 border-l-2 border-ds-blue-400 pl-3 text-foreground"
 				>
 					{renderInlineMarkdown(line.replace(/^>\s?/, ""), `q-${i}`)}
 				</blockquote>,
@@ -387,11 +388,11 @@ function MarkdownRenderer({ content }: { content: string }) {
 					<table className="w-full text-xs border-collapse">
 						{headerRow && (
 							<thead>
-								<tr className="border-b border-gray-300">
+								<tr className="border-b border-border">
 									{headerRow.map((cell, ci) => (
 										<th
 											key={`th-${i}-${ci}`}
-											className="px-2 py-1.5 text-left font-semibold text-gray-700 bg-gray-50"
+											className="px-2 py-1.5 text-left font-semibold text-foreground bg-muted"
 										>
 											{renderInlineMarkdown(cell, `th-${i}-${ci}`)}
 										</th>
@@ -403,12 +404,12 @@ function MarkdownRenderer({ content }: { content: string }) {
 							{bodyRows.map((row, ri) => (
 								<tr
 									key={`tr-${i}-${ri}`}
-									className="border-b border-gray-200 last:border-b-0"
+									className="border-b border-border last:border-b-0"
 								>
 									{row.map((cell, ci) => (
 										<td
 											key={`td-${i}-${ri}-${ci}`}
-											className="px-2 py-1 text-gray-600"
+											className="px-2 py-1 text-muted-foreground"
 										>
 											{renderInlineMarkdown(cell, `td-${i}-${ri}-${ci}`)}
 										</td>
@@ -423,7 +424,7 @@ function MarkdownRenderer({ content }: { content: string }) {
 		}
 
 		if (/^(-{3,}|\*{3,})$/.test(line.trim())) {
-			rendered.push(<hr key={`hr-${i}`} className="my-2 border-gray-300" />);
+			rendered.push(<hr key={`hr-${i}`} className="my-2 border-border" />);
 			i += 1;
 			continue;
 		}
@@ -480,11 +481,12 @@ function ReasoningBlock({
 	const preview = lines.slice(0, 2).join(" ").slice(0, 120);
 
 	return (
-		<div className="mb-2 rounded-md border border-purple-200 bg-purple-50/50 overflow-hidden">
-			<Button variant="ghost"
+		<div className="mb-2 rounded-md border border-ds-purple-100 bg-ds-purple-100/50 overflow-hidden">
+			<Button
+				variant="ghost"
 				type="button"
 				onClick={handleToggle}
-				className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-purple-700 hover:bg-purple-100/50 transition-colors"
+				className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-ds-blue-700 hover:bg-ds-blue-100/50 transition-colors"
 			>
 				<Brain className="w-3 h-3 flex-shrink-0" />
 				<span className="font-medium flex-shrink-0">
@@ -492,11 +494,11 @@ function ReasoningBlock({
 				</span>
 				{isStreaming && (
 					<span className="flex-shrink-0">
-						<span className="inline-block w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+						<span className="inline-block w-1.5 h-1.5 rounded-full bg-ds-purple-1000 animate-pulse" />
 					</span>
 				)}
 				{!isExpanded && (
-					<span className="text-purple-500/70 truncate text-left">
+					<span className="text-ds-purple-700/70 truncate text-left">
 						{preview}...
 					</span>
 				)}
@@ -508,7 +510,7 @@ function ReasoningBlock({
 				/>
 			</Button>
 			{isExpanded && (
-				<div className="px-3 pb-2 text-xs text-purple-600/80 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap font-mono">
+				<div className="px-3 pb-2 text-xs text-ds-purple-700/80 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap font-mono">
 					{content}
 					{isStreaming && (
 						<span className="inline-block w-1 h-3 bg-purple-400 animate-pulse ml-0.5 align-text-bottom" />
@@ -547,12 +549,12 @@ function ToolCallCards({
 			{roundEntries.map(([round, calls]) => (
 				<React.Fragment key={`round-${round}`}>
 					{hasRounds && (
-						<div className="flex items-center gap-2 text-[10px] text-gray-400 mt-1 first:mt-0">
-							<div className="flex-1 border-t border-gray-200" />
+						<div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1 first:mt-0">
+							<div className="flex-1 border-t border-border" />
 							<span className="font-medium uppercase tracking-wider">
 								Round {round}
 							</span>
-							<div className="flex-1 border-t border-gray-200" />
+							<div className="flex-1 border-t border-border" />
 						</div>
 					)}
 					{calls.map((tc) => {
@@ -564,31 +566,31 @@ function ToolCallCards({
 								className={cn(
 									"rounded-md border px-3 py-1.5 text-xs flex items-center gap-2",
 									isDone
-										? "border-green-200 bg-green-50/50"
-										: "border-amber-200 bg-amber-50/50",
+										? "border-ds-green-100 bg-ds-green-100/50"
+										: "border-ds-amber-100 bg-ds-amber-100/50",
 								)}
 							>
 								<Wrench
 									className={cn(
 										"w-3 h-3 flex-shrink-0",
-										isDone ? "text-green-600" : "text-amber-600",
+										isDone ? "text-ds-green-700" : "text-ds-amber-900",
 									)}
 								/>
-								<span className="font-medium text-gray-700">
+								<span className="font-medium text-foreground">
 									{tc.name.replace(/_/g, " ")}
 								</span>
 								{isDone ? (
 									<>
-										<Check className="w-3 h-3 text-green-500 flex-shrink-0" />
-										<span className="text-gray-500 truncate">
+										<Check className="w-3 h-3 text-ds-green-700 flex-shrink-0" />
+										<span className="text-muted-foreground truncate">
 											{result.summary}
 										</span>
-										<span className="text-gray-400 ml-auto flex-shrink-0">
+										<span className="text-muted-foreground ml-auto flex-shrink-0">
 											{result.durationMs}ms
 										</span>
 									</>
 								) : isActive ? (
-									<Loader2 className="w-3 h-3 animate-spin text-amber-500 flex-shrink-0" />
+									<Loader2 className="w-3 h-3 animate-spin text-ds-amber-700 flex-shrink-0" />
 								) : null}
 							</div>
 						);
@@ -1004,7 +1006,7 @@ export function OfficerAiChat() {
 									<X className="w-4 h-4" />
 								</Button>
 								<div className="flex items-center gap-2">
-									<Bot className="w-5 h-5 text-blue-500" />
+									<Bot className="w-5 h-5 text-ds-blue-700" />
 									<span className="font-semibold text-sm">
 										Officer Assistant
 									</span>
@@ -1028,9 +1030,9 @@ export function OfficerAiChat() {
 						</div>
 
 						{/* Beta notice */}
-						<div className="bg-blue-50/50 px-4 py-1.5 border-b border-blue-100 flex gap-2 items-center">
-							<AlertCircle className="w-3 h-3 text-blue-600 flex-shrink-0" />
-							<p className="text-[11px] text-blue-700 leading-tight">
+						<div className="bg-ds-blue-100/50 px-4 py-1.5 border-b border-ds-blue-100 flex gap-2 items-center">
+							<AlertCircle className="w-3 h-3 text-ds-blue-700 flex-shrink-0" />
+							<p className="text-[11px] text-ds-blue-700 leading-tight">
 								Beta — double check all info. Has access to tools for searching
 								data, looking up records, and checking budgets.
 							</p>
@@ -1066,8 +1068,8 @@ export function OfficerAiChat() {
 										)}
 									>
 										{msg.role === "assistant" && (
-											<div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
-												<Bot className="w-4 h-4 text-blue-600" />
+											<div className="w-7 h-7 rounded-full bg-ds-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
+												<Bot className="w-4 h-4 text-ds-blue-700" />
 											</div>
 										)}
 
@@ -1075,8 +1077,8 @@ export function OfficerAiChat() {
 											className={cn(
 												"rounded-lg text-sm max-w-[88%] min-w-0",
 												msg.role === "user"
-													? "bg-blue-600 text-white p-3"
-													: "bg-gray-100 text-gray-800 p-3",
+													? "bg-ds-blue-700 text-white p-3"
+													: "bg-muted text-foreground p-3",
 											)}
 										>
 											{msg.role === "assistant" && msg.reasoning && (
@@ -1103,8 +1105,8 @@ export function OfficerAiChat() {
 										</div>
 
 										{msg.role === "user" && (
-											<div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-1">
-												<UserIcon className="w-4 h-4 text-gray-600" />
+											<div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-1">
+												<UserIcon className="w-4 h-4 text-muted-foreground" />
 											</div>
 										)}
 									</div>
@@ -1114,8 +1116,8 @@ export function OfficerAiChat() {
 										<div className="ml-10 flex items-center gap-2">
 											{(msg.steps && msg.steps.length > 0) ||
 											(msg.toolCalls && msg.toolCalls.length > 0) ? (
-												<details className="text-xs text-gray-500 cursor-pointer group">
-													<summary className="flex items-center gap-1 hover:text-gray-700 select-none">
+												<details className="text-xs text-muted-foreground cursor-pointer group">
+													<summary className="flex items-center gap-1 hover:text-foreground select-none">
 														<span className="font-medium">
 															Trace{" "}
 															{msg.steps?.length ? `(${msg.steps.length})` : ""}
@@ -1125,7 +1127,7 @@ export function OfficerAiChat() {
 														</span>
 														<ChevronDown className="w-3 h-3 transition-transform group-open:rotate-180" />
 													</summary>
-													<div className="mt-1 pl-2 border-l-2 border-gray-200 flex flex-col gap-0.5 py-1">
+													<div className="mt-1 pl-2 border-l-2 border-border flex flex-col gap-0.5 py-1">
 														{msg.steps?.map((step, idx) => (
 															<span
 																key={`${msg.id}-step-${idx}`}
@@ -1135,8 +1137,8 @@ export function OfficerAiChat() {
 															</span>
 														))}
 														{msg.toolCalls && msg.toolCalls.length > 0 && (
-															<div className="mt-2 pt-2 border-t border-gray-200">
-																<div className="text-[11px] font-medium text-gray-600 mb-1">
+															<div className="mt-2 pt-2 border-t border-border">
+																<div className="text-[11px] font-medium text-muted-foreground mb-1">
 																	Tool Calls:
 																</div>
 																<ToolCallCards
@@ -1150,10 +1152,11 @@ export function OfficerAiChat() {
 												</details>
 											) : null}
 											{msg.error && !isLoading && (
-												<Button variant="outline"
+												<Button
+													variant="outline"
 													type="button"
 													onClick={() => handleRetry(msg.id)}
-													className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-600"
+													className="inline-flex items-center gap-1 text-xs text-ds-red-800 hover:text-ds-red-800"
 												>
 													<RotateCcw className="w-3 h-3" />
 													Retry

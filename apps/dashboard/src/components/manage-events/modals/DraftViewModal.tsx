@@ -159,11 +159,11 @@ export function DraftViewModal({
 						</div>
 					</div>
 
-					<div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-						<h4 className="text-sm font-semibold text-blue-900 mb-2">
+					<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-md p-4">
+						<h4 className="text-sm font-semibold text-ds-blue-1000 mb-2">
 							Draft Event
 						</h4>
-						<p className="text-sm text-blue-700">
+						<p className="text-sm text-ds-blue-700">
 							This is a draft event. You can edit the draft details or convert
 							it to a full event request with additional requirements like room
 							bookings, graphics, and funding.

@@ -35,11 +35,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 
 const STATUS_COLORS: Record<string, string> = {
-	submitted: "bg-blue-100 text-blue-800",
-	needs_info: "bg-orange-100 text-orange-800",
-	approved: "bg-green-100 text-green-800",
-	denied: "bg-red-100 text-red-800",
-	completed: "bg-purple-100 text-purple-800",
+	submitted: "bg-ds-blue-100 text-ds-blue-700",
+	needs_info: "bg-ds-amber-100 text-ds-amber-900",
+	approved: "bg-ds-green-100 text-ds-green-900",
+	denied: "bg-ds-red-100 text-ds-red-800",
+	completed: "bg-ds-blue-100 text-ds-purple-700",
 };
 
 const DEPARTMENT_LABELS: Record<string, string> = {
@@ -205,7 +205,7 @@ export default function FundRequestActionModal({
 								<p className="text-xs font-semibold text-muted-foreground uppercase">
 									Amount
 								</p>
-								<p className="text-xl font-bold text-green-600">
+								<p className="text-xl font-bold text-ds-green-700">
 									{formatCurrency(fundRequest.amount)}
 								</p>
 							</div>
@@ -237,8 +237,8 @@ export default function FundRequestActionModal({
 
 						{/* Info Response */}
 						{fundRequest.infoResponseNotes && (
-							<div className="bg-yellow-50/50 p-4 rounded-lg border border-yellow-200">
-								<h4 className="text-xs font-bold text-yellow-800 uppercase flex items-center gap-1 mb-2">
+							<div className="bg-ds-amber-100/50 p-4 rounded-lg border border-ds-amber-100">
+								<h4 className="text-xs font-bold text-ds-amber-900 uppercase flex items-center gap-1 mb-2">
 									<Megaphone className="w-3 h-3" /> Additional Context
 								</h4>
 								<p className="text-sm text-foreground whitespace-pre-wrap">
@@ -329,7 +329,7 @@ export default function FundRequestActionModal({
 										className="flex-1 cursor-pointer font-medium"
 									>
 										<div className="flex items-center gap-2">
-											<CheckCircle className="w-4 h-4 text-green-600" />
+											<CheckCircle className="w-4 h-4 text-ds-green-700" />
 											Approve Request
 										</div>
 										<span className="text-xs text-muted-foreground font-normal">
@@ -344,7 +344,7 @@ export default function FundRequestActionModal({
 										className="flex-1 cursor-pointer font-medium"
 									>
 										<div className="flex items-center gap-2">
-											<AlertCircle className="w-4 h-4 text-yellow-600" />
+											<AlertCircle className="w-4 h-4 text-ds-amber-900" />
 											Request More Info
 										</div>
 										<span className="text-xs text-muted-foreground font-normal">

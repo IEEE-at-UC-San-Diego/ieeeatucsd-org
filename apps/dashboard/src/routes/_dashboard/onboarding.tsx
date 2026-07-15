@@ -103,7 +103,7 @@ function OnboardingPage() {
 		return (
 			<div className="flex items-center justify-center min-h-[60vh]">
 				<div className="max-w-md w-full mx-4 text-center">
-					<div className="rounded-xl border bg-card p-8">
+					<div className="rounded-md border bg-card p-8">
 						<div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
 							<Lock className="w-8 h-8 text-destructive" />
 						</div>
@@ -315,7 +315,7 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 
 	return (
 		<div className="max-w-4xl space-y-4">
-			<div className="rounded-xl border bg-card p-6">
+			<div className="rounded-md border bg-card p-6">
 				<div className="mb-6">
 					<h3 className="text-lg font-semibold">Send Officer Invitation</h3>
 					<p className="text-sm text-muted-foreground mt-1">
@@ -453,11 +453,11 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 						/>
 					</div>
 
-					<div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-						<h4 className="text-sm font-medium text-blue-900 mb-2">
+					<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-4">
+						<h4 className="text-sm font-medium text-ds-blue-1000 mb-2">
 							What happens next?
 						</h4>
-						<ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+						<ul className="text-sm text-ds-blue-700 space-y-1 list-disc list-inside">
 							<li>
 								An invitation email will be sent to the prospective officer
 							</li>
@@ -734,7 +734,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 	return (
 		<div className="max-w-4xl space-y-4">
 			{/* Google Sheets URL Configuration Card */}
-			<div className="rounded-xl border bg-card p-6">
+			<div className="rounded-md border bg-card p-6">
 				<div className="flex items-start justify-between gap-4">
 					<div className="flex-1">
 						<h3 className="text-lg font-semibold flex items-center gap-2">
@@ -768,7 +768,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 								</p>
 							</div>
 						) : (
-							<div className="mt-4 flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+							<div className="mt-4 flex items-center gap-2 text-sm text-ds-amber-900 bg-ds-amber-100 border border-ds-amber-100 rounded-lg p-3">
 								<AlertCircle className="w-4 h-4 shrink-0" />
 								<span>
 									No Google Sheets URL configured. Please configure it before
@@ -793,7 +793,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 			</div>
 
 			{/* Direct Onboarding Form */}
-			<div className="rounded-xl border bg-card p-6">
+			<div className="rounded-md border bg-card p-6">
 				<div className="mb-6">
 					<h3 className="text-lg font-semibold">Direct Officer Onboarding</h3>
 					<p className="text-sm text-muted-foreground mt-1">
@@ -904,11 +904,11 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 						/>
 					</div>
 
-					<div className="rounded-lg border border-green-200 bg-green-50 p-4">
-						<h4 className="text-sm font-medium text-green-900 mb-2">
+					<div className="rounded-lg border border-ds-green-100 bg-ds-green-100 p-4">
+						<h4 className="text-sm font-medium text-ds-green-900 mb-2">
 							What happens immediately?
 						</h4>
-						<ul className="text-sm text-green-700 space-y-1 list-disc list-inside">
+						<ul className="text-sm text-ds-green-700 space-y-1 list-disc list-inside">
 							<li>
 								Onboarding email will be sent with all necessary instructions
 							</li>
@@ -1015,11 +1015,11 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 							</div>
 						)}
 
-						<div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-							<h4 className="text-sm font-medium text-blue-900 mb-2">
+						<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-4">
+							<h4 className="text-sm font-medium text-ds-blue-1000 mb-2">
 								Instructions:
 							</h4>
-							<ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+							<ol className="text-sm text-ds-blue-700 space-y-1 list-decimal list-inside">
 								<li>Open your Google Sheets contact list</li>
 								<li>
 									Click "Share" and ensure it's accessible to anyone with the
@@ -1169,7 +1169,7 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 
 	return (
 		<div className="space-y-6">
-			<div className="max-w-4xl rounded-xl border bg-card p-6">
+			<div className="max-w-4xl rounded-md border bg-card p-6">
 				<div className="mb-6">
 					<h3 className="text-lg font-semibold">Send Rejection Notice</h3>
 					<p className="text-sm text-muted-foreground mt-1">
@@ -1269,18 +1269,18 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 				{!rejections ? (
 					<div className="space-y-3">
 						{[1, 2, 3].map((i) => (
-							<Skeleton key={i} className="h-16 w-full rounded-xl" />
+							<Skeleton key={i} className="h-16 w-full rounded-md" />
 						))}
 					</div>
 				) : rejections.length === 0 ? (
-					<div className="rounded-xl border bg-card p-8 text-center">
+					<div className="rounded-md border bg-card p-8 text-center">
 						<XCircle className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
 						<p className="text-muted-foreground">
 							No rejection notices sent yet
 						</p>
 					</div>
 				) : (
-					<div className="rounded-xl border bg-card overflow-hidden">
+					<div className="rounded-md border bg-card overflow-hidden">
 						<Table>
 							<TableHeader>
 								<TableRow>
@@ -1311,7 +1311,7 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 										<TableCell>
 											<Badge
 												variant="secondary"
-												className="bg-red-100 text-red-800"
+												className="bg-ds-red-100 text-ds-red-800"
 											>
 												{rejection.emailSent ? "Sent" : "Not Sent"}
 											</Badge>
@@ -1361,7 +1361,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 	const getStatusBadge = (status: string, expired: boolean) => {
 		if (expired) {
 			return (
-				<Badge variant="secondary" className="bg-gray-100 text-gray-800 gap-1">
+				<Badge variant="secondary" className="bg-muted text-foreground gap-1">
 					<AlertCircle className="w-3 h-3" /> Expired
 				</Badge>
 			);
@@ -1371,7 +1371,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 				return (
 					<Badge
 						variant="secondary"
-						className="bg-yellow-100 text-yellow-800 gap-1"
+						className="bg-ds-amber-100 text-ds-amber-900 gap-1"
 					>
 						<Clock className="w-3 h-3" /> Pending
 					</Badge>
@@ -1380,14 +1380,17 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 				return (
 					<Badge
 						variant="secondary"
-						className="bg-green-100 text-green-800 gap-1"
+						className="bg-ds-green-100 text-ds-green-900 gap-1"
 					>
 						<CheckCircle className="w-3 h-3" /> Accepted
 					</Badge>
 				);
 			case "declined":
 				return (
-					<Badge variant="secondary" className="bg-red-100 text-red-800 gap-1">
+					<Badge
+						variant="secondary"
+						className="bg-ds-red-100 text-ds-red-800 gap-1"
+					>
 						<XCircle className="w-3 h-3" /> Declined
 					</Badge>
 				);
@@ -1466,7 +1469,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 			{/* Stats Cards */}
 			{stats && (
 				<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-					<div className="rounded-xl border bg-card p-4">
+					<div className="rounded-md border bg-card p-4">
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Total</p>
@@ -1475,37 +1478,37 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 							<Mail className="w-8 h-8 text-muted-foreground/40" />
 						</div>
 					</div>
-					<div className="rounded-xl border bg-card p-4">
+					<div className="rounded-md border bg-card p-4">
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Pending</p>
-								<p className="text-2xl font-bold text-yellow-600">
+								<p className="text-2xl font-bold text-ds-amber-900">
 									{stats.pending}
 								</p>
 							</div>
-							<Clock className="w-8 h-8 text-yellow-400" />
+							<Clock className="w-8 h-8 text-ds-amber-700" />
 						</div>
 					</div>
-					<div className="rounded-xl border bg-card p-4">
+					<div className="rounded-md border bg-card p-4">
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Accepted</p>
-								<p className="text-2xl font-bold text-green-600">
+								<p className="text-2xl font-bold text-ds-green-700">
 									{stats.accepted}
 								</p>
 							</div>
 							<CheckCircle className="w-8 h-8 text-green-400" />
 						</div>
 					</div>
-					<div className="rounded-xl border bg-card p-4">
+					<div className="rounded-md border bg-card p-4">
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Declined</p>
-								<p className="text-2xl font-bold text-red-600">
+								<p className="text-2xl font-bold text-ds-red-800">
 									{stats.declined}
 								</p>
 							</div>
-							<XCircle className="w-8 h-8 text-red-400" />
+							<XCircle className="w-8 h-8 text-ds-red-800" />
 						</div>
 					</div>
 				</div>
@@ -1515,11 +1518,11 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 			{!invitations ? (
 				<div className="space-y-3">
 					{[1, 2, 3].map((i) => (
-						<Skeleton key={i} className="h-16 w-full rounded-xl" />
+						<Skeleton key={i} className="h-16 w-full rounded-md" />
 					))}
 				</div>
 			) : invitations.length === 0 ? (
-				<div className="rounded-xl border bg-card p-8 text-center">
+				<div className="rounded-md border bg-card p-8 text-center">
 					<Mail className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
 					<p className="text-muted-foreground">No invitations sent yet</p>
 					<p className="text-sm text-muted-foreground mt-1">
@@ -1527,7 +1530,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 					</p>
 				</div>
 			) : (
-				<div className="rounded-xl border bg-card overflow-hidden">
+				<div className="rounded-md border bg-card overflow-hidden">
 					<Table>
 						<TableHeader>
 							<TableRow>
