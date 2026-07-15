@@ -153,11 +153,6 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
             height: auto;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: transform 0.2s ease;
-          }
-          .email-content img:hover {
-            transform: scale(1.02);
-            cursor: pointer;
           }
           .email-content table {
             border-collapse: collapse;
@@ -310,7 +305,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 												(attachment: any, index: number) => (
 													<div
 														key={index}
-														className="group flex items-center justify-between p-3 bg-muted/40 rounded-lg border border-border hover:border-ieee-blue hover:shadow-md transition-all duration-200"
+													className="group flex items-center justify-between p-3 bg-muted/40 rounded-lg border border-border hover:border-ieee-blue hover:shadow-md transition-[border-color,box-shadow] duration-150 ease-[ease]"
 													>
 														<div className="flex items-center space-x-3 flex-1 min-w-0">
 															<div className="shrink-0">

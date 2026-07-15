@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from "react";
 import { useEffect, useId, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useGoogleMapsPlacesLoader } from "@/hooks/useGoogleMapsPlacesLoader";
@@ -389,7 +390,7 @@ export function AddressAutocompleteInput({
 					className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
 				>
 					{suggestions.map((suggestion, index) => (
-						<button
+						<Button variant="ghost"
 							key={`${suggestion.id}-${index}`}
 							id={`${dropdownId}-${index}`}
 							type="button"
@@ -413,7 +414,7 @@ export function AddressAutocompleteInput({
 									{suggestion.secondaryText}
 								</span>
 							) : null}
-						</button>
+						</Button>
 					))}
 				</div>
 			) : null}

@@ -138,6 +138,7 @@ export function EventRequestWizardModal({
 	const isConvertingDraft = initialData?.status === "draft";
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
 	const [currentStep, setCurrentStep] = useState(isEditing ? 2 : 1);
+	const [direction, setDirection] = useState<"forward" | "back">("forward");
 	const [disclaimerAccepted, setDisclaimerAccepted] = useState(isEditing);
 	const [formData, setFormData] = useState<EventFormData>(
 		buildFormDataFromInitial(initialData),
@@ -148,6 +149,7 @@ export function EventRequestWizardModal({
 		if (isOpen) {
 			setFormData(buildFormDataFromInitial(initialData));
 			setCurrentStep(initialData ? 2 : 1);
+			setDirection("forward");
 			setDisclaimerAccepted(!!initialData);
 		}
 	}, [isOpen, initialData]);
@@ -183,12 +185,14 @@ export function EventRequestWizardModal({
 
 	const handleNext = () => {
 		if (currentStep < steps.length) {
+			setDirection("forward");
 			setCurrentStep((prev) => prev + 1);
 		}
 	};
 
 	const handleBack = () => {
 		if (currentStep > 1) {
+			setDirection("back");
 			setCurrentStep((prev) => prev - 1);
 		}
 	};
@@ -197,6 +201,7 @@ export function EventRequestWizardModal({
 		onSubmit(formData);
 		onClose();
 		setCurrentStep(1);
+		setDirection("forward");
 		setDisclaimerAccepted(false);
 		setFormData(defaultFormData);
 	};
@@ -354,7 +359,16 @@ export function EventRequestWizardModal({
 								</div>
 							</div>
 
-							<div className="min-h-[300px]">{renderStepContent()}</div>
+							<div
+								key={`${currentStep}-${direction}`}
+								className={`min-h-[300px] animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce ${
+									direction === "forward"
+										? "slide-in-from-right-4"
+										: "slide-in-from-left-4"
+								}`}
+							>
+								{renderStepContent()}
+							</div>
 						</div>
 					</div>
 

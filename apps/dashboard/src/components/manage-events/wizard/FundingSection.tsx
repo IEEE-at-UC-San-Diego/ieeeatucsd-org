@@ -344,7 +344,7 @@ export function FundingSection({
 								Manual Entry
 							</Button>
 						</div>
-						<input
+						<Input
 							ref={fileInputRef}
 							type="file"
 							accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"

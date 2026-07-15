@@ -485,54 +485,54 @@ function ManageUsersPage() {
 								{filters.searchTerm && (
 									<Badge variant="secondary" className="rounded-full">
 										Search: "{filters.searchTerm}"
-										<button
+										<Button variant="ghost" size="icon" type="button"
 											onClick={() => setFilters({ ...filters, searchTerm: "" })}
 											className="ml-2 hover:text-destructive"
 										>
 											<X className="h-3 w-3" />
-										</button>
+										</Button>
 									</Badge>
 								)}
 
 								{filters.roleFilter !== "all" && (
 									<Badge variant="secondary" className="rounded-full">
 										Role: {filters.roleFilter}
-										<button
+										<Button variant="ghost" size="icon" type="button"
 											onClick={() =>
 												setFilters({ ...filters, roleFilter: "all" })
 											}
 											className="ml-2 hover:text-destructive"
 										>
 											<X className="h-3 w-3" />
-										</button>
+										</Button>
 									</Badge>
 								)}
 
 								{filters.statusFilter !== "all" && (
 									<Badge variant="secondary" className="rounded-full">
 										Status: {filters.statusFilter}
-										<button
+										<Button variant="ghost" size="icon" type="button"
 											onClick={() =>
 												setFilters({ ...filters, statusFilter: "all" })
 											}
 											className="ml-2 hover:text-destructive"
 										>
 											<X className="h-3 w-3" />
-										</button>
+										</Button>
 									</Badge>
 								)}
 
 								{filters.teamFilter !== "all" && (
 									<Badge variant="secondary" className="rounded-full">
 										Team: {filters.teamFilter}
-										<button
+										<Button variant="ghost" size="icon" type="button"
 											onClick={() =>
 												setFilters({ ...filters, teamFilter: "all" })
 											}
 											className="ml-2 hover:text-destructive"
 										>
 											<X className="h-3 w-3" />
-										</button>
+										</Button>
 									</Badge>
 								)}
 

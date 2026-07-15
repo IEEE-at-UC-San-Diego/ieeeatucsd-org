@@ -896,7 +896,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 	title,
 	children,
 }) => (
-	<button
+	<Button variant="ghost"
 		type="button"
 		onClick={onClick}
 		disabled={disabled}
@@ -913,7 +913,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
     `}
 	>
 		{children}
-	</button>
+	</Button>
 );
 
 export default ConstitutionDocumentEditor;

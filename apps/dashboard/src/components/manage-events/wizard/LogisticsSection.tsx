@@ -251,7 +251,7 @@ export function LogisticsSection({
 								<span className="text-sm text-gray-500">
 									Upload room booking confirmation
 								</span>
-								<input
+								<Input
 									type="file"
 									accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
 									multiple

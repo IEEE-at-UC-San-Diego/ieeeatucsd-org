@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import type { InvoiceItem } from "../types";
 
@@ -219,7 +220,7 @@ export function InvoiceFileUpload({
 						</>
 					)}
 				</Button>
-				<input
+				<Input
 					ref={fileInputRef}
 					type="file"
 					accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"

@@ -108,13 +108,13 @@ export function EventsFilters({
 						className="pl-9"
 					/>
 					{filters.search && (
-						<button
+						<Button variant="ghost" size="icon" aria-label="Clear search"
 							onClick={() => onFiltersChange({ ...filters, search: "" })}
 							className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 							type="button"
 						>
 							<X className="h-4 w-4" />
-						</button>
+						</Button>
 					)}
 				</div>
 

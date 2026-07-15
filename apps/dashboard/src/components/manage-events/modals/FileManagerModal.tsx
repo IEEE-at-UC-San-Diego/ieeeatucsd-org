@@ -1,6 +1,7 @@
 import { Eye, File, Lock, Trash2, Unlock, Upload, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
 	Dialog,
 	DialogContent,
@@ -102,7 +103,7 @@ export function FileManagerModal({
 							Drag and drop files here, or{" "}
 							<label className="text-blue-600 hover:text-blue-700 cursor-pointer font-medium">
 								browse
-								<input
+								<Input
 									type="file"
 									multiple
 									className="hidden"

@@ -128,7 +128,7 @@ export function EventCard({
 
 	return (
 		<div
-			className={`group rounded-xl border bg-card shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer ${
+			className={`group rounded-xl border bg-card shadow-sm hover:shadow-md transition-[box-shadow,opacity] duration-150 ease-[ease] cursor-pointer ${
 				isPast ? "opacity-70 hover:opacity-100" : ""
 			}`}
 			onClick={onClick}

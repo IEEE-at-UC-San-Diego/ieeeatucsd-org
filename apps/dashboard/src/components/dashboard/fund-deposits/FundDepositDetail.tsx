@@ -384,7 +384,7 @@ export function FundDepositDetail({
 									{receiptFiles.length > 1 && (
 										<div className="p-2 border-t bg-background overflow-x-auto whitespace-nowrap gap-2 flex">
 											{receiptFiles.map((file, idx) => (
-												<button
+												<Button variant="outline"
 													key={idx}
 													onClick={() => {
 														setActiveImageIndex(idx);
@@ -408,7 +408,7 @@ export function FundDepositDetail({
 															alt="thumbnail"
 														/>
 													)}
-												</button>
+												</Button>
 											))}
 										</div>
 									)}

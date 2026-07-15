@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
@@ -365,9 +366,9 @@ const AuditEntryRow: React.FC<{
 				{(entry.beforeValue || entry.afterValue) && (
 					<Dialog>
 						<DialogTrigger asChild>
-							<button className="text-xs text-blue-600 hover:text-blue-700 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+							<Button variant="link" className="text-xs text-blue-600 hover:text-blue-700 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
 								View details
-							</button>
+							</Button>
 						</DialogTrigger>
 						<DialogContent className="max-w-lg">
 							<DialogHeader>
@@ -525,7 +526,7 @@ const ContentBlock: React.FC<{
 				{displayText}
 			</p>
 			{needsTruncation && (
-				<button
+				<Button variant="ghost"
 					onClick={onToggle}
 					className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 mt-1"
 				>
@@ -538,7 +539,7 @@ const ContentBlock: React.FC<{
 							Show more <ChevronDown className="h-3 w-3" />
 						</>
 					)}
-				</button>
+				</Button>
 			)}
 		</div>
 	);

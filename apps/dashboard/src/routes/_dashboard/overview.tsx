@@ -7,7 +7,6 @@ import {
 	DollarSign,
 	Loader2,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
 import {
 	Area,
 	AreaChart,
@@ -30,23 +29,12 @@ export const Route = createFileRoute("/_dashboard/overview")({
 	component: OverviewPage,
 });
 
-/* ─── Smooth Animated Active Dot ─── */
-function AnimatedActiveDot(props: Record<string, unknown>) {
+/* ─── Active Dot ─── */
+function ActiveDot(props: Record<string, unknown>) {
 	const { cx, cy, fill } = props as { cx: number; cy: number; fill: string };
-	const prevPos = useRef({ x: cx, y: cy });
-
-	// On mount, snap to position; on subsequent updates, animate
-	useEffect(() => {
-		prevPos.current = { x: cx, y: cy };
-	}, [cx, cy]);
 
 	return (
-		<g
-			style={{
-				transform: `translate(${cx}px, ${cy}px)`,
-				transition: "transform 250ms cubic-bezier(0.4, 0, 0.2, 1)",
-			}}
-		>
+		<g style={{ transform: `translate(${cx}px, ${cy}px)` }}>
 			{/* Subtle outer ring */}
 			<circle
 				cx={0}
@@ -54,9 +42,6 @@ function AnimatedActiveDot(props: Record<string, unknown>) {
 				r={10}
 				fill={fill}
 				fillOpacity={0.12}
-				style={{
-					transition: "r 200ms ease, fill-opacity 200ms ease",
-				}}
 			/>
 			{/* Main dot */}
 			<circle
@@ -348,7 +333,7 @@ function OverviewPage() {
 											stroke: "hsl(var(--card))",
 											strokeWidth: 2,
 										}}
-										activeDot={<AnimatedActiveDot fill="#1e3a8a" />}
+										activeDot={<ActiveDot fill="#1e3a8a" />}
 										animationDuration={600}
 										animationEasing="ease-out"
 									/>

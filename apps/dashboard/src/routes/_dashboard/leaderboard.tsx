@@ -2,6 +2,7 @@ import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import { Crown, Search, Users } from "lucide-react";
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
@@ -88,7 +89,7 @@ function LeaderboardPage() {
 						<div className="absolute inset-y-0 left-0 pl-[14px] flex items-center pointer-events-none">
 							<Search className="h-4 w-4 text-gray-400" />
 						</div>
-						<input
+						<Input
 							type="text"
 							placeholder="Search members..."
 							value={searchTerm}
@@ -96,7 +97,7 @@ function LeaderboardPage() {
 								setSearchTerm(e.target.value);
 								setCurrentPage(1);
 							}}
-							className="block w-full pl-[42px] pr-4 py-[11px] border border-gray-200 rounded-[9px] bg-white text-[14px] placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900/5 transition-all duration-150"
+							className="block w-full pl-[42px] pr-4 py-[11px] border border-gray-200 rounded-[9px] bg-white text-[14px] placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900/5 transition-[border-color,box-shadow] duration-150 ease-[ease]"
 						/>
 					</div>
 				</div>
@@ -187,17 +188,8 @@ function LeaderboardPage() {
 							{/* First Place */}
 							{topThree[0] && (
 								<div className="flex flex-col items-center relative z-10">
-									<style>{`
-                    @keyframes crown-float {
-                      0%, 100% { transform: translateX(-50%) translateY(0); }
-                      50% { transform: translateX(-50%) translateY(-5px); }
-                    }
-                    .crown-float {
-                      animation: crown-float 3s ease-in-out infinite;
-                    }
-                  `}</style>
 									<div className="relative mb-5">
-										<div className="absolute -top-7 left-1/2 crown-float z-0">
+										<div className="absolute -top-7 left-1/2 -translate-x-1/2 z-0">
 											<Crown className="w-7 h-7 text-yellow-600 fill-yellow-500" />
 										</div>
 										<div className="w-[84px] h-[84px] sm:w-[96px] sm:h-[96px] rounded-full border-[4px] border-white flex items-center justify-center bg-gradient-to-br from-yellow-50 to-yellow-100 shadow-sm">

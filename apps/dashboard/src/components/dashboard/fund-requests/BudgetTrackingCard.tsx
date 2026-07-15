@@ -1,4 +1,5 @@
 import { Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import {
@@ -27,7 +28,8 @@ export function BudgetTrackingCard({
 	onClick,
 }: BudgetTrackingCardProps) {
 	return (
-		<button
+		<Button
+			variant="outline"
 			type="button"
 			onClick={isConfigured ? onClick : undefined}
 			disabled={!isConfigured}
@@ -103,6 +105,6 @@ export function BudgetTrackingCard({
 					</p>
 				</div>
 			)}
-		</button>
+		</Button>
 	);
 }

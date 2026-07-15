@@ -511,7 +511,7 @@ export function EventViewModal({
 
 						<TabsContent
 							value="details"
-							className="space-y-6 animate-in fade-in-50 duration-300"
+							className="space-y-6"
 						>
 							<div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
 								<div className="space-y-1">
@@ -624,7 +624,7 @@ export function EventViewModal({
 
 						<TabsContent
 							value="files"
-							className="space-y-6 animate-in fade-in-50 duration-300"
+							className="space-y-6"
 						>
 							<div>
 								<h4 className="text-sm font-semibold mb-3">
@@ -646,7 +646,7 @@ export function EventViewModal({
 
 						<TabsContent
 							value="graphics"
-							className="space-y-6 animate-in fade-in-50 duration-300"
+							className="space-y-6"
 						>
 							<div className="border rounded-xl p-4 bg-card">
 								<h4 className="text-sm font-semibold mb-3">Graphics Needed</h4>
@@ -742,7 +742,7 @@ export function EventViewModal({
 									{onUpdateGraphics && event.status !== "published" && (
 										<div className="flex items-center gap-3">
 											<label>
-												<input
+												<Input
 													type="file"
 													className="hidden"
 													accept="image/*,application/pdf,.ai,.psd,.svg,.eps,.fig"
@@ -811,7 +811,7 @@ export function EventViewModal({
 
 						<TabsContent
 							value="funding"
-							className="space-y-6 animate-in fade-in-50 duration-300"
+							className="space-y-6"
 						>
 							<div className="flex items-center justify-between p-4 border rounded-xl bg-gradient-to-r from-background to-muted/20">
 								<div className="flex items-center gap-4">

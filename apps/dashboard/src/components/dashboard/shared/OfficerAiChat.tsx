@@ -19,6 +19,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -226,7 +227,7 @@ function CodeBlock({
 						{language}
 					</span>
 				)}
-				<button
+				<Button variant="ghost"
 					type="button"
 					onClick={handleCopy}
 					className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-gray-700 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm hover:bg-gray-600"
@@ -238,7 +239,7 @@ function CodeBlock({
 						<Copy className="h-3 w-3" />
 					)}
 					{copied ? "Copied" : "Copy"}
-				</button>
+				</Button>
 			</div>
 			<pre className="max-w-full overflow-x-auto rounded-lg bg-gray-900 p-3 text-xs text-gray-100">
 				<code className={className}>{codeText}</code>
@@ -480,7 +481,7 @@ function ReasoningBlock({
 
 	return (
 		<div className="mb-2 rounded-md border border-purple-200 bg-purple-50/50 overflow-hidden">
-			<button
+			<Button variant="ghost"
 				type="button"
 				onClick={handleToggle}
 				className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-purple-700 hover:bg-purple-100/50 transition-colors"
@@ -505,7 +506,7 @@ function ReasoningBlock({
 						isExpanded && "rotate-180",
 					)}
 				/>
-			</button>
+			</Button>
 			{isExpanded && (
 				<div className="px-3 pb-2 text-xs text-purple-600/80 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap font-mono">
 					{content}
@@ -1149,14 +1150,14 @@ export function OfficerAiChat() {
 												</details>
 											) : null}
 											{msg.error && !isLoading && (
-												<button
+												<Button variant="outline"
 													type="button"
 													onClick={() => handleRetry(msg.id)}
 													className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-600"
 												>
 													<RotateCcw className="w-3 h-3" />
 													Retry
-												</button>
+												</Button>
 											)}
 										</div>
 									)}
@@ -1173,7 +1174,7 @@ export function OfficerAiChat() {
 								}}
 								className="flex gap-2 items-end"
 							>
-								<textarea
+								<Textarea
 									ref={textareaRef}
 									value={input}
 									onChange={handleTextareaInput}

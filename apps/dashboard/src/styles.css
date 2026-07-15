@@ -43,6 +43,12 @@ code {
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-fast: 150ms;
+  --duration-ui: 200ms;
+  --duration-panel: 250ms;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.45 0.12 250);
@@ -121,6 +127,64 @@ code {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@keyframes motion-status-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes success-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes success-reveal-reduced {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.success-reveal {
+  animation: success-reveal 250ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin,
+  .animate-ping {
+    animation: motion-status-pulse 1.5s ease infinite;
+  }
+
+  .motion-surface {
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+    --tw-enter-scale: 1 !important;
+    --tw-exit-scale: 1 !important;
+  }
+
+  .motion-instant-reduce {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+
+  .success-reveal {
+    animation: success-reveal-reduced 200ms ease both;
   }
 }
 

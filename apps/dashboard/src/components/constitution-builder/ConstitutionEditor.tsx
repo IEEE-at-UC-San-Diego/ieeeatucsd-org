@@ -17,6 +17,13 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { ConstitutionSection } from "./types";
 import { isHtmlContent } from "./utils/documentEditorUtils";
@@ -382,37 +389,29 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 							<label className="block text-sm font-medium text-gray-700 mb-2">
 								Section Type
 							</label>
-							<select
+							<Select
 								value={addSectionType}
-								onChange={(e) => {
+								onValueChange={(value) => {
 									setAddSectionType(
-										e.target.value as ConstitutionSection["type"],
+										value as ConstitutionSection["type"],
 									);
-									if (e.target.value === "article") {
+									if (value === "article") {
 										setAddSectionContent("");
 									}
-									if (e.target.value === "preamble") {
+									if (value === "preamble") {
 										setAddSectionTitle("");
 									}
 								}}
-								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 							>
-								<option value="preamble">
-									Preamble - Opening statement of purpose
-								</option>
-								<option value="article">
-									Article - Main constitutional division
-								</option>
-								<option value="section">
-									Section - Must be under an article
-								</option>
-								<option value="subsection">
-									Subsection - Subdivision of a section
-								</option>
-								<option value="amendment">
-									Amendment - Constitutional modification
-								</option>
-							</select>
+								<SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+								<SelectContent>
+									<SelectItem value="preamble">Preamble - Opening statement of purpose</SelectItem>
+									<SelectItem value="article">Article - Main constitutional division</SelectItem>
+									<SelectItem value="section">Section - Must be under an article</SelectItem>
+									<SelectItem value="subsection">Subsection - Subdivision of a section</SelectItem>
+									<SelectItem value="amendment">Amendment - Constitutional modification</SelectItem>
+								</SelectContent>
+							</Select>
 						</div>
 
 						{parentOptions.length > 0 && (
@@ -420,20 +419,19 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 								<label className="block text-sm font-medium text-gray-700 mb-2">
 									Parent Section
 								</label>
-								<select
+								<Select
 									value={addSectionParent}
-									onChange={(e) => setAddSectionParent(e.target.value)}
-									className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+									onValueChange={setAddSectionParent}
 								>
-									<option value="">Select parent...</option>
-									{parentOptions.map((section) => (
-										<option key={section.id} value={section.id}>
+									<SelectTrigger className="w-full"><SelectValue placeholder="Select parent..." /></SelectTrigger>
+									<SelectContent>{parentOptions.map((section) => (
+										<SelectItem key={section.id} value={section.id}>
 											{section.type === "article"
 												? `Article - ${section.title || "Untitled"}`
 												: section.title || section.type}
-										</option>
-									))}
-								</select>
+										</SelectItem>
+									))}</SelectContent>
+								</Select>
 							</div>
 						)}
 

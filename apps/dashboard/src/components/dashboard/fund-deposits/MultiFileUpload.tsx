@@ -1,6 +1,7 @@
 import { AlertCircle, File, FileText, Image, Upload, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface MultiFileUploadProps {
 	files: File[];
@@ -299,8 +300,8 @@ export function MultiFileUpload({
 					tabIndex={disabled ? -1 : 0}
 					role="button"
 					aria-label="Upload files by clicking or using drag and drop"
-					className={`
-            relative border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
+						className={`
+            relative border-2 border-dashed rounded-xl p-6 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
             ${
 							isDragOver
 								? "border-primary bg-primary/5"
@@ -309,7 +310,7 @@ export function MultiFileUpload({
             ${disabled ? "opacity-50 cursor-not-allowed" : ""}
           `}
 				>
-					<input
+					<Input
 						ref={fileInputRef}
 						type="file"
 						multiple

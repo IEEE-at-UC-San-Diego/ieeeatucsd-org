@@ -469,13 +469,13 @@ function SlackAccessPage() {
 									{hasIEEEEmail || ieeeEmail ? (
 										<span className="flex items-center gap-1.5 truncate font-medium text-ieee-blue">
 											{ieeeEmail}
-											<button
+											<Button variant="ghost" size="icon" aria-label="Copy IEEE email"
 												onClick={copyEmail}
 												className="text-muted-foreground hover:text-foreground"
 												type="button"
 											>
 												<Copy className="h-3.5 w-3.5" />
-											</button>
+											</Button>
 										</span>
 									) : (
 										<span className="text-xs italic text-muted-foreground">
@@ -508,7 +508,7 @@ function SlackAccessPage() {
 											disabled={hasIEEEEmail && !canResetPassword}
 											className="h-10 pr-9 text-sm"
 										/>
-										<button
+										<Button variant="ghost" size="icon" aria-label="Toggle password visibility"
 											className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 											onClick={() => setShowPassword(!showPassword)}
 											type="button"
@@ -518,7 +518,7 @@ function SlackAccessPage() {
 											) : (
 												<Eye className="h-4 w-4" />
 											)}
-										</button>
+										</Button>
 									</div>
 									{customPassword && (
 										<PasswordStrengthIndicator
@@ -689,7 +689,7 @@ function SlackAccessPage() {
 													onKeyDown={handleInboxPasswordKeyDown}
 													className="h-10 pr-9 text-sm"
 												/>
-												<button
+															<Button variant="ghost" size="icon" aria-label="Toggle inbox password visibility"
 													className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 													onClick={() =>
 														setShowInboxPassword(!showInboxPassword)
@@ -701,7 +701,7 @@ function SlackAccessPage() {
 													) : (
 														<Eye className="h-4 w-4" />
 													)}
-												</button>
+															</Button>
 											</div>
 											<Button
 												onClick={authenticateInbox}
@@ -730,7 +730,7 @@ function SlackAccessPage() {
 													email.subject.toLowerCase().includes("slack") ||
 													email.from.toLowerCase().includes("slack");
 												return (
-													<button
+													<Button variant="outline"
 														key={email.id}
 														onClick={() => setSelectedEmail(email)}
 														type="button"
@@ -769,7 +769,7 @@ function SlackAccessPage() {
 																{email.preview}
 															</span>
 														</p>
-													</button>
+													</Button>
 												);
 											})
 										)}

@@ -263,14 +263,14 @@ export function InternalEventModal({
 								const Icon = type.icon;
 								const isSelected = formData.eventType === type.value;
 								return (
-									<button
+									<Button variant="outline"
 										key={type.value}
 										type="button"
 										onClick={() =>
 											setFormData({ ...formData, eventType: type.value })
 										}
 										className={cn(
-											"flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md border transition-all",
+											"flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md border transition-[background-color,border-color,color] duration-150 ease-[ease]",
 											isSelected
 												? type.color
 												: "bg-white border-slate-200 hover:border-slate-300 text-slate-500",
@@ -281,7 +281,7 @@ export function InternalEventModal({
 										<span className="text-[10px] font-medium leading-none">
 											{type.label}
 										</span>
-									</button>
+									</Button>
 								);
 							})}
 						</div>

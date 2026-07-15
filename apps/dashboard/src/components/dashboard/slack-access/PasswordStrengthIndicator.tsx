@@ -28,7 +28,7 @@ export function PasswordStrengthIndicator({
 			<div className="flex items-center space-x-2">
 				<div className="flex-1 bg-gray-200 rounded-full h-2">
 					<div
-						className={`h-2 rounded-full transition-all duration-300 ${getStrengthColor(validation.strength)}`}
+							className={`h-2 rounded-full transition-colors duration-150 ease-[ease] ${getStrengthColor(validation.strength)}`}
 						style={{ width: `${(validation.strength / 5) * 100}%` }}
 					/>
 				</div>

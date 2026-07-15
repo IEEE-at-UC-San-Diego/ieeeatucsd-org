@@ -612,7 +612,7 @@ function SettingsPage() {
 								<div className="border-t pt-4">
 									<h3 className="font-medium mb-2">Replace Resume</h3>
 									<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-										<input
+										<Input
 											type="file"
 											accept=".pdf,application/pdf"
 											onChange={(e) =>
@@ -639,7 +639,7 @@ function SettingsPage() {
 										opportunities.
 									</p>
 									<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
-										<input
+										<Input
 											type="file"
 											accept=".pdf,application/pdf"
 											onChange={(e) =>

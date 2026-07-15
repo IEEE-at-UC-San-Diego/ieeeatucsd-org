@@ -495,7 +495,7 @@ export function FundRequestFormModal({
 											{vendorLinks.map((link) => (
 												<div
 													key={link.id}
-													className="group relative bg-background border border-border/60 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200"
+												className="group relative bg-background border border-border/60 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-primary/20 transition-[border-color,box-shadow] duration-150 ease-[ease]"
 												>
 													<div className="flex flex-col gap-3">
 														<div className="flex gap-3 items-start">
@@ -831,12 +831,17 @@ export function FundRequestFormModal({
 						style={{ left: stepTrackInset, right: stepTrackInset }}
 					/>
 					<div
-						className="absolute top-4 h-0.5 bg-primary transition-all duration-300"
+						className="absolute top-4 h-0.5 overflow-hidden"
 						style={{
 							left: stepTrackInset,
-							width: `calc((100% - (${stepTrackInset} * 2)) * ${stepTrackProgress / 100})`,
+							right: stepTrackInset,
 						}}
-					/>
+					>
+						<div
+							className="h-full w-full origin-left bg-primary transition-transform duration-200 ease-[var(--ease-in-out)] motion-instant-reduce"
+							style={{ transform: `scaleX(${stepTrackProgress / 100})` }}
+						/>
+					</div>
 
 					<div
 						className="relative grid gap-3"
@@ -852,7 +857,7 @@ export function FundRequestFormModal({
 								<div key={step.id} className="flex flex-col items-center">
 									<div
 										className={`
-                      w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 border-2 relative z-10
+	                      w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-[background-color,border-color,color,box-shadow] duration-150 ease-[ease] border-2 relative z-10
                       ${isCompleted || isCurrent ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-muted bg-background text-muted-foreground"}
                     `}
 									>

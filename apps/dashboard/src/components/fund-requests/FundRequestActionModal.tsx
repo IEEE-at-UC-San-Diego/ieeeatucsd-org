@@ -371,7 +371,7 @@ export default function FundRequestActionModal({
 						</div>
 
 						{action === "approve" && (
-							<div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+							<div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce">
 								<Select
 									value={fundingSource}
 									onValueChange={(v) => setFundingSource(v as FUNDING_SOURCE)}
@@ -402,7 +402,7 @@ export default function FundRequestActionModal({
 						)}
 
 						{action === "needs_info" && (
-							<div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+							<div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce">
 								<Label>Information Requested *</Label>
 								<Textarea
 									placeholder="What information is missing? Be specific."
@@ -416,7 +416,7 @@ export default function FundRequestActionModal({
 						)}
 
 						{action === "deny" && (
-							<div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+							<div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce">
 								<Label>Rejection Reason *</Label>
 								<Textarea
 									placeholder="Why is this request being denied?"

@@ -117,7 +117,6 @@ function GetStartedPage() {
 	const [answers, setAnswers] = useState<Record<string, any>>({});
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
-	const [isAnimating, setIsAnimating] = useState(false);
 
 	const currentQuestion = questions[currentStep];
 	const isLastStep = currentStep === questions.length - 1;
@@ -142,25 +141,17 @@ function GetStartedPage() {
 		}
 
 		setError(null);
-		setIsAnimating(true);
-		setTimeout(() => {
-			if (isLastStep) {
-				handleSubmit();
-			} else {
-				setCurrentStep((prev) => prev + 1);
-				setIsAnimating(false);
-			}
-		}, 300);
+		if (isLastStep) {
+			handleSubmit();
+		} else {
+			setCurrentStep((prev) => prev + 1);
+		}
 	};
 
 	const handleBack = () => {
 		if (currentStep > 0) {
-			setIsAnimating(true);
-			setTimeout(() => {
-				setCurrentStep((prev) => prev - 1);
-				setIsAnimating(false);
-				setError(null);
-			}, 300);
+			setCurrentStep((prev) => prev - 1);
+			setError(null);
 		}
 	};
 
@@ -210,16 +201,15 @@ function GetStartedPage() {
 		} catch (err: any) {
 			setError(err.message);
 			setLoading(false);
-			setIsAnimating(false);
 		}
 	};
 
 	// Success screen
-	if (currentStep === questions.length) {
-		return (
-			<div className="min-h-screen bg-background flex items-center justify-center p-4">
-				<div className="text-center">
-					<div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+		if (currentStep === questions.length) {
+			return (
+				<div className="min-h-screen bg-background flex items-center justify-center p-4">
+					<div className="text-center success-reveal">
+						<div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
 						<CheckCircle className="w-12 h-12 text-white" />
 					</div>
 					<h1 className="text-3xl font-bold mb-4">Welcome to IEEE UCSD!</h1>
@@ -404,17 +394,15 @@ function GetStartedPage() {
 						</div>
 						<div className="w-full bg-muted rounded-full h-2">
 							<div
-								className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
+								className="bg-primary h-2 w-full origin-left rounded-full transition-transform duration-200 ease-[var(--ease-in-out)] motion-instant-reduce"
 								style={{
-									width: `${((currentStep + 1) / questions.length) * 100}%`,
+									transform: `scaleX(${(currentStep + 1) / questions.length})`,
 								}}
 							/>
 						</div>
 					</div>
 
-					<div
-						className={`p-8 transition-all duration-500 ${isAnimating ? "opacity-0" : "opacity-100"}`}
-					>
+					<div className="p-8">
 						<div className="text-center mb-8">
 							<div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
 								<currentQuestion.icon className="w-8 h-8 text-primary-foreground" />
@@ -472,12 +460,12 @@ function GetStartedPage() {
 
 				{!currentQuestion.required && (
 					<div className="text-center mt-4">
-						<button
+						<Button variant="link"
 							onClick={handleNext}
 							className="text-muted-foreground hover:text-foreground text-sm underline transition-colors"
 						>
 							Skip this question
-						</button>
+						</Button>
 					</div>
 				)}
 

@@ -94,7 +94,7 @@ export function AppSidebar({ currentPath = "" }: AppSidebarProps) {
 					<img
 						src="/logos/blue_logo_only.svg"
 						alt="IEEE UCSD Logo"
-						className="h-8 w-8 transition-transform group-hover:scale-105"
+						className="h-8 w-8"
 					/>
 					<span className="text-lg font-bold group-data-[collapsible=icon]:hidden">
 						IEEE UCSD

@@ -329,7 +329,7 @@ export function MarketingSection({ data, onChange }: MarketingSectionProps) {
 						<Label htmlFor="estimatedAttendance">
 							Estimated Number of Attendees
 						</Label>
-						<input
+						<Input
 							id="estimatedAttendance"
 							type="number"
 							min={1}

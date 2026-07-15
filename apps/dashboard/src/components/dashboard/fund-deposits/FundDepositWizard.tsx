@@ -57,6 +57,7 @@ export function FundDepositWizard({
 	const { user, getAuthHeaders } = useAuth();
 	const aiEnabled = user?.aiFeaturesEnabled !== false;
 	const [step, setStep] = useState(1);
+	const [direction, setDirection] = useState<"forward" | "back">("forward");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const createDeposit = useAuthedMutation(api.fundDeposits.create);
 	const generateUploadUrl = useAuthedMutation(
@@ -201,6 +202,7 @@ export function FundDepositWizard({
 		setIsAiParsing(false);
 		setAiParseMessage("");
 		setStep(1);
+		setDirection("forward");
 	};
 
 	const handleClose = () => {
@@ -237,12 +239,21 @@ export function FundDepositWizard({
 	};
 
 	const handleNext = () => {
-		if (step === 1 && validateStep1()) setStep(2);
-		if (step === 2 && validateStep2()) setStep(3);
+		if (step === 1 && validateStep1()) {
+			setDirection("forward");
+			setStep(2);
+		}
+		if (step === 2 && validateStep2()) {
+			setDirection("forward");
+			setStep(3);
+		}
 	};
 
 	const handleBack = () => {
-		if (step > 1) setStep(step - 1);
+		if (step > 1) {
+			setDirection("back");
+			setStep(step - 1);
+		}
 	};
 
 	const uploadFiles = async (files: File[]): Promise<string[]> => {
@@ -317,15 +328,23 @@ export function FundDepositWizard({
 					{/* Progress Bar */}
 					<div className="mt-4 h-1.5 w-full bg-muted rounded-full overflow-hidden">
 						<div
-							className="h-full bg-primary transition-all duration-300 ease-out"
-							style={{ width: `${(step / 3) * 100}%` }}
+							className="h-full w-full origin-left bg-primary transition-transform duration-200 ease-[var(--ease-in-out)] motion-instant-reduce"
+							style={{ transform: `scaleX(${step / 3})` }}
 						/>
 					</div>
 				</DialogHeader>
 
 				<div className="p-6 pt-2 overflow-y-auto max-h-[65vh]">
 					{step === 1 && (
-						<div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+						<div
+							key={`${step}-${direction}`}
+							className={cn(
+								"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
+								direction === "forward"
+									? "slide-in-from-right-4"
+									: "slide-in-from-left-4",
+							)}
+						>
 							{/* Amount and Title Group */}
 							<div className="grid gap-4">
 								<div>
@@ -412,8 +431,8 @@ export function FundDepositWizard({
 											onClick={() =>
 												setFormData({ ...formData, depositMethod: method })
 											}
-											className={cn(
-												"cursor-pointer rounded-lg border p-3 flex items-center justify-between transition-all hover:bg-muted/50",
+										className={cn(
+											"cursor-pointer rounded-lg border p-3 flex items-center justify-between transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] hover:bg-muted/50",
 												formData.depositMethod === method
 													? "border-primary bg-primary/5 ring-1 ring-primary"
 													: "border-input",
@@ -430,7 +449,7 @@ export function FundDepositWizard({
 								</div>
 
 								{formData.depositMethod === "other" && (
-									<div className="animate-in fade-in slide-in-from-top-2">
+									<div className="animate-in fade-in duration-150 motion-instant-reduce">
 										<Input
 											placeholder="Specify method..."
 											value={formData.otherDepositMethod}
@@ -465,7 +484,7 @@ export function FundDepositWizard({
 							</div>
 
 							{formData.isIeeeDeposit && (
-								<div className="pl-6 border-l-2 py-1 animate-in fade-in slide-in-from-left-2">
+								<div className="pl-6 border-l-2 py-1 animate-in fade-in duration-150 motion-instant-reduce">
 									<Label>IEEE Source</Label>
 									<Select
 										value={formData.ieeeDepositSource}
@@ -491,7 +510,15 @@ export function FundDepositWizard({
 					)}
 
 					{step === 2 && (
-						<div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+						<div
+							key={`${step}-${direction}`}
+							className={cn(
+								"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
+								direction === "forward"
+									? "slide-in-from-right-4"
+									: "slide-in-from-left-4",
+							)}
+						>
 							<div>
 								<Label htmlFor="purpose">
 									Purpose <span className="text-destructive">*</span>
@@ -544,7 +571,15 @@ export function FundDepositWizard({
 					)}
 
 					{step === 3 && (
-						<div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+						<div
+							key={`${step}-${direction}`}
+							className={cn(
+								"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
+								direction === "forward"
+									? "slide-in-from-right-4"
+									: "slide-in-from-left-4",
+							)}
+						>
 							<MultiFileUpload
 								files={receiptFiles}
 								onFilesChange={handleReceiptFilesChange}

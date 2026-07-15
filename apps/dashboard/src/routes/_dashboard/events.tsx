@@ -12,6 +12,7 @@ import {
 	getEventStatus,
 	HappeningToday,
 } from "@/components/events";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -227,7 +228,8 @@ function EventsPage() {
 					/>
 				</div>
 				<div className="flex rounded-lg border bg-card p-0.5">
-					<button
+					<Button
+						variant={activeTab === "upcoming" ? "default" : "ghost"}
 						className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
 							activeTab === "upcoming"
 								? "bg-primary text-primary-foreground shadow-sm"
@@ -236,8 +238,9 @@ function EventsPage() {
 						onClick={() => setActiveTab("upcoming")}
 					>
 						Upcoming ({upcomingEvents.length})
-					</button>
-					<button
+					</Button>
+					<Button
+						variant={activeTab === "past" ? "default" : "ghost"}
 						className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
 							activeTab === "past"
 								? "bg-primary text-primary-foreground shadow-sm"
@@ -249,7 +252,7 @@ function EventsPage() {
 						}}
 					>
 						Past ({pastEvents.length})
-					</button>
+					</Button>
 				</div>
 			</div>
 

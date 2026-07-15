@@ -867,7 +867,7 @@ function ManageReimbursementsPage() {
 													<div
 														key={idx}
 														onClick={() => setActiveReceiptIndex(idx)}
-														className={`p-3 rounded-xl border cursor-pointer transition-all ${
+															className={`p-3 rounded-xl border cursor-pointer transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
 															activeReceiptIndex === idx
 																? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/20"
 																: "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
@@ -1452,13 +1452,13 @@ function ManageReimbursementsPage() {
 							) : (
 								<div className="py-6">
 									<div
-										className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+										className={`border-2 border-dashed rounded-xl p-8 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
 											paidProofFile
 												? "border-blue-500 bg-blue-50"
 												: "border-gray-300 hover:border-gray-400 bg-gray-50"
 										}`}
 									>
-										<input
+										<Input
 											type="file"
 											id="payment-proof-upload"
 											accept="image/*,application/pdf"

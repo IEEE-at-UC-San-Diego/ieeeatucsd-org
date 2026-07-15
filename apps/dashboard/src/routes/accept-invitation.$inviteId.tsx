@@ -204,9 +204,10 @@ function AcceptInvitationPage() {
 	}
 
 	if (success) {
-		return (
-			<StatusShell
-				icon={<CheckCircle className="h-12 w-12 text-green-600" />}
+			return (
+				<StatusShell
+					className="success-reveal"
+					icon={<CheckCircle className="h-12 w-12 text-green-600" />}
 				title="Welcome to the Team!"
 				description="You've successfully accepted the position."
 				invitation={invitation}
@@ -289,7 +290,8 @@ function AcceptInvitationPage() {
 									{offeredPositions.map((position) => {
 										const selected = selectedPosition === position;
 										return (
-											<button
+											<Button
+												variant="outline"
 												key={position}
 												type="button"
 												onClick={() => setSelectedPosition(position)}
@@ -309,7 +311,7 @@ function AcceptInvitationPage() {
 														}`}
 													/>
 												</div>
-											</button>
+											</Button>
 										);
 									})}
 								</div>
@@ -388,16 +390,20 @@ function StatusShell({
 	description,
 	invitation,
 	children,
+	className = "",
 }: {
 	icon: React.ReactNode;
 	title: string;
 	description: string;
 	invitation: Invitation | null;
 	children: React.ReactNode;
+	className?: string;
 }) {
 	return (
 		<main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-			<div className="w-full max-w-2xl overflow-hidden rounded-xl border bg-background shadow-sm">
+			<div
+				className={`w-full max-w-2xl overflow-hidden rounded-xl border bg-background shadow-sm ${className}`}
+			>
 				<div className="bg-muted px-8 py-10 text-center">
 					<div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-background">
 						{icon}

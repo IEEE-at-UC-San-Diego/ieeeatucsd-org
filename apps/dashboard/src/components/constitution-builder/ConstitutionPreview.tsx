@@ -255,22 +255,22 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 					{pageEntries.map(({ section, pageNum }) => (
 						<div key={section.id} className="flex justify-between items-start">
 							<div className={`flex-1 ${getIndentClass(section)}`}>
-								<button
+								<Button variant="link"
 									onClick={() => setCurrentPage(pageNum)}
 									className="text-left text-gray-900 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
 									style={{ fontSize: "inherit", fontFamily: "inherit" }}
 								>
 									{getDisplayTitle(section)}
-								</button>
+								</Button>
 							</div>
 							<div className="flex-shrink-0 ml-4">
-								<button
+								<Button variant="link"
 									onClick={() => setCurrentPage(pageNum)}
 									className="text-gray-700 hover:text-blue-600 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
 									style={{ fontSize: "inherit", fontFamily: "inherit" }}
 								>
 									{pageNum}
-								</button>
+								</Button>
 							</div>
 						</div>
 					))}
@@ -583,13 +583,13 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 			<div className="no-print bg-gray-50 border-t border-gray-200 p-4 flex items-center justify-center">
 				<div className="flex items-center gap-2">
 					{/* Previous button */}
-					<button
+					<Button variant="outline"
 						onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
 						disabled={currentPage === 1}
 						className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300"
 					>
 						‹
-					</button>
+					</Button>
 
 					{/* Page numbers with smart truncation */}
 					{(() => {
@@ -632,7 +632,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 							}
 
 							return (
-								<button
+								<Button variant="outline"
 									key={pageNum}
 									onClick={() => setCurrentPage(pageNum as number)}
 									className={`w-8 h-8 rounded text-sm font-medium transition-colors ${
@@ -642,13 +642,13 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 									}`}
 								>
 									{pageNum}
-								</button>
+								</Button>
 							);
 						});
 					})()}
 
 					{/* Next button */}
-					<button
+					<Button variant="outline"
 						onClick={() =>
 							setCurrentPage(Math.min(totalPages, currentPage + 1))
 						}
@@ -656,7 +656,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 						className="px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-200 text-gray-700 hover:bg-gray-300"
 					>
 						›
-					</button>
+					</Button>
 
 					{/* Page info */}
 					<span className="ml-4 text-sm text-gray-600">

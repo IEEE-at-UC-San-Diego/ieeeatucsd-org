@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 interface ConstitutionSearchProps {
@@ -50,7 +51,7 @@ const ConstitutionSearch: React.FC<ConstitutionSearchProps> = ({
 			{showResults && filteredSections.length > 0 && (
 				<div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
 					{filteredSections.map((section: any) => (
-						<button
+						<Button variant="ghost"
 							key={section.id}
 							onClick={() => {
 								onSelectSection(section.id);
@@ -63,7 +64,7 @@ const ConstitutionSearch: React.FC<ConstitutionSearchProps> = ({
 							<div className="text-xs text-gray-500 capitalize">
 								{section.type}
 							</div>
-						</button>
+						</Button>
 					))}
 				</div>
 			)}

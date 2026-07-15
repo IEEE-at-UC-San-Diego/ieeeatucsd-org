@@ -174,9 +174,9 @@ export function EventCalendar({
 
 							<div className="space-y-1">
 								{dayEvents.slice(0, 3).map((event) => (
-									<button
+									<Button variant="ghost"
 										key={event._id}
-										className={`w-full text-left text-xs px-2 py-1 rounded truncate transition-all ${
+										className={`w-full text-left text-xs px-2 py-1 rounded truncate transition-shadow duration-150 ease-[ease] ${
 											statusBgColors[event.status]
 										} ${
 											hoveredEvent === event._id
@@ -197,7 +197,7 @@ export function EventCalendar({
 											}`}
 										/>
 										{event.eventName}
-									</button>
+									</Button>
 								))}
 								{dayEvents.length > 3 && (
 									<div className="text-xs text-gray-500 px-2">

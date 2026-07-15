@@ -421,11 +421,11 @@ function StepIndicator({
 
 						return (
 							<div key={step.id} className="flex items-center">
-								<button
+								<Button variant="ghost"
 									onClick={() => isClickable && onStepClick(step.id)}
 									disabled={!isClickable}
 									className={cn(
-										"flex items-center gap-2 group transition-all",
+										"flex items-center gap-2 group",
 										isClickable ? "cursor-pointer" : "cursor-default",
 									)}
 								>
@@ -470,7 +470,7 @@ function StepIndicator({
 											{step.name}
 										</p>
 									</div>
-								</button>
+								</Button>
 								{!isLast && (
 									<div
 										className={cn(
@@ -1098,7 +1098,7 @@ function AIWarningStep({
 	aiEnabled: boolean;
 }) {
 	return (
-		<div className="flex flex-col items-center justify-center flex-1 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6">
+		<div className="flex flex-col items-center justify-center flex-1 p-6">
 			<div className="bg-card border shadow-sm rounded-2xl p-8 text-center space-y-6 max-w-lg w-full">
 				<div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
 					<AlertTriangle className="w-10 h-10 text-primary" />
@@ -1150,7 +1150,7 @@ function BasicInfoStep({
 		formData.title && formData.department && formData.paymentMethod;
 
 	return (
-		<div className="flex flex-col items-center justify-center flex-1 p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+		<div className="flex flex-col items-center justify-center flex-1 p-6">
 			<Card className="w-full max-w-2xl shadow-sm">
 				<CardContent className="gap-8 p-8">
 					<div className="border-b pb-4">
@@ -1838,7 +1838,7 @@ function ReceiptsStep({
 	if (!activeReceipt) return null;
 
 	return (
-		<div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden">
+		<div className="flex flex-col h-full overflow-hidden">
 			<div className="flex items-center justify-between mb-4">
 				<div>
 					<h2 className="text-xl font-bold">Expenses</h2>
@@ -1859,8 +1859,8 @@ function ReceiptsStep({
 					{receipts.map((receipt, index) => {
 						const isActive = receipt.id === activeReceipt.id;
 						return (
-							<button
-								key={receipt.id}
+							<div key={receipt.id} className="relative">
+								<Button variant="outline"
 								type="button"
 								onClick={() => setActiveReceiptId(receipt.id)}
 								className={cn(
@@ -1879,26 +1879,6 @@ function ReceiptsStep({
 									<span className="text-xs font-medium">
 										Expense {index + 1}
 									</span>
-									{receipts.length > 1 && (
-										<span
-											role="button"
-											tabIndex={0}
-											onClick={(e) => {
-												e.stopPropagation();
-												removeReceipt(receipt.id);
-											}}
-											onKeyDown={(e) => {
-												if (e.key === "Enter" || e.key === " ") {
-													e.preventDefault();
-													e.stopPropagation();
-													removeReceipt(receipt.id);
-												}
-											}}
-											className="ml-1 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-										>
-											<Trash2 className="h-3.5 w-3.5" />
-										</span>
-									)}
 								</div>
 								<div className="mt-1 text-[11px] text-muted-foreground max-w-44 truncate">
 									{(receipt.vendorName ?? "").trim()
@@ -1910,7 +1890,20 @@ function ReceiptsStep({
 								<div className="mt-0.5 text-[11px] font-mono">
 									${receipt.total.toFixed(2)}
 								</div>
-							</button>
+								</Button>
+								{receipts.length > 1 && (
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										aria-label={`Remove expense ${index + 1}`}
+										onClick={() => removeReceipt(receipt.id)}
+										className="absolute right-1 top-1 h-6 w-6 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+									>
+										<Trash2 className="h-3.5 w-3.5" />
+									</Button>
+								)}
+							</div>
 						);
 					})}
 				</div>
@@ -1926,7 +1919,8 @@ function ReceiptsStep({
 						role="radiogroup"
 						aria-label="Expense type"
 					>
-						<button
+						<Button
+							variant={activeReceipt.expenseType !== "mileage" ? "default" : "ghost"}
 							type="button"
 							role="radio"
 							aria-checked={activeReceipt.expenseType !== "mileage"}
@@ -1941,8 +1935,9 @@ function ReceiptsStep({
 							}
 						>
 							Receipt
-						</button>
-						<button
+						</Button>
+						<Button
+							variant={activeReceipt.expenseType === "mileage" ? "default" : "ghost"}
 							type="button"
 							role="radio"
 							aria-checked={activeReceipt.expenseType === "mileage"}
@@ -1958,7 +1953,7 @@ function ReceiptsStep({
 						>
 							<Car className="h-3.5 w-3.5" />
 							Mileage
-						</button>
+						</Button>
 					</div>
 				</div>
 				<div className="min-h-0 flex-1 overflow-hidden">
@@ -2264,7 +2259,7 @@ function ReceiptsStep({
 									</div>
 									<div className="flex items-center gap-2">
 										<label>
-											<input
+											<Input
 												type="file"
 												className="hidden"
 												accept="image/*,application/pdf"
@@ -2622,7 +2617,7 @@ function ReceiptsStep({
 									WEBP.
 								</p>
 								<label className="mt-4 block">
-									<input
+									<Input
 										type="file"
 										className="hidden"
 										accept="image/*,application/pdf"
@@ -2706,7 +2701,7 @@ function ReviewStep({
 	};
 
 	return (
-		<div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+		<div className="flex flex-col h-full pb-20">
 			<div className="mb-6 shrink-0">
 				<h2 className="text-2xl font-bold">Review Request</h2>
 				<p className="text-muted-foreground">

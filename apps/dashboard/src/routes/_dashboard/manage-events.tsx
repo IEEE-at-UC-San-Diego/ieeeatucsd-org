@@ -971,7 +971,8 @@ function ManageEventsPage() {
 
 			{/* View Toggle */}
 			<div className="flex items-center gap-2">
-				<button
+				<Button
+					variant={viewMode === "list" ? "default" : "secondary"}
 					type="button"
 					onClick={() => setViewMode("list")}
 					className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -982,8 +983,9 @@ function ManageEventsPage() {
 				>
 					<List className="h-4 w-4" />
 					Events List
-				</button>
-				<button
+				</Button>
+				<Button
+					variant={viewMode === "calendar" ? "default" : "secondary"}
 					type="button"
 					onClick={() => setViewMode("calendar")}
 					className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -994,7 +996,7 @@ function ManageEventsPage() {
 				>
 					<CalendarIcon className="h-4 w-4" />
 					Event Planning
-				</button>
+				</Button>
 			</div>
 
 			{/* Filters */}
