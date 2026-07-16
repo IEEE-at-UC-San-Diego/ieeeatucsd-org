@@ -52,8 +52,8 @@ export function AppearancePicker() {
 						aria-checked={selected}
 						onClick={() => setTheme(value)}
 						className={cn(
-							"group relative flex flex-col items-start gap-3 rounded-md border p-3 text-left transition-[background-color,border-color,box-shadow,transform] duration-150 ease-[var(--ease-geist)]",
-							"hover:bg-ds-gray-100 active:scale-[0.98]",
+							"motion-press group relative flex flex-col items-start gap-3 rounded-md border p-3 text-left transition-[background-color,border-color,box-shadow] duration-150 ease-[var(--ease-geist)]",
+							"hover:bg-ds-gray-100",
 							"focus-visible:outline-none focus-visible:shadow-[0_0_0_2px_var(--focus-ring-gap),0_0_0_4px_var(--ring)]",
 							selected
 								? "border-ds-gray-1000 bg-ds-gray-100 shadow-raised"

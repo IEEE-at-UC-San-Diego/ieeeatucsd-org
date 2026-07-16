@@ -196,7 +196,7 @@ export function EventCalendar({
 									type="button"
 									onClick={() => setSelectedDay(day)}
 									className={cn(
-										"flex min-h-14 min-w-14 shrink-0 flex-col items-center justify-center rounded-md border px-2 py-1.5 text-xs active:scale-[0.97]",
+										"motion-press flex min-h-14 min-w-14 shrink-0 flex-col items-center justify-center rounded-md border px-2 py-1.5 text-xs",
 										active
 											? "border-ieee-blue bg-ds-blue-100 text-tone-info"
 											: "border-border bg-background text-foreground",

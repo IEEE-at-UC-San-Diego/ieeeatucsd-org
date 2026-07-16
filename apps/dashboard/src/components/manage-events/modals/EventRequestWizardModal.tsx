@@ -145,7 +145,6 @@ export function EventRequestWizardModal({
 	const isMobile = useIsMobile();
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
 	const [currentStep, setCurrentStep] = useState(isEditing ? 2 : 1);
-	const [direction, setDirection] = useState<"forward" | "back">("forward");
 	const [disclaimerAccepted, setDisclaimerAccepted] = useState(isEditing);
 	const [formData, setFormData] = useState<EventFormData>(
 		buildFormDataFromInitial(initialData),
@@ -163,7 +162,6 @@ export function EventRequestWizardModal({
 			setFormData(nextFormData);
 			initialSnapshotRef.current = JSON.stringify(nextFormData);
 			setCurrentStep(initialData ? 2 : 1);
-			setDirection("forward");
 			setDisclaimerAccepted(!!initialData);
 			setIsSubmitting(false);
 			setSubmitError(null);
@@ -202,14 +200,12 @@ export function EventRequestWizardModal({
 
 	const handleNext = () => {
 		if (currentStep < steps.length) {
-			setDirection("forward");
 			setCurrentStep((prev) => prev + 1);
 		}
 	};
 
 	const handleBack = () => {
 		if (currentStep > 1) {
-			setDirection("back");
 			setCurrentStep((prev) => prev - 1);
 		}
 	};
@@ -217,7 +213,6 @@ export function EventRequestWizardModal({
 	const resetAndClose = () => {
 		onClose();
 		setCurrentStep(1);
-		setDirection("forward");
 		setDisclaimerAccepted(false);
 		setFormData({ ...defaultFormData });
 		setShowDiscardDialog(false);
@@ -492,12 +487,7 @@ export function EventRequestWizardModal({
 							</p>
 						</div>
 					) : (
-						<div
-							key={`${currentStep}-${direction}`}
-							className="min-h-[300px] animate-in fade-in duration-150 ease-[var(--ease-out)] motion-instant-reduce"
-						>
-							{renderStepContent()}
-						</div>
+						<div className="min-h-[300px]">{renderStepContent()}</div>
 					)}
 
 					{currentStep === 1 && !submissionSucceeded && (

@@ -307,7 +307,7 @@ function ExecutiveAnalyticsPage() {
 					<button
 						type="button"
 						onClick={() => setFySheetOpen(true)}
-						className="flex h-11 w-full items-center justify-between rounded-md border bg-background px-3 text-sm font-medium active:scale-[0.99]"
+						className="motion-press flex h-11 w-full items-center justify-between rounded-md border bg-background px-3 text-sm font-medium"
 					>
 						<span className="text-muted-foreground">Fiscal year</span>
 						<span className="text-tone-link">

@@ -40,8 +40,8 @@ export function MobileTaskStepper({
 				aria-label={`Step ${currentStep} of ${totalSteps}`}
 			>
 				<div
-					className="h-full rounded-full bg-ieee-blue transition-[width] duration-200 ease-[var(--ease-out)]"
-					style={{ width: `${progress}%` }}
+					className="h-full w-full origin-left rounded-full bg-ieee-blue transition-transform duration-200 ease-[var(--ease-in-out)] motion-instant-reduce"
+					style={{ transform: `scaleX(${progress / 100})` }}
 				/>
 			</div>
 			{canJump && (
@@ -57,7 +57,7 @@ export function MobileTaskStepper({
 								disabled={!visited}
 								onClick={() => visited && onStepClick(step)}
 								className={cn(
-									"flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold transition-colors active:scale-[0.97]",
+									"motion-press flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold transition-colors",
 									active && "bg-ieee-blue text-on-accent",
 									!active &&
 										visited &&

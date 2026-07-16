@@ -109,7 +109,7 @@ function NotFoundComponent() {
 				<p className="text-muted-foreground">Page not found</p>
 				<a
 					href="/overview"
-					className="inline-flex h-12 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground active:scale-[0.97]"
+					className="motion-press inline-flex h-12 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground"
 				>
 					Go to Dashboard
 				</a>

@@ -1121,7 +1121,7 @@ function ReimbursementDetailView({
 							<button
 								type="button"
 								onClick={() => setReceiptOverlayOpen(true)}
-								className="flex h-full min-h-[220px] w-full flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border/80 bg-card p-8 text-center active:scale-[0.99] transition-transform"
+								className="motion-press flex h-full min-h-[220px] w-full flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border/80 bg-card p-8 text-center"
 							>
 								<div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
 									<Receipt className="h-7 w-7 text-primary" />

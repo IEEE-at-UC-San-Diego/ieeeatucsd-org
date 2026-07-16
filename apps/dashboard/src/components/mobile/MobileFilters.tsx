@@ -126,7 +126,7 @@ export function MobileFilters({
 							key={chip.id}
 							type="button"
 							onClick={chip.onClear}
-							className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-ieee-blue/30 bg-ds-blue-100/80 px-2.5 text-xs font-medium text-tone-link active:scale-[0.97]"
+							className="motion-press inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-ieee-blue/30 bg-ds-blue-100/80 px-2.5 text-xs font-medium text-tone-link"
 						>
 							{chip.label}
 							<X className="size-3" />

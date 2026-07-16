@@ -64,7 +64,7 @@ export function MobileDataListItem({
 				className={cn(
 					"flex min-h-[52px] items-center gap-3 px-4 py-3 sm:px-6 md:px-4",
 					interactive &&
-						"cursor-pointer transition-colors active:bg-muted/60 active:scale-[0.995] md:hover:bg-muted/40",
+						"motion-press cursor-pointer transition-colors active:bg-muted/60 md:hover:bg-muted/40",
 				)}
 				onClick={onClick}
 				onKeyDown={

@@ -670,7 +670,17 @@
     transition-duration: 1ms !important;
   }
 
-  [data-slot='button']:active {
+  [data-vaul-drawer],
+  [data-vaul-overlay] {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  [data-slot='button']:active,
+  .motion-press:active,
+  :where(a, button, [role='button'], [role='radio'], [role='tab']):active {
     transform: none !important;
   }
 
@@ -680,10 +690,6 @@
 
   .motion-press {
     transition: none !important;
-  }
-
-  .motion-press:active {
-    transform: none !important;
   }
 }
 

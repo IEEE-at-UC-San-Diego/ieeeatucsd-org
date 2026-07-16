@@ -51,7 +51,6 @@ export function FundDepositWizard({
 	const { user, getAuthHeaders } = useAuth();
 	const aiEnabled = user?.aiFeaturesEnabled !== false;
 	const [step, setStep] = useState(1);
-	const [direction, setDirection] = useState<"forward" | "back">("forward");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const createDeposit = useAuthedMutation(api.fundDeposits.create);
 	const generateUploadUrl = useAuthedMutation(
@@ -201,7 +200,6 @@ export function FundDepositWizard({
 		setIsAiParsing(false);
 		setAiParseMessage("");
 		setStep(1);
-		setDirection("forward");
 	};
 
 	const handleClose = () => {
@@ -239,18 +237,15 @@ export function FundDepositWizard({
 
 	const handleNext = () => {
 		if (step === 1 && validateStep1()) {
-			setDirection("forward");
 			setStep(2);
 		}
 		if (step === 2 && validateStep2()) {
-			setDirection("forward");
 			setStep(3);
 		}
 	};
 
 	const handleBack = () => {
 		if (step > 1) {
-			setDirection("back");
 			setStep(step - 1);
 		}
 	};
@@ -379,15 +374,7 @@ export function FundDepositWizard({
 
 			<div className="pb-2">
 				{step === 1 && (
-					<div
-						key={`${step}-${direction}`}
-						className={cn(
-							"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
-							direction === "forward"
-								? "slide-in-from-right-4"
-								: "slide-in-from-left-4",
-						)}
-					>
+					<div className="space-y-4">
 						{/* Amount and Title Group */}
 						<div className="grid gap-4">
 							<div>
@@ -554,15 +541,7 @@ export function FundDepositWizard({
 				)}
 
 				{step === 2 && (
-					<div
-						key={`${step}-${direction}`}
-						className={cn(
-							"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
-							direction === "forward"
-								? "slide-in-from-right-4"
-								: "slide-in-from-left-4",
-						)}
-					>
+					<div className="space-y-4">
 						<div>
 							<Label htmlFor="purpose">
 								Purpose <span className="text-destructive">*</span>
@@ -619,15 +598,7 @@ export function FundDepositWizard({
 				)}
 
 				{step === 3 && (
-					<div
-						key={`${step}-${direction}`}
-						className={cn(
-							"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
-							direction === "forward"
-								? "slide-in-from-right-4"
-								: "slide-in-from-left-4",
-						)}
-					>
+					<div className="space-y-4">
 						<MultiFileUpload
 							files={receiptFiles}
 							onFilesChange={handleReceiptFilesChange}
