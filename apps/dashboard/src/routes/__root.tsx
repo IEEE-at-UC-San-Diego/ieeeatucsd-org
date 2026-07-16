@@ -129,12 +129,7 @@ function RootComponent() {
 	});
 
 	if (pathname.startsWith("/accept-invitation/")) {
-		return (
-			<>
-				<Outlet />
-				<Toaster theme="light" position="bottom-right" />
-			</>
-		);
+		return <Outlet />;
 	}
 
 	return (
