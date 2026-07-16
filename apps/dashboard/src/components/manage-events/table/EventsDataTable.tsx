@@ -12,6 +12,7 @@ import {
 	Users,
 	Utensils,
 } from "lucide-react";
+import { MobileDataList, MobileDataListItem } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -28,6 +29,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { formatEventTypeLabel } from "../constants";
 import { StatusBadge } from "../filters/StatusBadge";
 import type { EventRequest, SortConfig } from "../types";
@@ -56,6 +58,8 @@ export function EventsDataTable({
 	onDelete,
 	pagination,
 }: EventsDataTableProps) {
+	const isMobile = useIsMobile();
+
 	const getSortIcon = (field: string) => {
 		if (sortConfig.field === field) {
 			return sortConfig.direction === "asc" ? (
@@ -111,6 +115,85 @@ export function EventsDataTable({
 				<p className="text-muted-foreground">
 					Create a new event or adjust your filters to see events here.
 				</p>
+			</div>
+		);
+	}
+
+	if (isMobile) {
+		return (
+			<div className="space-y-3">
+				<MobileDataList>
+					{events.map((event) => (
+						<MobileDataListItem
+							key={event._id}
+							title={event.eventName}
+							subtitle={
+								<span className="flex items-center gap-1">
+									<MapPin className="size-3 shrink-0" />
+									{event.location}
+								</span>
+							}
+							meta={format(event.startDate, "MMM d, yyyy")}
+							status={<StatusBadge status={event.status} />}
+							onClick={() => onView(event)}
+							actions={
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="size-11"
+											aria-label={`More actions for ${event.eventName}`}
+										>
+											<MoreHorizontal className="size-4" />
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end">
+										<DropdownMenuItem onSelect={() => onView(event)}>
+											<Eye /> View
+										</DropdownMenuItem>
+										<DropdownMenuItem onSelect={() => onEdit(event)}>
+											<Pencil /> Edit
+										</DropdownMenuItem>
+										<DropdownMenuItem
+											variant="destructive"
+											onSelect={() => onDelete(event)}
+										>
+											<Trash2 /> Delete
+										</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+							}
+						/>
+					))}
+				</MobileDataList>
+				{pagination && pagination.totalPages > 1 && (
+					<div className="flex items-center justify-between gap-3 px-1">
+						<Button
+							variant="outline"
+							className="h-11 flex-1"
+							disabled={pagination.currentPage <= 1}
+							onClick={() =>
+								pagination.onPageChange(pagination.currentPage - 1)
+							}
+						>
+							Previous
+						</Button>
+						<span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+							Page {pagination.currentPage} of {pagination.totalPages}
+						</span>
+						<Button
+							variant="outline"
+							className="h-11 flex-1"
+							disabled={pagination.currentPage >= pagination.totalPages}
+							onClick={() =>
+								pagination.onPageChange(pagination.currentPage + 1)
+							}
+						>
+							Next
+						</Button>
+					</div>
+				)}
 			</div>
 		);
 	}

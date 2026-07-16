@@ -40,7 +40,7 @@ function SignInPage() {
 	};
 
 	return (
-		<div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-ds-background-200 px-4 py-12 sm:px-6 lg:px-8">
+		<div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-ds-background-200 px-4 pt-[max(3rem,env(safe-area-inset-top))] pb-[max(3rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
 			<div className="relative z-10 w-full max-w-md">
 				<div className="rounded-md border bg-card px-6 py-10 shadow-raised sm:px-10">
 					<div className="mb-8 text-center">
@@ -77,7 +77,7 @@ function SignInPage() {
 						<Button
 							onClick={handleSignIn}
 							disabled={isLoading}
-							className="w-full"
+							className="h-12 w-full text-base"
 							size="lg"
 						>
 							{isLoading && isAuthenticated ? (

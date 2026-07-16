@@ -2,15 +2,8 @@
 
 import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -80,86 +73,27 @@ export function CheckInModal({
 	};
 
 	return (
-		<Dialog open={isOpen} onOpenChange={handleClose}>
-			<DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
-				<DialogHeader className="px-6 pt-6 pb-2">
-					<DialogTitle className="text-lg">
-						{step === 1 ? "Enter Event Code" : "Food Preference"}
-					</DialogTitle>
-					<DialogDescription className="text-sm">
-						{step === 1
-							? `Enter the code to check in to ${eventName}`
-							: "Select your dietary preference for this event"}
-					</DialogDescription>
-				</DialogHeader>
-
-				<div className="px-6 py-4">
-					{step === 1 ? (
-						<div className="space-y-3">
-							<div className="space-y-2">
-								<Label
-									htmlFor="event-code"
-									className="text-xs font-medium text-muted-foreground"
-								>
-									Event Code
-								</Label>
-								<Input
-									id="event-code"
-									placeholder="e.g. IEEE2024"
-									value={code}
-									onChange={(e) => setCode(e.target.value)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter") handleCodeSubmit();
-									}}
-									className="text-center text-lg font-mono tracking-wider uppercase h-12"
-									autoFocus
-								/>
-								{error && <p className="text-xs text-destructive">{error}</p>}
-							</div>
-						</div>
-					) : (
-						<div className="space-y-3">
-							<div className="flex items-center gap-2 rounded-lg border px-3 py-2">
-								<div className="w-1.5 h-1.5 rounded-full bg-ds-green-1000" />
-								<span className="text-xs font-medium">Code accepted</span>
-							</div>
-							<div className="space-y-2">
-								<Label
-									htmlFor="food-preference"
-									className="text-xs font-medium text-muted-foreground"
-								>
-									Dietary Preference (Optional)
-								</Label>
-								<Select
-									value={foodPreference}
-									onValueChange={setFoodPreference}
-								>
-									<SelectTrigger id="food-preference">
-										<SelectValue placeholder="Select your preference" />
-									</SelectTrigger>
-									<SelectContent>
-										{FOOD_PREFERENCES.map((pref) => (
-											<SelectItem key={pref.value} value={pref.value}>
-												{pref.label}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<p className="text-[11px] text-muted-foreground">
-									This helps us prepare the right amount of food.
-								</p>
-							</div>
-						</div>
-					)}
-				</div>
-
-				<DialogFooter className="px-6 pb-6 pt-2 flex gap-2">
+		<ResponsiveOverlay
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open) handleClose();
+			}}
+			title={step === 1 ? "Enter Event Code" : "Food Preference"}
+			description={
+				step === 1
+					? `Enter the code to check in to ${eventName}`
+					: "Select your dietary preference for this event"
+			}
+			variant="sheet"
+			className="sm:max-w-md"
+			footer={
+				<div className="flex w-full gap-2">
 					{step === 2 && (
 						<Button
 							variant="outline"
 							onClick={() => setStep(1)}
 							disabled={isSubmitting}
-							size="sm"
+							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
 							Back
 						</Button>
@@ -167,8 +101,7 @@ export function CheckInModal({
 					<Button
 						onClick={step === 1 ? handleCodeSubmit : handleFoodSubmit}
 						disabled={isSubmitting || (step === 1 && !code.trim())}
-						className="flex-1"
-						size="sm"
+						className="h-11 flex-1 sm:h-9"
 					>
 						{isSubmitting ? (
 							<>
@@ -187,8 +120,63 @@ export function CheckInModal({
 							</>
 						)}
 					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+				</div>
+			}
+		>
+			{step === 1 ? (
+				<div className="space-y-3 pb-2">
+					<div className="space-y-2">
+						<Label
+							htmlFor="event-code"
+							className="text-xs font-medium text-muted-foreground"
+						>
+							Event Code
+						</Label>
+						<Input
+							id="event-code"
+							placeholder="e.g. IEEE2024"
+							value={code}
+							onChange={(e) => setCode(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") handleCodeSubmit();
+							}}
+							className="text-center text-lg font-mono tracking-wider uppercase h-12"
+							autoFocus
+						/>
+						{error && <p className="text-xs text-destructive">{error}</p>}
+					</div>
+				</div>
+			) : (
+				<div className="space-y-3 pb-2">
+					<div className="flex items-center gap-2 rounded-lg border px-3 py-2">
+						<div className="w-1.5 h-1.5 rounded-full bg-ds-green-1000" />
+						<span className="text-xs font-medium">Code accepted</span>
+					</div>
+					<div className="space-y-2">
+						<Label
+							htmlFor="food-preference"
+							className="text-xs font-medium text-muted-foreground"
+						>
+							Dietary Preference (Optional)
+						</Label>
+						<Select value={foodPreference} onValueChange={setFoodPreference}>
+							<SelectTrigger id="food-preference" className="h-11 sm:h-9">
+								<SelectValue placeholder="Select your preference" />
+							</SelectTrigger>
+							<SelectContent>
+								{FOOD_PREFERENCES.map((pref) => (
+									<SelectItem key={pref.value} value={pref.value}>
+										{pref.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<p className="text-[11px] text-muted-foreground">
+							This helps us prepare the right amount of food.
+						</p>
+					</div>
+				</div>
+			)}
+		</ResponsiveOverlay>
 	);
 }

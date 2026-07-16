@@ -23,16 +23,15 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+	MobileDataList,
+	MobileDataListItem,
+	ResponsiveOverlay,
+	useMobileShell,
+} from "@/components/mobile";
 import ReceiptViewer from "@/components/reimbursement/ReceiptViewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pagination } from "@/components/ui/pagination";
@@ -47,6 +46,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
@@ -56,6 +56,7 @@ import {
 	MILEAGE_RATE_PER_MILE,
 } from "@/lib/reimbursement-mileage";
 import { sendNotification } from "@/lib/send-notification";
+import { cn } from "@/lib/utils";
 
 function formatAuditAction(action: string): {
 	label: string;
@@ -174,6 +175,8 @@ const getStatusIcon = (status: ReimbursementStatus) => {
 function ManageReimbursementsPage() {
 	const { hasAdminAccess, logtoId, user, getAuthHeaders, isLoading } =
 		usePermissions();
+	const isMobile = useIsMobile();
+	const { setHideTabBar } = useMobileShell();
 	const aiEnabled = user?.aiFeaturesEnabled !== false;
 	const reimbursements = useAuthedQuery(
 		api.reimbursements.listAll,
@@ -222,6 +225,11 @@ function ManageReimbursementsPage() {
 
 	// Receipt viewer state
 	const [activeReceiptIndex, setActiveReceiptIndex] = useState(0);
+
+	useEffect(() => {
+		setHideTabBar(viewMode === "detail" || isPaidModalOpen);
+		return () => setHideTabBar(false);
+	}, [viewMode, isPaidModalOpen, setHideTabBar]);
 
 	// Handle paste for file upload
 	useEffect(() => {
@@ -1341,7 +1349,7 @@ function ManageReimbursementsPage() {
 				</div>
 
 				{/* Paid Confirmation Modal */}
-				<Dialog
+				<ResponsiveOverlay
 					open={isPaidModalOpen}
 					onOpenChange={(open) => {
 						if (!open) {
@@ -1349,198 +1357,16 @@ function ManageReimbursementsPage() {
 						}
 						setIsPaidModalOpen(open);
 					}}
-				>
-					<DialogContent className={paymentReviewData ? "max-w-4xl" : ""}>
-						<DialogHeader>
-							<DialogTitle>
-								{paymentReviewData
-									? "Review Payment Details"
-									: "Process Payment"}
-							</DialogTitle>
-						</DialogHeader>
-						<div className="py-4">
-							{paymentReviewData ? (
-								<div className="flex gap-6">
-									{/* Left: Inputs */}
-									<div className="flex-1 space-y-4">
-										<div className="bg-ds-blue-100 border border-ds-blue-100 p-3 rounded-lg flex items-start gap-3">
-											<Sparkles className="w-5 h-5 text-ds-blue-700 mt-0.5" />
-											<div className="text-sm text-ds-blue-700">
-												<p className="font-semibold">
-													{aiEnabled
-														? "AI Extraction Complete"
-														: "Manual Entry Mode"}
-												</p>
-												<p className="opacity-80">
-													{aiEnabled
-														? "Please verify the details below match the proof."
-														: "AI is disabled for this account. Enter and verify payment details manually."}
-												</p>
-											</div>
-										</div>
-
-										<div className="grid grid-cols-2 gap-4">
-											<div className="space-y-2">
-												<Label>Payment Date</Label>
-												<Input
-													type="date"
-													value={paymentDate}
-													onChange={(e) => setPaymentDate(e.target.value)}
-												/>
-											</div>
-											<div className="space-y-2">
-												<Label>Amount Paid</Label>
-												<div className="relative">
-													<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-														$
-													</span>
-													<Input
-														type="number"
-														step="0.01"
-														value={paymentAmount}
-														onChange={(e) => setPaymentAmount(e.target.value)}
-														className="pl-7"
-													/>
-												</div>
-											</div>
-										</div>
-
-										<div className="space-y-2">
-											<Label>Confirmation Number</Label>
-											<Input
-												placeholder="Transaction ID"
-												value={paidConfirmationNumber}
-												onChange={(e) =>
-													setPaidConfirmationNumber(e.target.value)
-												}
-											/>
-										</div>
-
-										<div className="space-y-2">
-											<Label>Memo / Notes</Label>
-											<Textarea
-												placeholder="Any additional notes"
-												value={paymentMemo}
-												onChange={(e) => setPaymentMemo(e.target.value)}
-												rows={2}
-											/>
-										</div>
-									</div>
-
-									{/* Right: Preview */}
-									<div className="w-1/3 shrink-0">
-										<p className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
-											Proof Preview
-										</p>
-										<div className="border rounded-lg overflow-hidden h-64 bg-muted flex items-center justify-center relative group">
-											{uploadedProofUrl ? (
-												<img
-													src={uploadedProofUrl}
-													className="w-full h-full object-contain"
-													alt="Proof"
-												/>
-											) : (
-												<FileText className="text-muted-foreground w-12 h-12" />
-											)}
-											{uploadedProofUrl && (
-												<a
-													href={uploadedProofUrl}
-													target="_blank"
-													rel="noreferrer"
-													className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-medium"
-												>
-													View Full
-												</a>
-											)}
-										</div>
-									</div>
-								</div>
-							) : (
-								<div className="py-6">
-									<div
-										className={`border-2 border-dashed rounded-md p-8 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
-											paidProofFile
-												? "border-ds-blue-700 bg-ds-blue-100"
-												: "border-border hover:border-ds-gray-500 bg-muted"
-										}`}
-									>
-										<Input
-											type="file"
-											id="payment-proof-upload"
-											accept="image/*,application/pdf"
-											onChange={(e) =>
-												setPaidProofFile(
-													e.target.files ? e.target.files[0] : null,
-												)
-											}
-											className="hidden"
-										/>
-
-										<label
-											htmlFor="payment-proof-upload"
-											className="cursor-pointer space-y-3 block"
-										>
-											{paidProofFile ? (
-												<>
-													<CheckCircle className="w-12 h-12 text-ds-blue-700 mx-auto" />
-													<div>
-														<p className="font-bold">{paidProofFile.name}</p>
-														<p className="text-sm text-muted-foreground">
-															Ready to process
-														</p>
-													</div>
-													<Button
-														size="sm"
-														variant="outline"
-														onClick={(e) => {
-															e.preventDefault();
-															setPaidProofFile(null);
-														}}
-													>
-														Remove
-													</Button>
-												</>
-											) : (
-												<>
-													<div className="w-12 h-12 bg-ds-blue-100 text-ds-blue-700 rounded-full flex items-center justify-center mx-auto mb-2">
-														<UploadCloud className="w-6 h-6" />
-													</div>
-													<div>
-														<p className="font-bold text-lg">
-															Upload Proof of Payment
-														</p>
-														<p className="text-sm text-muted-foreground">
-															Click to browse or paste screenshot (Ctrl+V)
-														</p>
-													</div>
-													<Badge variant="secondary" className="mt-4">
-														Use "Paste" for quick screenshots
-													</Badge>
-												</>
-											)}
-										</label>
-									</div>
-
-									{/* Info about AI */}
-									<div className="mt-6 flex gap-3 p-3 bg-muted/50 rounded-lg border items-start">
-										<Sparkles className="w-5 h-5 text-ds-purple-700 shrink-0 mt-0.5" />
-										<div className="text-xs text-muted-foreground">
-											<p className="font-semibold text-foreground">
-												{aiEnabled ? "AI-Powered Extraction" : "Manual Mode"}
-											</p>
-											<p>
-												{aiEnabled
-													? "Upload a screenshot and our AI will automatically extract the confirmation number, date, and amount for you to review."
-													: "Upload a screenshot, then fill payment details manually after upload."}
-											</p>
-										</div>
-									</div>
-								</div>
-							)}
-						</div>
-						<DialogFooter>
+					title={
+						paymentReviewData ? "Review Payment Details" : "Process Payment"
+					}
+					variant={paymentReviewData ? "fullscreen" : "large-sheet"}
+					className={paymentReviewData ? "sm:max-w-4xl" : undefined}
+					footer={
+						<div className="flex w-full gap-2">
 							<Button
 								variant="outline"
+								className="h-11 flex-1 sm:h-9 sm:flex-none"
 								onClick={() => {
 									setIsPaidModalOpen(false);
 									setTimeout(resetPaidModal, 300);
@@ -1553,7 +1379,10 @@ function ManageReimbursementsPage() {
 								disabled={
 									processingId === selectedReimbursement?._id || aiProcessing
 								}
-								className={aiProcessing ? "bg-ds-purple-700" : ""}
+								className={cn(
+									"h-11 flex-1 sm:h-9 sm:flex-none",
+									aiProcessing ? "bg-ds-purple-700" : "",
+								)}
 							>
 								{processingId === selectedReimbursement?._id || aiProcessing ? (
 									<Loader2 className="h-4 w-4 animate-spin mr-1" />
@@ -1564,9 +1393,187 @@ function ManageReimbursementsPage() {
 										? "Process & Analyze"
 										: "Process & Continue"}
 							</Button>
-						</DialogFooter>
-					</DialogContent>
-				</Dialog>
+						</div>
+					}
+				>
+					{paymentReviewData ? (
+						<div className="flex flex-col gap-6 md:flex-row">
+							{/* Left: Inputs */}
+							<div className="flex-1 space-y-4">
+								<div className="bg-ds-blue-100 border border-ds-blue-100 p-3 rounded-lg flex items-start gap-3">
+									<Sparkles className="w-5 h-5 text-ds-blue-700 mt-0.5" />
+									<div className="text-sm text-ds-blue-700">
+										<p className="font-semibold">
+											{aiEnabled
+												? "AI Extraction Complete"
+												: "Manual Entry Mode"}
+										</p>
+										<p className="opacity-80">
+											{aiEnabled
+												? "Please verify the details below match the proof."
+												: "AI is disabled for this account. Enter and verify payment details manually."}
+										</p>
+									</div>
+								</div>
+
+								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+									<div className="space-y-2">
+										<Label>Payment Date</Label>
+										<Input
+											type="date"
+											value={paymentDate}
+											onChange={(e) => setPaymentDate(e.target.value)}
+											className="h-11 text-base sm:h-9 sm:text-sm"
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label>Amount Paid</Label>
+										<div className="relative">
+											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+												$
+											</span>
+											<Input
+												type="number"
+												step="0.01"
+												value={paymentAmount}
+												onChange={(e) => setPaymentAmount(e.target.value)}
+												className="h-11 pl-7 text-base sm:h-9 sm:text-sm"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div className="space-y-2">
+									<Label>Confirmation Number</Label>
+									<Input
+										placeholder="Transaction ID"
+										value={paidConfirmationNumber}
+										onChange={(e) => setPaidConfirmationNumber(e.target.value)}
+										className="h-11 text-base sm:h-9 sm:text-sm"
+									/>
+								</div>
+
+								<div className="space-y-2">
+									<Label>Memo / Notes</Label>
+									<Textarea
+										placeholder="Any additional notes"
+										value={paymentMemo}
+										onChange={(e) => setPaymentMemo(e.target.value)}
+										rows={2}
+										className="text-base sm:text-sm"
+									/>
+								</div>
+							</div>
+
+							{/* Right: Preview */}
+							<div className="w-full shrink-0 md:w-1/3">
+								<p className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
+									Proof Preview
+								</p>
+								<div className="border rounded-lg overflow-hidden h-64 bg-muted flex items-center justify-center relative">
+									{uploadedProofUrl ? (
+										<img
+											src={uploadedProofUrl}
+											className="w-full h-full object-contain"
+											alt="Proof"
+										/>
+									) : (
+										<FileText className="text-muted-foreground w-12 h-12" />
+									)}
+									{uploadedProofUrl && (
+										<a
+											href={uploadedProofUrl}
+											target="_blank"
+											rel="noreferrer"
+											className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-medium opacity-100 md:opacity-0 md:hover:opacity-100 transition-opacity"
+										>
+											View Full
+										</a>
+									)}
+								</div>
+							</div>
+						</div>
+					) : (
+						<div className="py-2">
+							<div
+								className={`border-2 border-dashed rounded-md p-8 text-center transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] ${
+									paidProofFile
+										? "border-ds-blue-700 bg-ds-blue-100"
+										: "border-border active:border-ds-gray-500 sm:hover:border-ds-gray-500 bg-muted"
+								}`}
+							>
+								<Input
+									type="file"
+									id="payment-proof-upload"
+									accept="image/*,application/pdf"
+									onChange={(e) =>
+										setPaidProofFile(e.target.files ? e.target.files[0] : null)
+									}
+									className="hidden"
+								/>
+
+								<label
+									htmlFor="payment-proof-upload"
+									className="cursor-pointer space-y-3 block min-h-11"
+								>
+									{paidProofFile ? (
+										<>
+											<CheckCircle className="w-12 h-12 text-ds-blue-700 mx-auto" />
+											<div>
+												<p className="font-bold">{paidProofFile.name}</p>
+												<p className="text-sm text-muted-foreground">
+													Ready to process
+												</p>
+											</div>
+											<Button
+												className="h-11 sm:h-9"
+												variant="outline"
+												onClick={(e) => {
+													e.preventDefault();
+													setPaidProofFile(null);
+												}}
+											>
+												Remove
+											</Button>
+										</>
+									) : (
+										<>
+											<div className="w-12 h-12 bg-ds-blue-100 text-ds-blue-700 rounded-full flex items-center justify-center mx-auto mb-2">
+												<UploadCloud className="w-6 h-6" />
+											</div>
+											<div>
+												<p className="font-bold text-lg">
+													Upload Proof of Payment
+												</p>
+												<p className="text-sm text-muted-foreground">
+													Click to browse or paste screenshot (Ctrl+V)
+												</p>
+											</div>
+											<Badge variant="secondary" className="mt-4">
+												Use "Paste" for quick screenshots
+											</Badge>
+										</>
+									)}
+								</label>
+							</div>
+
+							{/* Info about AI */}
+							<div className="mt-6 flex gap-3 p-3 bg-muted/50 rounded-lg border items-start">
+								<Sparkles className="w-5 h-5 text-ds-purple-700 shrink-0 mt-0.5" />
+								<div className="text-xs text-muted-foreground">
+									<p className="font-semibold text-foreground">
+										{aiEnabled ? "AI-Powered Extraction" : "Manual Mode"}
+									</p>
+									<p>
+										{aiEnabled
+											? "Upload a screenshot and our AI will automatically extract the confirmation number, date, and amount for you to review."
+											: "Upload a screenshot, then fill payment details manually after upload."}
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
+				</ResponsiveOverlay>
 			</div>
 		);
 	}
@@ -1624,7 +1631,7 @@ function ManageReimbursementsPage() {
 				</div>
 			</div>
 
-			{/* Reimbursements Table */}
+			{/* Reimbursements Table / Mobile queue */}
 			{!reimbursements ? (
 				<div className="space-y-3">
 					{[1, 2, 3].map((i) => (
@@ -1632,182 +1639,239 @@ function ManageReimbursementsPage() {
 					))}
 				</div>
 			) : paginated.length > 0 ? (
-				<div className="rounded-md border bg-card overflow-hidden">
-					<div className="overflow-x-auto">
-						<Table>
-							<TableHeader>
-								<TableRow className="bg-muted/50 hover:bg-muted/50">
-									<TableHead
-										className="cursor-pointer hover:bg-muted transition-colors"
-										onClick={() => handleSort("title")}
-									>
-										<span className="flex items-center gap-1 group">
-											Title {getSortIcon("title")}
-										</span>
-									</TableHead>
-									<TableHead
-										className="cursor-pointer hover:bg-muted transition-colors"
-										onClick={() => handleSort("totalAmount")}
-									>
-										<span className="flex items-center gap-1 group">
-											Amount {getSortIcon("totalAmount")}
-										</span>
-									</TableHead>
-									<TableHead
-										className="cursor-pointer hover:bg-muted transition-colors"
-										onClick={() => handleSort("_creationTime")}
-									>
-										<span className="flex items-center gap-1 group">
-											Date {getSortIcon("_creationTime")}
-										</span>
-									</TableHead>
-									<TableHead
-										className="cursor-pointer hover:bg-muted transition-colors"
-										onClick={() => handleSort("status")}
-									>
-										<span className="flex items-center gap-1 group">
-											Status {getSortIcon("status")}
-										</span>
-									</TableHead>
-									<TableHead
-										className="cursor-pointer hover:bg-muted transition-colors"
-										onClick={() => handleSort("department")}
-									>
-										<span className="flex items-center gap-1 group">
-											Department {getSortIcon("department")}
-										</span>
-									</TableHead>
-									<TableHead className="text-right">Actions</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{paginated.map((r) => {
-									const isHovered = hoveredRow === r._id;
-									const totalAmt = calculateTotalAmount(r);
-
-									return (
-										<TableRow
-											key={r._id}
-											className="group cursor-pointer"
-											onMouseEnter={() => setHoveredRow(r._id)}
-											onMouseLeave={() => setHoveredRow(null)}
-											onClick={() => handleViewDetails(r)}
+				isMobile ? (
+					<div className="space-y-3">
+						<MobileDataList>
+							{paginated.map((r) => {
+								const totalAmt = calculateTotalAmount(r);
+								const age = formatDistanceToNow(r._creationTime, {
+									addSuffix: true,
+								});
+								return (
+									<MobileDataListItem
+										key={r._id}
+										title={r.title}
+										subtitle={r.submittedByName || r.submittedBy}
+										meta={`${r.department} · ${age}`}
+										trailing={`$${totalAmt.toFixed(2)}`}
+										status={
+											<Badge
+												className={statusColors[r.status]}
+												variant="secondary"
+											>
+												<span className="flex items-center gap-1">
+													{getStatusIcon(r.status)}
+													{statusLabels[r.status]}
+												</span>
+											</Badge>
+										}
+										onClick={() => handleViewDetails(r)}
+									/>
+								);
+							})}
+						</MobileDataList>
+						{totalPages > 1 && (
+							<div className="flex items-center justify-between gap-3 px-1">
+								<Button
+									variant="outline"
+									className="h-11 flex-1"
+									disabled={page <= 1}
+									onClick={() => setPage(page - 1)}
+								>
+									Previous
+								</Button>
+								<span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+									Page {page} of {totalPages}
+								</span>
+								<Button
+									variant="outline"
+									className="h-11 flex-1"
+									disabled={page >= totalPages}
+									onClick={() => setPage(page + 1)}
+								>
+									Next
+								</Button>
+							</div>
+						)}
+					</div>
+				) : (
+					<div className="rounded-md border bg-card overflow-hidden">
+						<div className="overflow-x-auto">
+							<Table>
+								<TableHeader>
+									<TableRow className="bg-muted/50 hover:bg-muted/50">
+										<TableHead
+											className="cursor-pointer hover:bg-muted transition-colors"
+											onClick={() => handleSort("title")}
 										>
-											<TableCell className="min-w-[200px]">
-												<div className="font-medium text-foreground truncate max-w-[250px]">
-													{r.title}
-												</div>
-												<div className="text-xs text-muted-foreground">
-													{r.submittedByName || r.submittedBy}
-												</div>
-												{r.submittedByZelle && (
-													<div className="text-xs text-ds-blue-700 mt-0.5">
-														Zelle: {r.submittedByZelle}
+											<span className="flex items-center gap-1 group">
+												Title {getSortIcon("title")}
+											</span>
+										</TableHead>
+										<TableHead
+											className="cursor-pointer hover:bg-muted transition-colors"
+											onClick={() => handleSort("totalAmount")}
+										>
+											<span className="flex items-center gap-1 group">
+												Amount {getSortIcon("totalAmount")}
+											</span>
+										</TableHead>
+										<TableHead
+											className="cursor-pointer hover:bg-muted transition-colors"
+											onClick={() => handleSort("_creationTime")}
+										>
+											<span className="flex items-center gap-1 group">
+												Date {getSortIcon("_creationTime")}
+											</span>
+										</TableHead>
+										<TableHead
+											className="cursor-pointer hover:bg-muted transition-colors"
+											onClick={() => handleSort("status")}
+										>
+											<span className="flex items-center gap-1 group">
+												Status {getSortIcon("status")}
+											</span>
+										</TableHead>
+										<TableHead
+											className="cursor-pointer hover:bg-muted transition-colors"
+											onClick={() => handleSort("department")}
+										>
+											<span className="flex items-center gap-1 group">
+												Department {getSortIcon("department")}
+											</span>
+										</TableHead>
+										<TableHead className="text-right">Actions</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{paginated.map((r) => {
+										const isHovered = hoveredRow === r._id;
+										const totalAmt = calculateTotalAmount(r);
+
+										return (
+											<TableRow
+												key={r._id}
+												className="group cursor-pointer"
+												onMouseEnter={() => setHoveredRow(r._id)}
+												onMouseLeave={() => setHoveredRow(null)}
+												onClick={() => handleViewDetails(r)}
+											>
+												<TableCell className="min-w-[200px]">
+													<div className="font-medium text-foreground truncate max-w-[250px]">
+														{r.title}
 													</div>
-												)}
-											</TableCell>
-											<TableCell>
-												<span className="font-mono font-semibold">
-													${totalAmt.toFixed(2)}
-												</span>
-											</TableCell>
-											<TableCell>
-												<div className="text-sm">
-													{format(r._creationTime, "MMM d, yyyy")}
-												</div>
-												<div className="text-xs text-muted-foreground">
-													{format(r._creationTime, "h:mm a")}
-												</div>
-											</TableCell>
-											<TableCell>
-												<Badge
-													className={statusColors[r.status]}
-													variant="secondary"
-												>
-													<span className="flex items-center gap-1">
-														{getStatusIcon(r.status)}
-														{statusLabels[r.status]}
-													</span>
-												</Badge>
-											</TableCell>
-											<TableCell>
-												<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
-													{r.department}
-												</span>
-											</TableCell>
-											<TableCell className="text-right">
-												<div
-													className={`flex items-center justify-end gap-1 transition-opacity duration-200 ${
-														isHovered ? "opacity-100" : "opacity-0"
-													}`}
-													onClick={(e) => e.stopPropagation()}
-												>
-													{r.status === "submitted" && (
-														<>
-															<Button
-																variant="ghost"
-																size="sm"
-																className="h-8 w-8 p-0 text-ds-green-700 hover:text-ds-green-700 hover:bg-ds-green-100"
-																onClick={() =>
-																	handleStatusChange(r._id, "approved")
-																}
-																disabled={processingId === r._id}
-																title="Approve"
-															>
-																{processingId === r._id ? (
-																	<Loader2 className="h-4 w-4 animate-spin" />
-																) : (
-																	<CheckCircle className="h-4 w-4" />
-																)}
-															</Button>
-															<Button
-																variant="ghost"
-																size="sm"
-																className="h-8 w-8 p-0 text-ds-red-800 hover:text-ds-red-800 hover:bg-ds-red-100"
-																onClick={() => handleDecline(r._id)}
-																disabled={processingId === r._id}
-																title="Decline"
-															>
-																<XCircle className="h-4 w-4" />
-															</Button>
-														</>
+													<div className="text-xs text-muted-foreground">
+														{r.submittedByName || r.submittedBy}
+													</div>
+													{r.submittedByZelle && (
+														<div className="text-xs text-ds-blue-700 mt-0.5">
+															Zelle: {r.submittedByZelle}
+														</div>
 													)}
-													{r.status === "approved" && (
+												</TableCell>
+												<TableCell>
+													<span className="font-mono font-semibold">
+														${totalAmt.toFixed(2)}
+													</span>
+												</TableCell>
+												<TableCell>
+													<div className="text-sm">
+														{format(r._creationTime, "MMM d, yyyy")}
+													</div>
+													<div className="text-xs text-muted-foreground">
+														{format(r._creationTime, "h:mm a")}
+													</div>
+												</TableCell>
+												<TableCell>
+													<Badge
+														className={statusColors[r.status]}
+														variant="secondary"
+													>
+														<span className="flex items-center gap-1">
+															{getStatusIcon(r.status)}
+															{statusLabels[r.status]}
+														</span>
+													</Badge>
+												</TableCell>
+												<TableCell>
+													<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
+														{r.department}
+													</span>
+												</TableCell>
+												<TableCell className="text-right">
+													<div
+														className={`flex items-center justify-end gap-1 transition-opacity duration-200 ${
+															isHovered ? "opacity-100" : "opacity-0"
+														}`}
+														onClick={(e) => e.stopPropagation()}
+													>
+														{r.status === "submitted" && (
+															<>
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	className="h-8 w-8 p-0 text-ds-green-700 hover:text-ds-green-700 hover:bg-ds-green-100"
+																	onClick={() =>
+																		handleStatusChange(r._id, "approved")
+																	}
+																	disabled={processingId === r._id}
+																	title="Approve"
+																>
+																	{processingId === r._id ? (
+																		<Loader2 className="h-4 w-4 animate-spin" />
+																	) : (
+																		<CheckCircle className="h-4 w-4" />
+																	)}
+																</Button>
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	className="h-8 w-8 p-0 text-ds-red-800 hover:text-ds-red-800 hover:bg-ds-red-100"
+																	onClick={() => handleDecline(r._id)}
+																	disabled={processingId === r._id}
+																	title="Decline"
+																>
+																	<XCircle className="h-4 w-4" />
+																</Button>
+															</>
+														)}
+														{r.status === "approved" && (
+															<Button
+																variant="ghost"
+																size="sm"
+																className="h-8 w-8 p-0 text-ds-purple-700 hover:text-ds-blue-700 hover:bg-ds-purple-100"
+																onClick={() => handleViewDetails(r)}
+																title="Mark as Paid"
+															>
+																<DollarSign className="h-4 w-4" />
+															</Button>
+														)}
 														<Button
 															variant="ghost"
 															size="sm"
-															className="h-8 w-8 p-0 text-ds-purple-700 hover:text-ds-blue-700 hover:bg-ds-purple-100"
+															className="h-8 w-8 p-0"
 															onClick={() => handleViewDetails(r)}
-															title="Mark as Paid"
+															title="View Details"
 														>
-															<DollarSign className="h-4 w-4" />
+															<Eye className="h-4 w-4" />
 														</Button>
-													)}
-													<Button
-														variant="ghost"
-														size="sm"
-														className="h-8 w-8 p-0"
-														onClick={() => handleViewDetails(r)}
-														title="View Details"
-													>
-														<Eye className="h-4 w-4" />
-													</Button>
-												</div>
-											</TableCell>
-										</TableRow>
-									);
-								})}
-							</TableBody>
-						</Table>
+													</div>
+												</TableCell>
+											</TableRow>
+										);
+									})}
+								</TableBody>
+							</Table>
+						</div>
+						<div className="p-4 border-t">
+							<Pagination
+								currentPage={page}
+								totalPages={totalPages}
+								onPageChange={setPage}
+							/>
+						</div>
 					</div>
-					<div className="p-4 border-t">
-						<Pagination
-							currentPage={page}
-							totalPages={totalPages}
-							onPageChange={setPage}
-						/>
-					</div>
-				</div>
+				)
 			) : (
 				<div className="text-center py-12 text-muted-foreground">
 					<CreditCard className="mx-auto h-12 w-12 mb-4 opacity-50" />

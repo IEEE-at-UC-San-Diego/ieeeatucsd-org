@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-	ArrowRight,
 	Award,
 	Building2,
 	Check,
@@ -9,24 +8,12 @@ import {
 	Sparkles,
 	X,
 } from "lucide-react";
+import {
+	DashboardPage,
+	PageHeader,
+} from "@/components/dashboard/DashboardPage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
@@ -95,13 +82,15 @@ const benefits: Benefit[] = [
 	},
 ];
 
+const TIERS = ["bronze", "silver", "gold", "diamond"] as const;
+
 function SponsorInformationPage() {
 	const { user, isLoading } = useAuth();
 	const { isSponsor, isAdmin } = usePermissions();
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-[60vh]">
+			<div className="flex min-h-[60vh] items-center justify-center">
 				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
 			</div>
 		);
@@ -109,9 +98,11 @@ function SponsorInformationPage() {
 
 	if (!isSponsor && !isAdmin) {
 		return (
-			<div className="p-6 text-center text-muted-foreground">
-				You don't have permission to access this page.
-			</div>
+			<DashboardPage>
+				<p className="text-center text-muted-foreground">
+					You don't have permission to access this page.
+				</p>
+			</DashboardPage>
 		);
 	}
 
@@ -151,234 +142,248 @@ function SponsorInformationPage() {
 		}
 	};
 
-	const renderBenefitIcon = (value: boolean | string) => {
-		if (value === true) {
-			return <Check className="w-4 h-4 text-ds-green-700" />;
-		}
-		if (value === false) {
-			return <X className="w-4 h-4 text-muted-foreground" />;
-		}
-		return <ArrowRight className="w-4 h-4 text-ds-blue-700" />;
+	const formatBenefitValue = (value: boolean | string) => {
+		if (value === true) return "Included";
+		if (value === false) return "Not included";
+		return value;
 	};
 
-	return (
-		<div className="mx-auto max-w-7xl p-4 md:p-6 space-y-6 bg-muted min-h-full">
-			<Card className="border-border bg-gradient-to-r from-white to-ds-blue-100 shadow-sm">
-				<CardContent className="p-6 md:p-8">
-					<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-						<div className="space-y-2">
-							<div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-background px-3 py-1 text-xs text-ds-blue-700">
-								<Sparkles className="h-3.5 w-3.5" />
-								Sponsor Workspace
-							</div>
-							<h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-								{sponsorData?.sponsorOrganization || "Sponsor"}
-							</h1>
-							<p className="text-sm md:text-base text-muted-foreground">
-								Thank you for supporting IEEE at UC San Diego.
-							</p>
-						</div>
-						<Badge
-							variant="outline"
-							className={cn(
-								"px-4 py-2 text-sm font-semibold border rounded-full",
-								getTierColor(sponsorData?.sponsorTier),
-							)}
-						>
-							{sponsorData?.sponsorTier || "Tier not assigned"}
-						</Badge>
-					</div>
-				</CardContent>
-			</Card>
+	const currentTierKey = (sponsorData?.sponsorTier || "").toLowerCase() as
+		| (typeof TIERS)[number]
+		| "";
 
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-				<Card className="border-border shadow-sm bg-background">
-					<CardHeader className="pb-3">
-						<div className="flex items-center gap-3">
-							<div className="p-2 rounded-md bg-ds-blue-100 text-ds-blue-700">
-								<Building2 className="h-5 w-5" />
-							</div>
-							<CardTitle className="text-lg text-foreground">
-								Organization Details
-							</CardTitle>
+	return (
+		<DashboardPage width="wide" variant="list">
+			<PageHeader
+				title={sponsorData?.sponsorOrganization || "Sponsor"}
+				description="Thank you for supporting IEEE at UC San Diego."
+				hideTitleOnMobile
+				eyebrow={
+					<span className="inline-flex items-center gap-1.5">
+						<Sparkles className="h-3.5 w-3.5" />
+						Sponsor Workspace
+					</span>
+				}
+				actions={
+					<Badge
+						variant="outline"
+						className={cn(
+							"px-3 py-1.5 text-sm font-semibold",
+							getTierColor(sponsorData?.sponsorTier),
+						)}
+					>
+						{sponsorData?.sponsorTier || "Tier not assigned"}
+					</Badge>
+				}
+			/>
+
+			{/* Account details — grouped list on mobile */}
+			<section className="space-y-3">
+				<h2 className="text-sm font-semibold text-foreground md:sr-only">
+					Account
+				</h2>
+				<ul className="-mx-4 divide-y border-y bg-background md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:divide-y-0 md:border-0 md:bg-transparent">
+					<li className="flex min-h-[52px] items-center gap-3 px-4 py-3 md:rounded-md md:border md:px-4">
+						<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-blue-100 text-ds-blue-700">
+							<Building2 className="size-5" />
 						</div>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div className="rounded-md border border-border bg-muted p-4">
-							<p className="text-xs uppercase tracking-wide text-muted-foreground">
-								Organization
-							</p>
-							<p className="mt-1 text-base font-medium text-foreground">
+						<div className="min-w-0">
+							<p className="text-xs text-muted-foreground">Organization</p>
+							<p className="truncate text-sm font-medium">
 								{sponsorData?.sponsorOrganization || "Not specified"}
 							</p>
 						</div>
-						<div className="rounded-md border border-border bg-muted p-4">
-							<p className="text-xs uppercase tracking-wide text-muted-foreground">
-								Contact Email
-							</p>
-							<p className="mt-1 text-base font-medium text-foreground">
-								{sponsorData?.email || "Not specified"}
-							</p>
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card className="border-border shadow-sm bg-background">
-					<CardHeader className="pb-3">
-						<div className="flex items-center gap-3">
-							<div className="p-2 rounded-md bg-ds-amber-100 text-ds-amber-900">
-								<Award className="h-5 w-5" />
+					</li>
+					<li className="min-w-0 md:rounded-md md:border">
+						<a
+							href={
+								sponsorData?.email ? `mailto:${sponsorData.email}` : undefined
+							}
+							className={cn(
+								"flex min-h-[52px] items-center gap-3 px-4 py-3 active:bg-muted/60",
+								!sponsorData?.email && "pointer-events-none",
+							)}
+						>
+							<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-green-100 text-ds-green-700">
+								<Mail className="size-5" />
 							</div>
-							<CardTitle className="text-lg text-foreground">
-								Tier Snapshot
-							</CardTitle>
+							<div className="min-w-0 flex-1">
+								<p className="text-xs text-muted-foreground">Contact email</p>
+								<p className="truncate text-sm font-medium text-ieee-blue">
+									{sponsorData?.email || "Not specified"}
+								</p>
+							</div>
+						</a>
+					</li>
+					<li className="flex min-h-[52px] items-center gap-3 px-4 py-3 md:col-span-2 md:rounded-md md:border md:px-4">
+						<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-amber-100 text-ds-amber-900">
+							<Award className="size-5" />
 						</div>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div className="rounded-md border border-border p-4">
-							<p className="text-xs uppercase tracking-wide text-muted-foreground">
-								Current Tier
-							</p>
-							<p className="mt-1 text-xl font-semibold text-foreground">
+						<div className="min-w-0 flex-1">
+							<p className="text-xs text-muted-foreground">Current tier</p>
+							<p className="text-sm font-medium">
 								{sponsorData?.sponsorTier || "Not assigned"}
+								<span className="ml-2 text-muted-foreground">
+									· {getTierAmount(sponsorData?.sponsorTier)}
+								</span>
 							</p>
-							<p className="text-sm text-muted-foreground mt-1">
-								Suggested contribution:{" "}
-								{getTierAmount(sponsorData?.sponsorTier)}
-							</p>
+							{sponsorData?.autoAssignedSponsor && (
+								<p className="mt-0.5 text-xs text-ds-blue-700">
+									Auto-assigned from your company email domain.
+								</p>
+							)}
 						</div>
-						{sponsorData?.autoAssignedSponsor && (
-							<div className="rounded-md border border-ds-blue-100 bg-ds-blue-100 px-3 py-2 text-sm text-ds-blue-700">
-								Auto-assigned from your company email domain.
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			</div>
+					</li>
+				</ul>
+			</section>
 
-			<Card className="border-border shadow-sm bg-background overflow-hidden">
-				<CardHeader className="border-b border-border">
-					<div className="flex items-center gap-3">
-						<div className="p-2 rounded-md bg-ds-purple-100 text-ds-purple-700">
-							<Award className="h-5 w-5" />
-						</div>
-						<div>
-							<CardTitle className="text-lg text-foreground">
-								Benefits by Tier
-							</CardTitle>
-							<CardDescription className="text-muted-foreground">
-								Compare included opportunities across sponsorship levels.
-							</CardDescription>
-						</div>
-					</div>
-				</CardHeader>
-				<CardContent className="p-0">
-					<Table>
-						<TableHeader>
-							<TableRow className="bg-muted">
-								<TableHead className="text-muted-foreground">Benefit</TableHead>
+			{/* Benefits — mobile: stacked cards; desktop: comparison table */}
+			<section className="space-y-3">
+				<div>
+					<h2 className="text-base font-semibold text-foreground">
+						Benefits by Tier
+					</h2>
+					<p className="text-sm text-muted-foreground">
+						Compare included opportunities across sponsorship levels.
+					</p>
+				</div>
+
+				{/* Mobile: one benefit per card with your-tier highlight */}
+				<ul className="-mx-4 divide-y border-y md:hidden">
+					{benefits.map((benefit) => {
+						const yourValue =
+							currentTierKey && currentTierKey in benefit
+								? benefit[currentTierKey]
+								: undefined;
+						return (
+							<li key={benefit.name} className="space-y-3 px-4 py-4">
+								<p className="text-sm font-medium leading-5">{benefit.name}</p>
+								{yourValue !== undefined && (
+									<div className="flex items-center gap-2 rounded-md bg-ds-blue-100/60 px-3 py-2 text-sm text-ds-blue-700">
+										{yourValue === true || typeof yourValue === "string" ? (
+											<Check className="size-4 shrink-0" />
+										) : (
+											<X className="size-4 shrink-0 text-muted-foreground" />
+										)}
+										<span>Your tier: {formatBenefitValue(yourValue)}</span>
+									</div>
+								)}
+								<div className="grid grid-cols-2 gap-2">
+									{(
+										[
+											["Bronze", benefit.bronze],
+											["Silver", benefit.silver],
+											["Gold", benefit.gold],
+											["Diamond", benefit.diamond],
+										] as const
+									).map(([tier, value]) => (
+										<div
+											key={tier}
+											className={cn(
+												"rounded-md border px-2.5 py-2",
+												sponsorData?.sponsorTier === tier &&
+													"border-ieee-blue bg-ds-blue-100/40",
+											)}
+										>
+											<p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+												{tier}
+											</p>
+											<p className="mt-0.5 flex items-center gap-1 text-xs font-medium">
+												{value === true ? (
+													<>
+														<Check className="size-3.5 text-ds-green-700" />
+														Yes
+													</>
+												) : value === false ? (
+													<>
+														<X className="size-3.5 text-muted-foreground" />—
+													</>
+												) : (
+													value
+												)}
+											</p>
+										</div>
+									))}
+								</div>
+							</li>
+						);
+					})}
+				</ul>
+
+				{/* Desktop table */}
+				<div className="hidden overflow-x-auto rounded-md border md:block">
+					<table className="w-full text-sm">
+						<thead>
+							<tr className="border-b bg-muted/40">
+								<th className="px-4 py-3 text-left font-medium text-muted-foreground">
+									Benefit
+								</th>
 								{(["Bronze", "Silver", "Gold", "Diamond"] as const).map(
 									(tier) => (
-										<TableHead key={tier} className="text-center">
+										<th key={tier} className="px-3 py-3 text-center">
 											<div className="flex flex-col items-center gap-1">
 												<Badge
 													variant="outline"
 													className={cn("font-semibold", getTierColor(tier))}
 												>
-													{tier.toUpperCase()}
+													{tier}
 												</Badge>
 												<span className="text-xs text-muted-foreground">
 													{getTierAmount(tier)}
 												</span>
 											</div>
-										</TableHead>
+										</th>
 									),
 								)}
-							</TableRow>
-						</TableHeader>
-						<TableBody>
+							</tr>
+						</thead>
+						<tbody>
 							{benefits.map((benefit) => (
-								<TableRow key={benefit.name} className="hover:bg-muted/70">
-									<TableCell className="font-medium text-foreground">
-										{benefit.name}
-									</TableCell>
-									<TableCell>
-										<div className="flex items-center justify-center gap-2">
-											{renderBenefitIcon(benefit.bronze)}
-											{typeof benefit.bronze === "string" && (
-												<span className="text-xs font-medium text-ds-blue-700">
-													{benefit.bronze}
-												</span>
-											)}
-										</div>
-									</TableCell>
-									<TableCell>
-										<div className="flex items-center justify-center gap-2">
-											{renderBenefitIcon(benefit.silver)}
-											{typeof benefit.silver === "string" && (
-												<span className="text-xs font-medium text-ds-blue-700">
-													{benefit.silver}
-												</span>
-											)}
-										</div>
-									</TableCell>
-									<TableCell>
-										<div className="flex items-center justify-center gap-2">
-											{renderBenefitIcon(benefit.gold)}
-											{typeof benefit.gold === "string" && (
-												<span className="text-xs font-medium text-ds-blue-700">
-													{benefit.gold}
-												</span>
-											)}
-										</div>
-									</TableCell>
-									<TableCell>
-										<div className="flex items-center justify-center gap-2">
-											{renderBenefitIcon(benefit.diamond)}
-											{typeof benefit.diamond === "string" && (
-												<span className="text-xs font-medium text-ds-blue-700">
-													{benefit.diamond}
-												</span>
-											)}
-										</div>
-									</TableCell>
-								</TableRow>
+								<tr key={benefit.name} className="border-b last:border-0">
+									<td className="px-4 py-3 font-medium">{benefit.name}</td>
+									{(
+										[
+											benefit.bronze,
+											benefit.silver,
+											benefit.gold,
+											benefit.diamond,
+										] as const
+									).map((value, i) => (
+										<td key={i} className="px-3 py-3 text-center">
+											<div className="flex items-center justify-center gap-1.5">
+												{value === true ? (
+													<Check className="size-4 text-ds-green-700" />
+												) : value === false ? (
+													<X className="size-4 text-muted-foreground" />
+												) : (
+													<span className="text-xs font-medium text-ds-blue-700">
+														{value}
+													</span>
+												)}
+											</div>
+										</td>
+									))}
+								</tr>
 							))}
-						</TableBody>
-					</Table>
-				</CardContent>
-				{sponsorData?.sponsorTier && (
-					<CardFooter className="border-t border-ds-blue-100 bg-ds-blue-100 text-sm text-ds-blue-1000">
-						Your tier is{" "}
-						<strong className="mx-1">{sponsorData.sponsorTier}</strong>. Access
-						includes everything marked with ✓ and any tier-specific limits
-						listed in your column.
-					</CardFooter>
-				)}
-			</Card>
+						</tbody>
+					</table>
+				</div>
+			</section>
 
-			<Card className="border-border shadow-sm bg-background">
-				<CardHeader className="pb-2">
-					<div className="flex items-center gap-3">
-						<div className="p-2 rounded-md bg-ds-green-100 text-ds-green-700">
-							<Mail className="w-5 h-5" />
-						</div>
-						<CardTitle className="text-lg text-foreground">Support</CardTitle>
-					</div>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					<CardDescription className="text-base leading-relaxed text-muted-foreground">
-						Questions about sponsorship terms, resume access, or activations?
-						Reach the IEEE UCSD team directly.
-					</CardDescription>
-					<Button asChild className="gap-2">
-						<a href="mailto:ieee@ucsd.edu">
-							<Mail className="w-4 h-4" />
-							Contact IEEE UCSD
-						</a>
-					</Button>
-				</CardContent>
-			</Card>
-		</div>
+			{/* Support — one-tap contact */}
+			<section className="space-y-3">
+				<h2 className="text-base font-semibold">Support</h2>
+				<p className="text-sm text-muted-foreground">
+					Questions about sponsorship terms, resume access, or activations?
+					Reach the IEEE UCSD team directly.
+				</p>
+				<Button asChild className="h-12 w-full gap-2 sm:h-10 sm:w-auto">
+					<a href="mailto:ieee@ucsd.edu">
+						<Mail className="size-4" />
+						Contact IEEE UCSD
+					</a>
+				</Button>
+			</section>
+		</DashboardPage>
 	);
 }

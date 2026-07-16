@@ -34,7 +34,7 @@ export function BudgetTrackingCard({
 			onClick={isConfigured ? onClick : undefined}
 			disabled={!isConfigured}
 			className={cn(
-				"h-full w-full rounded-md border bg-card p-4 text-left shadow-sm transition-colors",
+				"flex h-full w-full flex-col items-stretch justify-start gap-0 whitespace-normal rounded-md border bg-card p-4 text-left shadow-sm transition-colors",
 				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 				isConfigured
 					? "hover:border-primary/50 hover:bg-accent/40"
@@ -42,24 +42,24 @@ export function BudgetTrackingCard({
 			)}
 			aria-label={`${DEPARTMENT_LABELS[department]} budget details`}
 		>
-			<div className="mb-3 flex items-center justify-between gap-3">
-				<div className="flex items-center gap-2">
+			<div className="mb-3 flex w-full items-center justify-between gap-3">
+				<div className="flex min-w-0 items-center gap-2">
 					<div
 						className={cn(
-							"rounded-md p-1.5",
+							"shrink-0 rounded-md p-1.5",
 							isConfigured
 								? "bg-primary/10 text-primary"
 								: "bg-muted text-muted-foreground",
 						)}
 					>
-						<Users className="w-3.5 h-3.5" />
+						<Users className="h-3.5 w-3.5" />
 					</div>
-					<span className="font-semibold text-sm">
+					<span className="truncate text-sm font-semibold">
 						{DEPARTMENT_LABELS[department]}
 					</span>
 				</div>
 				{!isConfigured && (
-					<span className="rounded-full border bg-muted px-2 py-1 text-xs text-muted-foreground">
+					<span className="shrink-0 rounded-full border bg-muted px-2 py-1 text-xs text-muted-foreground">
 						Not Configured
 					</span>
 				)}
@@ -67,7 +67,7 @@ export function BudgetTrackingCard({
 
 			{isConfigured ? (
 				<>
-					<div className="mb-4 flex items-end justify-between gap-3">
+					<div className="mb-4 flex w-full items-end justify-between gap-3">
 						<div className="min-w-0">
 							<p className="text-xl font-bold leading-none">
 								{formatCurrency(remainingBudget)}
@@ -77,7 +77,7 @@ export function BudgetTrackingCard({
 							</p>
 						</div>
 						{pendingBudget > 0 && (
-							<div className="text-right bg-ds-amber-100 px-1.5 py-0.5 rounded border border-ds-amber-100">
+							<div className="shrink-0 rounded border border-ds-amber-100 bg-ds-amber-100 px-1.5 py-0.5 text-right">
 								<p className="text-xs font-semibold text-ds-amber-900">
 									-{formatCurrency(pendingBudget)}
 								</p>
@@ -86,7 +86,7 @@ export function BudgetTrackingCard({
 						)}
 					</div>
 
-					<div className="space-y-1">
+					<div className="mt-auto w-full space-y-1">
 						<Progress value={Math.min(percentUsed, 100)} className="h-1.5" />
 						<div className="flex justify-between text-xs font-medium text-muted-foreground">
 							<span>0%</span>
@@ -96,8 +96,8 @@ export function BudgetTrackingCard({
 					</div>
 				</>
 			) : (
-				<div className="py-2 text-center">
-					<div className="w-full h-1 bg-muted rounded-full mb-1 opacity-50" />
+				<div className="flex w-full flex-1 flex-col justify-center py-2 text-center">
+					<div className="mb-1 h-1 w-full rounded-full bg-muted opacity-50" />
 					<p className="text-xs text-muted-foreground">
 						Budget not configured.
 					</p>

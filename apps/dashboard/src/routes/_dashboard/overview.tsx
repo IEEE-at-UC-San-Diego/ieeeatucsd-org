@@ -20,10 +20,12 @@ import {
 	DashboardPage,
 	PageHeader,
 } from "@/components/dashboard/DashboardPage";
+import { NetworkErrorState } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedQuery } from "@/hooks/useAuthedConvex";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { usePermissions } from "@/hooks/usePermissions";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
@@ -119,12 +121,24 @@ const activityConfig: Record<
 function OverviewPage() {
 	const { user, isLoading, signOut } = useAuth();
 	const { logtoId } = usePermissions();
+	const isOnline = useOnlineStatus();
 	const overviewData = useAuthedQuery(
 		api.users.getOverviewData,
 		logtoId ? { logtoId } : "skip",
 	);
 
 	if (isLoading) {
+		if (!isOnline) {
+			return (
+				<DashboardPage>
+					<NetworkErrorState
+						title="Can't finish signing in"
+						description="You're offline. Reconnect, then retry to load your account."
+						onRetry={() => window.location.reload()}
+					/>
+				</DashboardPage>
+			);
+		}
 		return (
 			<DashboardPage>
 				<div className="space-y-2 py-2">
@@ -149,16 +163,20 @@ function OverviewPage() {
 						<AlertCircle className="h-5 w-5 text-ds-amber-900 mt-0.5" />
 						<div className="space-y-3">
 							<h2 className="text-lg font-semibold text-ds-amber-900">
-								Finalizing account setup...
+								{isOnline
+									? "Finalizing account setup..."
+									: "Can't finish account setup"}
 							</h2>
 							<p className="text-sm text-ds-amber-900/80">
-								We are syncing your dashboard profile. This should only take a
-								moment.
+								{isOnline
+									? "We are syncing your dashboard profile. This should only take a moment."
+									: "You're offline. Reconnect, then retry so we can sync your profile."}
 							</p>
 							<div className="flex flex-wrap gap-2">
 								<Button
 									type="button"
 									size="sm"
+									className="h-11"
 									onClick={() => window.location.reload()}
 								>
 									<Loader2 className="h-4 w-4 mr-2" />
@@ -168,6 +186,7 @@ function OverviewPage() {
 									type="button"
 									variant="outline"
 									size="sm"
+									className="h-11"
 									onClick={() => signOut()}
 								>
 									Sign out
@@ -176,6 +195,22 @@ function OverviewPage() {
 						</div>
 					</div>
 				</div>
+			</DashboardPage>
+		);
+	}
+
+	if (!isOnline && overviewData === undefined) {
+		return (
+			<DashboardPage>
+				<PageHeader
+					hideTitleOnMobile
+					title={`Welcome back`}
+					description="Overview"
+				/>
+				<NetworkErrorState
+					description="Overview metrics need a connection. Reconnect and retry."
+					onRetry={() => window.location.reload()}
+				/>
 			</DashboardPage>
 		);
 	}
@@ -206,37 +241,38 @@ function OverviewPage() {
 				: "Good evening";
 
 	return (
-		<DashboardPage>
+		<DashboardPage variant="list">
 			{/* ─── Welcome Section ─── */}
 			<PageHeader
+				hideTitleOnMobile
 				title={`${greeting}, ${firstName}`}
 				description={`Your activity and progress${user.joinDate ? ` · Member since ${new Date(user.joinDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : ""}`}
 			/>
 
-			{/* ─── Compact Stats Row ─── */}
+			{/* ─── Compact Stats Row — balanced 2×2 on mobile ─── */}
 			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-				<div className="col-span-2 rounded-md border bg-card px-5 py-4 shadow-sm">
+				<div className="rounded-md border bg-card px-4 py-3.5 shadow-sm lg:col-span-2 lg:px-5 lg:py-4">
 					<p className="text-xs font-medium text-muted-foreground">Points</p>
-					<p className="mt-1 text-3xl font-semibold tracking-[-0.03em] tabular-nums">
+					<p className="mt-1 text-2xl font-semibold tracking-[-0.03em] tabular-nums lg:text-3xl">
 						{user.points || 0}
 					</p>
 				</div>
-				<div className="rounded-md border bg-card px-4 py-3">
+				<div className="rounded-md border bg-card px-4 py-3.5">
 					<p className="text-xs font-medium text-muted-foreground">Rank</p>
-					<p className="text-xl font-bold tabular-nums mt-0.5">
+					<p className="mt-1 text-xl font-bold tabular-nums">
 						{overviewData?.rank ? `#${overviewData.rank}` : "--"}
 						{overviewData?.totalMembers && (
-							<span className="text-xs font-normal text-muted-foreground ml-1">
+							<span className="ml-1 text-xs font-normal text-muted-foreground">
 								/ {overviewData.totalMembers}
 							</span>
 						)}
 					</p>
 				</div>
-				<div className="rounded-md border bg-card px-4 py-3">
+				<div className="rounded-md border bg-card px-4 py-3.5 lg:col-span-1">
 					<p className="text-xs font-medium text-muted-foreground">
 						Events attended
 					</p>
-					<p className="text-xl font-bold tabular-nums mt-0.5">
+					<p className="mt-1 text-xl font-bold tabular-nums">
 						{user.eventsAttended || 0}
 					</p>
 				</div>

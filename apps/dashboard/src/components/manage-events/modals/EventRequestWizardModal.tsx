@@ -1,6 +1,7 @@
 import { api } from "@convex/_generated/api";
 import { CheckCircle, Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { MobileTaskStepper, ResponsiveOverlay } from "@/components/mobile";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -13,14 +14,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { normalizeDepartment, normalizeEventType } from "../constants";
 import type { EventFormData, EventRequest } from "../types";
@@ -147,6 +142,7 @@ export function EventRequestWizardModal({
 }: EventRequestWizardModalProps) {
 	const isEditing = !!initialData;
 	const isConvertingDraft = initialData?.status === "draft";
+	const isMobile = useIsMobile();
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
 	const [currentStep, setCurrentStep] = useState(isEditing ? 2 : 1);
 	const [direction, setDirection] = useState<"forward" | "back">("forward");
@@ -158,14 +154,12 @@ export function EventRequestWizardModal({
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [submissionSucceeded, setSubmissionSucceeded] = useState(false);
-	const openerRef = useRef<HTMLElement | null>(null);
 	const initialSnapshotRef = useRef(JSON.stringify(formData));
 
 	// Sync form data when initialData changes (e.g., opening edit for a different event)
 	useEffect(() => {
 		if (isOpen) {
 			const nextFormData = buildFormDataFromInitial(initialData);
-			openerRef.current = document.activeElement as HTMLElement | null;
 			setFormData(nextFormData);
 			initialSnapshotRef.current = JSON.stringify(nextFormData);
 			setCurrentStep(initialData ? 2 : 1);
@@ -370,45 +364,107 @@ export function EventRequestWizardModal({
 		}
 	};
 
+	const footer = submissionSucceeded ? undefined : (
+		<div className="flex w-full items-center justify-between gap-2">
+			<div>
+				{currentStep > 1 && (
+					<Button
+						type="button"
+						variant="outline"
+						className="h-11 sm:h-9"
+						onClick={handleBack}
+					>
+						Back
+					</Button>
+				)}
+			</div>
+			<div className="flex flex-1 items-center justify-end gap-2">
+				{(blockedMessage || submitError) && (
+					<p
+						className={`mr-auto hidden text-xs sm:block ${submitError ? "text-destructive" : "text-muted-foreground"}`}
+						role={submitError ? "alert" : undefined}
+					>
+						{submitError || blockedMessage}
+					</p>
+				)}
+				<Button
+					type="button"
+					variant="outline"
+					className="h-11 sm:h-9"
+					onClick={requestClose}
+					disabled={isSubmitting}
+				>
+					Cancel
+				</Button>
+				{currentStep < steps.length ? (
+					<Button
+						type="button"
+						className="h-11 sm:h-9"
+						onClick={handleNext}
+						disabled={!canProceed()}
+					>
+						Next
+					</Button>
+				) : (
+					<Button
+						type="button"
+						className="h-11 sm:h-9"
+						onClick={handleSubmit}
+						disabled={isSubmitting}
+					>
+						{isSubmitting ? (
+							<Loader2 className="h-4 w-4 animate-spin" />
+						) : (
+							<CheckCircle className="h-4 w-4" />
+						)}
+						{isConvertingDraft
+							? "Submit Request"
+							: isEditing
+								? "Update Request"
+								: "Submit Request"}
+					</Button>
+				)}
+			</div>
+		</div>
+	);
+
 	return (
 		<>
-			<Dialog open={isOpen} onOpenChange={(open) => !open && requestClose()}>
-				<DialogContent
-					className="flex h-dvh w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none border-0 p-0 sm:h-[min(720px,calc(100vh-48px))] sm:w-[min(960px,calc(100vw-48px))] sm:max-w-none sm:rounded-md sm:border"
-					showCloseButton={!isSubmitting}
-					onOpenAutoFocus={() => {
-						const activeElement = document.activeElement as HTMLElement | null;
-						if (activeElement && !activeElement.closest('[role="dialog"]')) {
-							openerRef.current = activeElement;
-						}
-					}}
-					onCloseAutoFocus={(event) => {
-						event.preventDefault();
-						openerRef.current?.focus();
-					}}
+			<ResponsiveOverlay
+				open={isOpen}
+				onOpenChange={(open) => !open && requestClose()}
+				title={
+					isConvertingDraft
+						? "Convert Draft to Event Request"
+						: isEditing
+							? "Edit Event Request"
+							: "Create Event Request"
+				}
+				description={
+					isMobile
+						? undefined
+						: `Step ${currentStep} of ${steps.length}: ${steps[currentStep - 1].title}`
+				}
+				variant="fullscreen"
+				className="sm:h-[min(720px,calc(100vh-48px))] sm:w-[min(960px,calc(100vw-48px))] sm:max-w-none"
+				footer={footer}
+			>
+				<form
+					onSubmit={(e) => e.preventDefault()}
+					className="mx-auto max-w-3xl"
 				>
-					<form
-						onSubmit={(e) => e.preventDefault()}
-						className="flex min-h-0 flex-1 flex-col"
-					>
-						<DialogHeader className="shrink-0 border-b px-5 py-4 pr-14 sm:px-6">
-							<DialogTitle>
-								{isConvertingDraft
-									? "Convert Draft to Event Request"
-									: isEditing
-										? "Edit Event Request"
-										: "Create Event Request"}
-							</DialogTitle>
-							<p className="text-sm text-muted-foreground">
-								Step {currentStep} of {steps.length}:{" "}
-								{steps[currentStep - 1].title}
-							</p>
-						</DialogHeader>
-
-						<div className="shrink-0 border-b bg-muted/20 px-5 py-3 sm:px-6">
+					{isMobile ? (
+						<MobileTaskStepper
+							currentStep={currentStep}
+							totalSteps={steps.length}
+							stepTitle={steps[currentStep - 1].title}
+							className="mb-4"
+						/>
+					) : (
+						<div className="mb-4">
 							<Progress value={progress} className="h-1" />
 							<ol
-								className="mt-3 hidden grid-cols-6 gap-2 sm:grid"
+								className="mt-3 grid grid-cols-6 gap-2"
 								aria-label="Event request steps"
 							>
 								{steps.map((step) => (
@@ -424,127 +480,66 @@ export function EventRequestWizardModal({
 									</li>
 								))}
 							</ol>
-							<p className="mt-2 text-xs text-muted-foreground sm:hidden">
-								{currentStep < steps.length
-									? `Next: ${steps[currentStep].title}`
-									: "Final review"}
+						</div>
+					)}
+
+					{submissionSucceeded ? (
+						<div className="flex min-h-80 flex-col items-center justify-center text-center success-reveal">
+							<CheckCircle className="size-10 text-ds-green-700" />
+							<h2 className="mt-3 text-lg font-semibold">Request saved</h2>
+							<p className="mt-1 text-sm text-muted-foreground">
+								Your event request was submitted successfully.
 							</p>
 						</div>
-
-						<div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
-							<div className="mx-auto max-w-3xl">
-								{submissionSucceeded ? (
-									<div className="flex min-h-80 flex-col items-center justify-center text-center success-reveal">
-										<CheckCircle className="size-10 text-ds-green-700" />
-										<h2 className="mt-3 text-lg font-semibold">
-											Request saved
-										</h2>
-										<p className="mt-1 text-sm text-muted-foreground">
-											Your event request was submitted successfully.
-										</p>
-									</div>
-								) : (
-									<div
-										key={`${currentStep}-${direction}`}
-										className="min-h-[300px] animate-in fade-in duration-150 ease-[var(--ease-out)] motion-instant-reduce"
-									>
-										{renderStepContent()}
-									</div>
-								)}
-							</div>
+					) : (
+						<div
+							key={`${currentStep}-${direction}`}
+							className="min-h-[300px] animate-in fade-in duration-150 ease-[var(--ease-out)] motion-instant-reduce"
+						>
+							{renderStepContent()}
 						</div>
+					)}
 
-						{currentStep === 1 && !submissionSucceeded && (
-							<div className="shrink-0 border-t bg-background px-5 py-3 sm:px-6">
-								<label
-									htmlFor="event-requirements"
-									className="mx-auto flex max-w-3xl cursor-pointer items-start gap-3 text-sm leading-5"
-								>
-									<Checkbox
-										id="event-requirements"
-										checked={disclaimerAccepted}
-										onCheckedChange={(value) =>
-											setDisclaimerAccepted(value === true)
-										}
-										className="mt-0.5"
-									/>
-									<span>
-										I have read the requirements and agree to follow the event,
-										funding, and safety policies.
-									</span>
-								</label>
-							</div>
-						)}
-
-						<DialogFooter className="flex shrink-0 items-center justify-between border-t bg-background px-5 py-3 shadow-[0_-8px_16px_-16px_rgba(0,0,0,0.35)] sm:px-6">
-							<div>
-								{currentStep > 1 && !submissionSucceeded && (
-									<Button type="button" variant="outline" onClick={handleBack}>
-										Back
-									</Button>
-								)}
-							</div>
-							<div className="flex flex-1 items-center justify-end gap-2">
-								{(blockedMessage || submitError) && !submissionSucceeded && (
-									<p
-										className={`mr-auto hidden text-xs sm:block ${submitError ? "text-destructive" : "text-muted-foreground"}`}
-										role={submitError ? "alert" : undefined}
-									>
-										{submitError || blockedMessage}
-									</p>
-								)}
-								{!submissionSucceeded && (
-									<Button
-										type="button"
-										variant="outline"
-										onClick={requestClose}
-										disabled={isSubmitting}
-									>
-										Cancel
-									</Button>
-								)}
-								{!submissionSucceeded && currentStep < steps.length ? (
-									<Button
-										type="button"
-										onClick={handleNext}
-										disabled={!canProceed()}
-									>
-										Next
-									</Button>
-								) : !submissionSucceeded ? (
-									<Button
-										type="button"
-										onClick={handleSubmit}
-										disabled={isSubmitting}
-									>
-										{isSubmitting ? (
-											<Loader2 className="h-4 w-4 animate-spin" />
-										) : (
-											<CheckCircle className="h-4 w-4" />
-										)}
-										{isConvertingDraft
-											? "Submit Request"
-											: isEditing
-												? "Update Request"
-												: "Submit Request"}
-									</Button>
-								) : null}
-							</div>
-						</DialogFooter>
-					</form>
-				</DialogContent>
-			</Dialog>
+					{currentStep === 1 && !submissionSucceeded && (
+						<div className="mt-4 border-t pt-4">
+							<label
+								htmlFor="event-requirements"
+								className="flex cursor-pointer items-start gap-3 text-sm leading-5"
+							>
+								<Checkbox
+									id="event-requirements"
+									checked={disclaimerAccepted}
+									onCheckedChange={(value) =>
+										setDisclaimerAccepted(value === true)
+									}
+									className="mt-0.5"
+								/>
+								<span>
+									I have read the requirements and agree to follow the event,
+									funding, and safety policies.
+								</span>
+							</label>
+						</div>
+					)}
+				</form>
+			</ResponsiveOverlay>
 			<AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
-				<AlertDialogContent>
+				<AlertDialogContent className="sm:max-w-md">
 					<AlertDialogHeader>
 						<AlertDialogTitle>Discard this event request?</AlertDialogTitle>
 						<AlertDialogDescription>
 							Your changes have not been saved. This action cannot be undone.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Keep editing</AlertDialogCancel>
-						<AlertDialogAction variant="destructive" onClick={resetAndClose}>
+					<AlertDialogFooter className="gap-2 sm:gap-2">
+						<AlertDialogCancel className="h-11 sm:h-9">
+							Keep editing
+						</AlertDialogCancel>
+						<AlertDialogAction
+							variant="destructive"
+							className="h-11 sm:h-9"
+							onClick={resetAndClose}
+						>
 							Discard changes
 						</AlertDialogAction>
 					</AlertDialogFooter>

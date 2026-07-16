@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ResponsiveOverlay } from "@/components/mobile";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -28,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { formatDateDisplay } from "@/lib/formatters";
@@ -43,6 +45,7 @@ export const Route = createFileRoute("/_dashboard/settings")({
 
 function SettingsPage() {
 	const { user, isLoading, logtoId } = useAuth();
+	const isMobile = useIsMobile();
 	const updateProfile = useAuthedMutation(api.users.updateProfile);
 	const generateResumeUploadUrl = useAuthedMutation(
 		api.users.generateResumeUploadUrl,
@@ -72,6 +75,7 @@ function SettingsPage() {
 	const [downloadingResume, setDownloadingResume] = useState(false);
 	const [removingResume, setRemovingResume] = useState(false);
 	const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+	const [resumePickerOpen, setResumePickerOpen] = useState(false);
 
 	const resumeUrl = user?.resumeUrl;
 
@@ -356,8 +360,8 @@ function SettingsPage() {
 			</header>
 
 			{/* Settings Content */}
-			<main className="p-4 md:p-6">
-				<div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
+			<main className="px-4 py-5 sm:px-6 md:p-6">
+				<div className="mx-auto max-w-4xl min-w-0 space-y-4 md:space-y-6">
 					{/* Status Messages */}
 					{error && (
 						<div className="flex items-center space-x-2 p-4 bg-ds-red-100 border border-ds-red-100 rounded-lg text-ds-red-800">
@@ -564,70 +568,110 @@ function SettingsPage() {
 												Resume link unavailable. Try refreshing the page.
 											</p>
 										)}
-										<AlertDialog
-											open={removeDialogOpen}
-											onOpenChange={setRemoveDialogOpen}
-										>
-											<AlertDialogTrigger asChild>
-												<Button
-													variant="outline"
-													size="sm"
-													className="text-ds-red-800 hover:text-ds-red-800"
-													disabled={removingResume}
-												>
-													Remove
-												</Button>
-											</AlertDialogTrigger>
-											<AlertDialogContent>
-												<AlertDialogHeader>
-													<AlertDialogTitle>Remove resume?</AlertDialogTitle>
-													<AlertDialogDescription>
-														This will permanently delete your resume file. You
-														can upload a new one at any time.
-													</AlertDialogDescription>
-												</AlertDialogHeader>
-												<AlertDialogFooter>
-													<AlertDialogCancel disabled={removingResume}>
-														Cancel
-													</AlertDialogCancel>
-													<AlertDialogAction
+										{isMobile ? (
+											<Button
+												variant="outline"
+												size="sm"
+												className="h-11 text-ds-red-800 hover:text-ds-red-800"
+												disabled={removingResume}
+												onClick={() => setRemoveDialogOpen(true)}
+											>
+												Remove
+											</Button>
+										) : (
+											<AlertDialog
+												open={removeDialogOpen}
+												onOpenChange={setRemoveDialogOpen}
+											>
+												<AlertDialogTrigger asChild>
+													<Button
+														variant="outline"
+														size="sm"
+														className="text-ds-red-800 hover:text-ds-red-800"
 														disabled={removingResume}
-														className="bg-red-600 hover:bg-red-700"
-														onClick={async (e) => {
-															e.preventDefault();
-															const removed = await handleResumeRemove();
-															if (removed) {
-																setRemoveDialogOpen(false);
-															}
-														}}
 													>
-														{removingResume ? "Removing..." : "Remove"}
-													</AlertDialogAction>
-												</AlertDialogFooter>
-											</AlertDialogContent>
-										</AlertDialog>
+														Remove
+													</Button>
+												</AlertDialogTrigger>
+												<AlertDialogContent>
+													<AlertDialogHeader>
+														<AlertDialogTitle>Remove resume?</AlertDialogTitle>
+														<AlertDialogDescription>
+															This will permanently delete your resume file. You
+															can upload a new one at any time.
+														</AlertDialogDescription>
+													</AlertDialogHeader>
+													<AlertDialogFooter>
+														<AlertDialogCancel disabled={removingResume}>
+															Cancel
+														</AlertDialogCancel>
+														<AlertDialogAction
+															disabled={removingResume}
+															className="bg-red-600 hover:bg-red-700"
+															onClick={async (e) => {
+																e.preventDefault();
+																const removed = await handleResumeRemove();
+																if (removed) {
+																	setRemoveDialogOpen(false);
+																}
+															}}
+														>
+															{removingResume ? "Removing..." : "Remove"}
+														</AlertDialogAction>
+													</AlertDialogFooter>
+												</AlertDialogContent>
+											</AlertDialog>
+										)}
 									</div>
 								</div>
 
 								<div className="border-t pt-4">
 									<h3 className="font-medium mb-2">Replace Resume</h3>
-									<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-										<Input
-											type="file"
-											accept=".pdf,application/pdf"
-											onChange={(e) =>
-												handleResumeFileChange(e.target.files?.[0] || null)
-											}
-											className="flex-1 text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-ds-blue-700 hover:file:bg-ds-blue-200"
-										/>
-										<Button
-											onClick={handleResumeUpload}
-											disabled={!resumeFile || uploadingResume}
-										>
-											<Upload className="h-4 w-4 mr-2" />
-											{uploadingResume ? "Uploading..." : "Replace"}
-										</Button>
-									</div>
+									{isMobile ? (
+										<div className="space-y-3">
+											{resumeFile && (
+												<p className="text-sm text-muted-foreground truncate">
+													Selected: {resumeFile.name}
+												</p>
+											)}
+											<div className="flex gap-2">
+												<Button
+													type="button"
+													variant="outline"
+													className="h-11 flex-1"
+													onClick={() => setResumePickerOpen(true)}
+												>
+													Choose PDF
+												</Button>
+												<Button
+													className="h-11 flex-1"
+													onClick={handleResumeUpload}
+													disabled={!resumeFile || uploadingResume}
+												>
+													<Upload className="h-4 w-4 mr-2" />
+													{uploadingResume ? "Uploading..." : "Replace"}
+												</Button>
+											</div>
+										</div>
+									) : (
+										<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+											<Input
+												type="file"
+												accept=".pdf,application/pdf"
+												onChange={(e) =>
+													handleResumeFileChange(e.target.files?.[0] || null)
+												}
+												className="flex-1 text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-ds-blue-700 hover:file:bg-ds-blue-200"
+											/>
+											<Button
+												onClick={handleResumeUpload}
+												disabled={!resumeFile || uploadingResume}
+											>
+												<Upload className="h-4 w-4 mr-2" />
+												{uploadingResume ? "Uploading..." : "Replace"}
+											</Button>
+										</div>
+									)}
 								</div>
 							</div>
 						) : (
@@ -638,23 +682,51 @@ function SettingsPage() {
 										No resume uploaded. Upload your resume for networking
 										opportunities.
 									</p>
-									<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
-										<Input
-											type="file"
-											accept=".pdf,application/pdf"
-											onChange={(e) =>
-												handleResumeFileChange(e.target.files?.[0] || null)
-											}
-											className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-ds-blue-700 hover:file:bg-ds-blue-200"
-										/>
-										<Button
-											onClick={handleResumeUpload}
-											disabled={!resumeFile || uploadingResume}
-										>
-											<Upload className="h-4 w-4 mr-2" />
-											{uploadingResume ? "Uploading..." : "Upload"}
-										</Button>
-									</div>
+									{isMobile ? (
+										<div className="space-y-3">
+											{resumeFile && (
+												<p className="text-sm text-muted-foreground truncate">
+													Selected: {resumeFile.name}
+												</p>
+											)}
+											<div className="flex flex-col gap-2">
+												<Button
+													type="button"
+													variant="outline"
+													className="h-11 w-full"
+													onClick={() => setResumePickerOpen(true)}
+												>
+													Choose PDF
+												</Button>
+												<Button
+													className="h-11 w-full"
+													onClick={handleResumeUpload}
+													disabled={!resumeFile || uploadingResume}
+												>
+													<Upload className="h-4 w-4 mr-2" />
+													{uploadingResume ? "Uploading..." : "Upload"}
+												</Button>
+											</div>
+										</div>
+									) : (
+										<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
+											<Input
+												type="file"
+												accept=".pdf,application/pdf"
+												onChange={(e) =>
+													handleResumeFileChange(e.target.files?.[0] || null)
+												}
+												className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-ds-blue-700 hover:file:bg-ds-blue-200"
+											/>
+											<Button
+												onClick={handleResumeUpload}
+												disabled={!resumeFile || uploadingResume}
+											>
+												<Upload className="h-4 w-4 mr-2" />
+												{uploadingResume ? "Uploading..." : "Upload"}
+											</Button>
+										</div>
+									)}
 								</div>
 								<p className="text-xs text-muted-foreground">
 									PDF only, maximum 5MB
@@ -662,6 +734,67 @@ function SettingsPage() {
 							</div>
 						)}
 					</div>
+
+					<ResponsiveOverlay
+						open={resumePickerOpen}
+						onOpenChange={setResumePickerOpen}
+						title="Upload resume"
+						description="PDF only, maximum 5MB. Files are not camera/photo captures."
+						variant="sheet"
+					>
+						<div className="space-y-3 pb-2">
+							<label className="motion-press flex h-12 w-full cursor-pointer items-center justify-center rounded-md border bg-card text-sm font-medium">
+								Choose PDF from Files
+								<input
+									type="file"
+									accept=".pdf,application/pdf"
+									className="sr-only"
+									onChange={(e) => {
+										handleResumeFileChange(e.target.files?.[0] || null);
+										setResumePickerOpen(false);
+									}}
+								/>
+							</label>
+							<p className="text-xs text-muted-foreground text-center">
+								Camera and photo library are not used — resumes must be PDF.
+							</p>
+						</div>
+					</ResponsiveOverlay>
+
+					<ResponsiveOverlay
+						open={isMobile && removeDialogOpen}
+						onOpenChange={setRemoveDialogOpen}
+						title="Remove resume?"
+						description="This will permanently delete your resume file. You can upload a new one later."
+						variant="sheet"
+						footer={
+							<div className="flex w-full gap-2">
+								<Button
+									variant="outline"
+									className="h-11 flex-1"
+									disabled={removingResume}
+									onClick={() => setRemoveDialogOpen(false)}
+								>
+									Cancel
+								</Button>
+								<Button
+									variant="destructive"
+									className="h-11 flex-1"
+									disabled={removingResume}
+									onClick={async () => {
+										const ok = await handleResumeRemove();
+										if (ok) setRemoveDialogOpen(false);
+									}}
+								>
+									{removingResume ? "Removing..." : "Remove"}
+								</Button>
+							</div>
+						}
+					>
+						<p className="pb-2 text-sm text-muted-foreground">
+							Sponsors and officers will no longer see your resume.
+						</p>
+					</ResponsiveOverlay>
 
 					{/* Account Information */}
 					<div className="rounded-md border bg-card p-4 md:p-6">

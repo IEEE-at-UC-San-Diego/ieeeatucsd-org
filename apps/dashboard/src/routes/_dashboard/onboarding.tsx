@@ -21,16 +21,17 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+	DashboardPage,
+	PageHeader,
+} from "@/components/dashboard/DashboardPage";
+import {
+	MobileDataList,
+	MobileDataListItem,
+	ResponsiveOverlay,
+} from "@/components/mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -51,11 +52,13 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DEFAULT_DIRECT_ONBOARDING_EMAIL_TEMPLATE } from "@/lib/onboarding-template";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_dashboard/onboarding")({
 	loader: (ctx) =>
@@ -85,6 +88,12 @@ function createPositionField(value = ""): PositionField {
 		value,
 	};
 }
+
+/** Sticky, safe-area-aware submit bar. Full-bleed inside a `p-6` card on mobile, inline on desktop. */
+const STICKY_FORM_FOOTER =
+	"sticky bottom-0 z-10 -mx-6 -mb-6 rounded-b-md border-t bg-card/95 px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:static sm:mx-0 sm:mb-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:pt-4 sm:backdrop-blur-none";
+
+const MOBILE_INPUT = "h-11 text-base md:h-9 md:text-sm";
 
 // ── Main Page ──
 
@@ -119,33 +128,46 @@ function OnboardingPage() {
 	}
 
 	return (
-		<div className="p-6 space-y-6">
-			<div>
-				<h1 className="text-2xl font-bold tracking-tight">Onboarding</h1>
-				<p className="text-muted-foreground">
-					Manage officer invitations and onboarding.
-				</p>
-			</div>
+		<DashboardPage variant="list">
+			<PageHeader
+				title="Onboarding"
+				description="Manage officer invitations and onboarding."
+				hideTitleOnMobile
+			/>
 
 			<Tabs defaultValue="invitation" className="space-y-6">
-				<TabsList variant="line">
-					<TabsTrigger value="invitation" className="gap-2">
-						<Mail className="h-4 w-4" />
-						Invitation Flow
-					</TabsTrigger>
-					<TabsTrigger value="direct" className="gap-2">
-						<UserPlus className="h-4 w-4" />
-						Direct Onboarding
-					</TabsTrigger>
-					<TabsTrigger value="pending" className="gap-2">
-						<List className="h-4 w-4" />
-						Pending Invitations
-					</TabsTrigger>
-					<TabsTrigger value="rejections" className="gap-2">
-						<XCircle className="h-4 w-4" />
-						Rejections
-					</TabsTrigger>
-				</TabsList>
+				<div className="-mx-4 overflow-x-auto scrollbar-quiet px-4 sm:-mx-6 sm:px-6 md:mx-0 md:overflow-visible md:px-0">
+					<TabsList variant="line" className="h-11 w-max gap-1 md:h-9 md:w-fit">
+						<TabsTrigger
+							value="invitation"
+							className="h-11 shrink-0 gap-2 whitespace-nowrap px-4 md:h-8 md:px-2"
+						>
+							<Mail className="h-4 w-4" />
+							Invitation Flow
+						</TabsTrigger>
+						<TabsTrigger
+							value="direct"
+							className="h-11 shrink-0 gap-2 whitespace-nowrap px-4 md:h-8 md:px-2"
+						>
+							<UserPlus className="h-4 w-4" />
+							Direct Onboarding
+						</TabsTrigger>
+						<TabsTrigger
+							value="pending"
+							className="h-11 shrink-0 gap-2 whitespace-nowrap px-4 md:h-8 md:px-2"
+						>
+							<List className="h-4 w-4" />
+							Pending Invitations
+						</TabsTrigger>
+						<TabsTrigger
+							value="rejections"
+							className="h-11 shrink-0 gap-2 whitespace-nowrap px-4 md:h-8 md:px-2"
+						>
+							<XCircle className="h-4 w-4" />
+							Rejections
+						</TabsTrigger>
+					</TabsList>
+				</div>
 
 				<TabsContent value="invitation">
 					<InvitationFlowTab logtoId={logtoId} />
@@ -163,7 +185,7 @@ function OnboardingPage() {
 					<RejectionsTab logtoId={logtoId} />
 				</TabsContent>
 			</Tabs>
-		</div>
+		</DashboardPage>
 	);
 }
 
@@ -333,6 +355,8 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 								placeholder="John Doe"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
+								className={MOBILE_INPUT}
+								autoComplete="name"
 								required
 							/>
 						</div>
@@ -343,6 +367,9 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 								placeholder="john.doe@ucsd.edu"
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
+								className={MOBILE_INPUT}
+								inputMode="email"
+								autoComplete="email"
 								required
 							/>
 						</div>
@@ -352,7 +379,7 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 						<div className="space-y-2">
 							<Label>Officer Role *</Label>
 							<Select value={role} onValueChange={setRole}>
-								<SelectTrigger>
+								<SelectTrigger className={MOBILE_INPUT}>
 									<SelectValue placeholder="Select role" />
 								</SelectTrigger>
 								<SelectContent>
@@ -373,12 +400,14 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 											placeholder="e.g., Webmaster, President"
 											value={position.value}
 											onChange={(e) => updatePosition(index, e.target.value)}
+											className={MOBILE_INPUT}
 											required={index === 0}
 										/>
 										<Button
 											type="button"
 											variant="outline"
 											size="icon"
+											className="size-11 shrink-0 md:size-9"
 											onClick={() => removePosition(index)}
 											disabled={positions.length === 1}
 											aria-label="Remove position"
@@ -408,7 +437,7 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 						<div className="space-y-2">
 							<Label>Team Assignment (Optional)</Label>
 							<Select value={team} onValueChange={setTeam}>
-								<SelectTrigger>
+								<SelectTrigger className={MOBILE_INPUT}>
 									<SelectValue placeholder="Select a team" />
 								</SelectTrigger>
 								<SelectContent>
@@ -427,6 +456,7 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 								type="datetime-local"
 								value={acceptanceDeadline}
 								onChange={(e) => setAcceptanceDeadline(e.target.value)}
+								className={MOBILE_INPUT}
 							/>
 							<p className="text-xs text-muted-foreground">
 								Date and time by which the officer must accept
@@ -440,6 +470,8 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 							placeholder="e.g., Jane Smith"
 							value={leaderName}
 							onChange={(e) => setLeaderName(e.target.value)}
+							className={MOBILE_INPUT}
+							autoComplete="name"
 						/>
 					</div>
 
@@ -450,6 +482,7 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 							value={message}
 							onChange={(e) => setMessage(e.target.value)}
 							rows={4}
+							className="text-base md:text-sm"
 						/>
 					</div>
 
@@ -473,8 +506,12 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 						</ul>
 					</div>
 
-					<div className="flex justify-end pt-4">
-						<Button type="submit" disabled={isSubmitting}>
+					<div className={cn(STICKY_FORM_FOOTER, "flex justify-end")}>
+						<Button
+							type="submit"
+							className="h-11 w-full sm:h-9 sm:w-auto"
+							disabled={isSubmitting}
+						>
 							{isSubmitting ? (
 								<Loader2 className="h-4 w-4 animate-spin mr-2" />
 							) : (
@@ -735,8 +772,8 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 		<div className="max-w-4xl space-y-4">
 			{/* Google Sheets URL Configuration Card */}
 			<div className="rounded-md border bg-card p-6">
-				<div className="flex items-start justify-between gap-4">
-					<div className="flex-1">
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+					<div className="flex-1 min-w-0">
 						<h3 className="text-lg font-semibold flex items-center gap-2">
 							<Settings className="w-5 h-5" />
 							Onboarding Email Configuration
@@ -779,6 +816,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 					</div>
 					<Button
 						variant="outline"
+						className="h-11 w-full shrink-0 sm:h-9 sm:w-auto"
 						onClick={() => {
 							setTempGoogleSheetsUrl(googleSheetsUrl);
 							setTempEmailTemplate(savedEmailTemplate);
@@ -811,6 +849,8 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 								placeholder="John Doe"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
+								className={MOBILE_INPUT}
+								autoComplete="name"
 								required
 							/>
 						</div>
@@ -821,6 +861,9 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 								placeholder="john.doe@ucsd.edu"
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
+								className={MOBILE_INPUT}
+								inputMode="email"
+								autoComplete="email"
 								required
 							/>
 						</div>
@@ -830,7 +873,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 						<div className="space-y-2">
 							<Label>Officer Role *</Label>
 							<Select value={role} onValueChange={setRole}>
-								<SelectTrigger>
+								<SelectTrigger className={MOBILE_INPUT}>
 									<SelectValue placeholder="Select role" />
 								</SelectTrigger>
 								<SelectContent>
@@ -848,6 +891,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 								placeholder="e.g., Webmaster, President"
 								value={position}
 								onChange={(e) => setPosition(e.target.value)}
+								className={MOBILE_INPUT}
 								required
 							/>
 						</div>
@@ -857,7 +901,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 						<div className="space-y-2">
 							<Label>Team Assignment (Optional)</Label>
 							<Select value={team} onValueChange={setTeam}>
-								<SelectTrigger>
+								<SelectTrigger className={MOBILE_INPUT}>
 									<SelectValue placeholder="Select a team" />
 								</SelectTrigger>
 								<SelectContent>
@@ -876,6 +920,8 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 								placeholder="e.g., Jane Smith"
 								value={leaderName}
 								onChange={(e) => setLeaderName(e.target.value)}
+								className={MOBILE_INPUT}
+								autoComplete="name"
 							/>
 						</div>
 					</div>
@@ -887,6 +933,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 							value={customMessage}
 							onChange={(e) => setCustomMessage(e.target.value)}
 							rows={3}
+							className="text-base md:text-sm"
 						/>
 					</div>
 
@@ -917,16 +964,26 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 						</ul>
 					</div>
 
-					<div className="flex justify-end gap-3 pt-4">
+					<div
+						className={cn(
+							STICKY_FORM_FOOTER,
+							"flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3",
+						)}
+					>
 						<Button
 							type="button"
 							variant="outline"
+							className="h-11 w-full sm:h-9 sm:w-auto"
 							onClick={() => setShowPreview(true)}
 						>
 							<Eye className="h-4 w-4 mr-2" />
 							Preview Email
 						</Button>
-						<Button type="submit" disabled={isSubmitting}>
+						<Button
+							type="submit"
+							className="h-11 w-full sm:h-9 sm:w-auto"
+							disabled={isSubmitting}
+						>
 							{isSubmitting ? (
 								<Loader2 className="h-4 w-4 animate-spin mr-2" />
 							) : (
@@ -938,28 +995,31 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 				</form>
 			</div>
 
-			{/* Email Preview Dialog */}
-			<Dialog open={showPreview} onOpenChange={setShowPreview}>
-				<DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-y-auto">
-					<DialogHeader>
-						<DialogTitle>Email Preview</DialogTitle>
-						<DialogDescription>
-							Preview of the onboarding email that will be sent.
-						</DialogDescription>
-					</DialogHeader>
-					<div className="rounded-lg border bg-muted/50 p-4">
-						<pre className="whitespace-pre-wrap text-sm font-mono">
-							{getPreviewEmail()}
-						</pre>
-					</div>
-					<DialogFooter>
-						<Button onClick={() => setShowPreview(false)}>Close</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			{/* Email Preview */}
+			<ResponsiveOverlay
+				open={showPreview}
+				onOpenChange={setShowPreview}
+				title="Email Preview"
+				description="Preview of the onboarding email that will be sent."
+				variant="fullscreen"
+				footer={
+					<Button
+						className="h-11 w-full sm:h-9 sm:w-auto"
+						onClick={() => setShowPreview(false)}
+					>
+						Close
+					</Button>
+				}
+			>
+				<div className="rounded-lg border bg-muted/50 p-4">
+					<pre className="whitespace-pre-wrap text-sm font-mono">
+						{getPreviewEmail()}
+					</pre>
+				</div>
+			</ResponsiveOverlay>
 
-			{/* Settings Dialog */}
-			<Dialog
+			{/* Settings */}
+			<ResponsiveOverlay
 				open={showSettings}
 				onOpenChange={(open) => {
 					if (!open) {
@@ -969,71 +1029,14 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 						setTempEmailTemplate(savedEmailTemplate);
 					}
 				}}
-			>
-				<DialogContent className="sm:max-w-xl">
-					<DialogHeader>
-						<DialogTitle>Configure Onboarding Email</DialogTitle>
-						<DialogDescription>
-							Save the Direct Onboarding template and contact list URL. Accepted
-							invitations use this saved configuration.
-						</DialogDescription>
-					</DialogHeader>
-
-					<div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
-						<div className="space-y-2">
-							<Label>Google Sheets URL</Label>
-							<Input
-								type="url"
-								placeholder="https://docs.google.com/spreadsheets/d/..."
-								value={tempGoogleSheetsUrl}
-								onChange={(e) => setTempGoogleSheetsUrl(e.target.value)}
-							/>
-							<p className="text-xs text-muted-foreground">
-								The URL should start with
-								https://docs.google.com/spreadsheets/d/
-							</p>
-						</div>
-
-						<div className="space-y-2">
-							<Label>Saved Direct Onboarding Template</Label>
-							<p className="text-xs text-muted-foreground">
-								Use {"{NAME}"}, {"{POSITION}"}, {"{LEADER_INFO}"}, and{" "}
-								{"{CUSTOM_MESSAGE}"} as placeholders.
-							</p>
-							<Textarea
-								value={tempEmailTemplate}
-								onChange={(e) => setTempEmailTemplate(e.target.value)}
-								rows={12}
-								className="font-mono text-sm"
-							/>
-						</div>
-
-						{settingsError && (
-							<div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-								<AlertCircle className="w-4 h-4 shrink-0" />
-								<span>{settingsError}</span>
-							</div>
-						)}
-
-						<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-4">
-							<h4 className="text-sm font-medium text-ds-blue-1000 mb-2">
-								Instructions:
-							</h4>
-							<ol className="text-sm text-ds-blue-700 space-y-1 list-decimal list-inside">
-								<li>Open your Google Sheets contact list</li>
-								<li>
-									Click "Share" and ensure it's accessible to anyone with the
-									link
-								</li>
-								<li>Copy the full URL from your browser's address bar</li>
-								<li>Paste it in the field above</li>
-							</ol>
-						</div>
-					</div>
-
-					<DialogFooter>
+				title="Configure Onboarding Email"
+				description="Save the Direct Onboarding template and contact list URL. Accepted invitations use this saved configuration."
+				variant="large-sheet"
+				footer={
+					<div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 						<Button
 							variant="outline"
+							className="h-11 w-full sm:h-9 sm:w-auto"
 							onClick={() => {
 								setShowSettings(false);
 								setSettingsError(null);
@@ -1043,7 +1046,11 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 						>
 							Cancel
 						</Button>
-						<Button onClick={handleSaveSettings} disabled={savingSettings}>
+						<Button
+							className="h-11 w-full sm:h-9 sm:w-auto"
+							onClick={handleSaveSettings}
+							disabled={savingSettings}
+						>
 							{savingSettings ? (
 								<Loader2 className="h-4 w-4 animate-spin mr-2" />
 							) : (
@@ -1051,9 +1058,61 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 							)}
 							{savingSettings ? "Saving..." : "Save Settings"}
 						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+					</div>
+				}
+			>
+				<div className="space-y-4">
+					<div className="space-y-2">
+						<Label>Google Sheets URL</Label>
+						<Input
+							type="url"
+							placeholder="https://docs.google.com/spreadsheets/d/..."
+							value={tempGoogleSheetsUrl}
+							onChange={(e) => setTempGoogleSheetsUrl(e.target.value)}
+							className={MOBILE_INPUT}
+							inputMode="url"
+						/>
+						<p className="text-xs text-muted-foreground">
+							The URL should start with https://docs.google.com/spreadsheets/d/
+						</p>
+					</div>
+
+					<div className="space-y-2">
+						<Label>Saved Direct Onboarding Template</Label>
+						<p className="text-xs text-muted-foreground">
+							Use {"{NAME}"}, {"{POSITION}"}, {"{LEADER_INFO}"}, and{" "}
+							{"{CUSTOM_MESSAGE}"} as placeholders.
+						</p>
+						<Textarea
+							value={tempEmailTemplate}
+							onChange={(e) => setTempEmailTemplate(e.target.value)}
+							rows={12}
+							className="font-mono text-sm"
+						/>
+					</div>
+
+					{settingsError && (
+						<div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+							<AlertCircle className="w-4 h-4 shrink-0" />
+							<span>{settingsError}</span>
+						</div>
+					)}
+
+					<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-4">
+						<h4 className="text-sm font-medium text-ds-blue-1000 mb-2">
+							Instructions:
+						</h4>
+						<ol className="text-sm text-ds-blue-700 space-y-1 list-decimal list-inside">
+							<li>Open your Google Sheets contact list</li>
+							<li>
+								Click "Share" and ensure it's accessible to anyone with the link
+							</li>
+							<li>Copy the full URL from your browser's address bar</li>
+							<li>Paste it in the field above</li>
+						</ol>
+					</div>
+				</div>
+			</ResponsiveOverlay>
 		</div>
 	);
 }
@@ -1061,6 +1120,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 // ── Tab 3: Rejections ──
 
 function RejectionsTab({ logtoId }: { logtoId: string | null }) {
+	const isMobile = useIsMobile();
 	const { getAuthHeaders } = useAuth();
 	const rejections = useAuthedQuery(
 		api.officerRejections.list,
@@ -1186,6 +1246,8 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 								placeholder="John Doe"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
+								className={MOBILE_INPUT}
+								autoComplete="name"
 								required
 							/>
 						</div>
@@ -1196,6 +1258,9 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 								placeholder="john.doe@ucsd.edu"
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
+								className={MOBILE_INPUT}
+								inputMode="email"
+								autoComplete="email"
 								required
 							/>
 						</div>
@@ -1210,11 +1275,13 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 										placeholder="e.g., Webmaster, President"
 										value={position.value}
 										onChange={(e) => updatePosition(index, e.target.value)}
+										className={MOBILE_INPUT}
 									/>
 									<Button
 										type="button"
 										variant="outline"
 										size="icon"
+										className="size-11 shrink-0 md:size-9"
 										onClick={() => removePosition(index)}
 										disabled={positions.length === 1}
 										aria-label="Remove position"
@@ -1242,11 +1309,16 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 							value={customMessage}
 							onChange={(e) => setCustomMessage(e.target.value)}
 							rows={4}
+							className="text-base md:text-sm"
 						/>
 					</div>
 
-					<div className="flex justify-end pt-4">
-						<Button type="submit" disabled={isSubmitting}>
+					<div className={cn(STICKY_FORM_FOOTER, "flex justify-end")}>
+						<Button
+							type="submit"
+							className="h-11 w-full sm:h-9 sm:w-auto"
+							disabled={isSubmitting}
+						>
 							{isSubmitting ? (
 								<Loader2 className="h-4 w-4 animate-spin mr-2" />
 							) : (
@@ -1279,6 +1351,34 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 							No rejection notices sent yet
 						</p>
 					</div>
+				) : isMobile ? (
+					<MobileDataList>
+						{rejections.map((rejection) => (
+							<MobileDataListItem
+								key={rejection._id}
+								title={rejection.name}
+								subtitle={rejection.email}
+								meta={
+									rejection.positions.length > 0
+										? rejection.positions.join(", ")
+										: "No position specified"
+								}
+								status={
+									<Badge
+										variant="secondary"
+										className="bg-ds-red-100 text-[10px] text-ds-red-800"
+									>
+										{rejection.emailSent ? "Sent" : "Not Sent"}
+									</Badge>
+								}
+								trailing={
+									<span className="text-xs font-normal text-muted-foreground">
+										{formatDate(rejection.sentAt)}
+									</span>
+								}
+							/>
+						))}
+					</MobileDataList>
 				) : (
 					<div className="rounded-md border bg-card overflow-hidden">
 						<Table>
@@ -1330,6 +1430,7 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 // ── Tab 4: Pending Invitations ──
 
 function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
+	const isMobile = useIsMobile();
 	const { getAuthHeaders } = useAuth();
 	const invitations = useAuthedQuery(
 		api.officerInvitations.list,
@@ -1468,7 +1569,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 
 			{/* Stats Cards */}
 			{stats && (
-				<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+				<div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
 					<div className="rounded-md border bg-card p-4">
 						<div className="flex items-center justify-between">
 							<div>
@@ -1514,7 +1615,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 				</div>
 			)}
 
-			{/* Invitations Table */}
+			{/* Invitations */}
 			{!invitations ? (
 				<div className="space-y-3">
 					{[1, 2, 3].map((i) => (
@@ -1529,6 +1630,59 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 						Use the Invitation Flow or Direct Onboarding tabs to get started
 					</p>
 				</div>
+			) : isMobile ? (
+				<MobileDataList>
+					{invitations.map((inv) => {
+						const expired = isExpired(inv);
+						return (
+							<MobileDataListItem
+								key={inv._id}
+								title={inv.name}
+								subtitle={inv.email}
+								status={
+									<>
+										{getStatusBadge(inv.status, expired)}
+										<Badge variant="secondary" className="text-[10px]">
+											{inv.role}
+										</Badge>
+									</>
+								}
+								meta={
+									<span
+										className={cn(expired && "font-medium text-destructive")}
+									>
+										{Array.isArray(inv.offeredPositions) &&
+										inv.offeredPositions.length > 1
+											? inv.offeredPositions.join(", ")
+											: inv.position}
+										{" · "}
+										{expired
+											? "Expired"
+											: `Expires ${formatDate(inv.expiresAt)}`}
+									</span>
+								}
+								actions={
+									inv.status === "pending" ? (
+										<Button
+											size="icon"
+											variant="ghost"
+											className="size-11"
+											aria-label={`Resend invitation to ${inv.name}`}
+											onClick={() => handleResend(inv)}
+											disabled={resendingId === inv._id}
+										>
+											{resendingId === inv._id ? (
+												<Loader2 className="size-4 animate-spin" />
+											) : (
+												<RefreshCw className="size-4" />
+											)}
+										</Button>
+									) : undefined
+								}
+							/>
+						);
+					})}
+				</MobileDataList>
 			) : (
 				<div className="rounded-md border bg-card overflow-hidden">
 					<Table>

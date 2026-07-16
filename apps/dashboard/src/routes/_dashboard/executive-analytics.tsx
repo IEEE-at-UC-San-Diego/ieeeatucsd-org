@@ -27,7 +27,9 @@ import {
 	DashboardPage,
 	PageHeader,
 } from "@/components/dashboard/DashboardPage";
+import { ResponsiveOverlay } from "@/components/mobile";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -44,6 +46,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
@@ -142,10 +145,17 @@ function GrowthBadge({ value }: { value: number | null }) {
 }
 
 function ExecutiveAnalyticsPage() {
+	const isMobile = useIsMobile();
 	const { hasAdminAccess, logtoId, isLoading } = usePermissions();
 	const [fiscalYearStart, setFiscalYearStart] = useState<number | undefined>(
 		undefined,
 	);
+	const [touchedBar, setTouchedBar] = useState<{
+		month: string;
+		eventsHosted: number;
+		attendees: number;
+	} | null>(null);
+	const [fySheetOpen, setFySheetOpen] = useState(false);
 
 	const analytics = useAuthedQuery(
 		api.users.getExecutiveAnalytics,
@@ -261,42 +271,95 @@ function ExecutiveAnalyticsPage() {
 	);
 
 	return (
-		<DashboardPage width="wide">
+		<DashboardPage width="wide" variant="list">
 			<PageHeader
 				title="Executive Officer Analytics"
 				description={`Operational performance for ${analytics.selectedFiscalYearLabel}.`}
+				hideTitleOnMobile
 				actions={
-					<div className="w-full sm:w-64">
-						<Select
-							value={String(analytics.selectedFiscalYear)}
-							onValueChange={(value) => setFiscalYearStart(Number(value))}
-						>
-							<SelectTrigger className="w-full bg-background border-border">
-								<SelectValue placeholder="Select fiscal year" />
-							</SelectTrigger>
-							<SelectContent>
-								{analytics.fiscalYearOptions.map((option) => (
-									<SelectItem
-										key={option.startYear}
-										value={String(option.startYear)}
-									>
-										{option.label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
+					isMobile ? undefined : (
+						<div className="w-full sm:w-64">
+							<Select
+								value={String(analytics.selectedFiscalYear)}
+								onValueChange={(value) => setFiscalYearStart(Number(value))}
+							>
+								<SelectTrigger className="w-full border-border bg-background">
+									<SelectValue placeholder="Select fiscal year" />
+								</SelectTrigger>
+								<SelectContent>
+									{analytics.fiscalYearOptions.map((option) => (
+										<SelectItem
+											key={option.startYear}
+											value={String(option.startYear)}
+										>
+											{option.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					)
 				}
 			/>
 
+			{isMobile && (
+				<>
+					<button
+						type="button"
+						onClick={() => setFySheetOpen(true)}
+						className="flex h-11 w-full items-center justify-between rounded-md border bg-background px-3 text-sm font-medium active:scale-[0.99]"
+					>
+						<span className="text-muted-foreground">Fiscal year</span>
+						<span className="text-ieee-blue">
+							{analytics.selectedFiscalYearLabel}
+						</span>
+					</button>
+					<ResponsiveOverlay
+						open={fySheetOpen}
+						onOpenChange={setFySheetOpen}
+						title="Fiscal year"
+						variant="sheet"
+					>
+						<div className="space-y-2 pb-2">
+							{analytics.fiscalYearOptions.map((option) => (
+								<Button
+									key={option.startYear}
+									variant={
+										option.startYear === analytics.selectedFiscalYear
+											? "default"
+											: "outline"
+									}
+									className="h-12 w-full justify-start"
+									onClick={() => {
+										setFiscalYearStart(option.startYear);
+										setFySheetOpen(false);
+									}}
+								>
+									{option.label}
+								</Button>
+							))}
+						</div>
+					</ResponsiveOverlay>
+				</>
+			)}
+
+			{/* Metrics — stacked on mobile (one insight per block), grid on desktop */}
 			<div
-				className={`grid grid-cols-1 gap-4 ${nonZeroMetricCount <= 1 ? "sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]" : "sm:grid-cols-2 xl:grid-cols-5"}`}
+				className={`grid grid-cols-1 gap-4 ${
+					isMobile
+						? ""
+						: nonZeroMetricCount <= 1
+							? "sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
+							: "sm:grid-cols-2 xl:grid-cols-5"
+				}`}
 			>
 				{statsCards.map((card) => {
 					const Icon = card.icon;
-					if (nonZeroMetricCount <= 1 && card.key !== "events") return null;
+					if (!isMobile && nonZeroMetricCount <= 1 && card.key !== "events") {
+						return null;
+					}
 					return (
-						<Card key={card.key} className="bg-background border-border">
+						<Card key={card.key} className="border-border bg-background">
 							<CardHeader className="space-y-2 pb-2">
 								<CardDescription className="text-muted-foreground">
 									{card.title}
@@ -321,7 +384,7 @@ function ExecutiveAnalyticsPage() {
 						</Card>
 					);
 				})}
-				{nonZeroMetricCount <= 1 && (
+				{!isMobile && nonZeroMetricCount <= 1 && (
 					<div className="grid grid-cols-2 gap-3 rounded-md border bg-muted/20 p-4 sm:grid-cols-4">
 						{statsCards.slice(1).map((metric) => (
 							<div key={metric.key}>
@@ -336,54 +399,112 @@ function ExecutiveAnalyticsPage() {
 				)}
 			</div>
 
+			{/* Charts — no nested page scroll; fixed chart height */}
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-				<Card className="xl:col-span-2 bg-background border-border">
+				<Card className="border-border bg-background xl:col-span-2">
 					<CardHeader>
 						<CardTitle className="text-foreground">Monthly Trend</CardTitle>
 						<CardDescription className="text-muted-foreground">
 							Event volume and attendance from July through June.
+							{isMobile && " Tap a bar to inspect."}
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
 						{comparativeMonths.length > 1 ? (
-							<div className="h-80">
-								<ResponsiveContainer width="100%" height="100%">
-									<BarChart data={analytics.monthlyTrend} barGap={8}>
-										<CartesianGrid
-											strokeDasharray="3 3"
-											stroke="var(--border)"
-											vertical={false}
-										/>
-										<XAxis
-											dataKey="month"
-											tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-										/>
-										<YAxis
-											tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-											width={36}
-										/>
-										<Tooltip
-											cursor={{ fill: "var(--muted)" }}
-											contentStyle={{
-												backgroundColor: "var(--popover)",
-												border: "1px solid var(--border)",
-												borderRadius: "10px",
+							<div className="space-y-3">
+								{touchedBar && isMobile && (
+									<div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+										<p className="font-semibold">{touchedBar.month}</p>
+										<p className="text-muted-foreground">
+											{touchedBar.eventsHosted} events ·{" "}
+											{formatNumber.format(touchedBar.attendees)} attendees
+										</p>
+									</div>
+								)}
+								<div className={isMobile ? "h-64 touch-pan-y" : "h-80"}>
+									<ResponsiveContainer width="100%" height="100%">
+										<BarChart
+											data={analytics.monthlyTrend}
+											barGap={8}
+											onClick={(state) => {
+												if (!isMobile) return;
+												const active = (
+													state as {
+														activePayload?: Array<{
+															payload?: {
+																month: string;
+																eventsHosted: number;
+																attendees: number;
+															};
+														}>;
+													}
+												).activePayload?.[0]?.payload;
+												if (active) {
+													setTouchedBar({
+														month: active.month,
+														eventsHosted: active.eventsHosted,
+														attendees: active.attendees,
+													});
+												}
 											}}
-										/>
-										<Bar
-											dataKey="eventsHosted"
-											name="Events Hosted"
-											fill="var(--chart-1)"
-											radius={[6, 6, 0, 0]}
-										/>
-										<Bar
-											dataKey="attendees"
-											name="Attendees"
-											fill="var(--chart-2)"
-											radius={[6, 6, 0, 0]}
-										/>
-									</BarChart>
-								</ResponsiveContainer>
+										>
+											<CartesianGrid
+												strokeDasharray="3 3"
+												stroke="var(--border)"
+												vertical={false}
+											/>
+											<XAxis
+												dataKey="month"
+												tick={{
+													fill: "var(--muted-foreground)",
+													fontSize: isMobile ? 10 : 12,
+												}}
+												interval={isMobile ? 1 : 0}
+												height={isMobile ? 36 : 30}
+											/>
+											<YAxis
+												tick={{
+													fill: "var(--muted-foreground)",
+													fontSize: isMobile ? 10 : 12,
+												}}
+												width={isMobile ? 28 : 36}
+											/>
+											{!isMobile && (
+												<Tooltip
+													cursor={{ fill: "var(--muted)" }}
+													contentStyle={{
+														backgroundColor: "var(--popover)",
+														border: "1px solid var(--border)",
+														borderRadius: "10px",
+													}}
+												/>
+											)}
+											<Bar
+												dataKey="eventsHosted"
+												name="Events Hosted"
+												fill="var(--chart-1)"
+												radius={[6, 6, 0, 0]}
+											/>
+											<Bar
+												dataKey="attendees"
+												name="Attendees"
+												fill="var(--chart-2)"
+												radius={[6, 6, 0, 0]}
+											/>
+										</BarChart>
+									</ResponsiveContainer>
+								</div>
+								{isMobile && (
+									<p className="sr-only">
+										Monthly trend summary:{" "}
+										{analytics.monthlyTrend
+											.map(
+												(m) =>
+													`${m.month}: ${m.eventsHosted} events, ${m.attendees} attendees`,
+											)
+											.join(". ")}
+									</p>
+								)}
 							</div>
 						) : (
 							<div className="flex min-h-48 items-center justify-center rounded-md bg-muted/20 p-6 text-center">
@@ -405,7 +526,7 @@ function ExecutiveAnalyticsPage() {
 					</CardContent>
 				</Card>
 
-				<Card className="bg-background border-border">
+				<Card className="border-border bg-background">
 					<CardHeader>
 						<CardTitle className="text-foreground">Event Type Mix</CardTitle>
 						<CardDescription className="text-muted-foreground">
@@ -414,15 +535,15 @@ function ExecutiveAnalyticsPage() {
 					</CardHeader>
 					<CardContent className="space-y-4">
 						{activeEventTypes.length > 1 ? (
-							<div className="h-52">
+							<div className={isMobile ? "h-44" : "h-52"}>
 								<ResponsiveContainer width="100%" height="100%">
 									<PieChart>
 										<Pie
 											data={activeEventTypes}
 											dataKey="value"
 											nameKey="label"
-											innerRadius={48}
-											outerRadius={74}
+											innerRadius={isMobile ? 40 : 48}
+											outerRadius={isMobile ? 64 : 74}
 											paddingAngle={4}
 										>
 											{activeEventTypes.map((entry, index) => (
@@ -432,13 +553,15 @@ function ExecutiveAnalyticsPage() {
 												/>
 											))}
 										</Pie>
-										<Tooltip
-											contentStyle={{
-												backgroundColor: "var(--popover)",
-												border: "1px solid var(--border)",
-												borderRadius: "10px",
-											}}
-										/>
+										{!isMobile && (
+											<Tooltip
+												contentStyle={{
+													backgroundColor: "var(--popover)",
+													border: "1px solid var(--border)",
+													borderRadius: "10px",
+												}}
+											/>
+										)}
 									</PieChart>
 								</ResponsiveContainer>
 							</div>
@@ -460,7 +583,7 @@ function ExecutiveAnalyticsPage() {
 							{activeEventTypes.map((entry, index) => (
 								<div
 									key={entry.type}
-									className="flex items-center justify-between rounded-md bg-muted px-3 py-2"
+									className="flex min-h-[44px] items-center justify-between rounded-md bg-muted px-3 py-2"
 								>
 									<div className="flex items-center gap-2">
 										<span
@@ -485,7 +608,7 @@ function ExecutiveAnalyticsPage() {
 			</div>
 
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-				<Card className="xl:col-span-2 bg-background border-border">
+				<Card className="border-border bg-background xl:col-span-2">
 					<CardHeader>
 						<CardTitle className="text-foreground">
 							Top Events by Attendance
@@ -500,13 +623,13 @@ function ExecutiveAnalyticsPage() {
 								No event attendance data is available for this fiscal year.
 							</div>
 						) : (
-							<div className="space-y-2">
+							<ul className="-mx-4 divide-y border-y md:mx-0 md:space-y-2 md:divide-y-0 md:border-0">
 								{analytics.topEvents.map((event, index) => (
-									<div
+									<li
 										key={event.eventId}
-										className="flex flex-col gap-3 rounded-lg border border-border bg-background p-4 md:flex-row md:items-center md:justify-between"
+										className="flex min-h-[52px] flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between md:rounded-lg md:border md:bg-background md:p-4"
 									>
-										<div className="space-y-1">
+										<div className="min-w-0 space-y-1">
 											<p className="text-sm font-semibold text-foreground">
 												{index + 1}. {event.name}
 											</p>
@@ -525,18 +648,18 @@ function ExecutiveAnalyticsPage() {
 											>
 												{event.eventType}
 											</Badge>
-											<p className="text-sm font-semibold text-foreground">
-												{formatNumber.format(event.attendees)} attendees
+											<p className="text-sm font-semibold tabular-nums text-foreground">
+												{formatNumber.format(event.attendees)}
 											</p>
 										</div>
-									</div>
+									</li>
 								))}
-							</div>
+							</ul>
 						)}
 					</CardContent>
 				</Card>
 
-				<Card className="bg-background border-border">
+				<Card className="border-border bg-background">
 					<CardHeader>
 						<CardTitle className="text-foreground">
 							Engagement Quality
@@ -554,7 +677,7 @@ function ExecutiveAnalyticsPage() {
 								{formatNumber.format(analytics.overview.avgAttendeesPerEvent)}
 							</p>
 						</div>
-						<div className="rounded-lg bg-muted p-4 space-y-2">
+						<div className="space-y-2 rounded-lg bg-muted p-4">
 							<div className="flex items-center justify-between">
 								<p className="text-xs uppercase tracking-wide text-muted-foreground">
 									Attendee Coverage

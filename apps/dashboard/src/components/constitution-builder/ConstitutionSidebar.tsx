@@ -8,13 +8,8 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -245,124 +240,128 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 				</div>
 			</div>
 
-			<Dialog open={showAddSection} onOpenChange={setShowAddSection}>
-				<DialogContent className="max-w-md">
-					<DialogHeader>
-						<DialogTitle>Add New Section</DialogTitle>
-					</DialogHeader>
-					<div className="space-y-4">
+			<ResponsiveOverlay
+				open={showAddSection}
+				onOpenChange={setShowAddSection}
+				title="Add New Section"
+				variant="large-sheet"
+				className="sm:max-w-md"
+				footer={
+					<div className="flex w-full gap-3">
+						<Button
+							onClick={() => setShowAddSection(false)}
+							variant="outline"
+							className="h-11 flex-1"
+						>
+							Cancel
+						</Button>
+						<Button onClick={handleAddSection} className="h-11 flex-1">
+							Add Section
+						</Button>
+					</div>
+				}
+			>
+				<div className="space-y-4 pb-2">
+					<div>
+						<label className="block text-sm font-medium text-foreground mb-2">
+							Section Type
+						</label>
+						<Select
+							value={addSectionType}
+							onValueChange={(value) => {
+								handleTypeChange(value as ConstitutionSection["type"]);
+								setAddSectionParent("");
+							}}
+						>
+							<SelectTrigger className="h-11 w-full sm:h-9">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="preamble">
+									Preamble - Opening statement of purpose
+								</SelectItem>
+								<SelectItem value="article">
+									Article - Main constitutional division
+								</SelectItem>
+								<SelectItem value="section">
+									Section - Must be under an article
+								</SelectItem>
+								<SelectItem value="subsection">
+									Subsection - Subdivision of a section
+								</SelectItem>
+								<SelectItem value="amendment">
+									Amendment - Constitutional modification
+								</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+
+					{parentOptions.length > 0 && (
 						<div>
 							<label className="block text-sm font-medium text-foreground mb-2">
-								Section Type
+								Parent Section
 							</label>
 							<Select
-								value={addSectionType}
-								onValueChange={(value) => {
-									handleTypeChange(value as ConstitutionSection["type"]);
-									setAddSectionParent("");
-								}}
+								value={addSectionParent}
+								onValueChange={setAddSectionParent}
 							>
-								<SelectTrigger className="w-full">
-									<SelectValue />
+								<SelectTrigger className="h-11 w-full sm:h-9">
+									<SelectValue placeholder="Select parent..." />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="preamble">
-										Preamble - Opening statement of purpose
-									</SelectItem>
-									<SelectItem value="article">
-										Article - Main constitutional division
-									</SelectItem>
-									<SelectItem value="section">
-										Section - Must be under an article
-									</SelectItem>
-									<SelectItem value="subsection">
-										Subsection - Subdivision of a section
-									</SelectItem>
-									<SelectItem value="amendment">
-										Amendment - Constitutional modification
-									</SelectItem>
+									{parentOptions.map((section) => (
+										<SelectItem key={section.id} value={section.id}>
+											{getSectionDisplayTitle(section, sections)}
+										</SelectItem>
+									))}
 								</SelectContent>
 							</Select>
 						</div>
+					)}
 
-						{parentOptions.length > 0 && (
-							<div>
-								<label className="block text-sm font-medium text-foreground mb-2">
-									Parent Section
-								</label>
-								<Select
-									value={addSectionParent}
-									onValueChange={setAddSectionParent}
-								>
-									<SelectTrigger className="w-full">
-										<SelectValue placeholder="Select parent..." />
-									</SelectTrigger>
-									<SelectContent>
-										{parentOptions.map((section) => (
-											<SelectItem key={section.id} value={section.id}>
-												{getSectionDisplayTitle(section, sections)}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-						)}
-
-						{addSectionType !== "preamble" && (
-							<div>
-								<label className="block text-sm font-medium text-foreground mb-2">
-									Title{" "}
-									{addSectionType === "article" ? "(required)" : "(optional)"}
-								</label>
-								<Input
-									type="text"
-									value={addSectionTitle}
-									onChange={(e) => setAddSectionTitle(e.target.value)}
-									placeholder="Enter section title..."
-									required={addSectionType === "article"}
-								/>
-							</div>
-						)}
-
+					{addSectionType !== "preamble" && (
 						<div>
 							<label className="block text-sm font-medium text-foreground mb-2">
-								Content{" "}
-								{addSectionType === "preamble"
-									? "(required)"
-									: addSectionType === "article"
-										? "(not needed)"
-										: "(optional)"}
+								Title{" "}
+								{addSectionType === "article" ? "(required)" : "(optional)"}
 							</label>
-							<Textarea
-								value={addSectionContent}
-								onChange={(e) => setAddSectionContent(e.target.value)}
-								placeholder={
-									addSectionType === "preamble"
-										? "Enter preamble content..."
-										: addSectionType === "article"
-											? "Articles typically do not have content..."
-											: "Enter section content..."
-								}
-								rows={4}
-								disabled={addSectionType === "article"}
+							<Input
+								type="text"
+								value={addSectionTitle}
+								onChange={(e) => setAddSectionTitle(e.target.value)}
+								placeholder="Enter section title..."
+								required={addSectionType === "article"}
+								className="h-11 text-base sm:h-9 sm:text-sm"
 							/>
 						</div>
+					)}
 
-						<div className="flex gap-3 pt-4">
-							<Button onClick={handleAddSection} className="flex-1">
-								Add Section
-							</Button>
-							<Button
-								onClick={() => setShowAddSection(false)}
-								variant="outline"
-								className="flex-1"
-							>
-								Cancel
-							</Button>
-						</div>
+					<div>
+						<label className="block text-sm font-medium text-foreground mb-2">
+							Content{" "}
+							{addSectionType === "preamble"
+								? "(required)"
+								: addSectionType === "article"
+									? "(not needed)"
+									: "(optional)"}
+						</label>
+						<Textarea
+							value={addSectionContent}
+							onChange={(e) => setAddSectionContent(e.target.value)}
+							placeholder={
+								addSectionType === "preamble"
+									? "Enter preamble content..."
+									: addSectionType === "article"
+										? "Articles typically do not have content..."
+										: "Enter section content..."
+							}
+							rows={4}
+							disabled={addSectionType === "article"}
+							className="text-base sm:text-sm"
+						/>
 					</div>
-				</DialogContent>
-			</Dialog>
+				</div>
+			</ResponsiveOverlay>
 		</div>
 	);
 };

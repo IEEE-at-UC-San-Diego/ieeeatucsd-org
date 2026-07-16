@@ -8,18 +8,11 @@ import {
 	Loader2,
 	Sparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ResponsiveOverlay, useMobileShell } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -54,6 +47,7 @@ export function FundDepositWizard({
 	onClose,
 	logtoId,
 }: FundDepositWizardProps) {
+	const { setHideTabBar } = useMobileShell();
 	const { user, getAuthHeaders } = useAuth();
 	const aiEnabled = user?.aiFeaturesEnabled !== false;
 	const [step, setStep] = useState(1);
@@ -81,6 +75,11 @@ export function FundDepositWizard({
 	const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 	const [isAiParsing, setIsAiParsing] = useState(false);
 	const [aiParseMessage, setAiParseMessage] = useState("");
+
+	useEffect(() => {
+		setHideTabBar(isOpen);
+		return () => setHideTabBar(false);
+	}, [isOpen, setHideTabBar]);
 
 	const fileToDataUrl = async (file: File): Promise<string> =>
 		await new Promise((resolve, reject) => {
@@ -317,369 +316,49 @@ export function FundDepositWizard({
 	};
 
 	return (
-		<Dialog open={isOpen} onOpenChange={handleClose}>
-			<DialogContent className="sm:max-w-[600px] gap-0 p-0 overflow-hidden">
-				<DialogHeader className="p-6 pb-2">
-					<DialogTitle className="text-xl">New Fund Deposit</DialogTitle>
-					<DialogDescription>
-						Step {step} of 3: {DEPOSIT_STEPS[step - 1].name}
-					</DialogDescription>
-
-					{/* Progress Bar */}
-					<div className="mt-4 h-1.5 w-full bg-muted rounded-full overflow-hidden">
-						<div
-							className="h-full w-full origin-left bg-primary transition-transform duration-200 ease-[var(--ease-in-out)] motion-instant-reduce"
-							style={{ transform: `scaleX(${step / 3})` }}
-						/>
-					</div>
-				</DialogHeader>
-
-				<div className="p-6 pt-2 overflow-y-auto max-h-[65vh]">
-					{step === 1 && (
-						<div
-							key={`${step}-${direction}`}
-							className={cn(
-								"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
-								direction === "forward"
-									? "slide-in-from-right-4"
-									: "slide-in-from-left-4",
-							)}
-						>
-							{/* Amount and Title Group */}
-							<div className="grid gap-4">
-								<div>
-									<Label htmlFor="title">
-										Deposit Title <span className="text-destructive">*</span>
-									</Label>
-									<Input
-										id="title"
-										value={formData.title}
-										onChange={(e) =>
-											setFormData({ ...formData, title: e.target.value })
-										}
-										placeholder="e.g. Spring BBQ Food Sales"
-										className={formErrors.title ? "border-destructive" : ""}
-										autoFocus
-									/>
-									{formErrors.title && (
-										<p className="text-xs text-destructive mt-1">
-											{formErrors.title}
-										</p>
-									)}
-								</div>
-
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<Label htmlFor="amount">
-											Amount <span className="text-destructive">*</span>
-										</Label>
-										<div className="relative">
-											<DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-											<Input
-												id="amount"
-												type="number"
-												step="0.01"
-												value={formData.amount}
-												onChange={(e) =>
-													setFormData({ ...formData, amount: e.target.value })
-												}
-												placeholder="0.00"
-												className={`pl-9 ${formErrors.amount ? "border-destructive" : ""}`}
-											/>
-										</div>
-										{formErrors.amount && (
-											<p className="text-xs text-destructive mt-1">
-												{formErrors.amount}
-											</p>
-										)}
-									</div>
-									<div>
-										<Label htmlFor="depositDate">
-											Date <span className="text-destructive">*</span>
-										</Label>
-										<Input
-											id="depositDate"
-											type="date"
-											value={formData.depositDate}
-											onChange={(e) =>
-												setFormData({
-													...formData,
-													depositDate: e.target.value,
-												})
-											}
-										/>
-									</div>
-								</div>
-							</div>
-
-							{/* Method Group */}
-							<div className="space-y-3 pt-2">
-								<Label>
-									Deposit Method <span className="text-destructive">*</span>
-								</Label>
-								<div className="grid grid-cols-2 gap-2">
-									{(
-										[
-											"cash",
-											"check",
-											"bank_transfer",
-											"other",
-										] as DepositMethod[]
-									).map((method) => (
-										<div
-											key={method}
-											onClick={() =>
-												setFormData({ ...formData, depositMethod: method })
-											}
-											className={cn(
-												"cursor-pointer rounded-lg border p-3 flex items-center justify-between transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] hover:bg-muted/50",
-												formData.depositMethod === method
-													? "border-primary bg-primary/5 ring-1 ring-primary"
-													: "border-input",
-											)}
-										>
-											<span className="text-sm font-medium capitalize">
-												{method.replace("_", " ")}
-											</span>
-											{formData.depositMethod === method && (
-												<CheckCircle className="h-4 w-4 text-primary" />
-											)}
-										</div>
-									))}
-								</div>
-
-								{formData.depositMethod === "other" && (
-									<div className="animate-in fade-in duration-150 motion-instant-reduce">
-										<Input
-											placeholder="Specify method..."
-											value={formData.otherDepositMethod}
-											onChange={(e) =>
-												setFormData({
-													...formData,
-													otherDepositMethod: e.target.value,
-												})
-											}
-											className={
-												formErrors.otherDepositMethod
-													? "border-destructive"
-													: ""
-											}
-										/>
-									</div>
-								)}
-							</div>
-
-							{/* IEEE Source checkbox */}
-							<div className="flex items-center space-x-2 pt-2">
-								<Checkbox
-									id="isIeee"
-									checked={formData.isIeeeDeposit}
-									onCheckedChange={(c) =>
-										setFormData({ ...formData, isIeeeDeposit: c === true })
-									}
-								/>
-								<Label htmlFor="isIeee" className="cursor-pointer">
-									This is an IEEE Deposit (Concur)
-								</Label>
-							</div>
-
-							{formData.isIeeeDeposit && (
-								<div className="pl-6 border-l-2 py-1 animate-in fade-in duration-150 motion-instant-reduce">
-									<Label>IEEE Source</Label>
-									<Select
-										value={formData.ieeeDepositSource}
-										onValueChange={(v: IeeeDepositSource) =>
-											setFormData({ ...formData, ieeeDepositSource: v })
-										}
-									>
-										<SelectTrigger className="mt-1">
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="upp">IEEE UPP</SelectItem>
-											<SelectItem value="section">IEEE Section</SelectItem>
-											<SelectItem value="region">IEEE Region</SelectItem>
-											<SelectItem value="global">IEEE Global</SelectItem>
-											<SelectItem value="society">IEEE Society</SelectItem>
-											<SelectItem value="other">Other</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							)}
-						</div>
-					)}
-
-					{step === 2 && (
-						<div
-							key={`${step}-${direction}`}
-							className={cn(
-								"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
-								direction === "forward"
-									? "slide-in-from-right-4"
-									: "slide-in-from-left-4",
-							)}
-						>
-							<div>
-								<Label htmlFor="purpose">
-									Purpose <span className="text-destructive">*</span>
-								</Label>
-								<Input
-									id="purpose"
-									value={formData.purpose}
-									onChange={(e) =>
-										setFormData({ ...formData, purpose: e.target.value })
-									}
-									placeholder="e.g. Event Revenue, Membership Dues"
-									className={formErrors.purpose ? "border-destructive" : ""}
-									autoFocus
-								/>
-								{formErrors.purpose && (
-									<p className="text-xs text-destructive mt-1">
-										{formErrors.purpose}
-									</p>
-								)}
-							</div>
-
-							<div>
-								<Label htmlFor="reference">Reference Number (Optional)</Label>
-								<Input
-									id="reference"
-									value={formData.referenceNumber}
-									onChange={(e) =>
-										setFormData({
-											...formData,
-											referenceNumber: e.target.value,
-										})
-									}
-									placeholder="Check #, Transaction ID"
-								/>
-							</div>
-
-							<div>
-								<Label htmlFor="description">Additional Notes (Optional)</Label>
-								<Textarea
-									id="description"
-									value={formData.description}
-									onChange={(e) =>
-										setFormData({ ...formData, description: e.target.value })
-									}
-									placeholder="Any extra details..."
-									className="h-32 resize-none"
-								/>
-							</div>
-						</div>
-					)}
-
-					{step === 3 && (
-						<div
-							key={`${step}-${direction}`}
-							className={cn(
-								"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
-								direction === "forward"
-									? "slide-in-from-right-4"
-									: "slide-in-from-left-4",
-							)}
-						>
-							<MultiFileUpload
-								files={receiptFiles}
-								onFilesChange={handleReceiptFilesChange}
-								accept=".pdf,.jpg,.jpeg,.png"
-								maxFiles={10}
-								maxSizeInMB={10}
-								label="Upload Receipts"
-								description="Drag & drop or paste images here."
-							/>
-
-							<div className="rounded-lg border p-3 bg-muted/30">
-								<div className="flex items-center justify-between gap-2">
-									<div className="flex items-center gap-2 text-sm font-medium">
-										<Sparkles className="h-4 w-4 text-primary" />
-										{aiEnabled ? "AI Receipt Parsing" : "Manual Receipt Entry"}
-									</div>
-									<Button
-										variant="outline"
-										size="sm"
-										disabled={
-											!aiEnabled || isAiParsing || receiptFiles.length === 0
-										}
-										onClick={() => {
-											if (receiptFiles.length > 0) {
-												void parseReceiptWithAI(
-													receiptFiles[receiptFiles.length - 1],
-												);
-											}
-										}}
-									>
-										{isAiParsing && (
-											<Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-										)}
-										Re-Analyze Latest
-									</Button>
-								</div>
-								<p className="text-xs text-muted-foreground mt-1">
-									{aiEnabled
-										? "The latest uploaded receipt will auto-fill amount/title when possible."
-										: "AI is disabled for this account. Enter details manually after uploading receipts."}
-								</p>
-								{aiParseMessage && (
-									<p className="text-xs mt-2 text-muted-foreground">
-										{aiParseMessage}
-									</p>
-								)}
-							</div>
-
-							<div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2 border">
-								<h4 className="font-semibold flex items-center gap-2">
-									<FileText className="h-4 w-4" /> Summary
-								</h4>
-								<div className="grid grid-cols-2 gap-2 text-muted-foreground">
-									<span>Amount:</span>
-									<span className="font-medium text-foreground text-right">
-										${formData.amount}
-									</span>
-
-									<span>Method:</span>
-									<span className="font-medium text-foreground text-right capitalize">
-										{formData.depositMethod === "other"
-											? formData.otherDepositMethod
-											: formData.depositMethod.replace("_", " ")}
-									</span>
-
-									<span>Receipts:</span>
-									<span className="font-medium text-foreground text-right">
-										{receiptFiles.length} file(s)
-									</span>
-								</div>
-							</div>
-						</div>
-					)}
-				</div>
-
-				<DialogFooter className="p-6 pt-2 border-t bg-muted/20 flex items-center justify-between sm:justify-between">
+		<ResponsiveOverlay
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open) handleClose();
+			}}
+			title="New Fund Deposit"
+			description={`Step ${step} of 3: ${DEPOSIT_STEPS[step - 1].name}`}
+			variant="fullscreen"
+			className="sm:max-w-[600px]"
+			footer={
+				<div className="flex w-full items-center justify-between gap-2">
 					<Button
 						variant="ghost"
 						onClick={handleBack}
 						disabled={step === 1 || isSubmitting}
-						className={step === 1 ? "invisible" : ""}
+						className={cn("h-11 sm:h-9", step === 1 ? "invisible" : "")}
 					>
 						<ChevronLeft className="h-4 w-4 mr-2" /> Back
 					</Button>
 
-					<div className="flex gap-2">
+					<div className="flex flex-1 justify-end gap-2 sm:flex-none">
 						<Button
 							variant="outline"
 							onClick={handleClose}
 							disabled={isSubmitting}
+							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
 							Cancel
 						</Button>
 
 						{step < 3 ? (
-							<Button onClick={handleNext}>
+							<Button
+								onClick={handleNext}
+								className="h-11 flex-1 sm:h-9 sm:flex-none"
+							>
 								Next <ArrowRight className="h-4 w-4 ml-2" />
 							</Button>
 						) : (
-							<Button onClick={handleSubmit} disabled={isSubmitting}>
+							<Button
+								onClick={handleSubmit}
+								disabled={isSubmitting}
+								className="h-11 flex-1 sm:h-9 sm:flex-none"
+							>
 								{isSubmitting && (
 									<Loader2 className="h-4 w-4 animate-spin mr-2" />
 								)}
@@ -687,8 +366,342 @@ export function FundDepositWizard({
 							</Button>
 						)}
 					</div>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+				</div>
+			}
+		>
+			{/* Progress Bar */}
+			<div className="mb-4 h-1.5 w-full bg-muted rounded-full overflow-hidden">
+				<div
+					className="h-full w-full origin-left bg-primary transition-transform duration-200 ease-[var(--ease-in-out)] motion-instant-reduce"
+					style={{ transform: `scaleX(${step / 3})` }}
+				/>
+			</div>
+
+			<div className="pb-2">
+				{step === 1 && (
+					<div
+						key={`${step}-${direction}`}
+						className={cn(
+							"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
+							direction === "forward"
+								? "slide-in-from-right-4"
+								: "slide-in-from-left-4",
+						)}
+					>
+						{/* Amount and Title Group */}
+						<div className="grid gap-4">
+							<div>
+								<Label htmlFor="title">
+									Deposit Title <span className="text-destructive">*</span>
+								</Label>
+								<Input
+									id="title"
+									value={formData.title}
+									onChange={(e) =>
+										setFormData({ ...formData, title: e.target.value })
+									}
+									placeholder="e.g. Spring BBQ Food Sales"
+									className={cn(
+										"h-11 text-base sm:h-9 sm:text-sm",
+										formErrors.title ? "border-destructive" : "",
+									)}
+									autoFocus
+								/>
+								{formErrors.title && (
+									<p className="text-xs text-destructive mt-1">
+										{formErrors.title}
+									</p>
+								)}
+							</div>
+
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<Label htmlFor="amount">
+										Amount <span className="text-destructive">*</span>
+									</Label>
+									<div className="relative">
+										<DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+										<Input
+											id="amount"
+											type="number"
+											step="0.01"
+											value={formData.amount}
+											onChange={(e) =>
+												setFormData({ ...formData, amount: e.target.value })
+											}
+											placeholder="0.00"
+											className={cn(
+												"h-11 pl-9 text-base sm:h-9 sm:text-sm",
+												formErrors.amount ? "border-destructive" : "",
+											)}
+										/>
+									</div>
+									{formErrors.amount && (
+										<p className="text-xs text-destructive mt-1">
+											{formErrors.amount}
+										</p>
+									)}
+								</div>
+								<div>
+									<Label htmlFor="depositDate">
+										Date <span className="text-destructive">*</span>
+									</Label>
+									<Input
+										id="depositDate"
+										type="date"
+										value={formData.depositDate}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												depositDate: e.target.value,
+											})
+										}
+										className="h-11 text-base sm:h-9 sm:text-sm"
+									/>
+								</div>
+							</div>
+						</div>
+
+						{/* Method Group */}
+						<div className="space-y-3 pt-2">
+							<Label>
+								Deposit Method <span className="text-destructive">*</span>
+							</Label>
+							<div className="grid grid-cols-2 gap-2">
+								{(
+									["cash", "check", "bank_transfer", "other"] as DepositMethod[]
+								).map((method) => (
+									<div
+										key={method}
+										onClick={() =>
+											setFormData({ ...formData, depositMethod: method })
+										}
+										className={cn(
+											"cursor-pointer rounded-lg border p-3 min-h-11 flex items-center justify-between transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] active:bg-muted/50 sm:hover:bg-muted/50",
+											formData.depositMethod === method
+												? "border-primary bg-primary/5 ring-1 ring-primary"
+												: "border-input",
+										)}
+									>
+										<span className="text-sm font-medium capitalize">
+											{method.replace("_", " ")}
+										</span>
+										{formData.depositMethod === method && (
+											<CheckCircle className="h-4 w-4 text-primary" />
+										)}
+									</div>
+								))}
+							</div>
+
+							{formData.depositMethod === "other" && (
+								<div className="animate-in fade-in duration-150 motion-instant-reduce">
+									<Input
+										placeholder="Specify method..."
+										value={formData.otherDepositMethod}
+										onChange={(e) =>
+											setFormData({
+												...formData,
+												otherDepositMethod: e.target.value,
+											})
+										}
+										className={cn(
+											"h-11 text-base sm:h-9 sm:text-sm",
+											formErrors.otherDepositMethod ? "border-destructive" : "",
+										)}
+									/>
+								</div>
+							)}
+						</div>
+
+						{/* IEEE Source checkbox */}
+						<div className="flex items-center space-x-2 pt-2 min-h-11">
+							<Checkbox
+								id="isIeee"
+								checked={formData.isIeeeDeposit}
+								onCheckedChange={(c) =>
+									setFormData({ ...formData, isIeeeDeposit: c === true })
+								}
+							/>
+							<Label htmlFor="isIeee" className="cursor-pointer">
+								This is an IEEE Deposit (Concur)
+							</Label>
+						</div>
+
+						{formData.isIeeeDeposit && (
+							<div className="pl-6 border-l-2 py-1 animate-in fade-in duration-150 motion-instant-reduce">
+								<Label>IEEE Source</Label>
+								<Select
+									value={formData.ieeeDepositSource}
+									onValueChange={(v: IeeeDepositSource) =>
+										setFormData({ ...formData, ieeeDepositSource: v })
+									}
+								>
+									<SelectTrigger className="mt-1 h-11 sm:h-9">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="upp">IEEE UPP</SelectItem>
+										<SelectItem value="section">IEEE Section</SelectItem>
+										<SelectItem value="region">IEEE Region</SelectItem>
+										<SelectItem value="global">IEEE Global</SelectItem>
+										<SelectItem value="society">IEEE Society</SelectItem>
+										<SelectItem value="other">Other</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						)}
+					</div>
+				)}
+
+				{step === 2 && (
+					<div
+						key={`${step}-${direction}`}
+						className={cn(
+							"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
+							direction === "forward"
+								? "slide-in-from-right-4"
+								: "slide-in-from-left-4",
+						)}
+					>
+						<div>
+							<Label htmlFor="purpose">
+								Purpose <span className="text-destructive">*</span>
+							</Label>
+							<Input
+								id="purpose"
+								value={formData.purpose}
+								onChange={(e) =>
+									setFormData({ ...formData, purpose: e.target.value })
+								}
+								placeholder="e.g. Event Revenue, Membership Dues"
+								className={cn(
+									"h-11 text-base sm:h-9 sm:text-sm",
+									formErrors.purpose ? "border-destructive" : "",
+								)}
+								autoFocus
+							/>
+							{formErrors.purpose && (
+								<p className="text-xs text-destructive mt-1">
+									{formErrors.purpose}
+								</p>
+							)}
+						</div>
+
+						<div>
+							<Label htmlFor="reference">Reference Number (Optional)</Label>
+							<Input
+								id="reference"
+								value={formData.referenceNumber}
+								onChange={(e) =>
+									setFormData({
+										...formData,
+										referenceNumber: e.target.value,
+									})
+								}
+								placeholder="Check #, Transaction ID"
+								className="h-11 text-base sm:h-9 sm:text-sm"
+							/>
+						</div>
+
+						<div>
+							<Label htmlFor="description">Additional Notes (Optional)</Label>
+							<Textarea
+								id="description"
+								value={formData.description}
+								onChange={(e) =>
+									setFormData({ ...formData, description: e.target.value })
+								}
+								placeholder="Any extra details..."
+								className="h-32 resize-none text-base sm:text-sm"
+							/>
+						</div>
+					</div>
+				)}
+
+				{step === 3 && (
+					<div
+						key={`${step}-${direction}`}
+						className={cn(
+							"space-y-4 animate-in fade-in duration-200 ease-[var(--ease-out)] motion-surface motion-instant-reduce",
+							direction === "forward"
+								? "slide-in-from-right-4"
+								: "slide-in-from-left-4",
+						)}
+					>
+						<MultiFileUpload
+							files={receiptFiles}
+							onFilesChange={handleReceiptFilesChange}
+							accept=".pdf,.jpg,.jpeg,.png"
+							maxFiles={10}
+							maxSizeInMB={10}
+							label="Upload Receipts"
+							description="Drag & drop or paste images here."
+						/>
+
+						<div className="rounded-lg border p-3 bg-muted/30">
+							<div className="flex items-center justify-between gap-2">
+								<div className="flex items-center gap-2 text-sm font-medium">
+									<Sparkles className="h-4 w-4 text-primary" />
+									{aiEnabled ? "AI Receipt Parsing" : "Manual Receipt Entry"}
+								</div>
+								<Button
+									variant="outline"
+									className="h-11 sm:h-9"
+									disabled={
+										!aiEnabled || isAiParsing || receiptFiles.length === 0
+									}
+									onClick={() => {
+										if (receiptFiles.length > 0) {
+											void parseReceiptWithAI(
+												receiptFiles[receiptFiles.length - 1],
+											);
+										}
+									}}
+								>
+									{isAiParsing && (
+										<Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+									)}
+									Re-Analyze Latest
+								</Button>
+							</div>
+							<p className="text-xs text-muted-foreground mt-1">
+								{aiEnabled
+									? "The latest uploaded receipt will auto-fill amount/title when possible."
+									: "AI is disabled for this account. Enter details manually after uploading receipts."}
+							</p>
+							{aiParseMessage && (
+								<p className="text-xs mt-2 text-muted-foreground">
+									{aiParseMessage}
+								</p>
+							)}
+						</div>
+
+						<div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2 border">
+							<h4 className="font-semibold flex items-center gap-2">
+								<FileText className="h-4 w-4" /> Summary
+							</h4>
+							<div className="grid grid-cols-2 gap-2 text-muted-foreground">
+								<span>Amount:</span>
+								<span className="font-medium text-foreground text-right">
+									${formData.amount}
+								</span>
+
+								<span>Method:</span>
+								<span className="font-medium text-foreground text-right capitalize">
+									{formData.depositMethod === "other"
+										? formData.otherDepositMethod
+										: formData.depositMethod.replace("_", " ")}
+								</span>
+
+								<span>Receipts:</span>
+								<span className="font-medium text-foreground text-right">
+									{receiptFiles.length} file(s)
+								</span>
+							</div>
+						</div>
+					</div>
+				)}
+			</div>
+		</ResponsiveOverlay>
 	);
 }

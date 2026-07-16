@@ -16,16 +16,9 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ResponsiveOverlay } from "@/components/mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label"; // Assuming this exists
 import { Separator } from "@/components/ui/separator";
 import {
@@ -472,30 +465,38 @@ export function FundDepositDetail({
 			</Sheet>
 
 			{/* Reject Modal */}
-			<Dialog open={isRejectModalOpen} onOpenChange={setIsRejectModalOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Reject Deposit</DialogTitle>
-						<DialogDescription>
-							Please provide a reason for rejection.
-						</DialogDescription>
-					</DialogHeader>
-					<Textarea
-						value={rejectionReason}
-						onChange={(e) => setRejectionReason(e.target.value)}
-						placeholder="Reason..."
-						className="mt-2"
-					/>
-					<DialogFooter>
-						<Button variant="ghost" onClick={() => setIsRejectModalOpen(false)}>
+			<ResponsiveOverlay
+				open={isRejectModalOpen}
+				onOpenChange={setIsRejectModalOpen}
+				title="Reject Deposit"
+				description="Please provide a reason for rejection."
+				variant="sheet"
+				footer={
+					<div className="flex w-full gap-2">
+						<Button
+							variant="ghost"
+							className="h-11 flex-1 sm:h-9 sm:flex-none"
+							onClick={() => setIsRejectModalOpen(false)}
+						>
 							Cancel
 						</Button>
-						<Button variant="destructive" onClick={handleReject}>
+						<Button
+							variant="destructive"
+							className="h-11 flex-1 sm:h-9 sm:flex-none"
+							onClick={handleReject}
+						>
 							Confirm Rejection
 						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+					</div>
+				}
+			>
+				<Textarea
+					value={rejectionReason}
+					onChange={(e) => setRejectionReason(e.target.value)}
+					placeholder="Reason..."
+					className="min-h-24 text-base sm:text-sm"
+				/>
+			</ResponsiveOverlay>
 		</>
 	);
 }

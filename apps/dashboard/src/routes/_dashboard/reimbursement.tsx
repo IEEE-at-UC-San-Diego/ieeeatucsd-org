@@ -7,6 +7,7 @@ import {
 	ArrowLeft,
 	ArrowRight,
 	Calendar,
+	Camera,
 	Car,
 	CheckCircle,
 	ChevronDown,
@@ -14,6 +15,7 @@ import {
 	ChevronRight,
 	ChevronUp,
 	ExternalLink,
+	Eye,
 	FileText,
 	Loader2,
 	Plus,
@@ -29,6 +31,12 @@ import {
 	EmptyState,
 	PageHeader,
 } from "@/components/dashboard/DashboardPage";
+import {
+	MobileTaskStepper,
+	NetworkErrorState,
+	ResponsiveOverlay,
+	useMobileShell,
+} from "@/components/mobile";
 import { AddressAutocompleteInput } from "@/components/reimbursement/AddressAutocompleteInput";
 import ReceiptViewer from "@/components/reimbursement/ReceiptViewer";
 import { Badge } from "@/components/ui/badge";
@@ -46,9 +54,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { useGoogleMapsPlacesLoader } from "@/hooks/useGoogleMapsPlacesLoader";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import {
 	computeMileageTotal,
@@ -289,6 +299,9 @@ const CATEGORIES = [
 	"Other",
 ];
 
+// Accept HEIC/HEIF explicitly since some mobile browsers omit them from image/*
+const RECEIPT_FILE_ACCEPT = "image/*,.heic,.heif,application/pdf";
+
 export function isAiFeatureEnabled(aiFeaturesEnabled?: boolean) {
 	return aiFeaturesEnabled !== false;
 }
@@ -414,10 +427,26 @@ function StepIndicator({
 	maxVisitedStep: number;
 	onStepClick: (step: number) => void;
 }) {
+	const current = STEPS.find((s) => s.id === currentStep);
+	const isMobile = useIsMobile();
+
+	if (isMobile) {
+		return (
+			<MobileTaskStepper
+				currentStep={currentStep}
+				totalSteps={STEPS.length}
+				stepTitle={current?.name ?? `Step ${currentStep}`}
+				maxVisitedStep={maxVisitedStep}
+				onStepClick={onStepClick}
+				className="mb-6"
+			/>
+		);
+	}
+
 	return (
 		<div className="mb-8 flex justify-center px-2">
-			<div className="w-full max-w-4xl">
-				<div className="mx-auto flex w-fit max-w-full items-center justify-center">
+			<div className="w-full max-w-4xl overflow-x-auto scrollbar-quiet">
+				<div className="mx-auto flex w-max max-w-full items-center justify-center">
 					{STEPS.map((step, index) => {
 						const isActive = step.id === currentStep;
 						const isCompleted = step.id < currentStep;
@@ -425,7 +454,7 @@ function StepIndicator({
 						const isLast = index === STEPS.length - 1;
 
 						return (
-							<div key={step.id} className="flex items-center">
+							<div key={step.id} className="flex shrink-0 items-center">
 								<Button
 									variant="ghost"
 									onClick={() => isClickable && onStepClick(step.id)}
@@ -514,12 +543,15 @@ function StepNavigation({
 	const isLastStep = currentStep === STEPS.length;
 
 	return (
-		<div className="flex justify-between items-center pt-6 mt-6 border-t">
+		<div className="sticky bottom-0 z-10 -mx-4 mt-6 flex flex-col gap-3 border-t bg-background/95 px-4 pt-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:static sm:mx-0 sm:flex-row sm:items-center sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-6 sm:backdrop-blur-none">
 			<Button
 				variant="outline"
 				onClick={onBack}
 				disabled={isFirstStep}
-				className={cn(isFirstStep && "invisible")}
+				className={cn(
+					"h-11 w-full order-2 sm:order-1 sm:h-9 sm:w-auto",
+					isFirstStep && "invisible",
+				)}
 			>
 				<ChevronLeft className="w-4 h-4 mr-1" />
 				Back
@@ -527,7 +559,7 @@ function StepNavigation({
 			<Button
 				onClick={onNext}
 				disabled={!canGoNext || isSubmitting}
-				className="min-w-[140px]"
+				className="h-11 w-full min-w-[140px] order-1 sm:order-2 sm:h-9 sm:w-auto"
 			>
 				{isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
 				{nextLabel || (isLastStep ? "Submit" : "Next")}
@@ -549,7 +581,9 @@ function ReimbursementDetailView({
 	onBack: () => void;
 	userName?: string;
 }) {
+	const isMobile = useIsMobile();
 	const [activeReceiptIndex, setActiveReceiptIndex] = useState(0);
+	const [receiptOverlayOpen, setReceiptOverlayOpen] = useState(false);
 
 	const receipts = reimbursement.receipts || [];
 	const currentReceipt = receipts[activeReceiptIndex] || {};
@@ -1082,6 +1116,45 @@ function ReimbursementDetailView({
 								${(currentReceipt.total ?? 0).toFixed(2)}
 							</p>
 						</div>
+					) : isMobile ? (
+						<>
+							<button
+								type="button"
+								onClick={() => setReceiptOverlayOpen(true)}
+								className="flex h-full min-h-[220px] w-full flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border/80 bg-card p-8 text-center active:scale-[0.99] transition-transform"
+							>
+								<div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+									<Receipt className="h-7 w-7 text-primary" />
+								</div>
+								<p className="text-sm font-semibold text-foreground">
+									Receipt {activeReceiptIndex + 1}
+								</p>
+								<span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
+									<Eye className="h-4 w-4" />
+									View receipt
+								</span>
+							</button>
+							<ResponsiveOverlay
+								open={receiptOverlayOpen}
+								onOpenChange={setReceiptOverlayOpen}
+								variant="fullscreen"
+								title={`Receipt ${activeReceiptIndex + 1}`}
+								footer={
+									<Button
+										className="h-11 w-full"
+										onClick={() => setReceiptOverlayOpen(false)}
+									>
+										Done
+									</Button>
+								}
+							>
+								<ReceiptViewer
+									receiptUrl={receiptFileUrl || ""}
+									receiptName={`Receipt ${activeReceiptIndex + 1}`}
+									className="h-full"
+								/>
+							</ResponsiveOverlay>
+						</>
 					) : (
 						<ReceiptViewer
 							receiptUrl={receiptFileUrl || ""}
@@ -1272,6 +1345,7 @@ function ReceiptsStep({
 	aiEnabled: boolean;
 }) {
 	const { getAuthHeaders } = useAuth();
+	const isMobile = useIsMobile();
 	const [activeReceiptId, setActiveReceiptId] = useState<string | null>(
 		receipts[0]?.id ?? null,
 	);
@@ -2273,7 +2347,7 @@ function ReceiptsStep({
 											<Input
 												type="file"
 												className="hidden"
-												accept="image/*,application/pdf"
+												accept={RECEIPT_FILE_ACCEPT}
 												onChange={(e) => {
 													const file = e.target.files?.[0];
 													if (file)
@@ -2292,6 +2366,33 @@ function ReceiptsStep({
 												</span>
 											</Button>
 										</label>
+										{isMobile && (
+											<label>
+												<Input
+													type="file"
+													className="hidden"
+													accept="image/*"
+													capture="environment"
+													onChange={(e) => {
+														const file = e.target.files?.[0];
+														if (file)
+															void handleFileUpload(activeReceipt.id, file);
+														e.target.value = "";
+													}}
+												/>
+												<Button
+													variant="outline"
+													size="sm"
+													asChild
+													disabled={isActiveUploading || isActiveParsing}
+												>
+													<span>
+														<Camera className="h-3.5 w-3.5 mr-1.5" />
+														Camera
+													</span>
+												</Button>
+											</label>
+										)}
 										{aiEnabled && activeReceipt.receiptFile && (
 											<Button
 												variant="outline"
@@ -2625,23 +2726,51 @@ function ReceiptsStep({
 								</h3>
 								<p className="mt-2 text-sm text-muted-foreground">
 									Fields will appear after upload. Supports PDF, PNG, JPG, JPEG,
-									WEBP.
+									WEBP, HEIC.
 								</p>
-								<label className="mt-4 block">
-									<Input
-										type="file"
-										className="hidden"
-										accept="image/*,application/pdf"
-										onChange={(e) => {
-											const file = e.target.files?.[0];
-											if (file) void handleFileUpload(activeReceipt.id, file);
-											e.target.value = "";
-										}}
-									/>
-									<Button asChild>
-										<span>Select File</span>
-									</Button>
-								</label>
+								<div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
+									<label className="w-full sm:w-auto">
+										<Input
+											type="file"
+											className="hidden"
+											accept={RECEIPT_FILE_ACCEPT}
+											onChange={(e) => {
+												const file = e.target.files?.[0];
+												if (file) void handleFileUpload(activeReceipt.id, file);
+												e.target.value = "";
+											}}
+										/>
+										<Button asChild className="w-full sm:w-auto">
+											<span>Select File</span>
+										</Button>
+									</label>
+									{isMobile && (
+										<label className="w-full sm:w-auto">
+											<Input
+												type="file"
+												className="hidden"
+												accept="image/*"
+												capture="environment"
+												onChange={(e) => {
+													const file = e.target.files?.[0];
+													if (file)
+														void handleFileUpload(activeReceipt.id, file);
+													e.target.value = "";
+												}}
+											/>
+											<Button
+												variant="outline"
+												asChild
+												className="w-full sm:w-auto"
+											>
+												<span>
+													<Camera className="h-4 w-4 mr-2" />
+													Take Photo
+												</span>
+											</Button>
+										</label>
+									)}
+								</div>
 								{(isActiveUploading || isActiveParsing) && (
 									<div className="mt-4 text-xs text-muted-foreground flex items-center justify-center gap-2">
 										<Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -2926,8 +3055,83 @@ function ReviewStep({
 	);
 }
 
+const REIMBURSEMENT_DRAFT_KEY = "reimbursement-draft-v1";
+
+type ReimbursementDraftFormData = {
+	title: string;
+	department: string;
+	paymentMethod: string;
+	additionalInfo: string;
+	businessPurpose: string;
+};
+
+type ReimbursementDraft = {
+	formData: ReimbursementDraftFormData;
+	receipts: ReceiptEntry[];
+	step: number;
+	maxVisitedStep: number;
+	savedAt: number;
+};
+
+// Draft is JSON-only (no File objects). Uploaded receipts keep their storage URL;
+// local Files that were never uploaded cannot be restored from sessionStorage.
+function loadReimbursementDraft(): ReimbursementDraft | null {
+	try {
+		const raw = sessionStorage.getItem(REIMBURSEMENT_DRAFT_KEY);
+		if (!raw) return null;
+		const parsed = JSON.parse(raw) as ReimbursementDraft;
+		if (!parsed || typeof parsed !== "object" || !parsed.formData) return null;
+		return parsed;
+	} catch {
+		return null;
+	}
+}
+
+function saveReimbursementDraft(draft: Omit<ReimbursementDraft, "savedAt">) {
+	try {
+		sessionStorage.setItem(
+			REIMBURSEMENT_DRAFT_KEY,
+			JSON.stringify({ ...draft, savedAt: Date.now() }),
+		);
+	} catch {
+		// Storage unavailable (private browsing, quota, etc.) — draft persistence is best-effort.
+	}
+}
+
+function clearReimbursementDraft() {
+	try {
+		sessionStorage.removeItem(REIMBURSEMENT_DRAFT_KEY);
+	} catch {
+		// ignore
+	}
+}
+
+function hasMeaningfulDraftContent(draft: ReimbursementDraft): boolean {
+	const { formData, receipts } = draft;
+	if (
+		formData.title.trim() ||
+		formData.department ||
+		formData.paymentMethod ||
+		formData.additionalInfo.trim() ||
+		formData.businessPurpose.trim()
+	) {
+		return true;
+	}
+	return receipts.some(
+		(r) =>
+			r.vendorName.trim() ||
+			r.receiptFile ||
+			r.total > 0 ||
+			(r.mileageFrom ?? "").trim() ||
+			(r.mileageTo ?? "").trim(),
+	);
+}
+
 function ReimbursementPage() {
 	const { logtoId, user, getAuthHeaders } = useAuth();
+	const { setHideTabBar } = useMobileShell();
+	const isMobile = useIsMobile();
+	const isOnline = useOnlineStatus();
 	const aiEnabled = isAiFeatureEnabled(user?.aiFeaturesEnabled);
 	const reimbursements = useAuthedQuery(
 		api.reimbursements.listMine,
@@ -2963,6 +3167,39 @@ function ReimbursementPage() {
 	// Search + filter state (must be before any early returns)
 	const [searchTerm, setSearchTerm] = useState("");
 	const [statusFilter, setStatusFilter] = useState("all");
+
+	const hasRestoredDraftRef = useRef(false);
+
+	// Resume an in-progress draft (e.g. after accidental refresh/navigate away)
+	useEffect(() => {
+		if (hasRestoredDraftRef.current) return;
+		hasRestoredDraftRef.current = true;
+		const draft = loadReimbursementDraft();
+		if (draft && hasMeaningfulDraftContent(draft)) {
+			setFormData(draft.formData);
+			setReceipts(
+				draft.receipts.length > 0 ? draft.receipts : [emptyReceipt()],
+			);
+			setStep(draft.step || 1);
+			setMaxVisitedStep(draft.maxVisitedStep || draft.step || 1);
+			setView("create");
+			toast.info(
+				"Restored your reimbursement draft (form fields). Re-attach any receipts that weren't uploaded yet.",
+			);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	// Persist the draft while actively creating (never for File objects — receiptFile is a URL by then)
+	useEffect(() => {
+		if (view !== "create" || !hasRestoredDraftRef.current) return;
+		saveReimbursementDraft({ formData, receipts, step, maxVisitedStep });
+	}, [view, formData, receipts, step, maxVisitedStep]);
+
+	useEffect(() => {
+		setHideTabBar(view === "create" || view === "detail");
+		return () => setHideTabBar(false);
+	}, [view, setHideTabBar]);
 
 	const resetForm = () => {
 		setFormData({
@@ -3014,6 +3251,10 @@ function ReimbursementPage() {
 
 	const handleSubmit = async () => {
 		if (!logtoId) return;
+		if (!isOnline) {
+			toast.error("You're offline. Reconnect to submit your reimbursement.");
+			return;
+		}
 		if (!formData.title.trim()) {
 			toast.error("Title is required");
 			return;
@@ -3096,6 +3337,7 @@ function ReimbursementPage() {
 				submitterEmail: user?.email || "",
 			});
 
+			clearReimbursementDraft();
 			resetForm();
 			setView("list");
 		} catch (error: any) {
@@ -3120,71 +3362,79 @@ function ReimbursementPage() {
 
 	if (view === "create") {
 		return (
-			<div className="p-6 space-y-6 w-full">
-				<div className="flex items-center gap-3">
+			<div className="mx-auto w-full min-w-0 max-w-4xl space-y-6 px-4 py-5 sm:px-6 sm:py-6">
+				<div className="flex items-start gap-2 sm:items-center sm:gap-3">
 					<Button
 						variant="ghost"
-						size="sm"
+						size="icon"
+						className="size-11 shrink-0 sm:size-9"
 						onClick={() => {
 							setView("list");
 							resetForm();
 						}}
+						aria-label="Back to reimbursements"
 					>
-						<ArrowLeft className="h-4 w-4 mr-1" />
-						Back
+						<ArrowLeft className="h-4 w-4" />
 					</Button>
-					<div>
-						<h1 className="text-2xl font-bold tracking-tight">
+					<div className="min-w-0">
+						<h1
+							className={cn(
+								"text-xl font-semibold tracking-tight sm:text-2xl",
+								isMobile && "sr-only",
+							)}
+						>
 							New Reimbursement Request
 						</h1>
-						<p className="text-muted-foreground">
-							Fill out the details below to submit a reimbursement.
+						<p className="text-sm text-muted-foreground">
+							{isMobile
+								? "One step at a time — your progress is saved on this device until you submit."
+								: "Fill out the details below to submit a reimbursement."}
 						</p>
 					</div>
 				</div>
 
 				{/* Step Progress Indicator */}
-				<div className="flex justify-center">
-					<StepIndicator
-						currentStep={step}
-						maxVisitedStep={maxVisitedStep}
-						onStepClick={handleStepChange}
-					/>
-				</div>
+				<StepIndicator
+					currentStep={step}
+					maxVisitedStep={maxVisitedStep}
+					onStepClick={handleStepChange}
+				/>
 
 				{/* Step Content */}
-				{step === 1 && (
-					<AIWarningStep onNext={handleNext} aiEnabled={aiEnabled} />
-				)}
-				{step === 2 && (
-					<BasicInfoStep
-						formData={formData}
-						setFormData={setFormData}
-						onBack={handleBack}
-						onNext={handleNext}
-					/>
-				)}
-				{step === 3 && (
-					<ReceiptsStep
-						receipts={receipts}
-						setReceipts={setReceipts}
-						generateUploadUrl={generateUploadUrl}
-						getStorageUrl={getStorageUrl}
-						onBack={handleBack}
-						onNext={handleNext}
-						aiEnabled={aiEnabled}
-					/>
-				)}
-				{step === 4 && (
-					<ReviewStep
-						formData={formData}
-						receipts={receipts}
-						totalAmount={totalAmount}
-						onBack={handleBack}
-						onSubmit={handleSubmit}
-						isSubmitting={isSubmitting}
-					/>
-				)}
+				<div className="min-w-0">
+					{step === 1 && (
+						<AIWarningStep onNext={handleNext} aiEnabled={aiEnabled} />
+					)}
+					{step === 2 && (
+						<BasicInfoStep
+							formData={formData}
+							setFormData={setFormData}
+							onBack={handleBack}
+							onNext={handleNext}
+						/>
+					)}
+					{step === 3 && (
+						<ReceiptsStep
+							receipts={receipts}
+							setReceipts={setReceipts}
+							generateUploadUrl={generateUploadUrl}
+							getStorageUrl={getStorageUrl}
+							onBack={handleBack}
+							onNext={handleNext}
+							aiEnabled={aiEnabled}
+						/>
+					)}
+					{step === 4 && (
+						<ReviewStep
+							formData={formData}
+							receipts={receipts}
+							totalAmount={totalAmount}
+							onBack={handleBack}
+							onSubmit={handleSubmit}
+							isSubmitting={isSubmitting}
+						/>
+					)}
+				</div>
 			</div>
 		);
 	}
@@ -3216,19 +3466,22 @@ function ReimbursementPage() {
 	});
 
 	return (
-		<DashboardPage>
+		<DashboardPage variant="list">
 			{/* Header */}
 			<PageHeader
+				hideTitleOnMobile
 				title="Reimbursements"
 				description="Submit and track your reimbursement requests."
 				actions={
-					<Button onClick={() => setView("create")}>
+					<Button
+						className="h-11 w-full sm:h-9 sm:w-auto"
+						onClick={() => setView("create")}
+					>
 						<Plus className="h-4 w-4 mr-2" />
 						New Request
 					</Button>
 				}
 			/>
-
 			{/* Stats Row */}
 			{allReimbursements.length === 0 ? (
 				<div className="flex items-center justify-between rounded-md border bg-muted/20 px-4 py-3">
@@ -3324,52 +3577,51 @@ function ReimbursementPage() {
 
 				{/* List */}
 				{!reimbursements ? (
-					<div className="p-5 space-y-3">
-						{[1, 2, 3].map((i) => (
-							<Skeleton key={i} className="h-16 w-full rounded-lg" />
-						))}
-					</div>
+					!isOnline ? (
+						<div className="p-5">
+							<NetworkErrorState
+								description="Your reimbursements need a connection to load. Reconnect and retry."
+								onRetry={() => window.location.reload()}
+							/>
+						</div>
+					) : (
+						<div className="p-5 space-y-3">
+							{[1, 2, 3].map((i) => (
+								<Skeleton key={i} className="h-16 w-full rounded-lg" />
+							))}
+						</div>
+					)
 				) : filteredReimbursements.length > 0 ? (
 					<div className="divide-y divide-border">
 						{filteredReimbursements.map((r) => (
-							<div
+							<button
+								type="button"
 								key={r._id}
-								className="flex items-center gap-4 px-5 py-3.5 hover:bg-accent/40 transition-colors cursor-pointer group"
+								className="flex w-full min-h-[52px] items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-accent/50 sm:gap-4 sm:px-5 md:hover:bg-accent/40"
 								onClick={() => handleViewDetail(r as ReimbursementData)}
 							>
 								{/* Left: Title + Meta */}
-								<div className="flex-1 min-w-0">
-									<p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+								<div className="min-w-0 flex-1">
+									<p className="line-clamp-2 text-sm font-medium leading-5">
 										{r.title}
 									</p>
-									<div className="flex items-center gap-1.5 mt-1 flex-wrap">
-										<span className="inline-flex items-center rounded bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+									<div className="mt-1 flex flex-wrap items-center gap-1.5">
+										<span className="inline-flex items-center rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
 											{r.department}
 										</span>
-										<span className="text-muted-foreground/40 text-xs">·</span>
 										<span className="text-xs text-muted-foreground">
 											{r.paymentMethod}
 										</span>
-										{r.businessPurpose && (
-											<>
-												<span className="text-muted-foreground/40 text-xs">
-													·
-												</span>
-												<span className="text-xs text-muted-foreground/70 truncate max-w-[200px]">
-													{r.businessPurpose}
-												</span>
-											</>
-										)}
 									</div>
 								</div>
 
-								{/* Right: Amount + Date + Status */}
-								<div className="flex items-center gap-5 shrink-0">
-									<div className="text-right hidden sm:block">
+								{/* Right: Amount + Status */}
+								<div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-4">
+									<div className="text-right">
 										<p className="text-sm font-bold tabular-nums">
 											${r.totalAmount.toFixed(2)}
 										</p>
-										<p className="text-xs text-muted-foreground tabular-nums">
+										<p className="hidden text-xs tabular-nums text-muted-foreground sm:block">
 											{new Date(r._creationTime).toLocaleDateString(undefined, {
 												month: "short",
 												day: "numeric",
@@ -3377,9 +3629,6 @@ function ReimbursementPage() {
 											})}
 										</p>
 									</div>
-									<span className="text-sm font-bold tabular-nums sm:hidden">
-										${r.totalAmount.toFixed(2)}
-									</span>
 									<span
 										className={cn(
 											"inline-flex items-center gap-1.5 text-xs font-medium capitalize px-2.5 py-1 rounded-full whitespace-nowrap",
@@ -3387,20 +3636,10 @@ function ReimbursementPage() {
 												"bg-muted text-muted-foreground",
 										)}
 									>
-										<span
-											className={cn(
-												"w-1.5 h-1.5 rounded-full shrink-0",
-												r.status === "submitted" && "bg-ds-blue-1000",
-												r.status === "approved" && "bg-ds-green-1000",
-												r.status === "declined" && "bg-ds-red-800",
-												r.status === "paid" && "bg-ds-purple-1000",
-											)}
-										/>
 										{r.status}
 									</span>
-									<ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
 								</div>
-							</div>
+							</button>
 						))}
 					</div>
 				) : (

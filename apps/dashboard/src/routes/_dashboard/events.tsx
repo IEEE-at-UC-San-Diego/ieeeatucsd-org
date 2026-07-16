@@ -2,7 +2,7 @@ import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 import { Calendar, Clock, Download, ExternalLink, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
 	DashboardPage,
@@ -17,6 +17,7 @@ import {
 	getEventStatus,
 	HappeningToday,
 } from "@/components/events";
+import { NetworkErrorState, useMobileShell } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -30,6 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import {
 	buildGoogleCalendarIcsUrl,
 	buildGoogleCalendarSubscribeUrl,
@@ -45,6 +47,8 @@ const PAST_EVENTS_PER_PAGE = 9;
 
 function EventsPage() {
 	const { logtoId } = useAuth();
+	const isOnline = useOnlineStatus();
+	const { setHideTabBar } = useMobileShell();
 	// listPublished is a public query with no auth args
 	const events = useQuery(api.events.listPublished);
 	const attendedEventIdsData = useAuthedQuery(
@@ -63,6 +67,11 @@ function EventsPage() {
 	const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
 	const [checkInEvent, setCheckInEvent] = useState<EventType | null>(null);
 	const [isCheckingIn, setIsCheckingIn] = useState(false);
+
+	useEffect(() => {
+		setHideTabBar(isEventDetailOpen || isCheckInModalOpen);
+		return () => setHideTabBar(false);
+	}, [isEventDetailOpen, isCheckInModalOpen, setHideTabBar]);
 
 	const now = Date.now();
 
@@ -123,6 +132,10 @@ function EventsPage() {
 
 	const handleCheckInSubmit = async (code: string, foodPreference?: string) => {
 		if (!logtoId) return;
+		if (!isOnline) {
+			toast.error("You're offline. Reconnect to check in.");
+			return;
+		}
 		setIsCheckingIn(true);
 		try {
 			const result = await checkIn({
@@ -186,16 +199,20 @@ function EventsPage() {
 	}, [events]);
 
 	return (
-		<DashboardPage>
+		<DashboardPage variant="list">
 			{/* Header */}
 			<PageHeader
+				hideTitleOnMobile
 				title="Events"
 				description="Browse and check in to IEEE UCSD events."
 				actions={
 					publicCalendarMeta ? (
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="outline">
+								<Button
+									variant="outline"
+									className="h-11 w-full sm:h-9 sm:w-auto"
+								>
 									<Calendar /> Add to calendar
 								</Button>
 							</DropdownMenuTrigger>
@@ -236,14 +253,16 @@ function EventsPage() {
 			)}
 
 			{/* Search + Tabs */}
-			<div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-				<div className="relative flex-1 max-w-xs">
-					<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+			<div className="sticky top-0 z-10 -mx-4 space-y-3 border-b bg-background/90 px-4 py-3 backdrop-blur-sm sm:static sm:mx-0 sm:flex sm:flex-row sm:items-center sm:gap-3 sm:space-y-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
+				<div className="relative min-w-0 flex-1 sm:max-w-xs">
+					<Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
 					<Input
 						placeholder="Search events..."
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						className="pl-9 h-9 text-sm"
+						className="h-11 pl-9 text-base sm:h-9 sm:text-sm"
+						type="search"
+						enterKeyHint="search"
 					/>
 				</div>
 				<Tabs
@@ -252,23 +271,33 @@ function EventsPage() {
 						setActiveTab(value as "upcoming" | "past");
 						if (value === "past") setPastPage(1);
 					}}
+					className="w-full sm:w-auto"
 				>
-					<TabsList>
-						<TabsTrigger value="upcoming">
+					<TabsList className="grid h-11 w-full grid-cols-2 sm:inline-flex sm:h-9 sm:w-auto">
+						<TabsTrigger value="upcoming" className="text-xs sm:text-sm">
 							Upcoming ({upcomingEvents.length})
 						</TabsTrigger>
-						<TabsTrigger value="past">Past ({pastEvents.length})</TabsTrigger>
+						<TabsTrigger value="past" className="text-xs sm:text-sm">
+							Past ({pastEvents.length})
+						</TabsTrigger>
 					</TabsList>
 				</Tabs>
 			</div>
 
 			{/* Events grid */}
 			{!events ? (
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-					{[1, 2, 3, 4, 5, 6].map((i) => (
-						<Skeleton key={i} className="h-44 w-full rounded-md" />
-					))}
-				</div>
+				!isOnline ? (
+					<NetworkErrorState
+						description="Events need a connection to load. Reconnect and retry."
+						onRetry={() => window.location.reload()}
+					/>
+				) : (
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+						{[1, 2, 3, 4, 5, 6].map((i) => (
+							<Skeleton key={i} className="h-44 w-full rounded-md" />
+						))}
+					</div>
+				)
 			) : activeTab === "upcoming" ? (
 				upcomingEvents.length > 0 ? (
 					<div

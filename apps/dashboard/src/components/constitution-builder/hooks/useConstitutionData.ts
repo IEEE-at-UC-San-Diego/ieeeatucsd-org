@@ -8,7 +8,6 @@ import type {
 	ConstitutionDocumentSectionInput,
 	ConstitutionSection,
 	ConstitutionVersion,
-	SaveStatus,
 } from "../types";
 
 export function useConstitutionData() {
@@ -63,7 +62,6 @@ export function useConstitutionData() {
 		ensuringDefault ||
 		needsInitialization ||
 		constitution === null;
-	const saveStatus: SaveStatus = isLoading ? "idle" : "saved";
 
 	// Auto-initialize constitution when authenticated
 	useEffect(() => {
@@ -277,7 +275,6 @@ export function useConstitutionData() {
 		sections: sections || [],
 		versions: (versions || []) as ConstitutionVersion[],
 		isLoading,
-		saveStatus,
 		addSection: handleAddSection,
 		updateSection: handleUpdateSection,
 		deleteSection: handleDeleteSection,

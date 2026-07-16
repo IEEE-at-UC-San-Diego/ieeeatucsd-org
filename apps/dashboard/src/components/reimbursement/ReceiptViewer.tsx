@@ -13,6 +13,10 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 4;
 
 type FileKind = "pdf" | "image" | "unknown";
 
@@ -213,6 +217,7 @@ export default function ReceiptViewer({
 }: ReceiptViewerProps) {
 	const [zoomLevel, setZoomLevel] = useState(1);
 	const [rotation, setRotation] = useState(0);
+	const [pan, setPan] = useState({ x: 0, y: 0 });
 	const [imageError, setImageError] = useState(false);
 	const [fileKind, setFileKind] = useState<FileKind>("unknown");
 	const [loading, setLoading] = useState(true);
@@ -221,13 +226,91 @@ export default function ReceiptViewer({
 	const [isConverting, setIsConverting] = useState(false);
 	const blobUrlRef = useRef<string | null>(null);
 
-	const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.25, 3));
+	// Touch gesture tracking for pinch-zoom + pan on mobile
+	const gestureRef = useRef<{
+		mode: "none" | "pinch" | "pan";
+		startDistance: number;
+		startZoom: number;
+		startPan: { x: number; y: number };
+		startTouch: { x: number; y: number };
+	}>({
+		mode: "none",
+		startDistance: 0,
+		startZoom: 1,
+		startPan: { x: 0, y: 0 },
+		startTouch: { x: 0, y: 0 },
+	});
+
+	const handleZoomIn = () =>
+		setZoomLevel((prev) => Math.min(prev + 0.25, MAX_ZOOM));
 	const handleZoomOut = () =>
-		setZoomLevel((prev) => Math.max(prev - 0.25, 0.5));
+		setZoomLevel((prev) => Math.max(prev - 0.25, MIN_ZOOM));
 	const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
 	const resetView = () => {
 		setZoomLevel(1);
 		setRotation(0);
+		setPan({ x: 0, y: 0 });
+	};
+
+	const touchDistance = (touches: React.TouchList) => {
+		const [a, b] = [touches[0], touches[1]];
+		return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+	};
+
+	const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+		if (e.touches.length === 2) {
+			gestureRef.current = {
+				mode: "pinch",
+				startDistance: touchDistance(e.touches),
+				startZoom: zoomLevel,
+				startPan: pan,
+				startTouch: { x: 0, y: 0 },
+			};
+		} else if (e.touches.length === 1 && zoomLevel > 1) {
+			gestureRef.current = {
+				mode: "pan",
+				startDistance: 0,
+				startZoom: zoomLevel,
+				startPan: pan,
+				startTouch: { x: e.touches[0].clientX, y: e.touches[0].clientY },
+			};
+		}
+	};
+
+	const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+		const gesture = gestureRef.current;
+		if (gesture.mode === "pinch" && e.touches.length === 2) {
+			e.preventDefault();
+			const newDistance = touchDistance(e.touches);
+			if (gesture.startDistance > 0) {
+				const scale = newDistance / gesture.startDistance;
+				const nextZoom = Math.min(
+					MAX_ZOOM,
+					Math.max(MIN_ZOOM, gesture.startZoom * scale),
+				);
+				setZoomLevel(nextZoom);
+			}
+		} else if (gesture.mode === "pan" && e.touches.length === 1) {
+			e.preventDefault();
+			const dx = e.touches[0].clientX - gesture.startTouch.x;
+			const dy = e.touches[0].clientY - gesture.startTouch.y;
+			setPan({ x: gesture.startPan.x + dx, y: gesture.startPan.y + dy });
+		}
+	};
+
+	const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+		if (e.touches.length === 0) {
+			gestureRef.current.mode = "none";
+		} else if (e.touches.length === 1 && zoomLevel > 1) {
+			// Transition from pinch to pan without losing position
+			gestureRef.current = {
+				mode: "pan",
+				startDistance: 0,
+				startZoom: zoomLevel,
+				startPan: pan,
+				startTouch: { x: e.touches[0].clientX, y: e.touches[0].clientY },
+			};
+		}
 	};
 
 	const detectAndPrepare = useCallback(
@@ -310,8 +393,7 @@ export default function ReceiptViewer({
 	const handleRetry = () => {
 		setImageError(false);
 		setErrorMessage("");
-		setZoomLevel(1);
-		setRotation(0);
+		resetView();
 		detectAndPrepare(receiptUrl);
 	};
 
@@ -438,11 +520,20 @@ export default function ReceiptViewer({
 
 			{/* Content Viewer */}
 			<div className="flex-1 overflow-hidden relative bg-muted flex items-center justify-center">
-				{/* Loading State */}
+				{/* Loading / Converting State */}
 				{loading && (
 					<div className="flex flex-col items-center gap-3 text-muted-foreground">
 						<Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-						<p className="text-sm">Loading receipt…</p>
+						<p className="text-sm">
+							{isConverting
+								? "Converting HEIC image for preview…"
+								: "Loading receipt…"}
+						</p>
+						{isConverting && (
+							<p className="max-w-56 text-center text-xs text-muted-foreground/80">
+								This can take a few seconds on larger photos.
+							</p>
+						)}
 					</div>
 				)}
 
@@ -532,13 +623,22 @@ export default function ReceiptViewer({
 
 				{/* Image Viewer */}
 				{!loading && isImage && !imageError && (
-					<div className="w-full h-full overflow-auto flex items-center justify-center p-4">
+					<div
+						className="w-full h-full overflow-hidden flex items-center justify-center p-4 touch-none select-none"
+						onTouchStart={handleTouchStart}
+						onTouchMove={handleTouchMove}
+						onTouchEnd={handleTouchEnd}
+					>
 						<img
 							src={displayUrl}
 							alt={receiptName || "Receipt"}
-							className="max-w-full max-h-full object-contain rounded shadow-sm transition-transform duration-200 ease-out origin-center block"
+							className={cn(
+								"max-w-full max-h-full object-contain rounded shadow-sm origin-center block",
+								gestureRef.current.mode === "none" &&
+									"transition-transform duration-200 ease-out",
+							)}
 							style={{
-								transform: `scale(${zoomLevel}) rotate(${rotation}deg)`,
+								transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel}) rotate(${rotation}deg)`,
 							}}
 							onError={handleImageError}
 							onLoad={() => setLoading(false)}

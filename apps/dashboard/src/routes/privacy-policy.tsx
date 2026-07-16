@@ -9,26 +9,25 @@ export const Route = createFileRoute("/privacy-policy")({
 
 function PrivacyPolicyPage() {
 	return (
-		<div className="min-h-screen bg-background">
-			<div className="max-w-3xl mx-auto px-6 py-12">
-				<div className="mb-8">
-					<Button variant="ghost" size="sm" asChild>
-						<Link to="/overview">
-							<ArrowLeft className="h-4 w-4 mr-2" />
-							Back to Dashboard
-						</Link>
-					</Button>
-				</div>
-
-				<h1 className="text-3xl font-bold tracking-tight mb-2">
+		<div className="min-h-dvh bg-background pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[env(safe-area-inset-top)]">
+			<div className="sticky top-0 z-10 border-b bg-background/90 px-4 py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 [@media(prefers-reduced-transparency:reduce)]:bg-background [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none sm:px-6">
+				<Button variant="ghost" className="h-11 px-3 -ml-2" asChild>
+					<Link to="/overview">
+						<ArrowLeft className="mr-2 h-4 w-4" />
+						Back
+					</Link>
+				</Button>
+			</div>
+			<div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+				<h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl">
 					Privacy Policy
 				</h1>
-				<p className="text-muted-foreground mb-8">
+				<p className="mb-8 text-sm text-muted-foreground sm:text-base">
 					Version {LEGAL_VERSIONS.PRIVACY_POLICY_VERSION} &middot; Effective{" "}
 					{LEGAL_VERSIONS.PRIVACY_POLICY_EFFECTIVE_DATE}
 				</p>
 
-				<div className="prose prose-neutral max-w-none space-y-6">
+				<div className="prose prose-neutral max-w-prose space-y-6 sm:max-w-none">
 					<section>
 						<h2 className="text-xl font-semibold mt-8 mb-3">
 							1. Information We Collect

@@ -467,7 +467,7 @@ function SlackAccessPage() {
 										IEEE Email
 									</span>
 									{hasIEEEEmail || ieeeEmail ? (
-										<span className="flex items-center gap-1.5 truncate font-medium text-ieee-blue">
+										<span className="flex min-w-0 items-center gap-1.5 break-all font-medium text-ieee-blue">
 											{ieeeEmail}
 											<Button
 												variant="ghost"
@@ -509,13 +509,22 @@ function SlackAccessPage() {
 											onChange={(e) => setCustomPassword(e.target.value)}
 											onKeyDown={handleIEEEPasswordKeyDown}
 											disabled={hasIEEEEmail && !canResetPassword}
-											className="h-10 pr-9 text-sm"
+											className="h-11 pr-12 text-base md:h-10 md:text-sm"
+											autoComplete={
+												hasIEEEEmail ? "new-password" : "new-password"
+											}
+											autoCapitalize="off"
+											autoCorrect="off"
+											spellCheck={false}
+											enterKeyHint="done"
 										/>
 										<Button
 											variant="ghost"
 											size="icon"
-											aria-label="Toggle password visibility"
-											className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+											aria-label={
+												showPassword ? "Hide password" : "Show password"
+											}
+											className="absolute right-1 top-1/2 size-11 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 											onClick={() => setShowPassword(!showPassword)}
 											type="button"
 										>
@@ -542,7 +551,7 @@ function SlackAccessPage() {
 												!passwordValidation.isValid ||
 												emailState.isResetting
 											}
-											className="h-10 w-full bg-ieee-blue text-sm text-white hover:bg-ieee-blue-light"
+											className="h-11 w-full bg-ieee-blue text-sm text-white hover:bg-ieee-blue-light md:h-10"
 										>
 											{emailState.isResetting ? (
 												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -564,7 +573,7 @@ function SlackAccessPage() {
 											!passwordValidation.isValid ||
 											emailState.isGenerating
 										}
-										className="h-10 w-full bg-ieee-blue text-sm text-white hover:bg-ieee-blue-light"
+										className="h-11 w-full bg-ieee-blue text-sm text-white hover:bg-ieee-blue-light md:h-10"
 									>
 										{emailState.isGenerating ? (
 											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -681,7 +690,7 @@ function SlackAccessPage() {
 												<Key className="h-5 w-5 text-ds-purple-700" />
 											</div>
 											<h3 className="text-sm font-semibold">Login to Inbox</h3>
-											<p className="mt-0.5 truncate text-xs text-muted-foreground">
+											<p className="mt-0.5 break-all text-xs text-muted-foreground">
 												{ieeeEmail}
 											</p>
 										</div>
@@ -693,13 +702,22 @@ function SlackAccessPage() {
 													value={inboxPassword}
 													onChange={(e) => setInboxPassword(e.target.value)}
 													onKeyDown={handleInboxPasswordKeyDown}
-													className="h-10 pr-9 text-sm"
+													className="h-11 pr-12 text-base md:h-10 md:text-sm"
+													autoComplete="current-password"
+													autoCapitalize="off"
+													autoCorrect="off"
+													spellCheck={false}
+													enterKeyHint="go"
 												/>
 												<Button
 													variant="ghost"
 													size="icon"
-													aria-label="Toggle inbox password visibility"
-													className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+													aria-label={
+														showInboxPassword
+															? "Hide password"
+															: "Show password"
+													}
+													className="absolute right-1 top-1/2 size-11 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 													onClick={() =>
 														setShowInboxPassword(!showInboxPassword)
 													}
@@ -715,7 +733,7 @@ function SlackAccessPage() {
 											<Button
 												onClick={authenticateInbox}
 												disabled={!inboxPassword.trim() || inboxState.isLoading}
-												className="h-10 w-full bg-ds-purple-700 text-sm text-white hover:bg-ds-purple-800"
+												className="h-11 w-full bg-ds-purple-700 text-sm text-white hover:bg-ds-purple-800 md:h-10"
 											>
 												{inboxState.isLoading ? (
 													<Loader2 className="h-4 w-4 animate-spin" />

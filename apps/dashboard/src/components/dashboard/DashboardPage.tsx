@@ -1,19 +1,34 @@
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
-type DashboardPageProps = React.ComponentProps<"main"> & {
+type DashboardPageVariant =
+	| "list"
+	| "form"
+	| "editor"
+	| "immersive"
+	| "default";
+
+type DashboardPageProps = React.ComponentProps<"div"> & {
 	width?: "standard" | "wide";
+	variant?: DashboardPageVariant;
 };
 
 export function DashboardPage({
 	className,
 	width = "standard",
+	variant = "default",
 	...props
 }: DashboardPageProps) {
 	return (
-		<main
+		<div
 			className={cn(
-				"mx-auto w-full space-y-6 px-4 py-5 sm:px-6 sm:py-6 lg:space-y-8 lg:py-8",
+				"mx-auto w-full min-w-0",
+				variant === "immersive"
+					? "space-y-4 px-0 py-0"
+					: "space-y-6 px-4 py-5 sm:px-6 sm:py-6 lg:space-y-8 lg:py-8",
+				variant === "list" && "space-y-4 md:space-y-6",
+				variant === "form" && "space-y-5",
+				variant === "editor" && "space-y-3 px-3 sm:px-4",
 				width === "wide" ? "max-w-[1440px]" : "max-w-[1120px]",
 				className,
 			)}
@@ -27,6 +42,8 @@ type PageHeaderProps = React.ComponentProps<"header"> & {
 	description?: React.ReactNode;
 	eyebrow?: React.ReactNode;
 	actions?: React.ReactNode;
+	/** Hide the large title on compact screens when the app bar already shows it. */
+	hideTitleOnMobile?: boolean;
 };
 
 export function PageHeader({
@@ -34,6 +51,7 @@ export function PageHeader({
 	description,
 	eyebrow,
 	actions,
+	hideTitleOnMobile = false,
 	className,
 	...props
 }: PageHeaderProps) {
@@ -51,7 +69,12 @@ export function PageHeader({
 						{eyebrow}
 					</div>
 				)}
-				<h1 className="text-[28px] font-semibold leading-8 tracking-[-0.025em] text-foreground">
+				<h1
+					className={cn(
+						"text-2xl font-semibold leading-[1.2] tracking-[-0.025em] text-balance text-foreground md:text-[28px] md:leading-8",
+						hideTitleOnMobile && "sr-only md:not-sr-only",
+					)}
+				>
 					{title}
 				</h1>
 				{description && (
@@ -61,7 +84,7 @@ export function PageHeader({
 				)}
 			</div>
 			{actions && (
-				<div className="flex shrink-0 flex-wrap items-center gap-2">
+				<div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
 					{actions}
 				</div>
 			)}

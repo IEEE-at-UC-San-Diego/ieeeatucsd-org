@@ -46,8 +46,42 @@ export function DisclaimerSection() {
 						</p>
 					</div>
 				</div>
-				<div className="overflow-x-auto">
-					<table className="w-full min-w-[520px] text-left text-sm">
+				<div className="md:overflow-x-auto">
+					{/* Mobile stacked rows */}
+					<ul className="divide-y md:hidden">
+						<li className="space-y-1 px-4 py-3">
+							<p className="text-sm font-medium">AS funding</p>
+							<p className="text-sm tabular-nums">
+								Submit at least <span className="font-semibold">5 weeks</span>
+							</p>
+							<p className="text-xs text-muted-foreground">
+								Also required: Itemized invoices
+							</p>
+						</li>
+						<li className="space-y-1 px-4 py-3">
+							<p className="text-sm font-medium">
+								Food or flyers with AS funding
+							</p>
+							<p className="text-sm tabular-nums">
+								Submit at least <span className="font-semibold">7 weeks</span>
+							</p>
+							<p className="text-xs text-muted-foreground">
+								Also required: Confirm with VC Operations
+							</p>
+						</li>
+						<li className="space-y-1 px-4 py-3">
+							<p className="text-sm font-medium">
+								Food or flyers without AS funding
+							</p>
+							<p className="text-sm tabular-nums">
+								Submit at least <span className="font-semibold">4 weeks</span>
+							</p>
+							<p className="text-xs text-muted-foreground">
+								Also required: Room booking first
+							</p>
+						</li>
+					</ul>
+					<table className="hidden w-full min-w-[520px] text-left text-sm md:table">
 						<thead className="bg-muted/40 text-xs text-muted-foreground">
 							<tr>
 								<th className="px-4 py-2 font-medium">Request includes</th>

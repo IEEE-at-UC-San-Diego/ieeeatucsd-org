@@ -11,6 +11,7 @@ import {
 	Link as LinkIcon,
 	type LucideIcon,
 	MessageSquare,
+	MoreHorizontal,
 	Trophy,
 	UserPlus,
 	Users,
@@ -21,6 +22,10 @@ export interface NavigationItem {
 	icon: LucideIcon;
 	label: string;
 	href: string;
+	/** Prefer in bottom tab bar when true. */
+	mobilePrimary?: boolean;
+	/** Hide bottom tab bar on this route (full-screen tasks). */
+	hideTabBar?: boolean;
 }
 
 export interface NavigationCategory {
@@ -60,13 +65,24 @@ export const navigationCategories: NavigationCategory[] = [
 	{
 		title: "Member Actions",
 		items: [
-			{ icon: Home, label: "Overview", href: NAVIGATION_PATHS.OVERVIEW },
+			{
+				icon: Home,
+				label: "Overview",
+				href: NAVIGATION_PATHS.OVERVIEW,
+				mobilePrimary: true,
+			},
 			{ icon: LinkIcon, label: "Links", href: NAVIGATION_PATHS.LINKS },
-			{ icon: Calendar, label: "Events", href: NAVIGATION_PATHS.EVENTS },
+			{
+				icon: Calendar,
+				label: "Events",
+				href: NAVIGATION_PATHS.EVENTS,
+				mobilePrimary: true,
+			},
 			{
 				icon: CreditCard,
 				label: "Reimbursement",
 				href: NAVIGATION_PATHS.REIMBURSEMENT,
+				mobilePrimary: true,
 			},
 			{
 				icon: Trophy,
@@ -159,6 +175,66 @@ export const navigationCategories: NavigationCategory[] = [
 		],
 	},
 ];
+
+/** Bottom tab destinations for member/officer accounts. */
+export const MOBILE_TAB_ITEMS = [
+	{
+		id: "overview",
+		label: "Overview",
+		href: NAVIGATION_PATHS.OVERVIEW,
+		icon: Home,
+	},
+	{
+		id: "events",
+		label: "Events",
+		href: NAVIGATION_PATHS.EVENTS,
+		icon: Calendar,
+	},
+	{
+		id: "reimburse",
+		label: "Reimburse",
+		href: NAVIGATION_PATHS.REIMBURSEMENT,
+		icon: CreditCard,
+	},
+	{
+		id: "more",
+		label: "More",
+		href: "#more",
+		icon: MoreHorizontal,
+	},
+] as const;
+
+/** Routes that should hide the bottom tab bar (immersive / task flows). */
+export const MOBILE_HIDE_TAB_BAR_PATHS = new Set<string>([
+	NAVIGATION_PATHS.CONSTITUTION_BUILDER,
+	NAVIGATION_PATHS.GET_STARTED,
+]);
+
+export function shouldHideMobileTabBar(
+	pathname: string,
+	searchParams?: URLSearchParams | Record<string, unknown>,
+): boolean {
+	if (MOBILE_HIDE_TAB_BAR_PATHS.has(pathname)) return true;
+
+	// Reimbursement create / detail task surfaces
+	if (pathname === NAVIGATION_PATHS.REIMBURSEMENT) {
+		const mode =
+			searchParams instanceof URLSearchParams
+				? searchParams.get("mode")
+				: (searchParams?.mode as string | undefined);
+		if (mode === "create" || mode === "edit" || mode === "detail") return true;
+	}
+
+	if (pathname === NAVIGATION_PATHS.MANAGE_EVENTS) {
+		const mode =
+			searchParams instanceof URLSearchParams
+				? searchParams.get("wizard")
+				: (searchParams?.wizard as string | undefined);
+		if (mode === "1" || mode === "true") return true;
+	}
+
+	return false;
+}
 
 export const PATH_LABELS: Record<string, string> = {
 	"/overview": "Overview",

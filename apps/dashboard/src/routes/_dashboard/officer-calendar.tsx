@@ -1,7 +1,7 @@
 import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import { ExternalLink, Loader2, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EventCalendar } from "@/components/manage-events/calendar/EventCalendar";
 import { InternalEventModal } from "@/components/manage-events/modals/InternalEventModal";
@@ -16,11 +16,14 @@ import {
 	saveWeekLabelSettings,
 	type WeekLabelSettings,
 } from "@/components/manage-events/utils/weekLabels";
+import { MOBILE_TAB_BAR_OFFSET, useMobileShell } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { buildGoogleCalendarSubscribeUrl } from "@/lib/calendarLinks";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_dashboard/officer-calendar")({
 	loader: (ctx) => prefetchAuthedQuery(api.events.listAll, undefined, ctx),
@@ -60,6 +63,8 @@ const internalEventTypeToStatus: Record<InternalEventType, EventStatus> = {
 };
 
 function OfficerCalendarPage() {
+	const isMobile = useIsMobile();
+	const { setHideTabBar } = useMobileShell();
 	const { logtoId, hasOfficerAccess } = usePermissions();
 
 	const eventsData = useAuthedQuery(
@@ -81,6 +86,12 @@ function OfficerCalendarPage() {
 	const [selectedCalendarEvent, setSelectedCalendarEvent] =
 		useState<EventRequest | null>(null);
 	const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+	useEffect(() => {
+		setHideTabBar(isModalOpen || !!selectedCalendarEvent);
+		return () => setHideTabBar(false);
+	}, [isModalOpen, selectedCalendarEvent, setHideTabBar]);
+
 	const convexWeekLabelSettings = useAuthedQuery(
 		api.weekLabelSettings.get,
 		logtoId ? { logtoId } : "skip",
@@ -288,15 +299,21 @@ function OfficerCalendarPage() {
 	}
 
 	return (
-		<div className="p-6 space-y-6">
-			<div className="flex items-center justify-between">
+		<div
+			className={cn(
+				"space-y-4 p-4 md:space-y-6 md:p-6",
+				MOBILE_TAB_BAR_OFFSET,
+				"md:pb-6",
+			)}
+		>
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div>
-					<h1 className="text-2xl font-bold">Officer Calendar</h1>
-					<p className="text-muted-foreground">
+					<h1 className="text-xl font-bold md:text-2xl">Officer Calendar</h1>
+					<p className="text-sm text-muted-foreground md:text-base">
 						View published events and manage internal officer events
 					</p>
 				</div>
-				<div className="flex gap-2">
+				<div className="hidden gap-2 md:flex">
 					{officerCalendarId && (
 						<Button variant="outline" asChild>
 							<a
@@ -328,6 +345,19 @@ function OfficerCalendarPage() {
 					todayHighlightMode="background"
 					getDayLabel={(date) => getWeekLabelForDate(date, weekLabelSettings)}
 				/>
+			)}
+
+			{isMobile && (
+				<Button
+					onClick={() => openCreateModal()}
+					className="fixed right-4 z-30 h-12 gap-2 rounded-full px-5 shadow-modal active:scale-[0.97]"
+					style={{
+						bottom: "calc(3.5rem + env(safe-area-inset-bottom) + 0.75rem)",
+					}}
+				>
+					<Plus className="h-5 w-5" />
+					Add
+				</Button>
 			)}
 
 			<InternalEventModal

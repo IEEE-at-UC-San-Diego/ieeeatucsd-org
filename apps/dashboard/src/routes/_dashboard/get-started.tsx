@@ -14,6 +14,7 @@ import {
 	User,
 } from "lucide-react";
 import { useState } from "react";
+import { MobileTaskStepper } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,8 @@ interface Question {
 	min?: number;
 	max?: number;
 	accept?: string;
+	autoComplete?: string;
+	inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
 }
 
 const questions: Question[] = [
@@ -56,6 +59,8 @@ const questions: Question[] = [
 		required: true,
 		type: "text",
 		placeholder: "A12345678",
+		autoComplete: "off",
+		inputMode: "text",
 	},
 	{
 		id: "major",
@@ -65,6 +70,7 @@ const questions: Question[] = [
 		required: true,
 		type: "text",
 		placeholder: "Computer Science",
+		autoComplete: "organization-title",
 	},
 	{
 		id: "graduationYear",
@@ -76,6 +82,7 @@ const questions: Question[] = [
 		placeholder: "2025",
 		min: 2024,
 		max: 2030,
+		inputMode: "numeric",
 	},
 	{
 		id: "memberId",
@@ -85,6 +92,7 @@ const questions: Question[] = [
 		required: false,
 		type: "text",
 		placeholder: "12345678",
+		inputMode: "numeric",
 	},
 	{
 		id: "zelle",
@@ -95,6 +103,7 @@ const questions: Question[] = [
 		required: false,
 		type: "text",
 		placeholder: "Phone number or email",
+		autoComplete: "email",
 	},
 	{
 		id: "resume",
@@ -114,7 +123,7 @@ function GetStartedPage() {
 		api.users.generateResumeUploadUrl,
 	);
 	const [currentStep, setCurrentStep] = useState(0);
-	const [answers, setAnswers] = useState<Record<string, any>>({});
+	const [answers, setAnswers] = useState<Record<string, unknown>>({});
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 
@@ -128,7 +137,9 @@ function GetStartedPage() {
 
 	const handleNext = () => {
 		if (currentQuestion.type === "legal-acceptance") {
-			const legalValue = answers[currentQuestion.id];
+			const legalValue = answers[currentQuestion.id] as
+				| { tos?: boolean; privacy?: boolean }
+				| undefined;
 			if (!legalValue?.tos || !legalValue?.privacy) {
 				setError(
 					"You must accept both the Terms of Service and Privacy Policy to continue",
@@ -155,7 +166,7 @@ function GetStartedPage() {
 		}
 	};
 
-	const handleInputChange = (value: any) => {
+	const handleInputChange = (value: unknown) => {
 		setAnswers((prev) => ({ ...prev, [currentQuestion.id]: value }));
 		setError(null);
 	};
@@ -184,11 +195,11 @@ function GetStartedPage() {
 
 			await completeOnboarding({
 				logtoId: logtoId!,
-				pid: answers.pid,
-				major: answers.major,
-				graduationYear: parseInt(answers.graduationYear),
-				memberId: answers.memberId || undefined,
-				zelleInformation: answers.zelle || undefined,
+				pid: answers.pid as string,
+				major: answers.major as string,
+				graduationYear: parseInt(answers.graduationYear as string),
+				memberId: (answers.memberId as string) || undefined,
+				zelleInformation: (answers.zelle as string) || undefined,
 				resumeStorageId,
 				resumeFileName,
 				tosVersion: LEGAL_VERSIONS.TOS_VERSION,
@@ -198,25 +209,26 @@ function GetStartedPage() {
 			setTimeout(() => {
 				window.location.href = "/overview";
 			}, 2000);
-		} catch (err: any) {
-			setError(err.message);
+		} catch (err: unknown) {
+			setError(err instanceof Error ? err.message : "Something went wrong");
 			setLoading(false);
 		}
 	};
 
-	// Success screen
 	if (currentStep === questions.length) {
 		return (
-			<div className="min-h-screen bg-background flex items-center justify-center p-4">
+			<div className="flex min-h-dvh items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
 				<div className="text-center success-reveal">
-					<div className="w-24 h-24 bg-ds-green-1000 rounded-full flex items-center justify-center mx-auto mb-6">
-						<CheckCircle className="w-12 h-12 text-white" />
+					<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-ds-green-1000 sm:h-24 sm:w-24">
+						<CheckCircle className="h-10 w-10 text-white sm:h-12 sm:w-12" />
 					</div>
-					<h1 className="text-3xl font-bold mb-4">Welcome to IEEE UCSD!</h1>
-					<p className="text-muted-foreground text-lg">
+					<h1 className="mb-3 text-2xl font-bold sm:text-3xl">
+						Welcome to IEEE UCSD!
+					</h1>
+					<p className="text-muted-foreground">
 						Your profile has been set up successfully.
 					</p>
-					<p className="text-muted-foreground mt-2">
+					<p className="mt-2 text-sm text-muted-foreground">
 						Redirecting to your dashboard...
 					</p>
 				</div>
@@ -226,134 +238,145 @@ function GetStartedPage() {
 
 	const renderInput = () => {
 		const question = currentQuestion;
-		const value = answers[question.id] || "";
+		const value = answers[question.id];
 
 		switch (question.type) {
 			case "text":
 				return (
 					<Input
 						type="text"
-						value={value}
+						value={(value as string) || ""}
 						onChange={(e) => handleInputChange(e.target.value)}
 						onKeyDown={handleKeyPress}
 						placeholder={question.placeholder}
-						className="text-lg py-3"
+						className="h-12 text-base"
 						autoFocus
+						autoComplete={question.autoComplete}
+						inputMode={question.inputMode}
+						enterKeyHint="next"
 					/>
 				);
 			case "number":
 				return (
 					<Input
 						type="number"
-						value={value}
+						value={(value as string) || ""}
 						onChange={(e) => handleInputChange(e.target.value)}
 						onKeyDown={handleKeyPress}
 						placeholder={question.placeholder}
 						min={question.min}
 						max={question.max}
-						className="text-lg py-3"
+						className="h-12 text-base"
 						autoFocus
+						inputMode="numeric"
+						enterKeyHint="next"
 					/>
 				);
 			case "file":
 				return (
 					<div className="space-y-4">
-						<Input
-							type="file"
-							accept={question.accept}
-							onChange={(e) => {
-								const file = e.target.files?.[0] || null;
-								if (file) {
-									const validationError = validateResumeFile(file);
-									if (validationError) {
-										setError(validationError);
-										e.target.value = "";
-										return;
+						<label className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-muted/30 px-4 py-6 text-center active:bg-muted/50">
+							<Upload className="size-8 text-muted-foreground" />
+							<span className="text-sm font-medium">Tap to choose PDF</span>
+							<span className="text-xs text-muted-foreground">Maximum 5MB</span>
+							<input
+								type="file"
+								accept={question.accept}
+								className="sr-only"
+								onChange={(e) => {
+									const file = e.target.files?.[0] || null;
+									if (file) {
+										const validationError = validateResumeFile(file);
+										if (validationError) {
+											setError(validationError);
+											e.target.value = "";
+											return;
+										}
 									}
-								}
-								handleInputChange(file);
-							}}
-						/>
-						{value && (
-							<p className="text-ds-green-700 font-medium flex items-center gap-2">
+									handleInputChange(file);
+								}}
+							/>
+						</label>
+						{value instanceof File && (
+							<p className="flex items-center gap-2 font-medium text-ds-green-700">
 								<CheckCircle className="w-4 h-4" />
 								{value.name} selected
 							</p>
 						)}
 						<p className="text-xs text-muted-foreground">
-							PDF only, maximum 5MB. Your resume will be visible to IEEE
-							sponsors and officers.
+							Your resume will be visible to IEEE sponsors and officers.
 						</p>
 					</div>
 				);
 			case "legal-acceptance": {
-				const tosAccepted = value?.tos || false;
-				const privacyAccepted = value?.privacy || false;
+				const legal = (value as { tos?: boolean; privacy?: boolean }) || {};
+				const tosAccepted = legal.tos || false;
+				const privacyAccepted = legal.privacy || false;
 				return (
-					<div className="space-y-4">
-						<div className="bg-muted/50 rounded-lg p-4 border">
-							<div className="flex items-start gap-3">
-								<Checkbox
-									checked={tosAccepted}
-									onCheckedChange={(checked) =>
-										handleInputChange({ ...value, tos: checked })
-									}
-								/>
-								<div className="flex-1">
-									<div className="flex items-center gap-2 mb-1">
-										<FileText className="w-4 h-4 text-ds-blue-700" />
-										<span className="font-medium">Terms of Service</span>
-										<span className="text-xs bg-ds-blue-100 text-ds-blue-700 px-2 py-0.5 rounded">
-											v{LEGAL_VERSIONS.TOS_VERSION}
-										</span>
-									</div>
-									<p className="text-sm text-muted-foreground mb-2">
-										I have read and agree to the Terms of Service.
-									</p>
-									<a
-										href={LEGAL_VERSIONS.TOS_URL}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="inline-flex items-center gap-1 text-sm text-ds-blue-700 hover:underline"
-									>
-										Read Terms of Service
-										<ExternalLink className="w-3 h-3" />
-									</a>
+					<div className="space-y-3">
+						<label className="flex min-h-[52px] cursor-pointer items-start gap-3 rounded-md border bg-muted/40 p-4 active:bg-muted/60">
+							<Checkbox
+								checked={tosAccepted}
+								onCheckedChange={(checked) =>
+									handleInputChange({ ...legal, tos: checked })
+								}
+								className="mt-0.5 size-5"
+							/>
+							<div className="min-w-0 flex-1">
+								<div className="mb-1 flex flex-wrap items-center gap-2">
+									<FileText className="size-4 text-ds-blue-700" />
+									<span className="font-medium">Terms of Service</span>
+									<span className="rounded bg-ds-blue-100 px-2 py-0.5 text-xs text-ds-blue-700">
+										v{LEGAL_VERSIONS.TOS_VERSION}
+									</span>
 								</div>
+								<p className="mb-2 text-sm text-muted-foreground">
+									I have read and agree to the Terms of Service.
+								</p>
+								<a
+									href={LEGAL_VERSIONS.TOS_URL}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="inline-flex items-center gap-1 text-sm text-ds-blue-700"
+									onClick={(e) => e.stopPropagation()}
+								>
+									Read Terms of Service
+									<ExternalLink className="size-3" />
+								</a>
 							</div>
-						</div>
-						<div className="bg-muted/50 rounded-lg p-4 border">
-							<div className="flex items-start gap-3">
-								<Checkbox
-									checked={privacyAccepted}
-									onCheckedChange={(checked) =>
-										handleInputChange({ ...value, privacy: checked })
-									}
-								/>
-								<div className="flex-1">
-									<div className="flex items-center gap-2 mb-1">
-										<Shield className="w-4 h-4 text-ds-green-700" />
-										<span className="font-medium">Privacy Policy</span>
-										<span className="text-xs bg-ds-green-100 text-ds-green-700 px-2 py-0.5 rounded">
-											v{LEGAL_VERSIONS.PRIVACY_POLICY_VERSION}
-										</span>
-									</div>
-									<p className="text-sm text-muted-foreground mb-2">
-										I have read and agree to the Privacy Policy.
-									</p>
-									<a
-										href={LEGAL_VERSIONS.PRIVACY_POLICY_URL}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="inline-flex items-center gap-1 text-sm text-ds-blue-700 hover:underline"
-									>
-										Read Privacy Policy
-										<ExternalLink className="w-3 h-3" />
-									</a>
+						</label>
+						<label className="flex min-h-[52px] cursor-pointer items-start gap-3 rounded-md border bg-muted/40 p-4 active:bg-muted/60">
+							<Checkbox
+								checked={privacyAccepted}
+								onCheckedChange={(checked) =>
+									handleInputChange({ ...legal, privacy: checked })
+								}
+								className="mt-0.5 size-5"
+							/>
+							<div className="min-w-0 flex-1">
+								<div className="mb-1 flex flex-wrap items-center gap-2">
+									<Shield className="size-4 text-ds-green-700" />
+									<span className="font-medium">Privacy Policy</span>
+									<span className="rounded bg-ds-green-100 px-2 py-0.5 text-xs text-ds-green-700">
+										v{LEGAL_VERSIONS.PRIVACY_POLICY_VERSION}
+									</span>
 								</div>
+								<p className="mb-2 text-sm text-muted-foreground">
+									I have read and agree to the Privacy Policy.
+								</p>
+								<a
+									href={LEGAL_VERSIONS.PRIVACY_POLICY_URL}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="inline-flex items-center gap-1 text-sm text-ds-blue-700"
+									onClick={(e) => e.stopPropagation()}
+								>
+									Read Privacy Policy
+									<ExternalLink className="size-3" />
+								</a>
 							</div>
-						</div>
-						<p className="text-xs text-muted-foreground text-center">
+						</label>
+						<p className="text-center text-xs text-muted-foreground">
 							You must accept both policies to continue.
 						</p>
 					</div>
@@ -365,122 +388,110 @@ function GetStartedPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-background flex items-start justify-center p-4 py-8 md:py-12">
-			<div className="max-w-2xl w-full">
-				<div className="text-center mb-8">
-					<div className="flex items-center justify-center mb-4">
+		<div className="flex min-h-dvh flex-col bg-background pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+			<div className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10">
+				<div className="mb-6 text-center md:mb-8">
+					<div className="mb-3 flex items-center justify-center gap-3">
 						<img
 							src="/logos/blue_logo_only.svg"
-							alt="IEEE UCSD Logo"
-							className="w-12 h-12 mr-3"
+							alt=""
+							className="size-10 sm:size-12"
 						/>
-						<h1 className="text-3xl font-bold">IEEE at UC San Diego</h1>
+						<h1 className="text-xl font-bold sm:text-3xl">
+							IEEE at UC San Diego
+						</h1>
 					</div>
-					<p className="text-muted-foreground">
+					<p className="text-sm text-muted-foreground">
 						Complete your profile to get started
 					</p>
 				</div>
 
-				<div className="rounded-md border bg-card shadow-lg overflow-hidden">
-					<div className="px-6 py-4 border-b">
-						<div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-							<span>
-								Question {currentStep + 1} of {questions.length}
-							</span>
-							<span>
-								{Math.round(((currentStep + 1) / questions.length) * 100)}%
-								Complete
-							</span>
-						</div>
-						<div className="w-full bg-muted rounded-full h-2">
-							<div
-								className="bg-primary h-2 w-full origin-left rounded-full transition-transform duration-200 ease-[var(--ease-in-out)] motion-instant-reduce"
-								style={{
-									transform: `scaleX(${(currentStep + 1) / questions.length})`,
-								}}
-							/>
-						</div>
+				<div className="flex min-h-0 flex-1 flex-col rounded-md border bg-card md:shadow-sm">
+					<div className="shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4">
+						<MobileTaskStepper
+							currentStep={currentStep + 1}
+							totalSteps={questions.length}
+							stepTitle={currentQuestion.title}
+						/>
 					</div>
 
-					<div className="p-8">
-						<div className="text-center mb-8">
-							<div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-								<currentQuestion.icon className="w-8 h-8 text-primary-foreground" />
+					<div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
+						<div className="text-center">
+							<div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary sm:size-16">
+								<currentQuestion.icon className="size-7 text-primary-foreground sm:size-8" />
 							</div>
-							<h2 className="text-2xl font-bold mb-2">
+							<h2 className="mb-2 text-xl font-bold sm:text-2xl">
 								{currentQuestion.title}
 								{currentQuestion.required && (
-									<span className="text-ds-red-800 ml-1">*</span>
+									<span className="ml-1 text-ds-red-800">*</span>
 								)}
 							</h2>
-							<p className="text-muted-foreground">
+							<p className="text-sm text-muted-foreground sm:text-base">
 								{currentQuestion.description}
 							</p>
 						</div>
 
 						{error && (
-							<div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-								<p className="text-destructive text-sm">{error}</p>
+							<div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4">
+								<p className="text-sm text-destructive">{error}</p>
 							</div>
 						)}
 
-						<div className="mb-8">{renderInput()}</div>
+						{renderInput()}
+					</div>
 
-						<div className="flex justify-between items-center">
+					<div className="sticky bottom-0 shrink-0 space-y-2 border-t bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
+						<div className="flex gap-3">
 							<Button
-								variant="ghost"
+								variant="outline"
 								onClick={handleBack}
 								disabled={currentStep === 0}
+								className="h-12 min-w-[5.5rem] shrink-0"
 							>
-								<ArrowLeft className="w-5 h-5 mr-2" />
+								<ArrowLeft className="mr-1.5 size-4" />
 								Back
 							</Button>
-
-							<Button onClick={handleNext} disabled={loading}>
+							<Button
+								onClick={handleNext}
+								disabled={loading}
+								className="h-12 flex-1"
+							>
 								{loading ? (
 									<>
-										<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+										<Loader2 className="mr-2 size-4 animate-spin" />
 										Finishing...
 									</>
 								) : isLastStep ? (
 									<>
 										Complete Setup
-										<CheckCircle className="w-5 h-5 ml-2" />
+										<CheckCircle className="ml-2 size-4" />
 									</>
 								) : (
 									<>
 										Next
-										<ArrowRight className="w-5 h-5 ml-2" />
+										<ArrowRight className="ml-2 size-4" />
 									</>
 								)}
 							</Button>
 						</div>
+						{!currentQuestion.required && (
+							<Button
+								variant="ghost"
+								onClick={handleNext}
+								className="h-10 w-full text-muted-foreground"
+							>
+								Skip this question
+							</Button>
+						)}
 					</div>
 				</div>
 
-				{!currentQuestion.required && (
-					<div className="text-center mt-4">
-						<Button
-							variant="link"
-							onClick={handleNext}
-							className="text-muted-foreground hover:text-foreground text-sm underline transition-colors"
-						>
-							Skip this question
-						</Button>
-					</div>
-				)}
-
-				<div className="text-center mt-8 text-xs text-muted-foreground">
-					<p>
-						Need help? Contact us at{" "}
-						<a
-							href="mailto:ieee@ucsd.edu"
-							className="text-ds-blue-700 hover:text-ds-blue-700 transition-colors"
-						>
-							ieee@ucsd.edu
-						</a>
-					</p>
-				</div>
+				<p className="mt-6 text-center text-xs text-muted-foreground">
+					Need help?{" "}
+					<a href="mailto:ieee@ucsd.edu" className="text-ds-blue-700">
+						ieee@ucsd.edu
+					</a>
+				</p>
 			</div>
 		</div>
 	);

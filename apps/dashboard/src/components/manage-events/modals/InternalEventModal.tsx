@@ -10,13 +10,8 @@ import {
 	Wrench,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -224,216 +219,207 @@ export function InternalEventModal({
 		}
 	};
 
+	const footer = (
+		<div className="flex w-full items-center justify-end gap-2">
+			{editingEvent && onDelete && (
+				<Button
+					variant="ghost"
+					onClick={handleDelete}
+					disabled={isDeleting || isSubmitting}
+					className="text-ds-red-800 hover:text-ds-red-800 hover:bg-ds-red-100 mr-auto h-11 px-2 sm:h-8"
+				>
+					{isDeleting ? (
+						<span className="flex items-center gap-1.5 text-sm">
+							<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ds-red-800 border-t-transparent" />
+							Deleting...
+						</span>
+					) : (
+						<span className="flex items-center gap-1.5 text-sm">
+							<Trash2 className="h-3.5 w-3.5" />
+							Delete
+						</span>
+					)}
+				</Button>
+			)}
+			<Button
+				variant="outline"
+				onClick={onClose}
+				disabled={isSubmitting || isDeleting}
+				className="h-11 flex-1 sm:h-8 sm:flex-none"
+			>
+				Cancel
+			</Button>
+			<Button
+				onClick={handleSubmit}
+				disabled={
+					isSubmitting ||
+					isDeleting ||
+					!formData.name ||
+					!formData.location ||
+					!formData.startDate ||
+					!formData.startTime
+				}
+				className="bg-[#00629B] hover:bg-[#004d7a] h-11 flex-1 px-4 sm:h-8 sm:flex-none"
+			>
+				{isSubmitting ? (
+					<span className="flex items-center gap-1.5 text-sm">
+						<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+						Saving...
+					</span>
+				) : editingEvent ? (
+					"Update"
+				) : (
+					"Create"
+				)}
+			</Button>
+		</div>
+	);
+
 	return (
-		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="w-[min(96vw,700px)] max-w-[700px] p-0 overflow-hidden gap-0">
-				{/* Header */}
-				<div className="relative">
-					<DialogHeader className="px-5 pt-5 pb-3">
-						<DialogTitle className="text-lg font-semibold">
-							{editingEvent ? "Edit Event" : "New Internal Event"}
-						</DialogTitle>
-					</DialogHeader>
+		<ResponsiveOverlay
+			open={isOpen}
+			onOpenChange={onClose}
+			title={editingEvent ? "Edit Event" : "New Internal Event"}
+			variant="fullscreen"
+			className="sm:max-w-[700px]"
+			footer={footer}
+		>
+			<div className="space-y-3">
+				{/* Event Name */}
+				<div className="space-y-1.5">
+					<Label
+						htmlFor="name"
+						className="text-xs font-medium text-muted-foreground"
+					>
+						Name
+					</Label>
+					<Input
+						id="name"
+						value={formData.name}
+						onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+						placeholder="Weekly Team Meeting"
+						className="h-9 text-sm"
+					/>
 				</div>
 
-				{/* Form */}
-				<div className="px-5 pb-4 space-y-3">
-					{/* Event Name */}
-					<div className="space-y-1.5">
-						<Label
-							htmlFor="name"
-							className="text-xs font-medium text-muted-foreground"
-						>
-							Name
-						</Label>
+				{/* Event Type - 6 columns compact */}
+				<div className="space-y-1.5">
+					<Label className="text-xs font-medium text-muted-foreground">
+						Type
+					</Label>
+					<div className="grid grid-cols-6 gap-1">
+						{EVENT_TYPES.map((type) => {
+							const Icon = type.icon;
+							const isSelected = formData.eventType === type.value;
+							return (
+								<Button
+									variant="outline"
+									key={type.value}
+									type="button"
+									onClick={() =>
+										setFormData({ ...formData, eventType: type.value })
+									}
+									className={cn(
+										"flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md border transition-[background-color,border-color,color] duration-150 ease-[ease]",
+										isSelected
+											? type.color
+											: "bg-background border-border hover:border-border text-muted-foreground",
+									)}
+									title={type.label}
+								>
+									<Icon className="h-4 w-4" />
+									<span className="text-[10px] font-medium leading-none">
+										{type.label}
+									</span>
+								</Button>
+							);
+						})}
+					</div>
+				</div>
+
+				{/* Location */}
+				<div className="space-y-1.5">
+					<Label
+						htmlFor="location"
+						className="text-xs font-medium text-muted-foreground"
+					>
+						Location
+					</Label>
+					<div className="relative">
+						<MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
 						<Input
-							id="name"
-							value={formData.name}
+							id="location"
+							value={formData.location}
 							onChange={(e) =>
-								setFormData({ ...formData, name: e.target.value })
+								setFormData({ ...formData, location: e.target.value })
 							}
-							placeholder="Weekly Team Meeting"
-							className="h-9 text-sm"
+							placeholder="EBU-1 Room 101"
+							className="h-9 pl-8 text-sm"
 						/>
 					</div>
+				</div>
 
-					{/* Event Type - 6 columns compact */}
-					<div className="space-y-1.5">
-						<Label className="text-xs font-medium text-muted-foreground">
-							Type
-						</Label>
-						<div className="grid grid-cols-6 gap-1">
-							{EVENT_TYPES.map((type) => {
-								const Icon = type.icon;
-								const isSelected = formData.eventType === type.value;
-								return (
-									<Button
-										variant="outline"
-										key={type.value}
-										type="button"
-										onClick={() =>
-											setFormData({ ...formData, eventType: type.value })
-										}
-										className={cn(
-											"flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md border transition-[background-color,border-color,color] duration-150 ease-[ease]",
-											isSelected
-												? type.color
-												: "bg-background border-border hover:border-border text-muted-foreground",
-										)}
-										title={type.label}
-									>
-										<Icon className="h-4 w-4" />
-										<span className="text-[10px] font-medium leading-none">
-											{type.label}
-										</span>
-									</Button>
-								);
-							})}
-						</div>
-					</div>
-
-					{/* Location */}
-					<div className="space-y-1.5">
-						<Label
-							htmlFor="location"
-							className="text-xs font-medium text-muted-foreground"
-						>
-							Location
-						</Label>
-						<div className="relative">
-							<MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+				{/* Date & Time - Compact inline */}
+				<div className="space-y-1.5">
+					<Label className="text-xs font-medium text-muted-foreground">
+						Date & Time
+					</Label>
+					<div className="flex flex-wrap items-center gap-2">
+						<div className="relative flex-1">
+							<Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
 							<Input
-								id="location"
-								value={formData.location}
+								type="date"
+								value={formData.startDate}
 								onChange={(e) =>
-									setFormData({ ...formData, location: e.target.value })
+									setFormData({
+										...formData,
+										startDate: e.target.value,
+										endDate: e.target.value,
+									})
 								}
-								placeholder="EBU-1 Room 101"
 								className="h-9 pl-8 text-sm"
 							/>
 						</div>
-					</div>
-
-					{/* Date & Time - Compact inline */}
-					<div className="space-y-1.5">
-						<Label className="text-xs font-medium text-muted-foreground">
-							Date & Time
-						</Label>
-						<div className="flex flex-wrap items-center gap-2">
-							<div className="relative flex-1">
-								<Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-								<Input
-									type="date"
-									value={formData.startDate}
-									onChange={(e) =>
-										setFormData({
-											...formData,
-											startDate: e.target.value,
-											endDate: e.target.value,
-										})
-									}
-									className="h-9 pl-8 text-sm"
-								/>
-							</div>
-							<Input
-								type="time"
-								value={formData.startTime}
-								onChange={(e) =>
-									setFormData({ ...formData, startTime: e.target.value })
-								}
-								className="h-9 w-36 min-w-[8.5rem] text-sm"
-							/>
-							<span className="text-muted-foreground text-sm shrink-0">→</span>
-							<Input
-								type="time"
-								value={formData.endTime}
-								onChange={(e) =>
-									setFormData({ ...formData, endTime: e.target.value })
-								}
-								className="h-9 w-36 min-w-[8.5rem] text-sm"
-							/>
-						</div>
-					</div>
-
-					{/* Description - Smaller */}
-					<div className="space-y-1.5">
-						<Label
-							htmlFor="description"
-							className="text-xs font-medium text-muted-foreground"
-						>
-							Notes <span className="font-normal">(optional)</span>
-						</Label>
-						<Textarea
-							id="description"
-							value={formData.description}
+						<Input
+							type="time"
+							value={formData.startTime}
 							onChange={(e) =>
-								setFormData({ ...formData, description: e.target.value })
+								setFormData({ ...formData, startTime: e.target.value })
 							}
-							placeholder="Additional details..."
-							rows={1}
-							className="resize-none h-9 text-sm py-2"
+							className="h-9 w-36 min-w-[8.5rem] text-sm"
+						/>
+						<span className="text-muted-foreground text-sm shrink-0">→</span>
+						<Input
+							type="time"
+							value={formData.endTime}
+							onChange={(e) =>
+								setFormData({ ...formData, endTime: e.target.value })
+							}
+							className="h-9 w-36 min-w-[8.5rem] text-sm"
 						/>
 					</div>
 				</div>
 
-				{/* Footer */}
-				<div className="border-t px-5 py-3 flex items-center justify-end gap-2">
-					{editingEvent && onDelete && (
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={handleDelete}
-							disabled={isDeleting || isSubmitting}
-							className="text-ds-red-800 hover:text-ds-red-800 hover:bg-ds-red-100 mr-auto h-8 px-2"
-						>
-							{isDeleting ? (
-								<span className="flex items-center gap-1.5 text-sm">
-									<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ds-red-800 border-t-transparent" />
-									Deleting...
-								</span>
-							) : (
-								<span className="flex items-center gap-1.5 text-sm">
-									<Trash2 className="h-3.5 w-3.5" />
-									Delete
-								</span>
-							)}
-						</Button>
-					)}
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={onClose}
-						disabled={isSubmitting || isDeleting}
-						className="h-8"
+				{/* Description - Smaller */}
+				<div className="space-y-1.5">
+					<Label
+						htmlFor="description"
+						className="text-xs font-medium text-muted-foreground"
 					>
-						Cancel
-					</Button>
-					<Button
-						size="sm"
-						onClick={handleSubmit}
-						disabled={
-							isSubmitting ||
-							isDeleting ||
-							!formData.name ||
-							!formData.location ||
-							!formData.startDate ||
-							!formData.startTime
+						Notes <span className="font-normal">(optional)</span>
+					</Label>
+					<Textarea
+						id="description"
+						value={formData.description}
+						onChange={(e) =>
+							setFormData({ ...formData, description: e.target.value })
 						}
-						className="bg-[#00629B] hover:bg-[#004d7a] h-8 px-4"
-					>
-						{isSubmitting ? (
-							<span className="flex items-center gap-1.5 text-sm">
-								<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-								Saving...
-							</span>
-						) : editingEvent ? (
-							"Update"
-						) : (
-							"Create"
-						)}
-					</Button>
+						placeholder="Additional details..."
+						rows={1}
+						className="resize-none h-9 text-sm py-2"
+					/>
 				</div>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</ResponsiveOverlay>
 	);
 }

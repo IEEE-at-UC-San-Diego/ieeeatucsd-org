@@ -9,16 +9,7 @@ import {
 import type React from "react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ResponsiveOverlay } from "@/components/mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -179,32 +170,41 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 				</CardContent>
 			</Card>
 
-			<AlertDialog
+			<ResponsiveOverlay
 				open={Boolean(versionToRestore)}
 				onOpenChange={(open) => {
 					if (!open && !isRestoring) {
 						setVersionToRestore(null);
 					}
 				}}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							Restore {versionToRestore?.label}?
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							This will replace the current constitution with that snapshot. A
-							new auto-backup version of your current state will be saved first.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={isRestoring}>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={handleRestore} disabled={isRestoring}>
+				title={`Restore ${versionToRestore?.label}?`}
+				description="This will replace the current constitution with that snapshot. A new auto-backup version of your current state will be saved first."
+				variant="sheet"
+				footer={
+					<div className="flex w-full gap-2">
+						<Button
+							variant="outline"
+							className="h-11 flex-1 sm:h-9 sm:flex-none"
+							disabled={isRestoring}
+							onClick={() => setVersionToRestore(null)}
+						>
+							Cancel
+						</Button>
+						<Button
+							className="h-11 flex-1 sm:h-9 sm:flex-none"
+							onClick={handleRestore}
+							disabled={isRestoring}
+						>
 							{isRestoring ? "Restoring..." : "Restore Version"}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+						</Button>
+					</div>
+				}
+			>
+				<p className="text-sm text-muted-foreground pb-2">
+					Confirm you want to restore this version. Your current draft will be
+					backed up automatically.
+				</p>
+			</ResponsiveOverlay>
 		</>
 	);
 };

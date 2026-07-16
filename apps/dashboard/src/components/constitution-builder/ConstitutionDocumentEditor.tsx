@@ -19,6 +19,7 @@ import {
 	Italic,
 	List,
 	ListOrdered,
+	ListTree,
 	Minus,
 	Redo2,
 	RotateCcw,
@@ -28,23 +29,28 @@ import {
 	Undo2,
 } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+	forwardRef,
+	useCallback,
+	useEffect,
+	useImperativeHandle,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
+import { toast } from "sonner";
+import { ResponsiveOverlay } from "@/components/mobile";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useVisualViewportBottom } from "@/hooks/useVisualViewportBottom";
+import { cn } from "@/lib/utils";
 import type {
 	ConstitutionDocumentSaveResult,
 	ConstitutionDocumentSectionInput,
 	ConstitutionSection,
 	ConstitutionSectionType,
+	SaveStatus,
 } from "./types";
 import { toRomanNumeral } from "./utils/constitutionUtils";
 import {
@@ -63,6 +69,13 @@ interface ConstitutionDocumentEditorProps {
 		versionNumber: number;
 		label: string;
 	} | null>;
+	/** Reports real save status (idle/saving/saved/error) up to the parent header. */
+	onSaveStatusChange?: (status: SaveStatus) => void;
+}
+
+export interface ConstitutionDocumentEditorHandle {
+	/** Re-triggers the manual document save, used by the header's error/retry affordance. */
+	retrySave: () => void;
 }
 
 /**
@@ -383,21 +396,28 @@ function createSectionPrefixPlugin(
 	});
 }
 
-const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
-	sections,
-	onSaveDocument,
-	onSaveVersion,
-}) => {
+const ConstitutionDocumentEditor = forwardRef<
+	ConstitutionDocumentEditorHandle,
+	ConstitutionDocumentEditorProps
+>(function ConstitutionDocumentEditor(
+	{ sections, onSaveDocument, onSaveVersion, onSaveStatusChange },
+	ref,
+) {
+	const isMobile = useIsMobile();
+	const keyboardInset = useVisualViewportBottom();
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const [isSavingVersion, setIsSavingVersion] = useState(false);
 	const [saveVersionDialogOpen, setSaveVersionDialogOpen] = useState(false);
 	const [versionNote, setVersionNote] = useState("");
 	const [saveMessage, setSaveMessage] = useState("");
+	const [sectionNavOpen, setSectionNavOpen] = useState(false);
+	const [sectionNavQuery, setSectionNavQuery] = useState("");
 	// Counter that increments on every editor transaction to force toolbar re-renders
 	const [, setEditorRevision] = useState(0);
 	const initialHtmlRef = useRef<string>("");
 	const sectionsRef = useRef(sections);
+	const editorScrollRef = useRef<HTMLDivElement>(null);
 	// Ref flag to suppress onUpdate when we programmatically set content
 	const suppressOnUpdateRef = useRef(false);
 	// Ref flag to block external sync during save (prevents stale overwrite)
@@ -492,6 +512,7 @@ const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
 		setIsSaving(true);
 		isSavingRef.current = true;
 		setSaveMessage("");
+		onSaveStatusChange?.("saving");
 
 		const currentHtml = editor.getHTML();
 
@@ -508,6 +529,7 @@ const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
 				setSaveMessage("No changes detected");
 				setHasUnsavedChanges(false);
 				initialHtmlRef.current = currentHtml;
+				onSaveStatusChange?.("saved");
 				return true;
 			}
 
@@ -516,16 +538,28 @@ const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
 			setSaveMessage(
 				`Saved ${changedCount} change${changedCount > 1 ? "s" : ""} (${result.created} created, ${result.updated} updated, ${result.deleted} deleted, ${result.reordered} reordered)`,
 			);
+			onSaveStatusChange?.("saved");
 			return true;
 		} catch (error) {
 			console.error("Failed to save:", error);
 			setSaveMessage("Failed to save changes");
+			onSaveStatusChange?.("error");
 			return false;
 		} finally {
 			setIsSaving(false);
 			isSavingRef.current = false;
 		}
-	}, [editor, onSaveDocument]);
+	}, [editor, onSaveDocument, onSaveStatusChange]);
+
+	useImperativeHandle(
+		ref,
+		() => ({
+			retrySave: () => {
+				void handleSave();
+			},
+		}),
+		[handleSave],
+	);
 
 	const handleSaveVersion = useCallback(async () => {
 		setIsSavingVersion(true);
@@ -581,6 +615,34 @@ const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
 		setSaveMessage("");
 	}, [editor]);
 
+	const sortedSections = useMemo(
+		() => [...sections].sort((a, b) => a.order - b.order),
+		[sections],
+	);
+
+	const filteredNavSections = useMemo(() => {
+		const q = sectionNavQuery.trim().toLowerCase();
+		if (!q) return sortedSections;
+		return sortedSections.filter(
+			(s) =>
+				s.title?.toLowerCase().includes(q) || s.type?.toLowerCase().includes(q),
+		);
+	}, [sortedSections, sectionNavQuery]);
+
+	const scrollToSection = useCallback((sectionId: string) => {
+		const root = editorScrollRef.current;
+		if (!root) return;
+		const target = root.querySelector(
+			`[data-section-id="${CSS.escape(sectionId)}"]`,
+		);
+		if (target instanceof HTMLElement) {
+			target.scrollIntoView({ behavior: "smooth", block: "start" });
+			target.focus({ preventScroll: true });
+		}
+		setSectionNavOpen(false);
+		setSectionNavQuery("");
+	}, []);
+
 	if (!editor) {
 		return (
 			<div className="bg-background rounded-lg border border-border p-8 text-center">
@@ -592,269 +654,326 @@ const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
 		);
 	}
 
+	const formattingControls = (
+		<>
+			<ToolbarGroup>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().toggleBold().run()}
+					isActive={editor.isActive("bold")}
+					title="Bold"
+				>
+					<Bold className="h-4 w-4" />
+				</ToolbarButton>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().toggleItalic().run()}
+					isActive={editor.isActive("italic")}
+					title="Italic"
+				>
+					<Italic className="h-4 w-4" />
+				</ToolbarButton>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().toggleUnderline().run()}
+					isActive={editor.isActive("underline")}
+					title="Underline"
+				>
+					<UnderlineIcon className="h-4 w-4" />
+				</ToolbarButton>
+			</ToolbarGroup>
+
+			<ToolbarDivider />
+
+			<ToolbarGroup>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().setParagraph().run()}
+					isActive={editor.isActive("paragraph") && !editor.isActive("heading")}
+					title="Paragraph"
+				>
+					<Type className="h-4 w-4" />
+				</ToolbarButton>
+				<ToolbarButton
+					onClick={() =>
+						editor.chain().focus().toggleHeading({ level: 2 }).run()
+					}
+					isActive={editor.isActive("heading", { level: 2 })}
+					title="Heading 2"
+				>
+					<Heading2 className="h-4 w-4" />
+				</ToolbarButton>
+				<ToolbarButton
+					onClick={() =>
+						editor.chain().focus().toggleHeading({ level: 3 }).run()
+					}
+					isActive={editor.isActive("heading", { level: 3 })}
+					title="Heading 3"
+				>
+					<Heading3 className="h-4 w-4" />
+				</ToolbarButton>
+				<ToolbarButton
+					onClick={() =>
+						editor.chain().focus().toggleHeading({ level: 4 }).run()
+					}
+					isActive={editor.isActive("heading", { level: 4 })}
+					title="Heading 4"
+				>
+					<Heading4 className="h-4 w-4" />
+				</ToolbarButton>
+			</ToolbarGroup>
+
+			<ToolbarDivider />
+
+			<ToolbarGroup>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().toggleBulletList().run()}
+					isActive={editor.isActive("bulletList")}
+					title="Bullet List"
+				>
+					<List className="h-4 w-4" />
+				</ToolbarButton>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().toggleOrderedList().run()}
+					isActive={editor.isActive("orderedList")}
+					title="Numbered List"
+				>
+					<ListOrdered className="h-4 w-4" />
+				</ToolbarButton>
+			</ToolbarGroup>
+
+			<ToolbarDivider />
+
+			<ToolbarGroup>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().setTextAlign("left").run()}
+					isActive={editor.isActive({ textAlign: "left" })}
+					title="Align Left"
+				>
+					<AlignLeft className="h-4 w-4" />
+				</ToolbarButton>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().setTextAlign("center").run()}
+					isActive={editor.isActive({ textAlign: "center" })}
+					title="Align Center"
+				>
+					<AlignCenter className="h-4 w-4" />
+				</ToolbarButton>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().setTextAlign("right").run()}
+					isActive={editor.isActive({ textAlign: "right" })}
+					title="Align Right"
+				>
+					<AlignRight className="h-4 w-4" />
+				</ToolbarButton>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+					isActive={editor.isActive({ textAlign: "justify" })}
+					title="Justify"
+				>
+					<AlignJustify className="h-4 w-4" />
+				</ToolbarButton>
+			</ToolbarGroup>
+
+			<ToolbarDivider />
+
+			<ToolbarGroup>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().setHorizontalRule().run()}
+					title="Horizontal Rule"
+				>
+					<Minus className="h-4 w-4" />
+				</ToolbarButton>
+			</ToolbarGroup>
+
+			<ToolbarDivider />
+
+			<ToolbarGroup>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().undo().run()}
+					disabled={!editor.can().undo()}
+					title="Undo"
+				>
+					<Undo2 className="h-4 w-4" />
+				</ToolbarButton>
+				<ToolbarButton
+					onClick={() => editor.chain().focus().redo().run()}
+					disabled={!editor.can().redo()}
+					title="Redo"
+				>
+					<Redo2 className="h-4 w-4" />
+				</ToolbarButton>
+			</ToolbarGroup>
+		</>
+	);
+
+	const saveControls = (
+		<div className="flex min-w-0 flex-wrap items-center gap-2">
+			{saveMessage && (
+				<span
+					className={`text-xs font-medium px-2 py-1 rounded ${
+						saveMessage.includes("Failed")
+							? "text-ds-red-800 bg-ds-red-100"
+							: "text-ds-green-700 bg-ds-green-100"
+					}`}
+				>
+					{saveMessage}
+				</span>
+			)}
+			{hasUnsavedChanges && (
+				<span className="text-xs text-ds-amber-900 font-medium bg-ds-amber-100 px-2 py-1 rounded border border-ds-amber-100">
+					Unsaved
+				</span>
+			)}
+			<Button
+				onClick={handleReset}
+				variant="outline"
+				size="sm"
+				disabled={!hasUnsavedChanges}
+				className="h-11 min-w-11 text-xs md:h-9"
+			>
+				<RotateCcw className="h-3.5 w-3.5 md:mr-1" />
+				<span className="hidden sm:inline">Reset</span>
+			</Button>
+			<Button
+				onClick={() => setSaveVersionDialogOpen(true)}
+				size="sm"
+				variant="outline"
+				disabled={isSaving || isSavingVersion}
+				className="h-11 min-w-11 text-xs md:h-9"
+			>
+				<History className="h-3.5 w-3.5 md:mr-1" />
+				<span className="hidden sm:inline">
+					{isSavingVersion ? "Saving…" : "Version"}
+				</span>
+			</Button>
+			<Button
+				onClick={handleSave}
+				size="sm"
+				disabled={!hasUnsavedChanges || isSaving || isSavingVersion}
+				className={cn(
+					"h-11 min-w-11 text-xs md:h-9",
+					hasUnsavedChanges &&
+						"bg-ds-green-700 hover:bg-ds-green-800 text-white",
+				)}
+			>
+				<Save className="h-3.5 w-3.5 mr-1" />
+				{isSaving ? "Saving…" : "Save"}
+			</Button>
+		</div>
+	);
+
 	return (
 		<div className="bg-background rounded-lg border border-border overflow-hidden">
-			{/* Toolbar */}
+			{/* Top chrome: section nav + save (formatting lives here on desktop) */}
 			<div className="border-b border-border bg-muted px-3 py-2">
 				<div className="flex flex-wrap items-center gap-1">
-					{/* Text formatting */}
-					<ToolbarGroup>
-						<ToolbarButton
-							onClick={() => editor.chain().focus().toggleBold().run()}
-							isActive={editor.isActive("bold")}
-							title="Bold"
-						>
-							<Bold className="h-4 w-4" />
-						</ToolbarButton>
-						<ToolbarButton
-							onClick={() => editor.chain().focus().toggleItalic().run()}
-							isActive={editor.isActive("italic")}
-							title="Italic"
-						>
-							<Italic className="h-4 w-4" />
-						</ToolbarButton>
-						<ToolbarButton
-							onClick={() => editor.chain().focus().toggleUnderline().run()}
-							isActive={editor.isActive("underline")}
-							title="Underline"
-						>
-							<UnderlineIcon className="h-4 w-4" />
-						</ToolbarButton>
-					</ToolbarGroup>
-
-					<ToolbarDivider />
-
-					{/* Headings */}
-					<ToolbarGroup>
-						<ToolbarButton
-							onClick={() => editor.chain().focus().setParagraph().run()}
-							isActive={
-								editor.isActive("paragraph") && !editor.isActive("heading")
-							}
-							title="Paragraph"
-						>
-							<Type className="h-4 w-4" />
-						</ToolbarButton>
-						<ToolbarButton
-							onClick={() =>
-								editor.chain().focus().toggleHeading({ level: 2 }).run()
-							}
-							isActive={editor.isActive("heading", { level: 2 })}
-							title="Heading 2"
-						>
-							<Heading2 className="h-4 w-4" />
-						</ToolbarButton>
-						<ToolbarButton
-							onClick={() =>
-								editor.chain().focus().toggleHeading({ level: 3 }).run()
-							}
-							isActive={editor.isActive("heading", { level: 3 })}
-							title="Heading 3"
-						>
-							<Heading3 className="h-4 w-4" />
-						</ToolbarButton>
-						<ToolbarButton
-							onClick={() =>
-								editor.chain().focus().toggleHeading({ level: 4 }).run()
-							}
-							isActive={editor.isActive("heading", { level: 4 })}
-							title="Heading 4"
-						>
-							<Heading4 className="h-4 w-4" />
-						</ToolbarButton>
-					</ToolbarGroup>
-
-					<ToolbarDivider />
-
-					{/* Lists */}
-					<ToolbarGroup>
-						<ToolbarButton
-							onClick={() => editor.chain().focus().toggleBulletList().run()}
-							isActive={editor.isActive("bulletList")}
-							title="Bullet List"
-						>
-							<List className="h-4 w-4" />
-						</ToolbarButton>
-						<ToolbarButton
-							onClick={() => editor.chain().focus().toggleOrderedList().run()}
-							isActive={editor.isActive("orderedList")}
-							title="Numbered List"
-						>
-							<ListOrdered className="h-4 w-4" />
-						</ToolbarButton>
-					</ToolbarGroup>
-
-					<ToolbarDivider />
-
-					{/* Alignment */}
-					<ToolbarGroup>
-						<ToolbarButton
-							onClick={() => editor.chain().focus().setTextAlign("left").run()}
-							isActive={editor.isActive({ textAlign: "left" })}
-							title="Align Left"
-						>
-							<AlignLeft className="h-4 w-4" />
-						</ToolbarButton>
-						<ToolbarButton
-							onClick={() =>
-								editor.chain().focus().setTextAlign("center").run()
-							}
-							isActive={editor.isActive({ textAlign: "center" })}
-							title="Align Center"
-						>
-							<AlignCenter className="h-4 w-4" />
-						</ToolbarButton>
-						<ToolbarButton
-							onClick={() => editor.chain().focus().setTextAlign("right").run()}
-							isActive={editor.isActive({ textAlign: "right" })}
-							title="Align Right"
-						>
-							<AlignRight className="h-4 w-4" />
-						</ToolbarButton>
-						<ToolbarButton
-							onClick={() =>
-								editor.chain().focus().setTextAlign("justify").run()
-							}
-							isActive={editor.isActive({ textAlign: "justify" })}
-							title="Justify"
-						>
-							<AlignJustify className="h-4 w-4" />
-						</ToolbarButton>
-					</ToolbarGroup>
-
-					<ToolbarDivider />
-
-					{/* Insert */}
-					<ToolbarGroup>
-						<ToolbarButton
-							onClick={() => editor.chain().focus().setHorizontalRule().run()}
-							title="Horizontal Rule"
-						>
-							<Minus className="h-4 w-4" />
-						</ToolbarButton>
-					</ToolbarGroup>
-
-					<ToolbarDivider />
-
-					{/* Undo/Redo */}
-					<ToolbarGroup>
-						<ToolbarButton
-							onClick={() => editor.chain().focus().undo().run()}
-							disabled={!editor.can().undo()}
-							title="Undo"
-						>
-							<Undo2 className="h-4 w-4" />
-						</ToolbarButton>
-						<ToolbarButton
-							onClick={() => editor.chain().focus().redo().run()}
-							disabled={!editor.can().redo()}
-							title="Redo"
-						>
-							<Redo2 className="h-4 w-4" />
-						</ToolbarButton>
-					</ToolbarGroup>
-
-					{/* Spacer */}
-					<div className="flex-1" />
-
-					{/* Save controls */}
-					<div className="flex items-center gap-2">
-						{saveMessage && (
-							<span
-								className={`text-xs font-medium px-2 py-1 rounded ${
-									saveMessage.includes("Failed")
-										? "text-ds-red-800 bg-ds-red-100"
-										: "text-ds-green-700 bg-ds-green-100"
-								}`}
+					{isMobile && (
+						<>
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								className="h-11 gap-1.5"
+								onClick={() => setSectionNavOpen(true)}
 							>
-								{saveMessage}
-							</span>
-						)}
-						{hasUnsavedChanges && (
-							<span className="text-xs text-ds-amber-900 font-medium bg-ds-amber-100 px-2 py-1 rounded border border-ds-amber-100">
-								Unsaved changes
-							</span>
-						)}
-						<Button
-							onClick={handleReset}
-							variant="outline"
-							size="sm"
-							disabled={!hasUnsavedChanges}
-							className="h-8 text-xs"
-						>
-							<RotateCcw className="h-3.5 w-3.5 mr-1" />
-							Reset
-						</Button>
-						<Button
-							onClick={() => setSaveVersionDialogOpen(true)}
-							size="sm"
-							variant="outline"
-							disabled={isSaving || isSavingVersion}
-							className="h-8 text-xs"
-						>
-							<History className="h-3.5 w-3.5 mr-1" />
-							{isSavingVersion ? "Saving Version..." : "Save Version"}
-						</Button>
-						<Button
-							onClick={handleSave}
-							size="sm"
-							disabled={!hasUnsavedChanges || isSaving || isSavingVersion}
-							className={`h-8 text-xs ${
-								hasUnsavedChanges
-									? "bg-ds-green-700 hover:bg-ds-green-800 text-white"
-									: ""
-							}`}
-						>
-							<Save className="h-3.5 w-3.5 mr-1" />
-							{isSaving ? "Saving..." : "Save All"}
-						</Button>
-					</div>
+								<ListTree className="h-4 w-4" />
+								Sections
+							</Button>
+							<div className="flex-1" />
+							{saveControls}
+						</>
+					)}
+					{!isMobile && (
+						<>
+							{formattingControls}
+							<div className="flex-1" />
+							{saveControls}
+						</>
+					)}
 				</div>
 			</div>
 
 			{/* Editor Content */}
-			<div className="constitution-document-editor p-6 lg:p-8 min-h-125 max-h-[calc(100vh-300px)] overflow-y-auto">
+			<div
+				ref={editorScrollRef}
+				className={cn(
+					"constitution-document-editor p-4 sm:p-6 lg:p-8 min-h-125 max-h-[calc(100vh-300px)] overflow-y-auto",
+					isMobile && "pb-20",
+				)}
+			>
 				<EditorContent editor={editor} />
 			</div>
 
-			<Dialog
-				open={saveVersionDialogOpen}
-				onOpenChange={setSaveVersionDialogOpen}
-			>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Save Manual Version</DialogTitle>
-						<DialogDescription>
-							Save a restorable checkpoint. Audit logs remain separate and
-							automatic.
-						</DialogDescription>
-					</DialogHeader>
-
-					<div className="space-y-2">
-						<label
-							htmlFor="version-note"
-							className="text-sm font-medium text-foreground"
-						>
-							Note (optional)
-						</label>
-						<Input
-							id="version-note"
-							value={versionNote}
-							onChange={(e) => setVersionNote(e.target.value)}
-							placeholder="Example: Board-approved edits before publication"
-							maxLength={120}
-						/>
-						{hasUnsavedChanges && (
-							<p className="text-xs text-ds-amber-900">
-								Unsaved changes will be saved first before creating this
-								version.
-							</p>
-						)}
+			{/* Mobile formatting bar — sticky above software keyboard */}
+			{isMobile && (
+				<div
+					className="fixed inset-x-0 z-50 border-t border-border bg-background/90 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 [@media(prefers-reduced-transparency:reduce)]:bg-background [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none"
+					style={{
+						bottom: keyboardInset,
+						paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
+					}}
+				>
+					<div className="flex touch-pan-x items-center gap-1 overflow-x-auto overscroll-x-contain px-2 py-1.5">
+						{formattingControls}
 					</div>
+				</div>
+			)}
 
-					<DialogFooter>
+			<ResponsiveOverlay
+				open={sectionNavOpen}
+				onOpenChange={setSectionNavOpen}
+				title="Jump to section"
+				description="Search and select a section to scroll into the editor."
+				variant="sheet"
+			>
+				<div className="space-y-3 pb-4">
+					<Input
+						value={sectionNavQuery}
+						onChange={(e) => setSectionNavQuery(e.target.value)}
+						placeholder="Search sections…"
+						className="h-11 text-base"
+						type="search"
+						enterKeyHint="search"
+						autoComplete="off"
+					/>
+					<ul className="divide-y rounded-md border">
+						{filteredNavSections.length === 0 ? (
+							<li className="px-4 py-6 text-center text-sm text-muted-foreground">
+								No sections found
+							</li>
+						) : (
+							filteredNavSections.map((section) => (
+								<li key={section.id}>
+									<button
+										type="button"
+										className="flex min-h-12 w-full flex-col items-start gap-0.5 px-4 py-3 text-left active:bg-muted/60"
+										onClick={() => scrollToSection(section.id)}
+									>
+										<span className="text-sm font-medium text-foreground">
+											{section.title || "Untitled"}
+										</span>
+										<span className="text-xs capitalize text-muted-foreground">
+											{section.type}
+										</span>
+									</button>
+								</li>
+							))
+						)}
+					</ul>
+				</div>
+			</ResponsiveOverlay>
+
+			<ResponsiveOverlay
+				open={saveVersionDialogOpen}
+				onOpenChange={(open) => {
+					if (!open && isSavingVersion) return;
+					setSaveVersionDialogOpen(open);
+				}}
+				title="Save Manual Version"
+				description="Save a restorable checkpoint. Audit logs remain separate and automatic."
+				variant="sheet"
+				footer={
+					<div className="flex w-full gap-2 sm:justify-end">
 						<Button
 							variant="outline"
+							className="h-11 flex-1 sm:h-9 sm:flex-none"
 							onClick={() => {
 								if (isSavingVersion) return;
 								setSaveVersionDialogOpen(false);
@@ -862,15 +981,41 @@ const ConstitutionDocumentEditor: React.FC<ConstitutionDocumentEditorProps> = ({
 						>
 							Cancel
 						</Button>
-						<Button onClick={handleSaveVersion} disabled={isSavingVersion}>
+						<Button
+							className="h-11 flex-1 sm:h-9 sm:flex-none"
+							onClick={handleSaveVersion}
+							disabled={isSavingVersion}
+						>
 							{isSavingVersion ? "Saving..." : "Save Version"}
 						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+					</div>
+				}
+			>
+				<div className="space-y-2 pb-2">
+					<label
+						htmlFor="version-note"
+						className="text-sm font-medium text-foreground"
+					>
+						Note (optional)
+					</label>
+					<Input
+						id="version-note"
+						value={versionNote}
+						onChange={(e) => setVersionNote(e.target.value)}
+						placeholder="Example: Board-approved edits before publication"
+						maxLength={120}
+						className="h-11 text-base md:h-9 md:text-sm"
+					/>
+					{hasUnsavedChanges && (
+						<p className="text-xs text-ds-amber-900">
+							Unsaved changes will be saved first before creating this version.
+						</p>
+					)}
+				</div>
+			</ResponsiveOverlay>
 		</div>
 	);
-};
+});
 
 // Toolbar sub-components
 const ToolbarGroup: React.FC<{ children: React.ReactNode }> = ({
@@ -902,16 +1047,17 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 		onClick={onClick}
 		disabled={disabled}
 		title={title}
-		className={`
-      inline-flex items-center justify-center w-8 h-8 rounded-md text-sm
-      transition-colors duration-150
-      ${
-				isActive
-					? "bg-ds-blue-100 text-ds-blue-700 border border-ds-blue-100"
-					: "text-muted-foreground hover:bg-ds-gray-300 hover:text-foreground"
-			}
-      ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
-    `}
+		aria-label={title}
+		aria-pressed={isActive}
+		className={cn(
+			"inline-flex size-11 shrink-0 items-center justify-center rounded-md text-sm md:size-9",
+			"motion-safe:transition-colors motion-safe:duration-150",
+			"active:scale-[0.97]",
+			isActive
+				? "border border-ds-blue-100 bg-ds-blue-100 text-ds-blue-700"
+				: "text-muted-foreground hover:bg-ds-gray-300 hover:text-foreground",
+			disabled && "cursor-not-allowed opacity-40",
+		)}
 	>
 		{children}
 	</Button>

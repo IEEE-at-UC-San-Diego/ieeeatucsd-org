@@ -1,6 +1,7 @@
 import type { Id } from "@convex/_generated/dataModel";
 import { ChevronDown, ChevronUp, MoreHorizontal, Pencil } from "lucide-react";
 import { UserAvatarFallback } from "@/components/dashboard/UserAvatarFallback";
+import { MobileDataList, MobileDataListItem } from "@/components/mobile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { OfficerTeam, SortConfig, UserRole, UserStatus } from "./types";
 
 interface User {
@@ -49,14 +51,6 @@ const roleColors: Record<UserRole, string> = {
 	Administrator: "bg-ds-red-100 text-ds-red-800",
 };
 
-const truncateMajor = (major: string, maxLength = 20) => {
-	if (!major || major.length <= maxLength) return major;
-	return major.substring(0, maxLength) + "...";
-};
-
-// Use truncateMajor to avoid unused variable error
-void truncateMajor;
-
 export function UserTable({
 	users,
 	sortConfig,
@@ -64,6 +58,8 @@ export function UserTable({
 	currentUserId,
 	onRowClick,
 }: UserTableProps) {
+	const isMobile = useIsMobile();
+
 	const getSortIcon = (field: string) => {
 		if (sortConfig.field === field) {
 			return sortConfig.direction === "asc" ? (
@@ -103,6 +99,66 @@ export function UserTable({
 		);
 	}
 
+	if (isMobile) {
+		return (
+			<MobileDataList>
+				{users.map((user) => (
+					<MobileDataListItem
+						key={user._id}
+						leading={
+							<Avatar size="sm">
+								<AvatarImage src={user.avatar} alt={user.name} />
+								<AvatarFallback>
+									<UserAvatarFallback
+										name={user.name}
+										size="sm"
+										className="h-8 w-8 text-xs"
+									/>
+								</AvatarFallback>
+							</Avatar>
+						}
+						title={
+							<span className="inline-flex items-center gap-2">
+								{user.name}
+								{user._id === currentUserId && (
+									<Badge variant="outline" className="rounded-full text-[10px]">
+										You
+									</Badge>
+								)}
+							</span>
+						}
+						subtitle={user.email}
+						status={
+							<Badge className={`text-[10px] ${roleColors[user.role]}`}>
+								{user.role}
+							</Badge>
+						}
+						onClick={() => onRowClick?.(user)}
+						actions={
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="size-11"
+										aria-label={`Actions for ${user.name}`}
+									>
+										<MoreHorizontal className="size-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">
+									<DropdownMenuItem onSelect={() => onRowClick?.(user)}>
+										<Pencil /> View and edit
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						}
+					/>
+				))}
+			</MobileDataList>
+		);
+	}
+
 	return (
 		<div className="bg-background rounded-md border overflow-hidden">
 			<div className="overflow-x-auto">
@@ -116,9 +172,6 @@ export function UserTable({
 								<span className="flex items-center gap-1">
 									User {getSortIcon("name")}
 								</span>
-							</th>
-							<th className="w-14 p-4 text-right font-medium text-muted-foreground">
-								Actions
 							</th>
 							<th
 								className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell cursor-pointer hover:bg-muted transition-colors"
@@ -136,7 +189,6 @@ export function UserTable({
 									Role {getSortIcon("role")}
 								</span>
 							</th>
-
 							<th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">
 								Points
 							</th>
@@ -147,6 +199,9 @@ export function UserTable({
 								<span className="flex items-center gap-1">
 									Last Active {getSortIcon("lastLogin")}
 								</span>
+							</th>
+							<th className="w-14 p-4 text-right font-medium text-muted-foreground">
+								Actions
 							</th>
 						</tr>
 					</thead>
@@ -209,7 +264,6 @@ export function UserTable({
 										{user.role}
 									</Badge>
 								</td>
-
 								<td className="p-4 hidden xl:table-cell">
 									<Badge className="bg-ds-amber-100 text-ds-amber-900 font-mono">
 										{user.points || 0}

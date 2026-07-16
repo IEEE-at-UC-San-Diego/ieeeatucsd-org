@@ -24,16 +24,46 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			},
 			{
 				name: "viewport",
-				content: "width=device-width, initial-scale=1",
+				content:
+					"width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5",
 			},
 			{
 				title: "IEEE UCSD Dashboard",
+			},
+			{
+				name: "theme-color",
+				content: "#006bff",
+			},
+			{
+				name: "apple-mobile-web-app-capable",
+				content: "yes",
+			},
+			{
+				name: "apple-mobile-web-app-status-bar-style",
+				content: "default",
+			},
+			{
+				name: "apple-mobile-web-app-title",
+				content: "IEEE UCSD",
+			},
+			{
+				name: "mobile-web-app-capable",
+				content: "yes",
+			},
+			{
+				name: "description",
+				content:
+					"IEEE at UC San Diego member dashboard — events, reimbursements, and chapter tools.",
 			},
 		],
 		links: [
 			{
 				rel: "stylesheet",
 				href: appCss,
+			},
+			{
+				rel: "manifest",
+				href: "/manifest.json",
 			},
 			{
 				rel: "icon",
@@ -71,11 +101,14 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 function NotFoundComponent() {
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-background">
-			<div className="text-center space-y-4">
-				<h1 className="text-4xl font-bold">404</h1>
+		<div className="flex min-h-dvh items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+			<div className="w-full max-w-sm space-y-4 text-center">
+				<h1 className="text-4xl font-bold tracking-tight">404</h1>
 				<p className="text-muted-foreground">Page not found</p>
-				<a href="/overview" className="text-primary hover:underline">
+				<a
+					href="/overview"
+					className="inline-flex h-12 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground active:scale-[0.97]"
+				>
 					Go to Dashboard
 				</a>
 			</div>

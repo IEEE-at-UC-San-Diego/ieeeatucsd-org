@@ -40,13 +40,8 @@ import {
 	saveWeekLabelSettings,
 	type WeekLabelSettings,
 } from "@/components/manage-events/utils/weekLabels";
+import { ResponsiveOverlay, useMobileShell } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -55,6 +50,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
@@ -141,6 +137,8 @@ function ManageEventsPage() {
 		getAuthHeaders,
 		isLoading,
 	} = usePermissions();
+	const isMobile = useIsMobile();
+	const { setHideTabBar } = useMobileShell();
 	const aiEnabled = user?.aiFeaturesEnabled !== false;
 
 	// Single unified query — events and eventRequests are now one table
@@ -211,6 +209,7 @@ function ManageEventsPage() {
 	const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
 	const [isFileManagerOpen, setIsFileManagerOpen] = useState(false);
 	const [isWeekSettingsOpen, setIsWeekSettingsOpen] = useState(false);
+	const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
 	const [editingRequest, setEditingRequest] = useState<EventRequest | null>(
 		null,
 	);
@@ -223,6 +222,24 @@ function ManageEventsPage() {
 
 	// Loading state
 	const [isProcessing, setIsProcessing] = useState(false);
+
+	useEffect(() => {
+		const immersive =
+			isWizardOpen ||
+			isDraftModalOpen ||
+			isViewModalOpen ||
+			isDraftViewModalOpen ||
+			isFileManagerOpen;
+		setHideTabBar(immersive);
+		return () => setHideTabBar(false);
+	}, [
+		isWizardOpen,
+		isDraftModalOpen,
+		isViewModalOpen,
+		isDraftViewModalOpen,
+		isFileManagerOpen,
+		setHideTabBar,
+	]);
 
 	useEffect(() => {
 		if (!convexWeekLabelSettings || hasHydratedWeekSettings.current) return;
@@ -314,12 +331,12 @@ function ManageEventsPage() {
 	const paginatedEvents = useMemo(() => {
 		const startIndex = (currentPage - 1) * itemsPerPage;
 		return sortedEvents.slice(startIndex, startIndex + itemsPerPage);
-	}, [sortedEvents, currentPage, itemsPerPage]);
+	}, [sortedEvents, currentPage]);
 
 	// Reset page on filter/sort change
 	useMemo(() => {
 		setCurrentPage(1);
-	}, [filters, sortConfig]);
+	}, []);
 
 	// Loading state
 	if (isLoading) {
@@ -894,16 +911,29 @@ function ManageEventsPage() {
 				description="Review event requests and manage published events."
 				actions={
 					<>
-						<Button
-							variant="outline"
-							onClick={() => {
-								setDraftDate(null);
-								setIsDraftModalOpen(true);
-							}}
-						>
-							<FilePlus className="h-4 w-4 mr-2" />
-							Quick Draft
-						</Button>
+						{isMobile ? (
+							<Button onClick={() => setIsCreateSheetOpen(true)}>
+								<Plus className="h-4 w-4 mr-2" />
+								Create
+							</Button>
+						) : (
+							<>
+								<Button
+									variant="outline"
+									onClick={() => {
+										setDraftDate(null);
+										setIsDraftModalOpen(true);
+									}}
+								>
+									<FilePlus className="h-4 w-4 mr-2" />
+									Quick Draft
+								</Button>
+								<Button onClick={() => setIsWizardOpen(true)}>
+									<Plus className="h-4 w-4 mr-2" />
+									New Event Request
+								</Button>
+							</>
+						)}
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<Button variant="ghost" size="icon" aria-label="Event settings">
@@ -916,78 +946,108 @@ function ManageEventsPage() {
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
-						<Dialog
+						<ResponsiveOverlay
 							open={isWeekSettingsOpen}
 							onOpenChange={setIsWeekSettingsOpen}
+							title="Week Label Settings"
+							description="Set quarter starts once. Labels apply to both Manage Events and Officer Calendar."
+							variant="large-sheet"
+							className="sm:max-w-xl"
+							footer={
+								<Button
+									className="h-11 w-full sm:h-9 sm:w-auto"
+									onClick={() => setIsWeekSettingsOpen(false)}
+								>
+									Done
+								</Button>
+							}
 						>
-							<DialogContent className="sm:max-w-xl">
-								<DialogHeader>
-									<DialogTitle>Week Label Settings</DialogTitle>
-								</DialogHeader>
-								<p className="text-xs text-muted-foreground">
-									Set quarter starts once. Labels apply to both Manage Events
-									and Officer Calendar.
-								</p>
-								<p className="text-xs text-muted-foreground">
-									Follow the UCSD calendar and put the date where it says __
-									Quarter Begins and NOT the date that says instruction begins.
-								</p>
-								<div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-									<div className="space-y-1.5">
-										<Label htmlFor="fall-week0-start" className="text-xs">
-											Fall Week 0 Start
-										</Label>
-										<Input
-											id="fall-week0-start"
-											type="date"
-											value={weekLabelSettings.fallWeek0Start}
-											onChange={(e) =>
-												updateWeekLabelSetting("fallWeek0Start", e.target.value)
-											}
-										/>
-									</div>
-									<div className="space-y-1.5">
-										<Label htmlFor="winter-week1-start" className="text-xs">
-											Winter Week 1 Start
-										</Label>
-										<Input
-											id="winter-week1-start"
-											type="date"
-											value={weekLabelSettings.winterWeek1Start}
-											onChange={(e) =>
-												updateWeekLabelSetting(
-													"winterWeek1Start",
-													e.target.value,
-												)
-											}
-										/>
-									</div>
-									<div className="space-y-1.5">
-										<Label htmlFor="spring-week1-start" className="text-xs">
-											Spring Week 1 Start
-										</Label>
-										<Input
-											id="spring-week1-start"
-											type="date"
-											value={weekLabelSettings.springWeek1Start}
-											onChange={(e) =>
-												updateWeekLabelSetting(
-													"springWeek1Start",
-													e.target.value,
-												)
-											}
-										/>
-									</div>
+							<p className="mb-4 text-xs text-muted-foreground">
+								Follow the UCSD calendar and put the date where it says __
+								Quarter Begins and NOT the date that says instruction begins.
+							</p>
+							<div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+								<div className="space-y-1.5">
+									<Label htmlFor="fall-week0-start" className="text-xs">
+										Fall Week 0 Start
+									</Label>
+									<Input
+										id="fall-week0-start"
+										type="date"
+										className="h-11 text-base sm:h-9 sm:text-sm"
+										value={weekLabelSettings.fallWeek0Start}
+										onChange={(e) =>
+											updateWeekLabelSetting("fallWeek0Start", e.target.value)
+										}
+									/>
 								</div>
-							</DialogContent>
-						</Dialog>
-						<Button onClick={() => setIsWizardOpen(true)}>
-							<Plus className="h-4 w-4 mr-2" />
-							New Event Request
-						</Button>
+								<div className="space-y-1.5">
+									<Label htmlFor="winter-week1-start" className="text-xs">
+										Winter Week 1 Start
+									</Label>
+									<Input
+										id="winter-week1-start"
+										type="date"
+										className="h-11 text-base sm:h-9 sm:text-sm"
+										value={weekLabelSettings.winterWeek1Start}
+										onChange={(e) =>
+											updateWeekLabelSetting("winterWeek1Start", e.target.value)
+										}
+									/>
+								</div>
+								<div className="space-y-1.5">
+									<Label htmlFor="spring-week1-start" className="text-xs">
+										Spring Week 1 Start
+									</Label>
+									<Input
+										id="spring-week1-start"
+										type="date"
+										className="h-11 text-base sm:h-9 sm:text-sm"
+										value={weekLabelSettings.springWeek1Start}
+										onChange={(e) =>
+											updateWeekLabelSetting("springWeek1Start", e.target.value)
+										}
+									/>
+								</div>
+							</div>
+						</ResponsiveOverlay>
 					</>
 				}
 			/>
+
+			{/* Mobile create action sheet */}
+			<ResponsiveOverlay
+				open={isCreateSheetOpen}
+				onOpenChange={setIsCreateSheetOpen}
+				title="Create"
+				variant="sheet"
+			>
+				<div className="space-y-2 pb-2">
+					<Button
+						variant="outline"
+						className="h-12 w-full justify-start gap-3"
+						onClick={() => {
+							setIsCreateSheetOpen(false);
+							setIsWizardOpen(true);
+						}}
+					>
+						<Plus className="size-4" />
+						New Event Request
+					</Button>
+					<Button
+						variant="outline"
+						className="h-12 w-full justify-start gap-3"
+						onClick={() => {
+							setIsCreateSheetOpen(false);
+							setDraftDate(null);
+							setIsDraftModalOpen(true);
+						}}
+					>
+						<FilePlus className="size-4" />
+						Quick Draft
+					</Button>
+				</div>
+			</ResponsiveOverlay>
 
 			{/* View Toggle */}
 			<div className="flex items-center gap-2">
@@ -1035,50 +1095,45 @@ function ManageEventsPage() {
 			)}
 
 			{/* Content */}
-			{stableEventsData && (
-				<>
-					{viewMode === "list" ? (
-						<EventsDataTable
-							events={paginatedEvents}
-							sortConfig={sortConfig}
-							onSort={handleSort}
-							onView={(event) => {
-								setSelectedRequest(event);
-								if (event.status === "draft") {
-									setIsDraftViewModalOpen(true);
-								} else {
-									setIsViewModalOpen(true);
-								}
-							}}
-							onEdit={(event) => {
-								if (event.status === "draft") {
-									setEditingDraft(event);
-									setIsDraftModalOpen(true);
-								} else {
-									setEditingRequest(event);
-									setIsWizardOpen(true);
-								}
-							}}
-							onDelete={handleDelete}
-							onConvertToDraft={handleConvertToDraft}
-							pagination={{
-								currentPage,
-								totalPages,
-								onPageChange: setCurrentPage,
-							}}
-						/>
-					) : (
-						<EventCalendar
-							events={sortedEvents}
-							onDateClick={handleCalendarDateClick}
-							onEventClick={handleCalendarEventClick}
-							getDayLabel={(date) =>
-								getWeekLabelForDate(date, weekLabelSettings)
+			{stableEventsData &&
+				(viewMode === "list" ? (
+					<EventsDataTable
+						events={paginatedEvents}
+						sortConfig={sortConfig}
+						onSort={handleSort}
+						onView={(event) => {
+							setSelectedRequest(event);
+							if (event.status === "draft") {
+								setIsDraftViewModalOpen(true);
+							} else {
+								setIsViewModalOpen(true);
 							}
-						/>
-					)}
-				</>
-			)}
+						}}
+						onEdit={(event) => {
+							if (event.status === "draft") {
+								setEditingDraft(event);
+								setIsDraftModalOpen(true);
+							} else {
+								setEditingRequest(event);
+								setIsWizardOpen(true);
+							}
+						}}
+						onDelete={handleDelete}
+						onConvertToDraft={handleConvertToDraft}
+						pagination={{
+							currentPage,
+							totalPages,
+							onPageChange: setCurrentPage,
+						}}
+					/>
+				) : (
+					<EventCalendar
+						events={sortedEvents}
+						onDateClick={handleCalendarDateClick}
+						onEventClick={handleCalendarEventClick}
+						getDayLabel={(date) => getWeekLabelForDate(date, weekLabelSettings)}
+					/>
+				))}
 
 			{/* Event Request Wizard Modal */}
 			<EventRequestWizardModal

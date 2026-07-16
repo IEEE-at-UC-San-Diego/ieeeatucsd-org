@@ -20,7 +20,7 @@ import {
 	TrendingUp,
 	XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
 	DashboardPage,
@@ -30,6 +30,11 @@ import {
 import { BudgetLogModal } from "@/components/dashboard/fund-requests/BudgetLogModal";
 import { BudgetTrackingCard } from "@/components/dashboard/fund-requests/BudgetTrackingCard";
 import { FundRequestFormModal } from "@/components/dashboard/fund-requests/FundRequestFormModal";
+import {
+	MobileDataList,
+	MobileDataListItem,
+	useMobileShell,
+} from "@/components/mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,6 +42,7 @@ import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -116,9 +122,15 @@ function FundRequestDetailPage({
 	const vendorLinks = request.vendorLinks || [];
 	const attachments = request.attachments || [];
 	const auditLogs = request.auditLogs || [];
+	const showStickyEditBar = canEdit && !!onEdit;
 
 	return (
-		<div className="w-full max-w-[1600px] mx-auto space-y-6 p-4 sm:p-6">
+		<div
+			className={cn(
+				"w-full max-w-[1600px] mx-auto space-y-6 p-4 sm:p-6",
+				showStickyEditBar && "pb-24 sm:pb-6",
+			)}
+		>
 			<div className="flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-start lg:justify-between">
 				<div className="flex items-start gap-3 min-w-0">
 					<Button
@@ -162,8 +174,8 @@ function FundRequestDetailPage({
 							{formatCurrency(request.amount)}
 						</p>
 					</div>
-					{canEdit && onEdit && (
-						<Button onClick={onEdit} className="h-10">
+					{showStickyEditBar && (
+						<Button onClick={onEdit} className="hidden h-10 sm:inline-flex">
 							<Edit className="w-4 h-4 mr-2" />
 							{request.status === "needs_info"
 								? "Respond & Resubmit"
@@ -436,11 +448,24 @@ function FundRequestDetailPage({
 					</Card>
 				</div>
 			</div>
+
+			{showStickyEditBar && (
+				<div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:hidden">
+					<Button onClick={onEdit} className="h-11 w-full">
+						<Edit className="w-4 h-4 mr-2" />
+						{request.status === "needs_info"
+							? "Respond & Resubmit"
+							: "Edit Request"}
+					</Button>
+				</div>
+			)}
 		</div>
 	);
 }
 
 function FundRequestsPage() {
+	const isMobile = useIsMobile();
+	const { setHideTabBar } = useMobileShell();
 	const { logtoId } = useAuth();
 	const { hasOfficerAccess } = usePermissions();
 	const requests = useAuthedQuery(
@@ -458,6 +483,11 @@ function FundRequestsPage() {
 	const [selectedTab, setSelectedTab] = useState<FilterTab>("all");
 	const [page, setPage] = useState(1);
 	const [isDeleting, setIsDeleting] = useState(false);
+
+	useEffect(() => {
+		setHideTabBar(view === "form" || view === "detail");
+		return () => setHideTabBar(false);
+	}, [view, setHideTabBar]);
 
 	// Budget stats queries
 	const budgetStatsEvents = useAuthedQuery(
@@ -936,6 +966,31 @@ function FundRequestsPage() {
 							) : undefined
 						}
 					/>
+				) : isMobile ? (
+					<MobileDataList>
+						{paginatedRequests.map((r) => (
+							<MobileDataListItem
+								key={r._id}
+								title={r.title}
+								subtitle={
+									CATEGORY_LABELS[r.category as keyof typeof CATEGORY_LABELS] ||
+									r.category
+								}
+								meta={formatDate(r.createdAt)}
+								trailing={formatCurrency(r.amount)}
+								status={
+									<Badge
+										className={`${statusColors[r.status] || ""}`}
+										variant="secondary"
+									>
+										{STATUS_LABELS[r.status as keyof typeof STATUS_LABELS] ||
+											r.status}
+									</Badge>
+								}
+								onClick={() => handleViewRequest(r)}
+							/>
+						))}
+					</MobileDataList>
 				) : (
 					<div className="grid grid-cols-1 gap-4">
 						{paginatedRequests.map((r) => (

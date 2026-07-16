@@ -245,31 +245,31 @@ function AcceptInvitationPage() {
 	}
 
 	return (
-		<main className="min-h-screen bg-muted/40 p-4">
-			<section className="mx-auto flex min-h-screen max-w-3xl items-center py-10">
+		<main className="min-h-dvh bg-muted/40 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+			<section className="mx-auto flex min-h-[calc(100dvh-2rem)] max-w-3xl items-start py-6 sm:items-center sm:py-10">
 				<div className="w-full overflow-hidden rounded-md border bg-background shadow-sm">
-					<div className="bg-primary px-8 py-10 text-center text-primary-foreground">
-						<h1 className="mb-2 text-3xl font-bold">
+					<div className="bg-primary px-4 py-6 text-center text-primary-foreground sm:px-8 sm:py-10">
+						<h1 className="mb-1 text-xl font-bold sm:mb-2 sm:text-3xl">
 							Congratulations, {invitation?.name}!
 						</h1>
-						<p className="text-primary-foreground/80">
+						<p className="text-sm text-primary-foreground/80 sm:text-base">
 							You've been elected to the IEEE at UCSD board.
 						</p>
 					</div>
 
-					<div className="space-y-6 p-8">
-						<div className="rounded-lg border bg-card p-5">
-							<div className="flex items-start gap-4">
-								<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-									<Briefcase className="h-6 w-6 text-primary" />
+					<div className="space-y-5 p-4 sm:space-y-6 sm:p-8">
+						<div className="rounded-lg border bg-card p-4 sm:p-5">
+							<div className="flex items-start gap-3 sm:gap-4">
+								<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 sm:h-12 sm:w-12">
+									<Briefcase className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
 								</div>
-								<div>
+								<div className="min-w-0">
 									<p className="text-sm text-muted-foreground">
 										{hasMultiplePositions
 											? "Available Positions"
 											: "Your Position"}
 									</p>
-									<h2 className="text-2xl font-bold">
+									<h2 className="text-xl font-bold sm:text-2xl">
 										{hasMultiplePositions
 											? "Choose one position"
 											: invitation?.position}
@@ -345,27 +345,29 @@ function AcceptInvitationPage() {
 							</p>
 						</div>
 
-						<div className="flex flex-col gap-3 sm:flex-row">
-							<Button
-								type="button"
-								variant="outline"
-								onClick={handleDecline}
-								disabled={processing}
-								className="flex-1"
-							>
-								Decline Position
-							</Button>
-							<Button
-								type="button"
-								onClick={handleAccept}
-								disabled={!canAccept}
-								className="flex-1"
-							>
-								{processing ? (
-									<Loader2 className="h-4 w-4 animate-spin" />
-								) : null}
-								{processing ? "Processing..." : "Accept Position"}
-							</Button>
+						<div className="sticky bottom-0 -mx-4 border-t bg-background/95 px-4 py-3 backdrop-blur-xl supports-[backdrop-filter]:bg-background/85 [@media(prefers-reduced-transparency:reduce)]:bg-background [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+							<div className="flex flex-col gap-3 sm:flex-row">
+								<Button
+									type="button"
+									variant="outline"
+									onClick={handleDecline}
+									disabled={processing}
+									className="h-12 flex-1"
+								>
+									Decline Position
+								</Button>
+								<Button
+									type="button"
+									onClick={handleAccept}
+									disabled={!canAccept}
+									className="h-12 flex-1"
+								>
+									{processing ? (
+										<Loader2 className="h-4 w-4 animate-spin" />
+									) : null}
+									{processing ? "Processing..." : "Accept Position"}
+								</Button>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -376,8 +378,8 @@ function AcceptInvitationPage() {
 
 function CenteredShell({ children }: { children: React.ReactNode }) {
 	return (
-		<main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-			<div className="w-full max-w-md rounded-md border bg-background p-8 text-center shadow-sm">
+		<main className="flex min-h-dvh items-center justify-center bg-muted/40 px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+			<div className="w-full max-w-md rounded-md border bg-background p-6 text-center shadow-sm sm:p-8">
 				{children}
 			</div>
 		</main>
@@ -400,18 +402,20 @@ function StatusShell({
 	className?: string;
 }) {
 	return (
-		<main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+		<main className="flex min-h-dvh items-center justify-center bg-muted/40 px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
 			<div
 				className={`w-full max-w-2xl overflow-hidden rounded-md border bg-background shadow-sm ${className}`}
 			>
-				<div className="bg-muted px-8 py-10 text-center">
-					<div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-background">
+				<div className="bg-muted px-4 py-6 text-center sm:px-8 sm:py-10">
+					<div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-background sm:mb-4 sm:h-20 sm:w-20">
 						{icon}
 					</div>
-					<h1 className="mb-2 text-3xl font-bold">{title}</h1>
-					<p className="text-muted-foreground">{description}</p>
+					<h1 className="mb-2 text-xl font-bold sm:text-3xl">{title}</h1>
+					<p className="text-sm text-muted-foreground sm:text-base">
+						{description}
+					</p>
 				</div>
-				<div className="space-y-6 p-8">
+				<div className="space-y-5 p-4 sm:space-y-6 sm:p-8">
 					<InvitationDetails invitation={invitation} />
 					{children}
 				</div>
@@ -422,7 +426,7 @@ function StatusShell({
 
 function InvitationDetails({ invitation }: { invitation: Invitation | null }) {
 	return (
-		<div className="grid gap-4 sm:grid-cols-2">
+		<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
 			<DetailItem
 				icon={<User className="h-5 w-5 text-primary" />}
 				label="Full Name"

@@ -1,5 +1,7 @@
 import { Building2, ChevronDown, ChevronUp } from "lucide-react";
+import { MobileDataList, MobileDataListItem } from "@/components/mobile";
 import { Badge } from "@/components/ui/badge";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { SortConfig, SponsorDomain, SponsorTier } from "./types";
 
 interface SponsorTableProps {
@@ -23,6 +25,8 @@ export function SponsorTable({
 	onSort,
 	onRowClick,
 }: SponsorTableProps) {
+	const isMobile = useIsMobile();
+
 	const getSortIcon = (field: string) => {
 		if (sortConfig.field === field) {
 			return sortConfig.direction === "asc" ? (
@@ -48,6 +52,30 @@ export function SponsorTable({
 					with matching email addresses.
 				</p>
 			</div>
+		);
+	}
+
+	if (isMobile) {
+		return (
+			<MobileDataList>
+				{sponsors.map((sponsor) => (
+					<MobileDataListItem
+						key={sponsor._id}
+						title={sponsor.organizationName}
+						subtitle={
+							<span className="font-mono text-xs">{sponsor.domain}</span>
+						}
+						status={
+							<Badge
+								className={`text-[10px] ${tierColors[sponsor.sponsorTier]}`}
+							>
+								{sponsor.sponsorTier}
+							</Badge>
+						}
+						onClick={() => onRowClick?.(sponsor)}
+					/>
+				))}
+			</MobileDataList>
 		);
 	}
 

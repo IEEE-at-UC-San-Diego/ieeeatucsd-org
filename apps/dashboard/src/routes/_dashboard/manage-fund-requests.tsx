@@ -15,9 +15,14 @@ import {
 	Settings,
 	XCircle,
 } from "lucide-react";
-import { type ReactElement, useState } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 import { toast } from "sonner";
 import BudgetManagementModal from "@/components/fund-requests/BudgetManagementModal";
+import {
+	MobileDataList,
+	MobileDataListItem,
+	useMobileShell,
+} from "@/components/mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
@@ -534,6 +540,8 @@ function FundRequestDetailView({
 }
 
 function ManageFundRequestsPage() {
+	const isMobile = useIsMobile();
+	const { setHideTabBar } = useMobileShell();
 	const {
 		hasOfficerAccess,
 		hasAdminAccess,
@@ -560,6 +568,11 @@ function ManageFundRequestsPage() {
 	const selectedRequest = (allRequests || []).find(
 		(r) => r._id === selectedRequestId,
 	);
+
+	useEffect(() => {
+		setHideTabBar(view === "detail");
+		return () => setHideTabBar(false);
+	}, [view, setHideTabBar]);
 
 	const handleViewDetail = (request: FundRequestData) => {
 		setSelectedRequestId(request._id);
@@ -858,14 +871,37 @@ function ManageFundRequestsPage() {
 				</div>
 			</div>
 
-			{/* Table */}
-			<div className="rounded-md border bg-card overflow-hidden">
+			{/* Queue / table */}
+			<div
+				className={cn(!isMobile && "rounded-md border bg-card overflow-hidden")}
+			>
 				{!allRequests ? (
 					<div className="p-6 space-y-4">
 						{[1, 2, 3, 4, 5].map((i) => (
 							<Skeleton key={i} className="h-16 w-full" />
 						))}
 					</div>
+				) : paginatedRequests.length > 0 && isMobile ? (
+					<MobileDataList>
+						{paginatedRequests.map((request) => (
+							<MobileDataListItem
+								key={request._id}
+								title={request.title}
+								subtitle={request.submittedByName || "Unknown"}
+								meta={`${DEPARTMENT_LABELS[request.department] || request.department} · ${formatDateDisplay(request.createdAt || Date.now())}`}
+								trailing={formatCurrencyUSD(request.amount)}
+								status={
+									<Badge
+										className={STATUS_COLORS[request.status] || ""}
+										variant="secondary"
+									>
+										{STATUS_LABELS[request.status]}
+									</Badge>
+								}
+								onClick={() => handleViewDetail(request as FundRequestData)}
+							/>
+						))}
+					</MobileDataList>
 				) : paginatedRequests.length > 0 ? (
 					<div className="divide-y">
 						{paginatedRequests.map((request) => {

@@ -76,9 +76,10 @@ function LeaderboardPage() {
 	};
 
 	return (
-		<DashboardPage>
+		<DashboardPage variant="list">
 			{/* Header & Search */}
 			<PageHeader
+				hideTitleOnMobile
 				title="Leaderboard"
 				description="Community rankings based on event participation and engagement."
 				actions={

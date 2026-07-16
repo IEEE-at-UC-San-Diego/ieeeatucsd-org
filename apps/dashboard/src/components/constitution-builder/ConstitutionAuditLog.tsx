@@ -14,16 +14,10 @@ import {
 	User,
 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
+import { ResponsiveOverlay } from "@/components/mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -342,9 +336,10 @@ const AuditEntryRow: React.FC<{
 	formatFullTime,
 }) => {
 	const summary = useMemo(() => buildChangeSummary(entry), [entry]);
+	const [detailsOpen, setDetailsOpen] = useState(false);
 
 	return (
-		<div className="flex items-start gap-3 px-3 py-2.5 rounded-lg hover:bg-muted/80 transition-colors group">
+		<div className="flex items-start gap-3 px-3 py-2.5 rounded-lg transition-colors active:bg-muted/80 sm:hover:bg-muted/80">
 			<div className="flex-shrink-0 mt-0.5 w-7 h-7 rounded-full bg-muted flex items-center justify-center">
 				{getChangeTypeIcon(entry.changeType)}
 			</div>
@@ -366,25 +361,29 @@ const AuditEntryRow: React.FC<{
 				<p className="text-sm text-foreground mt-0.5 leading-snug">{summary}</p>
 
 				{(entry.beforeValue || entry.afterValue) && (
-					<Dialog>
-						<DialogTrigger asChild>
-							<Button
-								variant="link"
-								className="text-xs text-ds-blue-700 hover:text-ds-blue-700 mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
-							>
-								View details
-							</Button>
-						</DialogTrigger>
-						<DialogContent className="max-w-lg">
-							<DialogHeader>
-								<DialogTitle className="text-base font-semibold flex items-center gap-2">
+					<>
+						<Button
+							variant="link"
+							className="h-11 px-0 text-xs text-ds-blue-700 hover:text-ds-blue-700 mt-1 sm:h-auto"
+							onClick={() => setDetailsOpen(true)}
+						>
+							View details
+						</Button>
+						<ResponsiveOverlay
+							open={detailsOpen}
+							onOpenChange={setDetailsOpen}
+							title={
+								<span className="flex items-center gap-2">
 									{getChangeTypeIcon(entry.changeType)}
 									Change Details
-								</DialogTitle>
-							</DialogHeader>
+								</span>
+							}
+							variant="large-sheet"
+							className="sm:max-w-lg"
+						>
 							<DetailContent entry={entry} formatFullTime={formatFullTime} />
-						</DialogContent>
-					</Dialog>
+						</ResponsiveOverlay>
+					</>
 				)}
 			</div>
 		</div>
