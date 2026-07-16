@@ -126,7 +126,7 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 			<div className="bg-background rounded-lg border border-border p-8 lg:p-12">
 				<div className="text-center max-w-2xl mx-auto">
 					<div className="bg-ds-blue-100 rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-						<BookOpen className="h-12 w-12 text-ds-blue-700" />
+						<BookOpen className="h-12 w-12 text-tone-info" />
 					</div>
 					<h3 className="text-2xl lg:text-3xl font-bold text-foreground mb-4">
 						Welcome to the Constitution Builder
@@ -143,15 +143,15 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 									setAddSectionType("preamble");
 									setShowAddModal(true);
 								}}
-								className="flex flex-col items-center p-6 bg-ds-blue-700 text-white rounded-md hover:bg-ds-blue-800 transition-colors min-h-[120px] justify-center"
+								className="flex flex-col items-center p-6 bg-ds-blue-700 text-on-accent rounded-md hover:bg-ds-blue-800 transition-colors min-h-[120px] justify-center"
 							>
-								<div className="bg-ds-blue-1000 rounded-full p-3 mb-3">
+								<div className="bg-ds-blue-800 rounded-full p-3 mb-3">
 									<FileText className="h-6 w-6" />
 								</div>
 								<span className="font-medium text-base">
 									Start with Preamble
 								</span>
-								<span className="text-ds-blue-100 text-sm mt-1">
+								<span className="text-on-accent/70 text-sm mt-1">
 									Introduction & purpose
 								</span>
 							</Button>
@@ -160,15 +160,15 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 									setAddSectionType("article");
 									setShowAddModal(true);
 								}}
-								className="flex flex-col items-center p-6 bg-ds-gray-800 text-white rounded-md hover:bg-ds-gray-900 transition-colors min-h-[120px] justify-center"
+								className="flex flex-col items-center p-6 bg-primary text-primary-foreground rounded-md hover:bg-ds-gray-900 transition-colors min-h-[120px] justify-center"
 							>
-								<div className="bg-ds-gray-700 rounded-full p-3 mb-3">
+								<div className="bg-primary-foreground/15 rounded-full p-3 mb-3">
 									<Plus className="h-6 w-6" />
 								</div>
 								<span className="font-medium text-base">
 									Start with Article I
 								</span>
-								<span className="text-background text-sm mt-1">
+								<span className="text-primary-foreground/70 text-sm mt-1">
 									Main content sections
 								</span>
 							</Button>
@@ -209,7 +209,7 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 							<>
 								<Button
 									onClick={() => onEditSection(selectedSection)}
-									className="inline-flex items-center px-4 py-2.5 bg-ds-blue-700 text-white rounded-md hover:bg-ds-blue-800 transition-colors text-sm font-medium"
+									className="inline-flex items-center px-4 py-2.5 bg-ds-blue-700 text-on-accent rounded-md hover:bg-ds-blue-800 transition-colors text-sm font-medium"
 								>
 									<Edit3 className="h-4 w-4 mr-2" />
 									Edit Section
@@ -250,7 +250,7 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 								</div>
 								{hasUnsavedChanges && (
 									<div className="flex items-center justify-center sm:justify-start lg:justify-end">
-										<span className="text-sm text-ds-amber-900 font-medium bg-ds-amber-100 px-3 py-1.5 rounded-md border border-ds-amber-100">
+										<span className="text-sm text-tone-warning font-medium bg-ds-amber-100 px-3 py-1.5 rounded-md border border-ds-amber-100">
 											You have unsaved changes
 										</span>
 									</div>
@@ -323,13 +323,13 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 					<div className="prose max-w-none">
 						{currentSection.type === "article" ? (
 							<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-md p-6 text-center">
-								<div className="text-ds-blue-700 mb-2">
+								<div className="text-tone-info mb-2">
 									<BookOpen className="h-8 w-8 mx-auto mb-3" />
 								</div>
 								<h3 className="text-lg font-medium text-ds-blue-1000 mb-2">
 									Article Container
 								</h3>
-								<p className="text-ds-blue-700 leading-relaxed">
+								<p className="text-tone-info leading-relaxed">
 									Articles serve as organizational containers and only require a
 									title. Content should be added to sections within this
 									article.
@@ -362,7 +362,7 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 								</p>
 								<Button
 									onClick={() => onEditSection(selectedSection)}
-									className="inline-flex items-center px-4 py-2 bg-ds-blue-700 text-white rounded-md hover:bg-ds-blue-800 transition-colors text-sm font-medium"
+									className="inline-flex items-center px-4 py-2 bg-ds-blue-700 text-on-accent rounded-md hover:bg-ds-blue-800 transition-colors text-sm font-medium"
 								>
 									<Edit3 className="h-4 w-4 mr-2" />
 									Start Editing

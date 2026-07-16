@@ -250,10 +250,10 @@ export function FundDepositDetail({
 								{/* IEEE Info */}
 								{deposit.isIeeeDeposit && (
 									<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-lg p-4">
-										<Label className="text-ds-blue-700 font-semibold mb-1 block">
+										<Label className="text-tone-info font-semibold mb-1 block">
 											IEEE Deposit
 										</Label>
-										<p className="text-sm text-ds-blue-700">
+										<p className="text-sm text-tone-info">
 											Source:{" "}
 											<span className="uppercase">
 												{deposit.ieeeDepositSource}
@@ -424,7 +424,7 @@ export function FundDepositDetail({
 									size="sm"
 									onClick={handleDelete}
 									disabled={isDeleting}
-									className="text-destructive hover:text-destructive hover:bg-destructive/10"
+									className="text-muted-foreground hover:text-tone-danger hover:bg-destructive/10"
 								>
 									<Trash2 className="w-4 h-4 mr-2" /> Delete
 								</Button>

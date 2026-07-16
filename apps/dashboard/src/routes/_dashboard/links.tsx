@@ -44,11 +44,11 @@ export const Route = createFileRoute("/_dashboard/links")({
 const ITEMS_PER_PAGE = 12;
 
 const categoryColors: Record<string, string> = {
-	General: "bg-ds-blue-100 text-ds-blue-700",
-	"Social Media": "bg-ds-blue-100 text-ds-pink-700",
-	Resources: "bg-ds-green-100 text-ds-green-900",
-	Events: "bg-ds-blue-100 text-ds-purple-700",
-	Projects: "bg-ds-amber-100 text-ds-amber-900",
+	General: "bg-ds-blue-100 text-tone-info",
+	"Social Media": "bg-ds-pink-100 text-tone-pink",
+	Resources: "bg-ds-green-100 text-tone-success",
+	Events: "bg-ds-purple-100 text-tone-purple",
+	Projects: "bg-ds-amber-100 text-tone-warning",
 };
 
 function getCategoryColor(category: string) {
@@ -410,7 +410,7 @@ function LinksPage() {
 									key={link._id}
 									leading={
 										<div className="flex size-10 items-center justify-center rounded-lg bg-ds-blue-100">
-											<LinkIcon className="size-4 text-ds-blue-700" />
+											<LinkIcon className="size-4 text-tone-info" />
 										</div>
 									}
 									title={link.title}
@@ -463,7 +463,7 @@ function LinksPage() {
 										className="flex min-w-0 flex-1 items-start gap-3"
 									>
 										<div className="shrink-0 rounded-lg bg-ds-blue-100 p-2">
-											<LinkIcon className="h-4 w-4 text-ds-blue-700" />
+											<LinkIcon className="h-4 w-4 text-tone-info" />
 										</div>
 										<div className="min-w-0 flex-1">
 											<div className="flex items-center gap-2">
@@ -502,7 +502,7 @@ function LinksPage() {
 											<Button
 												variant="ghost"
 												size="sm"
-												className="h-9 w-9 p-0"
+												className="h-9 w-9 p-0 text-muted-foreground hover:text-tone-danger"
 												disabled={deletingId === link._id}
 												onClick={(e) => {
 													e.preventDefault();
@@ -513,7 +513,7 @@ function LinksPage() {
 												{deletingId === link._id ? (
 													<Loader2 className="h-3.5 w-3.5 animate-spin" />
 												) : (
-													<Trash2 className="h-3.5 w-3.5 text-destructive" />
+													<Trash2 className="h-3.5 w-3.5" />
 												)}
 											</Button>
 										</div>
@@ -613,7 +613,7 @@ function LinksPage() {
 						</Button>
 						<Button
 							variant="outline"
-							className="h-12 w-full justify-start gap-3 text-destructive hover:text-destructive"
+							className="h-12 w-full justify-start gap-3 text-muted-foreground hover:bg-ds-red-100 hover:text-tone-danger"
 							disabled={deletingId === manageLink?._id}
 							onClick={() => {
 								if (manageLink) handleDelete(manageLink._id);

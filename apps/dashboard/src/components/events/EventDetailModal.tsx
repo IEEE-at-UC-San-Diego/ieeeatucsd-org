@@ -114,7 +114,7 @@ export function EventDetailModal({
 					</Badge>
 
 					{isLive && (
-						<Badge className="bg-ds-green-700 text-white border-ds-green-700">
+						<Badge className="bg-ds-green-700 text-on-accent border-ds-green-700">
 							<span className="relative flex h-1.5 w-1.5 mr-1.5">
 								<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-background opacity-75" />
 								<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-background" />
@@ -125,7 +125,7 @@ export function EventDetailModal({
 					{isUpcoming && (
 						<Badge
 							variant="secondary"
-							className="bg-ds-blue-100 text-ds-blue-700 border-ds-blue-100"
+							className="bg-ds-blue-100 text-tone-info border-ds-blue-100"
 						>
 							Upcoming
 						</Badge>
@@ -139,7 +139,7 @@ export function EventDetailModal({
 					{userHasAttended && (
 						<Badge
 							variant="secondary"
-							className="bg-ds-green-100 text-ds-green-700 border-ds-green-100"
+							className="bg-ds-green-100 text-tone-success border-ds-green-100"
 						>
 							<UserCheck className="w-3 h-3 mr-1" />
 							Attended

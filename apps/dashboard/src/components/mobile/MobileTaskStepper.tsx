@@ -58,7 +58,7 @@ export function MobileTaskStepper({
 								onClick={() => visited && onStepClick(step)}
 								className={cn(
 									"flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold transition-colors active:scale-[0.97]",
-									active && "bg-ieee-blue text-white",
+									active && "bg-ieee-blue text-on-accent",
 									!active &&
 										visited &&
 										"bg-muted text-foreground hover:bg-accent",

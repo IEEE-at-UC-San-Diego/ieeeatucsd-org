@@ -190,20 +190,20 @@ export function FundDepositList({
 					value={stats.pending}
 					subValue={formatCurrency(stats.pendingAmount)}
 					icon={Clock}
-					color="text-ds-amber-900"
+					color="text-tone-warning"
 				/>
 				<StatCard
 					title="Verified Deposits"
 					value={stats.verified}
 					subValue={formatCurrency(stats.totalAmount)}
 					icon={CheckCircle}
-					color="text-ds-green-700"
+					color="text-tone-success"
 				/>
 				<StatCard
 					title="Total Requests"
 					value={stats.total}
 					icon={TrendingUp}
-					color="text-ds-blue-700"
+					color="text-tone-info"
 				/>
 				{/* Placeholder for maybe 'Rejected' or 'This Month' */}
 				<Card className="border-dashed shadow-none bg-muted/30 flex items-center justify-center p-6">
@@ -374,7 +374,7 @@ export function FundDepositList({
 																e.stopPropagation();
 																onDeleteDeposit(deposit);
 															}}
-															className="text-destructive focus:text-destructive"
+															className="text-muted-foreground focus:text-tone-danger"
 														>
 															<Trash2 className="w-4 h-4 mr-2" /> Delete
 														</DropdownMenuItem>

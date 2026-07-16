@@ -95,7 +95,7 @@ function LeaderboardPage() {
 								setSearchTerm(e.target.value);
 								setCurrentPage(1);
 							}}
-							className="block w-full pl-[42px] pr-4 py-[11px] border border-border rounded-[9px] bg-background text-[14px] placeholder-gray-400 focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-border transition-[border-color,box-shadow] duration-150 ease-[ease]"
+							className="block w-full pl-[42px] pr-4 py-[11px] border border-border rounded-[9px] bg-background text-[14px] placeholder:text-muted-foreground focus:outline-none focus:border-ds-gray-1000 focus:ring-1 focus:ring-border transition-[border-color,box-shadow] duration-150 ease-[var(--ease-geist)]"
 						/>
 					</div>
 				}
@@ -153,10 +153,10 @@ function LeaderboardPage() {
 							</div>
 
 							<div className="bg-ds-blue-700 rounded-md px-5 py-4">
-								<p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-[2px]">
+								<p className="text-[11px] font-semibold text-on-accent/70 uppercase tracking-wider mb-[2px]">
 									Your Rank
 								</p>
-								<p className="text-[26px] font-bold text-white leading-none tracking-tight">
+								<p className="text-[26px] font-bold text-on-accent leading-none tracking-tight">
 									{currentUserRank >= 0 ? `#${currentUserRank + 1}` : "—"}
 								</p>
 							</div>
@@ -177,12 +177,12 @@ function LeaderboardPage() {
 						{topThree[1] && (
 							<div className="flex flex-col items-center relative top-2">
 								<div className="relative mb-4">
-									<div className="w-[72px] h-[72px] sm:w-20 sm:h-20 rounded-full border-[3px] border-white flex items-center justify-center bg-muted">
+									<div className="w-[72px] h-[72px] sm:w-20 sm:h-20 rounded-full border-[3px] border-background flex items-center justify-center bg-muted">
 										<span className="text-[19px] font-bold text-muted-foreground tracking-tight">
 											{topThree[1].name.substring(0, 2).toUpperCase()}
 										</span>
 									</div>
-									<div className="absolute -bottom-[9px] left-1/2 -translate-x-1/2 bg-ds-gray-800 text-white text-[10px] font-bold px-2.5 py-[3px] rounded-sm tracking-wide">
+									<div className="absolute -bottom-[9px] left-1/2 -translate-x-1/2 bg-ds-gray-800 text-on-accent text-[10px] font-bold px-2.5 py-[3px] rounded-sm tracking-wide">
 										2
 									</div>
 								</div>
@@ -203,14 +203,14 @@ function LeaderboardPage() {
 							<div className="flex flex-col items-center relative z-10">
 								<div className="relative mb-5">
 									<div className="absolute -top-7 left-1/2 -translate-x-1/2 z-0">
-										<Crown className="w-7 h-7 text-ds-amber-900 fill-yellow-500" />
+										<Crown className="w-7 h-7 text-tone-warning fill-ds-amber-400" />
 									</div>
-									<div className="w-[84px] h-[84px] sm:w-[96px] sm:h-[96px] rounded-full border-[4px] border-white flex items-center justify-center bg-gradient-to-br from-yellow-50 to-ds-amber-200 shadow-sm">
-										<span className="text-[23px] font-bold text-ds-amber-900 tracking-tight">
+									<div className="w-[84px] h-[84px] sm:w-[96px] sm:h-[96px] rounded-full border-[4px] border-background flex items-center justify-center bg-gradient-to-br from-ds-amber-100 to-ds-amber-200 shadow-sm">
+										<span className="text-[23px] font-bold text-tone-warning tracking-tight">
 											{topThree[0].name.substring(0, 2).toUpperCase()}
 										</span>
 									</div>
-									<div className="absolute -bottom-[10px] left-1/2 -translate-x-1/2 bg-yellow-600 text-white text-[11px] font-bold px-3 py-[3px] rounded-sm tracking-wide">
+									<div className="absolute -bottom-[10px] left-1/2 -translate-x-1/2 bg-ds-amber-400 text-tone-warning text-[11px] font-bold px-3 py-[3px] rounded-sm tracking-wide border border-ds-amber-500">
 										1
 									</div>
 								</div>
@@ -218,11 +218,11 @@ function LeaderboardPage() {
 									<p className="font-semibold text-foreground text-[15px] sm:text-[16px]">
 										{topThree[0].name}
 									</p>
-									<p className="text-[13px] font-bold text-ds-amber-900 mt-[2px]">
+									<p className="text-[13px] font-bold text-tone-warning mt-[2px]">
 										{topThree[0].points} pts
 									</p>
 								</div>
-								<div className="w-[84px] sm:w-[100px] h-[112px] bg-yellow-300 rounded-t-sm border-t border-x border-yellow-400" />
+								<div className="w-[84px] sm:w-[100px] h-[112px] bg-ds-amber-300 rounded-t-sm border-t border-x border-ds-amber-400" />
 							</div>
 						)}
 
@@ -230,12 +230,12 @@ function LeaderboardPage() {
 						{topThree[2] && (
 							<div className="flex flex-col items-center relative top-4">
 								<div className="relative mb-4">
-									<div className="w-[72px] h-[72px] sm:w-20 sm:h-20 rounded-full border-[3px] border-white flex items-center justify-center bg-ds-amber-100">
-										<span className="text-[19px] font-bold text-ds-amber-900/70 tracking-tight">
+									<div className="w-[72px] h-[72px] sm:w-20 sm:h-20 rounded-full border-[3px] border-background flex items-center justify-center bg-ds-amber-100">
+										<span className="text-[19px] font-bold text-muted-foreground tracking-tight">
 											{topThree[2].name.substring(0, 2).toUpperCase()}
 										</span>
 									</div>
-									<div className="absolute -bottom-[9px] left-1/2 -translate-x-1/2 bg-orange-700 text-white text-[10px] font-bold px-2.5 py-[3px] rounded-sm tracking-wide">
+									<div className="absolute -bottom-[9px] left-1/2 -translate-x-1/2 bg-ds-amber-300 text-tone-warning text-[10px] font-bold px-2.5 py-[3px] rounded-sm tracking-wide border border-ds-amber-400">
 										3
 									</div>
 								</div>
@@ -243,11 +243,11 @@ function LeaderboardPage() {
 									<p className="font-semibold text-foreground text-[13px] sm:text-[14px] truncate">
 										{topThree[2].name.split(" ")[0]}
 									</p>
-									<p className="text-[12px] font-bold text-ds-amber-900/70 mt-[2px]">
+									<p className="text-[12px] font-bold text-muted-foreground mt-[2px]">
 										{topThree[2].points} pts
 									</p>
 								</div>
-								<div className="w-[72px] sm:w-[88px] h-[72px] bg-orange-200 rounded-t-sm border-t border-x border-orange-300" />
+								<div className="w-[72px] sm:w-[88px] h-[72px] bg-ds-amber-200 rounded-t-sm border-t border-x border-ds-amber-300" />
 							</div>
 						)}
 					</div>
@@ -300,7 +300,7 @@ function LeaderboardPage() {
 									</th>
 								</tr>
 							</thead>
-							<tbody className="divide-y divide-gray-50">
+							<tbody className="divide-y divide-border">
 								{paginatedData.map((member) => {
 									const rank =
 										leaderboard?.findIndex((u) => u._id === member._id) ?? -1;
@@ -319,11 +319,11 @@ function LeaderboardPage() {
                             w-8 h-8 flex items-center justify-center font-bold text-sm mx-auto rounded-sm
                             ${
 															rank === 0
-																? "bg-ds-amber-100 text-ds-amber-900"
+																? "bg-ds-amber-100 text-tone-warning"
 																: rank === 1
 																	? "bg-muted text-foreground"
 																	: rank === 2
-																		? "bg-ds-amber-100 text-ds-amber-900"
+																		? "bg-ds-amber-100 text-tone-warning"
 																		: "text-muted-foreground bg-muted"
 														}
                           `}
@@ -337,12 +337,12 @@ function LeaderboardPage() {
 														className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold
                               ${
 																rank === 0
-																	? "bg-ds-amber-100 text-ds-amber-900"
+																	? "bg-ds-amber-100 text-tone-warning"
 																	: rank === 1
 																		? "bg-muted text-foreground"
 																		: rank === 2
-																			? "bg-ds-amber-100 text-ds-amber-900"
-																			: "bg-ds-blue-100 text-ds-blue-700"
+																			? "bg-ds-amber-100 text-tone-warning"
+																			: "bg-ds-blue-100 text-tone-info"
 															}
                               `}
 													>
@@ -354,7 +354,7 @@ function LeaderboardPage() {
 																{member.name}
 															</div>
 															{user?._id === member._id && (
-																<span className="text-[10px] bg-foreground text-white px-2 py-0.5 rounded-sm font-medium uppercase tracking-wide">
+																<span className="text-[10px] bg-foreground text-primary-foreground px-2 py-0.5 rounded-sm font-medium uppercase tracking-wide">
 																	You
 																</span>
 															)}

@@ -112,9 +112,9 @@ const activityConfig: Record<
 	string,
 	{ icon: React.ComponentType<{ className?: string }>; color: string }
 > = {
-	event: { icon: Calendar, color: "text-ds-blue-700" },
-	reimbursement: { icon: CreditCard, color: "text-ds-green-700" },
-	fund_deposit: { icon: DollarSign, color: "text-ds-blue-700" },
+	event: { icon: Calendar, color: "text-tone-info" },
+	reimbursement: { icon: CreditCard, color: "text-tone-success" },
+	fund_deposit: { icon: DollarSign, color: "text-tone-info" },
 };
 
 /* ─── Main Page ─── */
@@ -160,14 +160,14 @@ function OverviewPage() {
 			<DashboardPage>
 				<div className="rounded-md border border-ds-amber-100/60 bg-ds-amber-100/50 p-6 md:p-8">
 					<div className="flex items-start gap-3">
-						<AlertCircle className="h-5 w-5 text-ds-amber-900 mt-0.5" />
+						<AlertCircle className="h-5 w-5 text-tone-warning mt-0.5" />
 						<div className="space-y-3">
-							<h2 className="text-lg font-semibold text-ds-amber-900">
+							<h2 className="text-lg font-semibold text-tone-warning">
 								{isOnline
 									? "Finalizing account setup..."
 									: "Can't finish account setup"}
 							</h2>
-							<p className="text-sm text-ds-amber-900/80">
+							<p className="text-sm text-muted-foreground">
 								{isOnline
 									? "We are syncing your dashboard profile. This should only take a moment."
 									: "You're offline. Reconnect, then retry so we can sync your profile."}
@@ -441,17 +441,17 @@ function OverviewPage() {
 			{!user.signedUp && (
 				<div className="rounded-md border border-ds-amber-100/50 bg-ds-amber-100/50 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
 					<div className="space-y-0.5">
-						<h3 className="text-sm font-semibold text-ds-amber-900">
+						<h3 className="text-sm font-semibold text-tone-warning">
 							Complete Your Profile
 						</h3>
-						<p className="text-xs text-ds-amber-900/80 max-w-2xl">
+						<p className="text-xs text-muted-foreground max-w-2xl">
 							Finish setting up your account to access all features and start
 							earning points.
 						</p>
 					</div>
 					<Link
 						to="/get-started"
-						className="inline-flex items-center justify-center px-4 py-2 bg-ds-amber-700 text-white rounded-lg hover:bg-ds-amber-800 transition-colors text-xs font-semibold shadow-sm shrink-0"
+						className="inline-flex items-center justify-center px-4 py-2 bg-ds-amber-700 text-on-accent rounded-lg hover:bg-ds-amber-800 transition-colors text-xs font-semibold shadow-sm shrink-0"
 					>
 						Finish Setup
 					</Link>

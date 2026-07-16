@@ -140,7 +140,7 @@ function renderInlineMarkdown(text: string, keyPrefix: string) {
 					href={href}
 					target="_blank"
 					rel="noreferrer"
-					className="underline decoration-blue-500/60 underline-offset-2 hover:text-ds-blue-700"
+					className="underline decoration-tone-link/60 underline-offset-2 hover:text-tone-info"
 				>
 					{label}
 				</a>
@@ -231,7 +231,7 @@ function CodeBlock({
 					variant="ghost"
 					type="button"
 					onClick={handleCopy}
-					className="inline-flex items-center gap-1 rounded-md border border-border bg-ds-gray-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm hover:bg-ds-gray-800"
+					className="inline-flex items-center gap-1 rounded-md border border-border bg-ds-gray-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-on-accent shadow-sm hover:bg-ds-gray-800"
 					aria-label="Copy code"
 				>
 					{copied ? (
@@ -486,7 +486,7 @@ function ReasoningBlock({
 				variant="ghost"
 				type="button"
 				onClick={handleToggle}
-				className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-ds-blue-700 hover:bg-ds-blue-100/50 transition-colors"
+				className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-tone-info hover:bg-ds-blue-100/50 transition-colors"
 			>
 				<Brain className="w-3 h-3 flex-shrink-0" />
 				<span className="font-medium flex-shrink-0">
@@ -498,7 +498,7 @@ function ReasoningBlock({
 					</span>
 				)}
 				{!isExpanded && (
-					<span className="text-ds-purple-700/70 truncate text-left">
+					<span className="text-muted-foreground truncate text-left">
 						{preview}...
 					</span>
 				)}
@@ -510,10 +510,10 @@ function ReasoningBlock({
 				/>
 			</Button>
 			{isExpanded && (
-				<div className="px-3 pb-2 text-xs text-ds-purple-700/80 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap font-mono">
+				<div className="px-3 pb-2 text-xs text-muted-foreground leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap font-mono">
 					{content}
 					{isStreaming && (
-						<span className="inline-block w-1 h-3 bg-purple-400 animate-pulse ml-0.5 align-text-bottom" />
+						<span className="inline-block w-1 h-3 bg-ds-purple-600 animate-pulse ml-0.5 align-text-bottom" />
 					)}
 				</div>
 			)}
@@ -573,7 +573,7 @@ function ToolCallCards({
 								<Wrench
 									className={cn(
 										"w-3 h-3 flex-shrink-0",
-										isDone ? "text-ds-green-700" : "text-ds-amber-900",
+										isDone ? "text-tone-success" : "text-tone-warning",
 									)}
 								/>
 								<span className="font-medium text-foreground">
@@ -581,7 +581,7 @@ function ToolCallCards({
 								</span>
 								{isDone ? (
 									<>
-										<Check className="w-3 h-3 text-ds-green-700 flex-shrink-0" />
+										<Check className="w-3 h-3 text-tone-success flex-shrink-0" />
 										<span className="text-muted-foreground truncate">
 											{result.summary}
 										</span>
@@ -590,7 +590,7 @@ function ToolCallCards({
 										</span>
 									</>
 								) : isActive ? (
-									<Loader2 className="w-3 h-3 animate-spin text-ds-amber-700 flex-shrink-0" />
+									<Loader2 className="w-3 h-3 animate-spin text-tone-warning flex-shrink-0" />
 								) : null}
 							</div>
 						);
@@ -1006,7 +1006,7 @@ export function OfficerAiChat() {
 									<X className="w-4 h-4" />
 								</Button>
 								<div className="flex items-center gap-2">
-									<Bot className="w-5 h-5 text-ds-blue-700" />
+									<Bot className="w-5 h-5 text-tone-info" />
 									<span className="font-semibold text-sm">
 										Officer Assistant
 									</span>
@@ -1031,8 +1031,8 @@ export function OfficerAiChat() {
 
 						{/* Beta notice */}
 						<div className="bg-ds-blue-100/50 px-4 py-1.5 border-b border-ds-blue-100 flex gap-2 items-center">
-							<AlertCircle className="w-3 h-3 text-ds-blue-700 flex-shrink-0" />
-							<p className="text-[11px] text-ds-blue-700 leading-tight">
+							<AlertCircle className="w-3 h-3 text-tone-info flex-shrink-0" />
+							<p className="text-[11px] text-tone-info leading-tight">
 								Beta — double check all info. Has access to tools for searching
 								data, looking up records, and checking budgets.
 							</p>
@@ -1069,7 +1069,7 @@ export function OfficerAiChat() {
 									>
 										{msg.role === "assistant" && (
 											<div className="w-7 h-7 rounded-full bg-ds-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
-												<Bot className="w-4 h-4 text-ds-blue-700" />
+												<Bot className="w-4 h-4 text-tone-info" />
 											</div>
 										)}
 
@@ -1077,7 +1077,7 @@ export function OfficerAiChat() {
 											className={cn(
 												"rounded-lg text-sm max-w-[88%] min-w-0",
 												msg.role === "user"
-													? "bg-ds-blue-700 text-white p-3"
+													? "bg-ds-blue-700 text-on-accent p-3"
 													: "bg-muted text-foreground p-3",
 											)}
 										>
@@ -1156,7 +1156,7 @@ export function OfficerAiChat() {
 													variant="outline"
 													type="button"
 													onClick={() => handleRetry(msg.id)}
-													className="inline-flex items-center gap-1 text-xs text-ds-red-800 hover:text-ds-red-800"
+													className="inline-flex items-center gap-1 text-xs text-tone-danger hover:text-tone-danger"
 												>
 													<RotateCcw className="w-3 h-3" />
 													Retry

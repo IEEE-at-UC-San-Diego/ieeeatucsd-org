@@ -8,12 +8,12 @@ interface StatusBadgeProps {
 
 const statusStyles: Record<EventStatus, string> = {
 	draft: "bg-muted text-foreground border-border",
-	submitted: "bg-ds-purple-100 text-ds-purple-700 border-ds-purple-100",
-	pending: "bg-ds-amber-100 text-ds-amber-900 border-ds-amber-100",
-	needs_review: "bg-ds-amber-100 text-ds-amber-900 border-ds-amber-100",
-	approved: "bg-ds-green-100 text-ds-green-900 border-ds-green-100",
-	declined: "bg-ds-red-100 text-ds-red-800 border-ds-red-100",
-	published: "bg-ds-blue-100 text-ds-pink-700 border-ds-pink-100",
+	submitted: "bg-ds-purple-100 text-tone-purple border-ds-purple-100",
+	pending: "bg-ds-amber-100 text-tone-warning border-ds-amber-100",
+	needs_review: "bg-ds-amber-100 text-tone-warning border-ds-amber-100",
+	approved: "bg-ds-green-100 text-tone-success border-ds-green-100",
+	declined: "bg-ds-red-100 text-tone-danger border-ds-red-100",
+	published: "bg-ds-pink-100 text-tone-pink border-ds-pink-100",
 };
 
 const statusLabels: Record<EventStatus, string> = {

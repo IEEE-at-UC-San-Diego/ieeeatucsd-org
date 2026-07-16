@@ -32,9 +32,9 @@ export default function AIWarningStep({
 		<Card className="max-w-2xl mx-auto">
 			<CardHeader className="text-center pb-2">
 				<div className="w-20 h-20 bg-ds-amber-100 rounded-full flex items-center justify-center mb-6 mx-auto relative">
-					<Brain className="w-10 h-10 text-ds-amber-900" />
-					<div className="absolute -bottom-1 -right-1 bg-ds-amber-100 p-1.5 rounded-full border-2 border-white">
-						<AlertTriangle className="w-4 h-4 text-ds-amber-900" />
+					<Brain className="w-10 h-10 text-tone-warning" />
+					<div className="absolute -bottom-1 -right-1 bg-ds-amber-100 p-1.5 rounded-full border-2 border-background">
+						<AlertTriangle className="w-4 h-4 text-tone-warning" />
 					</div>
 				</div>
 				<CardTitle className="text-2xl font-bold text-foreground">
@@ -54,12 +54,12 @@ export default function AIWarningStep({
 				{/* Warning Alert */}
 				<div className="bg-ds-amber-100 border border-ds-amber-100 rounded-md p-4">
 					<div className="flex items-start">
-						<AlertTriangle className="w-5 h-5 text-ds-amber-900 mt-0.5 mr-3 flex-shrink-0" />
+						<AlertTriangle className="w-5 h-5 text-tone-warning mt-0.5 mr-3 flex-shrink-0" />
 						<div>
-							<h4 className="font-semibold text-ds-amber-900 mb-1">
+							<h4 className="font-semibold text-tone-warning mb-1">
 								Important Note
 							</h4>
-							<p className="text-ds-amber-900 text-sm">
+							<p className="text-tone-warning text-sm">
 								Please double-check all extracted amounts, dates, and vendor
 								names.{" "}
 								<strong>Once submitted, the request cannot be changed.</strong>
@@ -71,7 +71,7 @@ export default function AIWarningStep({
 				{/* Data Processing Info */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 					<div className="flex items-start space-x-3 p-4 bg-muted rounded-lg">
-						<FileText className="w-5 h-5 text-ds-blue-700 flex-shrink-0 mt-0.5" />
+						<FileText className="w-5 h-5 text-tone-info flex-shrink-0 mt-0.5" />
 						<div>
 							<h5 className="font-medium text-foreground text-sm">
 								Receipt Data
@@ -83,7 +83,7 @@ export default function AIWarningStep({
 						</div>
 					</div>
 					<div className="flex items-start space-x-3 p-4 bg-muted rounded-lg">
-						<Shield className="w-5 h-5 text-ds-green-700 flex-shrink-0 mt-0.5" />
+						<Shield className="w-5 h-5 text-tone-success flex-shrink-0 mt-0.5" />
 						<div>
 							<h5 className="font-medium text-foreground text-sm">
 								Data Security
@@ -117,7 +117,7 @@ export default function AIWarningStep({
 				<Button
 					onClick={onContinue}
 					disabled={!acknowledged || isLoading}
-					className="bg-ds-blue-700 hover:bg-ds-blue-800 text-white font-semibold shadow-lg shadow-none px-8 py-6 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+					className="bg-ds-blue-700 hover:bg-ds-blue-800 text-on-accent font-semibold shadow-lg shadow-none px-8 py-6 text-base disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					{isLoading ? (
 						<>

@@ -31,7 +31,7 @@ export function BasicInfoSection({ data, onChange }: BasicInfoSectionProps) {
 			<div className="grid gap-6">
 				<div className="space-y-2">
 					<Label htmlFor="eventName">
-						Event Name <span className="text-ds-red-800">*</span>
+						Event Name <span className="text-tone-danger">*</span>
 					</Label>
 					<Input
 						id="eventName"
@@ -44,7 +44,7 @@ export function BasicInfoSection({ data, onChange }: BasicInfoSectionProps) {
 
 				<div className="space-y-2">
 					<Label htmlFor="eventDescription">
-						Event Description <span className="text-ds-red-800">*</span>
+						Event Description <span className="text-tone-danger">*</span>
 					</Label>
 					<Textarea
 						id="eventDescription"
@@ -62,7 +62,7 @@ export function BasicInfoSection({ data, onChange }: BasicInfoSectionProps) {
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="space-y-2">
 						<Label htmlFor="eventType">
-							Event Type <span className="text-ds-red-800">*</span>
+							Event Type <span className="text-tone-danger">*</span>
 						</Label>
 						<Select
 							value={data.eventType || undefined}

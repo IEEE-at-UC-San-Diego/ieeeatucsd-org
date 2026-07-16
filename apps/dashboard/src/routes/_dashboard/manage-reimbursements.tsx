@@ -76,13 +76,13 @@ function formatAuditAction(action: string): {
 		submitted: {
 			label: "Submitted",
 			description: "Reimbursement request was submitted for review",
-			color: "bg-ds-blue-1000",
+			color: "bg-ds-blue-700",
 			icon: FileText,
 		},
 		status_changed_to_approved: {
 			label: "Approved",
 			description: "Request was reviewed and approved",
-			color: "bg-ds-green-1000",
+			color: "bg-ds-green-700",
 			icon: CheckCircle,
 		},
 		status_changed_to_declined: {
@@ -94,7 +94,7 @@ function formatAuditAction(action: string): {
 		status_changed_to_paid: {
 			label: "Marked as Paid",
 			description: "Payment has been processed",
-			color: "bg-ds-green-1000",
+			color: "bg-ds-green-700",
 			icon: DollarSign,
 		},
 		payment_details_added: {
@@ -106,7 +106,7 @@ function formatAuditAction(action: string): {
 		status_changed_to_submitted: {
 			label: "Re-submitted",
 			description: "Request was re-submitted for review",
-			color: "bg-ds-blue-1000",
+			color: "bg-ds-blue-700",
 			icon: FileText,
 		},
 	};
@@ -144,10 +144,10 @@ interface SortConfig {
 }
 
 const statusColors: Record<ReimbursementStatus, string> = {
-	submitted: "bg-ds-amber-100 text-ds-amber-900",
-	approved: "bg-ds-green-100 text-ds-green-900",
-	declined: "bg-ds-red-100 text-ds-red-800",
-	paid: "bg-ds-blue-100 text-ds-purple-700",
+	submitted: "bg-ds-amber-100 text-tone-warning",
+	approved: "bg-ds-green-100 text-tone-success",
+	declined: "bg-ds-red-100 text-tone-danger",
+	paid: "bg-ds-purple-100 text-tone-purple",
 };
 
 const statusLabels: Record<ReimbursementStatus, string> = {
@@ -841,7 +841,7 @@ function ManageReimbursementsPage() {
 											<span className="text-muted-foreground font-medium">
 												Zelle Info
 											</span>
-											<span className="col-span-2 text-foreground font-medium bg-ds-green-100 px-2 py-0.5 rounded text-ds-green-900">
+											<span className="col-span-2 text-foreground font-medium bg-ds-green-100 px-2 py-0.5 rounded text-tone-success">
 												{selectedReimbursement.submittedByZelle}
 											</span>
 										</div>
@@ -851,7 +851,7 @@ function ManageReimbursementsPage() {
 											<span className="text-muted-foreground font-medium">
 												Payment Info
 											</span>
-											<span className="col-span-2 text-foreground font-medium bg-ds-blue-100 px-2 py-0.5 rounded text-ds-blue-700">
+											<span className="col-span-2 text-foreground font-medium bg-ds-blue-100 px-2 py-0.5 rounded text-tone-info">
 												{selectedReimbursement.additionalInfo}
 											</span>
 										</div>
@@ -980,9 +980,9 @@ function ManageReimbursementsPage() {
 																<div className="absolute left-[11px] top-7 bottom-0 w-px bg-muted" />
 															)}
 															<div
-																className={`relative z-10 flex-shrink-0 w-[23px] h-[23px] rounded-full ${info.color} flex items-center justify-center ring-4 ring-white`}
+																className={`relative z-10 flex-shrink-0 w-[23px] h-[23px] rounded-full ${info.color} flex items-center justify-center ring-4 ring-background`}
 															>
-																<Icon className="w-3 h-3 text-white" />
+																<Icon className="w-3 h-3 text-on-accent" />
 															</div>
 															<div className="flex-1 min-w-0 pt-0.5">
 																<div className="flex items-baseline justify-between gap-2">
@@ -1023,14 +1023,14 @@ function ManageReimbursementsPage() {
 							{selectedReimbursement.paymentDetails && (
 								<section className="bg-ds-green-100 border border-ds-green-100 rounded-md p-4 space-y-3">
 									<div className="flex items-center gap-2 border-b border-ds-green-100 pb-2">
-										<CheckCircle className="w-4 h-4 text-ds-green-700" />
-										<h3 className="text-xs font-bold text-ds-green-900 uppercase tracking-wide">
+										<CheckCircle className="w-4 h-4 text-tone-success" />
+										<h3 className="text-xs font-bold text-tone-success uppercase tracking-wide">
 											Payment Confirmed
 										</h3>
 									</div>
 									<div className="grid grid-cols-2 gap-3">
 										<div className="space-y-0.5">
-											<p className="text-[11px] font-medium text-ds-green-700 uppercase">
+											<p className="text-[11px] font-medium text-tone-success uppercase">
 												Confirmation #
 											</p>
 											<p className="text-sm font-mono font-medium">
@@ -1041,7 +1041,7 @@ function ManageReimbursementsPage() {
 											</p>
 										</div>
 										<div className="space-y-0.5">
-											<p className="text-[11px] font-medium text-ds-green-700 uppercase">
+											<p className="text-[11px] font-medium text-tone-success uppercase">
 												Amount Paid
 											</p>
 											<p className="text-sm tabular-nums font-medium">
@@ -1053,7 +1053,7 @@ function ManageReimbursementsPage() {
 										</div>
 										{selectedReimbursement.paymentDetails.paymentDate && (
 											<div className="space-y-0.5">
-												<p className="text-[11px] font-medium text-ds-green-700 uppercase">
+												<p className="text-[11px] font-medium text-tone-success uppercase">
 													Payment Date
 												</p>
 												<p className="text-sm">
@@ -1066,7 +1066,7 @@ function ManageReimbursementsPage() {
 										)}
 										{selectedReimbursement.paymentDetails.memo && (
 											<div className="space-y-0.5 col-span-2">
-												<p className="text-[11px] font-medium text-ds-green-700 uppercase">
+												<p className="text-[11px] font-medium text-tone-success uppercase">
 													Memo
 												</p>
 												<p className="text-sm">
@@ -1201,7 +1201,7 @@ function ManageReimbursementsPage() {
 																	: "No date"}
 															</p>
 														</div>
-														<Badge className="bg-ds-purple-100 text-ds-purple-700 hover:bg-ds-purple-100 border-ds-purple-100">
+														<Badge className="bg-ds-purple-100 text-tone-purple hover:bg-ds-purple-100 border-ds-purple-100">
 															AI Extracted
 														</Badge>
 													</div>
@@ -1226,7 +1226,7 @@ function ManageReimbursementsPage() {
 																</th>
 															</tr>
 														</thead>
-														<tbody className="divide-y divide-gray-100">
+														<tbody className="divide-y divide-border">
 															{currentReceipt.lineItems?.map(
 																(item: any, i: number) => (
 																	<tr
@@ -1401,8 +1401,8 @@ function ManageReimbursementsPage() {
 							{/* Left: Inputs */}
 							<div className="flex-1 space-y-4">
 								<div className="bg-ds-blue-100 border border-ds-blue-100 p-3 rounded-lg flex items-start gap-3">
-									<Sparkles className="w-5 h-5 text-ds-blue-700 mt-0.5" />
-									<div className="text-sm text-ds-blue-700">
+									<Sparkles className="w-5 h-5 text-tone-info mt-0.5" />
+									<div className="text-sm text-tone-info">
 										<p className="font-semibold">
 											{aiEnabled
 												? "AI Extraction Complete"
@@ -1518,7 +1518,7 @@ function ManageReimbursementsPage() {
 								>
 									{paidProofFile ? (
 										<>
-											<CheckCircle className="w-12 h-12 text-ds-blue-700 mx-auto" />
+											<CheckCircle className="w-12 h-12 text-tone-info mx-auto" />
 											<div>
 												<p className="font-bold">{paidProofFile.name}</p>
 												<p className="text-sm text-muted-foreground">
@@ -1538,7 +1538,7 @@ function ManageReimbursementsPage() {
 										</>
 									) : (
 										<>
-											<div className="w-12 h-12 bg-ds-blue-100 text-ds-blue-700 rounded-full flex items-center justify-center mx-auto mb-2">
+											<div className="w-12 h-12 bg-ds-blue-100 text-tone-info rounded-full flex items-center justify-center mx-auto mb-2">
 												<UploadCloud className="w-6 h-6" />
 											</div>
 											<div>
@@ -1559,7 +1559,7 @@ function ManageReimbursementsPage() {
 
 							{/* Info about AI */}
 							<div className="mt-6 flex gap-3 p-3 bg-muted/50 rounded-lg border items-start">
-								<Sparkles className="w-5 h-5 text-ds-purple-700 shrink-0 mt-0.5" />
+								<Sparkles className="w-5 h-5 text-tone-purple shrink-0 mt-0.5" />
 								<div className="text-xs text-muted-foreground">
 									<p className="font-semibold text-foreground">
 										{aiEnabled ? "AI-Powered Extraction" : "Manual Mode"}
@@ -1764,7 +1764,7 @@ function ManageReimbursementsPage() {
 														{r.submittedByName || r.submittedBy}
 													</div>
 													{r.submittedByZelle && (
-														<div className="text-xs text-ds-blue-700 mt-0.5">
+														<div className="text-xs text-tone-info mt-0.5">
 															Zelle: {r.submittedByZelle}
 														</div>
 													)}
@@ -1810,7 +1810,7 @@ function ManageReimbursementsPage() {
 																<Button
 																	variant="ghost"
 																	size="sm"
-																	className="h-8 w-8 p-0 text-ds-green-700 hover:text-ds-green-700 hover:bg-ds-green-100"
+																	className="h-8 w-8 p-0 text-tone-success hover:text-tone-success hover:bg-ds-green-100"
 																	onClick={() =>
 																		handleStatusChange(r._id, "approved")
 																	}
@@ -1826,7 +1826,7 @@ function ManageReimbursementsPage() {
 																<Button
 																	variant="ghost"
 																	size="sm"
-																	className="h-8 w-8 p-0 text-ds-red-800 hover:text-ds-red-800 hover:bg-ds-red-100"
+																	className="h-8 w-8 p-0 text-tone-danger hover:text-tone-danger hover:bg-ds-red-100"
 																	onClick={() => handleDecline(r._id)}
 																	disabled={processingId === r._id}
 																	title="Decline"
@@ -1839,7 +1839,7 @@ function ManageReimbursementsPage() {
 															<Button
 																variant="ghost"
 																size="sm"
-																className="h-8 w-8 p-0 text-ds-purple-700 hover:text-ds-blue-700 hover:bg-ds-purple-100"
+																className="h-8 w-8 p-0 text-tone-purple hover:text-tone-info hover:bg-ds-purple-100"
 																onClick={() => handleViewDetails(r)}
 																title="Mark as Paid"
 															>

@@ -38,12 +38,12 @@ interface EventCalendarProps {
 
 const statusColors: Record<EventStatus, string> = {
 	draft: "bg-ds-gray-600",
-	submitted: "bg-indigo-400",
-	pending: "bg-yellow-400",
-	needs_review: "bg-orange-400",
-	approved: "bg-green-400",
-	declined: "bg-red-400",
-	published: "bg-pink-400",
+	submitted: "bg-ds-purple-600",
+	pending: "bg-ds-amber-600",
+	needs_review: "bg-ds-amber-700",
+	approved: "bg-ds-green-600",
+	declined: "bg-ds-red-600",
+	published: "bg-ds-pink-600",
 };
 
 const statusBgColors: Record<EventStatus, string> = {
@@ -198,7 +198,7 @@ export function EventCalendar({
 									className={cn(
 										"flex min-h-14 min-w-14 shrink-0 flex-col items-center justify-center rounded-md border px-2 py-1.5 text-xs active:scale-[0.97]",
 										active
-											? "border-ieee-blue bg-ds-blue-100 text-ds-blue-700"
+											? "border-ieee-blue bg-ds-blue-100 text-tone-info"
 											: "border-border bg-background text-foreground",
 										isToday(day) && !active && "border-ds-blue-400",
 									)}
@@ -356,11 +356,13 @@ export function EventCalendar({
 							return (
 								<div
 									key={day.toISOString()}
-									className={`min-h-[72px] cursor-pointer p-2 transition-colors md:min-h-[100px] ${
+									className={cn(
+										"min-h-[72px] min-w-0 cursor-pointer overflow-hidden p-2 transition-colors md:min-h-[100px]",
 										isTodayDate && todayHighlightMode === "background"
 											? "border border-ds-blue-400 bg-ds-blue-100 hover:bg-ds-blue-100"
-											: "bg-background hover:bg-muted"
-									} ${!isCurrentMonth ? "opacity-50" : ""}`}
+											: "bg-background hover:bg-muted",
+										!isCurrentMonth && "opacity-50",
+									)}
 									onClick={() => {
 										setSelectedDay(day);
 										onDateClick?.(day);
@@ -375,33 +377,29 @@ export function EventCalendar({
 									role="button"
 									tabIndex={0}
 								>
-									<div className="mb-1 flex items-start justify-between">
+									<div className="mb-1 flex items-start justify-between gap-1">
 										<div className="min-w-0">
 											<span
-												className={`text-sm font-medium ${
+												className={cn(
+													"text-sm font-medium",
 													isTodayDate && todayHighlightMode === "text"
-														? "text-ds-blue-700"
-														: "text-foreground"
-												}`}
+														? "text-tone-info"
+														: "text-foreground",
+												)}
 											>
 												{format(day, "d")}
 											</span>
 											{sundayWeekLabel && (
 												<div className="mt-1">
 													<div
-														className={`rounded-md px-2 py-1 ${
+														className={cn(
+															"rounded-md px-2 py-1",
 															isFinalsWeekLabel
-																? "border border-ds-red-400 bg-red-700/85"
-																: "border border-ds-blue-100 bg-ds-blue-1000/85"
-														}`}
+																? "border border-ds-red-400 bg-ds-red-800/85"
+																: "border border-ds-blue-400 bg-ds-blue-800/85",
+														)}
 													>
-														<span
-															className={`block truncate text-[10px] font-semibold tracking-normal ${
-																isFinalsWeekLabel
-																	? "text-ds-red-100"
-																	: "text-blue-50"
-															}`}
-														>
+														<span className="block truncate text-[10px] font-semibold tracking-normal text-on-accent">
 															{sundayWeekLabel}
 														</span>
 													</div>
@@ -409,24 +407,23 @@ export function EventCalendar({
 											)}
 										</div>
 										{isTodayDate && (
-											<span className="text-xs font-medium text-ds-blue-700">
+											<span className="shrink-0 text-xs font-medium text-tone-info">
 												Today
 											</span>
 										)}
 									</div>
 
-									<div className="space-y-1">
+									<div className="min-w-0 space-y-1">
 										{dayEventList.slice(0, 3).map((event) => (
-											<Button
-												variant="ghost"
+											<button
+												type="button"
 												key={event._id}
-												className={`w-full truncate rounded px-2 py-1 text-left text-xs transition-shadow duration-150 ease-[ease] ${
-													statusBgColors[event.status]
-												} ${
-													hoveredEvent === event._id
-														? "ring-2 ring-offset-1 ring-gray-300"
-														: ""
-												}`}
+												className={cn(
+													"flex h-auto w-full min-w-0 items-center gap-1 overflow-hidden rounded px-1.5 py-0.5 text-left text-xs transition-shadow duration-150",
+													statusBgColors[event.status],
+													hoveredEvent === event._id &&
+														"ring-2 ring-gray-300 ring-offset-1",
+												)}
 												onClick={(e) => {
 													e.stopPropagation();
 													onEventClick?.(event);
@@ -436,15 +433,18 @@ export function EventCalendar({
 												title={event.eventName}
 											>
 												<span
-													className={`mr-1 inline-block h-2 w-2 rounded-full ${
-														statusColors[event.status]
-													}`}
+													className={cn(
+														"size-2 shrink-0 rounded-full",
+														statusColors[event.status],
+													)}
 												/>
-												{event.eventName}
-											</Button>
+												<span className="min-w-0 truncate">
+													{event.eventName}
+												</span>
+											</button>
 										))}
 										{dayEventList.length > 3 && (
-											<div className="px-2 text-xs text-muted-foreground">
+											<div className="truncate px-1.5 text-xs text-muted-foreground">
 												+{dayEventList.length - 3} more
 											</div>
 										)}

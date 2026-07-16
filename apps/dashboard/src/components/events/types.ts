@@ -63,10 +63,10 @@ export const EVENT_TYPE_LABELS: Record<Event["eventType"], string> = {
 };
 
 export const EVENT_TYPE_COLORS: Record<Event["eventType"], string> = {
-	social: "bg-ds-pink-100 text-ds-pink-700",
-	technical: "bg-ds-blue-100 text-ds-blue-700",
-	outreach: "bg-ds-green-100 text-ds-green-700",
-	professional: "bg-ds-purple-100 text-ds-purple-700",
-	projects: "bg-ds-amber-100 text-ds-amber-900",
+	social: "bg-ds-pink-100 text-tone-pink",
+	technical: "bg-ds-blue-100 text-tone-info",
+	outreach: "bg-ds-green-100 text-tone-success",
+	professional: "bg-ds-purple-100 text-tone-purple",
+	projects: "bg-ds-amber-100 text-tone-warning",
 	other: "bg-muted text-foreground",
 };

@@ -68,7 +68,7 @@ const EVENT_TYPES: Array<{
 		label: "Meeting",
 		icon: Users,
 		color:
-			"bg-ds-blue-100 text-ds-blue-700 border-ds-blue-100 hover:bg-ds-blue-100",
+			"bg-ds-blue-100 text-tone-info border-ds-blue-100 hover:bg-ds-blue-100",
 		description: "Team meetings, planning sessions",
 	},
 	{
@@ -76,7 +76,7 @@ const EVENT_TYPES: Array<{
 		label: "Tabling",
 		icon: Presentation,
 		color:
-			"bg-ds-green-100 text-ds-green-700 border-ds-green-100 hover:bg-ds-green-100",
+			"bg-ds-green-100 text-tone-success border-ds-green-100 hover:bg-ds-green-100",
 		description: "Recruitment, info booths",
 	},
 	{
@@ -84,7 +84,7 @@ const EVENT_TYPES: Array<{
 		label: "Workshop",
 		icon: Wrench,
 		color:
-			"bg-ds-amber-100 text-ds-amber-900 border-ds-amber-100 hover:bg-ds-amber-100",
+			"bg-ds-amber-100 text-tone-warning border-ds-amber-100 hover:bg-ds-amber-100",
 		description: "Technical workshops, tutorials",
 	},
 	{
@@ -92,7 +92,7 @@ const EVENT_TYPES: Array<{
 		label: "Social",
 		icon: PartyPopper,
 		color:
-			"bg-ds-pink-100 text-ds-pink-700 border-ds-pink-100 hover:bg-ds-blue-100",
+			"bg-ds-pink-100 text-tone-pink border-ds-pink-100 hover:bg-ds-blue-100",
 		description: "Social events, hangouts",
 	},
 	{
@@ -100,7 +100,7 @@ const EVENT_TYPES: Array<{
 		label: "Outreach",
 		icon: Heart,
 		color:
-			"bg-ds-red-100 text-ds-red-800 border-ds-red-100 hover:bg-ds-red-200",
+			"bg-ds-red-100 text-tone-danger border-ds-red-100 hover:bg-ds-red-200",
 		description: "Community service, outreach",
 	},
 	{
@@ -226,7 +226,7 @@ export function InternalEventModal({
 					variant="ghost"
 					onClick={handleDelete}
 					disabled={isDeleting || isSubmitting}
-					className="text-ds-red-800 hover:text-ds-red-800 hover:bg-ds-red-100 mr-auto h-11 px-2 sm:h-8"
+					className="text-tone-danger hover:text-tone-danger hover:bg-ds-red-100 mr-auto h-11 px-2 sm:h-8"
 				>
 					{isDeleting ? (
 						<span className="flex items-center gap-1.5 text-sm">
@@ -259,11 +259,11 @@ export function InternalEventModal({
 					!formData.startDate ||
 					!formData.startTime
 				}
-				className="bg-[#00629B] hover:bg-[#004d7a] h-11 flex-1 px-4 sm:h-8 sm:flex-none"
+				className="bg-ieee-blue hover:bg-ds-blue-800 text-on-accent h-11 flex-1 px-4 sm:h-8 sm:flex-none"
 			>
 				{isSubmitting ? (
 					<span className="flex items-center gap-1.5 text-sm">
-						<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+						<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-on-accent border-t-transparent" />
 						Saving...
 					</span>
 				) : editingEvent ? (

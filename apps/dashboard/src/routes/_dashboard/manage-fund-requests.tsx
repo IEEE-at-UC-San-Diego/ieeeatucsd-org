@@ -58,11 +58,11 @@ export const Route = createFileRoute("/_dashboard/manage-fund-requests")({
 const ITEMS_PER_PAGE = 10;
 
 const STATUS_COLORS: Record<string, string> = {
-	submitted: "bg-ds-blue-100 text-ds-blue-700",
-	needs_info: "bg-ds-amber-100 text-ds-amber-900",
-	approved: "bg-ds-green-100 text-ds-green-900",
-	denied: "bg-ds-red-100 text-ds-red-800",
-	completed: "bg-ds-blue-100 text-ds-purple-700",
+	submitted: "bg-ds-blue-100 text-tone-info",
+	needs_info: "bg-ds-amber-100 text-tone-warning",
+	approved: "bg-ds-green-100 text-tone-success",
+	denied: "bg-ds-red-100 text-tone-danger",
+	completed: "bg-ds-purple-100 text-tone-purple",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -305,7 +305,7 @@ function FundRequestDetailView({
 									<Button
 										variant="outline"
 										className={cn(
-											"flex-1 border-ds-green-100 text-ds-green-700 hover:bg-ds-green-100",
+											"flex-1 border-ds-green-100 text-tone-success hover:bg-ds-green-100",
 											selectedStatus === "approve" &&
 												"bg-ds-green-100 border-ds-green-400",
 										)}
@@ -317,7 +317,7 @@ function FundRequestDetailView({
 									<Button
 										variant="outline"
 										className={cn(
-											"flex-1 border-ds-amber-100 text-ds-amber-900 hover:bg-ds-amber-100",
+											"flex-1 border-ds-amber-100 text-tone-warning hover:bg-ds-amber-100",
 											selectedStatus === "needs_info" &&
 												"bg-ds-amber-100 border-ds-amber-400",
 										)}
@@ -329,7 +329,7 @@ function FundRequestDetailView({
 									<Button
 										variant="outline"
 										className={cn(
-											"flex-1 border-ds-red-100 text-ds-red-800 hover:bg-ds-red-100",
+											"flex-1 border-ds-red-100 text-tone-danger hover:bg-ds-red-100",
 											selectedStatus === "deny" &&
 												"bg-ds-red-100 border-ds-red-400",
 										)}
@@ -685,12 +685,12 @@ function ManageFundRequestsPage() {
 							<p className="text-xs text-muted-foreground font-medium">
 								Pending Review
 							</p>
-							<p className="text-xl font-bold mt-1 text-ds-blue-700">
+							<p className="text-xl font-bold mt-1 text-tone-info">
 								{stats.pendingCount}
 							</p>
 						</div>
 						<div className="w-8 h-8 bg-ds-blue-100 rounded-lg flex items-center justify-center">
-							<Clock className="w-4 h-4 text-ds-blue-700" />
+							<Clock className="w-4 h-4 text-tone-info" />
 						</div>
 					</div>
 				</div>
@@ -700,12 +700,12 @@ function ManageFundRequestsPage() {
 							<p className="text-xs text-muted-foreground font-medium">
 								Needs Information
 							</p>
-							<p className="text-xl font-bold mt-1 text-ds-amber-900">
+							<p className="text-xl font-bold mt-1 text-tone-warning">
 								{stats.needsInfoCount}
 							</p>
 						</div>
 						<div className="w-8 h-8 bg-ds-amber-100 rounded-lg flex items-center justify-center">
-							<AlertCircle className="w-4 h-4 text-ds-amber-900" />
+							<AlertCircle className="w-4 h-4 text-tone-warning" />
 						</div>
 					</div>
 				</div>
@@ -730,12 +730,12 @@ function ManageFundRequestsPage() {
 							<p className="text-xs text-muted-foreground font-medium">
 								Total Approved
 							</p>
-							<p className="text-xl font-bold mt-1 text-ds-green-700">
+							<p className="text-xl font-bold mt-1 text-tone-success">
 								{formatCurrencyUSD(stats.approvedValue)}
 							</p>
 						</div>
 						<div className="w-8 h-8 bg-ds-green-100 rounded-lg flex items-center justify-center">
-							<CheckCircle className="w-4 h-4 text-ds-green-700" />
+							<CheckCircle className="w-4 h-4 text-tone-success" />
 						</div>
 					</div>
 				</div>

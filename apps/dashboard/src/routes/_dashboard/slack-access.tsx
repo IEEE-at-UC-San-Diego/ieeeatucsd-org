@@ -438,7 +438,7 @@ function SlackAccessPage() {
 					<div className="rounded-md border bg-card p-5 shadow-sm lg:col-span-5">
 						<div className="mb-4 flex items-center gap-3 border-b pb-3">
 							<div className="rounded-lg bg-ds-blue-100 p-2">
-								<Mail className="h-5 w-5 text-ieee-blue" />
+								<Mail className="h-5 w-5 text-tone-info" />
 							</div>
 							<div>
 								<h2 className="text-base font-semibold">
@@ -467,7 +467,7 @@ function SlackAccessPage() {
 										IEEE Email
 									</span>
 									{hasIEEEEmail || ieeeEmail ? (
-										<span className="flex min-w-0 items-center gap-1.5 break-all font-medium text-ieee-blue">
+										<span className="flex min-w-0 items-center gap-1.5 break-all font-medium text-tone-link">
 											{ieeeEmail}
 											<Button
 												variant="ghost"
@@ -551,7 +551,7 @@ function SlackAccessPage() {
 												!passwordValidation.isValid ||
 												emailState.isResetting
 											}
-											className="h-11 w-full bg-ieee-blue text-sm text-white hover:bg-ieee-blue-light md:h-10"
+											className="h-11 w-full bg-ieee-blue text-sm text-on-accent hover:bg-ieee-blue-light md:h-10"
 										>
 											{emailState.isResetting ? (
 												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -561,8 +561,11 @@ function SlackAccessPage() {
 											Reset Password
 										</Button>
 									) : (
-										<div className="rounded-md border border-ds-amber-100 bg-ds-amber-100 p-2.5 text-xs text-ds-amber-900">
-											Password reset is only available to officers and admins.
+										<div className="rounded-md border border-ds-amber-100 bg-ds-amber-100 p-2.5 text-xs text-muted-foreground">
+											<span className="font-medium text-tone-warning">
+												Password reset
+											</span>{" "}
+											is only available to officers and admins.
 										</div>
 									)
 								) : (
@@ -573,7 +576,7 @@ function SlackAccessPage() {
 											!passwordValidation.isValid ||
 											emailState.isGenerating
 										}
-										className="h-11 w-full bg-ieee-blue text-sm text-white hover:bg-ieee-blue-light md:h-10"
+										className="h-11 w-full bg-ieee-blue text-sm text-on-accent hover:bg-ieee-blue-light md:h-10"
 									>
 										{emailState.isGenerating ? (
 											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -585,13 +588,13 @@ function SlackAccessPage() {
 								)}
 
 								{emailState.success && (
-									<div className="flex items-center gap-2 rounded-md border border-ds-green-100 bg-ds-green-100 p-2.5 text-xs text-ds-green-700">
+									<div className="flex items-center gap-2 rounded-md border border-ds-green-100 bg-ds-green-100 p-2.5 text-xs text-tone-success">
 										<CheckCircle className="h-3.5 w-3.5" />
 										{emailState.success}
 									</div>
 								)}
 								{emailState.error && (
-									<div className="flex items-center gap-2 rounded-md border border-ds-red-100 bg-ds-red-100 p-2.5 text-xs text-ds-red-800">
+									<div className="flex items-center gap-2 rounded-md border border-ds-red-100 bg-ds-red-100 p-2.5 text-xs text-tone-danger">
 										<AlertCircle className="h-3.5 w-3.5" />
 										{emailState.error}
 									</div>
@@ -602,7 +605,7 @@ function SlackAccessPage() {
 								<div className="rounded-lg border bg-ds-purple-100/40 p-3">
 									<div className="flex items-start gap-3">
 										<div className="rounded-md bg-ds-purple-100 p-2">
-											<MessageSquare className="h-4 w-4 text-ds-purple-700" />
+											<MessageSquare className="h-4 w-4 text-tone-purple" />
 										</div>
 										<div className="space-y-1">
 											<h3 className="text-sm font-semibold">Slack Workspace</h3>
@@ -610,7 +613,7 @@ function SlackAccessPage() {
 												href="https://ieeeucsdofficers.slack.com"
 												target="_blank"
 												rel="noopener noreferrer"
-												className="inline-flex items-center gap-1 text-xs font-medium text-ieee-blue hover:underline"
+												className="inline-flex items-center gap-1 text-xs font-medium text-tone-link hover:underline"
 											>
 												ieeeucsdofficers.slack.com
 												<ExternalLink className="h-3 w-3" />
@@ -625,16 +628,16 @@ function SlackAccessPage() {
 
 								<div className="rounded-lg border border-ds-amber-100 bg-ds-amber-100 p-3">
 									<div className="flex items-start gap-2.5">
-										<Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-ds-amber-900" />
+										<Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-tone-warning" />
 										<div className="space-y-1">
-											<p className="text-xs font-semibold text-ds-amber-900">
+											<p className="text-xs font-semibold text-tone-warning">
 												Access Restriction
 											</p>
-											<p className="text-xs text-ds-amber-900">
+											<p className="text-xs text-muted-foreground">
 												This account is for Slack authentication only.
 											</p>
-											<div className="flex items-center gap-1.5 text-[11px] text-ds-amber-900">
-												<Info className="h-3.5 w-3.5" />
+											<div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+												<Info className="h-3.5 w-3.5 text-tone-warning" />
 												Do not use for external communication.
 											</div>
 										</div>
@@ -648,7 +651,7 @@ function SlackAccessPage() {
 						<div className="mb-4 flex items-center justify-between border-b pb-3">
 							<div className="flex items-center gap-3">
 								<div className="rounded-lg bg-ds-purple-100 p-2">
-									<Inbox className="h-5 w-5 text-ds-purple-700" />
+									<Inbox className="h-5 w-5 text-tone-purple" />
 								</div>
 								<div>
 									<h2 className="text-base font-semibold">Inbox</h2>
@@ -666,9 +669,9 @@ function SlackAccessPage() {
 									className="h-8 w-8 p-0"
 								>
 									{inboxState.isRefreshing ? (
-										<Loader2 className="h-4 w-4 animate-spin text-ds-purple-700" />
+										<Loader2 className="h-4 w-4 animate-spin text-tone-purple" />
 									) : (
-										<RefreshCw className="h-4 w-4 text-ds-purple-700" />
+										<RefreshCw className="h-4 w-4 text-tone-purple" />
 									)}
 								</Button>
 							)}
@@ -687,7 +690,7 @@ function SlackAccessPage() {
 									<div className="w-full max-w-[300px] space-y-4 rounded-lg border bg-muted/20 p-4">
 										<div className="text-center">
 											<div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-ds-blue-100">
-												<Key className="h-5 w-5 text-ds-purple-700" />
+												<Key className="h-5 w-5 text-tone-purple" />
 											</div>
 											<h3 className="text-sm font-semibold">Login to Inbox</h3>
 											<p className="mt-0.5 break-all text-xs text-muted-foreground">
@@ -733,7 +736,7 @@ function SlackAccessPage() {
 											<Button
 												onClick={authenticateInbox}
 												disabled={!inboxPassword.trim() || inboxState.isLoading}
-												className="h-11 w-full bg-ds-purple-700 text-sm text-white hover:bg-ds-purple-800 md:h-10"
+												className="h-11 w-full bg-ds-purple-700 text-sm text-on-accent hover:bg-ds-purple-800 md:h-10"
 											>
 												{inboxState.isLoading ? (
 													<Loader2 className="h-4 w-4 animate-spin" />
@@ -774,7 +777,7 @@ function SlackAccessPage() {
 																	<span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-ds-purple-1000" />
 																)}
 																{isSlackRelated && (
-																	<span className="rounded bg-ds-blue-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ds-blue-700">
+																	<span className="rounded bg-ds-blue-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-tone-info">
 																		Slack
 																	</span>
 																)}
@@ -828,7 +831,7 @@ function SlackAccessPage() {
 								</>
 							)}
 							{inboxState.error && (
-								<div className="mt-2 flex items-center justify-center border-t border-ds-red-100 bg-ds-red-100 p-2.5 text-xs text-ds-red-800">
+								<div className="mt-2 flex items-center justify-center border-t border-ds-red-100 bg-ds-red-100 p-2.5 text-xs text-tone-danger">
 									{inboxState.error}
 								</div>
 							)}

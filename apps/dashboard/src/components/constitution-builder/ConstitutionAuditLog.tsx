@@ -172,13 +172,13 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({
 	) => {
 		switch (changeType) {
 			case "create":
-				return <Plus className="h-3.5 w-3.5 text-ds-green-700" />;
+				return <Plus className="h-3.5 w-3.5 text-tone-success" />;
 			case "update":
-				return <Edit3 className="h-3.5 w-3.5 text-ds-blue-700" />;
+				return <Edit3 className="h-3.5 w-3.5 text-tone-info" />;
 			case "delete":
-				return <Minus className="h-3.5 w-3.5 text-ds-red-800" />;
+				return <Minus className="h-3.5 w-3.5 text-tone-danger" />;
 			case "reorder":
-				return <ArrowUpDown className="h-3.5 w-3.5 text-ds-amber-900" />;
+				return <ArrowUpDown className="h-3.5 w-3.5 text-tone-warning" />;
 			default:
 				return <Clock className="h-3.5 w-3.5 text-muted-foreground" />;
 		}
@@ -188,10 +188,10 @@ export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({
 		changeType: ConstitutionAuditEntry["changeType"],
 	) => {
 		const variants: Record<string, string> = {
-			create: "bg-ds-green-100 text-ds-green-700 border-ds-green-100",
-			update: "bg-ds-blue-100 text-ds-blue-700 border-ds-blue-100",
-			delete: "bg-ds-red-100 text-ds-red-800 border-ds-red-100",
-			reorder: "bg-ds-amber-100 text-ds-amber-900 border-ds-amber-100",
+			create: "bg-ds-green-100 text-tone-success border-ds-green-100",
+			update: "bg-ds-blue-100 text-tone-info border-ds-blue-100",
+			delete: "bg-ds-red-100 text-tone-danger border-ds-red-100",
+			reorder: "bg-ds-amber-100 text-tone-warning border-ds-amber-100",
 		};
 		return (
 			<Badge
@@ -364,7 +364,7 @@ const AuditEntryRow: React.FC<{
 					<>
 						<Button
 							variant="link"
-							className="h-11 px-0 text-xs text-ds-blue-700 hover:text-ds-blue-700 mt-1 sm:h-auto"
+							className="h-11 px-0 text-xs text-tone-info hover:text-tone-info mt-1 sm:h-auto"
 							onClick={() => setDetailsOpen(true)}
 						>
 							View details
@@ -461,7 +461,7 @@ const DetailContent: React.FC<{
 							</div>
 							<div className="space-y-1.5">
 								<div className="flex items-start gap-2">
-									<span className="text-xs text-ds-red-800 font-medium mt-0.5 shrink-0">
+									<span className="text-xs text-tone-danger font-medium mt-0.5 shrink-0">
 										Before
 									</span>
 									<span className="text-sm text-muted-foreground line-through">
@@ -469,7 +469,7 @@ const DetailContent: React.FC<{
 									</span>
 								</div>
 								<div className="flex items-start gap-2">
-									<span className="text-xs text-ds-green-700 font-medium mt-0.5 shrink-0">
+									<span className="text-xs text-tone-success font-medium mt-0.5 shrink-0">
 										After
 									</span>
 									<span className="text-sm text-foreground font-medium">
@@ -521,9 +521,9 @@ const ContentBlock: React.FC<{
 	const displayText = expanded ? content : truncate(content, MAX_LEN);
 
 	const borderColors = {
-		green: "border-l-green-400",
-		red: "border-l-red-400",
-		blue: "border-l-blue-400",
+		green: "border-l-ds-green-400",
+		red: "border-l-ds-red-400",
+		blue: "border-l-ds-blue-400",
 	};
 
 	return (

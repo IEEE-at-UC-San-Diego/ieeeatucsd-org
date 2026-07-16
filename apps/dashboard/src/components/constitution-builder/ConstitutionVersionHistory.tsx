@@ -117,8 +117,8 @@ const ConstitutionVersionHistory: React.FC<ConstitutionVersionHistoryProps> = ({
 													variant="outline"
 													className={`text-xs ${
 														version.source === "manual"
-															? "border-ds-blue-100 bg-ds-blue-100 text-ds-blue-700"
-															: "border-ds-amber-100 bg-ds-amber-100 text-ds-amber-900"
+															? "border-ds-blue-100 bg-ds-blue-100 text-tone-info"
+															: "border-ds-amber-100 bg-ds-amber-100 text-tone-warning"
 													}`}
 												>
 													{version.source === "manual"

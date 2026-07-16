@@ -256,7 +256,7 @@ export default function BudgetManagementModal({
 								</p>
 							</div>
 							{totalAdjustments > 0 && (
-								<span className="text-sm font-semibold text-ds-amber-900">
+								<span className="text-sm font-semibold text-tone-warning">
 									Total: {formatCurrency(totalAdjustments)}
 								</span>
 							)}
@@ -314,13 +314,13 @@ export default function BudgetManagementModal({
 												</div>
 											</div>
 											<div className="flex items-center gap-3 ml-4">
-												<span className="font-semibold text-ds-amber-900">
+												<span className="font-semibold text-tone-warning">
 													{formatCurrency(adj.amount)}
 												</span>
 												<Button
 													variant="ghost"
 													size="icon"
-													className="text-destructive hover:text-destructive"
+													className="text-muted-foreground hover:text-tone-danger"
 													onClick={() => handleDeleteAdjustment(adj._id)}
 												>
 													<Trash2 className="h-4 w-4" />

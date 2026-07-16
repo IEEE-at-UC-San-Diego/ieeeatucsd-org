@@ -219,8 +219,8 @@ function GetStartedPage() {
 		return (
 			<div className="flex min-h-dvh items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
 				<div className="text-center success-reveal">
-					<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-ds-green-1000 sm:h-24 sm:w-24">
-						<CheckCircle className="h-10 w-10 text-white sm:h-12 sm:w-12" />
+					<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-ds-green-700 sm:h-24 sm:w-24">
+						<CheckCircle className="h-10 w-10 text-on-accent sm:h-12 sm:w-12" />
 					</div>
 					<h1 className="mb-3 text-2xl font-bold sm:text-3xl">
 						Welcome to IEEE UCSD!
@@ -298,7 +298,7 @@ function GetStartedPage() {
 							/>
 						</label>
 						{value instanceof File && (
-							<p className="flex items-center gap-2 font-medium text-ds-green-700">
+							<p className="flex items-center gap-2 font-medium text-tone-success">
 								<CheckCircle className="w-4 h-4" />
 								{value.name} selected
 							</p>
@@ -324,9 +324,9 @@ function GetStartedPage() {
 							/>
 							<div className="min-w-0 flex-1">
 								<div className="mb-1 flex flex-wrap items-center gap-2">
-									<FileText className="size-4 text-ds-blue-700" />
+									<FileText className="size-4 text-tone-info" />
 									<span className="font-medium">Terms of Service</span>
-									<span className="rounded bg-ds-blue-100 px-2 py-0.5 text-xs text-ds-blue-700">
+									<span className="rounded bg-ds-blue-100 px-2 py-0.5 text-xs text-tone-info">
 										v{LEGAL_VERSIONS.TOS_VERSION}
 									</span>
 								</div>
@@ -337,7 +337,7 @@ function GetStartedPage() {
 									href={LEGAL_VERSIONS.TOS_URL}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="inline-flex items-center gap-1 text-sm text-ds-blue-700"
+									className="inline-flex items-center gap-1 text-sm text-tone-info"
 									onClick={(e) => e.stopPropagation()}
 								>
 									Read Terms of Service
@@ -355,9 +355,9 @@ function GetStartedPage() {
 							/>
 							<div className="min-w-0 flex-1">
 								<div className="mb-1 flex flex-wrap items-center gap-2">
-									<Shield className="size-4 text-ds-green-700" />
+									<Shield className="size-4 text-tone-success" />
 									<span className="font-medium">Privacy Policy</span>
-									<span className="rounded bg-ds-green-100 px-2 py-0.5 text-xs text-ds-green-700">
+									<span className="rounded bg-ds-green-100 px-2 py-0.5 text-xs text-tone-success">
 										v{LEGAL_VERSIONS.PRIVACY_POLICY_VERSION}
 									</span>
 								</div>
@@ -368,7 +368,7 @@ function GetStartedPage() {
 									href={LEGAL_VERSIONS.PRIVACY_POLICY_URL}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="inline-flex items-center gap-1 text-sm text-ds-blue-700"
+									className="inline-flex items-center gap-1 text-sm text-tone-info"
 									onClick={(e) => e.stopPropagation()}
 								>
 									Read Privacy Policy
@@ -423,7 +423,7 @@ function GetStartedPage() {
 							<h2 className="mb-2 text-xl font-bold sm:text-2xl">
 								{currentQuestion.title}
 								{currentQuestion.required && (
-									<span className="ml-1 text-ds-red-800">*</span>
+									<span className="ml-1 text-tone-danger">*</span>
 								)}
 							</h2>
 							<p className="text-sm text-muted-foreground sm:text-base">
@@ -488,7 +488,7 @@ function GetStartedPage() {
 
 				<p className="mt-6 text-center text-xs text-muted-foreground">
 					Need help?{" "}
-					<a href="mailto:ieee@ucsd.edu" className="text-ds-blue-700">
+					<a href="mailto:ieee@ucsd.edu" className="text-tone-info">
 						ieee@ucsd.edu
 					</a>
 				</p>

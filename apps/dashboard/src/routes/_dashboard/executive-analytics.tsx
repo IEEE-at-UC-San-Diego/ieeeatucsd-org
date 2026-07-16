@@ -130,8 +130,8 @@ function GrowthBadge({ value }: { value: number | null }) {
 			variant="outline"
 			className={
 				isPositive
-					? "border-ds-green-100 bg-ds-green-100 text-ds-green-700"
-					: "border-ds-red-100 bg-ds-red-100 text-ds-red-800"
+					? "border-ds-green-100 bg-ds-green-100 text-tone-success"
+					: "border-ds-red-100 bg-ds-red-100 text-tone-danger"
 			}
 		>
 			{isPositive ? (
@@ -310,7 +310,7 @@ function ExecutiveAnalyticsPage() {
 						className="flex h-11 w-full items-center justify-between rounded-md border bg-background px-3 text-sm font-medium active:scale-[0.99]"
 					>
 						<span className="text-muted-foreground">Fiscal year</span>
-						<span className="text-ieee-blue">
+						<span className="text-tone-link">
 							{analytics.selectedFiscalYearLabel}
 						</span>
 					</button>

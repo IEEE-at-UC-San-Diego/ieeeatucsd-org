@@ -33,33 +33,33 @@ const getFileTypeIcon = (contentType: string, filename: string) => {
 		type.includes("image/") ||
 		["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)
 	) {
-		return <Image className="w-4 h-4 text-ds-blue-700" />;
+		return <Image className="w-4 h-4 text-tone-info" />;
 	}
 	if (
 		type.includes("video/") ||
 		["mp4", "avi", "mov", "wmv", "flv"].includes(ext)
 	) {
-		return <FileVideo className="w-4 h-4 text-ds-purple-700" />;
+		return <FileVideo className="w-4 h-4 text-tone-purple" />;
 	}
 	if (type.includes("audio/") || ["mp3", "wav", "flac", "aac"].includes(ext)) {
-		return <FileAudio className="w-4 h-4 text-ds-green-700" />;
+		return <FileAudio className="w-4 h-4 text-tone-success" />;
 	}
 	if (type.includes("application/pdf") || ext === "pdf") {
-		return <FileText className="w-4 h-4 text-ds-red-800" />;
+		return <FileText className="w-4 h-4 text-tone-danger" />;
 	}
 	if (
 		type.includes("application/zip") ||
 		type.includes("application/x-rar") ||
 		["zip", "rar", "7z", "tar"].includes(ext)
 	) {
-		return <Archive className="w-4 h-4 text-ds-amber-700" />;
+		return <Archive className="w-4 h-4 text-tone-warning" />;
 	}
 	if (
 		type.includes("application/msword") ||
 		type.includes("application/vnd.openxmlformats-officedocument") ||
 		["doc", "docx", "xls", "xlsx", "ppt", "pptx"].includes(ext)
 	) {
-		return <FileText className="w-4 h-4 text-ds-blue-700" />;
+		return <FileText className="w-4 h-4 text-tone-info" />;
 	}
 	return <File className="w-4 h-4 text-muted-foreground" />;
 };
@@ -161,6 +161,14 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 			}
 		>
 			<style>{`
+          .email-preview-paper {
+            color-scheme: light;
+            --border: #e5e7eb;
+            --muted: #f9fafb;
+            --foreground: #171717;
+            background-color: #ffffff;
+            color: var(--foreground);
+          }
           .email-content {
             max-width: 100%;
             overflow-x: hidden;
@@ -188,23 +196,23 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
           }
           .email-content td, .email-content th {
             padding: 12px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border);
             text-align: left;
           }
           .email-content th {
-            background-color: #f9fafb;
+            background-color: var(--muted);
             font-weight: 600;
           }
           .email-content a {
-            color: #2563eb;
+            color: var(--ds-blue-700);
             text-decoration: underline;
             word-break: break-word;
           }
           .email-content blockquote {
-            border-left: 4px solid #3b82f6;
+            border-left: 4px solid var(--ds-blue-700);
             padding-left: 16px;
             margin: 16px 0;
-            background-color: #f8fafc;
+            background-color: var(--muted);
             padding: 16px;
             border-radius: 0 8px 8px 0;
             font-style: italic;
@@ -226,7 +234,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 			<div className="min-w-0 pb-4">
 				{isLoading ? (
 					<div className="flex flex-col items-center justify-center py-16 px-6 h-full">
-						<RefreshCw className="w-8 h-8 text-ieee-blue animate-spin mb-4" />
+						<RefreshCw className="w-8 h-8 text-tone-link animate-spin mb-4" />
 						<div className="text-center">
 							<h3 className="text-lg font-medium text-foreground mb-2">
 								Loading Email Content
@@ -240,7 +248,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 					<div className="p-8 h-full flex items-center justify-center">
 						<div className="max-w-md mx-auto text-center">
 							<div className="w-16 h-16 bg-ds-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-								<AlertCircle className="w-8 h-8 text-ds-red-800" />
+								<AlertCircle className="w-8 h-8 text-tone-danger" />
 							</div>
 							<h3 className="text-lg font-semibold text-foreground mb-2">
 								Unable to Load Email
@@ -295,7 +303,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 								<div className="mb-6">
 									<div className="flex items-center space-x-2 mb-4">
 										<div className="p-1.5 bg-ds-blue-100 rounded-md">
-											<Paperclip className="w-4 h-4 text-ds-blue-700" />
+											<Paperclip className="w-4 h-4 text-tone-info" />
 										</div>
 										<h4 className="text-sm font-semibold text-foreground">
 											{emailContent.attachments.length} Attachment
@@ -317,7 +325,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 															)}
 														</div>
 														<div className="min-w-0 flex-1">
-															<p className="text-sm font-medium text-foreground truncate group-hover:text-ieee-blue transition-colors">
+															<p className="text-sm font-medium text-foreground truncate group-hover:text-tone-link transition-colors">
 																{attachment.filename.length > 25
 																	? `${attachment.filename.substring(0, 22)}...${attachment.filename.split(".").pop()}`
 																	: attachment.filename}
@@ -336,7 +344,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 														</div>
 													</div>
 													<Button variant="ghost" size="sm" disabled>
-														<Download className="w-4 h-4 text-muted-foreground group-hover:text-ieee-blue" />
+														<Download className="w-4 h-4 text-muted-foreground group-hover:text-tone-link" />
 													</Button>
 												</div>
 											),
@@ -350,7 +358,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 							<div className="flex items-center justify-between mb-4">
 								<div className="flex items-center space-x-2">
 									<div className="p-1.5 bg-ds-green-100 rounded-lg">
-										<Mail className="w-4 h-4 text-ds-green-700" />
+										<Mail className="w-4 h-4 text-tone-success" />
 									</div>
 									<h4 className="text-sm font-semibold text-foreground">
 										Message Content
@@ -383,7 +391,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 
 							{/* Content Display */}
 							{viewMode === "html" && emailContent.htmlContent ? (
-								<div className="bg-background border border-border rounded-md overflow-hidden shadow-sm">
+								<div className="email-preview-paper border border-border rounded-md overflow-hidden shadow-sm">
 									<div
 										className="prose prose-sm max-w-none p-6 email-content"
 										dangerouslySetInnerHTML={{

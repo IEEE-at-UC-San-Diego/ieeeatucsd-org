@@ -10,9 +10,9 @@ export function PasswordStrengthIndicator({
 }: PasswordStrengthIndicatorProps) {
 	const getStrengthColor = (strength: number) => {
 		if (strength <= 2) return "bg-ds-red-800";
-		if (strength <= 3) return "bg-ds-amber-1000";
-		if (strength <= 4) return "bg-ds-blue-1000";
-		return "bg-ds-green-1000";
+		if (strength <= 3) return "bg-ds-amber-700";
+		if (strength <= 4) return "bg-ds-blue-700";
+		return "bg-ds-green-700";
 	};
 
 	const getStrengthText = (strength: number) => {
@@ -33,7 +33,7 @@ export function PasswordStrengthIndicator({
 					/>
 				</div>
 				<span
-					className={`text-xs font-medium ${validation.strength <= 2 ? "text-ds-red-800" : validation.strength <= 3 ? "text-ds-amber-900" : validation.strength <= 4 ? "text-ds-blue-700" : "text-ds-green-700"}`}
+					className={`text-xs font-medium ${validation.strength <= 2 ? "text-tone-danger" : validation.strength <= 3 ? "text-tone-warning" : validation.strength <= 4 ? "text-tone-info" : "text-tone-success"}`}
 				>
 					{getStrengthText(validation.strength)}
 				</span>
@@ -42,42 +42,42 @@ export function PasswordStrengthIndicator({
 			{/* Requirements List */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
 				<div
-					className={`flex items-center space-x-1 ${validation.requirements.minLength ? "text-ds-green-700" : "text-muted-foreground"}`}
+					className={`flex items-center space-x-1 ${validation.requirements.minLength ? "text-tone-success" : "text-muted-foreground"}`}
 				>
 					<Check
-						className={`w-3 h-3 ${validation.requirements.minLength ? "text-ds-green-700" : "text-muted-foreground"}`}
+						className={`w-3 h-3 ${validation.requirements.minLength ? "text-tone-success" : "text-muted-foreground"}`}
 					/>
 					<span>8+ characters</span>
 				</div>
 				<div
-					className={`flex items-center space-x-1 ${validation.requirements.hasUppercase ? "text-ds-green-700" : "text-muted-foreground"}`}
+					className={`flex items-center space-x-1 ${validation.requirements.hasUppercase ? "text-tone-success" : "text-muted-foreground"}`}
 				>
 					<Check
-						className={`w-3 h-3 ${validation.requirements.hasUppercase ? "text-ds-green-700" : "text-muted-foreground"}`}
+						className={`w-3 h-3 ${validation.requirements.hasUppercase ? "text-tone-success" : "text-muted-foreground"}`}
 					/>
 					<span>Uppercase letter</span>
 				</div>
 				<div
-					className={`flex items-center space-x-1 ${validation.requirements.hasLowercase ? "text-ds-green-700" : "text-muted-foreground"}`}
+					className={`flex items-center space-x-1 ${validation.requirements.hasLowercase ? "text-tone-success" : "text-muted-foreground"}`}
 				>
 					<Check
-						className={`w-3 h-3 ${validation.requirements.hasLowercase ? "text-ds-green-700" : "text-muted-foreground"}`}
+						className={`w-3 h-3 ${validation.requirements.hasLowercase ? "text-tone-success" : "text-muted-foreground"}`}
 					/>
 					<span>Lowercase letter</span>
 				</div>
 				<div
-					className={`flex items-center space-x-1 ${validation.requirements.hasNumber ? "text-ds-green-700" : "text-muted-foreground"}`}
+					className={`flex items-center space-x-1 ${validation.requirements.hasNumber ? "text-tone-success" : "text-muted-foreground"}`}
 				>
 					<Check
-						className={`w-3 h-3 ${validation.requirements.hasNumber ? "text-ds-green-700" : "text-muted-foreground"}`}
+						className={`w-3 h-3 ${validation.requirements.hasNumber ? "text-tone-success" : "text-muted-foreground"}`}
 					/>
 					<span>Number</span>
 				</div>
 				<div
-					className={`flex items-center space-x-1 ${validation.requirements.hasSpecialChar ? "text-ds-green-700" : "text-muted-foreground"}`}
+					className={`flex items-center space-x-1 ${validation.requirements.hasSpecialChar ? "text-tone-success" : "text-muted-foreground"}`}
 				>
 					<Check
-						className={`w-3 h-3 ${validation.requirements.hasSpecialChar ? "text-ds-green-700" : "text-muted-foreground"}`}
+						className={`w-3 h-3 ${validation.requirements.hasSpecialChar ? "text-tone-success" : "text-muted-foreground"}`}
 					/>
 					<span>Special character</span>
 				</div>

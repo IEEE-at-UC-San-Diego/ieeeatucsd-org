@@ -12,11 +12,11 @@ interface SponsorTableProps {
 }
 
 const tierColors: Record<SponsorTier, string> = {
-	Bronze: "bg-ds-amber-100 text-ds-amber-900",
+	Bronze: "bg-ds-amber-100 text-tone-warning",
 	Silver: "bg-muted text-foreground",
-	Gold: "bg-ds-amber-100 text-ds-amber-900",
-	Platinum: "bg-ds-blue-100 text-ds-purple-700",
-	Diamond: "bg-ds-blue-100 text-ds-blue-700",
+	Gold: "bg-ds-amber-100 text-tone-warning",
+	Platinum: "bg-ds-purple-100 text-tone-purple",
+	Diamond: "bg-ds-blue-100 text-tone-info",
 };
 
 export function SponsorTable({

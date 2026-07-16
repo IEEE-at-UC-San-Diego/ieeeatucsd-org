@@ -106,7 +106,7 @@ export function MobileMoreDrawer({
 													onClick={close}
 													className={cn(
 														"flex min-h-[52px] items-center gap-3 px-3.5 py-2.5 transition-colors active:bg-muted",
-														active && "bg-ds-blue-100/70 text-ieee-blue",
+														active && "bg-ds-blue-100/70 text-tone-link",
 													)}
 													aria-current={active ? "page" : undefined}
 												>
@@ -120,7 +120,7 @@ export function MobileMoreDrawer({
 															className={cn(
 																"size-5",
 																active
-																	? "text-ieee-blue"
+																	? "text-tone-link"
 																	: "text-muted-foreground",
 															)}
 														/>

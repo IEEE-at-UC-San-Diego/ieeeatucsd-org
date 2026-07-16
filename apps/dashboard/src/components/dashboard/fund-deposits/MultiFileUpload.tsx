@@ -179,7 +179,7 @@ export function MultiFileUpload({
 						type="button"
 						variant="ghost"
 						size="icon"
-						className="h-5 w-5 text-destructive hover:text-destructive"
+						className="h-5 w-5 text-muted-foreground hover:text-tone-danger"
 						onClick={() => setErrorMessage("")}
 					>
 						<X className="w-4 h-4" />

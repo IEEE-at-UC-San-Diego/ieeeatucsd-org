@@ -193,7 +193,7 @@ export function DraftViewModal({
 					<h4 className="text-sm font-semibold text-ds-blue-1000 mb-2">
 						Draft Event
 					</h4>
-					<p className="text-sm text-ds-blue-700">
+					<p className="text-sm text-tone-info">
 						This is a draft event. You can edit the draft details or convert it
 						to a full event request with additional requirements like room
 						bookings, graphics, and funding.

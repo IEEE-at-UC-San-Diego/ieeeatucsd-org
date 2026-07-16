@@ -63,7 +63,7 @@ export function OfficerCalendarEventModal({
 					<Badge
 						className={
 							isInternalEvent
-								? "border-amber-300 bg-ds-amber-100 text-ds-amber-900"
+								? "border-ds-amber-400 bg-ds-amber-100 text-tone-warning"
 								: "border-ds-blue-400 bg-ds-blue-100 text-ds-blue-1000"
 						}
 					>

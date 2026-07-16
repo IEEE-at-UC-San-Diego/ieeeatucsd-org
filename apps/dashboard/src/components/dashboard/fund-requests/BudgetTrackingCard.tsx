@@ -78,10 +78,10 @@ export function BudgetTrackingCard({
 						</div>
 						{pendingBudget > 0 && (
 							<div className="shrink-0 rounded border border-ds-amber-100 bg-ds-amber-100 px-1.5 py-0.5 text-right">
-								<p className="text-xs font-semibold text-ds-amber-900">
+								<p className="text-xs font-semibold text-tone-warning">
 									-{formatCurrency(pendingBudget)}
 								</p>
-								<p className="text-xs font-medium text-ds-amber-900">pending</p>
+								<p className="text-xs font-medium text-tone-warning">pending</p>
 							</div>
 						)}
 					</div>

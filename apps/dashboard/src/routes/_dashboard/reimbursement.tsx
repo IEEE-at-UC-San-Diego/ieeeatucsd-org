@@ -97,13 +97,13 @@ function formatAuditAction(action: string): {
 		submitted: {
 			label: "Submitted",
 			description: "Reimbursement request was submitted for review",
-			color: "bg-ds-blue-1000",
+			color: "bg-ds-blue-700",
 			iconName: "FileText",
 		},
 		status_changed_to_approved: {
 			label: "Approved",
 			description: "Request was reviewed and approved",
-			color: "bg-ds-green-1000",
+			color: "bg-ds-green-700",
 			iconName: "CheckCircle",
 		},
 		status_changed_to_declined: {
@@ -115,7 +115,7 @@ function formatAuditAction(action: string): {
 		status_changed_to_paid: {
 			label: "Marked as Paid",
 			description: "Payment has been processed",
-			color: "bg-ds-green-1000",
+			color: "bg-ds-green-700",
 			iconName: "Receipt",
 		},
 		payment_details_added: {
@@ -127,7 +127,7 @@ function formatAuditAction(action: string): {
 		status_changed_to_submitted: {
 			label: "Re-submitted",
 			description: "Request was re-submitted for review",
-			color: "bg-ds-blue-1000",
+			color: "bg-ds-blue-700",
 			iconName: "FileText",
 		},
 	};
@@ -156,10 +156,10 @@ export const Route = createFileRoute("/_dashboard/reimbursement")({
 });
 
 const statusColors: Record<string, string> = {
-	submitted: "bg-ds-blue-100 text-ds-blue-700",
-	approved: "bg-ds-green-100 text-ds-green-900",
-	declined: "bg-ds-red-100 text-ds-red-800",
-	paid: "bg-ds-blue-100 text-ds-purple-700",
+	submitted: "bg-ds-blue-100 text-tone-info",
+	approved: "bg-ds-green-100 text-tone-success",
+	declined: "bg-ds-red-100 text-tone-danger",
+	paid: "bg-ds-purple-100 text-tone-purple",
 };
 
 const STEPS = [
@@ -700,14 +700,14 @@ function ReimbursementDetailView({
 							reimbursement.paymentDetails && (
 								<section className="bg-ds-green-100 border border-ds-green-100 rounded-md p-5 space-y-4">
 									<div className="flex items-center gap-2 border-b border-ds-green-100 pb-2 mb-2">
-										<CheckCircle className="w-5 h-5 text-ds-green-700" />
-										<h3 className="text-sm font-bold text-ds-green-900 uppercase tracking-wide">
+										<CheckCircle className="w-5 h-5 text-tone-success" />
+										<h3 className="text-sm font-bold text-tone-success uppercase tracking-wide">
 											Payment Confirmation
 										</h3>
 									</div>
 									<div className="grid grid-cols-2 gap-y-4 gap-x-4">
 										<div>
-											<p className="text-xs font-semibold text-ds-green-700 uppercase mb-1">
+											<p className="text-xs font-semibold text-tone-success uppercase mb-1">
 												Confirmation Number
 											</p>
 											<p className="text-sm font-mono font-medium bg-background/50 px-2 py-1 rounded border border-ds-green-100 inline-block">
@@ -715,27 +715,27 @@ function ReimbursementDetailView({
 											</p>
 										</div>
 										<div>
-											<p className="text-xs font-semibold text-ds-green-700 uppercase mb-1">
+											<p className="text-xs font-semibold text-tone-success uppercase mb-1">
 												Payment Date
 											</p>
 											<div className="flex items-center gap-1.5 text-sm">
-												<Calendar className="w-4 h-4 text-ds-green-700" />
+												<Calendar className="w-4 h-4 text-tone-success" />
 												<span>
 													{formatDate(reimbursement.paymentDetails.paymentDate)}
 												</span>
 											</div>
 										</div>
 										<div>
-											<p className="text-xs font-semibold text-ds-green-700 uppercase mb-1">
+											<p className="text-xs font-semibold text-tone-success uppercase mb-1">
 												Amount Paid
 											</p>
 											<p className="text-lg font-bold flex items-center gap-1">
-												<span className="text-ds-green-700 text-sm">$</span>
+												<span className="text-tone-success text-sm">$</span>
 												{reimbursement.paymentDetails.amountPaid?.toFixed(2)}
 											</p>
 										</div>
 										<div>
-											<p className="text-xs font-semibold text-ds-green-700 uppercase mb-1">
+											<p className="text-xs font-semibold text-tone-success uppercase mb-1">
 												Payment Proof
 											</p>
 											{reimbursement.paymentDetails.proofFileUrl ? (
@@ -743,7 +743,7 @@ function ReimbursementDetailView({
 													href={reimbursement.paymentDetails.proofFileUrl}
 													target="_blank"
 													rel="noopener noreferrer"
-													className="flex items-center gap-2 text-sm text-ds-blue-700 hover:text-ds-blue-700 hover:underline font-medium"
+													className="flex items-center gap-2 text-sm text-tone-info hover:text-tone-info hover:underline font-medium"
 												>
 													<FileText className="w-4 h-4" />
 													View Proof
@@ -757,7 +757,7 @@ function ReimbursementDetailView({
 										</div>
 										{reimbursement.paymentDetails.memo && (
 											<div className="col-span-2 mt-1">
-												<p className="text-xs font-semibold text-ds-green-700 uppercase mb-1">
+												<p className="text-xs font-semibold text-tone-success uppercase mb-1">
 													Memo
 												</p>
 												<p className="text-sm bg-background/50 p-2 rounded border border-ds-green-100">
@@ -958,10 +958,10 @@ function ReimbursementDetailView({
 									</p>
 								</div>
 								<div className="space-y-0.5">
-									<p className="text-[11px] font-bold text-ds-green-700 uppercase">
+									<p className="text-[11px] font-bold text-tone-success uppercase">
 										Total
 									</p>
-									<p className="text-base font-bold tabular-nums text-ds-green-700">
+									<p className="text-base font-bold tabular-nums text-tone-success">
 										${(currentReceipt.total || 0).toFixed(2)}
 									</p>
 								</div>
@@ -986,7 +986,7 @@ function ReimbursementDetailView({
 												<th className="px-3 py-2 text-right">Price</th>
 											</tr>
 										</thead>
-										<tbody className="divide-y divide-gray-100">
+										<tbody className="divide-y divide-border">
 											{currentLineItems.map((item: LineItem, idx: number) => (
 												<tr key={idx} className="bg-background">
 													<td className="px-3 py-2">
@@ -1039,7 +1039,7 @@ function ReimbursementDetailView({
 													<div
 														className={`relative z-10 flex-shrink-0 w-[23px] h-[23px] rounded-full ${info.color} flex items-center justify-center ring-4 ring-background`}
 													>
-														<Icon className="w-3 h-3 text-white" />
+														<Icon className="w-3 h-3 text-on-accent" />
 													</div>
 													<div className="flex-1 min-w-0 pt-0.5">
 														<div className="flex items-baseline justify-between gap-2">
@@ -2426,8 +2426,8 @@ function ReceiptsStep({
 										className={cn(
 											"text-xs",
 											parseResults[activeReceipt.id].success
-												? "text-ds-green-700"
-												: "text-ds-amber-900",
+												? "text-tone-success"
+												: "text-tone-warning",
 										)}
 									>
 										{parseResults[activeReceipt.id].message}
@@ -2786,8 +2786,8 @@ function ReceiptsStep({
 										className={cn(
 											"mt-3 text-xs",
 											parseResults[activeReceipt.id].success
-												? "text-ds-green-700"
-												: "text-ds-amber-900",
+												? "text-tone-success"
+												: "text-tone-warning",
 										)}
 									>
 										{parseResults[activeReceipt.id].message}
@@ -2891,7 +2891,7 @@ function ReviewStep({
 									<Separator />
 									<div className="flex justify-between items-center">
 										<span className="font-bold">Total Amount</span>
-										<span className="font-bold text-xl text-ds-green-700">
+										<span className="font-bold text-xl text-tone-success">
 											${totalAmount.toFixed(2)}
 										</span>
 									</div>

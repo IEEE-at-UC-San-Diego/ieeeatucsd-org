@@ -6,7 +6,9 @@ import {
 	Scripts,
 	useRouterState,
 } from "@tanstack/react-router";
+import { useTheme } from "next-themes";
 import { Toaster } from "sonner";
+import { ThemeMeta, ThemeProvider, ThemeScript } from "@/components/theme";
 import { AuthProvider } from "@/hooks/useAuth";
 import ConvexProvider from "../integrations/convex/provider";
 import AppLogtoProvider from "../integrations/logto/provider";
@@ -146,6 +148,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 		<html lang="en" suppressHydrationWarning>
 			<head>
 				<HeadContent />
+				<ThemeScript />
 				<HydrationCleanupScript />
 			</head>
 			<body suppressHydrationWarning>
@@ -156,23 +159,47 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	);
 }
 
+function ThemedToaster() {
+	const { resolvedTheme } = useTheme();
+	return (
+		<Toaster
+			theme={resolvedTheme === "dark" ? "dark" : "light"}
+			position="bottom-right"
+			toastOptions={{
+				classNames: {
+					toast:
+						"border-border bg-popover text-popover-foreground shadow-popover",
+				},
+			}}
+		/>
+	);
+}
+
 function RootComponent() {
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	});
 
 	if (pathname.startsWith("/accept-invitation/")) {
-		return <Outlet />;
+		return (
+			<ThemeProvider>
+				<ThemeMeta />
+				<Outlet />
+			</ThemeProvider>
+		);
 	}
 
 	return (
-		<AppLogtoProvider>
-			<ConvexProvider>
-				<AuthProvider>
-					<Outlet />
-					<Toaster theme="light" position="bottom-right" />
-				</AuthProvider>
-			</ConvexProvider>
-		</AppLogtoProvider>
+		<ThemeProvider>
+			<ThemeMeta />
+			<AppLogtoProvider>
+				<ConvexProvider>
+					<AuthProvider>
+						<Outlet />
+						<ThemedToaster />
+					</AuthProvider>
+				</ConvexProvider>
+			</AppLogtoProvider>
+		</ThemeProvider>
 	);
 }

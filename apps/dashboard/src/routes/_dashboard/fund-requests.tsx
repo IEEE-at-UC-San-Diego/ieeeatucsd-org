@@ -70,20 +70,20 @@ const ITEMS_PER_PAGE = 6;
 
 const statusColors: Record<string, string> = {
 	draft: "bg-muted text-foreground",
-	submitted: "bg-ds-blue-100 text-ds-blue-700",
-	needs_info: "bg-ds-amber-100 text-ds-amber-900",
-	approved: "bg-ds-green-100 text-ds-green-900",
-	denied: "bg-ds-red-100 text-ds-red-800",
-	completed: "bg-ds-blue-100 text-ds-purple-700",
+	submitted: "bg-ds-blue-100 text-tone-info",
+	needs_info: "bg-ds-amber-100 text-tone-warning",
+	approved: "bg-ds-green-100 text-tone-success",
+	denied: "bg-ds-red-100 text-tone-danger",
+	completed: "bg-ds-blue-100 text-tone-purple",
 };
 
 const statusIconColors: Record<string, string> = {
 	draft: "bg-muted text-muted-foreground",
-	submitted: "bg-ds-blue-100 text-ds-blue-700",
-	needs_info: "bg-ds-amber-100 text-ds-amber-900",
-	approved: "bg-ds-green-100 text-ds-green-700",
-	denied: "bg-ds-red-100 text-ds-red-800",
-	completed: "bg-ds-purple-100 text-ds-blue-700",
+	submitted: "bg-ds-blue-100 text-tone-info",
+	needs_info: "bg-ds-amber-100 text-tone-warning",
+	approved: "bg-ds-green-100 text-tone-success",
+	denied: "bg-ds-red-100 text-tone-danger",
+	completed: "bg-ds-purple-100 text-tone-info",
 };
 
 const getStatusIcon = (status: FundRequestStatus) => {
@@ -170,7 +170,7 @@ function FundRequestDetailPage({
 						<p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
 							Amount
 						</p>
-						<p className="text-xl font-bold text-ds-green-700">
+						<p className="text-xl font-bold text-tone-success">
 							{formatCurrency(request.amount)}
 						</p>
 					</div>
@@ -187,12 +187,12 @@ function FundRequestDetailPage({
 
 			{request.status === "needs_info" && request.infoRequestNotes && (
 				<div className="rounded-md border border-ds-amber-100 bg-ds-amber-100 p-3 flex gap-3">
-					<AlertCircle className="w-4 h-4 text-ds-amber-900 flex-shrink-0 mt-0.5" />
+					<AlertCircle className="w-4 h-4 text-tone-warning flex-shrink-0 mt-0.5" />
 					<div>
-						<h2 className="font-semibold text-ds-amber-900 text-sm mb-0.5">
+						<h2 className="font-semibold text-tone-warning text-sm mb-0.5">
 							Information Requested
 						</h2>
-						<p className="text-xs text-ds-amber-900 leading-relaxed">
+						<p className="text-xs text-tone-warning leading-relaxed">
 							{request.infoRequestNotes}
 						</p>
 					</div>
@@ -201,12 +201,12 @@ function FundRequestDetailPage({
 
 			{request.status === "denied" && request.reviewNotes && (
 				<div className="rounded-md border border-ds-red-100 bg-ds-red-100 p-4 flex gap-3">
-					<XCircle className="w-5 h-5 text-ds-red-800 flex-shrink-0 mt-0.5" />
+					<XCircle className="w-5 h-5 text-tone-danger flex-shrink-0 mt-0.5" />
 					<div>
-						<h2 className="font-semibold text-ds-red-800 text-sm mb-1">
+						<h2 className="font-semibold text-tone-danger text-sm mb-1">
 							Request Denied
 						</h2>
-						<p className="text-sm text-ds-red-800 leading-relaxed">
+						<p className="text-sm text-tone-danger leading-relaxed">
 							{request.reviewNotes}
 						</p>
 					</div>
@@ -215,13 +215,13 @@ function FundRequestDetailPage({
 
 			{request.status === "approved" && (
 				<div className="rounded-md border border-ds-green-100 bg-ds-green-100 p-4 flex gap-3">
-					<CheckCircle className="w-5 h-5 text-ds-green-700 flex-shrink-0 mt-0.5" />
+					<CheckCircle className="w-5 h-5 text-tone-success flex-shrink-0 mt-0.5" />
 					<div>
-						<h2 className="font-semibold text-ds-green-900 text-sm mb-1">
+						<h2 className="font-semibold text-tone-success text-sm mb-1">
 							Request Approved
 						</h2>
 						{request.reviewNotes && (
-							<p className="text-sm text-ds-green-700 leading-relaxed">
+							<p className="text-sm text-tone-success leading-relaxed">
 								{request.reviewNotes}
 							</p>
 						)}
@@ -245,7 +245,7 @@ function FundRequestDetailPage({
 					{request.infoResponseNotes && (
 						<Card className="border-ds-amber-100/70 bg-ds-amber-100/50 shadow-sm">
 							<CardContent className="p-5 space-y-2">
-								<h2 className="text-xs font-semibold text-ds-amber-900 uppercase tracking-wide">
+								<h2 className="text-xs font-semibold text-tone-warning uppercase tracking-wide">
 									Response to Info Request
 								</h2>
 								<p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -869,7 +869,7 @@ function FundRequestsPage() {
 											{stats.submitted > 0 && (
 												<Badge
 													variant="secondary"
-													className="bg-ds-blue-100 text-ds-blue-700"
+													className="bg-ds-blue-100 text-tone-info"
 												>
 													{stats.submitted}
 												</Badge>
@@ -880,7 +880,7 @@ function FundRequestsPage() {
 											{stats.needsInfo > 0 && (
 												<Badge
 													variant="secondary"
-													className="bg-ds-amber-100 text-ds-amber-900"
+													className="bg-ds-amber-100 text-tone-warning"
 												>
 													{stats.needsInfo}
 												</Badge>
@@ -891,7 +891,7 @@ function FundRequestsPage() {
 											{stats.approved > 0 && (
 												<Badge
 													variant="secondary"
-													className="bg-ds-green-100 text-ds-green-700"
+													className="bg-ds-green-100 text-tone-success"
 												>
 													{stats.approved}
 												</Badge>
@@ -902,7 +902,7 @@ function FundRequestsPage() {
 											{stats.denied > 0 && (
 												<Badge
 													variant="secondary"
-													className="bg-ds-red-100 text-ds-red-800"
+													className="bg-ds-red-100 text-tone-danger"
 												>
 													{stats.denied}
 												</Badge>
@@ -913,7 +913,7 @@ function FundRequestsPage() {
 											{stats.completed > 0 && (
 												<Badge
 													variant="secondary"
-													className="bg-ds-purple-100 text-ds-blue-700"
+													className="bg-ds-purple-100 text-tone-info"
 												>
 													{stats.completed}
 												</Badge>
@@ -1061,12 +1061,12 @@ function FundRequestsPage() {
 
 											{r.status === "needs_info" && r.infoRequestNotes && (
 												<div className="mt-2 p-2 bg-ds-amber-100/50 rounded border border-ds-amber-100/50 flex items-start gap-2">
-													<AlertCircle className="w-3.5 h-3.5 text-ds-amber-900 flex-shrink-0 mt-0.5" />
+													<AlertCircle className="w-3.5 h-3.5 text-tone-warning flex-shrink-0 mt-0.5" />
 													<div>
-														<span className="text-xs font-semibold text-ds-amber-900 block mb-0.5">
+														<span className="text-xs font-semibold text-tone-warning block mb-0.5">
 															Action Required
 														</span>
-														<p className="text-xs text-ds-amber-900 line-clamp-1">
+														<p className="text-xs text-tone-warning line-clamp-1">
 															{r.infoRequestNotes}
 														</p>
 													</div>

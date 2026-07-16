@@ -163,7 +163,7 @@ export function EventReviewSection({
 		<div className="space-y-6">
 			{isEditing && changes.length > 0 ? (
 				<div className="border border-ds-amber-100 bg-ds-amber-100 rounded-lg p-4">
-					<h4 className="text-sm font-semibold text-ds-amber-900 mb-3">
+					<h4 className="text-sm font-semibold text-tone-warning mb-3">
 						Changes Summary ({changes.length} field
 						{changes.length !== 1 ? "s" : ""} modified)
 					</h4>
@@ -173,14 +173,14 @@ export function EventReviewSection({
 								key={change.label}
 								className="flex items-start gap-2 text-sm"
 							>
-								<span className="text-ds-amber-900 font-medium min-w-30 shrink-0">
+								<span className="text-tone-warning font-medium min-w-30 shrink-0">
 									{change.label}:
 								</span>
-								<span className="text-ds-red-800 line-through wrap-break-word">
+								<span className="text-tone-danger line-through wrap-break-word">
 									{change.before}
 								</span>
-								<ArrowRight className="h-4 w-4 text-ds-amber-700 shrink-0 mt-0.5" />
-								<span className="text-ds-green-700 font-medium wrap-break-word">
+								<ArrowRight className="h-4 w-4 text-tone-warning shrink-0 mt-0.5" />
+								<span className="text-tone-success font-medium wrap-break-word">
 									{change.after}
 								</span>
 							</div>
@@ -189,13 +189,13 @@ export function EventReviewSection({
 				</div>
 			) : isEditing ? (
 				<div className="bg-ds-green-100 border border-ds-green-100 rounded-lg p-4">
-					<p className="text-sm text-ds-green-700">
+					<p className="text-sm text-tone-success">
 						No changes detected. The event request is unchanged.
 					</p>
 				</div>
 			) : (
 				<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-lg p-4">
-					<p className="text-sm text-ds-blue-700">
+					<p className="text-sm text-tone-info">
 						Please review all information before submitting. Once submitted,
 						your event request will be reviewed by officers.
 					</p>
@@ -253,7 +253,7 @@ export function EventReviewSection({
 							getRequirements().map((req) => (
 								<span
 									key={req.label}
-									className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-ds-blue-100 text-ds-blue-700"
+									className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-ds-blue-100 text-tone-info"
 								>
 									<req.icon className="h-3.5 w-3.5" />
 									{req.label}
@@ -368,7 +368,7 @@ export function EventReviewSection({
 											</div>
 										)}
 										{invoice.invoiceFile && (
-											<span className="text-xs text-ds-green-700">
+											<span className="text-xs text-tone-success">
 												File attached
 											</span>
 										)}

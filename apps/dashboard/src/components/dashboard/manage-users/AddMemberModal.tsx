@@ -179,7 +179,7 @@ export function AddMemberModal({
 										onClick={() => setSelectedMember(member)}
 										className={`motion-press flex w-full min-h-[52px] items-center justify-between p-4 text-left transition-colors ${
 											selectedMember?._id === member._id
-												? "bg-ds-blue-100 border-l-4 border-l-blue-500"
+												? "bg-ds-blue-100 border-l-4 border-l-ds-blue-700"
 												: "active:bg-muted md:hover:bg-muted"
 										}`}
 									>

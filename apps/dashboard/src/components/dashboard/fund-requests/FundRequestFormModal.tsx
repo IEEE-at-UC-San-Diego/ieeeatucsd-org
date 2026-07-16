@@ -736,7 +736,7 @@ export function FundRequestFormModal({
 											</Badge>
 										</div>
 									</div>
-									<p className="text-2xl font-bold text-ds-green-700">
+									<p className="text-2xl font-bold text-tone-success">
 										{formatCurrency(parseFloat(amount) || 0)}
 									</p>
 								</div>

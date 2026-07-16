@@ -115,11 +115,11 @@ function SponsorInformationPage() {
 			case "Platinum":
 				return "bg-muted text-foreground border-border";
 			case "Gold":
-				return "bg-ds-amber-100 text-ds-amber-900 border-ds-amber-100";
+				return "bg-ds-amber-100 text-tone-warning border-ds-amber-100";
 			case "Silver":
 				return "bg-muted text-foreground border-zinc-300";
 			case "Bronze":
-				return "bg-ds-amber-100 text-ds-amber-900 border-ds-amber-100";
+				return "bg-ds-amber-100 text-tone-warning border-ds-amber-100";
 			default:
 				return "bg-muted text-muted-foreground border-border";
 		}
@@ -184,7 +184,7 @@ function SponsorInformationPage() {
 				</h2>
 				<ul className="-mx-4 divide-y border-y bg-background md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:divide-y-0 md:border-0 md:bg-transparent">
 					<li className="flex min-h-[52px] items-center gap-3 px-4 py-3 md:rounded-md md:border md:px-4">
-						<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-blue-100 text-ds-blue-700">
+						<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-blue-100 text-tone-info">
 							<Building2 className="size-5" />
 						</div>
 						<div className="min-w-0">
@@ -204,19 +204,19 @@ function SponsorInformationPage() {
 								!sponsorData?.email && "pointer-events-none",
 							)}
 						>
-							<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-green-100 text-ds-green-700">
+							<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-green-100 text-tone-success">
 								<Mail className="size-5" />
 							</div>
 							<div className="min-w-0 flex-1">
 								<p className="text-xs text-muted-foreground">Contact email</p>
-								<p className="truncate text-sm font-medium text-ieee-blue">
+								<p className="truncate text-sm font-medium text-tone-link">
 									{sponsorData?.email || "Not specified"}
 								</p>
 							</div>
 						</a>
 					</li>
 					<li className="flex min-h-[52px] items-center gap-3 px-4 py-3 md:col-span-2 md:rounded-md md:border md:px-4">
-						<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-amber-100 text-ds-amber-900">
+						<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-amber-100 text-tone-warning">
 							<Award className="size-5" />
 						</div>
 						<div className="min-w-0 flex-1">
@@ -228,7 +228,7 @@ function SponsorInformationPage() {
 								</span>
 							</p>
 							{sponsorData?.autoAssignedSponsor && (
-								<p className="mt-0.5 text-xs text-ds-blue-700">
+								<p className="mt-0.5 text-xs text-tone-info">
 									Auto-assigned from your company email domain.
 								</p>
 							)}
@@ -259,7 +259,7 @@ function SponsorInformationPage() {
 							<li key={benefit.name} className="space-y-3 px-4 py-4">
 								<p className="text-sm font-medium leading-5">{benefit.name}</p>
 								{yourValue !== undefined && (
-									<div className="flex items-center gap-2 rounded-md bg-ds-blue-100/60 px-3 py-2 text-sm text-ds-blue-700">
+									<div className="flex items-center gap-2 rounded-md bg-ds-blue-100/60 px-3 py-2 text-sm text-tone-info">
 										{yourValue === true || typeof yourValue === "string" ? (
 											<Check className="size-4 shrink-0" />
 										) : (
@@ -291,7 +291,7 @@ function SponsorInformationPage() {
 											<p className="mt-0.5 flex items-center gap-1 text-xs font-medium">
 												{value === true ? (
 													<>
-														<Check className="size-3.5 text-ds-green-700" />
+														<Check className="size-3.5 text-tone-success" />
 														Yes
 													</>
 												) : value === false ? (
@@ -352,11 +352,11 @@ function SponsorInformationPage() {
 										<td key={i} className="px-3 py-3 text-center">
 											<div className="flex items-center justify-center gap-1.5">
 												{value === true ? (
-													<Check className="size-4 text-ds-green-700" />
+													<Check className="size-4 text-tone-success" />
 												) : value === false ? (
 													<X className="size-4 text-muted-foreground" />
 												) : (
-													<span className="text-xs font-medium text-ds-blue-700">
+													<span className="text-xs font-medium text-tone-info">
 														{value}
 													</span>
 												)}

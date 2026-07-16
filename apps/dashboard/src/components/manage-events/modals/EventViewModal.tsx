@@ -375,7 +375,7 @@ export function EventViewModal({
 						>
 							<div className="flex items-center gap-3 overflow-hidden">
 								<div className="p-2 bg-ds-blue-100 rounded-md">
-									<FileText className="h-5 w-5 text-ds-blue-700" />
+									<FileText className="h-5 w-5 text-tone-info" />
 								</div>
 								<div className="min-w-0">
 									<p className="text-sm font-medium truncate">
@@ -507,7 +507,7 @@ export function EventViewModal({
 								htmlFor="can-publish"
 								className="text-sm cursor-pointer flex items-center gap-1.5 font-medium"
 							>
-								<Globe className="h-3.5 w-3.5 text-ds-blue-700" />
+								<Globe className="h-3.5 w-3.5 text-tone-info" />
 								Published
 							</Label>
 						</div>
@@ -620,7 +620,7 @@ export function EventViewModal({
 											<req.icon className="h-3.5 w-3.5" />
 											{req.label}
 											{req.completed && (
-												<Check className="h-3 w-3.5 text-ds-green-700 ml-0.5" />
+												<Check className="h-3 w-3.5 text-tone-success ml-0.5" />
 											)}
 										</span>
 									))}
@@ -663,7 +663,7 @@ export function EventViewModal({
 									{graphicsNeeds.map((need) => (
 										<span
 											key={need}
-											className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-ds-blue-100 text-ds-blue-700 border border-ds-blue-100"
+											className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-ds-blue-100 text-tone-info border border-ds-blue-100"
 										>
 											<ImageIcon className="h-3 w-3" />
 											{need}
@@ -734,7 +734,7 @@ export function EventViewModal({
 														href={url.trim()}
 														target="_blank"
 														rel="noopener noreferrer"
-														className="flex items-center gap-2 text-sm text-ds-blue-700 hover:text-ds-blue-700 hover:underline truncate"
+														className="flex items-center gap-2 text-sm text-tone-info hover:text-tone-info hover:underline truncate"
 													>
 														<LinkIcon className="h-3.5 w-3.5 shrink-0" />
 														<span className="truncate">{url.trim()}</span>
@@ -817,7 +817,7 @@ export function EventViewModal({
 						<div className="flex items-center justify-between p-4 border rounded-md bg-gradient-to-r from-background to-muted/20">
 							<div className="flex items-center gap-4">
 								<div className="p-3 bg-ds-green-100 rounded-full">
-									<DollarSign className="h-6 w-6 text-ds-green-700" />
+									<DollarSign className="h-6 w-6 text-tone-success" />
 								</div>
 								<div>
 									<p className="font-semibold">AS Funding Requested</p>
@@ -826,7 +826,7 @@ export function EventViewModal({
 										<span
 											className={
 												event.needsASFunding
-													? "text-ds-green-700 font-medium"
+													? "text-tone-success font-medium"
 													: "text-muted-foreground"
 											}
 										>
@@ -840,7 +840,7 @@ export function EventViewModal({
 						{event.invoices.length > 0 && (
 							<div className="bg-ds-green-100 border border-ds-green-100 rounded-md p-4">
 								<div className="flex items-center justify-between mb-2">
-									<h4 className="text-sm font-semibold text-ds-green-900">
+									<h4 className="text-sm font-semibold text-tone-success">
 										Formatted Invoice Data (Copyable)
 									</h4>
 									<Button
@@ -857,7 +857,7 @@ export function EventViewModal({
 										{copiedInvoice ? "Copied!" : "Copy"}
 									</Button>
 								</div>
-								<p className="text-xs font-mono text-ds-green-900 bg-background/80 border rounded-md p-3 whitespace-pre-wrap break-words">
+								<p className="text-xs font-mono text-tone-success bg-background/80 border rounded-md p-3 whitespace-pre-wrap break-words">
 									{formatInvoiceData(event)}
 								</p>
 							</div>
@@ -983,10 +983,10 @@ export function EventViewModal({
 						<div className="space-y-4">
 							<div className="rounded-md border p-4 bg-muted/20">
 								<div className="flex flex-wrap items-center gap-3 text-sm">
-									<span className="inline-flex items-center px-2.5 py-1 rounded-full bg-ds-blue-100 text-ds-blue-700 font-medium">
+									<span className="inline-flex items-center px-2.5 py-1 rounded-full bg-ds-blue-100 text-tone-info font-medium">
 										Estimated: {event.estimatedAttendance}
 									</span>
-									<span className="inline-flex items-center px-2.5 py-1 rounded-full bg-ds-green-100 text-ds-green-700 font-medium">
+									<span className="inline-flex items-center px-2.5 py-1 rounded-full bg-ds-green-100 text-tone-success font-medium">
 										Checked In: {event.attendeeCount || attendees.length}
 									</span>
 								</div>

@@ -191,7 +191,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 						</div>
 						<Button
 							onClick={() => setShowAddSection(true)}
-							className="lg:hidden inline-flex items-center justify-center px-2 md:px-3 py-2 bg-ds-blue-700 text-white rounded-md hover:bg-ds-blue-800 transition-colors text-sm shadow-sm min-h-[40px] md:min-h-[44px] w-full sm:w-auto"
+							className="lg:hidden inline-flex items-center justify-center px-2 md:px-3 py-2 bg-ds-blue-700 text-on-accent rounded-md hover:bg-ds-blue-800 transition-colors text-sm shadow-sm min-h-[40px] md:min-h-[44px] w-full sm:w-auto"
 						>
 							<Plus className="h-4 w-4 mr-1" />
 							<span className="hidden sm:inline">Add Section</span>
@@ -202,7 +202,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 					<div className="hidden lg:block">
 						<Button
 							onClick={() => setShowAddSection(true)}
-							className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-ds-blue-700 text-white rounded-md hover:bg-ds-blue-800 transition-colors text-sm font-medium shadow-sm min-h-[44px]"
+							className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-ds-blue-700 text-on-accent rounded-md hover:bg-ds-blue-800 transition-colors text-sm font-medium shadow-sm min-h-[44px]"
 						>
 							<Plus className="h-4 w-4 mr-2" />
 							Add Block
@@ -226,7 +226,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 							</p>
 							<Button
 								onClick={() => setShowAddSection(true)}
-								className="inline-flex items-center px-3 py-2 bg-ds-blue-700 text-white rounded-md hover:bg-ds-blue-800 transition-colors text-sm min-h-[40px]"
+								className="inline-flex items-center px-3 py-2 bg-ds-blue-700 text-on-accent rounded-md hover:bg-ds-blue-800 transition-colors text-sm min-h-[40px]"
 							>
 								<Plus className="h-4 w-4 mr-2" />
 								Add First Section
@@ -404,7 +404,7 @@ const SectionNavigationItem: React.FC<{
 				}
 			}}
 			className={`flex items-center gap-1 md:gap-2 p-2 rounded-md cursor-pointer transition-colors ${
-				isSelected ? "bg-ds-blue-100 text-ds-blue-700" : "hover:bg-muted"
+				isSelected ? "bg-ds-blue-100 text-tone-info" : "hover:bg-muted"
 			}`}
 			onClick={() => onSelect(section.id)}
 		>

@@ -31,7 +31,7 @@ export function UserAvatarFallback({
 	return (
 		<div
 			className={cn(
-				"rounded-full bg-ds-blue-100 flex items-center justify-center text-ds-blue-700 font-semibold shrink-0",
+				"rounded-full bg-ds-blue-100 flex items-center justify-center text-tone-info font-semibold shrink-0",
 				actualSize,
 				className,
 			)}

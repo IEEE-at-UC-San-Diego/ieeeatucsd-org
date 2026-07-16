@@ -268,7 +268,7 @@ export function FundingSection({
 					<Label className="text-sm font-medium flex items-center gap-2">
 						<DollarSign className="h-4 w-4 text-muted-foreground" />
 						Do you need AS (Associated Students) funding for this event?{" "}
-						<span className="text-ds-red-800">*</span>
+						<span className="text-tone-danger">*</span>
 					</Label>
 					<RadioGroup
 						value={data.needsASFunding ? "yes" : "no"}
@@ -299,10 +299,10 @@ export function FundingSection({
 
 				{data.needsASFunding && (
 					<div className="bg-ds-amber-100 border border-ds-amber-100 rounded-lg p-3">
-						<p className="text-xs text-ds-amber-900 font-medium mb-1">
+						<p className="text-xs text-tone-warning font-medium mb-1">
 							AS Funding Guidelines
 						</p>
-						<ul className="text-xs text-ds-amber-900 list-disc list-inside space-y-0.5">
+						<ul className="text-xs text-tone-warning list-disc list-inside space-y-0.5">
 							<li>Maximum $5,000 per event</li>
 							<li>Itemized receipts required</li>
 							<li>Food/drinks must follow university guidelines</li>
@@ -355,7 +355,7 @@ export function FundingSection({
 
 					{uploadError && (
 						<div className="bg-ds-red-100 border border-ds-red-100 rounded-lg p-3">
-							<p className="text-xs text-ds-red-800">{uploadError}</p>
+							<p className="text-xs text-tone-danger">{uploadError}</p>
 						</div>
 					)}
 
@@ -418,7 +418,7 @@ export function FundingSection({
 									</div>
 
 									{invoice.invoiceFile && (
-										<div className="flex items-center gap-2 text-xs text-ds-green-700 bg-ds-green-100 border border-ds-green-100 rounded-lg px-3 py-2">
+										<div className="flex items-center gap-2 text-xs text-tone-success bg-ds-green-100 border border-ds-green-100 rounded-lg px-3 py-2">
 											<FileText className="h-3.5 w-3.5 shrink-0" />
 											<span>
 												{aiEnabled

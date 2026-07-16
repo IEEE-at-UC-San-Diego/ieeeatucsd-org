@@ -77,7 +77,7 @@ export function MobileFilters({
 							>
 								<SlidersHorizontal className="size-4" />
 								{activeFilterCount > 0 && (
-									<span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ieee-blue px-1 text-[10px] font-semibold text-white">
+									<span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ieee-blue px-1 text-[10px] font-semibold text-on-accent">
 										{activeFilterCount}
 									</span>
 								)}
@@ -126,7 +126,7 @@ export function MobileFilters({
 							key={chip.id}
 							type="button"
 							onClick={chip.onClear}
-							className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-ieee-blue/30 bg-ds-blue-100/80 px-2.5 text-xs font-medium text-ieee-blue active:scale-[0.97]"
+							className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-ieee-blue/30 bg-ds-blue-100/80 px-2.5 text-xs font-medium text-tone-link active:scale-[0.97]"
 						>
 							{chip.label}
 							<X className="size-3" />

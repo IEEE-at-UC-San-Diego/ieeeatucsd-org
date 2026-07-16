@@ -226,7 +226,7 @@ export function DraftEventModal({
 			<form id={formId} onSubmit={handleSubmit} className="space-y-4">
 				<div className="space-y-2">
 					<Label htmlFor="draft-name">
-						Event Name <span className="text-ds-red-800">*</span>
+						Event Name <span className="text-tone-danger">*</span>
 					</Label>
 					<Input
 						id="draft-name"
@@ -309,7 +309,7 @@ export function DraftEventModal({
 						onBlur={handleDateBlur}
 						placeholder="mm/dd/yy"
 					/>
-					{dateError && <p className="text-xs text-ds-red-800">{dateError}</p>}
+					{dateError && <p className="text-xs text-tone-danger">{dateError}</p>}
 				</div>
 
 				<div className="grid grid-cols-2 gap-4">
@@ -323,7 +323,7 @@ export function DraftEventModal({
 							placeholder="e.g., 9am, 9:00 AM"
 						/>
 						{startTimeError && (
-							<p className="text-xs text-ds-red-800">{startTimeError}</p>
+							<p className="text-xs text-tone-danger">{startTimeError}</p>
 						)}
 					</div>
 					<div className="space-y-2">
@@ -336,7 +336,7 @@ export function DraftEventModal({
 							placeholder="e.g., 2pm, 2:00 PM"
 						/>
 						{endTimeError && (
-							<p className="text-xs text-ds-red-800">{endTimeError}</p>
+							<p className="text-xs text-tone-danger">{endTimeError}</p>
 						)}
 					</div>
 				</div>

@@ -62,12 +62,12 @@ function SignInPage() {
 							dashboard
 						</p>
 						{reason === "session-init" && (
-							<p className="mt-3 text-sm text-ds-amber-900">
+							<p className="mt-3 text-sm text-tone-warning">
 								Session initialization failed. Sign in again.
 							</p>
 						)}
 						{reason === "stale-callback" && (
-							<p className="mt-3 text-sm text-ds-amber-900">
+							<p className="mt-3 text-sm text-tone-warning">
 								Your previous sign-in callback expired. Retrying sign-in now.
 							</p>
 						)}
@@ -95,7 +95,7 @@ function SignInPage() {
 						Need access?{" "}
 						<a
 							href="mailto:ieee@ucsd.edu"
-							className="font-medium text-ds-blue-700 hover:underline"
+							className="font-medium text-tone-info hover:underline"
 						>
 							Contact IEEE UCSD
 						</a>

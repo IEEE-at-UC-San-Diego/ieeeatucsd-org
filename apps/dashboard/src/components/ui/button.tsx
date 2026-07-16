@@ -12,14 +12,14 @@ const buttonVariants = cva(
 				default:
 					"bg-primary text-primary-foreground hover:bg-ds-gray-900 active:bg-ds-gray-800",
 				destructive:
-					"bg-destructive text-white hover:bg-ds-red-800/90 focus-visible:shadow-[0_0_0_2px_var(--focus-ring-gap),0_0_0_4px_var(--ds-red-800)]",
+					"bg-destructive text-on-accent hover:bg-ds-red-800/90 focus-visible:shadow-[0_0_0_2px_var(--focus-ring-gap),0_0_0_4px_var(--ds-red-800)]",
 				outline:
 					"border border-[var(--ds-gray-alpha-400)] bg-background hover:bg-ds-gray-100 hover:border-[var(--ds-gray-alpha-500)] active:bg-ds-gray-200 active:border-[var(--ds-gray-alpha-600)]",
 				secondary:
 					"border border-[var(--ds-gray-alpha-400)] bg-background text-foreground hover:bg-ds-gray-100 hover:border-[var(--ds-gray-alpha-500)] active:bg-ds-gray-200",
 				ghost:
 					"text-foreground hover:bg-[var(--ds-gray-alpha-200)] active:bg-[var(--ds-gray-alpha-300)]",
-				link: "text-ds-blue-700 underline-offset-4 hover:underline",
+				link: "text-tone-link underline-offset-4 hover:underline",
 			},
 			size: {
 				default: "h-10 px-2.5 has-[>svg]:px-2",

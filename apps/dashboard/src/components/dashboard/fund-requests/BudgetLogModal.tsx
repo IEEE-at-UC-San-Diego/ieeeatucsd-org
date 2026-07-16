@@ -141,24 +141,24 @@ export function BudgetLogModal({
 					{/* Summary Stats */}
 					<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 						<div className="rounded-md border bg-ds-green-100/50 p-4">
-							<div className="flex items-center gap-2 mb-2 text-ds-green-700">
+							<div className="flex items-center gap-2 mb-2 text-tone-success">
 								<User className="w-4 h-4" />
 								<span className="text-xs font-bold uppercase tracking-wide">
 									Approved
 								</span>
 							</div>
-							<p className="text-2xl font-bold text-ds-green-700">
+							<p className="text-2xl font-bold text-tone-success">
 								{formatCurrency(stats.approved)}
 							</p>
 						</div>
 						<div className="rounded-md border bg-ds-amber-100/50 p-4">
-							<div className="flex items-center gap-2 mb-2 text-ds-amber-900">
+							<div className="flex items-center gap-2 mb-2 text-tone-warning">
 								<Loader2 className="w-4 h-4" />
 								<span className="text-xs font-bold uppercase tracking-wide">
 									Pending
 								</span>
 							</div>
-							<p className="text-2xl font-bold text-ds-amber-900">
+							<p className="text-2xl font-bold text-tone-warning">
 								{formatCurrency(stats.pending)}
 							</p>
 						</div>
@@ -230,7 +230,7 @@ export function BudgetLogModal({
 													subtitle={request.submittedByName || "Unknown"}
 													meta={formatDate(request._creationTime)}
 													trailing={
-														<span className="text-ds-green-700">
+														<span className="text-tone-success">
 															{formatCurrency(request.amount)}
 														</span>
 													}
@@ -288,7 +288,7 @@ export function BudgetLogModal({
 																</div>
 															</TableCell>
 															<TableCell className="text-right">
-																<span className="font-bold text-ds-green-700">
+																<span className="font-bold text-tone-success">
 																	{formatCurrency(request.amount)}
 																</span>
 															</TableCell>
@@ -334,7 +334,7 @@ export function BudgetLogModal({
 										<div className="space-y-4">
 											{selectedTab === "all" && (
 												<div className="flex items-center gap-2">
-													<Wrench className="w-4 h-4 text-ds-amber-900" />
+													<Wrench className="w-4 h-4 text-tone-warning" />
 													<span className="text-sm font-semibold text-foreground">
 														Manual Adjustments
 													</span>
@@ -349,7 +349,7 @@ export function BudgetLogModal({
 															subtitle={adjustment.createdByName || "Unknown"}
 															meta={formatDate(adjustment.createdAt)}
 															trailing={
-																<span className="text-ds-amber-900">
+																<span className="text-tone-warning">
 																	{formatCurrency(adjustment.amount)}
 																</span>
 															}
@@ -398,7 +398,7 @@ export function BudgetLogModal({
 																		</div>
 																	</TableCell>
 																	<TableCell className="text-right">
-																		<span className="font-bold text-ds-amber-900">
+																		<span className="font-bold text-tone-warning">
 																			{formatCurrency(adjustment.amount)}
 																		</span>
 																	</TableCell>

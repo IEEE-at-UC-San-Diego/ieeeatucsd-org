@@ -84,13 +84,13 @@ export function EventsDataTable({
 				reqs.push({
 					icon: Image,
 					label: "Graphics Submitted",
-					className: "bg-ds-green-100 text-ds-green-700 border-ds-green-100",
+					className: "bg-ds-green-100 text-tone-success border-ds-green-100",
 				});
 			} else {
 				reqs.push({
 					icon: Image,
 					label: "Graphics Needed",
-					className: "bg-ds-red-100 text-ds-red-800 border-ds-red-100",
+					className: "bg-ds-red-100 text-tone-danger border-ds-red-100",
 				});
 			}
 		} else {

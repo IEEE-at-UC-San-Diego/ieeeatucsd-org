@@ -161,7 +161,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 			fontFamily: "Arial, sans-serif",
 			fontWeight: "bold",
 			pageBreakAfter: "avoid",
-			color: "#333",
+			color: "var(--foreground)",
 		};
 
 		switch (section.type) {
@@ -190,7 +190,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 					textAlign: "left",
 					marginBottom: "8px",
 					marginTop: "12px",
-					color: "#555",
+					color: "var(--muted-foreground)",
 				};
 			case "subsection":
 				return {
@@ -199,7 +199,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 					fontWeight: 600,
 					marginBottom: "6px",
 					marginTop: "10px",
-					color: "#666",
+					color: "var(--muted-foreground)",
 				};
 			case "amendment":
 				return {
@@ -225,7 +225,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 			fontFamily: "Arial, sans-serif",
 			fontSize: "11pt",
 			lineHeight: "1.5",
-			color: "#444",
+			color: "var(--foreground)",
 			textAlign: "justify",
 		};
 	};
@@ -248,11 +248,11 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 						<div
 							key={item.key}
 							style={{
-								border: "2px dashed #ccc",
+								border: "2px dashed var(--border)",
 								padding: "24px",
 								textAlign: "center",
 								margin: "16px 0",
-								background: "#f9f9f9",
+								background: "var(--muted)",
 								pageBreakInside: "avoid",
 								fontFamily: "Arial, sans-serif",
 							}}
@@ -271,7 +271,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 								lineHeight: "1.5",
 								marginBottom: "10px",
 								paddingLeft: "20px",
-								color: "#444",
+								color: "var(--foreground)",
 							}}
 						>
 							{item.items.map((listItem: any, idx: number) => (
@@ -301,7 +301,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 								lineHeight: "1.5",
 								marginBottom: "10px",
 								paddingLeft: "20px",
-								color: "#444",
+								color: "var(--foreground)",
 							}}
 						>
 							{item.items.map((listItem: any, idx: number) => (
@@ -332,13 +332,13 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 								textIndent: "0",
 								orphans: 2,
 								widows: 2,
-								color: "#444",
+								color: "var(--foreground)",
 								whiteSpace: "pre",
 								overflow: "auto",
-								background: "#f8f9fa",
+								background: "var(--muted)",
 								padding: "8px",
 								borderRadius: "4px",
-								border: "1px solid #e9ecef",
+								border: "1px solid var(--border)",
 							}}
 						>
 							<span dangerouslySetInnerHTML={{ __html: item.content }} />
@@ -359,7 +359,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 								textIndent: "0",
 								orphans: 2,
 								widows: 2,
-								color: "#444",
+								color: "var(--foreground)",
 								whiteSpace: "pre-wrap",
 							}}
 						>
@@ -398,10 +398,10 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 				marginBottom: section.type === "article" ? "8px" : "14px",
 				...getIndentStyle(),
 				...(isHighlighted && {
-					backgroundColor: "#fef08a",
+					backgroundColor: "var(--ds-amber-100)",
 					padding: "8px",
 					borderRadius: "4px",
-					border: "2px solid #f59e0b",
+					border: "2px solid var(--ds-amber-600)",
 					animation: "section-highlight-fade 3s ease-out",
 				}),
 			}}

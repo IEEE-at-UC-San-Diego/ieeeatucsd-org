@@ -98,12 +98,12 @@ export const STATUS_LABELS: Record<FundRequestStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<FundRequestStatus, string> = {
-	draft: "bg-gray-100 text-gray-800",
-	submitted: "bg-blue-100 text-blue-800",
-	needs_info: "bg-yellow-100 text-ds-amber-900",
-	approved: "bg-green-100 text-green-800",
-	denied: "bg-ds-red-100 text-ds-red-800",
-	completed: "bg-purple-100 text-ds-purple-700",
+	draft: "bg-muted text-foreground",
+	submitted: "bg-ds-blue-100 text-tone-info",
+	needs_info: "bg-ds-amber-100 text-tone-warning",
+	approved: "bg-ds-green-100 text-tone-success",
+	denied: "bg-ds-red-100 text-tone-danger",
+	completed: "bg-ds-purple-100 text-tone-purple",
 };
 
 export const CATEGORY_LABELS: Record<FundRequestCategory, string> = {

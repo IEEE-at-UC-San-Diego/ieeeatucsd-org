@@ -419,9 +419,9 @@ export default function ReceiptViewer({
 			<div className="flex items-center justify-between px-4 py-2 bg-muted border-b border-border shrink-0">
 				<div className="flex items-center gap-2 overflow-hidden">
 					{isPdf ? (
-						<FileText className="w-4 h-4 text-ds-red-800 shrink-0" />
+						<FileText className="w-4 h-4 text-tone-danger shrink-0" />
 					) : (
-						<ImageIcon className="w-4 h-4 text-ds-blue-700 shrink-0" />
+						<ImageIcon className="w-4 h-4 text-tone-info shrink-0" />
 					)}
 					<span
 						className="text-foreground text-xs font-medium truncate max-w-37.5"
@@ -440,7 +440,7 @@ export default function ReceiptViewer({
 					{isConverting && (
 						<Badge
 							variant="secondary"
-							className="text-[10px] h-5 ml-1 bg-ds-amber-100 text-ds-amber-900 border-ds-amber-100"
+							className="text-[10px] h-5 ml-1 bg-ds-amber-100 text-tone-warning border-ds-amber-100"
 						>
 							Converting HEIC…
 						</Badge>
@@ -509,7 +509,7 @@ export default function ReceiptViewer({
 					<Button
 						variant="ghost"
 						size="icon"
-						className="h-8 w-8 text-muted-foreground hover:text-ds-blue-700 hover:bg-muted"
+						className="h-8 w-8 text-muted-foreground hover:text-tone-info hover:bg-muted"
 						onClick={() => window.open(receiptUrl, "_blank")}
 						title="Open in new tab"
 					>
@@ -541,7 +541,7 @@ export default function ReceiptViewer({
 				{!loading && imageError && (
 					<div className="flex flex-col items-center gap-4 text-center p-8 max-w-sm">
 						<div className="w-14 h-14 rounded-full bg-ds-red-100 flex items-center justify-center">
-							<AlertCircle className="w-7 h-7 text-ds-red-800" />
+							<AlertCircle className="w-7 h-7 text-tone-danger" />
 						</div>
 						<div>
 							<p className="text-sm font-medium text-foreground mb-1">

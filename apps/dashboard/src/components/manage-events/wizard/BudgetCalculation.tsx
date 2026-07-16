@@ -42,7 +42,7 @@ export function BudgetCalculation({
 					<span>
 						${recommendedBudget.toLocaleString()}
 						{maxReached && (
-							<span className="text-ds-amber-900 text-xs font-normal ml-1">
+							<span className="text-tone-warning text-xs font-normal ml-1">
 								(Maximum budget reached)
 							</span>
 						)}
@@ -55,23 +55,23 @@ export function BudgetCalculation({
 	return (
 		<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-lg p-4 mt-3">
 			<div className="flex items-center gap-2 mb-3">
-				<Calculator className="h-4 w-4 text-ds-blue-700" />
-				<h4 className="text-sm font-semibold text-ds-blue-700">
+				<Calculator className="h-4 w-4 text-tone-info" />
+				<h4 className="text-sm font-semibold text-tone-info">
 					Budget Calculation
 				</h4>
 			</div>
 			<div className="space-y-2 text-sm">
-				<div className="flex justify-between text-ds-blue-700">
+				<div className="flex justify-between text-tone-info">
 					<span>Expected Attendance:</span>
 					<span className="font-medium">
 						{estimatedAttendance.toLocaleString()} people
 					</span>
 				</div>
-				<div className="flex justify-between text-ds-blue-700">
+				<div className="flex justify-between text-tone-info">
 					<span>Cost per person:</span>
 					<span className="font-medium">${COST_PER_PERSON}</span>
 				</div>
-				<div className="flex justify-between text-ds-blue-700">
+				<div className="flex justify-between text-tone-info">
 					<span>Calculated Budget:</span>
 					<span className="font-medium">
 						${calculatedBudget.toLocaleString()}
@@ -82,7 +82,7 @@ export function BudgetCalculation({
 					<span>
 						${recommendedBudget.toLocaleString()}
 						{maxReached && (
-							<span className="text-ds-amber-900 text-xs font-normal ml-1">
+							<span className="text-tone-warning text-xs font-normal ml-1">
 								(Maximum budget reached)
 							</span>
 						)}
@@ -91,8 +91,8 @@ export function BudgetCalculation({
 			</div>
 			{maxReached && (
 				<div className="flex items-start gap-2 mt-3 pt-2 border-t border-ds-blue-100">
-					<AlertTriangle className="h-3.5 w-3.5 text-ds-amber-900 mt-0.5 shrink-0" />
-					<p className="text-xs text-ds-amber-900">
+					<AlertTriangle className="h-3.5 w-3.5 text-tone-warning mt-0.5 shrink-0" />
+					<p className="text-xs text-tone-warning">
 						The maximum AS funding budget is ${MAX_BUDGET.toLocaleString()} per
 						event.
 					</p>

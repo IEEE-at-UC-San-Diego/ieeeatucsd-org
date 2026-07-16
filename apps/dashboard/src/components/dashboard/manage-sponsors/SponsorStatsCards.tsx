@@ -33,14 +33,14 @@ export function SponsorStatsCards({
 			title: "Total Sponsors",
 			value: stats.totalSponsors,
 			icon: Building2,
-			color: "text-ds-blue-700",
+			color: "text-tone-info",
 			bgColor: "bg-ds-blue-100",
 		},
 		{
 			title: "Gold Sponsors",
 			value: stats.goldSponsors,
 			icon: Crown,
-			color: "text-ds-amber-900",
+			color: "text-tone-warning",
 			bgColor: "bg-ds-amber-100",
 		},
 		{
@@ -54,7 +54,7 @@ export function SponsorStatsCards({
 			title: "Bronze Sponsors",
 			value: stats.bronzeSponsors,
 			icon: Users,
-			color: "text-ds-amber-900",
+			color: "text-tone-warning",
 			bgColor: "bg-ds-amber-100",
 		},
 	];

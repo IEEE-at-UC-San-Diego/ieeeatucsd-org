@@ -490,7 +490,7 @@ function InvitationFlowTab({ logtoId }: { logtoId: string | null }) {
 						<h4 className="text-sm font-medium text-ds-blue-1000 mb-2">
 							What happens next?
 						</h4>
-						<ul className="text-sm text-ds-blue-700 space-y-1 list-disc list-inside">
+						<ul className="text-sm text-tone-info space-y-1 list-disc list-inside">
 							<li>
 								An invitation email will be sent to the prospective officer
 							</li>
@@ -805,7 +805,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 								</p>
 							</div>
 						) : (
-							<div className="mt-4 flex items-center gap-2 text-sm text-ds-amber-900 bg-ds-amber-100 border border-ds-amber-100 rounded-lg p-3">
+							<div className="mt-4 flex items-center gap-2 text-sm text-tone-warning bg-ds-amber-100 border border-ds-amber-100 rounded-lg p-3">
 								<AlertCircle className="w-4 h-4 shrink-0" />
 								<span>
 									No Google Sheets URL configured. Please configure it before
@@ -952,10 +952,10 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 					</div>
 
 					<div className="rounded-lg border border-ds-green-100 bg-ds-green-100 p-4">
-						<h4 className="text-sm font-medium text-ds-green-900 mb-2">
+						<h4 className="text-sm font-medium text-tone-success mb-2">
 							What happens immediately?
 						</h4>
-						<ul className="text-sm text-ds-green-700 space-y-1 list-disc list-inside">
+						<ul className="text-sm text-tone-success space-y-1 list-disc list-inside">
 							<li>
 								Onboarding email will be sent with all necessary instructions
 							</li>
@@ -1102,7 +1102,7 @@ function DirectOnboardingTab({ logtoId }: { logtoId: string | null }) {
 						<h4 className="text-sm font-medium text-ds-blue-1000 mb-2">
 							Instructions:
 						</h4>
-						<ol className="text-sm text-ds-blue-700 space-y-1 list-decimal list-inside">
+						<ol className="text-sm text-tone-info space-y-1 list-decimal list-inside">
 							<li>Open your Google Sheets contact list</li>
 							<li>
 								Click "Share" and ensure it's accessible to anyone with the link
@@ -1366,7 +1366,7 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 								status={
 									<Badge
 										variant="secondary"
-										className="bg-ds-red-100 text-[10px] text-ds-red-800"
+										className="bg-ds-red-100 text-[10px] text-tone-danger"
 									>
 										{rejection.emailSent ? "Sent" : "Not Sent"}
 									</Badge>
@@ -1411,7 +1411,7 @@ function RejectionsTab({ logtoId }: { logtoId: string | null }) {
 										<TableCell>
 											<Badge
 												variant="secondary"
-												className="bg-ds-red-100 text-ds-red-800"
+												className="bg-ds-red-100 text-tone-danger"
 											>
 												{rejection.emailSent ? "Sent" : "Not Sent"}
 											</Badge>
@@ -1472,7 +1472,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 				return (
 					<Badge
 						variant="secondary"
-						className="bg-ds-amber-100 text-ds-amber-900 gap-1"
+						className="bg-ds-amber-100 text-tone-warning gap-1"
 					>
 						<Clock className="w-3 h-3" /> Pending
 					</Badge>
@@ -1481,7 +1481,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 				return (
 					<Badge
 						variant="secondary"
-						className="bg-ds-green-100 text-ds-green-900 gap-1"
+						className="bg-ds-green-100 text-tone-success gap-1"
 					>
 						<CheckCircle className="w-3 h-3" /> Accepted
 					</Badge>
@@ -1490,7 +1490,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 				return (
 					<Badge
 						variant="secondary"
-						className="bg-ds-red-100 text-ds-red-800 gap-1"
+						className="bg-ds-red-100 text-tone-danger gap-1"
 					>
 						<XCircle className="w-3 h-3" /> Declined
 					</Badge>
@@ -1583,33 +1583,33 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Pending</p>
-								<p className="text-2xl font-bold text-ds-amber-900">
+								<p className="text-2xl font-bold text-tone-warning">
 									{stats.pending}
 								</p>
 							</div>
-							<Clock className="w-8 h-8 text-ds-amber-700" />
+							<Clock className="w-8 h-8 text-tone-warning" />
 						</div>
 					</div>
 					<div className="rounded-md border bg-card p-4">
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Accepted</p>
-								<p className="text-2xl font-bold text-ds-green-700">
+								<p className="text-2xl font-bold text-tone-success">
 									{stats.accepted}
 								</p>
 							</div>
-							<CheckCircle className="w-8 h-8 text-green-400" />
+							<CheckCircle className="w-8 h-8 text-tone-success" />
 						</div>
 					</div>
 					<div className="rounded-md border bg-card p-4">
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Declined</p>
-								<p className="text-2xl font-bold text-ds-red-800">
+								<p className="text-2xl font-bold text-tone-danger">
 									{stats.declined}
 								</p>
 							</div>
-							<XCircle className="w-8 h-8 text-ds-red-800" />
+							<XCircle className="w-8 h-8 text-tone-danger" />
 						</div>
 					</div>
 				</div>

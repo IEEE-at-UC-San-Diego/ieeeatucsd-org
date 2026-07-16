@@ -4,6 +4,7 @@ import {
 	AlertCircle,
 	CheckCircle,
 	FileText,
+	Palette,
 	Save,
 	Shield,
 	Sparkles,
@@ -13,6 +14,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ResponsiveOverlay } from "@/components/mobile";
+import { AppearancePicker } from "@/components/theme";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -247,11 +249,29 @@ function SettingsPage() {
 						<Skeleton className="h-4 w-96" />
 					</div>
 
+					{/* Appearance */}
+					<div className="rounded-md border bg-card p-4 md:p-6">
+						<div className="flex items-center space-x-3 mb-4 md:mb-6">
+							<div className="w-8 h-8 bg-ds-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+								<Palette className="w-5 h-5 text-foreground" />
+							</div>
+							<div>
+								<h2 className="text-base md:text-lg font-semibold">
+									Appearance
+								</h2>
+								<p className="text-sm text-muted-foreground">
+									Choose how the dashboard looks on this device
+								</p>
+							</div>
+						</div>
+						<AppearancePicker />
+					</div>
+
 					{/* AI Features Settings */}
 					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
 							<div className="w-8 h-8 bg-ds-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<Sparkles className="w-5 h-5 text-ds-amber-900" />
+								<Sparkles className="w-5 h-5 text-tone-warning" />
 							</div>
 							<h2 className="text-base md:text-lg font-semibold">
 								AI Features
@@ -364,24 +384,42 @@ function SettingsPage() {
 				<div className="mx-auto max-w-4xl min-w-0 space-y-4 md:space-y-6">
 					{/* Status Messages */}
 					{error && (
-						<div className="flex items-center space-x-2 p-4 bg-ds-red-100 border border-ds-red-100 rounded-lg text-ds-red-800">
+						<div className="flex items-center space-x-2 p-4 bg-ds-red-100 border border-ds-red-100 rounded-lg text-tone-danger">
 							<AlertCircle className="w-5 h-5 flex-shrink-0" />
 							<span className="text-sm md:text-base">{error}</span>
 						</div>
 					)}
 
 					{success && (
-						<div className="flex items-center space-x-2 p-4 bg-ds-green-100 border border-ds-green-100 rounded-lg text-ds-green-700">
+						<div className="flex items-center space-x-2 p-4 bg-ds-green-100 border border-ds-green-100 rounded-lg text-tone-success">
 							<CheckCircle className="w-5 h-5 flex-shrink-0" />
 							<span className="text-sm md:text-base">{success}</span>
 						</div>
 					)}
 
+					{/* Appearance */}
+					<div className="rounded-md border bg-card p-4 md:p-6">
+						<div className="flex items-center space-x-3 mb-4 md:mb-6">
+							<div className="w-8 h-8 bg-ds-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+								<Palette className="w-5 h-5 text-foreground" />
+							</div>
+							<div>
+								<h2 className="text-base md:text-lg font-semibold">
+									Appearance
+								</h2>
+								<p className="text-sm text-muted-foreground">
+									Choose how the dashboard looks on this device
+								</p>
+							</div>
+						</div>
+						<AppearancePicker />
+					</div>
+
 					{/* AI Features Settings */}
 					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
 							<div className="w-8 h-8 bg-ds-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<Sparkles className="w-5 h-5 text-ds-amber-900" />
+								<Sparkles className="w-5 h-5 text-tone-warning" />
 							</div>
 							<h2 className="text-base md:text-lg font-semibold">
 								AI Features
@@ -422,7 +460,7 @@ function SettingsPage() {
 					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
 							<div className="w-8 h-8 bg-ds-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<UserCircle className="w-5 h-5 text-ds-blue-700" />
+								<UserCircle className="w-5 h-5 text-tone-info" />
 							</div>
 							<h2 className="text-base md:text-lg font-semibold">
 								Profile Settings
@@ -521,7 +559,7 @@ function SettingsPage() {
 					<div className="rounded-md border bg-card p-6">
 						<div className="flex items-center space-x-3 mb-6">
 							<div className="w-8 h-8 bg-ds-green-100 rounded-lg flex items-center justify-center">
-								<FileText className="w-5 h-5 text-ds-green-700" />
+								<FileText className="w-5 h-5 text-tone-success" />
 							</div>
 							<h2 className="text-lg font-semibold">Resume</h2>
 						</div>
@@ -572,7 +610,7 @@ function SettingsPage() {
 											<Button
 												variant="outline"
 												size="sm"
-												className="h-11 text-ds-red-800 hover:text-ds-red-800"
+												className="h-11 text-tone-danger hover:text-tone-danger"
 												disabled={removingResume}
 												onClick={() => setRemoveDialogOpen(true)}
 											>
@@ -587,7 +625,7 @@ function SettingsPage() {
 													<Button
 														variant="outline"
 														size="sm"
-														className="text-ds-red-800 hover:text-ds-red-800"
+														className="text-tone-danger hover:text-tone-danger"
 														disabled={removingResume}
 													>
 														Remove
@@ -607,7 +645,7 @@ function SettingsPage() {
 														</AlertDialogCancel>
 														<AlertDialogAction
 															disabled={removingResume}
-															className="bg-red-600 hover:bg-red-700"
+															className="bg-destructive text-on-accent hover:bg-ds-red-800"
 															onClick={async (e) => {
 																e.preventDefault();
 																const removed = await handleResumeRemove();
@@ -661,7 +699,7 @@ function SettingsPage() {
 												onChange={(e) =>
 													handleResumeFileChange(e.target.files?.[0] || null)
 												}
-												className="flex-1 text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-ds-blue-700 hover:file:bg-ds-blue-200"
+												className="flex-1 text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-tone-info hover:file:bg-ds-blue-200"
 											/>
 											<Button
 												onClick={handleResumeUpload}
@@ -716,7 +754,7 @@ function SettingsPage() {
 												onChange={(e) =>
 													handleResumeFileChange(e.target.files?.[0] || null)
 												}
-												className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-ds-blue-700 hover:file:bg-ds-blue-200"
+												className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-ds-blue-100 file:text-tone-info hover:file:bg-ds-blue-200"
 											/>
 											<Button
 												onClick={handleResumeUpload}
@@ -800,7 +838,7 @@ function SettingsPage() {
 					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
 							<div className="w-8 h-8 bg-ds-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<Shield className="w-5 h-5 text-ds-purple-700" />
+								<Shield className="w-5 h-5 text-tone-purple" />
 							</div>
 							<h2 className="text-base md:text-lg font-semibold">
 								Account Information
@@ -840,11 +878,11 @@ function SettingsPage() {
 					{/* Security Note for OAuth users */}
 					{isOAuthUser() && (
 						<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-lg p-6">
-							<div className="flex items-center space-x-2 text-ds-blue-700">
+							<div className="flex items-center space-x-2 text-tone-info">
 								<Shield className="w-5 h-5" />
 								<span className="font-medium">OAuth Account</span>
 							</div>
-							<p className="text-ds-blue-700 mt-2 text-sm">
+							<p className="text-tone-info mt-2 text-sm">
 								You signed in with OAuth. To change your password, please visit
 								your account settings in your OAuth provider.
 							</p>

@@ -114,7 +114,7 @@ export function LogisticsSection({
 			<div className="grid gap-6">
 				<div className="space-y-2">
 					<Label htmlFor="location">
-						Location <span className="text-ds-red-800">*</span>
+						Location <span className="text-tone-danger">*</span>
 					</Label>
 					<Input
 						id="location"
@@ -127,7 +127,7 @@ export function LogisticsSection({
 
 				<div className="space-y-2">
 					<Label htmlFor="eventDate">
-						Event Date <span className="text-ds-red-800">*</span>
+						Event Date <span className="text-tone-danger">*</span>
 					</Label>
 					<Input
 						id="eventDate"
@@ -136,7 +136,7 @@ export function LogisticsSection({
 						onBlur={handleDateBlur}
 						placeholder="mm/dd/yy"
 					/>
-					{dateError && <p className="text-xs text-ds-red-800">{dateError}</p>}
+					{dateError && <p className="text-xs text-tone-danger">{dateError}</p>}
 					<p className="text-xs text-muted-foreground">
 						Type in mm/dd/yy format (e.g., 02/14/26)
 					</p>
@@ -145,7 +145,7 @@ export function LogisticsSection({
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div className="space-y-2">
 						<Label htmlFor="startTime">
-							Start Time <span className="text-ds-red-800">*</span>
+							Start Time <span className="text-tone-danger">*</span>
 						</Label>
 						<Input
 							id="startTime"
@@ -155,13 +155,13 @@ export function LogisticsSection({
 							placeholder="e.g., 9am, 9:00 AM, 14:00"
 						/>
 						{startTimeError && (
-							<p className="text-xs text-ds-red-800">{startTimeError}</p>
+							<p className="text-xs text-tone-danger">{startTimeError}</p>
 						)}
 					</div>
 
 					<div className="space-y-2">
 						<Label htmlFor="endTime">
-							End Time <span className="text-ds-red-800">*</span>
+							End Time <span className="text-tone-danger">*</span>
 						</Label>
 						<Input
 							id="endTime"
@@ -171,17 +171,17 @@ export function LogisticsSection({
 							placeholder="e.g., 2pm, 2:00 PM, 17:00"
 						/>
 						{endTimeError && (
-							<p className="text-xs text-ds-red-800">{endTimeError}</p>
+							<p className="text-xs text-tone-danger">{endTimeError}</p>
 						)}
 					</div>
 				</div>
 				{timeRangeError && (
-					<p className="text-xs text-ds-red-800">{timeRangeError}</p>
+					<p className="text-xs text-tone-danger">{timeRangeError}</p>
 				)}
 
 				<div className="space-y-2">
 					<Label htmlFor="eventCode">
-						Event Code <span className="text-ds-red-800">*</span>
+						Event Code <span className="text-tone-danger">*</span>
 					</Label>
 					<Input
 						id="eventCode"
@@ -265,7 +265,7 @@ export function LogisticsSection({
 					<div className="space-y-3 pt-2">
 						<Label className="text-sm font-medium">
 							Will you be serving food or drinks at this event?{" "}
-							<span className="text-ds-red-800">*</span>
+							<span className="text-tone-danger">*</span>
 						</Label>
 						<RadioGroup
 							value={data.foodDrinksBeingServed ? "yes" : "no"}
@@ -291,8 +291,8 @@ export function LogisticsSection({
 						{data.foodDrinksBeingServed && (
 							<div className="bg-ds-amber-100 border border-ds-amber-100 rounded-lg p-3">
 								<div className="flex items-start gap-2">
-									<AlertTriangle className="h-4 w-4 text-ds-amber-900 mt-0.5 shrink-0" />
-									<p className="text-xs text-ds-amber-900">
+									<AlertTriangle className="h-4 w-4 text-tone-warning mt-0.5 shrink-0" />
+									<p className="text-xs text-tone-warning">
 										<strong>Important:</strong> If serving food/drinks, you may
 										need AS funding and must follow university guidelines. All
 										food must be from approved AS vendors. Home-cooked food is

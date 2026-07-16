@@ -120,7 +120,7 @@ const ConstitutionBuilderContent = () => {
 					<div className="lg:hidden space-y-3 mb-4">
 						<div className="flex items-start justify-between gap-3">
 							<h1 className="text-xl font-bold text-foreground flex items-center gap-2 min-w-0">
-								<FileText className="h-6 w-6 text-ds-blue-700 shrink-0" />
+								<FileText className="h-6 w-6 text-tone-info shrink-0" />
 								<span className="truncate">Constitution Builder</span>
 							</h1>
 							<div className="flex shrink-0 items-center gap-2">
@@ -151,8 +151,8 @@ const ConstitutionBuilderContent = () => {
 							<div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
 								{saveStatus === "saved" && (
 									<>
-										<Check className="h-3.5 w-3.5 text-ds-green-700" />
-										<span className="text-ds-green-700">Saved</span>
+										<Check className="h-3.5 w-3.5 text-tone-success" />
+										<span className="text-tone-success">Saved</span>
 									</>
 								)}
 								{saveStatus === "idle" && (
@@ -169,13 +169,13 @@ const ConstitutionBuilderContent = () => {
 								)}
 								{saveStatus === "error" && (
 									<>
-										<AlertCircle className="h-3.5 w-3.5 text-ds-red-800" />
-										<span className="text-ds-red-800">Save failed</span>
+										<AlertCircle className="h-3.5 w-3.5 text-tone-danger" />
+										<span className="text-tone-danger">Save failed</span>
 										<Button
 											type="button"
 											variant="ghost"
 											size="sm"
-											className="h-7 gap-1 px-2 text-xs text-ds-red-800 hover:text-ds-red-900"
+											className="h-7 gap-1 px-2 text-xs text-tone-danger hover:text-tone-danger"
 											onClick={handleRetrySave}
 										>
 											<RefreshCw className="h-3 w-3" />
@@ -228,7 +228,7 @@ const ConstitutionBuilderContent = () => {
 					<div className="hidden lg:flex items-center justify-between">
 						<div className="flex-1 mr-8">
 							<h1 className="text-2xl xl:text-3xl font-bold text-foreground flex items-center gap-3">
-								<FileText className="h-7 w-7 xl:h-8 xl:w-8 text-ds-blue-700" />
+								<FileText className="h-7 w-7 xl:h-8 xl:w-8 text-tone-info" />
 								Constitution Builder
 							</h1>
 							<p className="text-muted-foreground mt-2 mb-4">
@@ -248,8 +248,8 @@ const ConstitutionBuilderContent = () => {
 							<div className="flex items-center gap-2 text-sm">
 								{saveStatus === "saved" && (
 									<>
-										<Check className="h-4 w-4 text-ds-green-700" />
-										<span className="text-ds-green-700">Changes saved</span>
+										<Check className="h-4 w-4 text-tone-success" />
+										<span className="text-tone-success">Changes saved</span>
 									</>
 								)}
 								{saveStatus === "idle" && (
@@ -266,13 +266,13 @@ const ConstitutionBuilderContent = () => {
 								)}
 								{saveStatus === "error" && (
 									<>
-										<AlertCircle className="h-4 w-4 text-ds-red-800" />
-										<span className="text-ds-red-800">Save failed</span>
+										<AlertCircle className="h-4 w-4 text-tone-danger" />
+										<span className="text-tone-danger">Save failed</span>
 										<Button
 											type="button"
 											variant="ghost"
 											size="sm"
-											className="h-8 gap-1.5 px-2 text-ds-red-800 hover:text-ds-red-900"
+											className="h-8 gap-1.5 px-2 text-tone-danger hover:text-tone-danger"
 											onClick={handleRetrySave}
 										>
 											<RefreshCw className="h-3.5 w-3.5" />

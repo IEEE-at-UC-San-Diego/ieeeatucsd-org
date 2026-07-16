@@ -330,7 +330,7 @@ function ManageUsersPage() {
 		return (
 			<DashboardPage width="wide">
 				<div className="bg-background rounded-md border p-8 text-center">
-					<div className="text-ds-red-800 mb-4">
+					<div className="text-tone-danger mb-4">
 						<svg
 							className="w-12 h-12 mx-auto"
 							fill="none"

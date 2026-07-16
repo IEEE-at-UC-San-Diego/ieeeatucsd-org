@@ -105,7 +105,7 @@ export function FileManagerModal({
 					<Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
 					<p className="text-sm text-muted-foreground mb-2">
 						Drag and drop files here, or{" "}
-						<label className="text-ds-blue-700 hover:text-ds-blue-700 cursor-pointer font-medium">
+						<label className="text-tone-info hover:text-tone-info cursor-pointer font-medium">
 							browse
 							<Input
 								type="file"
@@ -146,7 +146,7 @@ export function FileManagerModal({
 							{Array.from(selectedFiles).map((file, idx) => (
 								<div
 									key={idx}
-									className="text-xs text-ds-blue-700 flex items-center gap-2"
+									className="text-xs text-tone-info flex items-center gap-2"
 								>
 									<File className="h-3 w-3" />
 									{file.name} ({formatFileSize(file.size)})
@@ -231,7 +231,7 @@ export function FileManagerModal({
 										<Button
 											variant="ghost"
 											size="sm"
-											className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+											className="h-8 w-8 p-0 text-muted-foreground hover:text-tone-danger"
 											onClick={() => onDelete(file._id)}
 										>
 											<Trash2 className="h-4 w-4" />

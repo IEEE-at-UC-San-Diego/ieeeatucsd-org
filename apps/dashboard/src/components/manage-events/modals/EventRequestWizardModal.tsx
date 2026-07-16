@@ -473,7 +473,7 @@ export function EventRequestWizardModal({
 										aria-current={step.id === currentStep ? "step" : undefined}
 									>
 										<span
-											className={`block text-xs font-medium ${step.id === currentStep ? "text-foreground" : step.id < currentStep ? "text-ds-green-700" : "text-muted-foreground"}`}
+											className={`block text-xs font-medium ${step.id === currentStep ? "text-foreground" : step.id < currentStep ? "text-tone-success" : "text-muted-foreground"}`}
 										>
 											{step.title}
 										</span>
@@ -485,7 +485,7 @@ export function EventRequestWizardModal({
 
 					{submissionSucceeded ? (
 						<div className="flex min-h-80 flex-col items-center justify-center text-center success-reveal">
-							<CheckCircle className="size-10 text-ds-green-700" />
+							<CheckCircle className="size-10 text-tone-success" />
 							<h2 className="mt-3 text-lg font-semibold">Request saved</h2>
 							<p className="mt-1 text-sm text-muted-foreground">
 								Your event request was submitted successfully.

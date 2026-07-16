@@ -33,25 +33,25 @@ export function EventStatsCards({
 			title: "Total Events",
 			value: stats.totalEvents,
 			icon: CalendarDays,
-			gradient: "from-ds-blue-1000 to-ds-blue-800",
+			gradient: "from-ds-blue-800 to-ds-blue-700",
 			bgGradient: "from-ds-blue-100 to-ds-blue-200",
-			textColor: "text-ds-blue-700",
+			textColor: "text-tone-info",
 		},
 		{
 			title: "Published Events",
 			value: stats.publishedEvents,
 			icon: CheckCircle2,
-			gradient: "from-ds-pink-1000 to-ds-pink-800",
+			gradient: "from-ds-pink-800 to-ds-pink-700",
 			bgGradient: "from-ds-pink-100 to-ds-pink-200",
-			textColor: "text-ds-pink-700",
+			textColor: "text-tone-pink",
 		},
 		{
 			title: "Total Attendees",
 			value: stats.totalAttendees,
 			icon: Users,
-			gradient: "from-ds-purple-1000 to-ds-purple-800",
+			gradient: "from-ds-purple-800 to-ds-purple-700",
 			bgGradient: "from-ds-purple-100 to-ds-purple-200",
-			textColor: "text-ds-purple-700",
+			textColor: "text-tone-purple",
 		},
 	];
 
@@ -66,7 +66,7 @@ export function EventStatsCards({
 					>
 						<div className="relative z-10 flex items-center gap-4">
 							<div
-								className={`p-3 rounded-md bg-gradient-to-br ${stat.gradient} text-white shadow-lg`}
+								className={`p-3 rounded-md bg-gradient-to-br ${stat.gradient} text-on-accent shadow-lg`}
 							>
 								<IconComponent className="h-6 w-6" />
 							</div>

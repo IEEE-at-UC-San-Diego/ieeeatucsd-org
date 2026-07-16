@@ -193,6 +193,190 @@
   --ds-pink-800: #e4106e;
   --ds-pink-900: #c41562;
   --ds-pink-1000: #460523;
+
+  /* Text/icons sitting on solid accent fills */
+  --on-accent: #ffffff;
+
+  /*
+   * Soft accent foregrounds — badges, icons, tinted labels.
+   * Light: mid-scale (readable on pale tints).
+   * Dark: *-1000 pastels (avoid neon 700/900 glare on black).
+   */
+  --tone-info: var(--ds-blue-700);
+  --tone-success: var(--ds-green-700);
+  --tone-warning: var(--ds-amber-900);
+  --tone-danger: var(--ds-red-800);
+  --tone-purple: var(--ds-purple-700);
+  --tone-pink: var(--ds-pink-700);
+  --tone-teal: var(--ds-teal-700);
+  /* Links / focus-adjacent accents */
+  --tone-link: var(--ds-blue-700);
+}
+
+/* Geist primitives — Dark (vercel.com/design.dark.md)
+   Same token names; step intent is preserved so ds-* utility classes flip automatically. */
+.dark {
+  color-scheme: dark;
+
+  --ds-background-100: #000000;
+  --ds-background-200: #000000;
+  --ds-gray-100: #1a1a1a;
+  --ds-gray-200: #1f1f1f;
+  --ds-gray-300: #292929;
+  --ds-gray-400: #2e2e2e;
+  --ds-gray-500: #454545;
+  --ds-gray-600: #878787;
+  --ds-gray-700: #8f8f8f;
+  --ds-gray-800: #7d7d7d;
+  --ds-gray-900: #a0a0a0;
+  --ds-gray-1000: #ededed;
+  --ds-gray-alpha-100: #ffffff12;
+  --ds-gray-alpha-200: #ffffff17;
+  --ds-gray-alpha-300: #ffffff21;
+  --ds-gray-alpha-400: #ffffff24;
+  --ds-gray-alpha-500: #ffffff3d;
+  --ds-gray-alpha-600: #ffffff82;
+  --ds-gray-alpha-700: #ffffff8a;
+  --ds-gray-alpha-800: #ffffff78;
+  --ds-gray-alpha-900: #ffffff9c;
+  --ds-gray-alpha-1000: #ffffffeb;
+  --ds-blue-100: #06193a;
+  --ds-blue-200: #022248;
+  --ds-blue-300: #002f62;
+  --ds-blue-400: #003674;
+  --ds-blue-500: #00418b;
+  --ds-blue-600: #0090ff;
+  --ds-blue-700: #006efe;
+  --ds-blue-800: #005be7;
+  --ds-blue-900: #47a8ff;
+  --ds-blue-1000: #eaf6ff;
+  --ds-red-100: #330a11;
+  --ds-red-200: #440d13;
+  --ds-red-300: #5d0e17;
+  --ds-red-400: #6f101b;
+  --ds-red-500: #88151f;
+  --ds-red-600: #f32e40;
+  --ds-red-700: #f13242;
+  --ds-red-800: #e2162a;
+  --ds-red-900: #ff565f;
+  --ds-red-1000: #ffe9ed;
+  --ds-amber-100: #2a1700;
+  --ds-amber-200: #361900;
+  --ds-amber-300: #502800;
+  --ds-amber-400: #5b3000;
+  --ds-amber-500: #703e00;
+  --ds-amber-600: #ed9a00;
+  --ds-amber-700: #ffae00;
+  --ds-amber-800: #ff9300;
+  --ds-amber-900: #ff9300;
+  --ds-amber-1000: #fff3d5;
+  --ds-green-100: #002608;
+  --ds-green-200: #00320b;
+  --ds-green-300: #003a0e;
+  --ds-green-400: #004615;
+  --ds-green-500: #006717;
+  --ds-green-600: #00952d;
+  --ds-green-700: #00ac3a;
+  --ds-green-800: #009432;
+  --ds-green-900: #00ca50;
+  --ds-green-1000: #d8ffe4;
+  --ds-teal-100: #00231b;
+  --ds-teal-200: #002b22;
+  --ds-teal-300: #003d34;
+  --ds-teal-400: #004035;
+  --ds-teal-500: #006354;
+  --ds-teal-600: #009e86;
+  --ds-teal-700: #00aa95;
+  --ds-teal-800: #00927f;
+  --ds-teal-900: #00cfb7;
+  --ds-teal-1000: #cbfff5;
+  --ds-purple-100: #290c33;
+  --ds-purple-200: #341142;
+  --ds-purple-300: #47185e;
+  --ds-purple-400: #541a76;
+  --ds-purple-500: #642290;
+  --ds-purple-600: #9440d5;
+  --ds-purple-700: #9440d5;
+  --ds-purple-800: #7d2bba;
+  --ds-purple-900: #c472fb;
+  --ds-purple-1000: #fbecff;
+  --ds-pink-100: #310d1e;
+  --ds-pink-200: #420c25;
+  --ds-pink-300: #571032;
+  --ds-pink-400: #5d0c34;
+  --ds-pink-500: #76063f;
+  --ds-pink-600: #ba0056;
+  --ds-pink-700: #f12b82;
+  --ds-pink-800: #e7006d;
+  --ds-pink-900: #ff4d8d;
+  --ds-pink-1000: #ffe9f4;
+
+  /* Semantic remaps — same names, dark values via updated primitives */
+  --background: var(--ds-background-100);
+  --foreground: var(--ds-gray-1000);
+  --card: var(--ds-background-100);
+  --card-foreground: var(--ds-gray-1000);
+  --popover: var(--ds-gray-100);
+  --popover-foreground: var(--ds-gray-1000);
+  --primary: var(--ds-gray-1000);
+  --primary-foreground: var(--ds-background-100);
+  --secondary: var(--ds-gray-100);
+  --secondary-foreground: var(--ds-gray-1000);
+  --muted: var(--ds-gray-100);
+  --muted-foreground: var(--ds-gray-900);
+  --accent: var(--ds-gray-200);
+  --accent-foreground: var(--ds-gray-1000);
+  --destructive: var(--ds-red-800);
+  --destructive-foreground: #ffffff;
+  --border: var(--ds-gray-alpha-400);
+  --input: var(--ds-gray-alpha-400);
+  --ring: var(--ds-blue-900);
+  --focus-ring-gap: var(--ds-background-100);
+  --chart-1: var(--ds-blue-700);
+  --chart-2: var(--ds-teal-700);
+  --chart-3: var(--ds-amber-700);
+  --chart-4: var(--ds-purple-700);
+  --chart-5: var(--ds-pink-700);
+
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.16);
+  --shadow-popover:
+    0 1px 1px rgba(0, 0, 0, 0.02), 0 4px 8px -4px rgba(0, 0, 0, 0.04),
+    0 16px 24px -8px rgba(0, 0, 0, 0.06);
+  --shadow-modal:
+    0 1px 1px rgba(0, 0, 0, 0.02), 0 8px 16px -4px rgba(0, 0, 0, 0.04),
+    0 24px 32px -8px rgba(0, 0, 0, 0.06);
+
+  --sidebar: var(--ds-background-100);
+  --sidebar-foreground: var(--ds-gray-1000);
+  --sidebar-primary: var(--ds-gray-1000);
+  --sidebar-primary-foreground: var(--ds-background-100);
+  --sidebar-accent: var(--ds-gray-200);
+  --sidebar-accent-foreground: var(--ds-gray-1000);
+  --sidebar-border: var(--ds-gray-alpha-400);
+  --sidebar-ring: var(--ds-blue-900);
+
+  --ieee-blue: #006efe;
+  --ieee-blue-light: #47a8ff;
+  --ieee-gold: #ffae00;
+  --ieee-success: #00ac3a;
+  --ieee-warning: #ffae00;
+  --ieee-error: #e2162a;
+  --ieee-info: #006efe;
+  --ieee-base-100: var(--ds-background-100);
+  --ieee-base-200: var(--ds-gray-100);
+
+  --on-accent: #ffffff;
+
+  /* Soft accents: pastel labels, not neon mid-tones */
+  --tone-info: var(--ds-blue-1000);
+  --tone-success: var(--ds-green-1000);
+  --tone-warning: var(--ds-amber-1000);
+  --tone-danger: var(--ds-red-1000);
+  --tone-purple: var(--ds-purple-1000);
+  --tone-pink: var(--ds-pink-1000);
+  --tone-teal: var(--ds-teal-1000);
+  /* Geist secondary blue for links — intentional, used sparingly */
+  --tone-link: var(--ds-blue-900);
 }
 
 
@@ -246,6 +430,15 @@
   --color-ieee-info: var(--ieee-info);
   --color-ieee-base-100: var(--ieee-base-100);
   --color-ieee-base-200: var(--ieee-base-200);
+  --color-on-accent: var(--on-accent);
+  --color-tone-info: var(--tone-info);
+  --color-tone-success: var(--tone-success);
+  --color-tone-warning: var(--tone-warning);
+  --color-tone-danger: var(--tone-danger);
+  --color-tone-purple: var(--tone-purple);
+  --color-tone-pink: var(--tone-pink);
+  --color-tone-teal: var(--tone-teal);
+  --color-tone-link: var(--tone-link);
 
   --color-ds-background-100: var(--ds-background-100);
   --color-ds-background-200: var(--ds-background-200);

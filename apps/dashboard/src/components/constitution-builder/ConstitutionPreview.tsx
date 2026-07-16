@@ -117,7 +117,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 					textAlign: "center",
 					lineHeight: "1.1",
 					fontWeight: "bold",
-					color: "#000",
+					color: "var(--foreground)",
 					marginBottom: "24px",
 				}}
 			>
@@ -132,7 +132,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 					textAlign: "center",
 					lineHeight: "1.3",
 					fontWeight: "600",
-					color: "#000",
+					color: "var(--foreground)",
 					marginBottom: "24px",
 				}}
 			>
@@ -149,7 +149,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 						textAlign: "center",
 						textIndent: "0",
 						marginBottom: "12px",
-						color: "#000",
+						color: "var(--foreground)",
 					}}
 				>
 					Last Updated:{" "}
@@ -167,7 +167,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 						fontSize: "11pt",
 						textAlign: "center",
 						textIndent: "0",
-						color: "#888",
+						color: "var(--muted-foreground)",
 						marginTop: "8px",
 					}}
 				>
@@ -258,7 +258,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 								<Button
 									variant="link"
 									onClick={() => setCurrentPage(pageNum)}
-									className="text-left text-foreground hover:text-ds-blue-700 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
+									className="text-left text-foreground hover:text-tone-info hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
 									style={{ fontSize: "inherit", fontFamily: "inherit" }}
 								>
 									{getDisplayTitle(section)}
@@ -268,7 +268,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 								<Button
 									variant="link"
 									onClick={() => setCurrentPage(pageNum)}
-									className="text-foreground hover:text-ds-blue-700 hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
+									className="text-foreground hover:text-tone-info hover:underline transition-colors cursor-pointer bg-transparent border-none p-0 font-inherit"
 									style={{ fontSize: "inherit", fontFamily: "inherit" }}
 								>
 									{pageNum}
@@ -297,7 +297,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 				>
 					<div
 						style={{
-							color: "#666",
+							color: "var(--muted-foreground)",
 							fontFamily: "Arial, sans-serif",
 							fontSize: "12pt",
 						}}
@@ -349,13 +349,13 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
               max-height: 11in;
               padding: 1in;
               margin: 0 auto 20px auto;
-              background: white;
+              background: var(--card);
               box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
               position: relative;
               font-family: Arial, sans-serif;
               font-size: 11pt;
               line-height: 1.5;
-              color: #444;
+              color: var(--foreground);
               box-sizing: border-box;
               overflow: hidden;
             }
@@ -441,11 +441,11 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
             }
 
             .image-placeholder {
-              border: 2px dashed #ccc;
+              border: 2px dashed var(--border);
               padding: 24px;
               text-align: center;
               margin: 16px 0;
-              background: #f9f9f9;
+              background: var(--muted);
               page-break-inside: avoid;
               font-family: Arial, sans-serif;
             }
@@ -454,8 +454,8 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
               position: absolute;
               top: 10px;
               right: 20px;
-              background: #3b82f6;
-              color: white;
+              background: var(--ds-blue-700);
+              color: var(--on-accent);
               padding: 4px 8px;
               border-radius: 4px;
               font-size: 10pt;
@@ -504,6 +504,8 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
                 min-height: 11in !important;
                 padding: 1in !important;
                 box-sizing: border-box !important;
+                background: white !important;
+                color: #444 !important;
               }
               .constitution-page:last-child { page-break-after: avoid; }
 
@@ -527,8 +529,8 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 
             @keyframes section-highlight-fade {
               0% {
-                background-color: #fef08a;
-                border-color: #f59e0b;
+                background-color: var(--ds-amber-100);
+                border-color: var(--ds-amber-700);
               }
               100% {
                 background-color: transparent;
@@ -546,7 +548,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 						onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
 						disabled={currentPage === 1}
 						variant="default"
-						className="bg-ds-blue-700 hover:bg-ds-blue-800"
+						className="bg-ds-blue-700 hover:bg-ds-blue-800 text-on-accent"
 					>
 						<ChevronLeft className="h-4 w-4 mr-1" />
 						Previous
@@ -562,7 +564,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 						}
 						disabled={currentPage === totalPages}
 						variant="default"
-						className="bg-ds-blue-700 hover:bg-ds-blue-800"
+						className="bg-ds-blue-700 hover:bg-ds-blue-800 text-on-accent"
 					>
 						Next
 						<ChevronRight className="h-4 w-4 ml-1" />
@@ -641,7 +643,7 @@ const ConstitutionPreview: React.FC<ConstitutionPreviewProps> = ({
 									onClick={() => setCurrentPage(pageNum as number)}
 									className={`w-8 h-8 rounded text-sm font-medium transition-colors ${
 										pageNum === currentPage
-											? "bg-ds-blue-700 text-white"
+											? "bg-ds-blue-700 text-on-accent"
 											: "bg-muted text-foreground hover:bg-ds-gray-300"
 									}`}
 								>

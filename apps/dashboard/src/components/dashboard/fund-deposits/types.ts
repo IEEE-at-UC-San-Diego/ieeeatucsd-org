@@ -56,9 +56,9 @@ export interface FundDeposit {
 }
 
 export const STATUS_COLORS: Record<FundDepositStatus, string> = {
-	pending: "bg-ds-amber-100 text-ds-amber-900 border-ds-amber-100",
-	verified: "bg-ds-blue-100 text-ds-blue-700 border-ds-blue-100",
-	rejected: "bg-ds-red-100 text-ds-red-800 border-ds-red-100",
+	pending: "bg-ds-amber-100 text-tone-warning border-ds-amber-100",
+	verified: "bg-ds-blue-100 text-tone-info border-ds-blue-100",
+	rejected: "bg-ds-red-100 text-tone-danger border-ds-red-100",
 };
 
 export const STATUS_LABELS: Record<FundDepositStatus, string> = {

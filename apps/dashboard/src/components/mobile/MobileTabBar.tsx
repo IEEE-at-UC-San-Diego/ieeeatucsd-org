@@ -49,12 +49,12 @@ export function MobileTabBar({ items, className, hidden }: MobileTabBarProps) {
 								<Icon
 									className={cn(
 										"size-[22px] transition-colors",
-										active ? "text-ieee-blue" : "text-muted-foreground",
+										active ? "text-tone-link" : "text-muted-foreground",
 									)}
 									strokeWidth={active ? 2.25 : 1.75}
 								/>
 								{item.badge ? (
-									<span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ieee-blue px-1 text-[10px] font-semibold text-white">
+									<span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ieee-blue px-1 text-[10px] font-semibold text-on-accent">
 										{typeof item.badge === "number" && item.badge > 0
 											? item.badge > 9
 												? "9+"
@@ -66,7 +66,7 @@ export function MobileTabBar({ items, className, hidden }: MobileTabBarProps) {
 							<span
 								className={cn(
 									"text-[10px] font-medium leading-none tracking-wide",
-									active ? "text-ieee-blue" : "text-muted-foreground",
+									active ? "text-tone-link" : "text-muted-foreground",
 								)}
 							>
 								{item.label}

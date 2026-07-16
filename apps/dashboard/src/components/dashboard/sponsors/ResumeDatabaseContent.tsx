@@ -475,7 +475,7 @@ export default function ResumeDatabaseContent() {
 				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 					<Card className="bg-background border-border shadow-sm">
 						<CardContent className="p-5 flex items-center gap-3">
-							<div className="rounded-md p-2.5 bg-ds-blue-100 text-ds-blue-700">
+							<div className="rounded-md p-2.5 bg-ds-blue-100 text-tone-info">
 								<FileText className="h-5 w-5" />
 							</div>
 							<div>
@@ -488,7 +488,7 @@ export default function ResumeDatabaseContent() {
 					</Card>
 					<Card className="bg-background border-border shadow-sm">
 						<CardContent className="p-5 flex items-center gap-3">
-							<div className="rounded-md p-2.5 bg-ds-green-100 text-ds-green-700">
+							<div className="rounded-md p-2.5 bg-ds-green-100 text-tone-success">
 								<Filter className="h-5 w-5" />
 							</div>
 							<div>
@@ -503,7 +503,7 @@ export default function ResumeDatabaseContent() {
 					</Card>
 					<Card className="bg-background border-border shadow-sm">
 						<CardContent className="p-5 flex items-center gap-3">
-							<div className="rounded-md p-2.5 bg-ds-purple-100 text-ds-purple-700">
+							<div className="rounded-md p-2.5 bg-ds-purple-100 text-tone-purple">
 								<Briefcase className="h-5 w-5" />
 							</div>
 							<div>
@@ -516,7 +516,7 @@ export default function ResumeDatabaseContent() {
 					</Card>
 					<Card className="bg-background border-border shadow-sm">
 						<CardContent className="p-5 flex items-center gap-3">
-							<div className="rounded-md p-2.5 bg-ds-amber-100 text-ds-amber-900">
+							<div className="rounded-md p-2.5 bg-ds-amber-100 text-tone-warning">
 								<GraduationCap className="h-5 w-5" />
 							</div>
 							<div>
@@ -789,7 +789,7 @@ export default function ResumeDatabaseContent() {
 									}
 								>
 									<CardContent className="flex flex-col gap-3 p-0 sm:flex-row sm:items-center sm:justify-between md:p-4">
-										<p className="text-sm text-ds-blue-700">
+										<p className="text-sm text-tone-info">
 											<strong>{selectedUsers.size}</strong> user
 											{selectedUsers.size !== 1 ? "s" : ""} selected
 										</p>

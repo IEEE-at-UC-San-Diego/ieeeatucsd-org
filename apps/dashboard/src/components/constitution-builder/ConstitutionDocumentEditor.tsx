@@ -809,15 +809,15 @@ const ConstitutionDocumentEditor = forwardRef<
 				<span
 					className={`text-xs font-medium px-2 py-1 rounded ${
 						saveMessage.includes("Failed")
-							? "text-ds-red-800 bg-ds-red-100"
-							: "text-ds-green-700 bg-ds-green-100"
+							? "text-tone-danger bg-ds-red-100"
+							: "text-tone-success bg-ds-green-100"
 					}`}
 				>
 					{saveMessage}
 				</span>
 			)}
 			{hasUnsavedChanges && (
-				<span className="text-xs text-ds-amber-900 font-medium bg-ds-amber-100 px-2 py-1 rounded border border-ds-amber-100">
+				<span className="text-xs text-tone-warning font-medium bg-ds-amber-100 px-2 py-1 rounded border border-ds-amber-100">
 					Unsaved
 				</span>
 			)}
@@ -850,7 +850,7 @@ const ConstitutionDocumentEditor = forwardRef<
 				className={cn(
 					"h-11 min-w-11 text-xs md:h-9",
 					hasUnsavedChanges &&
-						"bg-ds-green-700 hover:bg-ds-green-800 text-white",
+						"bg-ds-green-700 hover:bg-ds-green-800 text-on-accent",
 				)}
 			>
 				<Save className="h-3.5 w-3.5 mr-1" />
@@ -1007,7 +1007,7 @@ const ConstitutionDocumentEditor = forwardRef<
 						className="h-11 text-base md:h-9 md:text-sm"
 					/>
 					{hasUnsavedChanges && (
-						<p className="text-xs text-ds-amber-900">
+						<p className="text-xs text-tone-warning">
 							Unsaved changes will be saved first before creating this version.
 						</p>
 					)}
@@ -1054,7 +1054,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 			"motion-safe:transition-colors motion-safe:duration-150",
 			"active:scale-[0.97]",
 			isActive
-				? "border border-ds-blue-100 bg-ds-blue-100 text-ds-blue-700"
+				? "border border-ds-blue-100 bg-ds-blue-100 text-tone-info"
 				: "text-muted-foreground hover:bg-ds-gray-300 hover:text-foreground",
 			disabled && "cursor-not-allowed opacity-40",
 		)}

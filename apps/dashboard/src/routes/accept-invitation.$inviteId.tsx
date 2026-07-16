@@ -207,7 +207,7 @@ function AcceptInvitationPage() {
 		return (
 			<StatusShell
 				className="success-reveal"
-				icon={<CheckCircle className="h-12 w-12 text-ds-green-700" />}
+				icon={<CheckCircle className="h-12 w-12 text-tone-success" />}
 				title="Welcome to the Team!"
 				description="You've successfully accepted the position."
 				invitation={invitation}
@@ -325,18 +325,18 @@ function AcceptInvitationPage() {
 								<p className="mb-2 text-sm font-medium text-ds-blue-1000">
 									Message from Leadership
 								</p>
-								<p className="text-sm leading-relaxed text-ds-blue-700">
+								<p className="text-sm leading-relaxed text-tone-info">
 									{invitation.message}
 								</p>
 							</div>
 						)}
 
-						<div className="rounded-lg border border-ds-amber-100 bg-ds-amber-100 p-5 text-sm text-ds-amber-900">
-							<p className="font-semibold">Important</p>
-							<p className="mt-1 leading-relaxed">
+						<div className="rounded-lg border border-ds-amber-100 bg-ds-amber-100 p-5 text-sm">
+							<p className="font-semibold text-tone-warning">Important</p>
+							<p className="mt-1 leading-relaxed text-muted-foreground">
 								By accepting this position, you agree to fulfill the
 								responsibilities of{" "}
-								<strong>
+								<strong className="text-foreground">
 									{hasMultiplePositions
 										? selectedPosition || "the selected position"
 										: invitation?.position}

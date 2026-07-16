@@ -24,7 +24,7 @@ export function DisclaimerSection() {
 						key={item}
 						className="flex items-start gap-2 rounded-md border bg-muted/20 p-3 text-sm leading-5"
 					>
-						<CheckCircle2 className="mt-0.5 size-4 shrink-0 text-ds-green-700" />
+						<CheckCircle2 className="mt-0.5 size-4 shrink-0 text-tone-success" />
 						<span>{item}</span>
 					</li>
 				))}
@@ -35,12 +35,12 @@ export function DisclaimerSection() {
 				aria-labelledby="deadline-heading"
 			>
 				<div className="flex items-start gap-3 border-b bg-ds-amber-100/60 px-4 py-3">
-					<Clock3 className="mt-0.5 size-4 shrink-0 text-ds-amber-900" />
+					<Clock3 className="mt-0.5 size-4 shrink-0 text-tone-warning" />
 					<div>
-						<h3 id="deadline-heading" className="font-medium text-ds-amber-900">
+						<h3 id="deadline-heading" className="font-medium text-tone-warning">
 							Submission deadlines
 						</h3>
-						<p className="text-xs leading-5 text-ds-amber-900/80">
+						<p className="text-xs leading-5 text-muted-foreground">
 							Use the longest deadline that applies and confirm current dates in
 							Slack.
 						</p>
@@ -138,7 +138,7 @@ export function DisclaimerSection() {
 				</details>
 				<details className="group rounded-md border bg-background">
 					<summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 py-3 font-medium marker:hidden">
-						<AlertTriangle className="size-4 text-ds-red-800" />
+						<AlertTriangle className="size-4 text-tone-danger" />
 						Safety, changes, and post-event requirements
 					</summary>
 					<div className="border-t px-4 py-3 text-sm leading-6 text-muted-foreground">

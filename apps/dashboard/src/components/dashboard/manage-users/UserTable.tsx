@@ -43,12 +43,12 @@ interface UserTableProps {
 
 const roleColors: Record<UserRole, string> = {
 	Member: "bg-muted text-foreground",
-	"General Officer": "bg-ds-blue-100 text-ds-blue-700",
-	"Executive Officer": "bg-ds-blue-100 text-ds-purple-700",
-	"Member at Large": "bg-teal-100 text-ds-teal-700",
-	"Past Officer": "bg-ds-amber-100 text-ds-amber-900",
-	Sponsor: "bg-ds-amber-100 text-ds-amber-900",
-	Administrator: "bg-ds-red-100 text-ds-red-800",
+	"General Officer": "bg-ds-blue-100 text-tone-info",
+	"Executive Officer": "bg-ds-purple-100 text-tone-purple",
+	"Member at Large": "bg-ds-teal-100 text-tone-teal",
+	"Past Officer": "bg-ds-amber-100 text-tone-warning",
+	Sponsor: "bg-ds-amber-100 text-tone-warning",
+	Administrator: "bg-ds-red-100 text-tone-danger",
 };
 
 export function UserTable({
@@ -265,7 +265,7 @@ export function UserTable({
 									</Badge>
 								</td>
 								<td className="p-4 hidden xl:table-cell">
-									<Badge className="bg-ds-amber-100 text-ds-amber-900 font-mono">
+									<Badge className="bg-ds-amber-100 text-tone-warning font-mono">
 										{user.points || 0}
 									</Badge>
 								</td>
