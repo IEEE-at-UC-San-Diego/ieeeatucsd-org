@@ -47,12 +47,15 @@ const config = defineConfig(({ command }) => ({
 	},
 	ssr: {
 		// Bundle React so standalone Docker deploys don't need hoisted workspace
-		// node_modules. Only do this for builds: during `vite dev` the SSR module
-		// runner inline-evaluates React's CJS jsx-runtime, where `module` is
-		// undefined, so React must stay external in dev.
+		// node_modules. React context consumers must be bundled with the same
+		// React instance; otherwise Nitro can put them in a separate chunk with a
+		// second React dispatcher and SSR fails with an invalid hook call.
+		// Only do this for builds: during `vite dev` the SSR module runner
+		// inline-evaluates React's CJS jsx-runtime, where `module` is undefined, so
+		// React must stay external in dev.
 		noExternal:
 			command === "build"
-				? [/^@tanstack\//, "react", "react-dom"]
+				? [/^@tanstack\//, "next-themes", "react", "react-dom"]
 				: [/^@tanstack\//],
 	},
 	plugins: [
