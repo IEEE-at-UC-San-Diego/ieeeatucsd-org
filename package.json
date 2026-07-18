@@ -27,6 +27,8 @@
     "test": "turbo run test",
     "dev:website": "turbo run dev --filter=@ieeeatucsd/website",
     "dev:dashboard": "turbo run dev --filter=@ieeeatucsd/dashboard",
+    "dev:convex": "docker compose -p ieee-convex-dev -f tools/convex-local/docker-compose.yml --env-file tools/convex-local/.env up -d",
+    "stop:convex": "docker compose -p ieee-convex-dev -f tools/convex-local/docker-compose.yml --env-file tools/convex-local/.env down",
     "build:website": "turbo run build --filter=@ieeeatucsd/website",
     "build:dashboard": "turbo run build --filter=@ieeeatucsd/dashboard"
   },

@@ -30,6 +30,7 @@ interface EventRequestWizardModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	onSubmit: (data: EventFormData) => void | Promise<void>;
+	onSave?: (data: EventFormData) => void | Promise<void>;
 	initialData?: Partial<EventRequest>;
 	aiEnabled?: boolean;
 }
@@ -137,6 +138,7 @@ export function EventRequestWizardModal({
 	isOpen,
 	onClose,
 	onSubmit,
+	onSave,
 	initialData,
 	aiEnabled = true,
 }: EventRequestWizardModalProps) {
@@ -151,6 +153,7 @@ export function EventRequestWizardModal({
 	);
 	const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [submissionSucceeded, setSubmissionSucceeded] = useState(false);
 	const initialSnapshotRef = useRef(JSON.stringify(formData));
@@ -164,6 +167,7 @@ export function EventRequestWizardModal({
 			setCurrentStep(initialData ? 2 : 1);
 			setDisclaimerAccepted(!!initialData);
 			setIsSubmitting(false);
+			setIsSaving(false);
 			setSubmitError(null);
 			setSubmissionSucceeded(false);
 		}
@@ -198,6 +202,13 @@ export function EventRequestWizardModal({
 		}
 	};
 
+	const canSave = () =>
+		!!formData.eventName.trim() &&
+		!!formData.eventDescription.trim() &&
+		!!formData.eventType &&
+		!!formData.location.trim() &&
+		formData.endDate > formData.startDate;
+
 	const handleNext = () => {
 		if (currentStep < steps.length) {
 			setCurrentStep((prev) => prev + 1);
@@ -223,7 +234,7 @@ export function EventRequestWizardModal({
 		(!isEditing && disclaimerAccepted);
 
 	const requestClose = () => {
-		if (isSubmitting) return;
+		if (isSubmitting || isSaving) return;
 		if (isDirty && !submissionSucceeded) {
 			setShowDiscardDialog(true);
 			return;
@@ -248,6 +259,24 @@ export function EventRequestWizardModal({
 		}
 	};
 
+	const handleSave = async () => {
+		if (!onSave) return;
+		setIsSaving(true);
+		setSubmitError(null);
+		try {
+			await onSave(formData);
+			initialSnapshotRef.current = JSON.stringify(formData);
+		} catch (error) {
+			setSubmitError(
+				error instanceof Error
+					? error.message
+					: "The request could not be saved. Please try again.",
+			);
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
 	const blockedMessage = (() => {
 		if (currentStep === 1 && !disclaimerAccepted)
 			return "Accept the requirements to continue.";
@@ -255,6 +284,8 @@ export function EventRequestWizardModal({
 			return "Add the event name, description, and type to continue.";
 		if (currentStep === 3 && !canProceed())
 			return "Add a location, valid time range, and event code to continue.";
+		if (onSave && currentStep >= 2 && !canSave())
+			return "Add the event name, description, type, location, and valid time range to save.";
 		return null;
 	})();
 
@@ -373,7 +404,7 @@ export function EventRequestWizardModal({
 					</Button>
 				)}
 			</div>
-			<div className="flex flex-1 items-center justify-end gap-2">
+			<div className="flex flex-1 flex-wrap items-center justify-end gap-2">
 				{(blockedMessage || submitError) && (
 					<p
 						className={`mr-auto hidden text-xs sm:block ${submitError ? "text-destructive" : "text-muted-foreground"}`}
@@ -387,16 +418,28 @@ export function EventRequestWizardModal({
 					variant="outline"
 					className="h-11 sm:h-9"
 					onClick={requestClose}
-					disabled={isSubmitting}
+					disabled={isSubmitting || isSaving}
 				>
 					Cancel
 				</Button>
+				{onSave && currentStep >= 2 && (
+					<Button
+						type="button"
+						variant="outline"
+						className="h-11 sm:h-9"
+						onClick={handleSave}
+						disabled={isSubmitting || isSaving || !canSave()}
+					>
+						{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+						Save
+					</Button>
+				)}
 				{currentStep < steps.length ? (
 					<Button
 						type="button"
 						className="h-11 sm:h-9"
 						onClick={handleNext}
-						disabled={!canProceed()}
+						disabled={!canProceed() || isSaving}
 					>
 						Next
 					</Button>
@@ -405,7 +448,7 @@ export function EventRequestWizardModal({
 						type="button"
 						className="h-11 sm:h-9"
 						onClick={handleSubmit}
-						disabled={isSubmitting}
+						disabled={isSubmitting || isSaving}
 					>
 						{isSubmitting ? (
 							<Loader2 className="h-4 w-4 animate-spin" />

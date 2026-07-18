@@ -22,7 +22,14 @@ import {
 	Users,
 	Utensils,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	type ComponentType,
+	type ReactNode,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,11 +42,37 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
+import { cn } from "@/lib/utils";
 import { formatDepartmentLabel, formatEventTypeLabel } from "../constants";
 import { StatusBadge } from "../filters/StatusBadge";
 import type { EventRequest, EventStatus } from "../types";
+
+function MetaField({
+	icon: Icon,
+	label,
+	children,
+	className,
+}: {
+	icon?: ComponentType<{ className?: string }>;
+	label: string;
+	children: ReactNode;
+	className?: string;
+}) {
+	return (
+		<div className={cn("min-w-0 space-y-1", className)}>
+			<div className="flex items-center gap-1.5 text-muted-foreground">
+				{Icon ? <Icon className="size-3.5 shrink-0 opacity-70" /> : null}
+				<span className="text-[11px] font-medium uppercase tracking-wider">
+					{label}
+				</span>
+			</div>
+			<div className="text-sm font-medium text-foreground">{children}</div>
+		</div>
+	);
+}
 
 interface EventViewModalProps {
 	isOpen: boolean;
@@ -356,7 +389,7 @@ export function EventViewModal({
 	const renderFileCards = (files: string[], sectionName: string) => {
 		if (files.length === 0) {
 			return (
-				<div className="text-center py-8 bg-muted/20 rounded-md border border-dashed">
+				<div className="rounded-lg border border-dashed border-border/60 bg-muted/10 px-4 py-7 text-center">
 					<p className="text-sm text-muted-foreground">
 						No {sectionName.toLowerCase()} attached
 					</p>
@@ -365,37 +398,37 @@ export function EventViewModal({
 		}
 
 		return (
-			<div className="grid sm:grid-cols-2 gap-3">
+			<div className="grid gap-2 sm:grid-cols-2">
 				{files.map((fileRef, idx) => {
 					const fileUrl = resolveFileUrl(fileRef);
 					return (
 						<div
 							key={`${sectionName}-${idx}`}
-							className="flex items-center justify-between p-3 border rounded-lg bg-card"
+							className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-card/50 px-3 py-2.5"
 						>
-							<div className="flex items-center gap-3 overflow-hidden">
-								<div className="p-2 bg-ds-blue-100 rounded-md">
-									<FileText className="h-5 w-5 text-tone-info" />
+							<div className="flex min-w-0 items-center gap-2.5">
+								<div className="rounded-md bg-ds-blue-100 p-1.5">
+									<FileText className="size-4 text-tone-info" />
 								</div>
 								<div className="min-w-0">
-									<p className="text-sm font-medium truncate">
+									<p className="truncate text-sm font-medium">
 										{getDisplayFileName(fileRef, `${sectionName} ${idx + 1}`)}
 									</p>
 									<p className="text-xs text-muted-foreground">
-										{fileUrl ? "Ready" : "Resolving secure file..."}
+										{fileUrl ? "Ready" : "Resolving…"}
 									</p>
 								</div>
 							</div>
 							<Button
 								variant="ghost"
-								size="icon"
+								size="icon-sm"
 								disabled={!fileUrl}
 								onClick={() => {
 									if (fileUrl)
 										window.open(fileUrl, "_blank", "noopener,noreferrer");
 								}}
 							>
-								<ExternalLink className="h-4 w-4" />
+								<ExternalLink className="size-4" />
 							</Button>
 						</div>
 					);
@@ -409,12 +442,11 @@ export function EventViewModal({
 			<div className="flex gap-2">
 				{onEdit && (
 					<Button
-						variant="outline"
 						size="sm"
 						className="h-11 flex-1 sm:h-9 sm:flex-none"
 						onClick={() => onEdit(event)}
 					>
-						<Pencil className="h-4 w-4 mr-2" />
+						<Pencil className="h-4 w-4" />
 						Edit Event
 					</Button>
 				)}
@@ -422,18 +454,19 @@ export function EventViewModal({
 					<Button
 						variant="outline"
 						size="sm"
-						className="h-11 flex-1 sm:h-9 sm:flex-none text-destructive hover:bg-destructive/10 border-destructive/20"
+						className="h-11 flex-1 sm:h-9 sm:flex-none text-destructive hover:bg-destructive/10 border-destructive/30"
 						onClick={() => onDelete(event)}
 					>
-						<Trash2 className="h-4 w-4 mr-2" />
+						<Trash2 className="h-4 w-4" />
 						Delete
 					</Button>
 				)}
 			</div>
 			<Button
+				variant="outline"
 				onClick={onClose}
 				size="sm"
-				className="h-11 w-full sm:h-9 sm:w-auto sm:px-6"
+				className="h-11 w-full sm:h-9 sm:w-auto sm:px-5"
 			>
 				Close
 			</Button>
@@ -451,22 +484,22 @@ export function EventViewModal({
 			className="sm:max-w-4xl"
 			footer={footer}
 		>
-			<div className="space-y-4">
-				<div className="flex items-center gap-2">
+			<div className="space-y-5 pb-2">
+				<div className="flex flex-wrap items-center gap-x-3 gap-y-2">
 					<StatusBadge status={event.status} />
-					<span className="text-sm text-muted-foreground border-l pl-2 ml-1">
+					<span className="text-sm text-muted-foreground">
 						{formatEventTypeLabel(event.eventType)}
 					</span>
 				</div>
 
 				{event.status !== "draft" && canManageStatus && (
-					<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-md border bg-muted/20 px-4 py-3">
-						<div className="flex items-center gap-2">
+					<div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+						<div className="flex items-center gap-2.5">
 							<Label
 								htmlFor="event-status"
-								className="text-sm font-medium whitespace-nowrap text-muted-foreground"
+								className="text-xs font-medium whitespace-nowrap text-muted-foreground"
 							>
-								Status:
+								Status
 							</Label>
 							<Select
 								value={event.status}
@@ -477,7 +510,7 @@ export function EventViewModal({
 							>
 								<SelectTrigger
 									id="event-status"
-									className="w-[140px] h-8 text-xs bg-background"
+									className="h-8 w-[148px] bg-background text-xs"
 								>
 									<SelectValue />
 								</SelectTrigger>
@@ -494,22 +527,22 @@ export function EventViewModal({
 								</SelectContent>
 							</Select>
 						</div>
-						<div className="flex items-center gap-2">
-							<Checkbox
-								id="can-publish"
-								checked={event.status === "published"}
-								onCheckedChange={(checked) => {
-									if (onTogglePublish)
-										onTogglePublish(event, checked as boolean);
-								}}
-							/>
+						<div className="flex items-center justify-between gap-3 border-t border-border/50 pt-2.5 sm:border-0 sm:pt-0">
 							<Label
 								htmlFor="can-publish"
-								className="text-sm cursor-pointer flex items-center gap-1.5 font-medium"
+								className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground"
 							>
-								<Globe className="h-3.5 w-3.5 text-tone-info" />
-								Published
+								<Globe className="size-3.5 shrink-0" />
+								Show on website
 							</Label>
+							<Switch
+								id="can-publish"
+								size="sm"
+								checked={event.status === "published"}
+								onCheckedChange={(checked) => {
+									if (onTogglePublish) onTogglePublish(event, checked);
+								}}
+							/>
 						</div>
 					</div>
 				)}
@@ -517,155 +550,132 @@ export function EventViewModal({
 				<Tabs
 					value={activeTab}
 					onValueChange={setActiveTab}
-					className="flex flex-col"
+					className="flex flex-col gap-4"
 				>
-					<TabsList className="grid w-full grid-cols-3 gap-1 sm:grid-cols-6">
-						<TabsTrigger value="details">Details</TabsTrigger>
-						<TabsTrigger value="files">Files</TabsTrigger>
-						<TabsTrigger value="graphics">Graphics</TabsTrigger>
-						<TabsTrigger value="funding">Funding</TabsTrigger>
-						<TabsTrigger value="attendees">Attendees</TabsTrigger>
-						<TabsTrigger value="history">History</TabsTrigger>
-					</TabsList>
+					<div className="scrollbar-quiet -mx-1 overflow-x-auto px-1 sm:overflow-visible">
+						<TabsList className="h-9 w-max min-w-full justify-start sm:w-full">
+							<TabsTrigger value="details" className="px-3">
+								Details
+							</TabsTrigger>
+							<TabsTrigger value="files" className="px-3">
+								Files
+							</TabsTrigger>
+							<TabsTrigger value="graphics" className="px-3">
+								Graphics
+							</TabsTrigger>
+							<TabsTrigger value="funding" className="px-3">
+								Funding
+							</TabsTrigger>
+							<TabsTrigger value="attendees" className="px-3">
+								Attendees
+							</TabsTrigger>
+							<TabsTrigger value="history" className="px-3">
+								History
+							</TabsTrigger>
+						</TabsList>
+					</div>
 
-					<TabsContent value="details" className="space-y-6">
-						<div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-							<div className="space-y-1">
-								<div className="flex items-center gap-2 text-muted-foreground mb-1">
-									<Calendar className="h-4 w-4" />
-									<span className="text-xs font-semibold uppercase tracking-wider">
-										Date & Time
-									</span>
-								</div>
-								<p className="font-medium">{formatDate(event.startDate)}</p>
-								<p className="text-sm text-muted-foreground">
-									{formatTime(event.startDate)} - {formatTime(event.endDate)}
+					<TabsContent value="details" className="mt-0 space-y-5">
+						<div className="grid grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-4">
+							<MetaField icon={Calendar} label="Date & Time">
+								<p className="text-balance">{formatDate(event.startDate)}</p>
+								<p className="mt-0.5 text-xs font-normal text-muted-foreground">
+									{formatTime(event.startDate)} – {formatTime(event.endDate)}
 								</p>
-							</div>
+							</MetaField>
 
-							<div className="space-y-1">
-								<div className="flex items-center gap-2 text-muted-foreground mb-1">
-									<MapPin className="h-4 w-4" />
-									<span className="text-xs font-semibold uppercase tracking-wider">
-										Location
-									</span>
-								</div>
-								<p className="font-medium">{event.location}</p>
-							</div>
+							<MetaField icon={MapPin} label="Location">
+								<p className="text-balance">{event.location}</p>
+							</MetaField>
 
-							<div className="space-y-1">
-								<div className="flex items-center gap-2 text-muted-foreground mb-1">
-									<Users className="h-4 w-4" />
-									<span className="text-xs font-semibold uppercase tracking-wider">
-										Expected Attendees
-									</span>
-								</div>
-								<p className="font-medium">
+							<MetaField icon={Users} label="Expected">
+								<p className="tabular-nums">
 									{event.estimatedAttendance || "N/A"}
 								</p>
-							</div>
+							</MetaField>
 
-							<div className="space-y-1">
-								<div className="flex items-center gap-2 text-muted-foreground mb-1">
-									<User className="h-4 w-4" />
-									<span className="text-xs font-semibold uppercase tracking-wider">
-										Organizer
-									</span>
-								</div>
-								<p className="font-medium truncate" title={event.createdBy}>
+							<MetaField icon={User} label="Organizer">
+								<p className="truncate" title={event.createdBy}>
 									{event.createdBy}
 								</p>
-								<p className="text-xs text-muted-foreground">
-									on {formatDate(event._creationTime)}
+								<p className="mt-0.5 text-xs font-normal text-muted-foreground">
+									{formatDate(event._creationTime)}
 								</p>
-							</div>
+							</MetaField>
 						</div>
 
-						<div className="grid grid-cols-2 gap-6 pt-4 border-t">
-							<div className="space-y-1">
-								<div className="flex items-center gap-2 text-muted-foreground mb-1">
-									<FileText className="h-4 w-4" />
-									<span className="text-xs font-semibold uppercase tracking-wider">
-										Event Code
-									</span>
-								</div>
-								<p className="font-mono bg-muted/50 px-2 py-0.5 rounded text-sm w-fit">
+						<div className="grid grid-cols-2 gap-x-4 gap-y-5 border-t border-border/50 pt-5">
+							<MetaField icon={FileText} label="Event Code">
+								<p className="w-fit rounded-md bg-muted/60 px-2 py-0.5 font-mono text-xs tracking-wide">
 									{event.eventCode}
 								</p>
-							</div>
+							</MetaField>
 
-							{event.department && (
-								<div className="space-y-1">
-									<span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1">
-										Department
-									</span>
-									<p className="font-medium">
-										{formatDepartmentLabel(event.department)}
-									</p>
-								</div>
-							)}
+							{event.department ? (
+								<MetaField label="Department">
+									<p>{formatDepartmentLabel(event.department)}</p>
+								</MetaField>
+							) : null}
 						</div>
 
 						{requirements.length > 0 && (
-							<div className="pt-4 border-t">
-								<span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-3">
+							<div className="border-t border-border/50 pt-5">
+								<span className="mb-2.5 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
 									Requirements
 								</span>
-								<div className="flex flex-wrap gap-2">
+								<div className="flex flex-wrap gap-1.5">
 									{requirements.map((req) => (
 										<span
 											key={req.label}
-											className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground border border-border"
+											className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-secondary/80 px-2.5 py-1 text-xs font-medium text-secondary-foreground"
 										>
-											<req.icon className="h-3.5 w-3.5" />
+											<req.icon className="size-3.5 opacity-70" />
 											{req.label}
-											{req.completed && (
-												<Check className="h-3 w-3.5 text-tone-success ml-0.5" />
-											)}
+											{req.completed ? (
+												<Check className="size-3 text-tone-success" />
+											) : null}
 										</span>
 									))}
 								</div>
 							</div>
 						)}
 
-						<div className="pt-4 border-t">
-							<span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-2">
+						<div className="border-t border-border/50 pt-5">
+							<span className="mb-2.5 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
 								Description
 							</span>
-							<div className="bg-muted/30 p-4 rounded-lg text-sm text-foreground whitespace-pre-wrap leading-relaxed border">
-								{event.eventDescription}
+							<div className="rounded-lg bg-muted/25 px-3.5 py-3 text-sm leading-relaxed text-pretty whitespace-pre-wrap text-foreground">
+								{event.eventDescription || "No description provided."}
 							</div>
 						</div>
 					</TabsContent>
 
-					<TabsContent value="files" className="space-y-6">
+					<TabsContent value="files" className="mt-0 space-y-5">
 						<div>
-							<h4 className="text-sm font-semibold mb-3">Room Booking Files</h4>
+							<h4 className="mb-2.5 text-sm font-medium">Room Booking</h4>
 							{renderFileCards(event.roomBookingFiles || [], "Room Booking")}
 						</div>
 						<div>
-							<h4 className="text-sm font-semibold mb-3">Invoice Files</h4>
+							<h4 className="mb-2.5 text-sm font-medium">Invoices</h4>
 							{renderFileCards(invoiceFileRefs, "Invoice")}
 						</div>
 						<div>
-							<h4 className="text-sm font-semibold mb-3">
-								General Event Files
-							</h4>
+							<h4 className="mb-2.5 text-sm font-medium">General</h4>
 							{renderFileCards(event.files || [], "Event File")}
 						</div>
 					</TabsContent>
 
-					<TabsContent value="graphics" className="space-y-6">
-						<div className="border rounded-md p-4 bg-card">
-							<h4 className="text-sm font-semibold mb-3">Graphics Needed</h4>
+					<TabsContent value="graphics" className="mt-0 space-y-4">
+						<div className="rounded-lg border border-border/60 bg-card/50 p-4">
+							<h4 className="mb-2.5 text-sm font-medium">Graphics Needed</h4>
 							{graphicsNeeds.length > 0 ? (
-								<div className="flex flex-wrap gap-2">
+								<div className="flex flex-wrap gap-1.5">
 									{graphicsNeeds.map((need) => (
 										<span
 											key={need}
-											className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-ds-blue-100 text-tone-info border border-ds-blue-100"
+											className="inline-flex items-center gap-1.5 rounded-md border border-ds-blue-100 bg-ds-blue-100 px-2.5 py-1 text-xs font-medium text-tone-info"
 										>
-											<ImageIcon className="h-3 w-3" />
+											<ImageIcon className="size-3 opacity-80" />
 											{need}
 										</span>
 									))}
@@ -677,7 +687,7 @@ export function EventViewModal({
 							)}
 						</div>
 
-						<div className="border rounded-md p-4 bg-card space-y-4">
+						<div className="space-y-4 rounded-lg border border-border/60 bg-card/50 p-4">
 							<div className="flex items-center justify-between">
 								<div>
 									<h4 className="text-sm font-semibold">Graphics Delivery</h4>
@@ -813,27 +823,16 @@ export function EventViewModal({
 						</div>
 					</TabsContent>
 
-					<TabsContent value="funding" className="space-y-6">
-						<div className="flex items-center justify-between p-4 border rounded-md bg-gradient-to-r from-background to-muted/20">
-							<div className="flex items-center gap-4">
-								<div className="p-3 bg-ds-green-100 rounded-full">
-									<DollarSign className="h-6 w-6 text-tone-success" />
-								</div>
-								<div>
-									<p className="font-semibold">AS Funding Requested</p>
-									<p className="text-sm text-muted-foreground">
-										Status:{" "}
-										<span
-											className={
-												event.needsASFunding
-													? "text-tone-success font-medium"
-													: "text-muted-foreground"
-											}
-										>
-											{event.needsASFunding ? "Yes" : "No"}
-										</span>
-									</p>
-								</div>
+					<TabsContent value="funding" className="mt-0 space-y-5">
+						<div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/15 px-4 py-3.5">
+							<div className="rounded-md bg-ds-green-100 p-2">
+								<DollarSign className="size-5 text-tone-success" />
+							</div>
+							<div>
+								<p className="text-sm font-medium">AS Funding</p>
+								<p className="text-sm text-muted-foreground">
+									{event.needsASFunding ? "Requested" : "Not requested"}
+								</p>
 							</div>
 						</div>
 
@@ -979,27 +978,25 @@ export function EventViewModal({
 						)}
 					</TabsContent>
 
-					<TabsContent value="attendees" className="h-full">
+					<TabsContent value="attendees" className="mt-0 h-full">
 						<div className="space-y-4">
-							<div className="rounded-md border p-4 bg-muted/20">
-								<div className="flex flex-wrap items-center gap-3 text-sm">
-									<span className="inline-flex items-center px-2.5 py-1 rounded-full bg-ds-blue-100 text-tone-info font-medium">
-										Estimated: {event.estimatedAttendance}
-									</span>
-									<span className="inline-flex items-center px-2.5 py-1 rounded-full bg-ds-green-100 text-tone-success font-medium">
-										Checked In: {event.attendeeCount || attendees.length}
-									</span>
-								</div>
+							<div className="flex flex-wrap items-center gap-2">
+								<span className="inline-flex items-center rounded-md bg-ds-blue-100 px-2.5 py-1 text-xs font-medium text-tone-info">
+									Estimated {event.estimatedAttendance}
+								</span>
+								<span className="inline-flex items-center rounded-md bg-ds-green-100 px-2.5 py-1 text-xs font-medium tabular-nums text-tone-success">
+									Checked in {event.attendeeCount || attendees.length}
+								</span>
 							</div>
 
 							{attendees.length === 0 ? (
-								<div className="h-full flex flex-col items-center justify-center p-8 text-center bg-muted/10 rounded-md border border-dashed">
-									<Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground/40" />
-									<h3 className="font-medium text-foreground">
+								<div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-muted/10 px-4 py-10 text-center">
+									<Users className="mb-3 size-10 text-muted-foreground/35" />
+									<h3 className="text-sm font-medium text-foreground">
 										No attendees yet
 									</h3>
-									<p className="text-sm text-muted-foreground mt-1">
-										Attendees will appear here after members check in.
+									<p className="mt-1 text-sm text-muted-foreground">
+										They'll show up here after check-in.
 									</p>
 								</div>
 							) : (
@@ -1046,27 +1043,27 @@ export function EventViewModal({
 						</div>
 					</TabsContent>
 
-					<TabsContent value="history" className="space-y-4">
-						<div className="space-y-0 relative pl-4 border-l-2 border-muted ml-2">
-							<div className="relative pb-6 pl-6">
-								<div className="absolute -left-[25px] top-0 p-1 bg-background rounded-full border border-muted">
-									<Clock className="h-4 w-4 text-muted-foreground" />
+					<TabsContent value="history" className="mt-0">
+						<div className="relative ml-1 space-y-0 border-l border-border/60 pl-5">
+							<div className="relative pb-6">
+								<div className="absolute -left-[27px] top-0.5 rounded-md border border-border/60 bg-background p-1">
+									<Clock className="size-3.5 text-muted-foreground" />
 								</div>
-								<p className="font-medium text-sm">Event Created</p>
-								<p className="text-xs text-muted-foreground mt-0.5">
-									{formatDate(event._creationTime)} at{" "}
+								<p className="text-sm font-medium">Created</p>
+								<p className="mt-0.5 text-xs text-muted-foreground">
+									{formatDate(event._creationTime)} ·{" "}
 									{formatTime(event._creationTime)}
 								</p>
 							</div>
 
-							<div className="relative pl-6">
-								<div className="absolute -left-[25px] top-0 p-1 bg-background rounded-full border border-muted">
-									<History className="h-4 w-4 text-muted-foreground" />
+							<div className="relative">
+								<div className="absolute -left-[27px] top-0.5 rounded-md border border-border/60 bg-background p-1">
+									<History className="size-3.5 text-muted-foreground" />
 								</div>
-								<p className="font-medium text-sm">Last Updated</p>
-								<p className="text-xs text-muted-foreground mt-0.5">
+								<p className="text-sm font-medium">Last updated</p>
+								<p className="mt-0.5 text-xs text-muted-foreground">
 									{event._updatedAt
-										? `${formatDate(event._updatedAt)} at ${formatTime(event._updatedAt)}`
+										? `${formatDate(event._updatedAt)} · ${formatTime(event._updatedAt)}`
 										: "Never"}
 								</p>
 							</div>

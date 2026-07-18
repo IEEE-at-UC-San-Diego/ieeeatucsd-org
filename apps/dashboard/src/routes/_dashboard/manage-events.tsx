@@ -128,6 +128,66 @@ function mapEventToType(event: any): EventRequest {
 	};
 }
 
+function buildUpdateEventArgs(
+	logtoId: string,
+	eventId: string,
+	data: EventFormData,
+) {
+	return {
+		logtoId,
+		id: eventId as any,
+		eventName: data.eventName,
+		location: data.location,
+		startDate: data.startDate,
+		endDate: data.endDate,
+		eventDescription: data.eventDescription,
+		eventType: normalizeEventType(data.eventType),
+		department: data.department,
+		expectedAttendance: data.estimatedAttendance,
+		flyersNeeded: data.needsFlyers,
+		needsGraphics: data.needsGraphics,
+		needsAsFunding: data.needsASFunding,
+		hasFood: data.hasFood,
+		eventCode: data.eventCode,
+		invoices: data.invoices.map((inv) => ({
+			id: inv._id,
+			vendor: inv.vendor,
+			items:
+				inv.items.length > 0
+					? inv.items
+					: [
+							{
+								description: inv.description,
+								quantity: 1,
+								unitPrice: inv.amount,
+								total: inv.amount,
+							},
+						],
+			tax: inv.tax || 0,
+			tip: inv.tip || 0,
+			subtotal: inv.subtotal || inv.amount,
+			total: inv.total || inv.amount,
+			additionalFiles: inv.additionalFiles || [],
+			invoiceFile: inv.invoiceFile,
+		})),
+		flyerType: data.flyerType,
+		otherFlyerType: data.otherFlyerType,
+		flyerAdvertisingStartDate: data.flyerAdvertisingStartDate,
+		flyerAdditionalRequests: data.flyerAdditionalRequests,
+		photographyNeeded: data.photographyNeeded,
+		requiredLogos: data.requiredLogos,
+		otherLogos: data.otherLogos,
+		advertisingFormat: data.advertisingFormat,
+		willOrHaveRoomBooking: data.willOrHaveRoomBooking,
+		roomBookingFiles: data.roomBookingFiles,
+		asFundingRequired: data.asFundingRequired,
+		foodDrinksBeingServed: data.foodDrinksBeingServed,
+		additionalSpecifications: data.additionalSpecifications,
+		flyersCompleted: data.flyersCompleted,
+		graphicsUploadNote: data.graphicsUploadNote || undefined,
+	};
+}
+
 function ManageEventsPage() {
 	const {
 		hasOfficerAccess,
@@ -451,6 +511,22 @@ function ManageEventsPage() {
 		}
 	};
 
+	const handleSaveRequest = async (data: EventFormData) => {
+		if (!logtoId || !editingRequest) return;
+		setIsProcessing(true);
+		try {
+			await updateEvent(
+				buildUpdateEventArgs(logtoId, editingRequest._id, data),
+			);
+			toast.success("Event saved successfully!");
+		} catch (error: any) {
+			toast.error(error.message || "Failed to save event");
+			throw error;
+		} finally {
+			setIsProcessing(false);
+		}
+	};
+
 	// Update event handler
 	const handleUpdateRequest = async (data: EventFormData) => {
 		if (!logtoId || !editingRequest) return;
@@ -459,59 +535,9 @@ function ManageEventsPage() {
 			const convertingDraft = editingRequest.status === "draft";
 			const eventId = editingRequest._id as any;
 
-			await updateEvent({
-				logtoId,
-				id: eventId,
-				eventName: data.eventName,
-				location: data.location,
-				startDate: data.startDate,
-				endDate: data.endDate,
-				eventDescription: data.eventDescription,
-				eventType: normalizeEventType(data.eventType),
-				department: data.department,
-				expectedAttendance: data.estimatedAttendance,
-				flyersNeeded: data.needsFlyers,
-				needsGraphics: data.needsGraphics,
-				needsAsFunding: data.needsASFunding,
-				hasFood: data.hasFood,
-				eventCode: data.eventCode,
-				invoices: data.invoices.map((inv) => ({
-					id: inv._id,
-					vendor: inv.vendor,
-					items:
-						inv.items.length > 0
-							? inv.items
-							: [
-									{
-										description: inv.description,
-										quantity: 1,
-										unitPrice: inv.amount,
-										total: inv.amount,
-									},
-								],
-					tax: inv.tax || 0,
-					tip: inv.tip || 0,
-					subtotal: inv.subtotal || inv.amount,
-					total: inv.total || inv.amount,
-					additionalFiles: inv.additionalFiles || [],
-					invoiceFile: inv.invoiceFile,
-				})),
-				flyerType: data.flyerType,
-				otherFlyerType: data.otherFlyerType,
-				flyerAdvertisingStartDate: data.flyerAdvertisingStartDate,
-				flyerAdditionalRequests: data.flyerAdditionalRequests,
-				photographyNeeded: data.photographyNeeded,
-				requiredLogos: data.requiredLogos,
-				otherLogos: data.otherLogos,
-				advertisingFormat: data.advertisingFormat,
-				willOrHaveRoomBooking: data.willOrHaveRoomBooking,
-				roomBookingFiles: data.roomBookingFiles,
-				asFundingRequired: data.asFundingRequired,
-				foodDrinksBeingServed: data.foodDrinksBeingServed,
-				additionalSpecifications: data.additionalSpecifications,
-				flyersCompleted: data.flyersCompleted,
-				graphicsUploadNote: data.graphicsUploadNote || undefined,
-			});
+			await updateEvent(
+				buildUpdateEventArgs(logtoId, editingRequest._id, data),
+			);
 
 			if (convertingDraft) {
 				await updateEventStatus({
@@ -1143,6 +1169,7 @@ function ManageEventsPage() {
 					setEditingRequest(null);
 				}}
 				onSubmit={editingRequest ? handleUpdateRequest : handleCreateRequest}
+				onSave={editingRequest ? handleSaveRequest : undefined}
 				initialData={editingRequest || undefined}
 				aiEnabled={aiEnabled}
 			/>
