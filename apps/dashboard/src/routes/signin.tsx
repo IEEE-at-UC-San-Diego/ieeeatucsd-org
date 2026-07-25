@@ -27,13 +27,28 @@ function SignInPage() {
 		if (typeof window === "undefined") return;
 		if (reason !== "stale-callback" && reason !== "session-init") return;
 
+		// Native soft-recovery lands here with Logto still authenticated. Prefer
+		// re-entering the dashboard (re-bootstrap) over forcing another OAuth hop.
+		// Cap attempts so a hard Convex failure cannot loop forever.
+		if (reason === "session-init" && !isLoading && isAuthenticated) {
+			const rebootstrapKey = "auth-retry:session-init-rebootstrap";
+			if (!window.sessionStorage.getItem(rebootstrapKey)) {
+				window.sessionStorage.setItem(rebootstrapKey, "1");
+				logAuthEvent("signin_retry_rebootstrap", { reason });
+				navigate({ to: "/overview", replace: true });
+				return;
+			}
+		}
+
+		if (isLoading || isAuthenticated) return;
+
 		const storageKey = `auth-retry:${reason}`;
 		if (window.sessionStorage.getItem(storageKey)) return;
 
 		window.sessionStorage.setItem(storageKey, "1");
 		logAuthEvent("signin_retry_triggered", { reason });
 		signIn();
-	}, [reason, signIn]);
+	}, [reason, signIn, isLoading, isAuthenticated, navigate]);
 
 	const handleSignIn = () => {
 		signIn();

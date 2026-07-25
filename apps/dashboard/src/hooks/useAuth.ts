@@ -21,6 +21,7 @@ import {
 	logAuthEvent,
 } from "@/lib/auth/logging";
 import { isNativeAuthBridgeMode } from "@/lib/auth/mode";
+import { loadNativeSession } from "@/lib/auth/nativeSession";
 import { refreshSessionWithRetry } from "@/lib/auth/sessionRefresh";
 import { buildLogtoSignInOptions, type SignInOptions } from "@/lib/auth/signIn";
 import { setAuthTokens } from "@/lib/prefetch/authTokens";
@@ -543,6 +544,18 @@ function useSharedAuthClient(options: {
 				mode,
 				reason: authFailureReason,
 			});
+
+			// Native mode keeps the Logto refresh token in localStorage so the
+			// user stays signed in across reloads (Gmail/Amazon-style). Only the
+			// in-memory Convex bridge state is cleared; IdP logout is explicit.
+			if (mode === "native") {
+				clearLocalAuthState();
+				const url = new URL(`${origin}/signin`);
+				url.searchParams.set("reason", RECOVERY_REASON);
+				window.location.replace(url.toString());
+				return;
+			}
+
 			try {
 				await clearAllTokensRef.current?.();
 			} catch (error) {
@@ -741,56 +754,37 @@ function useNativeAuthClient() {
 
 	const bootstrapSession =
 		useCallback(async (): Promise<AuthBootstrapResult> => {
-			const [claims, idToken, accessToken] = await Promise.all([
-				getIdTokenClaims?.(),
-				getIdToken?.(),
-				getAccessToken?.(),
-			]);
-
-			if (!claims?.sub || !idToken || !accessToken) {
-				throw new Error("Missing Logto claims, ID token, or access token");
-			}
-
-			return {
-				logtoId: claims.sub,
-				accessToken,
-				sessionToken: idToken,
-				expiresAt: claims.exp ? claims.exp * 1000 : Date.now() + 5 * 60_000,
-			};
+			return await retryAsync(
+				async () =>
+					loadNativeSession({
+						getAccessToken: async () => getAccessToken?.(),
+						getIdToken: async () => getIdToken?.(),
+						getIdTokenClaims: async () => getIdTokenClaims?.(),
+					}),
+				3,
+				500,
+			);
 		}, [getAccessToken, getIdToken, getIdTokenClaims]);
 
 	const refreshSession = useCallback(async (): Promise<AuthBootstrapResult> => {
 		return await retryAsync(
-			async () => {
-				const [claims, idToken, accessToken] = await Promise.all([
-					getIdTokenClaims?.(),
-					getIdToken?.(),
-					getAccessToken?.(),
-				]);
-
-				if (!claims?.sub || !idToken || !accessToken) {
-					throw new Error(
-						"Missing refreshed Logto claims, ID token, or access token",
-					);
-				}
-
-				return {
-					logtoId: claims.sub,
-					accessToken,
-					sessionToken: idToken,
-					expiresAt: claims.exp ? claims.exp * 1000 : Date.now() + 5 * 60_000,
-				};
-			},
+			async () =>
+				loadNativeSession({
+					getAccessToken: async () => getAccessToken?.(),
+					getIdToken: async () => getIdToken?.(),
+					getIdTokenClaims: async () => getIdTokenClaims?.(),
+				}),
 			3,
 			500,
 		);
 	}, [getAccessToken, getIdToken, getIdTokenClaims]);
 
 	const auth = useSharedAuthClient({
-		logtoLoading: isLoading || convexAuth.isLoading,
-		isAuthenticated: Boolean(
-			isAuthenticated && (!convexAuth.isLoading || convexAuth.isAuthenticated),
-		),
+		// Logto is the source of truth for "signed in". Convex token validation
+		// can lag or briefly fail during refresh; treating that as sign-out was
+		// clearing local state and forcing another Google login.
+		logtoLoading: isLoading || (Boolean(isAuthenticated) && convexAuth.isLoading),
+		isAuthenticated: Boolean(isAuthenticated),
 		signIn,
 		signOut,
 		clearAllTokens,

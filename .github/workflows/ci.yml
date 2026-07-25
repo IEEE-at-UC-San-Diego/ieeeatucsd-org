@@ -52,7 +52,7 @@ jobs:
             PUBLIC_DASHBOARD_URL=https://dashboard.example.com
             PUBLIC_GOOGLE_CALENDAR_ID=placeholder@group.calendar.google.com
             VITE_APP_TITLE=IEEE at UC San Diego Dashboard
-            VITE_AUTH_BRIDGE_MODE=legacy
+            VITE_AUTH_BRIDGE_MODE=native
             VITE_CONVEX_URL=https://convex.example.com
             VITE_LOGTO_ENDPOINT=https://logto.example.com
             VITE_LOGTO_APP_ID=placeholder

@@ -106,8 +106,11 @@ async function getNativeIdentity(ctx: AuthContext) {
 
 /**
  * Get the current user document from the database using their Logto ID.
- * Since Convex is self-hosted, ctx.auth is not available.
- * The logtoId is passed explicitly from the client and must match auth token subject.
+ *
+ * Self-hosted Convex supports OIDC JWT auth via auth.config.ts. Prefer the
+ * native identity from ctx.auth.getUserIdentity() when AUTH_BRIDGE_MODE=native.
+ * Legacy mode still accepts the app-minted HMAC bridge token (authToken), which
+ * must match the explicit logtoId from the client.
  */
 export async function getCurrentUser(
   ctx: AuthContext,
