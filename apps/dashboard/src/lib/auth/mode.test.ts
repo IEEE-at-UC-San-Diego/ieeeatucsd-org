@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveAuthBridgeMode } from "./mode";
+import {
+	resolveAuthBridgeMode,
+	resolveConvexAuthStrategy,
+} from "./mode";
 
 describe("resolveAuthBridgeMode", () => {
 	it("defaults to native when unset", () => {
@@ -43,5 +46,25 @@ describe("resolveAuthBridgeMode", () => {
 				isBrowser: false,
 			}),
 		).toBe("native");
+	});
+});
+
+describe("resolveConvexAuthStrategy", () => {
+	it("defaults to bridge so ES384 Logto tenants keep working", () => {
+		expect(
+			resolveConvexAuthStrategy({
+				isBrowser: false,
+			}),
+		).toBe("bridge");
+	});
+
+	it("allows opting into Convex JWT auth after Logto RSA rotation", () => {
+		expect(
+			resolveConvexAuthStrategy({
+				serverStrategy: "jwt",
+				viteStrategy: "jwt",
+				isBrowser: false,
+			}),
+		).toBe("jwt");
 	});
 });

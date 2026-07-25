@@ -31,8 +31,10 @@ Set these in your `.env` file or pass as build args/runtime env vars:
 
 - `CONVEX_SELF_HOSTED_URL`
 - `CONVEX_SELF_HOSTED_ADMIN_KEY`
-- `AUTH_BRIDGE_MODE` (`native` default for stay-signed-in JWT auth; `legacy` rollback only)
+- `AUTH_BRIDGE_MODE` (`native` default for stay-signed-in Logto sessions; `legacy` rollback only)
 - `VITE_AUTH_BRIDGE_MODE` (must match `AUTH_BRIDGE_MODE` for client/server consistency)
+- `CONVEX_AUTH_STRATEGY` (`bridge` default; `jwt` only after Logto RSA rotation)
+- `VITE_CONVEX_AUTH_STRATEGY` (must match `CONVEX_AUTH_STRATEGY`)
 - `VITE_LOGTO_ENDPOINT`
 - `LOGTO_APP_ID` (required by Convex self-hosted auth config)
 - `VITE_LOGTO_APP_ID`

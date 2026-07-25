@@ -2,10 +2,15 @@
 
 ## Current Modes
 
-- `AUTH_BRIDGE_MODE=native` (**default**): browser Logto auth plus native Convex OIDC JWT auth via `convex/auth.config.ts`. Logto refresh tokens persist in `localStorage`, so users stay signed in until they explicitly sign out.
-- `AUTH_BRIDGE_MODE=legacy`: browser Logto auth plus app-minted 5-minute Convex bridge token (rollback only).
+- `AUTH_BRIDGE_MODE=native` (**default**): Logto refresh tokens persist in `localStorage`, so users stay signed in until they explicitly sign out.
+- `AUTH_BRIDGE_MODE=legacy`: older recovery behavior (rollback only).
 
-Self-hosted Convex **does** support this native path. What is unsupported out of the box is the separate `@convex-dev/auth` component product — not `auth.config.ts` JWT validation. Production already ships `convex/auth.config.ts` for Logto.
+### Convex auth strategy (under native mode)
+
+- `CONVEX_AUTH_STRATEGY=bridge` (**default**): mint short-lived HMAC Convex session tokens from a validated Logto access token. Works with Logto’s default **ES384** signing keys.
+- `CONVEX_AUTH_STRATEGY=jwt`: Convex validates Logto ID tokens via `convex/auth.config.ts`. Requires Logto private keys rotated to **RSA (RS256)** or **ES256** — Convex cannot verify ES384.
+
+Self-hosted Convex supports `auth.config.ts` JWT validation. What is unsupported out of the box is the separate `@convex-dev/auth` component product.
 
 ## Required Self-Hosted Settings
 
@@ -25,11 +30,12 @@ Self-hosted Convex **does** support this native path. What is unsupported out of
 - `LOGTO_ENDPOINT` (same base URL as the app; `auth.config.ts` appends `/oidc` to match the ID token `iss`)
 - `LOGTO_APP_ID`
 
-## Why Sessions Felt Short-Lived Before
+## Why Sessions Felt Short-Lived / Broken Before
 
-1. Legacy bridge tokens expire every 5 minutes and recovery cleared Logto tokens on mint failure.
-2. Native mode was incomplete: Convex was not forced to refresh Logto ID tokens, and bootstrap could race an expired ID token.
+1. Bridge tokens expire every 5 minutes and recovery cleared Logto tokens on mint failure.
+2. Enabling Convex JWT auth against Logto ES384 ID tokens fails verification (`Could not verify OIDC token claim`).
 3. Convex `auth.config.ts` must use the Logto OIDC issuer (`{endpoint}/oidc`), not the bare base URL.
+4. To enable `CONVEX_AUTH_STRATEGY=jwt`, rotate Logto OIDC private keys to RSA in Console → Tenant settings → OIDC configs, confirm `/oidc/jwks` serves `RS256`, then set both app + Vite strategy envs to `jwt`.
 
 ## Flow Diagrams
 

@@ -20,7 +20,10 @@ import {
 	errorMessage,
 	logAuthEvent,
 } from "@/lib/auth/logging";
-import { isNativeAuthBridgeMode } from "@/lib/auth/mode";
+import {
+	isConvexJwtAuthEnabled,
+	isNativeAuthBridgeMode,
+} from "@/lib/auth/mode";
 import { loadNativeSession } from "@/lib/auth/nativeSession";
 import {
 	clearAuthRecoveryLatches,
@@ -784,6 +787,125 @@ function useLegacyAuthClient() {
 }
 
 function useNativeAuthClient() {
+	// Env-fixed strategy (same pattern as legacy vs native above).
+	if (isConvexJwtAuthEnabled()) {
+		return useNativeJwtAuthClient();
+	}
+	return useNativeBridgeAuthClient();
+}
+
+function useMintConvexBridgeSession(eventPrefix: string) {
+	return useCallback(async (token: string) => {
+		const requestId = createAuthRequestId(eventPrefix);
+		logAuthEvent(`${eventPrefix}_mint_started`, { requestId });
+
+		const response = await fetchWithTimeout(
+			"/api/auth/convex-session",
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${token}`,
+					"Content-Type": "application/json",
+					"X-Auth-Request-Id": requestId,
+				},
+				body: JSON.stringify({}),
+			},
+			SESSION_MINT_TIMEOUT_MS,
+		);
+
+		if (!response.ok) {
+			throw new Error(`Failed to mint Convex session (${response.status})`);
+		}
+
+		const data = (await response.json()) as {
+			sessionToken: string;
+			expiresAt: number;
+		};
+		logAuthEvent(`${eventPrefix}_mint_succeeded`, {
+			requestId,
+			expiresAt: data.expiresAt,
+		});
+		return data;
+	}, [eventPrefix]);
+}
+
+/** Persistent Logto session + app-minted Convex bridge token (ES384-safe). */
+function useNativeBridgeAuthClient() {
+	const {
+		isAuthenticated,
+		isLoading,
+		signIn,
+		signOut,
+		clearAllTokens,
+		getIdTokenClaims,
+		getAccessToken,
+	} = useLogto();
+	const mintConvexSession = useMintConvexBridgeSession("native_bridge_session");
+
+	const bootstrapSession =
+		useCallback(async (): Promise<AuthBootstrapResult> => {
+			const [claims, token] = await Promise.all([
+				getIdTokenClaims?.(),
+				getAccessToken?.(),
+			]);
+			if (!claims?.sub || !token) {
+				throw new Error("Missing Logto claims or access token");
+			}
+
+			const { session, accessToken } = await refreshSessionWithRetry({
+				currentAccessToken: token,
+				getLatestAccessToken: async () => getAccessToken?.(),
+				mintSession: mintConvexSession,
+				maxAttempts: 3,
+				baseDelayMs: 500,
+			});
+
+			return {
+				logtoId: claims.sub,
+				accessToken,
+				sessionToken: session.sessionToken,
+				expiresAt: session.expiresAt,
+			};
+		}, [getAccessToken, getIdTokenClaims, mintConvexSession]);
+
+	const refreshSession = useCallback(async (): Promise<AuthBootstrapResult> => {
+		const claims = await getIdTokenClaims?.();
+		if (!claims?.sub) {
+			throw new Error("Missing Logto claims");
+		}
+
+		const { session, accessToken } = await refreshSessionWithRetry({
+			currentAccessToken: null,
+			getLatestAccessToken: async () => getAccessToken?.(),
+			mintSession: mintConvexSession,
+			maxAttempts: 3,
+			baseDelayMs: 750,
+		});
+
+		return {
+			logtoId: claims.sub,
+			accessToken,
+			sessionToken: session.sessionToken,
+			expiresAt: session.expiresAt,
+		};
+	}, [getAccessToken, getIdTokenClaims, mintConvexSession]);
+
+	return useSharedAuthClient({
+		logtoLoading: isLoading,
+		isAuthenticated: Boolean(isAuthenticated),
+		signIn,
+		signOut,
+		clearAllTokens,
+		getIdTokenClaims,
+		getAccessToken,
+		bootstrapSession,
+		refreshSession,
+		mode: "native",
+	});
+}
+
+/** Opt-in path: Convex validates Logto ID tokens (requires RS256/ES256). */
+function useNativeJwtAuthClient() {
 	const {
 		isAuthenticated,
 		isLoading,
@@ -823,11 +945,9 @@ function useNativeAuthClient() {
 		);
 	}, [getAccessToken, getIdToken, getIdTokenClaims]);
 
-	const auth = useSharedAuthClient({
-		// Logto is the source of truth for "signed in". Convex token validation
-		// can lag or briefly fail during refresh; treating that as sign-out was
-		// clearing local state and forcing another Google login.
-		logtoLoading: isLoading || (Boolean(isAuthenticated) && convexAuth.isLoading),
+	return useSharedAuthClient({
+		logtoLoading:
+			isLoading || (Boolean(isAuthenticated) && convexAuth.isLoading),
 		isAuthenticated: Boolean(isAuthenticated),
 		signIn,
 		signOut,
@@ -838,6 +958,4 @@ function useNativeAuthClient() {
 		refreshSession,
 		mode: "native",
 	});
-
-	return auth;
 }

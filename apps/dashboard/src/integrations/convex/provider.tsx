@@ -7,7 +7,7 @@ import {
 } from "convex/react";
 import { useCallback, useMemo, useRef } from "react";
 import { errorMessage, logAuthEvent } from "@/lib/auth/logging";
-import { isNativeAuthBridgeMode } from "@/lib/auth/mode";
+import { isConvexJwtAuthEnabled } from "@/lib/auth/mode";
 import { refreshLogtoIdToken } from "@/lib/auth/logtoToken";
 
 const CONVEX_URL = (
@@ -81,7 +81,9 @@ export default function AppConvexProvider({
 }: {
 	children: React.ReactNode;
 }) {
-	if (isNativeAuthBridgeMode()) {
+	// Only wire ConvexProviderWithAuth when Logto signs with RS256/ES256.
+	// Default Logto ES384 ID tokens cannot be verified by Convex.
+	if (isConvexJwtAuthEnabled()) {
 		return (
 			<ConvexProviderWithAuth
 				client={convexQueryClient.convexClient as unknown as ConvexReactClient}
