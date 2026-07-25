@@ -22,7 +22,10 @@ import {
 } from "@/lib/auth/logging";
 import { isNativeAuthBridgeMode } from "@/lib/auth/mode";
 import { loadNativeSession } from "@/lib/auth/nativeSession";
-import { resolveNativeAuthRecoveryAction } from "@/lib/auth/recovery";
+import {
+	clearAuthRecoveryLatches,
+	resolveNativeAuthRecoveryAction,
+} from "@/lib/auth/recovery";
 import { refreshSessionWithRetry } from "@/lib/auth/sessionRefresh";
 import { buildLogtoSignInOptions, type SignInOptions } from "@/lib/auth/signIn";
 import { setAuthTokens } from "@/lib/prefetch/authTokens";
@@ -318,6 +321,7 @@ function useSharedAuthClient(options: {
 				setAuthFailureReason(null);
 				authInitializedRef.current = true;
 				recoveryTriggeredRef.current = false;
+				clearAuthRecoveryLatches();
 				logAuthEvent("auth_bootstrap_succeeded", {
 					mode,
 					logtoId: session.logtoId,
@@ -397,6 +401,7 @@ function useSharedAuthClient(options: {
 					setConvexSessionToken(nextSession.sessionToken);
 					setConvexSessionExpiresAt(nextSession.expiresAt);
 					setAuthFailureReason(null);
+					clearAuthRecoveryLatches();
 					logAuthEvent("auth_refresh_succeeded", {
 						mode,
 						logtoId: nextSession.logtoId,
