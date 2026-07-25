@@ -42,6 +42,9 @@ function SignInPage() {
 
 		if (isLoading || isAuthenticated) return;
 
+		// Hard recovery cleared Logto tokens; drop the soft-rebootstrap latch.
+		window.sessionStorage.removeItem("auth-retry:session-init-rebootstrap");
+
 		const storageKey = `auth-retry:${reason}`;
 		if (window.sessionStorage.getItem(storageKey)) return;
 

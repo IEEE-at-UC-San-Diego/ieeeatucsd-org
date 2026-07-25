@@ -22,6 +22,7 @@ import {
 } from "@/lib/auth/logging";
 import { isNativeAuthBridgeMode } from "@/lib/auth/mode";
 import { loadNativeSession } from "@/lib/auth/nativeSession";
+import { resolveNativeAuthRecoveryAction } from "@/lib/auth/recovery";
 import { refreshSessionWithRetry } from "@/lib/auth/sessionRefresh";
 import { buildLogtoSignInOptions, type SignInOptions } from "@/lib/auth/signIn";
 import { setAuthTokens } from "@/lib/prefetch/authTokens";
@@ -545,14 +546,52 @@ function useSharedAuthClient(options: {
 				reason: authFailureReason,
 			});
 
-			// Native mode keeps the Logto refresh token in localStorage so the
-			// user stays signed in across reloads (Gmail/Amazon-style). Only the
-			// in-memory Convex bridge state is cleared; IdP logout is explicit.
+			// Native mode: keep Logto tokens only when the refresh token still
+			// works (Convex-side failure). If Logto refresh is dead ("Grant
+			// request is invalid"), clear storage so the next sign-in is clean.
 			if (mode === "native") {
-				clearLocalAuthState();
-				const url = new URL(`${origin}/signin`);
-				url.searchParams.set("reason", RECOVERY_REASON);
-				window.location.replace(url.toString());
+				let refreshStillValid = false;
+				try {
+					const token = await getAccessTokenRef.current?.();
+					refreshStillValid = Boolean(token);
+				} catch (error) {
+					logAuthEvent("auth_recovery_refresh_probe_failed", {
+						mode,
+						reason: authFailureReason,
+						error: errorMessage(error),
+					});
+				}
+
+				const recoveryAction =
+					resolveNativeAuthRecoveryAction(refreshStillValid);
+				logAuthEvent("auth_recovery_action", {
+					mode,
+					reason: authFailureReason,
+					recoveryAction,
+				});
+
+				if (recoveryAction === "soft_rebootstrap") {
+					clearLocalAuthState();
+					const url = new URL(`${origin}/signin`);
+					url.searchParams.set("reason", RECOVERY_REASON);
+					window.location.replace(url.toString());
+					return;
+				}
+
+				try {
+					await clearAllTokensRef.current?.();
+				} catch (error) {
+					logAuthEvent("auth_recovery_clear_tokens_failed", {
+						mode,
+						reason: authFailureReason,
+						error: errorMessage(error),
+					});
+				} finally {
+					clearLocalAuthState();
+					const url = new URL(`${origin}/signin`);
+					url.searchParams.set("reason", RECOVERY_REASON);
+					window.location.replace(url.toString());
+				}
 				return;
 			}
 
