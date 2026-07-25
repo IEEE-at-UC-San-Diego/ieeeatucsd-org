@@ -4,6 +4,10 @@ import { useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { logAuthEvent } from "@/lib/auth/logging";
+import {
+	AUTH_REBOOTSTRAP_LATCH_KEY,
+	clearAuthRecoveryLatches,
+} from "@/lib/auth/recovery";
 
 export const Route = createFileRoute("/signin")({
 	component: SignInPage,
@@ -19,6 +23,8 @@ function SignInPage() {
 
 	useEffect(() => {
 		if (!isLoading && isAuthenticated && !authFailureReason) {
+			// Successful auth means future soft recoveries in this tab can retry.
+			clearAuthRecoveryLatches();
 			navigate({ to: "/overview", replace: true });
 		}
 	}, [authFailureReason, isLoading, isAuthenticated, navigate]);
@@ -27,13 +33,30 @@ function SignInPage() {
 		if (typeof window === "undefined") return;
 		if (reason !== "stale-callback" && reason !== "session-init") return;
 
+		// Native soft-recovery lands here with Logto still authenticated. Prefer
+		// re-entering the dashboard (re-bootstrap) over forcing another OAuth hop.
+		// Cap one attempt per failure cascade; successful bootstrap clears the latch.
+		if (reason === "session-init" && !isLoading && isAuthenticated) {
+			if (!window.sessionStorage.getItem(AUTH_REBOOTSTRAP_LATCH_KEY)) {
+				window.sessionStorage.setItem(AUTH_REBOOTSTRAP_LATCH_KEY, "1");
+				logAuthEvent("signin_retry_rebootstrap", { reason });
+				navigate({ to: "/overview", replace: true });
+				return;
+			}
+		}
+
+		if (isLoading || isAuthenticated) return;
+
+		// Hard recovery cleared Logto tokens; drop the soft-rebootstrap latch.
+		window.sessionStorage.removeItem(AUTH_REBOOTSTRAP_LATCH_KEY);
+
 		const storageKey = `auth-retry:${reason}`;
 		if (window.sessionStorage.getItem(storageKey)) return;
 
 		window.sessionStorage.setItem(storageKey, "1");
 		logAuthEvent("signin_retry_triggered", { reason });
 		signIn();
-	}, [reason, signIn]);
+	}, [reason, signIn, isLoading, isAuthenticated, navigate]);
 
 	const handleSignIn = () => {
 		signIn();

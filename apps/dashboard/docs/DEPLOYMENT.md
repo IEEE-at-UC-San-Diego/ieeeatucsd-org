@@ -31,8 +31,10 @@ Set these in your `.env` file or pass as build args/runtime env vars:
 
 - `CONVEX_SELF_HOSTED_URL`
 - `CONVEX_SELF_HOSTED_ADMIN_KEY`
-- `AUTH_BRIDGE_MODE` (`legacy` for rollback, `native` for Convex-native auth)
+- `AUTH_BRIDGE_MODE` (`native` default for stay-signed-in Logto sessions; `legacy` rollback only)
 - `VITE_AUTH_BRIDGE_MODE` (must match `AUTH_BRIDGE_MODE` for client/server consistency)
+- `CONVEX_AUTH_STRATEGY` (`bridge` default; `jwt` only after Logto RSA rotation)
+- `VITE_CONVEX_AUTH_STRATEGY` (must match `CONVEX_AUTH_STRATEGY`)
 - `VITE_LOGTO_ENDPOINT`
 - `LOGTO_APP_ID` (required by Convex self-hosted auth config)
 - `VITE_LOGTO_APP_ID`
@@ -57,12 +59,12 @@ Set these in your `.env` file or pass as build args/runtime env vars:
 
 ### Self-Hosted Convex Auth
 
-The repo now includes `convex/auth.config.ts` for native Convex authentication against self-hosted Logto.
+The repo includes `convex/auth.config.ts` for native Convex authentication against self-hosted Logto.
+Self-hosted Convex supports this OIDC JWT path; you do not need Convex Cloud.
 
-- Set `LOGTO_ENDPOINT` to your Logto issuer URL.
+- Set `LOGTO_ENDPOINT` to your Logto **base** URL (e.g. `https://auth.example.com`). `auth.config.ts` normalizes it to the OIDC issuer (`…/oidc`) so it matches ID token `iss`.
 - Set `LOGTO_APP_ID` to the Logto application ID used by the dashboard.
-- Set both `AUTH_BRIDGE_MODE=native` and `VITE_AUTH_BRIDGE_MODE=native` in staging to enable native Convex auth.
-- Keep `AUTH_BRIDGE_MODE=legacy` as the rollback path while validating staging.
+- Default mode is `native`. Keep `AUTH_BRIDGE_MODE=legacy` only as an emergency rollback.
 - For self-hosted Convex manual setup, apply environment variables directly in the Convex deployment since the CLI flow is limited.
 
 ## Docker Deployment

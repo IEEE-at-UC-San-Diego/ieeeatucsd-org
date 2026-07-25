@@ -10,7 +10,7 @@ import {
 	errorMessage,
 	logAuthEvent,
 } from "@/lib/auth/logging";
-import { isNativeAuthBridgeMode } from "@/lib/auth/mode";
+import { isConvexJwtAuthEnabled } from "@/lib/auth/mode";
 
 export const Route = createFileRoute("/callback")({
 	component: CallbackPage,
@@ -61,7 +61,7 @@ function CallbackClient() {
 			getIdTokenClaims: getIdTokenClaims as any,
 			getAccessToken: getAccessToken as any,
 			createSession: async (accessToken: string) => {
-				if (isNativeAuthBridgeMode()) {
+				if (isConvexJwtAuthEnabled()) {
 					const idToken = await getIdToken?.();
 					if (!idToken) {
 						throw new Error("Missing ID token for native Convex auth");

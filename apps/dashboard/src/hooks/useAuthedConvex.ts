@@ -1,6 +1,6 @@
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
-import { isNativeAuthBridgeMode } from "@/lib/auth/mode";
+import { isConvexJwtAuthEnabled } from "@/lib/auth/mode";
 import { useAuth } from "./useAuth";
 
 type GenericArgs = Record<string, unknown>;
@@ -10,7 +10,7 @@ export function useAuthedQuery<QueryRef extends FunctionReference<"query">>(
 	args?: Partial<QueryRef["_args"]> | "skip",
 ): QueryRef["_returnType"] | undefined {
 	const { logtoId, convexSessionToken } = useAuth();
-	const convexAuth = isNativeAuthBridgeMode()
+	const convexAuth = isConvexJwtAuthEnabled()
 		? useConvexAuth()
 		: { isAuthenticated: true, isLoading: false };
 	if (args === "skip") {
@@ -40,7 +40,7 @@ export function useAuthedMutation<
 	args?: Partial<MutationRef["_args"]>,
 ) => Promise<MutationRef["_returnType"]> {
 	const { logtoId, convexSessionToken } = useAuth();
-	const convexAuth = isNativeAuthBridgeMode()
+	const convexAuth = isConvexJwtAuthEnabled()
 		? useConvexAuth()
 		: { isAuthenticated: true, isLoading: false };
 	const mutate = useMutation(mutationRef);

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { errorMessage, logAuthEvent } from "@/lib/auth/logging";
-import { isNativeAuthBridgeMode } from "@/lib/auth/mode";
+import { isConvexJwtAuthEnabled } from "@/lib/auth/mode";
 import { requireApiAuth } from "@/server/auth";
 import { createConvexSessionToken } from "@/server/convex-session";
 import type { UserRole } from "@/types/roles";
@@ -15,11 +15,14 @@ export async function handleConvexSession({ request }: { request: Request }) {
 			});
 		}
 
-		if (isNativeAuthBridgeMode()) {
+		// When Convex JWT auth is enabled, clients must use Logto ID tokens
+		// instead of app-minted bridge tokens.
+		if (isConvexJwtAuthEnabled()) {
 			logAuthEvent("legacy_session_endpoint_rejected", { requestId });
 			return new Response(
 				JSON.stringify({
-					error: "Legacy session minting is disabled in native auth mode",
+					error:
+						"Bridge session minting is disabled while CONVEX_AUTH_STRATEGY=jwt",
 				}),
 				{
 					status: 409,

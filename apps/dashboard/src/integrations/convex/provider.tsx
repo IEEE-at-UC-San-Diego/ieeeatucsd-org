@@ -7,7 +7,8 @@ import {
 } from "convex/react";
 import { useCallback, useMemo, useRef } from "react";
 import { errorMessage, logAuthEvent } from "@/lib/auth/logging";
-import { isNativeAuthBridgeMode } from "@/lib/auth/mode";
+import { isConvexJwtAuthEnabled } from "@/lib/auth/mode";
+import { refreshLogtoIdToken } from "@/lib/auth/logtoToken";
 
 const CONVEX_URL = (
 	import.meta as ImportMeta & {
@@ -24,19 +25,36 @@ const convexQueryClient = new ConvexQueryClient(CONVEX_URL ?? "");
 export { convexQueryClient };
 
 function useLogtoConvexAuth() {
-	const { isAuthenticated, isLoading, getIdToken } = useLogto();
+	const {
+		isAuthenticated,
+		isLoading,
+		getIdToken,
+		getAccessToken,
+		clearAccessToken,
+	} = useLogto();
 
 	const getIdTokenRef = useRef(getIdToken);
+	const getAccessTokenRef = useRef(getAccessToken);
+	const clearAccessTokenRef = useRef(clearAccessToken);
 	getIdTokenRef.current = getIdToken;
+	getAccessTokenRef.current = getAccessToken;
+	clearAccessTokenRef.current = clearAccessToken;
 
 	const fetchAccessToken = useCallback(
 		async ({ forceRefreshToken }: { forceRefreshToken: boolean }) => {
 			try {
-				const token = await getIdTokenRef.current?.();
+				const token = await refreshLogtoIdToken({
+					forceRefreshToken,
+					clearAccessToken: async () => {
+						await clearAccessTokenRef.current?.();
+					},
+					getAccessToken: async () => getAccessTokenRef.current?.(),
+					getIdToken: async () => getIdTokenRef.current?.(),
+				});
 				if (!token && forceRefreshToken) {
 					logAuthEvent("convex_native_token_missing", { forceRefreshToken });
 				}
-				return token ?? null;
+				return token;
 			} catch (error) {
 				logAuthEvent("convex_native_token_failed", {
 					forceRefreshToken,
@@ -63,7 +81,9 @@ export default function AppConvexProvider({
 }: {
 	children: React.ReactNode;
 }) {
-	if (isNativeAuthBridgeMode()) {
+	// Only wire ConvexProviderWithAuth when Logto signs with RS256/ES256.
+	// Default Logto ES384 ID tokens cannot be verified by Convex.
+	if (isConvexJwtAuthEnabled()) {
 		return (
 			<ConvexProviderWithAuth
 				client={convexQueryClient.convexClient as unknown as ConvexReactClient}

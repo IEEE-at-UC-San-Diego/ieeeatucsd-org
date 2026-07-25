@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireApiAuthMock = vi.fn();
 const createConvexSessionTokenMock = vi.fn();
-const isNativeAuthBridgeModeMock = vi.fn(() => false);
+const isConvexJwtAuthEnabledMock = vi.fn(() => false);
 
 vi.mock("@/server/auth", () => ({
 	requireApiAuth: requireApiAuthMock,
@@ -13,14 +13,15 @@ vi.mock("@/server/convex-session", () => ({
 }));
 
 vi.mock("@/lib/auth/mode", () => ({
-	isNativeAuthBridgeMode: isNativeAuthBridgeModeMock,
-	getAuthBridgeMode: () => (isNativeAuthBridgeModeMock() ? "native" : "legacy"),
+	isConvexJwtAuthEnabled: isConvexJwtAuthEnabledMock,
+	isNativeAuthBridgeMode: () => true,
+	getAuthBridgeMode: () => "native",
 }));
 
 describe("POST /api/auth/convex-session", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		isNativeAuthBridgeModeMock.mockReturnValue(false);
+		isConvexJwtAuthEnabledMock.mockReturnValue(false);
 	});
 
 	it("mints a session for a valid but unprovisioned user", async () => {
@@ -81,8 +82,8 @@ describe("POST /api/auth/convex-session", () => {
 		expect(createConvexSessionTokenMock).not.toHaveBeenCalled();
 	});
 
-	it("rejects legacy minting in native auth mode", async () => {
-		isNativeAuthBridgeModeMock.mockReturnValue(true);
+	it("rejects bridge minting when Convex JWT auth strategy is enabled", async () => {
+		isConvexJwtAuthEnabledMock.mockReturnValue(true);
 
 		const { handleConvexSession } = await import("./convex-session");
 		const response = await handleConvexSession({
