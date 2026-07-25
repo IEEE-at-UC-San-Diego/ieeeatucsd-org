@@ -21,7 +21,7 @@ This is a Bun + Turborepo monorepo with two runnable apps: the public **website*
 
 ### External services (needed only for full end-to-end flows)
 
-- **Logto** (auth) and **Convex** (database/backend) are external. Dashboard sign-in ("Continue with Google") requires Logto credentials that are not present by default, so authenticated dashboard flows cannot be completed without those secrets.
+- **Logto** (auth) and **Convex** (database/backend) are external. Logto credentials are supplied as Cursor secrets (`VITE_LOGTO_ENDPOINT`, `VITE_LOGTO_APP_ID`, `LOGTO_ENDPOINT`, `LOGTO_APP_ID`, `LOGTO_M2M_APP_ID`, `LOGTO_M2M_APP_SECRET`) and must be copied into the local `.env` (they are injected as env vars but Vite reads client `VITE_*` values from the env file). With them set, "Continue with Google" correctly redirects through Logto (`auth.ieeeatucsd.org`) to Google OAuth; completing an actual login still needs valid Google account credentials.
 - A local self-hosted Convex backend is available via `bun run dev:convex`, but it requires **Docker** (not installed by default) and a `tools/convex-local/.env` file.
 
 ### Known pre-existing issue
