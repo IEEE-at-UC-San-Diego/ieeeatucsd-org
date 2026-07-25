@@ -1,9 +1,9 @@
 export interface NativeSessionClaims {
 	sub: string;
 	exp?: number;
-	email?: string;
-	name?: string;
-	picture?: string;
+	email?: string | null;
+	name?: string | null;
+	picture?: string | null;
 }
 
 export interface NativeSessionResult {
