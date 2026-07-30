@@ -1,6 +1,6 @@
 import { type LogtoConfig, LogtoProvider, UserScope } from "@logto/react";
-import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { DashboardLoadingShell } from "@/components/dashboard/DashboardLoadingShell";
 
 const defaultScopes: string[] = [
 	UserScope.Email,
@@ -47,21 +47,14 @@ export default function AppLogtoProvider({
 	// Guard against SSR — @logto/react requires browser APIs (window, localStorage).
 	// During SSR and the first client hydration render, isClient is false.
 	// We must NOT render children without LogtoProvider because they may call useLogto().
-	// Instead, show a loading state until the provider is ready.
+	// Instead, paint the dashboard's stable geometry until the provider is ready.
 	const [isClient, setIsClient] = useState(false);
 	useEffect(() => {
 		setIsClient(true);
 	}, []);
 
 	if (!isClient) {
-		return (
-			<div className="flex h-screen items-center justify-center bg-background">
-				<div className="text-center">
-					<Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary" />
-					<p className="text-muted-foreground">Loading...</p>
-				</div>
-			</div>
-		);
+		return <DashboardLoadingShell />;
 	}
 
 	return <LogtoProvider config={logtoConfig}>{children}</LogtoProvider>;

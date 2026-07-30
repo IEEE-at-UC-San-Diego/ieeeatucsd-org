@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { DashboardLoadingShell } from "@/components/dashboard/DashboardLoadingShell";
 import { NotificationBell } from "@/components/dashboard/NotificationBell";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import {
@@ -121,30 +121,20 @@ export function DashboardLayout() {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const isMobile = useIsMobile();
+	const redirectPath = authFailureReason
+		? "/signin"
+		: resolveDashboardRedirect({
+				isAuthResolved,
+				isAuthenticated,
+				user,
+				pathname: location.pathname,
+			});
 
 	useEffect(() => {
-		if (authFailureReason) {
-			navigate({ to: "/signin", replace: true });
-			return;
-		}
-
-		const redirectPath = resolveDashboardRedirect({
-			isAuthResolved,
-			isAuthenticated,
-			user,
-			pathname: location.pathname,
-		});
 		if (redirectPath) {
 			navigate({ to: redirectPath, replace: true });
 		}
-	}, [
-		authFailureReason,
-		isAuthResolved,
-		isAuthenticated,
-		user,
-		location.pathname,
-		navigate,
-	]);
+	}, [navigate, redirectPath]);
 
 	// Reset horizontal + vertical scroll on route change
 	useEffect(() => {
@@ -157,37 +147,8 @@ export function DashboardLayout() {
 
 	const title = PATH_LABELS[location.pathname] || "Dashboard";
 
-	if (isLoading) {
-		return (
-			<div className="flex h-dvh items-center justify-center bg-background">
-				<div className="text-center">
-					<Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary" />
-					<p className="text-muted-foreground">Loading dashboard...</p>
-				</div>
-			</div>
-		);
-	}
-
-	if (!isAuthenticated) {
-		return (
-			<div className="flex h-dvh items-center justify-center bg-background">
-				<div className="text-center">
-					<Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary" />
-					<p className="text-muted-foreground">Redirecting to sign in...</p>
-				</div>
-			</div>
-		);
-	}
-
-	if (isAuthResolved && !user) {
-		return (
-			<div className="flex h-dvh items-center justify-center bg-background">
-				<div className="text-center">
-					<Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary" />
-					<p className="text-muted-foreground">Redirecting to sign in...</p>
-				</div>
-			</div>
-		);
+	if (isLoading || !isAuthResolved || redirectPath) {
+		return <DashboardLoadingShell title={title} />;
 	}
 
 	if (isMobile) {
