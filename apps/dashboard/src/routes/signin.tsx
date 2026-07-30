@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
 import { useEffect, useMemo } from "react";
+import { DashboardLoadingShell } from "@/components/dashboard/DashboardLoadingShell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { logAuthEvent } from "@/lib/auth/logging";
@@ -62,6 +62,13 @@ function SignInPage() {
 		signIn();
 	};
 
+	// Avoid flashing the sign-in card while Logto restores an existing session.
+	// Authenticated users see the same stable frame as dashboard routes until the
+	// navigation effect above sends them to their destination.
+	if ((isLoading || isAuthenticated) && !authFailureReason) {
+		return <DashboardLoadingShell title="Overview" />;
+	}
+
 	return (
 		<div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-ds-background-200 px-4 pt-[max(3rem,env(safe-area-inset-top))] pb-[max(3rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
 			<div className="relative z-10 w-full max-w-md">
@@ -103,14 +110,7 @@ function SignInPage() {
 							className="h-12 w-full text-base"
 							size="lg"
 						>
-							{isLoading && isAuthenticated ? (
-								<>
-									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									Signing In…
-								</>
-							) : (
-								"Continue with Google"
-							)}
+							Continue with Google
 						</Button>
 					</div>
 
