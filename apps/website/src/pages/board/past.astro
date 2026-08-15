@@ -1,0 +1,33 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import PastBoards from "../../components/board/PastBoards.astro";
+import { Image } from "astro:assets";
+import board from "../../images/board.webp";
+
+const seoProps = {
+  title: "Past Boards - IEEE at UC San Diego",
+  description: "Browse previous IEEE at UC San Diego boards by academic year.",
+  keywords: [
+    "IEEE UCSD board",
+    "past boards",
+    "student officers",
+    "IEEE leadership",
+    "student organization board",
+  ],
+  image: "/logos/blue_logo_only.png",
+};
+---
+
+<Layout {...seoProps}>
+  <Image
+    src={board}
+    alt="BOARD"
+    class="absolute left-[1vw] w-[4vw] top-[15vh]"
+  />
+  <Image
+    src={board}
+    alt="BOARD"
+    class="absolute right-[1vw] w-[4vw] top-[15vh]"
+  />
+  <PastBoards />
+</Layout>

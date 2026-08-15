@@ -1,23 +1,50 @@
 ---
 import about from "../../images/about.webp";
 import { Image } from "astro:assets";
+import type { ImageMetadata } from "astro";
 import neko from "../../images/neko.webp";
 import { LiaDotCircle } from "react-icons/lia";
 import Officer from "../board/Officer.astro";
 import Filter from "../board/Filter.astro";
-import officers from "../../data/officers.json";
 
-const officerImages = import.meta.glob("../../images/officers/*.webp", {
-  eager: true,
-});
+export interface OfficerRecord {
+  name: string;
+  position: string;
+  picture: string;
+  email: string;
+  type: string[];
+}
 
-function resolveOfficerImage(picturePath: string, name: string) {
-  if (picturePath?.startsWith("http")) return picturePath;
+interface Props {
+  officers: OfficerRecord[];
+  heading?: string;
+  description?: string;
+  footerLink?: {
+    href: string;
+    label: string;
+  };
+}
 
-  if (!picturePath) {
-    const text = encodeURIComponent(name.toUpperCase());
-    return `https://placehold.co/334x440?text=${text}`;
-  }
+const {
+  officers,
+  heading = "MEET THE BOARD",
+  description,
+  footerLink,
+} = Astro.props;
+
+const blurb =
+  description ??
+  `Our board comprises ${officers.length} students of varying majors, colleges, and interests! Feel free to reach out for any questions about our position or experiences.`;
+
+const officerImages = import.meta.glob<{ default: ImageMetadata }>(
+  "../../images/officers/*.webp",
+  {
+    eager: true,
+  },
+);
+
+function resolveOfficerImage(picturePath: string): ImageMetadata | null {
+  if (!picturePath || picturePath.startsWith("http")) return null;
 
   const base = picturePath.split("/").pop() || "";
   const filename = base.endsWith(".webp") ? base : `${base}.webp`;
@@ -25,12 +52,9 @@ function resolveOfficerImage(picturePath: string, name: string) {
   const key = Object.keys(officerImages).find((k) =>
     k.endsWith(`/${filename}`),
   );
-  return key
-    ? (officerImages as any)[key].default
-    : `https://placehold.co/334x440?text=${encodeURIComponent(name.toUpperCase())}`;
+  return key ? (officerImages[key]?.default ?? null) : null;
 }
 
-// Get all unique types and add 'All' option
 const typeOrder = ["Executives", "Internal", "Events", "Projects"];
 const types = ["All", ...typeOrder];
 
@@ -55,15 +79,25 @@ const eagerCount = 6;
 
   <div class="text-[5vw] md:text-[2.5vw] flex items-center mt-[1vw]">
     <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
-    <p>MEET THE BOARD</p>
+    <p>{heading}</p>
   </div>
 
   <p
     class="md:text-[1.3vw] text-[2.5vw] md:w-[56%] w-[70%] my-[3%] font-extralight text-center"
   >
-    Our board comprises 31 students of varying majors, colleges, and interests!
-    Feel free to reach out for any questions about our position or experiences.
+    {blurb}
   </p>
+
+  {
+    footerLink && (
+      <a
+        href={footerLink.href}
+        class="mb-[1vw] text-ieee-yellow md:text-[1vw] text-[2.2vw] underline underline-offset-4 hover:text-white transition-colors"
+      >
+        {footerLink.label}
+      </a>
+    )
+  }
 
   <Filter filters={types} currentFilter={currentFilter} />
 
@@ -78,7 +112,7 @@ const eagerCount = 6;
           <Officer
             name={officer.name}
             position={officer.position}
-            picture={resolveOfficerImage(officer.picture, officer.name)}
+            picture={resolveOfficerImage(officer.picture)}
             email={officer.email}
             eager={i < eagerCount}
           />

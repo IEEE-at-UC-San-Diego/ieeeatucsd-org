@@ -1,19 +1,19 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import Officers from "../components/board/Officers.astro";
+import Layout from "../../layouts/Layout.astro";
+import Officers from "../../components/board/Officers.astro";
 import { Image } from "astro:assets";
-import board from "../images/board.webp";
-import officers from "../data/officers.json";
+import board from "../../images/board.webp";
+import officers from "../../data/officers-2025-2026.json";
 
 const seoProps = {
-  title: "Board Members - IEEE at UC San Diego",
+  title: "2025–2026 Board - IEEE at UC San Diego",
   description:
-    "Meet the dedicated board members and officers leading IEEE at UC San Diego. Our team is committed to empowering students through technical excellence and professional development.",
+    "Meet the IEEE at UC San Diego board from the 2025–2026 academic year.",
   keywords: [
     "IEEE UCSD board",
     "student officers",
     "IEEE leadership",
-    "UCSD engineering leaders",
+    "2025-2026 board",
     "student organization board",
   ],
   image: "/logos/blue_logo_only.png",
@@ -33,6 +33,8 @@ const seoProps = {
   />
   <Officers
     officers={officers}
+    heading="2025–2026 BOARD"
+    description="The IEEE at UC San Diego board for the 2025–2026 academic year."
     footerLink={{
       href: "/board/past",
       label: "View past boards",
