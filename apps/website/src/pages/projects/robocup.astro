@@ -5,7 +5,6 @@ import roboFaq from "../../data/roboFaq.json";
 import About from "../../components/core/About.astro";
 import RoboTitle from "../../components/robocub/RoboTitle.astro";
 import { Image } from "astro:assets";
-import roboborder from "../../images/roboborder.webp";
 import robocupImage from "../../images/robocup.webp";
 import Subteams from "../../components/robocub/Subteams.astro";
 import Timeline from "../../components/qp/Timeline.astro";
@@ -34,16 +33,6 @@ const seoProps = {
 ---
 
 <Layout {...seoProps}>
-  <Image
-    src={roboborder}
-    alt="JOIN US"
-    class="absolute left-[1vw] w-[4vw] top-[60vh] z-10"
-  />
-  <Image
-    src={roboborder}
-    alt="JOIN US"
-    class="absolute right-[1vw] w-[4vw] top-[60vh] z-10"
-  />
   <RoboTitle />
   <About
     title="What is RoboCup?"
@@ -54,10 +43,10 @@ const seoProps = {
       {
         roboLinks.map((roboLink) => (
           <a
-            data-inview
             href={roboLink.link}
             target="_blank"
-            class={`hover:font-semibold in-view:animate-fade-down animate-de animate-delay-${roboLink.delay} w-[30%] text-center z-10 cursor-pointer px-[2%] py-[1%] md:text-[1.2vw] text-[2vw] border-[0.1vw] border-white rounded-[0.5vw] hover:bg-ieee-yellow/80 duration-300 font-light flex items-center justify-center`}
+            rel="noreferrer"
+            class="ieee-btn ieee-btn-ghost w-[30%] text-center text-sm md:text-base"
           >
             {roboLink.text}
           </a>

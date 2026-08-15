@@ -1,15 +1,15 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Landing from "../components/main_page/Landing.astro";
-import Divider from "../components/main_page/Divider.astro";
-import Social from "../components/core/Social.astro";
 import About from "../components/main_page/About.astro";
+import ProjectSpaceTeaser from "../components/main_page/ProjectSpaceTeaser.astro";
 import Activities from "../components/main_page/Activities.astro";
+import Social from "../components/core/Social.astro";
 
 const seoProps = {
   title: "IEEE at UC San Diego - Join One of the Largest IEEE Student Branches",
   description:
-    "Join one of the largest IEEE student branches in the US! IEEE @ UCSD empowers students through technical projects, workshops, networking, and professional development opportunities in engineering and technology.",
+    "Join one of the largest IEEE student branches in the US! IEEE @ UCSD empowers students through Project Space, technical projects, workshops, networking, and professional development.",
   keywords: [
     "IEEE UCSD",
     "UC San Diego engineering",
@@ -19,6 +19,7 @@ const seoProps = {
     "technical workshops",
     "engineering networking",
     "UCSD student branch",
+    "IEEE Project Space",
   ],
   image: "/logos/blue_logo_only.png",
   imageAlt: "IEEE at UC San Diego Logo",
@@ -27,8 +28,8 @@ const seoProps = {
 
 <Layout {...seoProps}>
   <Landing />
-  <Divider />
   <About />
+  <ProjectSpaceTeaser />
   <Activities />
   <Social />
 </Layout>

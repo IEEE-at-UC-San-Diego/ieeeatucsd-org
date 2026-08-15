@@ -1,0 +1,60 @@
+---
+import { RiSlideshowLine } from "react-icons/ri";
+import { IoMdGlobe } from "react-icons/io";
+import SectionHeading from "../core/SectionHeading.astro";
+---
+
+<section class="page-section" aria-labelledby="resources-heading">
+  <SectionHeading
+    id="resources-heading"
+    eyebrow="For members"
+    title="Resources"
+  />
+  <div class="mt-8 grid gap-4 md:grid-cols-2">
+    <article class="ieee-panel p-6 flex gap-4 items-start">
+      <div
+        class="flex size-14 shrink-0 items-center justify-center rounded-full border border-white/15 bg-ieee-blue-300/40 text-2xl"
+        aria-hidden="true"
+      >
+        <RiSlideshowLine />
+      </div>
+      <div>
+        <h3 class="font-display font-semibold text-xl">Workshop slides</h3>
+        <p class="mt-2 text-white/75">
+          Slides from IEEE at UC San Diego technical workshops.
+        </p>
+        <a
+          class="ieee-btn ieee-btn-ghost mt-4"
+          href="http://www.google.com"
+          target="_blank"
+          rel="noreferrer"
+        >
+          View
+        </a>
+      </div>
+    </article>
+    <article class="ieee-panel p-6 flex gap-4 items-start">
+      <div
+        class="flex size-14 shrink-0 items-center justify-center rounded-full border border-white/15 bg-ieee-blue-300/40 text-2xl"
+        aria-hidden="true"
+      >
+        <IoMdGlobe />
+      </div>
+      <div>
+        <h3 class="font-display font-semibold text-xl">International IEEE</h3>
+        <p class="mt-2 text-white/75">
+          The parent organization offers project sponsorship, IEEE DataPort, and
+          student contests.
+        </p>
+        <a
+          class="ieee-btn ieee-btn-ghost mt-4"
+          href="https://www.ieee.org/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          View
+        </a>
+      </div>
+    </article>
+  </div>
+</section>

@@ -1,24 +1,20 @@
 ---
-import { LiaDotCircle } from "react-icons/lia";
 import FirestoreEventList from "./FirestoreEventList.jsx";
+import SectionHeading from "../core/SectionHeading.astro";
 
 const { events = [] } = Astro.props;
 ---
 
-<div class="flex ml-[15%] md:my-[10%] my-[20%]">
-  <div class="md:w-1/4 w-[30%] text-white pr-[5%] mr-[10%]">
-    <div class="w-[6vw] h-[0.3vw] bg-ieee-yellow rounded-full"></div>
-    <div class="flex items-center md:text-[2vw] text-[4vw] font-bold my-[10%]">
-      <LiaDotCircle className=" mr-[1vw] text-[2.5vw]" />
-      <p>
-        Upcoming <br /> Events
-      </p>
-    </div>
-    <p class="md:text-[1.3vw] text-[2vw] font-light">
-      SCROLL DOWN TO SEE THE UPCOMING EVENTS FOR IEEE!
-    </p>
-  </div>
-  <div>
+<section class="page-section" aria-labelledby="upcoming-heading">
+  <SectionHeading
+    id="upcoming-heading"
+    eyebrow="This quarter"
+    title="Upcoming events"
+  >
+    Workshops, socials, and project meetings. Subscribe on the calendar below
+    for the full list.
+  </SectionHeading>
+  <div class="mt-8">
     <FirestoreEventList client:load events={events} />
   </div>
-</div>
+</section>

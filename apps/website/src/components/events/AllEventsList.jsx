@@ -28,8 +28,7 @@ const EventCard = ({ event, index, publicCalendarId }) => {
 
   return (
     <div
-      className={`bg-white/10 backdrop-blur-sm rounded-lg p-6 mb-6 border border-white/20 hover:bg-white/15 transition-all duration-300 animate-duration-500 animate-delay-${index * 100} in-view:animate-fade-up`}
-      data-inview
+      className="bg-white/10 rounded-lg p-6 mb-6 border border-white/20"
     >
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-white text-xl font-bold">{event.eventName}</h3>

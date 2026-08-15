@@ -2,7 +2,6 @@
 import about from "../../images/about.webp";
 import { Image } from "astro:assets";
 import neko from "../../images/neko.webp";
-import { LiaDotCircle } from "react-icons/lia";
 import pastBoards from "../../data/pastBoards.json";
 
 interface Props {
@@ -11,7 +10,7 @@ interface Props {
 }
 
 const {
-  heading = "PAST BOARDS",
+  heading = "Past boards",
   description = "Previous IEEE at UC San Diego boards.",
 } = Astro.props;
 ---
@@ -19,10 +18,7 @@ const {
 <div
   class="text-white flex flex-col items-center md:mt-[5vw] mt-[10vw] mb-[10vh]"
 >
-  <div
-    data-inview
-    class="relative w-[40vw] md:w-[21vw] mb-[10vh] in-view:animate-fade-down"
-  >
+  <div class="relative w-[40vw] md:w-[21vw] mb-[10vh]">
     <Image src={about} alt="About background image" />
     <Image
       src={neko}
@@ -31,10 +27,9 @@ const {
     />
   </div>
 
-  <div class="text-[5vw] md:text-[2.5vw] flex items-center mt-[1vw]">
-    <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
-    <p>{heading}</p>
-  </div>
+  <h1 class="font-display font-bold text-[clamp(1.8rem,4vw,2.8rem)] mt-2">
+    {heading}
+  </h1>
 
   <p
     class="md:text-[1.3vw] text-[2.5vw] md:w-[56%] w-[70%] my-[3%] font-extralight text-center"
@@ -55,7 +50,7 @@ const {
         <li>
           <a
             href={entry.href}
-            class="group block rounded-[1.5vw] border border-white/10 bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 px-[4%] py-[3%] hover:shadow-glow hover:-translate-y-[0.2vw] transition-all duration-300"
+            class="group block rounded-[1.5vw] border border-white/10 bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 px-[4%] py-[3%]"
           >
             <p class="md:text-[1.8vw] text-[3.6vw] font-semibold tracking-tight">
               {entry.year}

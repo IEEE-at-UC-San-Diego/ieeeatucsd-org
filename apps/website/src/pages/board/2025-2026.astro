@@ -1,8 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import Officers from "../../components/board/Officers.astro";
-import { Image } from "astro:assets";
-import board from "../../images/board.webp";
 import officers from "../../data/officers-2025-2026.json";
 
 const seoProps = {
@@ -21,19 +19,9 @@ const seoProps = {
 ---
 
 <Layout {...seoProps}>
-  <Image
-    src={board}
-    alt="BOARD"
-    class="absolute left-[1vw] w-[4vw] top-[15vh]"
-  />
-  <Image
-    src={board}
-    alt="BOARD"
-    class="absolute right-[1vw] w-[4vw] top-[15vh]"
-  />
   <Officers
     officers={officers}
-    heading="2025–2026 BOARD"
+    heading="2025–2026 board"
     description="The IEEE at UC San Diego board for the 2025–2026 academic year."
     footerLink={{
       href: "/board/past",

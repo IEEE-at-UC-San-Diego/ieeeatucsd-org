@@ -1,11 +1,8 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Social from "../components/core/Social.astro";
-import Findus from "../components/join/Findus.astro";
+import ProjectSpace from "../components/join/ProjectSpace.astro";
 import FindTitle from "../components/find/FindTitle.astro";
-import { Image } from "astro:assets";
-import event from "../images/event.webp";
-import contactbroder from "../images/contactbroder.webp";
 
 const seoProps = {
   title: "Find Us - IEEE at UC San Diego",
@@ -24,23 +21,7 @@ const seoProps = {
 ---
 
 <Layout {...seoProps}>
-  <Image
-    src={contactbroder}
-    alt="JOIN US"
-    class="absolute left-[1vw] md:w-[4vw] w-[5vw] md:top-[60vh] top-[70vw] -z-10"
-  />
-  <Image
-    src={contactbroder}
-    alt="JOIN US"
-    class="absolute right-[1vw] md:w-[4vw] w-[5vw] md:top-[60vh] top-[70vw] -z-10"
-  />
   <FindTitle />
-  <div class="w-full flex justify-center">
-    <div class="skeleton w-3/4 rounded-full">
-      <Image src={event} alt="board group photos" class="w-full rounded-full" />
-    </div>
-  </div>
-
-  <Findus />
+  <ProjectSpace />
   <Social />
 </Layout>

@@ -1,7 +1,6 @@
 ---
 import Navbar from "../components/core/Navbar.astro";
 import Footer from "../components/core/Footer.astro";
-import InView from "../components/core/InView.astro";
 import SEO from "../components/core/SEO.astro";
 
 export interface Props {
@@ -27,10 +26,8 @@ const seoProps = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
 
-    <!-- SEO Meta Tags -->
     <SEO {...seoProps} />
 
-    <!-- Fonts: Bricolage Grotesque (display) · Geist (body) · Geist Mono (labels) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -38,7 +35,6 @@ const seoProps = Astro.props;
       href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap"
     />
 
-    <!-- Favicons -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -57,36 +53,30 @@ const seoProps = Astro.props;
     />
     <link rel="manifest" href="/site.webmanifest" />
 
-    <!-- Iconify -->
     <script
       src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"
     ></script>
 
-    <!-- Theme Script -->
     <script is:inline>
-      // Set default theme to dark if not already set
       if (!localStorage.getItem("theme")) {
         localStorage.setItem("theme", "dark");
         document.documentElement.setAttribute("data-theme", "dark");
       } else {
-        // Apply saved theme
         const savedTheme = localStorage.getItem("theme");
         document.documentElement.setAttribute("data-theme", savedTheme);
       }
     </script>
   </head>
-  <InView />
-  <body class="w-full h-full m-0 bg-ieee-black">
-    <div class="text-white min-h-screen">
+  <body class="w-full min-h-full m-0 bg-ieee-black text-white">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div class="min-h-screen flex flex-col">
       <header class="sticky top-0 w-full z-[999]">
         <Navbar />
       </header>
-      <main class="w-[95%] mx-auto">
+      <main id="main-content" class="page-main flex-1">
         <slot />
       </main>
       <Footer />
     </div>
-
-    <!-- PWA Install Prompt removed - only for dashboard -->
   </body>
 </html>

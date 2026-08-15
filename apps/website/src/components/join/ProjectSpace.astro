@@ -1,0 +1,118 @@
+---
+interface Props {
+  showCalendar?: boolean;
+}
+
+const { showCalendar = true } = Astro.props;
+
+const mapSrc =
+  "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3350.627565860723!2d-117.23806952372503!3d32.881572078634505!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80dc06c3689b4f99%3A0xdf55f97f07f34d4f!2sIrwin%20%26%20Joan%20Jacobs%20School%20of%20Engineering!5e0!3m2!1sen!2sus!4v1736755644414!5m2!1sen!2sus";
+const calendarSrc =
+  "https://calendar.google.com/calendar/embed?src=c_386c2eeca82d8373c803ea11c5b4ed210b3817005c169c99aa6bd93775444176%40group.calendar.google.com&ctz=America%2FLos_Angeles";
+const directionsHref = "https://maps.app.goo.gl/y4RwNCkoKBEHGHsv6";
+
+const tools = [
+  "Soldering stations",
+  "Breadboards and components",
+  "Arduino and Raspberry Pi parts",
+  "Open tables for homework",
+];
+---
+
+<section
+  id="project-space"
+  class="page-section scroll-mt-24"
+  aria-labelledby="project-space-heading"
+>
+  <div class="ieee-panel overflow-hidden">
+    <div
+      class="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] items-stretch"
+    >
+      <div class="p-6 sm:p-8 lg:p-10">
+        <p class="eyebrow text-ieee-yellow text-xs md:text-sm mb-3">
+          Walk in this week
+        </p>
+        <h2
+          id="project-space-heading"
+          class="font-display font-bold text-[clamp(1.8rem,4vw,2.75rem)]"
+        >
+          Project Space
+        </h2>
+        <p
+          class="mt-3 font-mono-tech text-ieee-blue-100 text-sm md:text-base tracking-[0.14em]"
+        >
+          EBU1-4710 · Jacobs Hall, 4th floor
+        </p>
+        <p class="mt-5 text-lead text-white/80 max-w-xl">
+          Our open-access studio is one of the club’s most important offerings.
+          Come do homework, build, or ask an officer a question. No membership
+          fee. No application.
+        </p>
+
+        <ol
+          class="mt-6 space-y-2 text-white/80 text-[0.98rem] leading-relaxed list-decimal pl-5"
+        >
+          <li>Take the Jacobs Hall / EBU1 elevators to the 4th floor.</li>
+          <li>Turn left after you exit, then walk to the end of the hall.</li>
+          <li>Project Space is the last hallway on your left.</li>
+        </ol>
+
+        <ul class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {
+            tools.map((tool) => (
+              <li class="rounded-full border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/85">
+                {tool}
+              </li>
+            ))
+          }
+        </ul>
+
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a
+            class="ieee-btn ieee-btn-primary"
+            href={directionsHref}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Get directions
+          </a>
+          {
+            showCalendar && (
+              <a class="ieee-btn ieee-btn-ghost" href="#open-access-hours">
+                Officer hours
+              </a>
+            )
+          }
+        </div>
+      </div>
+
+      <div class="min-h-[18rem] border-t lg:border-t-0 lg:border-l border-white/10">
+        <iframe
+          class="h-full min-h-[18rem] w-full"
+          src={mapSrc}
+          title="Map of Jacobs School of Engineering, home of IEEE Project Space"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+    </div>
+  </div>
+
+  {
+    showCalendar && (
+      <div id="open-access-hours" class="mt-10 scroll-mt-24">
+        <h3 class="font-display font-semibold text-[clamp(1.3rem,3vw,1.8rem)]">
+          Open Access Hours
+        </h3>
+        <p class="mt-2 text-white/70 max-w-2xl">
+          Officers host drop-in hours in Project Space. Use the calendar to see
+          who is there and when.
+        </p>
+        <iframe
+          class="mt-5 w-full min-h-[28rem] rounded-2xl border border-white/10"
+          src={calendarSrc}
+          title="IEEE at UC San Diego Open Access Hours calendar"
+          loading="lazy"></iframe>
+      </div>
+    )
+  }
+</section>
