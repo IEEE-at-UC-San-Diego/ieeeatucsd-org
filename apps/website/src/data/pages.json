@@ -31,7 +31,13 @@
   },
   {
     "name": "Board",
-    "path": "/board"
+    "path": "/board",
+    "subpages": [
+      {
+        "name": "2025–2026 Board",
+        "path": "/board/2025-2026"
+      }
+    ]
   },
   {
     "name": "Contact",

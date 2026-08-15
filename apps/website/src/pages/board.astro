@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import Officers from "../components/board/Officers.astro";
 import { Image } from "astro:assets";
 import board from "../images/board.webp";
+import officers from "../data/officers.json";
 
 const seoProps = {
   title: "Board Members - IEEE at UC San Diego",
@@ -30,5 +31,11 @@ const seoProps = {
     alt="BOARD"
     class="absolute right-[1vw] w-[4vw] top-[15vh]"
   />
-  <Officers />
+  <Officers
+    officers={officers}
+    footerLink={{
+      href: "/board/2025-2026",
+      label: "View the 2025–2026 board",
+    }}
+  />
 </Layout>

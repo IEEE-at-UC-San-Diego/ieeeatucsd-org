@@ -1,0 +1,212 @@
+[
+  {
+    "name": "Erik Duarte",
+    "position": "Chair",
+    "picture": "/officers/erik.webp",
+    "email": "president@ieeeatucsd.org",
+    "type": ["Executives"]
+  },
+  {
+    "name": "Wan-Rong Leung",
+    "position": "Vice Chair Internal",
+    "picture": "/officers/emma.webp",
+    "email": "internal@ieeeatucsd.org",
+    "type": ["Executives", "Internal"]
+  },
+  {
+    "name": "Akhil Ram Shankar",
+    "position": "Vice Chair External",
+    "picture": "/officers/akhil.webp",
+    "email": "external@ieeeatucsd.org",
+    "type": ["Executives"]
+  },
+  {
+    "name": "Anupama Nambiar",
+    "position": "Vice Chair Events",
+    "picture": "/officers/anu.webp",
+    "email": "events@ieeeatucsd.org",
+    "type": ["Executives", "Events"]
+  },
+  {
+    "name": "Charles Nguyen",
+    "position": "Vice Chair Finance",
+    "picture": "/officers/charles.webp",
+    "email": "treasurer@ieeeatucsd.org",
+    "type": ["Executives"]
+  },
+  {
+    "name": "Aiden Bassette",
+    "position": "VC Operations",
+    "picture": "/officers/aiden.webp",
+    "email": "coordinators@ieeeatucsd.org",
+    "type": ["Executives", "Events"]
+  },
+  {
+    "name": "Anusha Chadalavada",
+    "position": "VC Operations",
+    "picture": "/officers/anusha.webp",
+    "email": "coordinators@ieeeatucsd.org",
+    "type": ["Executives", "Events"]
+  },
+  {
+    "name": "Raymond Rada",
+    "position": "Robocup Soccer Chair",
+    "picture": "/officers/raymond.webp",
+    "email": "robocup@ieeeatucsd.org",
+    "type": ["Projects"]
+  },
+  {
+    "name": "Lukas Cao",
+    "position": "Robocup Soccer Chair",
+    "picture": "/officers/lukas.webp",
+    "email": "robocup@ieeeatucsd.org",
+    "type": ["Projects"]
+  },
+  {
+    "name": "Gauri Renjith",
+    "position": "Supercomputing Chair",
+    "picture": "/officers/gauri.webp",
+    "email": "projects@ieeeatucsd.org",
+    "type": ["Projects"]
+  },
+  {
+    "name": "Ferrari Guan",
+    "position": "Quarterly Projects Chair",
+    "picture": "/officers/ferrari.webp",
+    "email": "qp@ieeeatucsd.org",
+    "type": ["Projects"]
+  },
+  {
+    "name": "Angel Rinea Arguilla",
+    "position": "Quarterly Projects Chair",
+    "picture": "",
+    "email": "qp@ieeeatucsd.org",
+    "type": ["Projects"]
+  },
+  {
+    "name": "Iris Chou",
+    "position": "Professional Chair",
+    "picture": "",
+    "email": "professional@ieeeatucsd.org",
+    "type": ["Events"]
+  },
+  {
+    "name": "Ridhi Srikanth",
+    "position": "Technical Chair",
+    "picture": "/officers/ridhi.webp",
+    "email": "technical@ieeeatucsd.org",
+    "type": ["Events"]
+  },
+  {
+    "name": "Aryen Singhal",
+    "position": "Technical Chair",
+    "picture": "/officers/aryen.webp",
+    "email": "technical@ieeeatucsd.org",
+    "type": ["Events"]
+  },
+  {
+    "name": "Riya Bhatia",
+    "position": "Technical Chair",
+    "picture": "",
+    "email": "technical@ieeeatucsd.org",
+    "type": ["Events"]
+  },
+  {
+    "name": "Anika Agarwal",
+    "position": "Outreach Chair",
+    "picture": "/officers/anika.webp",
+    "email": "outreach@ieeeatucsd.org",
+    "type": ["Events"]
+  },
+  {
+    "name": "Aaditya Pillai",
+    "position": "Outreach Chair",
+    "picture": "/officers/aaditya.webp",
+    "email": "outreach@ieeeatucsd.org",
+    "type": ["Events"]
+  },
+  {
+    "name": "Kelly Guan",
+    "position": "Social Chair",
+    "picture": "/officers/kelly.webp",
+    "email": "social@ieeeatucsd.org",
+    "type": ["Events"]
+  },
+  {
+    "name": "Cailey Murad",
+    "position": "Social Chair",
+    "picture": "/officers/cailey.webp",
+    "email": "social@ieeeatucsd.org",
+    "type": ["Events"]
+  },
+  {
+    "name": "Andy Smithwick",
+    "position": "Webmaster",
+    "picture": "/officers/andy.webp",
+    "email": "webmaster@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Shing Hung",
+    "position": "Webmaster",
+    "picture": "/officers/shing.webp",
+    "email": "webmaster@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Katie Ngo",
+    "position": "Webmaster",
+    "picture": "/officers/katie.webp",
+    "email": "webmaster@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Daniel Xu",
+    "position": "Webmaster",
+    "picture": "/officers/daniel.webp",
+    "email": "webmaster@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Lauren Vo",
+    "position": "Marketing Chair",
+    "picture": "/officers/lauren.webp",
+    "email": "marketing@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Loraine Diosa",
+    "position": "Marketing Chair",
+    "picture": "",
+    "email": "marketing@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Christine Uy",
+    "position": "Design Chair",
+    "picture": "/officers/christine.webp",
+    "email": "design@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Emma Pan",
+    "position": "Design Chair",
+    "picture": "/officers/emmapan.webp",
+    "email": "design@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Cameryn Mugol",
+    "position": "Design Chair",
+    "picture": "/officers/cameryn.webp",
+    "email": "design@ieeeatucsd.org",
+    "type": ["Internal"]
+  },
+  {
+    "name": "Paul Moore",
+    "position": "UI/UX Chair",
+    "picture": "/officers/paul.webp",
+    "email": "ui@ieeeatucsd.org",
+    "type": ["Internal"]
+  }
+]

@@ -7,7 +7,7 @@ interface Props {
   name: string;
   position: string;
   picture: ImageMetadata | null;
-  email: string;
+  email?: string;
   eager?: boolean;
 }
 
@@ -72,18 +72,20 @@ const { name, position, picture, email, eager = false } = Astro.props as Props;
       </p>
     </div>
 
-    <div class="w-[85%] pb-[1.2vw] pt-[0.6vw] flex justify-center">
-      <a
-        href={`mailto:${email}`}
-        class="group/email inline-flex items-center gap-[0.6vw] rounded-full bg-white/5 hover:bg-white/10 border border-white/10 px-[1.2vw] py-[0.4vw] text-ieee-yellow md:text-[0.85vw] text-[1.7vw] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ieee-yellow/60"
-        aria-label={`Email ${name}`}
-        title={email}
-      >
-        <MdEmail
-          className="md:text-[1.1vw] text-[2.2vw] opacity-80 group-hover/email:opacity-100 transition-opacity"
-        />
-        <span class="truncate max-w-[14vw] md:max-w-[12vw]">{email}</span>
-      </a>
-    </div>
+    {
+      email && (
+        <div class="w-[85%] pb-[1.2vw] pt-[0.6vw] flex justify-center">
+          <a
+            href={`mailto:${email}`}
+            class="group/email inline-flex items-center gap-[0.6vw] rounded-full bg-white/5 hover:bg-white/10 border border-white/10 px-[1.2vw] py-[0.4vw] text-ieee-yellow md:text-[0.85vw] text-[1.7vw] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ieee-yellow/60"
+            aria-label={`Email ${name}`}
+            title={email}
+          >
+            <MdEmail className="md:text-[1.1vw] text-[2.2vw] opacity-80 group-hover/email:opacity-100 transition-opacity" />
+            <span class="truncate max-w-[14vw] md:max-w-[12vw]">{email}</span>
+          </a>
+        </div>
+      )
+    }
   </div>
 </div>
