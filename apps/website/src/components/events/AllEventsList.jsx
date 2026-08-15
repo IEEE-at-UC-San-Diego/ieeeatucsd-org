@@ -5,7 +5,7 @@ import {
   downloadEventIcs,
 } from "../../lib/calendarLinks";
 
-const EventCard = ({ event, index, publicCalendarId }) => {
+const EventCard = ({ event, publicCalendarId }) => {
   const startDate = new Date(Number(event.startDate));
   const endDate = new Date(Number(event.endDate));
 
@@ -209,11 +209,10 @@ const AllEventsList = ({ events = [], publicCalendarId = "" }) => {
         </div>
       ) : (
         <div>
-          {filteredEvents.map((event, index) => (
+          {filteredEvents.map((event) => (
             <EventCard
               key={event._id}
               event={event}
-              index={index}
               publicCalendarId={publicCalendarId}
             />
           ))}

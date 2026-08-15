@@ -62,7 +62,7 @@ const FirestoreEventList = ({ events = [] }) => {
 
   return (
     <div>
-      {upcomingEvents.map((event, index) => {
+      {upcomingEvents.map((event) => {
         const startDate = new Date(Number(event.startDate));
         const day = startDate.toLocaleDateString("en-US", { weekday: "short" });
         const date = startDate.toLocaleDateString("en-US", {
