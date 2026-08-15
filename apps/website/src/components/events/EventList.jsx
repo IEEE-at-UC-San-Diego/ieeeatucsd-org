@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from "react";
 
-const UpcomingEvent = ({ name, location, date, time, delay, description }) => (
+const UpcomingEvent = ({ name, location, date, time, description }) => (
   <div className="text-white w-full max-w-lg pl-4 md:pl-8 border-l-2 md:border-l-4 border-white/70 pb-8 md:pb-12 relative">
     <p
-      data-inview
-      className={`animate-duration-500 animate-delay-${delay * 200} in-view:animate-fade-left py-2 px-4 md:px-6 w-fit border border-white/30 font-light rounded-full text-sm md:text-lg lg:text-xl`}
+      className="py-2 px-4 md:px-6 w-fit border border-white/30 font-light rounded-full text-sm md:text-lg lg:text-xl"
     >
       {name}
     </p>
     <div
-      data-inview
-      className={`animate-duration-500 animate-delay-${delay * 200 + 100} in-view:animate-fade-left space-y-2 md:space-y-0 md:flex md:flex-wrap md:gap-4 text-sm md:text-base lg:text-lg my-4`}
+      className="space-y-2 md:space-y-0 md:flex md:flex-wrap md:gap-4 text-sm md:text-base lg:text-lg my-4"
     >
       <div className="flex items-center flex-wrap">
         <span className="font-medium mr-2">Location:</span>
@@ -30,8 +28,7 @@ const UpcomingEvent = ({ name, location, date, time, delay, description }) => (
       )}
     </div>
     <p
-      data-inview
-      className={`animate-duration-500 animate-delay-${delay * 200 + 200} in-view:animate-fade-left text-xs md:text-sm lg:text-base text-white/60 break-words`}
+      className="text-xs md:text-sm lg:text-base text-white/60 break-words"
     >
       {description}
     </p>
@@ -128,9 +125,7 @@ const EventList = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
           location="¯\_(ツ)_/¯"
           date=""
           time=""
-          delay={0}
-          description="There are no upcoming events! Check back again soon :)
-...or just wait for the entire page to load. This is here by default LOL"
+          description="There are no upcoming events. Check back soon."
         />
       )}
       {!loading && !error && events.length > 0 && (
@@ -159,7 +154,6 @@ const EventList = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
                 location={event.location || "No location provided"}
                 date={`${day} ${date}`}
                 time={time}
-                delay={index}
                 description={event.description || "No description available."}
               />
             );

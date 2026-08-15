@@ -1,19 +1,20 @@
 ---
 import Question from "./Question.astro";
+import SectionHeading from "./SectionHeading.astro";
+
 const { faq } = Astro.props;
-import { LiaDotCircle } from "react-icons/lia";
 ---
 
-<div class="text-white md:ml-[15vw] ml-[10vw] mb-[20%] mt-[10%]">
-  <div class="text-[4.5vw] md:text-[2.5vw] flex items-center my-[7vh]">
-    <LiaDotCircle className=" mr-[1vw] pt-[0.5%]" />
-    <p>Frequently Asked Questions</p>
-  </div>
-  <div class="w-full ml-[5vw]">
+<section class="page-section" aria-labelledby="faq-heading">
+  <SectionHeading
+    id="faq-heading"
+    title="Frequently asked questions"
+  />
+  <div class="mt-6">
     {
-      faq.map((question: any) => (
-        <Question question={question.question} answer={question.answer} />
+      faq.map((item: { question: string; answer: string }) => (
+        <Question question={item.question} answer={item.answer} />
       ))
     }
   </div>
-</div>
+</section>

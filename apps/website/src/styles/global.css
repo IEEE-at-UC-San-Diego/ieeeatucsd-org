@@ -4,6 +4,12 @@
 
 @layer base {
   :root {
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --duration-press: 140ms;
+    --duration-ui: 200ms;
+    --page-gutter: clamp(1.25rem, 4vw, 3rem);
+    --page-max: 72rem;
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -146,8 +152,25 @@
 
   /* Accessible, on-brand focus rings */
   :focus-visible {
-    outline: 2px solid rgba(136, 191, 236, 0.7);
-    outline-offset: 2px;
+    outline: 2px solid rgba(136, 191, 236, 0.85);
+    outline-offset: 3px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  a:where(:not(.ieee-btn):not(.skip-link):not(:has(img))) {
+    @apply text-ieee-blue-100 underline underline-offset-[0.18em] decoration-ieee-blue-100/55;
+    transition:
+      color var(--duration-ui) ease,
+      text-decoration-color var(--duration-ui) ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    a:where(:not(.ieee-btn):not(.skip-link):not(:has(img))):hover {
+      @apply text-ieee-yellow decoration-ieee-yellow/85;
+    }
   }
 
   /* Respect reduced-motion preferences */
@@ -165,22 +188,110 @@
   }
 }
 
+/* Page structure + pressable controls */
+@layer components {
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: 0.75rem;
+    z-index: 10000;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+    background: #f3c135;
+    color: #0a0e1a;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .skip-link:focus {
+    width: auto;
+    height: auto;
+    padding: 0.65rem 1rem;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: normal;
+    border-radius: 999px;
+  }
+
+  .page-main {
+    width: min(100% - var(--page-gutter) * 2, var(--page-max));
+    margin-inline: auto;
+  }
+
+  .page-section {
+    padding-block: clamp(3rem, 7vw, 5.5rem);
+  }
+
+  .ieee-panel {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 1.25rem;
+    background:
+      linear-gradient(180deg, rgba(136, 191, 236, 0.08) 0%, rgba(10, 14, 26, 0.4) 42%),
+      rgba(13, 19, 36, 0.72);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  }
+
+  .ieee-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0.65rem 1.15rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    color: #fff;
+    font-weight: 500;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    transition:
+      color var(--duration-ui) ease,
+      border-color var(--duration-ui) ease,
+      background-color var(--duration-ui) ease,
+      transform var(--duration-press) var(--ease-out);
+  }
+
+  .ieee-btn:active {
+    transform: scale(0.97);
+  }
+
+  .ieee-btn-primary {
+    background: #f3c135;
+    border-color: #f3c135;
+    color: #0a0e1a;
+  }
+
+  .ieee-btn-ghost {
+    background: transparent;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ieee-btn-ghost:hover {
+      color: #f3c135;
+      border-color: #f3c135;
+      background: rgba(243, 193, 53, 0.06);
+    }
+
+    .ieee-btn-primary:hover {
+      background: #ffd25a;
+      border-color: #ffd25a;
+    }
+  }
+}
+
 /* Typographic Utilities */
 @layer utilities {
-  /* Monospace technical labels / eyebrows — instrument-panel precision */
+  /* Monospace technical labels — instrument-panel precision */
   .font-mono-tech {
     font-family:
       "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
-  }
-
-  /* Eyebrow: small uppercase mono kicker above headings */
-  .eyebrow {
-    font-family:
-      "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
-    text-transform: uppercase;
-    letter-spacing: 0.22em;
-    font-weight: 500;
-    font-feature-settings: "ss01";
   }
 
   /* Lead paragraph — slightly larger, airier body copy */

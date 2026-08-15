@@ -1,13 +1,8 @@
 {
-  "Tritonbot": {
+  "RoboCup": {
     "description": "Participate in the Robocup competition.",
     "image": "/robocup.webp",
     "url": "/projects/robocup"
-  },
-  "Signal Processing": {
-    "description": "Explore the field of signal processing.",
-    "image": "/signal.webp",
-    "url": "projects/signal"
   },
   "Supercomputing": {
     "description": "Explore the field of supercomputing.",

@@ -1,21 +1,22 @@
 [
   {
-    "question": "Can I join IEEE @ UCSD if I am not an engineering major?",
-    "answer": "Yes! IEEE @ UCSD is open to students of all majors, colleges, and programs with an interest in engineering. "
+    "question": "Can I join if I am not an engineering major?",
+    "answer": "Yes. IEEE at UC San Diego is open to students of all majors, colleges, and programs who are interested in engineering."
   },
-
   {
-    "question": "How should I get involved if I am... ",
-    "answer": "a transfer? We encourage transfer students to participate as early as possible through our project teams, workshops, and socials! Consider applying to become an officer if you feel up to the task and we will do our best to help you succeed both in IEEE and at UCSD. a beginner at engineering? IEEE @ UCSD’s technical workshops are a strong introduction to the basics of hands-on engineering skills. For a ‘forge by fire’ approach, Quarterly Project teams are open to students of all skill levels and supported by a seasoned mentorship base. Attending these opportunities with questions for the board officers and a readiness to learn will be your greatest weapons!"
+    "question": "I am a transfer student. How should I get involved?",
+    "answer": "Start as early as you can: Project Space, workshops, project teams, and socials. If you want more responsibility, apply to become an officer. We will help you find a path that fits your first quarters at UC San Diego."
   },
-
   {
-    "question": "Is there a membership fee to join?",
-    "answer": "No, there is no necessary membership fee for IEEE @ UCSD. However, buying an International IEEE membership is vastly beneficial for the mentorship and resource opportunities."
+    "question": "I am new to engineering. Where should I start?",
+    "answer": "Technical workshops are a strong introduction to hands-on skills. Quarterly Project teams are open to every skill level and supported by mentors. Come with questions for officers during Open Access Hours in Project Space."
   },
-
+  {
+    "question": "Is there a membership fee?",
+    "answer": "No. IEEE at UC San Diego does not require a fee. An International IEEE membership is optional and useful if you want extra mentorship and resources."
+  },
   {
     "question": "How can I contact board officers?",
-    "answer": "Our board officers are accessible both online and in-person. To reach us online, shoot us an email (which can be found on the Board page of the website) or DM on Discord! To reach us in person, each officer hosts Open Access Hours in our club project space, EBU1-4710; the calendar can be found below."
+    "answer": "Email an officer from the Board page, message us on Discord, or visit Open Access Hours in Project Space, EBU1-4710. The calendar is on this page."
   }
 ]
