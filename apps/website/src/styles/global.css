@@ -160,6 +160,19 @@
     outline: none;
   }
 
+  a:where(:not(.ieee-btn):not(.skip-link):not(:has(img))) {
+    @apply text-ieee-blue-100 underline underline-offset-[0.18em] decoration-ieee-blue-100/55;
+    transition:
+      color var(--duration-ui) ease,
+      text-decoration-color var(--duration-ui) ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    a:where(:not(.ieee-btn):not(.skip-link):not(:has(img))):hover {
+      @apply text-ieee-yellow decoration-ieee-yellow/85;
+    }
+  }
+
   /* Respect reduced-motion preferences */
   @media (prefers-reduced-motion: reduce) {
     html {
@@ -275,20 +288,10 @@
 
 /* Typographic Utilities */
 @layer utilities {
-  /* Monospace technical labels / eyebrows — instrument-panel precision */
+  /* Monospace technical labels — instrument-panel precision */
   .font-mono-tech {
     font-family:
       "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
-  }
-
-  /* Eyebrow: small uppercase mono kicker above headings */
-  .eyebrow {
-    font-family:
-      "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
-    text-transform: uppercase;
-    letter-spacing: 0.22em;
-    font-weight: 500;
-    font-feature-settings: "ss01";
   }
 
   /* Lead paragraph — slightly larger, airier body copy */

@@ -18,7 +18,6 @@ Allow: /join
 Allow: /events
 Allow: /projects
 Allow: /board
-Allow: /find
 
 # Sitemap location
 Sitemap: https://ieeeucsd.org/sitemap-index.xml

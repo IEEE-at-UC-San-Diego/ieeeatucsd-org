@@ -38,18 +38,20 @@ const currentPath = Astro.url.pathname;
               {page.name}
             </a>
             {page.subpages && (
-              <ul class="nav-submenu absolute left-1/2 top-full z-50 mt-2 min-w-[12rem] -translate-x-1/2 rounded-xl border border-white/15 bg-ieee-black/95 p-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible">
-                {page.subpages.map((subpage) => (
-                  <li>
-                    <a
-                      href={subpage.path}
-                      class="block rounded-lg px-3 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-white"
-                    >
-                      {subpage.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <div class="nav-submenu absolute left-1/2 top-full z-50 w-max min-w-[12rem] -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible">
+                <ul class="rounded-xl border border-white/15 bg-ieee-black/95 p-1">
+                  {page.subpages.map((subpage) => (
+                    <li>
+                      <a
+                        href={subpage.path}
+                        class="block rounded-lg px-3 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-white"
+                      >
+                        {subpage.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </li>
         ))
@@ -102,6 +104,10 @@ const currentPath = Astro.url.pathname;
 </nav>
 
 <style>
+  .nav-submenu a {
+    @apply no-underline;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .nav-submenu {
       transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);

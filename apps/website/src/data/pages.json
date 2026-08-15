@@ -16,26 +16,18 @@
         "path": "/projects/quarterly"
       },
       {
-        "name": "TritonBot",
+        "name": "RoboCup",
         "path": "/projects/robocup"
       },
       {
         "name": "Supercomputing",
         "path": "/projects/supercomputing"
-      },
-      {
-        "name": "Signal Processing",
-        "path": "/projects/signal"
       }
     ]
   },
   {
     "name": "Board",
     "path": "/board"
-  },
-  {
-    "name": "Contact",
-    "path": "/find"
   },
   {
     "name": "Sponsor Us",

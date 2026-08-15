@@ -29,9 +29,6 @@ const tools = [
       class="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] items-stretch"
     >
       <div class="p-6 sm:p-8 lg:p-10">
-        <p class="eyebrow text-ieee-yellow text-xs md:text-sm mb-3">
-          Walk in this week
-        </p>
         <h2
           id="project-space-heading"
           class="font-display font-bold text-[clamp(1.8rem,4vw,2.75rem)]"
@@ -44,9 +41,10 @@ const tools = [
           EBU1-4710 · Jacobs Hall, 4th floor
         </p>
         <p class="mt-5 text-lead text-white/80 max-w-xl">
-          Our open-access studio is one of the club’s most important offerings.
-          Come do homework, build, or ask an officer a question. No membership
-          fee. No application.
+          The IEEE Project Space is an open-access, collaborative space located
+          at EBU1-4710. Students can do homework or get access to basic
+          electronic tools such as soldering stations, breadboard components,
+          and Arduino and Raspberry PI parts!
         </p>
 
         <ol
@@ -86,7 +84,9 @@ const tools = [
         </div>
       </div>
 
-      <div class="min-h-[18rem] border-t lg:border-t-0 lg:border-l border-white/10">
+      <div
+        class="min-h-[18rem] border-t lg:border-t-0 lg:border-l border-white/10"
+      >
         <iframe
           class="h-full min-h-[18rem] w-full"
           src={mapSrc}
@@ -111,7 +111,8 @@ const tools = [
           class="mt-5 w-full min-h-[28rem] rounded-2xl border border-white/10"
           src={calendarSrc}
           title="IEEE at UC San Diego Open Access Hours calendar"
-          loading="lazy"></iframe>
+          loading="lazy"
+        />
       </div>
     )
   }
