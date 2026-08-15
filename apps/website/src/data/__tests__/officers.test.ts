@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import officers from "../officers.json";
 import archiveOfficers from "../officers-2025-2026.json";
+import pastBoards from "../pastBoards.json";
 
 const officersDir = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -161,5 +162,17 @@ describe("2025-2026 board archive", () => {
       "Cailey Murad": "/officers/cailey.webp",
       "Paul Moore": "/officers/paul.webp",
     });
+  });
+});
+
+describe("past boards index", () => {
+  it("lists the 2025-2026 board as an archive entry", () => {
+    expect(pastBoards).toEqual([
+      {
+        year: "2025–2026",
+        href: "/board/2025-2026",
+        summary: "Chair Erik Duarte and the 2025–2026 officer team.",
+      },
+    ]);
   });
 });

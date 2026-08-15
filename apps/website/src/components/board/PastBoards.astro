@@ -1,0 +1,74 @@
+---
+import about from "../../images/about.webp";
+import { Image } from "astro:assets";
+import neko from "../../images/neko.webp";
+import { LiaDotCircle } from "react-icons/lia";
+import pastBoards from "../../data/pastBoards.json";
+
+interface Props {
+  heading?: string;
+  description?: string;
+}
+
+const {
+  heading = "PAST BOARDS",
+  description = "Previous IEEE at UC San Diego boards.",
+} = Astro.props;
+---
+
+<div
+  class="text-white flex flex-col items-center md:mt-[5vw] mt-[10vw] mb-[10vh]"
+>
+  <div
+    data-inview
+    class="relative w-[40vw] md:w-[21vw] mb-[10vh] in-view:animate-fade-down"
+  >
+    <Image src={about} alt="About background image" />
+    <Image
+      src={neko}
+      alt="About image"
+      class="absolute top-[10%] left-[16%] aspect-[399/491] object-cover w-[27vw] md:w-[14vw] rounded-[2vw]"
+    />
+  </div>
+
+  <div class="text-[5vw] md:text-[2.5vw] flex items-center mt-[1vw]">
+    <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
+    <p>{heading}</p>
+  </div>
+
+  <p
+    class="md:text-[1.3vw] text-[2.5vw] md:w-[56%] w-[70%] my-[3%] font-extralight text-center"
+  >
+    {description}
+  </p>
+
+  <a
+    href="/board"
+    class="mb-[4vw] text-ieee-yellow md:text-[1vw] text-[2.2vw] underline underline-offset-4 hover:text-white transition-colors"
+  >
+    View the current board
+  </a>
+
+  <ul class="w-[80%] md:w-[40%] flex flex-col gap-[2vw]">
+    {
+      pastBoards.map((entry) => (
+        <li>
+          <a
+            href={entry.href}
+            class="group block rounded-[1.5vw] border border-white/10 bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 px-[4%] py-[3%] hover:shadow-glow hover:-translate-y-[0.2vw] transition-all duration-300"
+          >
+            <p class="md:text-[1.8vw] text-[3.6vw] font-semibold tracking-tight">
+              {entry.year}
+            </p>
+            <p class="md:text-[1vw] text-[2.2vw] font-extralight text-white/80 mt-[0.6vw]">
+              {entry.summary}
+            </p>
+            <p class="mt-[1.2vw] text-ieee-yellow md:text-[0.9vw] text-[2vw] group-hover:text-white transition-colors">
+              View board
+            </p>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</div>
