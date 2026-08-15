@@ -31,13 +31,7 @@
   },
   {
     "name": "Board",
-    "path": "/board",
-    "subpages": [
-      {
-        "name": "Past Boards",
-        "path": "/board/past"
-      }
-    ]
+    "path": "/board"
   },
   {
     "name": "Contact",
