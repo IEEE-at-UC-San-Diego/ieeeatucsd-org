@@ -29,7 +29,7 @@ export default defineConfig({
   output: "server",
   integrations: [
     tailwind({
-      applyBaseStyles: true,
+      applyBaseStyles: false,
     }),
     expressiveCode(),
     react(),
