@@ -1,19 +1,16 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Social from "../components/core/Social.astro";
-import JoinTitle from "../components/join/JoinTitle.astro";
-import Resources from "../components/join/Resources.jsx";
+import JoinHero from "../components/join/JoinHero.astro";
+import ProjectSpace from "../components/join/ProjectSpace.astro";
 import Questions from "../components/core/Questions.astro";
 import Involvements from "../components/join/Involvements.astro";
-import Findus from "../components/join/Findus.astro";
-import { Image } from "astro:assets";
-import join from "../images/join.webp";
 import faq from "../data/faq.json";
 
 const seoProps = {
   title: "Join IEEE at UC San Diego - Get Involved Today",
   description:
-    "Become a member of IEEE at UC San Diego! Access exclusive workshops, projects, networking opportunities, and resources. No experience required - all majors welcome!",
+    "Become a member of IEEE at UC San Diego! Visit Project Space in EBU1-4710, join Discord, and access workshops, projects, and resources. No experience required — all majors welcome.",
   keywords: [
     "join IEEE UCSD",
     "IEEE membership",
@@ -22,26 +19,16 @@ const seoProps = {
     "get involved UCSD",
     "student membership",
     "IEEE benefits",
+    "IEEE Project Space",
   ],
   image: "/logos/blue_logo_only.png",
 };
 ---
 
 <Layout {...seoProps}>
-  <Image
-    src={join}
-    alt="JOIN US"
-    class="absolute left-[1vw] md:w-[4vw] w-[10vw] md:top-[60vh] top-[70vw]"
-  />
-  <Image
-    src={join}
-    alt="JOIN US"
-    class="absolute right-[1vw] md:w-[4vw] w-[10vw] md:top-[60vh] top-[70vw]"
-  />
-  <JoinTitle />
+  <JoinHero />
+  <ProjectSpace />
   <Involvements />
-  <Social />
   <Questions faq={faq} />
-  <Resources />
-  <Findus />
+  <Social />
 </Layout>

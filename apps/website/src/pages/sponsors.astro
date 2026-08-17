@@ -1,7 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { Image } from "astro:assets";
-import join from "../images/join.webp";
 import Title from "@/components/core/Title.astro";
 import { LiaDotCircle } from "react-icons/lia";
 import sponsors from "../data/sponsors.json";
@@ -9,16 +8,6 @@ import { resolveImage } from "../lib/images";
 ---
 
 <Layout>
-  <Image
-    src={join}
-    alt="JOIN US"
-    class="absolute left-[1vw] md:w-[4vw] w-[10vw] md:top-[60vh] top-[70vw]"
-  />
-  <Image
-    src={join}
-    alt="JOIN US"
-    class="absolute right-[1vw] md:w-[4vw] w-[10vw] md:top-[60vh] top-[70vw]"
-  />
   <Title title="Sponsorship" />
   <div class="w-full flex justify-center text-[1.2vw]">
     <p
@@ -50,9 +39,8 @@ import { resolveImage } from "../lib/images";
     </div>
 
     <a
-      data-inview
       href="mailto:ieee@ucsd.edu"
-      class="in-view:animate-jump-in border-white/70 border-[0.1vw] py-[1%] px-[3%] rounded-[0.7vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 md:text-[1.2vw] text-[2vw]"
+      class="ieee-btn ieee-btn-ghost md:text-[1.2vw] text-[2vw]"
     >
       Please email ieee@ucsd.edu
     </a>
@@ -126,10 +114,7 @@ import { resolveImage } from "../lib/images";
           required></textarea>
 
         <div class="flex justify-end">
-          <button
-            type="submit"
-            class="hover:scale-[102%] hover:text-ieee-yellow hover:border-ieee-yellow active:scale-100 duration-100 border-[0.1vw] border-white px-[1.5vw] py-[0.5vw] rounded-[0.5vw]"
-          >
+          <button type="submit" class="ieee-btn ieee-btn-ghost">
             Submit
           </button>
         </div>

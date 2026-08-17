@@ -2,29 +2,21 @@
   {
     "title": "Quarterly Project",
     "text": "QP is a quarter-long project competition. Students collaborate in teams of up to 6 to build a product aligned with a quarterly theme.",
-    "link": "/projects/quarterly",
-    "number": "01",
-    "delay": "100"
+    "link": "/projects/quarterly"
   },
   {
     "title": "Annual Project",
-    "text": "IEEE @ UCSD hosts the university Robocup, Signal Processing, Supercomputing, and Micromouse teams that each compete in annual competitions.",
-    "link": "/projects",
-    "number": "02",
-    "delay": "300"
+    "text": "IEEE @ UCSD hosts the university Robocup and Supercomputing teams that each compete in annual competitions.",
+    "link": "/projects"
   },
   {
     "title": "Social",
     "text": "Get involved in our diverse student society! We host regular social events ranging from IEEEat meals-out to karaoke sessions.",
-    "link": "/events",
-    "number": "03",
-    "delay": "500"
+    "link": "/events"
   },
   {
     "title": "Professional Development",
     "text": "IEEE @ UCSD offers a diversity of technical and professional workshops each quarter. Connect, learn, and grow with us! ",
-    "link": "/events",
-    "number": "04",
-    "delay": "700"
+    "link": "/events"
   }
 ]
