@@ -16,7 +16,7 @@ docker run -p 4323:4323 --env-file .env dashboard
 ## Prerequisites
 
 - Docker & Docker Compose
-- Bun runtime (for local development)
+- Node.js 24 and pnpm 11.21.0 (for local development)
 - Node.js 20+ (for the production Node server)
 
 ## Port Configuration
@@ -117,23 +117,23 @@ docker-compose up -d --build dashboard
 
 ```bash
 # Install dependencies
-bun install
+pnpm install
 
 # Start development server (port 3000)
-bun run dev
+pnpm dev
 
 # Build for production
-bun run build
+pnpm build
 
 # Start production server locally
-bun run start
+pnpm start
 ```
 
 ## Production Build
 
 The application builds to `.output/server/index.mjs` and runs with Node.js:
 
-1. **Build**: `bun run build` (Vite build)
+1. **Build**: `pnpm build` (Vite build)
 2. **Output**: `.output/` directory
 3. **Start**: `node .output/server/index.mjs`
 
@@ -145,13 +145,13 @@ The application builds to `.output/server/index.mjs` and runs with Node.js:
 # Multi-stage build
 FROM base as dashboard_builder
 WORKDIR /app/apps/dashboard
-RUN bun run build
+RUN pnpm build
 
 FROM base as dashboard
 COPY --from=dashboard_builder /app/apps/dashboard/.output /app/apps/dashboard/.output
 WORKDIR /app/apps/dashboard
 EXPOSE 4323
-CMD ["bun", "run", "start"]
+CMD ["node", ".output/server/index.mjs"]
 ```
 
 ### Docker Compose Service

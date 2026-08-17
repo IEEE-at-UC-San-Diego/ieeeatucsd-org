@@ -5,17 +5,17 @@ Astro public website (`@ieeeatucsd/website`).
 From the repository root:
 
 ```bash
-bun install
-bun run dev:website
+pnpm install
+pnpm dev:website
 ```
 
 App-local commands from `apps/website`:
 
 ```bash
-bun run dev
-bun run build
-bun run check
-bun run test
+pnpm dev
+pnpm build
+pnpm check
+pnpm test
 ```
 
 Deployment uses the root `Dockerfile` `website` target. See [`docs/deployment.md`](../../docs/deployment.md).
