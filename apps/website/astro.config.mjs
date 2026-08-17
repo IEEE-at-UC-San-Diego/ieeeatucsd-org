@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from "astro/config";
+import { defineConfig, fontProviders } from "astro/config";
 
 import tailwind from "@astrojs/tailwind";
 
@@ -46,6 +46,20 @@ export default defineConfig({
   adapter: node({
     mode: "standalone",
   }),
+
+  experimental: {
+    fonts: [
+      {
+        provider: fontProviders.fontsource(),
+        name: "IBM Plex Sans",
+        cssVariable: "--font-ibm-plex-sans",
+        weights: [200, 300, 400, 500, 600, 700],
+        styles: ["normal"],
+        subsets: ["latin"],
+        fallbacks: ["sans-serif"],
+      },
+    ],
+  },
 
   server: {
     host: true,

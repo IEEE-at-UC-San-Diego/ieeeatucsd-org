@@ -93,26 +93,13 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family:
-      "Geist",
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      "Segoe UI",
-      Roboto,
-      Helvetica,
-      Arial,
-      sans-serif;
+    font-family: var(--font-ibm-plex-sans);
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    /* Stylistic set + contextual alternates for a cleaner, modern read */
-    font-feature-settings: "ss01", "cv01", "cv11";
-    font-variant-ligatures: contextual;
   }
 
-  /* Display typography — Bricolage Grotesque, optically sized & tightly set */
   h1,
   h2,
   h3,
@@ -120,11 +107,9 @@
   h5,
   h6,
   .font-display {
-    font-family:
-      "Bricolage Grotesque", "Geist", ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-ibm-plex-sans);
     letter-spacing: -0.02em;
     line-height: 1.08;
-    font-optical-sizing: auto;
     text-wrap: balance;
   }
 
@@ -294,8 +279,7 @@
 @layer utilities {
   /* Monospace technical labels — instrument-panel precision */
   .font-mono-tech {
-    font-family:
-      "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+    font-family: var(--font-ibm-plex-sans);
   }
 
   /* Lead paragraph — slightly larger, airier body copy */
