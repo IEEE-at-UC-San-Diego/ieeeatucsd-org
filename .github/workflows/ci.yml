@@ -6,7 +6,7 @@ on:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     env:
       PUPPETEER_SKIP_DOWNLOAD: true
     steps:
@@ -32,7 +32,7 @@ jobs:
       - run: pnpm test
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
       matrix:
         target: [website, dashboard]
