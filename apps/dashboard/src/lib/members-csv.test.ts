@@ -31,6 +31,17 @@ describe("escapeCsvField", () => {
 		expect(escapeCsvField('say "hi"')).toBe('"say ""hi"""');
 		expect(escapeCsvField("line\nbreak")).toBe('"line\nbreak"');
 	});
+
+	it("quotes standalone carriage returns so rows do not split", () => {
+		expect(escapeCsvField("line\rbreak")).toBe('"line\rbreak"');
+	});
+
+	it("neutralizes spreadsheet formula prefixes", () => {
+		expect(escapeCsvField("=1+1")).toBe("'=1+1");
+		expect(escapeCsvField("@foo")).toBe("'@foo");
+		expect(escapeCsvField("+cmd")).toBe("'+cmd");
+		expect(escapeCsvField("-2+2")).toBe("'-2+2");
+	});
 });
 
 describe("formatCsvDate", () => {
@@ -101,6 +112,34 @@ describe("buildMembersCsv", () => {
 		expect(csv).not.toContain("zelle");
 		expect(csv).not.toContain("logtoId");
 		expect(csv).not.toContain("authUserId");
+	});
+
+	it("keeps a carriage return inside a quoted field instead of splitting the row", () => {
+		const csv = buildMembersCsv([member({ name: "Ada\rLovelace" })]);
+		const lines = csv.split("\n");
+
+		expect(lines).toHaveLength(2);
+		expect(lines[1]).toContain('"Ada\rLovelace"');
+	});
+
+	it("does not emit formula-leading names as live spreadsheet formulas", () => {
+		const csv = buildMembersCsv([
+			member({ name: "=1+1" }),
+			member({ name: "@foo", email: "foo@ucsd.edu" }),
+		]);
+		const nameFields = csv
+			.split("\n")
+			.slice(1)
+			.map((row) => row.split(",")[0]);
+
+		expect(nameFields).toEqual(["'=1+1", "'@foo"]);
+		for (const nameField of nameFields) {
+			expect(nameField).toBeDefined();
+			expect(nameField?.startsWith("=")).toBe(false);
+			expect(nameField?.startsWith("@")).toBe(false);
+			expect(nameField?.startsWith("+")).toBe(false);
+			expect(nameField?.startsWith("-")).toBe(false);
+		}
 	});
 
 	it("leaves optional fields empty instead of inventing values", () => {
