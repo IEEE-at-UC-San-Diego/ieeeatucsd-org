@@ -1,0 +1,4 @@
+{
+  "name": "ieeeatucsd-org",
+  "install": "corepack enable && corepack prepare pnpm@11.21.0 --activate && pnpm install"
+}
