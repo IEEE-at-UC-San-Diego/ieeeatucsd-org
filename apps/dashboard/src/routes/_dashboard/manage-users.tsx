@@ -1,7 +1,15 @@
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { createFileRoute } from "@tanstack/react-router";
-import { Filter, Loader2, Plus, Search, UserPlus, X } from "lucide-react";
+import {
+	Download,
+	Filter,
+	Loader2,
+	Plus,
+	Search,
+	UserPlus,
+	X,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -33,6 +41,11 @@ import {
 } from "@/components/ui/select";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import {
+	buildMembersCsv,
+	downloadMembersCsv,
+	membersCsvFilename,
+} from "@/lib/members-csv";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
 export const Route = createFileRoute("/_dashboard/manage-users")({
@@ -282,6 +295,21 @@ function ManageUsersPage() {
 		}
 	};
 
+	const handleExportCsv = () => {
+		// Export the full users.list result, not the page's client-side filters.
+		if (!users || users.length === 0) return;
+
+		try {
+			const csv = buildMembersCsv(users);
+			downloadMembersCsv(csv, membersCsvFilename());
+			toast.success(`Exported ${users.length} members`);
+		} catch (error: unknown) {
+			const message =
+				error instanceof Error ? error.message : "Failed to export members";
+			toast.error(message);
+		}
+	};
+
 	const handleDeleteUser = async (userId: Id<"users">) => {
 		if (
 			!confirm(
@@ -364,6 +392,13 @@ function ManageUsersPage() {
 				description="View and manage user accounts, roles, and permissions."
 				actions={
 					<>
+						<Button
+							variant="outline"
+							onClick={handleExportCsv}
+							disabled={!users || users.length === 0}
+						>
+							<Download /> Export CSV
+						</Button>
 						<Button
 							variant="outline"
 							onClick={() => setShowAddMemberModal(true)}
