@@ -49,8 +49,24 @@ export type MemberCsvSource = {
 	sponsorOrganization?: string;
 };
 
+function stripLeadingWhitespaceAndControls(value: string): string {
+	let index = 0;
+	while (index < value.length) {
+		const code = value.charCodeAt(index);
+		if (code <= 0x20) {
+			index += 1;
+			continue;
+		}
+		break;
+	}
+	return value.slice(index);
+}
+
 export function escapeCsvField(value: string): string {
-	const safeValue = /^[=+\-@]/.test(value) ? `'${value}` : value;
+	const formulaPayload = stripLeadingWhitespaceAndControls(value);
+	const safeValue = /^[=+\-@]/.test(formulaPayload)
+		? `'${formulaPayload}`
+		: value;
 	if (
 		safeValue.includes(",") ||
 		safeValue.includes('"') ||

@@ -42,6 +42,11 @@ describe("escapeCsvField", () => {
 		expect(escapeCsvField("+cmd")).toBe("'+cmd");
 		expect(escapeCsvField("-2+2")).toBe("'-2+2");
 	});
+
+	it("neutralizes formula prefixes after leading whitespace or control characters", () => {
+		expect(escapeCsvField(" =1+1")).toBe("'=1+1");
+		expect(escapeCsvField("\t@foo")).toBe("'@foo");
+	});
 });
 
 describe("formatCsvDate", () => {
@@ -126,19 +131,23 @@ describe("buildMembersCsv", () => {
 		const csv = buildMembersCsv([
 			member({ name: "=1+1" }),
 			member({ name: "@foo", email: "foo@ucsd.edu" }),
+			member({ name: " =1+1", email: "space@ucsd.edu" }),
+			member({ name: "\t@foo", email: "tab@ucsd.edu" }),
 		]);
 		const nameFields = csv
 			.split("\n")
 			.slice(1)
 			.map((row) => row.split(",")[0]);
 
-		expect(nameFields).toEqual(["'=1+1", "'@foo"]);
+		expect(nameFields).toEqual(["'=1+1", "'@foo", "'=1+1", "'@foo"]);
 		for (const nameField of nameFields) {
 			expect(nameField).toBeDefined();
 			expect(nameField?.startsWith("=")).toBe(false);
 			expect(nameField?.startsWith("@")).toBe(false);
 			expect(nameField?.startsWith("+")).toBe(false);
 			expect(nameField?.startsWith("-")).toBe(false);
+			expect(nameField?.startsWith(" ")).toBe(false);
+			expect(nameField?.startsWith("\t")).toBe(false);
 		}
 	});
 
