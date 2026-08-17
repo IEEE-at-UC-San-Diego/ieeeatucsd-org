@@ -27,9 +27,7 @@ const EventCard = ({ event, publicCalendarId }) => {
   const isPast = endDate < new Date();
 
   return (
-    <div
-      className="bg-white/10 rounded-lg p-6 mb-6 border border-white/20"
-    >
+    <div className="bg-white/10 rounded-lg p-6 mb-6 border border-white/20">
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-white text-xl font-bold">{event.eventName}</h3>
         <span

@@ -9,69 +9,63 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
-import { Route as SigninRouteImport } from './routes/signin'
-import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
-import { Route as CallbackRouteImport } from './routes/callback'
-import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiResetEmailPasswordRouteImport } from './routes/api/reset-email-password'
-import { Route as ApiParseReceiptRouteImport } from './routes/api/parse-receipt'
-import { Route as ApiParseInvoiceRouteImport } from './routes/api/parse-invoice'
-import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as ApiExtractPaymentDetailsRouteImport } from './routes/api/extract-payment-details'
-import { Route as ApiCreateIeeeEmailRouteImport } from './routes/api/create-ieee-email'
-import { Route as ApiCheckEmailExistsRouteImport } from './routes/api/check-email-exists'
-import { Route as ApiSplatRouteImport } from './routes/api.$'
-import { Route as AcceptInvitationInviteIdRouteImport } from './routes/accept-invitation.$inviteId'
-import { Route as DashboardSlackAccessRouteImport } from './routes/_dashboard/slack-access'
-import { Route as DashboardSettingsRouteImport } from './routes/_dashboard/settings'
-import { Route as DashboardReimbursementRouteImport } from './routes/_dashboard/reimbursement'
-import { Route as DashboardOverviewRouteImport } from './routes/_dashboard/overview'
-import { Route as DashboardOnboardingRouteImport } from './routes/_dashboard/onboarding'
-import { Route as DashboardOfficerCalendarRouteImport } from './routes/_dashboard/officer-calendar'
-import { Route as DashboardManageUsersRouteImport } from './routes/_dashboard/manage-users'
-import { Route as DashboardManageSponsorsRouteImport } from './routes/_dashboard/manage-sponsors'
-import { Route as DashboardManageReimbursementsRouteImport } from './routes/_dashboard/manage-reimbursements'
-import { Route as DashboardManageFundRequestsRouteImport } from './routes/_dashboard/manage-fund-requests'
-import { Route as DashboardManageEventsRouteImport } from './routes/_dashboard/manage-events'
-import { Route as DashboardLinksRouteImport } from './routes/_dashboard/links'
-import { Route as DashboardLeaderboardRouteImport } from './routes/_dashboard/leaderboard'
-import { Route as DashboardGetStartedRouteImport } from './routes/_dashboard/get-started'
-import { Route as DashboardFundRequestsRouteImport } from './routes/_dashboard/fund-requests'
-import { Route as DashboardExecutiveAnalyticsRouteImport } from './routes/_dashboard/executive-analytics'
-import { Route as DashboardEventsRouteImport } from './routes/_dashboard/events'
-import { Route as DashboardConstitutionPreviewRouteImport } from './routes/_dashboard/constitution-preview'
+import { Route as DashboardRouteImport } from './routes/_dashboard'
+import { Route as CallbackRouteImport } from './routes/callback'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
+import { Route as SigninRouteImport } from './routes/signin'
+import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
 import { Route as DashboardConstitutionBuilderRouteImport } from './routes/_dashboard/constitution-builder'
-import { Route as ApiUsersUpdateRoleRouteImport } from './routes/api/users/update-role'
-import { Route as ApiRpcSplatRouteImport } from './routes/api.rpc.$'
-import { Route as ApiOnboardingSendRejectionRouteImport } from './routes/api/onboarding/send-rejection'
-import { Route as ApiOnboardingSendInvitationRouteImport } from './routes/api/onboarding/send-invitation'
-import { Route as ApiOnboardingSendDirectOnboardingRouteImport } from './routes/api/onboarding/send-direct-onboarding'
-import { Route as ApiOnboardingResendInvitationRouteImport } from './routes/api/onboarding/resend-invitation'
-import { Route as ApiOnboardingAcceptInvitationRouteImport } from './routes/api/onboarding/accept-invitation'
-import { Route as ApiIeeeEmailFetchEmailsRouteImport } from './routes/api/ieee-email/fetch-emails'
-import { Route as ApiIeeeEmailFetchContentRouteImport } from './routes/api/ieee-email/fetch-content'
-import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
-import { Route as ApiEmailNotifyRouteImport } from './routes/api/email/notify'
-import { Route as ApiAuthConvexSessionRouteImport } from './routes/api/auth/convex-session'
-import { Route as ApiAiQueryRouteImport } from './routes/api/ai/query'
-import { Route as DashboardSponsorsResumeDatabaseRouteImport } from './routes/_dashboard/sponsors/resume-database'
+import { Route as DashboardConstitutionPreviewRouteImport } from './routes/_dashboard/constitution-preview'
+import { Route as DashboardEventsRouteImport } from './routes/_dashboard/events'
+import { Route as DashboardExecutiveAnalyticsRouteImport } from './routes/_dashboard/executive-analytics'
+import { Route as DashboardFundRequestsRouteImport } from './routes/_dashboard/fund-requests'
+import { Route as DashboardGetStartedRouteImport } from './routes/_dashboard/get-started'
+import { Route as DashboardLeaderboardRouteImport } from './routes/_dashboard/leaderboard'
+import { Route as DashboardLinksRouteImport } from './routes/_dashboard/links'
+import { Route as DashboardManageEventsRouteImport } from './routes/_dashboard/manage-events'
+import { Route as DashboardManageFundRequestsRouteImport } from './routes/_dashboard/manage-fund-requests'
+import { Route as DashboardManageReimbursementsRouteImport } from './routes/_dashboard/manage-reimbursements'
+import { Route as DashboardManageSponsorsRouteImport } from './routes/_dashboard/manage-sponsors'
+import { Route as DashboardManageUsersRouteImport } from './routes/_dashboard/manage-users'
+import { Route as DashboardOfficerCalendarRouteImport } from './routes/_dashboard/officer-calendar'
+import { Route as DashboardOnboardingRouteImport } from './routes/_dashboard/onboarding'
+import { Route as DashboardOverviewRouteImport } from './routes/_dashboard/overview'
+import { Route as DashboardReimbursementRouteImport } from './routes/_dashboard/reimbursement'
+import { Route as DashboardSettingsRouteImport } from './routes/_dashboard/settings'
+import { Route as DashboardSlackAccessRouteImport } from './routes/_dashboard/slack-access'
+import { Route as AcceptInvitationInviteIdRouteImport } from './routes/accept-invitation.$inviteId'
+import { Route as ApiSplatRouteImport } from './routes/api.$'
+import { Route as ApiCheckEmailExistsRouteImport } from './routes/api/check-email-exists'
+import { Route as ApiCreateIeeeEmailRouteImport } from './routes/api/create-ieee-email'
+import { Route as ApiExtractPaymentDetailsRouteImport } from './routes/api/extract-payment-details'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiParseInvoiceRouteImport } from './routes/api/parse-invoice'
+import { Route as ApiParseReceiptRouteImport } from './routes/api/parse-receipt'
+import { Route as ApiResetEmailPasswordRouteImport } from './routes/api/reset-email-password'
 import { Route as DashboardSponsorsInformationRouteImport } from './routes/_dashboard/sponsors/information'
+import { Route as DashboardSponsorsResumeDatabaseRouteImport } from './routes/_dashboard/sponsors/resume-database'
+import { Route as ApiAiQueryRouteImport } from './routes/api/ai/query'
+import { Route as ApiAuthConvexSessionRouteImport } from './routes/api/auth/convex-session'
+import { Route as ApiEmailNotifyRouteImport } from './routes/api/email/notify'
+import { Route as ApiEmailSendRouteImport } from './routes/api/email/send'
+import { Route as ApiIeeeEmailFetchContentRouteImport } from './routes/api/ieee-email/fetch-content'
+import { Route as ApiIeeeEmailFetchEmailsRouteImport } from './routes/api/ieee-email/fetch-emails'
+import { Route as ApiOnboardingAcceptInvitationRouteImport } from './routes/api/onboarding/accept-invitation'
+import { Route as ApiOnboardingResendInvitationRouteImport } from './routes/api/onboarding/resend-invitation'
+import { Route as ApiOnboardingSendDirectOnboardingRouteImport } from './routes/api/onboarding/send-direct-onboarding'
+import { Route as ApiOnboardingSendInvitationRouteImport } from './routes/api/onboarding/send-invitation'
+import { Route as ApiOnboardingSendRejectionRouteImport } from './routes/api/onboarding/send-rejection'
+import { Route as ApiRpcSplatRouteImport } from './routes/api.rpc.$'
+import { Route as ApiUsersUpdateRoleRouteImport } from './routes/api/users/update-role'
 
-const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
-  id: '/terms-of-service',
-  path: '/terms-of-service',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SigninRoute = SigninRouteImport.update({
-  id: '/signin',
-  path: '/signin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
-  id: '/privacy-policy',
-  path: '/privacy-policy',
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/_dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CallbackRoute = CallbackRouteImport.update({
@@ -79,138 +73,36 @@ const CallbackRoute = CallbackRouteImport.update({
   path: '/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/_dashboard',
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const SigninRoute = SigninRouteImport.update({
+  id: '/signin',
+  path: '/signin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiResetEmailPasswordRoute = ApiResetEmailPasswordRouteImport.update({
-  id: '/api/reset-email-password',
-  path: '/api/reset-email-password',
+const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
+  id: '/terms-of-service',
+  path: '/terms-of-service',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiParseReceiptRoute = ApiParseReceiptRouteImport.update({
-  id: '/api/parse-receipt',
-  path: '/api/parse-receipt',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiParseInvoiceRoute = ApiParseInvoiceRouteImport.update({
-  id: '/api/parse-invoice',
-  path: '/api/parse-invoice',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiExtractPaymentDetailsRoute =
-  ApiExtractPaymentDetailsRouteImport.update({
-    id: '/api/extract-payment-details',
-    path: '/api/extract-payment-details',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiCreateIeeeEmailRoute = ApiCreateIeeeEmailRouteImport.update({
-  id: '/api/create-ieee-email',
-  path: '/api/create-ieee-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCheckEmailExistsRoute = ApiCheckEmailExistsRouteImport.update({
-  id: '/api/check-email-exists',
-  path: '/api/check-email-exists',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSplatRoute = ApiSplatRouteImport.update({
-  id: '/api/$',
-  path: '/api/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AcceptInvitationInviteIdRoute =
-  AcceptInvitationInviteIdRouteImport.update({
-    id: '/accept-invitation/$inviteId',
-    path: '/accept-invitation/$inviteId',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const DashboardSlackAccessRoute = DashboardSlackAccessRouteImport.update({
-  id: '/slack-access',
-  path: '/slack-access',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardReimbursementRoute = DashboardReimbursementRouteImport.update({
-  id: '/reimbursement',
-  path: '/reimbursement',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardOverviewRoute = DashboardOverviewRouteImport.update({
-  id: '/overview',
-  path: '/overview',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardOnboardingRoute = DashboardOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardOfficerCalendarRoute =
-  DashboardOfficerCalendarRouteImport.update({
-    id: '/officer-calendar',
-    path: '/officer-calendar',
+const DashboardConstitutionBuilderRoute =
+  DashboardConstitutionBuilderRouteImport.update({
+    id: '/constitution-builder',
+    path: '/constitution-builder',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardManageUsersRoute = DashboardManageUsersRouteImport.update({
-  id: '/manage-users',
-  path: '/manage-users',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardManageSponsorsRoute = DashboardManageSponsorsRouteImport.update({
-  id: '/manage-sponsors',
-  path: '/manage-sponsors',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardManageReimbursementsRoute =
-  DashboardManageReimbursementsRouteImport.update({
-    id: '/manage-reimbursements',
-    path: '/manage-reimbursements',
+const DashboardConstitutionPreviewRoute =
+  DashboardConstitutionPreviewRouteImport.update({
+    id: '/constitution-preview',
+    path: '/constitution-preview',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardManageFundRequestsRoute =
-  DashboardManageFundRequestsRouteImport.update({
-    id: '/manage-fund-requests',
-    path: '/manage-fund-requests',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardManageEventsRoute = DashboardManageEventsRouteImport.update({
-  id: '/manage-events',
-  path: '/manage-events',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardLinksRoute = DashboardLinksRouteImport.update({
-  id: '/links',
-  path: '/links',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardLeaderboardRoute = DashboardLeaderboardRouteImport.update({
-  id: '/leaderboard',
-  path: '/leaderboard',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardGetStartedRoute = DashboardGetStartedRouteImport.update({
-  id: '/get-started',
-  path: '/get-started',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardFundRequestsRoute = DashboardFundRequestsRouteImport.update({
-  id: '/fund-requests',
-  path: '/fund-requests',
+const DashboardEventsRoute = DashboardEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardExecutiveAnalyticsRoute =
@@ -219,66 +111,161 @@ const DashboardExecutiveAnalyticsRoute =
     path: '/executive-analytics',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardEventsRoute = DashboardEventsRouteImport.update({
-  id: '/events',
-  path: '/events',
+const DashboardFundRequestsRoute = DashboardFundRequestsRouteImport.update({
+  id: '/fund-requests',
+  path: '/fund-requests',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardConstitutionPreviewRoute =
-  DashboardConstitutionPreviewRouteImport.update({
-    id: '/constitution-preview',
-    path: '/constitution-preview',
+const DashboardGetStartedRoute = DashboardGetStartedRouteImport.update({
+  id: '/get-started',
+  path: '/get-started',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLeaderboardRoute = DashboardLeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLinksRoute = DashboardLinksRouteImport.update({
+  id: '/links',
+  path: '/links',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardManageEventsRoute = DashboardManageEventsRouteImport.update({
+  id: '/manage-events',
+  path: '/manage-events',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardManageFundRequestsRoute =
+  DashboardManageFundRequestsRouteImport.update({
+    id: '/manage-fund-requests',
+    path: '/manage-fund-requests',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardConstitutionBuilderRoute =
-  DashboardConstitutionBuilderRouteImport.update({
-    id: '/constitution-builder',
-    path: '/constitution-builder',
+const DashboardManageReimbursementsRoute =
+  DashboardManageReimbursementsRouteImport.update({
+    id: '/manage-reimbursements',
+    path: '/manage-reimbursements',
     getParentRoute: () => DashboardRoute,
   } as any)
-const ApiUsersUpdateRoleRoute = ApiUsersUpdateRoleRouteImport.update({
-  id: '/api/users/update-role',
-  path: '/api/users/update-role',
+const DashboardManageSponsorsRoute = DashboardManageSponsorsRouteImport.update({
+  id: '/manage-sponsors',
+  path: '/manage-sponsors',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardManageUsersRoute = DashboardManageUsersRouteImport.update({
+  id: '/manage-users',
+  path: '/manage-users',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardOfficerCalendarRoute =
+  DashboardOfficerCalendarRouteImport.update({
+    id: '/officer-calendar',
+    path: '/officer-calendar',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardOnboardingRoute = DashboardOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardOverviewRoute = DashboardOverviewRouteImport.update({
+  id: '/overview',
+  path: '/overview',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardReimbursementRoute = DashboardReimbursementRouteImport.update({
+  id: '/reimbursement',
+  path: '/reimbursement',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSlackAccessRoute = DashboardSlackAccessRouteImport.update({
+  id: '/slack-access',
+  path: '/slack-access',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const AcceptInvitationInviteIdRoute =
+  AcceptInvitationInviteIdRouteImport.update({
+    id: '/accept-invitation/$inviteId',
+    path: '/accept-invitation/$inviteId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: '/api/$',
+  path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
-  id: '/api/rpc/$',
-  path: '/api/rpc/$',
+const ApiCheckEmailExistsRoute = ApiCheckEmailExistsRouteImport.update({
+  id: '/api/check-email-exists',
+  path: '/api/check-email-exists',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiOnboardingSendRejectionRoute =
-  ApiOnboardingSendRejectionRouteImport.update({
-    id: '/api/onboarding/send-rejection',
-    path: '/api/onboarding/send-rejection',
+const ApiCreateIeeeEmailRoute = ApiCreateIeeeEmailRouteImport.update({
+  id: '/api/create-ieee-email',
+  path: '/api/create-ieee-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExtractPaymentDetailsRoute =
+  ApiExtractPaymentDetailsRouteImport.update({
+    id: '/api/extract-payment-details',
+    path: '/api/extract-payment-details',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiOnboardingSendInvitationRoute =
-  ApiOnboardingSendInvitationRouteImport.update({
-    id: '/api/onboarding/send-invitation',
-    path: '/api/onboarding/send-invitation',
-    getParentRoute: () => rootRouteImport,
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiParseInvoiceRoute = ApiParseInvoiceRouteImport.update({
+  id: '/api/parse-invoice',
+  path: '/api/parse-invoice',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiParseReceiptRoute = ApiParseReceiptRouteImport.update({
+  id: '/api/parse-receipt',
+  path: '/api/parse-receipt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiResetEmailPasswordRoute = ApiResetEmailPasswordRouteImport.update({
+  id: '/api/reset-email-password',
+  path: '/api/reset-email-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardSponsorsInformationRoute =
+  DashboardSponsorsInformationRouteImport.update({
+    id: '/sponsors/information',
+    path: '/sponsors/information',
+    getParentRoute: () => DashboardRoute,
   } as any)
-const ApiOnboardingSendDirectOnboardingRoute =
-  ApiOnboardingSendDirectOnboardingRouteImport.update({
-    id: '/api/onboarding/send-direct-onboarding',
-    path: '/api/onboarding/send-direct-onboarding',
-    getParentRoute: () => rootRouteImport,
+const DashboardSponsorsResumeDatabaseRoute =
+  DashboardSponsorsResumeDatabaseRouteImport.update({
+    id: '/sponsors/resume-database',
+    path: '/sponsors/resume-database',
+    getParentRoute: () => DashboardRoute,
   } as any)
-const ApiOnboardingResendInvitationRoute =
-  ApiOnboardingResendInvitationRouteImport.update({
-    id: '/api/onboarding/resend-invitation',
-    path: '/api/onboarding/resend-invitation',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiOnboardingAcceptInvitationRoute =
-  ApiOnboardingAcceptInvitationRouteImport.update({
-    id: '/api/onboarding/accept-invitation',
-    path: '/api/onboarding/accept-invitation',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiIeeeEmailFetchEmailsRoute = ApiIeeeEmailFetchEmailsRouteImport.update({
-  id: '/api/ieee-email/fetch-emails',
-  path: '/api/ieee-email/fetch-emails',
+const ApiAiQueryRoute = ApiAiQueryRouteImport.update({
+  id: '/api/ai/query',
+  path: '/api/ai/query',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthConvexSessionRoute = ApiAuthConvexSessionRouteImport.update({
+  id: '/api/auth/convex-session',
+  path: '/api/auth/convex-session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEmailNotifyRoute = ApiEmailNotifyRouteImport.update({
+  id: '/api/email/notify',
+  path: '/api/email/notify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEmailSendRoute = ApiEmailSendRouteImport.update({
+  id: '/api/email/send',
+  path: '/api/email/send',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiIeeeEmailFetchContentRoute =
@@ -287,38 +274,51 @@ const ApiIeeeEmailFetchContentRoute =
     path: '/api/ieee-email/fetch-content',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiEmailSendRoute = ApiEmailSendRouteImport.update({
-  id: '/api/email/send',
-  path: '/api/email/send',
+const ApiIeeeEmailFetchEmailsRoute = ApiIeeeEmailFetchEmailsRouteImport.update({
+  id: '/api/ieee-email/fetch-emails',
+  path: '/api/ieee-email/fetch-emails',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiEmailNotifyRoute = ApiEmailNotifyRouteImport.update({
-  id: '/api/email/notify',
-  path: '/api/email/notify',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthConvexSessionRoute = ApiAuthConvexSessionRouteImport.update({
-  id: '/api/auth/convex-session',
-  path: '/api/auth/convex-session',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAiQueryRoute = ApiAiQueryRouteImport.update({
-  id: '/api/ai/query',
-  path: '/api/ai/query',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardSponsorsResumeDatabaseRoute =
-  DashboardSponsorsResumeDatabaseRouteImport.update({
-    id: '/sponsors/resume-database',
-    path: '/sponsors/resume-database',
-    getParentRoute: () => DashboardRoute,
+const ApiOnboardingAcceptInvitationRoute =
+  ApiOnboardingAcceptInvitationRouteImport.update({
+    id: '/api/onboarding/accept-invitation',
+    path: '/api/onboarding/accept-invitation',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const DashboardSponsorsInformationRoute =
-  DashboardSponsorsInformationRouteImport.update({
-    id: '/sponsors/information',
-    path: '/sponsors/information',
-    getParentRoute: () => DashboardRoute,
+const ApiOnboardingResendInvitationRoute =
+  ApiOnboardingResendInvitationRouteImport.update({
+    id: '/api/onboarding/resend-invitation',
+    path: '/api/onboarding/resend-invitation',
+    getParentRoute: () => rootRouteImport,
   } as any)
+const ApiOnboardingSendDirectOnboardingRoute =
+  ApiOnboardingSendDirectOnboardingRouteImport.update({
+    id: '/api/onboarding/send-direct-onboarding',
+    path: '/api/onboarding/send-direct-onboarding',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOnboardingSendInvitationRoute =
+  ApiOnboardingSendInvitationRouteImport.update({
+    id: '/api/onboarding/send-invitation',
+    path: '/api/onboarding/send-invitation',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOnboardingSendRejectionRoute =
+  ApiOnboardingSendRejectionRouteImport.update({
+    id: '/api/onboarding/send-rejection',
+    path: '/api/onboarding/send-rejection',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
+  id: '/api/rpc/$',
+  path: '/api/rpc/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUsersUpdateRoleRoute = ApiUsersUpdateRoleRouteImport.update({
+  id: '/api/users/update-role',
+  path: '/api/users/update-role',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -659,32 +659,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/terms-of-service': {
-      id: '/terms-of-service'
-      path: '/terms-of-service'
-      fullPath: '/terms-of-service'
-      preLoaderRoute: typeof TermsOfServiceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signin': {
-      id: '/signin'
-      path: '/signin'
-      fullPath: '/signin'
-      preLoaderRoute: typeof SigninRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy-policy': {
-      id: '/privacy-policy'
-      path: '/privacy-policy'
-      fullPath: '/privacy-policy'
-      preLoaderRoute: typeof PrivacyPolicyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/callback': {
-      id: '/callback'
-      path: '/callback'
-      fullPath: '/callback'
-      preLoaderRoute: typeof CallbackRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_dashboard': {
@@ -694,193 +673,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/callback': {
+      id: '/callback'
+      path: '/callback'
+      fullPath: '/callback'
+      preLoaderRoute: typeof CallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/reset-email-password': {
-      id: '/api/reset-email-password'
-      path: '/api/reset-email-password'
-      fullPath: '/api/reset-email-password'
-      preLoaderRoute: typeof ApiResetEmailPasswordRouteImport
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/parse-receipt': {
-      id: '/api/parse-receipt'
-      path: '/api/parse-receipt'
-      fullPath: '/api/parse-receipt'
-      preLoaderRoute: typeof ApiParseReceiptRouteImport
+    '/signin': {
+      id: '/signin'
+      path: '/signin'
+      fullPath: '/signin'
+      preLoaderRoute: typeof SigninRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/parse-invoice': {
-      id: '/api/parse-invoice'
-      path: '/api/parse-invoice'
-      fullPath: '/api/parse-invoice'
-      preLoaderRoute: typeof ApiParseInvoiceRouteImport
+    '/terms-of-service': {
+      id: '/terms-of-service'
+      path: '/terms-of-service'
+      fullPath: '/terms-of-service'
+      preLoaderRoute: typeof TermsOfServiceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/extract-payment-details': {
-      id: '/api/extract-payment-details'
-      path: '/api/extract-payment-details'
-      fullPath: '/api/extract-payment-details'
-      preLoaderRoute: typeof ApiExtractPaymentDetailsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/create-ieee-email': {
-      id: '/api/create-ieee-email'
-      path: '/api/create-ieee-email'
-      fullPath: '/api/create-ieee-email'
-      preLoaderRoute: typeof ApiCreateIeeeEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/check-email-exists': {
-      id: '/api/check-email-exists'
-      path: '/api/check-email-exists'
-      fullPath: '/api/check-email-exists'
-      preLoaderRoute: typeof ApiCheckEmailExistsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/$': {
-      id: '/api/$'
-      path: '/api/$'
-      fullPath: '/api/$'
-      preLoaderRoute: typeof ApiSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/accept-invitation/$inviteId': {
-      id: '/accept-invitation/$inviteId'
-      path: '/accept-invitation/$inviteId'
-      fullPath: '/accept-invitation/$inviteId'
-      preLoaderRoute: typeof AcceptInvitationInviteIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_dashboard/slack-access': {
-      id: '/_dashboard/slack-access'
-      path: '/slack-access'
-      fullPath: '/slack-access'
-      preLoaderRoute: typeof DashboardSlackAccessRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/settings': {
-      id: '/_dashboard/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof DashboardSettingsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/reimbursement': {
-      id: '/_dashboard/reimbursement'
-      path: '/reimbursement'
-      fullPath: '/reimbursement'
-      preLoaderRoute: typeof DashboardReimbursementRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/overview': {
-      id: '/_dashboard/overview'
-      path: '/overview'
-      fullPath: '/overview'
-      preLoaderRoute: typeof DashboardOverviewRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/onboarding': {
-      id: '/_dashboard/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof DashboardOnboardingRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/officer-calendar': {
-      id: '/_dashboard/officer-calendar'
-      path: '/officer-calendar'
-      fullPath: '/officer-calendar'
-      preLoaderRoute: typeof DashboardOfficerCalendarRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/manage-users': {
-      id: '/_dashboard/manage-users'
-      path: '/manage-users'
-      fullPath: '/manage-users'
-      preLoaderRoute: typeof DashboardManageUsersRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/manage-sponsors': {
-      id: '/_dashboard/manage-sponsors'
-      path: '/manage-sponsors'
-      fullPath: '/manage-sponsors'
-      preLoaderRoute: typeof DashboardManageSponsorsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/manage-reimbursements': {
-      id: '/_dashboard/manage-reimbursements'
-      path: '/manage-reimbursements'
-      fullPath: '/manage-reimbursements'
-      preLoaderRoute: typeof DashboardManageReimbursementsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/manage-fund-requests': {
-      id: '/_dashboard/manage-fund-requests'
-      path: '/manage-fund-requests'
-      fullPath: '/manage-fund-requests'
-      preLoaderRoute: typeof DashboardManageFundRequestsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/manage-events': {
-      id: '/_dashboard/manage-events'
-      path: '/manage-events'
-      fullPath: '/manage-events'
-      preLoaderRoute: typeof DashboardManageEventsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/links': {
-      id: '/_dashboard/links'
-      path: '/links'
-      fullPath: '/links'
-      preLoaderRoute: typeof DashboardLinksRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/leaderboard': {
-      id: '/_dashboard/leaderboard'
-      path: '/leaderboard'
-      fullPath: '/leaderboard'
-      preLoaderRoute: typeof DashboardLeaderboardRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/get-started': {
-      id: '/_dashboard/get-started'
-      path: '/get-started'
-      fullPath: '/get-started'
-      preLoaderRoute: typeof DashboardGetStartedRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/fund-requests': {
-      id: '/_dashboard/fund-requests'
-      path: '/fund-requests'
-      fullPath: '/fund-requests'
-      preLoaderRoute: typeof DashboardFundRequestsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/executive-analytics': {
-      id: '/_dashboard/executive-analytics'
-      path: '/executive-analytics'
-      fullPath: '/executive-analytics'
-      preLoaderRoute: typeof DashboardExecutiveAnalyticsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/_dashboard/events': {
-      id: '/_dashboard/events'
-      path: '/events'
-      fullPath: '/events'
-      preLoaderRoute: typeof DashboardEventsRouteImport
+    '/_dashboard/constitution-builder': {
+      id: '/_dashboard/constitution-builder'
+      path: '/constitution-builder'
+      fullPath: '/constitution-builder'
+      preLoaderRoute: typeof DashboardConstitutionBuilderRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/constitution-preview': {
@@ -890,88 +715,207 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardConstitutionPreviewRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/_dashboard/constitution-builder': {
-      id: '/_dashboard/constitution-builder'
-      path: '/constitution-builder'
-      fullPath: '/constitution-builder'
-      preLoaderRoute: typeof DashboardConstitutionBuilderRouteImport
+    '/_dashboard/events': {
+      id: '/_dashboard/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof DashboardEventsRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/api/users/update-role': {
-      id: '/api/users/update-role'
-      path: '/api/users/update-role'
-      fullPath: '/api/users/update-role'
-      preLoaderRoute: typeof ApiUsersUpdateRoleRouteImport
+    '/_dashboard/executive-analytics': {
+      id: '/_dashboard/executive-analytics'
+      path: '/executive-analytics'
+      fullPath: '/executive-analytics'
+      preLoaderRoute: typeof DashboardExecutiveAnalyticsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/fund-requests': {
+      id: '/_dashboard/fund-requests'
+      path: '/fund-requests'
+      fullPath: '/fund-requests'
+      preLoaderRoute: typeof DashboardFundRequestsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/get-started': {
+      id: '/_dashboard/get-started'
+      path: '/get-started'
+      fullPath: '/get-started'
+      preLoaderRoute: typeof DashboardGetStartedRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/leaderboard': {
+      id: '/_dashboard/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof DashboardLeaderboardRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/links': {
+      id: '/_dashboard/links'
+      path: '/links'
+      fullPath: '/links'
+      preLoaderRoute: typeof DashboardLinksRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/manage-events': {
+      id: '/_dashboard/manage-events'
+      path: '/manage-events'
+      fullPath: '/manage-events'
+      preLoaderRoute: typeof DashboardManageEventsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/manage-fund-requests': {
+      id: '/_dashboard/manage-fund-requests'
+      path: '/manage-fund-requests'
+      fullPath: '/manage-fund-requests'
+      preLoaderRoute: typeof DashboardManageFundRequestsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/manage-reimbursements': {
+      id: '/_dashboard/manage-reimbursements'
+      path: '/manage-reimbursements'
+      fullPath: '/manage-reimbursements'
+      preLoaderRoute: typeof DashboardManageReimbursementsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/manage-sponsors': {
+      id: '/_dashboard/manage-sponsors'
+      path: '/manage-sponsors'
+      fullPath: '/manage-sponsors'
+      preLoaderRoute: typeof DashboardManageSponsorsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/manage-users': {
+      id: '/_dashboard/manage-users'
+      path: '/manage-users'
+      fullPath: '/manage-users'
+      preLoaderRoute: typeof DashboardManageUsersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/officer-calendar': {
+      id: '/_dashboard/officer-calendar'
+      path: '/officer-calendar'
+      fullPath: '/officer-calendar'
+      preLoaderRoute: typeof DashboardOfficerCalendarRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/onboarding': {
+      id: '/_dashboard/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof DashboardOnboardingRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/overview': {
+      id: '/_dashboard/overview'
+      path: '/overview'
+      fullPath: '/overview'
+      preLoaderRoute: typeof DashboardOverviewRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/reimbursement': {
+      id: '/_dashboard/reimbursement'
+      path: '/reimbursement'
+      fullPath: '/reimbursement'
+      preLoaderRoute: typeof DashboardReimbursementRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/settings': {
+      id: '/_dashboard/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/slack-access': {
+      id: '/_dashboard/slack-access'
+      path: '/slack-access'
+      fullPath: '/slack-access'
+      preLoaderRoute: typeof DashboardSlackAccessRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/accept-invitation/$inviteId': {
+      id: '/accept-invitation/$inviteId'
+      path: '/accept-invitation/$inviteId'
+      fullPath: '/accept-invitation/$inviteId'
+      preLoaderRoute: typeof AcceptInvitationInviteIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/rpc/$': {
-      id: '/api/rpc/$'
-      path: '/api/rpc/$'
-      fullPath: '/api/rpc/$'
-      preLoaderRoute: typeof ApiRpcSplatRouteImport
+    '/api/$': {
+      id: '/api/$'
+      path: '/api/$'
+      fullPath: '/api/$'
+      preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/onboarding/send-rejection': {
-      id: '/api/onboarding/send-rejection'
-      path: '/api/onboarding/send-rejection'
-      fullPath: '/api/onboarding/send-rejection'
-      preLoaderRoute: typeof ApiOnboardingSendRejectionRouteImport
+    '/api/check-email-exists': {
+      id: '/api/check-email-exists'
+      path: '/api/check-email-exists'
+      fullPath: '/api/check-email-exists'
+      preLoaderRoute: typeof ApiCheckEmailExistsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/onboarding/send-invitation': {
-      id: '/api/onboarding/send-invitation'
-      path: '/api/onboarding/send-invitation'
-      fullPath: '/api/onboarding/send-invitation'
-      preLoaderRoute: typeof ApiOnboardingSendInvitationRouteImport
+    '/api/create-ieee-email': {
+      id: '/api/create-ieee-email'
+      path: '/api/create-ieee-email'
+      fullPath: '/api/create-ieee-email'
+      preLoaderRoute: typeof ApiCreateIeeeEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/onboarding/send-direct-onboarding': {
-      id: '/api/onboarding/send-direct-onboarding'
-      path: '/api/onboarding/send-direct-onboarding'
-      fullPath: '/api/onboarding/send-direct-onboarding'
-      preLoaderRoute: typeof ApiOnboardingSendDirectOnboardingRouteImport
+    '/api/extract-payment-details': {
+      id: '/api/extract-payment-details'
+      path: '/api/extract-payment-details'
+      fullPath: '/api/extract-payment-details'
+      preLoaderRoute: typeof ApiExtractPaymentDetailsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/onboarding/resend-invitation': {
-      id: '/api/onboarding/resend-invitation'
-      path: '/api/onboarding/resend-invitation'
-      fullPath: '/api/onboarding/resend-invitation'
-      preLoaderRoute: typeof ApiOnboardingResendInvitationRouteImport
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/onboarding/accept-invitation': {
-      id: '/api/onboarding/accept-invitation'
-      path: '/api/onboarding/accept-invitation'
-      fullPath: '/api/onboarding/accept-invitation'
-      preLoaderRoute: typeof ApiOnboardingAcceptInvitationRouteImport
+    '/api/parse-invoice': {
+      id: '/api/parse-invoice'
+      path: '/api/parse-invoice'
+      fullPath: '/api/parse-invoice'
+      preLoaderRoute: typeof ApiParseInvoiceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/ieee-email/fetch-emails': {
-      id: '/api/ieee-email/fetch-emails'
-      path: '/api/ieee-email/fetch-emails'
-      fullPath: '/api/ieee-email/fetch-emails'
-      preLoaderRoute: typeof ApiIeeeEmailFetchEmailsRouteImport
+    '/api/parse-receipt': {
+      id: '/api/parse-receipt'
+      path: '/api/parse-receipt'
+      fullPath: '/api/parse-receipt'
+      preLoaderRoute: typeof ApiParseReceiptRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/ieee-email/fetch-content': {
-      id: '/api/ieee-email/fetch-content'
-      path: '/api/ieee-email/fetch-content'
-      fullPath: '/api/ieee-email/fetch-content'
-      preLoaderRoute: typeof ApiIeeeEmailFetchContentRouteImport
+    '/api/reset-email-password': {
+      id: '/api/reset-email-password'
+      path: '/api/reset-email-password'
+      fullPath: '/api/reset-email-password'
+      preLoaderRoute: typeof ApiResetEmailPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/email/send': {
-      id: '/api/email/send'
-      path: '/api/email/send'
-      fullPath: '/api/email/send'
-      preLoaderRoute: typeof ApiEmailSendRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_dashboard/sponsors/information': {
+      id: '/_dashboard/sponsors/information'
+      path: '/sponsors/information'
+      fullPath: '/sponsors/information'
+      preLoaderRoute: typeof DashboardSponsorsInformationRouteImport
+      parentRoute: typeof DashboardRoute
     }
-    '/api/email/notify': {
-      id: '/api/email/notify'
-      path: '/api/email/notify'
-      fullPath: '/api/email/notify'
-      preLoaderRoute: typeof ApiEmailNotifyRouteImport
+    '/_dashboard/sponsors/resume-database': {
+      id: '/_dashboard/sponsors/resume-database'
+      path: '/sponsors/resume-database'
+      fullPath: '/sponsors/resume-database'
+      preLoaderRoute: typeof DashboardSponsorsResumeDatabaseRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/api/ai/query': {
+      id: '/api/ai/query'
+      path: '/api/ai/query'
+      fullPath: '/api/ai/query'
+      preLoaderRoute: typeof ApiAiQueryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/convex-session': {
@@ -981,26 +925,82 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthConvexSessionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/ai/query': {
-      id: '/api/ai/query'
-      path: '/api/ai/query'
-      fullPath: '/api/ai/query'
-      preLoaderRoute: typeof ApiAiQueryRouteImport
+    '/api/email/notify': {
+      id: '/api/email/notify'
+      path: '/api/email/notify'
+      fullPath: '/api/email/notify'
+      preLoaderRoute: typeof ApiEmailNotifyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_dashboard/sponsors/resume-database': {
-      id: '/_dashboard/sponsors/resume-database'
-      path: '/sponsors/resume-database'
-      fullPath: '/sponsors/resume-database'
-      preLoaderRoute: typeof DashboardSponsorsResumeDatabaseRouteImport
-      parentRoute: typeof DashboardRoute
+    '/api/email/send': {
+      id: '/api/email/send'
+      path: '/api/email/send'
+      fullPath: '/api/email/send'
+      preLoaderRoute: typeof ApiEmailSendRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_dashboard/sponsors/information': {
-      id: '/_dashboard/sponsors/information'
-      path: '/sponsors/information'
-      fullPath: '/sponsors/information'
-      preLoaderRoute: typeof DashboardSponsorsInformationRouteImport
-      parentRoute: typeof DashboardRoute
+    '/api/ieee-email/fetch-content': {
+      id: '/api/ieee-email/fetch-content'
+      path: '/api/ieee-email/fetch-content'
+      fullPath: '/api/ieee-email/fetch-content'
+      preLoaderRoute: typeof ApiIeeeEmailFetchContentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ieee-email/fetch-emails': {
+      id: '/api/ieee-email/fetch-emails'
+      path: '/api/ieee-email/fetch-emails'
+      fullPath: '/api/ieee-email/fetch-emails'
+      preLoaderRoute: typeof ApiIeeeEmailFetchEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/onboarding/accept-invitation': {
+      id: '/api/onboarding/accept-invitation'
+      path: '/api/onboarding/accept-invitation'
+      fullPath: '/api/onboarding/accept-invitation'
+      preLoaderRoute: typeof ApiOnboardingAcceptInvitationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/onboarding/resend-invitation': {
+      id: '/api/onboarding/resend-invitation'
+      path: '/api/onboarding/resend-invitation'
+      fullPath: '/api/onboarding/resend-invitation'
+      preLoaderRoute: typeof ApiOnboardingResendInvitationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/onboarding/send-direct-onboarding': {
+      id: '/api/onboarding/send-direct-onboarding'
+      path: '/api/onboarding/send-direct-onboarding'
+      fullPath: '/api/onboarding/send-direct-onboarding'
+      preLoaderRoute: typeof ApiOnboardingSendDirectOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/onboarding/send-invitation': {
+      id: '/api/onboarding/send-invitation'
+      path: '/api/onboarding/send-invitation'
+      fullPath: '/api/onboarding/send-invitation'
+      preLoaderRoute: typeof ApiOnboardingSendInvitationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/onboarding/send-rejection': {
+      id: '/api/onboarding/send-rejection'
+      path: '/api/onboarding/send-rejection'
+      fullPath: '/api/onboarding/send-rejection'
+      preLoaderRoute: typeof ApiOnboardingSendRejectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/rpc/$': {
+      id: '/api/rpc/$'
+      path: '/api/rpc/$'
+      fullPath: '/api/rpc/$'
+      preLoaderRoute: typeof ApiRpcSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/users/update-role': {
+      id: '/api/users/update-role'
+      path: '/api/users/update-role'
+      fullPath: '/api/users/update-role'
+      preLoaderRoute: typeof ApiUsersUpdateRoleRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }

@@ -1,12 +1,12 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * Test script for all email notification types.
  *
  * Usage:
- *   bun run src/index.ts --to you@example.com              # Send all test emails
- *   bun run src/index.ts --to you@example.com --type reimbursement_submitted
- *   bun run src/index.ts --preview                          # Write HTML files to ./preview/
- *   bun run src/index.ts --preview --type fund_request_submitted
+ *   pnpm --filter @ieeeatucsd/test-emails preview -- --to you@example.com
+ *   pnpm --filter @ieeeatucsd/test-emails exec tsx src/index.ts --to you@example.com --type reimbursement_submitted
+ *   pnpm --filter @ieeeatucsd/test-emails preview
+ *   pnpm --filter @ieeeatucsd/test-emails exec tsx src/index.ts --preview --type fund_request_submitted
  *
  * Environment:
  *   RESEND_API_KEY   — required for sending (not needed for --preview)
@@ -49,7 +49,7 @@ const toEmail = toIndex !== -1 ? args[toIndex + 1] : undefined;
 const filterType = typeIndex !== -1 ? (args[typeIndex + 1] as EmailType) : undefined;
 
 if (!isPreview && !toEmail) {
-  console.error("Usage: bun run src/index.ts --to <email> [--type <type>] [--preview]");
+  console.error("Usage: tsx src/index.ts --to <email> [--type <type>] [--preview]");
   console.error("\nAvailable types:");
   EMAIL_TYPES.forEach((t) => console.error(`  ${t}`));
   process.exit(1);
@@ -429,7 +429,7 @@ async function main() {
   const replyTo = process.env.REPLY_TO_EMAIL || "ieee@ucsd.edu";
 
   if (isPreview) {
-    mkdirSync(join(import.meta.dir, "../preview"), { recursive: true }); // gitignored
+    mkdirSync(join(import.meta.dirname, "../preview"), { recursive: true }); // gitignored
   }
 
   let successCount = 0;
@@ -456,7 +456,7 @@ async function main() {
       for (const email of emails) {
         if (isPreview) {
           const filename = `${type}.html`;
-          const filepath = join(import.meta.dir, "../preview", filename);
+          const filepath = join(import.meta.dirname, "../preview", filename);
           writeFileSync(filepath, email.html);
           console.log(`✅ ${type} → preview/${filename}`);
         } else {

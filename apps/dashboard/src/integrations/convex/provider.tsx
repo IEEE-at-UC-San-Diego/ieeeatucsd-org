@@ -7,8 +7,8 @@ import {
 } from "convex/react";
 import { useCallback, useMemo, useRef } from "react";
 import { errorMessage, logAuthEvent } from "@/lib/auth/logging";
-import { isConvexJwtAuthEnabled } from "@/lib/auth/mode";
 import { refreshLogtoIdToken } from "@/lib/auth/logtoToken";
+import { isConvexJwtAuthEnabled } from "@/lib/auth/mode";
 
 const CONVEX_URL = (
 	import.meta as ImportMeta & {

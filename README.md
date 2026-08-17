@@ -19,27 +19,28 @@ docs/
 
 ## Prerequisites
 
-- [Bun 1.3.14](https://bun.sh)
+- [Node.js 24](https://nodejs.org/)
+- [pnpm 11.21.0](https://pnpm.io) (pinned in `package.json` `packageManager`)
 
-Install Bun, then from the repository root:
+Or enter the Nix flake (`direnv allow` / `nix develop`), which provides both. Then from the repository root:
 
 ```bash
-bun install
+pnpm install
 ```
 
 ## Root commands
 
 | Command | Description |
 | --- | --- |
-| `bun run dev` | Start all dev servers via Turborepo |
-| `bun run dev:website` | Website only |
-| `bun run dev:dashboard` | Dashboard only |
-| `bun run build` | Build all packages and apps |
-| `bun run check` | Non-mutating format/lint/check across the workspace |
-| `bun run typecheck` | Typecheck all workspaces |
-| `bun run test` | Run all test suites |
-| `bun run format` | Apply formatters locally |
-| `bun run verify:google-auth` | Diagnose Google Workspace auth setup |
+| `pnpm dev` | Start all dev servers via Turborepo |
+| `pnpm dev:website` | Website only |
+| `pnpm dev:dashboard` | Dashboard only |
+| `pnpm build` | Build all packages and apps |
+| `pnpm check` | Non-mutating format/lint/check across the workspace |
+| `pnpm typecheck` | Typecheck all workspaces |
+| `pnpm test` | Run all test suites |
+| `pnpm format` | Apply formatters locally |
+| `pnpm verify:google-auth` | Diagnose Google Workspace auth setup |
 
 ## Environment setup
 

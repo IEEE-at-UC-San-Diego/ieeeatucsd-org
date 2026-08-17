@@ -1,5 +1,7 @@
 # Monorepo Cleanup Implementation Plan
 
+> Historical plan for the Bun workspace cleanup. The repository now uses pnpm; see the root README.
+
 ## Status
 
 - Decision status: Approved for implementation planning

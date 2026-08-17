@@ -24,6 +24,8 @@ describe("resolveLogtoOidcIssuer", () => {
 	});
 
 	it("rejects empty endpoints", () => {
-		expect(() => resolveLogtoOidcIssuer("   ")).toThrow("Logto endpoint is empty");
+		expect(() => resolveLogtoOidcIssuer("   ")).toThrow(
+			"Logto endpoint is empty",
+		);
 	});
 });

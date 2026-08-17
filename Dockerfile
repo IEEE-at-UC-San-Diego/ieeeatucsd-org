@@ -1,18 +1,21 @@
 # syntax=docker/dockerfile:1.7
 
-FROM oven/bun:1.3.14 AS base
+FROM node:24-bookworm-slim AS base
+ENV PNPM_HOME="/pnpm" \
+    PATH="/pnpm:$PATH"
 WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@11.21.0 --activate
 
 FROM base AS pruner
 COPY . .
-RUN bunx turbo prune @ieeeatucsd/website --docker
+RUN pnpm dlx turbo prune @ieeeatucsd/website --docker
 
 FROM base AS website_deps
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 COPY --from=pruner /app/out/json/ .
-COPY --from=pruner /app/out/bun.lock ./bun.lock
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
 FROM website_deps AS website_builder
 ARG PUBLIC_DASHBOARD_URL
@@ -23,7 +26,7 @@ ENV PUBLIC_DASHBOARD_URL=$PUBLIC_DASHBOARD_URL \
 
 COPY --from=pruner /app/out/full/ .
 RUN --mount=type=cache,target=/app/.turbo,id=turbo-website \
-    bunx turbo run build --filter=@ieeeatucsd/website
+    pnpm exec turbo run build --filter=@ieeeatucsd/website
 
 FROM base AS website_system
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
@@ -54,18 +57,18 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       xdg-utils
 
 FROM website_deps AS website_prod_deps
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --production
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    CI=true pnpm prune --prod
 
 FROM website_system AS website
 WORKDIR /app
-USER bun
+USER node
 
-COPY --chown=bun:bun --from=website_prod_deps /app/node_modules ./node_modules
-COPY --chown=bun:bun --from=website_prod_deps /app/apps/website/node_modules ./apps/website/node_modules
-COPY --chown=bun:bun --from=website_builder /app/apps/website/dist ./apps/website/dist
-COPY --chown=bun:bun --from=website_builder /app/apps/website/package.json ./apps/website/package.json
-COPY --chown=bun:bun --from=website_builder /app/packages ./packages
+COPY --chown=node:node --from=website_prod_deps /app/node_modules ./node_modules
+COPY --chown=node:node --from=website_prod_deps /app/apps/website/node_modules ./apps/website/node_modules
+COPY --chown=node:node --from=website_builder /app/apps/website/dist ./apps/website/dist
+COPY --chown=node:node --from=website_builder /app/apps/website/package.json ./apps/website/package.json
+COPY --chown=node:node --from=website_builder /app/packages ./packages
 
 WORKDIR /app/apps/website
 ENV PORT=4321 \
@@ -74,19 +77,19 @@ ENV PORT=4321 \
 EXPOSE 4321
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD ["bun", "-e", "fetch('http://127.0.0.1:4321/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+  CMD ["node", "-e", "fetch('http://127.0.0.1:4321/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 
-CMD ["bun", "run", "start"]
+CMD ["node", "./dist/server/entry.mjs"]
 
 FROM base AS dashboard_pruner
 COPY . .
-RUN bunx turbo prune @ieeeatucsd/dashboard --docker
+RUN pnpm dlx turbo prune @ieeeatucsd/dashboard --docker
 
 FROM base AS dashboard_deps
 COPY --from=dashboard_pruner /app/out/json/ .
-COPY --from=dashboard_pruner /app/out/bun.lock ./bun.lock
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install
+COPY --from=dashboard_pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
 FROM dashboard_deps AS dashboard_builder
 ARG VITE_APP_TITLE
@@ -111,20 +114,20 @@ ENV VITE_APP_TITLE=$VITE_APP_TITLE \
 
 COPY --from=dashboard_pruner /app/out/full/ .
 RUN --mount=type=cache,target=/app/.turbo,id=turbo-dashboard \
-    bunx turbo run build --filter=@ieeeatucsd/dashboard
+    pnpm exec turbo run build --filter=@ieeeatucsd/dashboard
 
 FROM dashboard_deps AS dashboard_prod_deps
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --production
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    CI=true pnpm prune --prod
 
 FROM base AS dashboard
 WORKDIR /app
-USER bun
+USER node
 
-COPY --chown=bun:bun --from=dashboard_prod_deps /app/node_modules ./node_modules
-COPY --chown=bun:bun --from=dashboard_prod_deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
-COPY --chown=bun:bun --from=dashboard_builder /app/apps/dashboard/.output ./apps/dashboard/.output
-COPY --chown=bun:bun --from=dashboard_builder /app/apps/dashboard/package.json ./apps/dashboard/package.json
+COPY --chown=node:node --from=dashboard_prod_deps /app/node_modules ./node_modules
+COPY --chown=node:node --from=dashboard_prod_deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
+COPY --chown=node:node --from=dashboard_builder /app/apps/dashboard/.output ./apps/dashboard/.output
+COPY --chown=node:node --from=dashboard_builder /app/apps/dashboard/package.json ./apps/dashboard/package.json
 
 WORKDIR /app/apps/dashboard
 ENV PORT=4323 \
@@ -133,6 +136,6 @@ ENV PORT=4323 \
 EXPOSE 4323
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD ["bun", "-e", "fetch('http://127.0.0.1:4323/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+  CMD ["node", "-e", "fetch('http://127.0.0.1:4323/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 
-CMD ["bun", "run", "start"]
+CMD ["node", ".output/server/index.mjs"]

@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	resolveAuthBridgeMode,
-	resolveConvexAuthStrategy,
-} from "./mode";
+import { resolveAuthBridgeMode, resolveConvexAuthStrategy } from "./mode";
 
 describe("resolveAuthBridgeMode", () => {
 	it("defaults to native when unset", () => {

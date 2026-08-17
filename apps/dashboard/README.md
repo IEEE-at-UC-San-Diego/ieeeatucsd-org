@@ -5,21 +5,21 @@ TanStack Start application for IEEE UCSD dashboard management (`@ieeeatucsd/dash
 From the repository root:
 
 ```bash
-bun install
-bun run dev:dashboard
+pnpm install
+pnpm dev:dashboard
 ```
 
 App-local commands from `apps/dashboard`:
 
 ```bash
-bun run dev
+pnpm dev
 ```
 
 ## Building For Production
 
 ```bash
-bun run build
-bun run start
+pnpm build
+pnpm start
 ```
 
 ## Deployment
@@ -31,7 +31,7 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for Docker deployment instructions, environ
 This project uses [Vitest](https://vitest.dev/) for testing:
 
 ```bash
-bun run test
+pnpm test
 ```
 
 ## Styling
@@ -44,9 +44,9 @@ This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
 This project uses [Biome](https://biomejs.dev/) for linting and formatting:
 
 ```bash
-bun run lint
-bun run format
-bun run check
+pnpm lint
+pnpm format
+pnpm check
 ```
 
 
@@ -56,7 +56,7 @@ Set `VITE_CONVEX_URL` and `CONVEX_DEPLOYMENT` environment variables in `.env.loc
 
 ```bash
 # Development only
-bunx convex dev
+pnpm exec convex dev
 ```
 
 
@@ -65,7 +65,7 @@ bunx convex dev
 Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
 
 ```bash
-bunx shadcn@latest add button
+pnpm dlx shadcn@latest add button
 ```
 
 
@@ -190,7 +190,7 @@ React-Query is an excellent addition or alternative to route loading and integra
 Add dependencies:
 
 ```bash
-bun add @tanstack/react-query @tanstack/react-query-devtools
+pnpm add @tanstack/react-query @tanstack/react-query-devtools
 ```
 
 Next we'll need to create a query client and provider. We recommend putting those in `main.tsx`.
@@ -271,7 +271,7 @@ Another common requirement for React applications is state management. There are
 Add TanStack Store:
 
 ```bash
-bun add @tanstack/store
+pnpm add @tanstack/store
 ```
 
 Now let's create a simple counter in the `src/App.tsx` file as a demonstration.

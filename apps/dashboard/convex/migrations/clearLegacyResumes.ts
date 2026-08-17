@@ -3,7 +3,7 @@ import { internalMutation } from "../_generated/server";
 /**
  * One-time migration: clears legacy string `resume` values before the object schema.
  *
- *   bunx convex run migrations/clearLegacyResumes:clearLegacyResumeStrings '{}'
+ *   pnpm exec convex run migrations/clearLegacyResumes:clearLegacyResumeStrings '{}'
  */
 export const clearLegacyResumeStrings = internalMutation({
   args: {},
