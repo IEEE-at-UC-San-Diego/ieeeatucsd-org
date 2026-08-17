@@ -233,7 +233,11 @@
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 1.25rem;
     background:
-      linear-gradient(180deg, rgba(136, 191, 236, 0.08) 0%, rgba(10, 14, 26, 0.4) 42%),
+      linear-gradient(
+        180deg,
+        rgba(136, 191, 236, 0.08) 0%,
+        rgba(10, 14, 26, 0.4) 42%
+      ),
       rgba(13, 19, 36, 0.72);
     box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
   }

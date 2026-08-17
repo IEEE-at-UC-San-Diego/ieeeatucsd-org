@@ -6,10 +6,7 @@ const { faq } = Astro.props;
 ---
 
 <section class="page-section" aria-labelledby="faq-heading">
-  <SectionHeading
-    id="faq-heading"
-    title="Frequently asked questions"
-  />
+  <SectionHeading id="faq-heading" title="Frequently asked questions" />
   <div class="mt-6">
     {
       faq.map((item: { question: string; answer: string }) => (

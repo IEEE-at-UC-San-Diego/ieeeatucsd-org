@@ -76,8 +76,7 @@ const { filters, currentFilter }: Props = Astro.props;
 
     officers.forEach((officer) => {
       const types = JSON.parse(officer.getAttribute("data-types") || "[]");
-      const match =
-        selectedFilter === "All" || types.includes(selectedFilter);
+      const match = selectedFilter === "All" || types.includes(selectedFilter);
       officer.toggleAttribute("hidden", !match);
     });
   }

@@ -2,14 +2,10 @@ import { useMemo } from "react";
 
 const UpcomingEvent = ({ name, location, date, time, description }) => (
   <div className="text-white w-full max-w-lg pl-4 md:pl-8 border-l-2 md:border-l-4 border-white/70 pb-8 md:pb-12 relative">
-    <p
-      className="py-2 px-4 md:px-6 w-fit border border-white/30 font-light rounded-full text-sm md:text-lg lg:text-xl"
-    >
+    <p className="py-2 px-4 md:px-6 w-fit border border-white/30 font-light rounded-full text-sm md:text-lg lg:text-xl">
       {name}
     </p>
-    <div
-      className="space-y-2 md:space-y-0 md:flex md:flex-wrap md:gap-4 text-sm md:text-base lg:text-lg my-4"
-    >
+    <div className="space-y-2 md:space-y-0 md:flex md:flex-wrap md:gap-4 text-sm md:text-base lg:text-lg my-4">
       <div className="flex items-center flex-wrap">
         <span className="font-medium mr-2">Location:</span>
         <span className="break-words">{location}</span>
@@ -27,9 +23,7 @@ const UpcomingEvent = ({ name, location, date, time, description }) => (
         </div>
       )}
     </div>
-    <p
-      className="text-xs md:text-sm lg:text-base text-white/60 break-words"
-    >
+    <p className="text-xs md:text-sm lg:text-base text-white/60 break-words">
       {description}
     </p>
     <div className="bg-ieee-yellow w-3 h-3 md:w-4 md:h-4 rounded-full absolute -top-1.5 -left-[0.57rem]" />
