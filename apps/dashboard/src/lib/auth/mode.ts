@@ -94,7 +94,5 @@ export function isNativeAuthBridgeMode() {
 
 /** True only when Convex should validate Logto ID tokens via auth.config.ts. */
 export function isConvexJwtAuthEnabled() {
-	return (
-		isNativeAuthBridgeMode() && getConvexAuthStrategy() === "jwt"
-	);
+	return isNativeAuthBridgeMode() && getConvexAuthStrategy() === "jwt";
 }

@@ -12,12 +12,7 @@ export interface PublishedConvexEvent {
   endDate: number;
   published: boolean;
   eventType:
-    | "social"
-    | "technical"
-    | "outreach"
-    | "professional"
-    | "projects"
-    | "other";
+    "social" | "technical" | "outreach" | "professional" | "projects" | "other";
   hasFood?: boolean;
   attendeeCount?: number;
   publicGoogleEventId?: string | null;

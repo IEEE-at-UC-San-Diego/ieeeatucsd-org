@@ -795,38 +795,41 @@ function useNativeAuthClient() {
 }
 
 function useMintConvexBridgeSession(eventPrefix: string) {
-	return useCallback(async (token: string) => {
-		const requestId = createAuthRequestId(eventPrefix);
-		logAuthEvent(`${eventPrefix}_mint_started`, { requestId });
+	return useCallback(
+		async (token: string) => {
+			const requestId = createAuthRequestId(eventPrefix);
+			logAuthEvent(`${eventPrefix}_mint_started`, { requestId });
 
-		const response = await fetchWithTimeout(
-			"/api/auth/convex-session",
-			{
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${token}`,
-					"Content-Type": "application/json",
-					"X-Auth-Request-Id": requestId,
+			const response = await fetchWithTimeout(
+				"/api/auth/convex-session",
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+						"X-Auth-Request-Id": requestId,
+					},
+					body: JSON.stringify({}),
 				},
-				body: JSON.stringify({}),
-			},
-			SESSION_MINT_TIMEOUT_MS,
-		);
+				SESSION_MINT_TIMEOUT_MS,
+			);
 
-		if (!response.ok) {
-			throw new Error(`Failed to mint Convex session (${response.status})`);
-		}
+			if (!response.ok) {
+				throw new Error(`Failed to mint Convex session (${response.status})`);
+			}
 
-		const data = (await response.json()) as {
-			sessionToken: string;
-			expiresAt: number;
-		};
-		logAuthEvent(`${eventPrefix}_mint_succeeded`, {
-			requestId,
-			expiresAt: data.expiresAt,
-		});
-		return data;
-	}, [eventPrefix]);
+			const data = (await response.json()) as {
+				sessionToken: string;
+				expiresAt: number;
+			};
+			logAuthEvent(`${eventPrefix}_mint_succeeded`, {
+				requestId,
+				expiresAt: data.expiresAt,
+			});
+			return data;
+		},
+		[eventPrefix],
+	);
 }
 
 /** Persistent Logto session + app-minted Convex bridge token (ES384-safe). */
