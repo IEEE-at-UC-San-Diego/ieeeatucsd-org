@@ -27,6 +27,13 @@ ENV PUBLIC_DASHBOARD_URL=$PUBLIC_DASHBOARD_URL \
 COPY --from=pruner /app/out/full/ .
 RUN --mount=type=cache,target=/app/.turbo,id=turbo-website \
     pnpm exec turbo run build --filter=@ieeeatucsd/website
+# Isolated workspace node_modules are a symlink forest. Copying pieces of
+# that tree into the runtime image leaves broken links, the process exits,
+# and Dokploy/Traefik serves a plain "404 page not found".
+# pnpm deploy produces a portable package; dist/ is gitignored so copy it in.
+RUN pnpm --filter=@ieeeatucsd/website --prod deploy --legacy /prod/website \
+    && rm -rf /prod/website/dist \
+    && cp -a /app/apps/website/dist /prod/website/dist
 
 FROM base AS website_system
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
@@ -56,22 +63,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       libxrandr2 \
       xdg-utils
 
-FROM website_deps AS website_prod_deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    CI=true pnpm prune --prod
-
 FROM website_system AS website
 WORKDIR /app
+
+COPY --chown=node:node --from=website_builder /prod/website ./
 USER node
 
-COPY --chown=node:node --from=website_prod_deps /app/node_modules ./node_modules
-COPY --chown=node:node --from=website_prod_deps /app/apps/website/node_modules ./apps/website/node_modules
-COPY --chown=node:node --from=website_builder /app/apps/website/dist ./apps/website/dist
-COPY --chown=node:node --from=website_builder /app/apps/website/package.json ./apps/website/package.json
-COPY --chown=node:node --from=website_builder /app/packages ./packages
-
-WORKDIR /app/apps/website
-ENV PORT=4321 \
+ENV NODE_ENV=production \
+    PORT=4321 \
     HOST=0.0.0.0
 
 EXPOSE 4321
@@ -115,22 +114,18 @@ ENV VITE_APP_TITLE=$VITE_APP_TITLE \
 COPY --from=dashboard_pruner /app/out/full/ .
 RUN --mount=type=cache,target=/app/.turbo,id=turbo-dashboard \
     pnpm exec turbo run build --filter=@ieeeatucsd/dashboard
-
-FROM dashboard_deps AS dashboard_prod_deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    CI=true pnpm prune --prod
+RUN pnpm --filter=@ieeeatucsd/dashboard --prod deploy --legacy /prod/dashboard \
+    && rm -rf /prod/dashboard/.output \
+    && cp -a /app/apps/dashboard/.output /prod/dashboard/.output
 
 FROM base AS dashboard
 WORKDIR /app
+
+COPY --chown=node:node --from=dashboard_builder /prod/dashboard ./
 USER node
 
-COPY --chown=node:node --from=dashboard_prod_deps /app/node_modules ./node_modules
-COPY --chown=node:node --from=dashboard_prod_deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
-COPY --chown=node:node --from=dashboard_builder /app/apps/dashboard/.output ./apps/dashboard/.output
-COPY --chown=node:node --from=dashboard_builder /app/apps/dashboard/package.json ./apps/dashboard/package.json
-
-WORKDIR /app/apps/dashboard
-ENV PORT=4323 \
+ENV NODE_ENV=production \
+    PORT=4323 \
     HOST=0.0.0.0
 
 EXPOSE 4323
