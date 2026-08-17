@@ -7,7 +7,7 @@
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "VITE_CONVEX_URL=${VITE_CONVEX_URL:-http://127.0.0.1:3210} vitest run",
     "typecheck": "tsc --noEmit",
     "format": "biome format",
     "lint": "biome lint",
