@@ -58,7 +58,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 FROM website_deps AS website_prod_deps
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm prune --prod
+    CI=true pnpm prune --prod
 
 FROM website_system AS website
 WORKDIR /app
@@ -118,7 +118,7 @@ RUN --mount=type=cache,target=/app/.turbo,id=turbo-dashboard \
 
 FROM dashboard_deps AS dashboard_prod_deps
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm prune --prod
+    CI=true pnpm prune --prod
 
 FROM base AS dashboard
 WORKDIR /app
