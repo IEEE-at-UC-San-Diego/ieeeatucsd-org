@@ -24,12 +24,12 @@ function officerInitials(fullName: string): string {
 const initials = officerInitials(name);
 ---
 
-<div class="text-white min-w-0 w-full">
+<div class="text-white min-w-0 w-full h-full">
   <div
-    class="group w-full min-w-0 aspect-[334/440] bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[10%] flex flex-col items-center relative border border-white/10"
+    class="group w-full h-full min-w-0 bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[10%] flex flex-col items-center relative border border-white/10"
   >
     <div
-      class="relative w-[90%] aspect-[334/440] md:rounded-[1.5vw] rounded-[3vw] overflow-hidden mt-[5%] mb-[3%]"
+      class="relative w-[90%] aspect-[334/440] shrink-0 md:rounded-[1.5vw] rounded-[3vw] overflow-hidden mt-[5%]"
     >
       {
         picture ? (
@@ -94,28 +94,27 @@ const initials = officerInitials(name);
       </div>
     </div>
 
-    <div class="w-[85%] flex flex-col items-center text-center">
+    <div
+      class="mt-auto w-[85%] shrink-0 flex flex-col items-center text-center pt-[3%] pb-[4%]"
+    >
       <p
         class="md:text-[1.6vw] text-[3.2vw] font-semibold tracking-tight md:leading-[2.1vw] leading-[4.2vw]"
       >
         {name}
       </p>
-    </div>
-
-    {
-      email && (
-        <div class="w-[85%] pb-[1.2vw] pt-[0.6vw] flex justify-center">
+      {
+        email && (
           <a
             href={`mailto:${email}`}
-            class="group/email inline-flex items-center gap-[0.6vw] rounded-full bg-white/5 hover:bg-white/10 border border-white/10 px-[1.2vw] py-[0.4vw] text-ieee-yellow md:text-[0.85vw] text-[1.7vw] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ieee-yellow/60"
+            class="group/email mt-[0.6vw] inline-flex items-center gap-[0.6vw] rounded-full bg-white/5 hover:bg-white/10 border border-white/10 px-[1.2vw] py-[0.4vw] text-ieee-yellow md:text-[0.85vw] text-[1.7vw] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ieee-yellow/60"
             aria-label={`Email ${name}`}
             title={email}
           >
             <MdEmail className="md:text-[1.1vw] text-[2.2vw] opacity-80 group-hover/email:opacity-100 transition-opacity" />
             <span class="truncate max-w-[14vw] md:max-w-[12vw]">{email}</span>
           </a>
-        </div>
-      )
-    }
+        )
+      }
+    </div>
   </div>
 </div>
