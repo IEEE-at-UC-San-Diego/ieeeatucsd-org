@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ConstitutionSection } from "../types";
-import {
-	htmlToDocumentSections,
-	sectionsToHtml,
-} from "./documentEditorUtils";
+import { htmlToDocumentSections, sectionsToHtml } from "./documentEditorUtils";
 
 function makeSection(
 	overrides: Partial<ConstitutionSection>,

@@ -42,7 +42,9 @@ describe("generatePrintContent article body", () => {
 		const html = generatePrintContent(null, sections);
 
 		const articleHeading = html.indexOf("Article I: Risk Management");
-		const articleBody = html.indexOf("Registered student organization paragraph.");
+		const articleBody = html.indexOf(
+			"Registered student organization paragraph.",
+		);
 		const sectionHeading = html.indexOf("Section 1: Minors");
 		const sectionBody = html.indexOf("Section body stays.");
 
