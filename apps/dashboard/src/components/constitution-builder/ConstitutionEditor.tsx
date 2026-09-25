@@ -83,11 +83,8 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 
 		const updates: Partial<ConstitutionSection> = {
 			title: editTitle,
+			content: editContent,
 		};
-
-		if (currentSection?.type !== "article") {
-			updates.content = editContent;
-		}
 
 		onUpdateSection(selectedSection, updates);
 
@@ -278,64 +275,52 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 							/>
 						</div>
 
-						{currentSection.type !== "article" && (
-							<div>
-								<div className="flex items-center justify-between mb-3">
-									<label className="block text-sm font-medium text-foreground">
-										Section Content
-									</label>
-									<div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-										{editContent.length} characters
-									</div>
-								</div>
-								<div className="space-y-4">
-									<Textarea
-										value={editContent}
-										onChange={(e) => setEditContent(e.target.value)}
-										rows={14}
-										className="w-full px-4 py-3 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ds-blue-700 font-mono text-sm leading-relaxed min-h-[300px]"
-										placeholder="Enter the section content..."
-									/>
-									<div className="flex gap-3">
-										<Button
-											type="button"
-											variant="outline"
-											className="inline-flex items-center px-4 py-2.5 text-sm"
-											onClick={() => {
-												const imageText = "[IMAGE:Add image description here]";
-												const newContent =
-													editContent + (editContent ? "\n\n" : "") + imageText;
-												setEditContent(newContent);
-											}}
-										>
-											<Image className="h-4 w-4 mr-2" />
-											Add Image Placeholder
-										</Button>
-										<p className="text-xs text-muted-foreground flex items-center">
-											Use [IMAGE:description] syntax to add image placeholders
-										</p>
-									</div>
+						<div>
+							<div className="flex items-center justify-between mb-3">
+								<label className="block text-sm font-medium text-foreground">
+									Section Content
+								</label>
+								<div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+									{editContent.length} characters
 								</div>
 							</div>
-						)}
+							<div className="space-y-4">
+								<Textarea
+									value={editContent}
+									onChange={(e) => setEditContent(e.target.value)}
+									rows={14}
+									className="w-full px-4 py-3 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ds-blue-700 font-mono text-sm leading-relaxed min-h-[300px]"
+									placeholder={
+										currentSection.type === "article"
+											? "Optional introductory text before the first section..."
+											: "Enter the section content..."
+									}
+								/>
+								<div className="flex gap-3">
+									<Button
+										type="button"
+										variant="outline"
+										className="inline-flex items-center px-4 py-2.5 text-sm"
+										onClick={() => {
+											const imageText = "[IMAGE:Add image description here]";
+											const newContent =
+												editContent + (editContent ? "\n\n" : "") + imageText;
+											setEditContent(newContent);
+										}}
+									>
+										<Image className="h-4 w-4 mr-2" />
+										Add Image Placeholder
+									</Button>
+									<p className="text-xs text-muted-foreground flex items-center">
+										Use [IMAGE:description] syntax to add image placeholders
+									</p>
+								</div>
+							</div>
+						</div>
 					</div>
 				) : (
 					<div className="prose max-w-none">
-						{currentSection.type === "article" ? (
-							<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-md p-6 text-center">
-								<div className="text-tone-info mb-2">
-									<BookOpen className="h-8 w-8 mx-auto mb-3" />
-								</div>
-								<h3 className="text-lg font-medium text-ds-blue-1000 mb-2">
-									Article Container
-								</h3>
-								<p className="text-tone-info leading-relaxed">
-									Articles serve as organizational containers and only require a
-									title. Content should be added to sections within this
-									article.
-								</p>
-							</div>
-						) : currentSection.content ? (
+						{currentSection.content ? (
 							<div className="bg-background border border-border rounded-md p-6">
 								{isHtmlContent(currentSection.content) ? (
 									<div
@@ -404,9 +389,6 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 							value={addSectionType}
 							onValueChange={(value) => {
 								setAddSectionType(value as ConstitutionSection["type"]);
-								if (value === "article") {
-									setAddSectionContent("");
-								}
 								if (value === "preamble") {
 									setAddSectionTitle("");
 								}
@@ -480,11 +462,7 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 					<div>
 						<label className="block text-sm font-medium text-foreground mb-2">
 							Content{" "}
-							{addSectionType === "preamble"
-								? "(required)"
-								: addSectionType === "article"
-									? "(not needed)"
-									: "(optional)"}
+							{addSectionType === "preamble" ? "(required)" : "(optional)"}
 						</label>
 						<Textarea
 							value={addSectionContent}
@@ -493,11 +471,10 @@ const ConstitutionEditor: React.FC<ConstitutionEditorProps> = ({
 								addSectionType === "preamble"
 									? "Enter preamble content..."
 									: addSectionType === "article"
-										? "Articles typically do not have content..."
+										? "Optional introductory text before the first section..."
 										: "Enter section content..."
 							}
 							rows={4}
-							disabled={addSectionType === "article"}
 							className="text-base sm:text-sm"
 						/>
 					</div>

@@ -64,7 +64,7 @@ export function sectionsToHtml(
 
 		html += `<h${headingLevel} data-section-id="${section.id}" data-section-type="${section.type}">${escapeHtml(titleText)}</h${headingLevel}>`;
 
-		if (section.content && section.type !== "article") {
+		if (section.content) {
 			const contentHtml = isHtmlContent(section.content)
 				? section.content
 				: plainTextToHtml(section.content);
@@ -135,7 +135,7 @@ export function htmlToDocumentSections(
 			id: sectionId,
 			type: sectionType,
 			title,
-			content: sectionType === "article" ? "" : heading.contentHtml.trim(),
+			content: heading.contentHtml.trim(),
 			order: nextOrder,
 			parentId,
 		});

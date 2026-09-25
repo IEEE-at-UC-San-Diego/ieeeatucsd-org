@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { ConstitutionSection } from "../types";
-import { htmlToDocumentSections } from "./documentEditorUtils";
+import {
+	htmlToDocumentSections,
+	sectionsToHtml,
+} from "./documentEditorUtils";
 
 function makeSection(
 	overrides: Partial<ConstitutionSection>,
@@ -43,6 +46,7 @@ describe("htmlToDocumentSections", () => {
 
 		const html = [
 			'<h2 data-section-id="article-1" data-section-type="article">New Article</h2>',
+			"<p>Article introduction</p>",
 			'<h3 data-section-id="section-1" data-section-type="section">New Section</h3>',
 			"<p>Updated content</p>",
 		].join("");
@@ -54,7 +58,7 @@ describe("htmlToDocumentSections", () => {
 			id: "article-1",
 			type: "article",
 			title: "New Article",
-			content: "",
+			content: "<p>Article introduction</p>",
 			order: 1,
 			parentId: undefined,
 		});
@@ -239,5 +243,217 @@ describe("htmlToDocumentSections", () => {
 			type: "section",
 			parentId: "article-1",
 		});
+	});
+
+	it("preserves article-level body text before the first section", () => {
+		const original = [
+			makeSection({
+				id: "article-1",
+				type: "article",
+				title: "Risk Management",
+				order: 1,
+			}),
+			makeSection({
+				id: "section-1",
+				type: "section",
+				title: "IN CASE OF INTERACTION WITH MINORS AND/OR ELDERLY",
+				content: "<p>Training is required.</p>",
+				parentId: "article-1",
+				order: 1,
+			}),
+		];
+
+		const html = [
+			'<h2 data-section-id="article-1" data-section-type="article">Risk Management</h2>',
+			"<p>[Name of the organization] at UC San Diego is a registered student organization at the University of California, San Diego, but not part of the University itself.</p>",
+			"<p>[Name of the organization] at UC San Diego understands that the University does not assume legal liability for the actions of the organization.</p>",
+			'<h3 data-section-id="section-1" data-section-type="section">IN CASE OF INTERACTION WITH MINORS AND/OR ELDERLY</h3>',
+			"<p>Training is required.</p>",
+		].join("");
+
+		const parsed = htmlToDocumentSections(html, original);
+
+		expect(parsed[0]).toMatchObject({
+			id: "article-1",
+			type: "article",
+			title: "Risk Management",
+			content:
+				"<p>[Name of the organization] at UC San Diego is a registered student organization at the University of California, San Diego, but not part of the University itself.</p><p>[Name of the organization] at UC San Diego understands that the University does not assume legal liability for the actions of the organization.</p>",
+		});
+		expect(parsed[1]).toMatchObject({
+			id: "section-1",
+			type: "section",
+			content: "<p>Training is required.</p>",
+		});
+	});
+
+	it("preserves article-level body text when the article has no sections", () => {
+		const html = [
+			'<h2 data-section-id="article-1" data-section-type="article">Standalone</h2>',
+			"<p>Only article body.</p>",
+			"<p>Second paragraph.</p>",
+		].join("");
+
+		const parsed = htmlToDocumentSections(html, [
+			makeSection({
+				id: "article-1",
+				type: "article",
+				title: "Standalone",
+				order: 1,
+			}),
+		]);
+
+		expect(parsed).toHaveLength(1);
+		expect(parsed[0]).toMatchObject({
+			id: "article-1",
+			type: "article",
+			content: "<p>Only article body.</p><p>Second paragraph.</p>",
+		});
+	});
+
+	it("keeps empty article content empty so existing documents stay unchanged", () => {
+		const original = [
+			makeSection({
+				id: "article-1",
+				type: "article",
+				title: "Empty Article",
+				content: "",
+				order: 1,
+			}),
+			makeSection({
+				id: "section-1",
+				type: "section",
+				title: "Only Section",
+				content: "<p>Section body</p>",
+				parentId: "article-1",
+				order: 1,
+			}),
+		];
+
+		const html = [
+			'<h2 data-section-id="article-1" data-section-type="article">Empty Article</h2>',
+			'<h3 data-section-id="section-1" data-section-type="section">Only Section</h3>',
+			"<p>Section body</p>",
+		].join("");
+
+		const parsed = htmlToDocumentSections(html, original);
+
+		expect(parsed[0].content).toBe("");
+		expect(parsed[1].content).toBe("<p>Section body</p>");
+	});
+});
+
+describe("sectionsToHtml / htmlToDocumentSections round trip", () => {
+	it("round-trips article body, section body, and subsection body", () => {
+		const sections: ConstitutionSection[] = [
+			makeSection({
+				id: "article-1",
+				type: "article",
+				title: "Risk Management",
+				content:
+					"<p>Registered student organization paragraph.</p><p>University liability paragraph.</p>",
+				order: 1,
+			}),
+			makeSection({
+				id: "section-1",
+				type: "section",
+				title: "Minors",
+				content: "<p>Section body stays.</p>",
+				parentId: "article-1",
+				order: 1,
+			}),
+			makeSection({
+				id: "sub-1",
+				type: "subsection",
+				title: "Training",
+				content: "<p>Subsection body stays.</p>",
+				parentId: "section-1",
+				order: 1,
+			}),
+		];
+
+		const html = sectionsToHtml(sections, sections);
+		const parsed = htmlToDocumentSections(html, sections);
+
+		expect(html).toContain("Registered student organization paragraph.");
+		expect(html).toContain(
+			'<h3 data-section-id="section-1" data-section-type="section">Minors</h3>',
+		);
+		expect(parsed).toEqual([
+			{
+				id: "article-1",
+				type: "article",
+				title: "Risk Management",
+				content:
+					"<p>Registered student organization paragraph.</p><p>University liability paragraph.</p>",
+				order: 1,
+				parentId: undefined,
+			},
+			{
+				id: "section-1",
+				type: "section",
+				title: "Minors",
+				content: "<p>Section body stays.</p>",
+				order: 1,
+				parentId: "article-1",
+			},
+			{
+				id: "sub-1",
+				type: "subsection",
+				title: "Training",
+				content: "<p>Subsection body stays.</p>",
+				order: 1,
+				parentId: "section-1",
+			},
+		]);
+	});
+
+	it("round-trips an article with body and no child sections", () => {
+		const sections: ConstitutionSection[] = [
+			makeSection({
+				id: "article-1",
+				type: "article",
+				title: "Preamble-like Article",
+				content: "<p>Standalone article body.</p>",
+				order: 1,
+			}),
+		];
+
+		const html = sectionsToHtml(sections, sections);
+		const parsed = htmlToDocumentSections(html, sections);
+
+		expect(html).toContain("Standalone article body.");
+		expect(parsed).toHaveLength(1);
+		expect(parsed[0]).toMatchObject({
+			id: "article-1",
+			content: "<p>Standalone article body.</p>",
+		});
+	});
+
+	it("round-trips articles that have no body text", () => {
+		const sections: ConstitutionSection[] = [
+			makeSection({
+				id: "article-1",
+				type: "article",
+				title: "No Body",
+				content: "",
+				order: 1,
+			}),
+			makeSection({
+				id: "section-1",
+				type: "section",
+				title: "Child",
+				content: "<p>Still here.</p>",
+				parentId: "article-1",
+				order: 1,
+			}),
+		];
+
+		const html = sectionsToHtml(sections, sections);
+		const parsed = htmlToDocumentSections(html, sections);
+
+		expect(html).not.toContain("<p></p>");
+		expect(parsed[0].content).toBe("");
+		expect(parsed[1].content).toBe("<p>Still here.</p>");
 	});
 });

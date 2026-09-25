@@ -408,8 +408,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
 		>
 			<HeadingTag style={getTitleStyle()}>{getDisplayTitle()}</HeadingTag>
 
-			{/* Articles should not render content, only title */}
-			{section.content && section.type !== "article" && (
+			{section.content && (
 				<div style={getContentStyle()}>
 					{isHtmlContent(section.content) ? (
 						<div
