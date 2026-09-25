@@ -113,9 +113,6 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 
 	const handleTypeChange = (newType: ConstitutionSection["type"]) => {
 		setAddSectionType(newType);
-		if (newType === "article") {
-			setAddSectionContent("");
-		}
 		if (newType === "preamble") {
 			setAddSectionTitle("");
 		}
@@ -339,11 +336,7 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 					<div>
 						<label className="block text-sm font-medium text-foreground mb-2">
 							Content{" "}
-							{addSectionType === "preamble"
-								? "(required)"
-								: addSectionType === "article"
-									? "(not needed)"
-									: "(optional)"}
+							{addSectionType === "preamble" ? "(required)" : "(optional)"}
 						</label>
 						<Textarea
 							value={addSectionContent}
@@ -352,11 +345,10 @@ const ConstitutionSidebar: React.FC<ConstitutionSidebarProps> = ({
 								addSectionType === "preamble"
 									? "Enter preamble content..."
 									: addSectionType === "article"
-										? "Articles typically do not have content..."
+										? "Optional introductory text before the first section..."
 										: "Enter section content..."
 							}
 							rows={4}
-							disabled={addSectionType === "article"}
 							className="text-base sm:text-sm"
 						/>
 					</div>

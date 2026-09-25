@@ -1,5 +1,6 @@
 import type { Constitution, ConstitutionSection } from "../types";
 import { getSectionDisplayTitle, toRomanNumeral } from "./constitutionUtils";
+import { isHtmlContent } from "./documentEditorUtils";
 
 // Legacy interface for backward compatibility
 export interface TableOfContentsEntry {
@@ -143,7 +144,7 @@ const estimateContentHeight = (section: ConstitutionSection): number => {
 	}
 
 	// Content height (if any)
-	if (section.content && section.type !== "article") {
+	if (section.content) {
 		const contentLines = section.content.split("\n").length;
 		const wordsPerLine = 12;
 		const words = section.content
@@ -400,7 +401,12 @@ const parseContentForPrint = (content: string) => {
 };
 
 export const renderSectionContent = (section: ConstitutionSection) => {
-	return parseContentForPrint(section.content || "");
+	const content = section.content || "";
+	if (!content) return "";
+	if (isHtmlContent(content)) {
+		return content;
+	}
+	return parseContentForPrint(content);
 };
 
 /**
@@ -529,6 +535,7 @@ export const generatePrintContent = (
         <div class="constitution-page">
             <div class="constitution-section" id="section-${article.id}">
                 <h2 class="article-title">${getSectionPrintTitle(article, index, sections)}</h2>
+                ${renderSectionContent(article)}
             </div>`;
 
 		articleSections.forEach((section) => {
