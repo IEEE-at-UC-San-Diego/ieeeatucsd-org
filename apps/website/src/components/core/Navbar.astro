@@ -82,12 +82,12 @@ const currentPath = Astro.url.pathname;
                 {page.name}
               </a>
               {page.subpages && (
-                <ul class="mt-2 space-y-2 pl-2">
+                <ul class="mt-2 ml-3 space-y-2 border-l border-white/20 pl-3">
                   {page.subpages.map((subpage) => (
                     <li>
                       <a
                         href={subpage.path}
-                        class="ieee-btn ieee-btn-ghost w-full text-sm"
+                        class="ieee-btn ieee-btn-ghost w-full uppercase text-sm"
                       >
                         {subpage.name}
                       </a>
