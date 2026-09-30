@@ -54,11 +54,11 @@ const questions: Question[] = [
 	{
 		id: "pid",
 		title: "Student TSN",
-		description: "Your UCSD student ID (e.g., A12345678)",
+		description: "Your UCSD student ID (e.g., 123456789)",
 		icon: User,
 		required: true,
 		type: "text",
-		placeholder: "A12345678",
+		placeholder: "123456789",
 		autoComplete: "off",
 		inputMode: "text",
 	},

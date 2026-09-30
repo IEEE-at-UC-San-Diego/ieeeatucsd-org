@@ -497,7 +497,7 @@ function SettingsPage() {
 									id="pid"
 									value={form.pid}
 									onChange={(e) => setForm({ ...form, pid: e.target.value })}
-									placeholder="A12345678"
+									placeholder="123456789"
 								/>
 							</div>
 							<div>

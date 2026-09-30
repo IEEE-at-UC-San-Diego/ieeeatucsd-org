@@ -93,7 +93,7 @@ describe("buildMembersCsv", () => {
 			member({
 				position: "Treasurer",
 				team: "Internal",
-				pid: "A12345678",
+				pid: "123456789",
 				memberId: "IEEE-99",
 				major: "Computer Engineering",
 				graduationYear: 2027,
@@ -109,7 +109,7 @@ describe("buildMembersCsv", () => {
 		expect(csv).toContain("Name,Email,Role,Position,Team,Status,TSN,Member ID");
 		expect(csv).toContain("Treasurer");
 		expect(csv).toContain("Internal");
-		expect(csv).toContain("A12345678");
+		expect(csv).toContain("123456789");
 		expect(csv).toContain("IEEE-99");
 		expect(csv).toContain("Computer Engineering");
 		expect(csv).toContain("2027");

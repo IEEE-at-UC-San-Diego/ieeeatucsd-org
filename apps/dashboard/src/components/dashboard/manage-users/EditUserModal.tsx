@@ -329,7 +329,7 @@ export function EditUserModal({
 							<Input
 								value={formData.pid || ""}
 								onChange={(e) => handleInputChange("pid", e.target.value)}
-								placeholder="Student ID"
+								placeholder="123456789"
 								className="h-11 text-base sm:h-9 sm:text-sm"
 								inputMode="numeric"
 								autoComplete="off"
