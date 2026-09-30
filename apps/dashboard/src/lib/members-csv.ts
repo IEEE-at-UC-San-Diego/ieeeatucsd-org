@@ -10,7 +10,7 @@ export const MEMBER_CSV_HEADERS = [
 	"Position",
 	"Team",
 	"Status",
-	"PID",
+	"TSN",
 	"Member ID",
 	"Major",
 	"Graduation Year",

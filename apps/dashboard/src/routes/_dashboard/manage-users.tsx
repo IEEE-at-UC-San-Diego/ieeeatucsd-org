@@ -426,7 +426,7 @@ function ManageUsersPage() {
 						<div className="relative flex-1 max-w-md">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 							<Input
-								placeholder="Search by name, email, PID, major..."
+								placeholder="Search by name, email, TSN, major..."
 								value={filters.searchTerm}
 								onChange={(e) =>
 									setFilters({ ...filters, searchTerm: e.target.value })

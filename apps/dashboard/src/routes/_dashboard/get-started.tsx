@@ -53,7 +53,7 @@ const questions: Question[] = [
 	},
 	{
 		id: "pid",
-		title: "Student PID",
+		title: "Student TSN",
 		description: "Your UCSD student ID (e.g., A12345678)",
 		icon: User,
 		required: true,

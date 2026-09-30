@@ -492,7 +492,7 @@ function SettingsPage() {
 								</p>
 							</div>
 							<div>
-								<Label htmlFor="pid">Student ID (PID)</Label>
+								<Label htmlFor="pid">Student ID (TSN)</Label>
 								<Input
 									id="pid"
 									value={form.pid}

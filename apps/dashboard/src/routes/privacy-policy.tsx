@@ -34,7 +34,7 @@ function PrivacyPolicyPage() {
 						</h2>
 						<p className="text-muted-foreground leading-relaxed">
 							We collect information you provide directly, including your name,
-							email address, UCSD student PID, major, graduation year, IEEE
+							email address, UCSD student TSN, major, graduation year, IEEE
 							member ID, and optionally your Zelle information for
 							reimbursements and your resume.
 						</p>

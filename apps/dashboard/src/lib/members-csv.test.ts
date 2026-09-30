@@ -106,7 +106,7 @@ describe("buildMembersCsv", () => {
 			}),
 		]);
 
-		expect(csv).toContain("Name,Email,Role,Position,Team,Status,PID,Member ID");
+		expect(csv).toContain("Name,Email,Role,Position,Team,Status,TSN,Member ID");
 		expect(csv).toContain("Treasurer");
 		expect(csv).toContain("Internal");
 		expect(csv).toContain("A12345678");
