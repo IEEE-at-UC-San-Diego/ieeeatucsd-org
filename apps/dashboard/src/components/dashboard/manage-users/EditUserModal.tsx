@@ -325,11 +325,11 @@ export function EditUserModal({
 					</div>
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<Label>PID</Label>
+							<Label>TSN</Label>
 							<Input
 								value={formData.pid || ""}
 								onChange={(e) => handleInputChange("pid", e.target.value)}
-								placeholder="Student ID"
+								placeholder="123456789"
 								className="h-11 text-base sm:h-9 sm:text-sm"
 								inputMode="numeric"
 								autoComplete="off"

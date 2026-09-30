@@ -245,7 +245,7 @@ export function UserTable({
 											</div>
 											{user.pid && (
 												<div className="text-xs text-muted-foreground">
-													PID: {user.pid}
+													TSN: {user.pid}
 												</div>
 											)}
 										</div>
