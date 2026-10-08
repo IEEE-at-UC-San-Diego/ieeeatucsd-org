@@ -1,6 +1,7 @@
 import { api } from "@convex/_generated/api";
+import type { Doc } from "@convex/_generated/dataModel";
 import { useQuery } from "convex/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import type {
@@ -9,27 +10,75 @@ import type {
 	ConstitutionSection,
 	ConstitutionVersion,
 } from "../types";
+import {
+	isConstitutionDataLoading,
+	resolveStableValue,
+	retryWithBackoff,
+} from "./constitutionDataState";
+
+type ConstitutionDoc = Doc<"constitutions">;
+
+const MAX_ENSURE_ATTEMPTS = 3;
+const ENSURE_RETRY_DELAY_MS = 1_000;
+
+function ensureErrorMessage(error: unknown): string {
+	return error instanceof Error && error.message
+		? error.message
+		: "Failed to initialize the constitution";
+}
 
 export function useConstitutionData() {
 	const { isAuthenticated, logtoId } = useAuth();
 	const [initialized, setInitialized] = useState(false);
 	const [ensuringDefault, setEnsuringDefault] = useState(false);
+	const [ensureError, setEnsureError] = useState<string | null>(null);
+
+	// Remember the last successfully resolved values so a transient `undefined`
+	// (e.g. an authed query re-subscribing after the auth session token rotates)
+	// does not drop the builder back into its loading state. Doing so would
+	// replace the document editor with a skeleton, unmount the Tiptap editor,
+	// and discard the user's unsaved edits.
+	const lastConstitutionRef = useRef<ConstitutionDoc | null | undefined>(
+		undefined,
+	);
+	const lastSectionsRef = useRef<
+		ConstitutionDoc["sections"] | null | undefined
+	>(undefined);
+	const ensuringDefaultRef = useRef(false);
 
 	// Get or ensure constitution exists
-	const constitution = useAuthedQuery(
+	const rawConstitution = useAuthedQuery(
 		api.constitutions.getDefault,
 		logtoId ? { logtoId } : "skip",
 	);
 	const ensureConstitution = useAuthedMutation(
 		api.constitutions.ensureDefaultConstitution,
 	);
+	const ensureConstitutionRef = useRef(ensureConstitution);
+	ensureConstitutionRef.current = ensureConstitution;
 
-	// Get sections - only when we have a valid constitution ID
-	// getSections is a public query with no auth args
-	const sections = useQuery(
+	const stableConstitution = resolveStableValue(
+		rawConstitution,
+		lastConstitutionRef.current,
+	);
+	lastConstitutionRef.current = stableConstitution.lastResolved;
+	const constitution = stableConstitution.value;
+
+	// Get sections - only when we have a valid constitution ID.
+	// getSections is a public query with no auth args, so once the constitution
+	// has resolved it keeps receiving updates while the authed query above
+	// re-subscribes.
+	const rawSections = useQuery(
 		api.constitutions.getSections,
 		constitution ? { constitutionId: constitution._id } : "skip",
 	);
+	const stableSections = resolveStableValue(
+		rawSections,
+		lastSectionsRef.current,
+	);
+	lastSectionsRef.current = stableSections.lastResolved;
+	const sections = stableSections.value;
+
 	const versions = useAuthedQuery(
 		api.constitutions.listVersions,
 		constitution && logtoId
@@ -50,45 +99,74 @@ export function useConstitutionData() {
 		api.constitutions.restoreVersion,
 	);
 
-	const constitutionLoading =
-		Boolean(isAuthenticated && logtoId) && constitution === undefined;
-	const sectionsLoading = Boolean(constitution) && sections === undefined;
-	const needsInitialization = Boolean(
-		isAuthenticated && logtoId && !initialized,
-	);
-	const isLoading =
-		constitutionLoading ||
-		sectionsLoading ||
-		ensuringDefault ||
-		needsInitialization ||
-		constitution === null;
+	const isLoading = isConstitutionDataLoading({
+		isAuthenticated,
+		logtoId,
+		constitution,
+		sections,
+		ensuringDefault,
+		initialized,
+	});
 
-	// Auto-initialize constitution when authenticated
+	const initializeConstitution = useCallback(async () => {
+		if (!isAuthenticated || !logtoId) return;
+		if (constitution) {
+			setInitialized(true);
+			setEnsureError(null);
+			return;
+		}
+		if (ensuringDefaultRef.current) return;
+
+		ensuringDefaultRef.current = true;
+		setEnsuringDefault(true);
+		setEnsureError(null);
+
+		try {
+			await retryWithBackoff(() => ensureConstitutionRef.current({ logtoId }), {
+				maxAttempts: MAX_ENSURE_ATTEMPTS,
+				baseDelayMs: ENSURE_RETRY_DELAY_MS,
+			});
+			setInitialized(true);
+		} catch (error) {
+			setEnsureError(ensureErrorMessage(error));
+		} finally {
+			ensuringDefaultRef.current = false;
+			setEnsuringDefault(false);
+		}
+	}, [isAuthenticated, logtoId, constitution]);
+
+	const retryInitialize = useCallback(() => {
+		setEnsureError(null);
+		void initializeConstitution();
+	}, [initializeConstitution]);
+
+	// Auto-initialize the default constitution when authenticated and none
+	// exists yet. Failures surface `ensureError` (with `retryInitialize`)
+	// instead of leaving the builder stuck on its loading skeleton.
 	useEffect(() => {
 		if (!isAuthenticated || !logtoId) {
 			setInitialized(false);
 			setEnsuringDefault(false);
+			setEnsureError(null);
+			ensuringDefaultRef.current = false;
 			return;
 		}
 
-		if (constitution && !initialized) {
+		if (constitution) {
 			setInitialized(true);
+			setEnsureError(null);
 			return;
 		}
 
-		if (constitution === null && !ensuringDefault) {
-			setEnsuringDefault(true);
-			ensureConstitution({ logtoId })
-				.then(() => setInitialized(true))
-				.finally(() => setEnsuringDefault(false));
+		if (constitution === null && !ensureError) {
+			void initializeConstitution();
 		}
 	}, [
 		isAuthenticated,
 		logtoId,
-		initialized,
 		constitution,
-		ensureConstitution,
-		ensuringDefault,
+		ensureError,
+		initializeConstitution,
 	]);
 
 	const handleAddSection = async (
@@ -192,27 +270,6 @@ export function useConstitutionData() {
 		});
 	};
 
-	const initializeConstitution = useCallback(async () => {
-		if (!isAuthenticated || !logtoId || ensuringDefault) return;
-		if (constitution) {
-			setInitialized(true);
-			return;
-		}
-		setEnsuringDefault(true);
-		try {
-			await ensureConstitution({ logtoId });
-			setInitialized(true);
-		} finally {
-			setEnsuringDefault(false);
-		}
-	}, [
-		isAuthenticated,
-		logtoId,
-		ensuringDefault,
-		constitution,
-		ensureConstitution,
-	]);
-
 	const handleSaveDocumentSections = useCallback(
 		async (
 			parsedSections: ConstitutionDocumentSectionInput[],
@@ -283,6 +340,8 @@ export function useConstitutionData() {
 		saveVersion: handleSaveVersion,
 		restoreVersion: handleRestoreVersion,
 		initializeConstitution,
+		retryInitialize,
+		ensureError,
 		constitutionId: constitution?._id,
 	};
 }
