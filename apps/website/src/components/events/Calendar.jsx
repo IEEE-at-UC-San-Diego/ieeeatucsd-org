@@ -82,22 +82,22 @@ const Calendar = ({ events = [], publicCalendarId = "" }) => {
   };
 
   return (
-    <div className="md:w-[90vw] w-[95vw] mx-auto p-[3vw] relative z-10">
-      <div className="flex justify-center mb-[2vw]">
-        <div className="bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[1.5vw] p-[1vw] backdrop-blur-sm w-[30vw] px-[2vw]">
-          <div className="flex items-center gap-[3vw]">
+    <div className="w-full py-6 sm:py-8 relative z-10">
+      <div className="flex justify-center mb-4 sm:mb-6">
+        <div className="bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-2xl p-2 sm:p-3 backdrop-blur-sm w-fit max-w-full px-3 sm:px-5">
+          <div className="flex items-center gap-3 sm:gap-6">
             <button
               onClick={() => changeMonth(-1)}
-              className="text-white hover:text-ieee-yellow transition-colors text-[2vw] bg-ieee-black/40 w-[4vw] h-[4vw] rounded-[1vw] flex items-center justify-center"
+              className="text-white hover:text-ieee-yellow transition-colors text-lg sm:text-2xl bg-ieee-black/40 w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center"
             >
               ←
             </button>
-            <h2 className="text-white text-[2.5vw] font-bold whitespace-nowrap">
+            <h2 className="text-white text-xl sm:text-2xl md:text-3xl font-bold whitespace-nowrap">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h2>
             <button
               onClick={() => changeMonth(1)}
-              className="text-white hover:text-gray transition-colors text-[2vw] bg-ieee-black/40 w-[4vw] h-[4vw] rounded-[1vw] flex items-center justify-center"
+              className="text-white hover:text-gray transition-colors text-lg sm:text-2xl bg-ieee-black/40 w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center"
             >
               →
             </button>
@@ -136,18 +136,18 @@ const Calendar = ({ events = [], publicCalendarId = "" }) => {
         </div>
       )}
 
-      <div className="bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[1.5vw] p-[1vw] relative">
-        <div className="grid grid-cols-7 gap-[0.5vw] mb-[1vw]">
+      <div className="bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-2xl p-2 sm:p-3 relative">
+        <div className="grid grid-cols-7 gap-1 sm:gap-1.5 mb-2">
           {weekDays.map((day, index) => (
             <div key={day} className="flex justify-center w-full">
               <div
-                className={`text-white text-center font-semibold p-[0.5vw] text-[1.2vw] bg-ieee-black/60 w-full h-[4vw] flex items-center justify-center
+                className={`text-white text-center font-semibold px-1 py-2 text-[0.65rem] sm:text-sm md:text-base bg-ieee-black/60 w-full min-h-9 sm:min-h-11 flex items-center justify-center
                 ${
                   index === 0
-                    ? "rounded-tl-[2vw] rounded-[0.5vw]"
+                    ? "rounded-tl-2xl rounded-md"
                     : index === 6
-                      ? "rounded-tr-[2vw] rounded-[0.5vw]"
-                      : "rounded-[0.5vw]"
+                      ? "rounded-tr-2xl rounded-md"
+                      : "rounded-md"
                 }`}
               >
                 {day}
@@ -156,11 +156,11 @@ const Calendar = ({ events = [], publicCalendarId = "" }) => {
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-[0.5vw] relative">
+        <div className="grid grid-cols-7 gap-1 sm:gap-1.5 relative">
           {getDaysInMonth(currentDate).map((day, index) => (
             <div
               key={index}
-              className={`min-h-[10vw] p-[0.5vw] rounded relative ${day ? "bg-white/5" : "bg-transparent"} border border-white/10 ${
+              className={`min-h-20 sm:min-h-24 md:min-h-28 p-1 sm:p-1.5 rounded relative ${day ? "bg-white/5" : "bg-transparent"} border border-white/10 ${
                 isToday(day)
                   ? "ring-2 ring-ieee-yellow/60 bg-ieee-yellow/10"
                   : ""
@@ -168,17 +168,17 @@ const Calendar = ({ events = [], publicCalendarId = "" }) => {
             >
               {day && (
                 <>
-                  <div className="text-white mb-[0.5vw] text-[1vw]">
+                  <div className="text-white mb-1 text-xs sm:text-sm md:text-base">
                     {day.getDate()}
                   </div>
-                  <div className="space-y-[0.5vw]">
+                  <div className="space-y-1">
                     {getEventsForDay(day)
                       .slice(0, 3)
                       .map((event) => (
                         <button
                           type="button"
                           key={event._id}
-                          className="w-full text-left text-[0.75vw] border border-ieee-yellow text-white p-[0.45vw] rounded truncate hover:bg-white/10 transition-colors"
+                          className="w-full text-left text-[0.65rem] sm:text-xs border border-ieee-yellow text-white px-1 py-0.5 rounded truncate hover:bg-white/10 transition-colors"
                           onClick={() => setSelectedEvent(event)}
                         >
                           {event.eventName}

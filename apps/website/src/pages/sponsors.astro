@@ -9,9 +9,9 @@ import { resolveImage } from "../lib/images";
 
 <Layout>
   <Title title="Sponsorship" />
-  <div class="w-full flex justify-center text-[1.2vw]">
+  <div class="w-full flex justify-center text-[min(1.2vw,1.08rem)]">
     <p
-      class="w-[70%] my-[4vw] text-white/90 border-l-[0.5vw] pl-[1vw] border-ieee-yellow"
+      class="w-[70%] my-[min(4vw,3.6rem)] text-white/90 border-l-[min(0.5vw,0.45rem)] pl-[min(1vw,0.9rem)] border-ieee-yellow"
     >
       Sponsors have played a vital role in the growth and success of IEEE at UC
       San Diego.<br /><br /> Through their generous support, our organization has
@@ -28,9 +28,11 @@ import { resolveImage } from "../lib/images";
     </p>
   </div>
 
-  <div class="flex flex-col items-center text-white my-[5vw]">
-    <div class="flex items-center text-[4.5vw] md:text-[2.5vw] mb-[3%]">
-      <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
+  <div class="flex flex-col items-center text-white my-[min(5vw,4.5rem)]">
+    <div
+      class="flex items-center text-[min(4.5vw,4.05rem)] md:text-[min(2.5vw,2.25rem)] mb-[3%]"
+    >
+      <LiaDotCircle className="mr-[min(1vw,0.9rem)] pt-[0.5%]" />
       <p
         class="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ieee-black"
       >
@@ -40,13 +42,15 @@ import { resolveImage } from "../lib/images";
 
     <a
       href="mailto:ieee@ucsd.edu"
-      class="ieee-btn ieee-btn-ghost md:text-[1.2vw] text-[2vw]"
+      class="ieee-btn ieee-btn-ghost md:text-[min(1.2vw,1.08rem)] text-[min(2vw,1.8rem)]"
     >
       Please email ieee@ucsd.edu
     </a>
 
-    <div class="flex items-center text-[4.5vw] md:text-[2.5vw] mt-[10vw]">
-      <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
+    <div
+      class="flex items-center text-[min(4.5vw,4.05rem)] md:text-[min(2.5vw,2.25rem)] mt-[min(10vw,9rem)]"
+    >
+      <LiaDotCircle className="mr-[min(1vw,0.9rem)] pt-[0.5%]" />
       <p
         class="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ieee-black"
       >
@@ -54,10 +58,10 @@ import { resolveImage } from "../lib/images";
       </p>
     </div>
 
-    <div class="grid grid-cols-3 mb-[10vw]">
+    <div class="grid grid-cols-3 mb-[min(10vw,9rem)]">
       {
         sponsors.map((sponsor) => (
-          <div class="flex items-center justify-center p-[1vw] aspect-video w-[20vw]">
+          <div class="flex items-center justify-center p-[min(1vw,0.9rem)] aspect-video w-[min(20vw,18rem)]">
             <Image
               src={resolveImage(sponsor)}
               alt={sponsor}
@@ -70,15 +74,17 @@ import { resolveImage } from "../lib/images";
 
     <div class="flex">
       <div class="w-2/5 flex flex-col items-end mr-[5%]">
-        <div class="flex items-center text-[4.7vw] md:text-[2.5vw] mb-[15%]">
-          <LiaDotCircle className="mr-[1vw] pt-[0.5%]" />
+        <div
+          class="flex items-center text-[min(4.7vw,4.23rem)] md:text-[min(2.5vw,2.25rem)] mb-[15%]"
+        >
+          <LiaDotCircle className="mr-[min(1vw,0.9rem)] pt-[0.5%]" />
           <p
             class="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ieee-black"
           >
             Become a Sponsor
           </p>
         </div>
-        <p class="text-end w-[75%] text-[1.3vw]">
+        <p class="text-end w-[75%] text-[min(1.3vw,1.17rem)]">
           To get involved, please email us <br /> or fill out the contact form to
           the right — we look forward to partnering with you in growing the next generation
           of engineers.
@@ -88,7 +94,7 @@ import { resolveImage } from "../lib/images";
       <form
         method="POST"
         action="/api/email/send-sponsor-confirmation"
-        class="border-white rounded-[3vw] border w-[45%] h-[33vw] py-[3%] px-[5%] bg-white/5 font-extralight text-[1.1vw]"
+        class="border-white rounded-[min(3vw,2.7rem)] border w-[45%] h-[min(33vw,29.7rem)] py-[3%] px-[5%] bg-white/5 font-extralight text-[min(1.1vw,0.99rem)]"
       >
         <p>Email</p>
         <input
@@ -96,7 +102,7 @@ import { resolveImage } from "../lib/images";
           name="email"
           placeholder="ieee@ucsd.edu"
           required
-          class="mb-[1vw] w-full bg-transparent border-b-[0.1vw] border-white/80"
+          class="mb-[min(1vw,0.9rem)] w-full bg-transparent border-b-[min(0.1vw,0.09rem)] border-white/80"
         />
 
         <p>Phone</p>
@@ -104,13 +110,13 @@ import { resolveImage } from "../lib/images";
           type="text"
           name="phone"
           placeholder="123-456-7890"
-          class="mb-[1vw] w-full bg-transparent border-b-[0.1vw] border-white/80"
+          class="mb-[min(1vw,0.9rem)] w-full bg-transparent border-b-[min(0.1vw,0.09rem)] border-white/80"
         />
 
         <p>Message</p>
         <textarea
           name="message"
-          class="w-full bg-transparent border-[0.1vw] mb-[1vw] border-white h-[50%] mt-[0.5vw]"
+          class="w-full bg-transparent border-[min(0.1vw,0.09rem)] mb-[min(1vw,0.9rem)] border-white h-[50%] mt-[min(0.5vw,0.45rem)]"
           required></textarea>
 
         <div class="flex justify-end">

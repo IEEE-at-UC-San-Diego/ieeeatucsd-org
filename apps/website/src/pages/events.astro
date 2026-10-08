@@ -28,7 +28,7 @@ const seoProps = {
 <Layout {...seoProps}>
   <EventTitle />
   <UpcomingEvents events={events} />
-  <div class="flex justify-center pb-[10%]">
+  <div class="w-full pb-[10%]">
     <Calendar client:load events={events} publicCalendarId={publicCalendarId} />
   </div>
 </Layout>

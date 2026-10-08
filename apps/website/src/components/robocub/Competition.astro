@@ -12,13 +12,21 @@ const { picture, name, description, link, linktext } = Astro.props;
   />
 
   <div class="w-full flex justify-evenly absolute bottom-[20%] left-[4%]">
-    <div class="flex items-center md:text-[2.5vw] text-[4vw]">
-      <LiaDotCircle className="mr-[1vw] md:text-[2.6vw]" />
+    <div
+      class="flex items-center md:text-[min(2.5vw,2.25rem)] text-[min(4vw,3.6rem)]"
+    >
+      <LiaDotCircle
+        className="mr-[min(1vw,0.9rem)] md:text-[min(2.6vw,2.34rem)]"
+      />
       <p>Competition</p>
     </div>
 
-    <div class="md:text-[1.6vw] text-[2.2vw] tracking-wider max-w-[60%]">
-      <p class="w-[35vw] md:mt-[25vw] mt-[35vw]">
+    <div
+      class="md:text-[min(1.6vw,1.44rem)] text-[min(2.2vw,1.98rem)] tracking-wider max-w-[60%]"
+    >
+      <p
+        class="w-[min(35vw,31.5rem)] md:mt-[min(25vw,22.5rem)] mt-[min(35vw,31.5rem)]"
+      >
         {name}
       </p>
       <p class="mb-[5%]">
@@ -27,7 +35,7 @@ const { picture, name, description, link, linktext } = Astro.props;
       <a
         href={link}
         target="_blank"
-        class="md:text-[1.2vw] text-[2vw] font-light border-white/70 border-[0.1vw] py-[1.5%] px-[9%] rounded-[0.5vw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300"
+        class="md:text-[min(1.2vw,1.08rem)] text-[min(2vw,1.8rem)] font-light border-white/70 border-[min(0.1vw,0.09rem)] py-[1.5%] px-[9%] rounded-[min(0.5vw,0.45rem)] hover:text-ieee-yellow hover:border-ieee-yellow duration-300"
       >
         {linktext}
       </a>

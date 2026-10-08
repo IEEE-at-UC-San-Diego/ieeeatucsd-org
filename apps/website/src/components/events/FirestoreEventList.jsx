@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
 const UpcomingEvent = ({ name, location, date, time, description }) => (
-  <div className="text-white w-full max-w-lg pl-4 md:pl-8 border-l-2 md:border-l-4 border-white/70 pb-8 md:pb-12 relative">
+  <div className="text-white w-full max-w-4xl pl-4 md:pl-8 border-l-2 md:border-l-4 border-white/70 pb-8 md:pb-12 relative">
     <p className="py-2 px-4 md:px-6 w-fit border border-white/30 font-light rounded-full text-sm md:text-lg lg:text-xl">
       {name}
     </p>
