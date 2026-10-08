@@ -1,5 +1,10 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import {
+  applyResolvedAuditUserNames,
+  hasUnknownUserName,
+  resolveAuditActor,
+} from "./constitutionAudit";
 import { requireAdminAccess, requireOfficerAccess } from "./permissions";
 
 const constitutionSectionType = v.union(
@@ -137,9 +142,8 @@ export const addSection = mutation({
     order: v.number(),
   },
   handler: async (ctx, args) => {
-    await requireAdminAccess(ctx, args.logtoId, args.authToken);
-    const user = await ctx.auth.getUserIdentity();
-    const userId = user?.subject || args.logtoId;
+    const adminUser = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const { userId, userName } = resolveAuditActor(adminUser, args.logtoId);
 
     const constitution = await ctx.db.get(args.constitutionId);
     if (!constitution) {
@@ -172,7 +176,7 @@ export const addSection = mutation({
       changeDescription: `Created ${section.type}: ${section.title || "Untitled"}`,
       afterValue: section,
       userId,
-      userName: user?.name || user?.email || "Unknown User",
+      userName,
     });
 
     await ctx.db.patch(args.constitutionId, { sections: updatedSections });
@@ -192,9 +196,8 @@ export const updateSection = mutation({
     parentId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdminAccess(ctx, args.logtoId, args.authToken);
-    const user = await ctx.auth.getUserIdentity();
-    const userId = user?.subject || args.logtoId;
+    const adminUser = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const { userId, userName } = resolveAuditActor(adminUser, args.logtoId);
 
     const constitution = await ctx.db.get(args.constitutionId);
     if (!constitution) {
@@ -232,7 +235,7 @@ export const updateSection = mutation({
       beforeValue: section,
       afterValue: updatedSection,
       userId,
-      userName: user?.name || user?.email || "Unknown User",
+      userName,
     });
 
     await ctx.db.patch(args.constitutionId, { sections: updatedSections });
@@ -248,9 +251,8 @@ export const deleteSection = mutation({
     sectionId: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireAdminAccess(ctx, args.logtoId, args.authToken);
-    const user = await ctx.auth.getUserIdentity();
-    const userId = user?.subject || args.logtoId;
+    const adminUser = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const { userId, userName } = resolveAuditActor(adminUser, args.logtoId);
 
     const constitution = await ctx.db.get(args.constitutionId);
     if (!constitution) {
@@ -272,7 +274,7 @@ export const deleteSection = mutation({
       changeDescription: `Deleted ${section.type}: ${section.title || "Untitled"}`,
       beforeValue: section,
       userId,
-      userName: user?.name || user?.email || "Unknown User",
+      userName,
     });
 
     await ctx.db.patch(args.constitutionId, { sections: updatedSections });
@@ -308,9 +310,8 @@ export const reorderSection = mutation({
     newOrder: v.number(),
   },
   handler: async (ctx, args) => {
-    await requireAdminAccess(ctx, args.logtoId, args.authToken);
-    const user = await ctx.auth.getUserIdentity();
-    const userId = user?.subject || args.logtoId;
+    const adminUser = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const { userId, userName } = resolveAuditActor(adminUser, args.logtoId);
 
     const constitution = await ctx.db.get(args.constitutionId);
     if (!constitution) {
@@ -340,7 +341,7 @@ export const reorderSection = mutation({
       beforeValue: section,
       afterValue: { ...section, order: args.newOrder },
       userId,
-      userName: user?.name || user?.email || "Unknown User",
+      userName,
     });
 
     return { success: true };
@@ -394,9 +395,8 @@ export const syncDocumentSections = mutation({
     sections: v.array(documentSectionInput),
   },
   handler: async (ctx, args) => {
-    await requireAdminAccess(ctx, args.logtoId, args.authToken);
-    const user = await ctx.auth.getUserIdentity();
-    const userId = user?.subject || args.logtoId;
+    const adminUser = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    const { userId, userName } = resolveAuditActor(adminUser, args.logtoId);
 
     const constitution = await ctx.db.get(args.constitutionId);
     if (!constitution) {
@@ -513,7 +513,7 @@ export const syncDocumentSections = mutation({
       beforeValue: { sectionCount: existingSections.length },
       afterValue: { sectionCount: nextSections.length },
       userId,
-      userName: user?.name || user?.email || "Unknown User",
+      userName,
     });
 
     const totalSectionChanges =
@@ -527,7 +527,7 @@ export const syncDocumentSections = mutation({
           changeDescription: `Created ${section.type}: ${section.title || "Untitled"}`,
           afterValue: section,
           userId,
-          userName: user?.name || user?.email || "Unknown User",
+          userName,
         });
       }
 
@@ -539,7 +539,7 @@ export const syncDocumentSections = mutation({
           changeDescription: `Deleted ${section.type}: ${section.title || "Untitled"}`,
           beforeValue: section,
           userId,
-          userName: user?.name || user?.email || "Unknown User",
+          userName,
         });
       }
 
@@ -563,7 +563,7 @@ export const syncDocumentSections = mutation({
             beforeValue: previous,
             afterValue: section,
             userId,
-            userName: user?.name || user?.email || "Unknown User",
+            userName,
           });
           continue;
         }
@@ -577,7 +577,7 @@ export const syncDocumentSections = mutation({
             beforeValue: previous,
             afterValue: section,
             userId,
-            userName: user?.name || user?.email || "Unknown User",
+            userName,
           });
         }
       }
@@ -696,9 +696,7 @@ export const saveVersion = mutation({
   },
   handler: async (ctx, args) => {
     const adminUser = await requireAdminAccess(ctx, args.logtoId, args.authToken);
-    const user = await ctx.auth.getUserIdentity();
-    const userId = user?.subject || args.logtoId;
-    const userName = user?.name || user?.email || adminUser.name || "Unknown User";
+    const { userId, userName } = resolveAuditActor(adminUser, args.logtoId);
 
     const constitution = await ctx.db.get(args.constitutionId);
     if (!constitution) {
@@ -738,9 +736,7 @@ export const restoreVersion = mutation({
   },
   handler: async (ctx, args) => {
     const adminUser = await requireAdminAccess(ctx, args.logtoId, args.authToken);
-    const user = await ctx.auth.getUserIdentity();
-    const userId = user?.subject || args.logtoId;
-    const userName = user?.name || user?.email || adminUser.name || "Unknown User";
+    const { userId, userName } = resolveAuditActor(adminUser, args.logtoId);
 
     const constitution = await ctx.db.get(args.constitutionId);
     if (!constitution) {
@@ -946,7 +942,34 @@ export const getAuditLog = query({
       .query("constitutionAuditLogs")
       .withIndex("by_constitutionId", (q: any) => q.eq("constitutionId", args.constitutionId))
       .first();
-    return auditLog?.entries || [];
+    const entries: any[] = auditLog?.entries || [];
+    if (entries.length === 0) return entries;
+
+    // Repair entries written before the actor name was captured reliably: look
+    // up their display name from the stored actor id so the log no longer shows
+    // "Unknown User" for those historical entries.
+    const unresolvedUserIds = Array.from(
+      new Set(
+        entries
+          .filter((entry) => hasUnknownUserName(entry.userName))
+          .map((entry) => entry.userId)
+          .filter((id): id is string => typeof id === "string" && id.length > 0),
+      ),
+    );
+
+    if (unresolvedUserIds.length === 0) return entries;
+
+    const nameByUserId = new Map<string, string>();
+    for (const userId of unresolvedUserIds) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_logtoId", (q: any) => q.eq("logtoId", userId))
+        .first();
+      const name = user?.name?.trim() || user?.email?.trim();
+      if (name) nameByUserId.set(userId, name);
+    }
+
+    return applyResolvedAuditUserNames(entries, nameByUserId);
   },
 });
 
@@ -967,8 +990,8 @@ export const getDefault = query({
 export const ensureDefaultConstitution = mutation({
   args: { logtoId: v.string(), authToken: v.string() },
   handler: async (ctx, args) => {
-    await requireAdminAccess(ctx, args.logtoId, args.authToken);
-    
+    const adminUser = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+
     const existing = await ctx.db
       .query("constitutions")
       .filter((q) => q.eq(q.field("title"), "IEEE at UC San Diego Constitution"))
@@ -979,8 +1002,7 @@ export const ensureDefaultConstitution = mutation({
     }
 
     // Create default constitution
-    const user = await ctx.auth.getUserIdentity();
-    const userId = user?.subject || args.logtoId;
+    const userId = adminUser.logtoId ?? adminUser.authUserId ?? args.logtoId;
 
     return await ctx.db.insert("constitutions", {
       title: "IEEE at UC San Diego Constitution",
