@@ -1,6 +1,7 @@
 import { api } from "@convex/_generated/api";
+import type { Doc } from "@convex/_generated/dataModel";
 import { useQuery } from "convex/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import type {
@@ -9,27 +10,64 @@ import type {
 	ConstitutionSection,
 	ConstitutionVersion,
 } from "../types";
+import {
+	isConstitutionDataLoading,
+	resolveStableValue,
+} from "./constitutionDataState";
+
+type ConstitutionDoc = Doc<"constitutions">;
 
 export function useConstitutionData() {
 	const { isAuthenticated, logtoId } = useAuth();
 	const [initialized, setInitialized] = useState(false);
 	const [ensuringDefault, setEnsuringDefault] = useState(false);
 
+	// Remember the last successfully resolved values so a transient `undefined`
+	// (e.g. an authed query re-subscribing after the auth session token rotates)
+	// does not drop the builder back into its loading state. Doing so would
+	// replace the document editor with a skeleton, unmount the Tiptap editor,
+	// and discard the user's unsaved edits.
+	const lastConstitutionRef = useRef<ConstitutionDoc | null | undefined>(
+		undefined,
+	);
+	const lastSectionsRef = useRef<
+		ConstitutionDoc["sections"] | null | undefined
+	>(undefined);
+	const ensuringDefaultRef = useRef(false);
+
 	// Get or ensure constitution exists
-	const constitution = useAuthedQuery(
+	const rawConstitution = useAuthedQuery(
 		api.constitutions.getDefault,
 		logtoId ? { logtoId } : "skip",
 	);
 	const ensureConstitution = useAuthedMutation(
 		api.constitutions.ensureDefaultConstitution,
 	);
+	const ensureConstitutionRef = useRef(ensureConstitution);
+	ensureConstitutionRef.current = ensureConstitution;
 
-	// Get sections - only when we have a valid constitution ID
-	// getSections is a public query with no auth args
-	const sections = useQuery(
+	const stableConstitution = resolveStableValue(
+		rawConstitution,
+		lastConstitutionRef.current,
+	);
+	lastConstitutionRef.current = stableConstitution.lastResolved;
+	const constitution = stableConstitution.value;
+
+	// Get sections - only when we have a valid constitution ID.
+	// getSections is a public query with no auth args, so once the constitution
+	// has resolved it keeps receiving updates while the authed query above
+	// re-subscribes.
+	const rawSections = useQuery(
 		api.constitutions.getSections,
 		constitution ? { constitutionId: constitution._id } : "skip",
 	);
+	const stableSections = resolveStableValue(
+		rawSections,
+		lastSectionsRef.current,
+	);
+	lastSectionsRef.current = stableSections.lastResolved;
+	const sections = stableSections.value;
+
 	const versions = useAuthedQuery(
 		api.constitutions.listVersions,
 		constitution && logtoId
@@ -50,46 +88,41 @@ export function useConstitutionData() {
 		api.constitutions.restoreVersion,
 	);
 
-	const constitutionLoading =
-		Boolean(isAuthenticated && logtoId) && constitution === undefined;
-	const sectionsLoading = Boolean(constitution) && sections === undefined;
-	const needsInitialization = Boolean(
-		isAuthenticated && logtoId && !initialized,
-	);
-	const isLoading =
-		constitutionLoading ||
-		sectionsLoading ||
-		ensuringDefault ||
-		needsInitialization ||
-		constitution === null;
+	const isLoading = isConstitutionDataLoading({
+		isAuthenticated,
+		logtoId,
+		constitution,
+		sections,
+		ensuringDefault,
+		initialized,
+	});
 
 	// Auto-initialize constitution when authenticated
 	useEffect(() => {
 		if (!isAuthenticated || !logtoId) {
 			setInitialized(false);
 			setEnsuringDefault(false);
+			ensuringDefaultRef.current = false;
 			return;
 		}
 
-		if (constitution && !initialized) {
+		if (constitution) {
 			setInitialized(true);
 			return;
 		}
 
-		if (constitution === null && !ensuringDefault) {
+		if (constitution === null && !ensuringDefaultRef.current) {
+			ensuringDefaultRef.current = true;
 			setEnsuringDefault(true);
-			ensureConstitution({ logtoId })
+			ensureConstitutionRef
+				.current({ logtoId })
 				.then(() => setInitialized(true))
-				.finally(() => setEnsuringDefault(false));
+				.finally(() => {
+					ensuringDefaultRef.current = false;
+					setEnsuringDefault(false);
+				});
 		}
-	}, [
-		isAuthenticated,
-		logtoId,
-		initialized,
-		constitution,
-		ensureConstitution,
-		ensuringDefault,
-	]);
+	}, [isAuthenticated, logtoId, constitution]);
 
 	const handleAddSection = async (
 		type: ConstitutionSection["type"],
@@ -193,25 +226,25 @@ export function useConstitutionData() {
 	};
 
 	const initializeConstitution = useCallback(async () => {
-		if (!isAuthenticated || !logtoId || ensuringDefault) return;
+		if (!isAuthenticated || !logtoId) return;
+
 		if (constitution) {
 			setInitialized(true);
 			return;
 		}
+
+		if (ensuringDefaultRef.current) return;
+
+		ensuringDefaultRef.current = true;
 		setEnsuringDefault(true);
 		try {
-			await ensureConstitution({ logtoId });
+			await ensureConstitutionRef.current({ logtoId });
 			setInitialized(true);
 		} finally {
+			ensuringDefaultRef.current = false;
 			setEnsuringDefault(false);
 		}
-	}, [
-		isAuthenticated,
-		logtoId,
-		ensuringDefault,
-		constitution,
-		ensureConstitution,
-	]);
+	}, [isAuthenticated, logtoId, constitution]);
 
 	const handleSaveDocumentSections = useCallback(
 		async (
