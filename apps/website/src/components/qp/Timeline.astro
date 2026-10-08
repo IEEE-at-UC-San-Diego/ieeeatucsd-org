@@ -9,10 +9,10 @@ import Subtitle from "../core/Subtitle.astro";
   <Subtitle title="Timeline" />
 
   <div
-    class="relative flex items-center justify-between w-full md:max-w-[min(75vw,67.5rem)] max-w-[min(85vw,76.5rem)] py-[10%] md:mt-[7%] mt-[10%]"
+    class="relative flex items-center justify-between w-full md:max-w-[75cqw] max-w-[85cqw] py-[10%] md:mt-[7%] mt-[10%]"
   >
     <div
-      class="absolute top-1/2 w-full h-[min(0.1vw,0.09rem)] bg-gray-200 transform -translate-y-1/2"
+      class="absolute top-1/2 w-full h-[0.1cqw] bg-gray-200 transform -translate-y-1/2"
     >
     </div>
 
@@ -25,10 +25,10 @@ import Subtitle from "../core/Subtitle.astro";
             } flex flex-col items-center`}
           >
             <div class="text-center">
-              <div class="font-bold text-ieee-yellow md:text-[min(1.4vw,1.26rem)] text-[min(2vw,1.8rem)]">
+              <div class="font-bold text-ieee-yellow md:text-[1.4cqw] text-[2cqw]">
                 {event.week}
               </div>
-              <div class="md:text-[min(1.1vw,0.99rem)] text-[min(1.5vw,1.35rem)] text-gray-300 md:max-w-[min(10vw,9rem)] max-w-[min(15vw,13.5rem)]">
+              <div class="md:text-[1.1cqw] text-[1.5cqw] text-gray-300 md:max-w-[10cqw] max-w-[15cqw]">
                 {event.description}
               </div>
             </div>
@@ -36,14 +36,12 @@ import Subtitle from "../core/Subtitle.astro";
 
           <div
             class={`absolute ${
-              index % 2 === 1
-                ? "h-[min(5vw,4.5rem)] top-1/2"
-                : "h-[min(5vw,4.5rem)] bottom-1/2"
-            } w-[min(0.1vw,0.09rem)] bg-white`}
+              index % 2 === 1 ? "h-[5cqw] top-1/2" : "h-[5cqw] bottom-1/2"
+            } w-[0.1cqw] bg-white`}
           />
 
           <div class="absolute top-1/2 transform -translate-y-1/2">
-            <div class="w-[min(1.2vw,1.08rem)] h-[min(1.2vw,1.08rem)] bg-white border-2 rounded-full" />
+            <div class="w-[1.2cqw] h-[1.2cqw] bg-white border-2 rounded-full" />
           </div>
         </div>
       ))

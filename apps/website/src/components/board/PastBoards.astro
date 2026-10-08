@@ -16,14 +16,14 @@ const {
 ---
 
 <div
-  class="text-white flex flex-col items-center md:mt-[min(5vw,4.5rem)] mt-[min(10vw,9rem)] mb-[10vh]"
+  class="text-white flex flex-col items-center md:mt-[5cqw] mt-[10cqw] mb-[10vh]"
 >
-  <div class="relative w-[min(40vw,36rem)] md:w-[min(21vw,18.9rem)] mb-[10vh]">
+  <div class="relative w-[40cqw] md:w-[21cqw] mb-[10vh]">
     <Image src={about} alt="About background image" />
     <Image
       src={neko}
       alt="About image"
-      class="absolute top-[10%] left-[16%] aspect-[399/491] object-cover w-[min(27vw,24.3rem)] md:w-[min(14vw,12.6rem)] rounded-[min(2vw,1.8rem)]"
+      class="absolute top-[10%] left-[16%] aspect-[399/491] object-cover w-[27cqw] md:w-[14cqw] rounded-[2cqw]"
     />
   </div>
 
@@ -32,33 +32,33 @@ const {
   </h1>
 
   <p
-    class="md:text-[min(1.3vw,1.17rem)] text-[min(2.5vw,2.25rem)] md:w-[56%] w-[70%] my-[3%] font-extralight text-center"
+    class="md:text-[1.3cqw] text-[2.5cqw] md:w-[56%] w-[70%] my-[3%] font-extralight text-center"
   >
     {description}
   </p>
 
   <a
     href="/board"
-    class="mb-[min(4vw,3.6rem)] text-ieee-yellow md:text-[min(1vw,0.9rem)] text-[min(2.2vw,1.98rem)] underline underline-offset-4 hover:text-white transition-colors"
+    class="mb-[4cqw] text-ieee-yellow md:text-[1cqw] text-[2.2cqw] underline underline-offset-4 hover:text-white transition-colors"
   >
     View current board
   </a>
 
-  <ul class="w-[80%] md:w-[40%] flex flex-col gap-[min(2vw,1.8rem)]">
+  <ul class="w-[80%] md:w-[40%] flex flex-col gap-[2cqw]">
     {
       pastBoards.map((entry) => (
         <li>
           <a
             href={entry.href}
-            class="group block rounded-[min(1.5vw,1.35rem)] border border-white/10 bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 px-[4%] py-[3%]"
+            class="group block rounded-[1.5cqw] border border-white/10 bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 px-[4%] py-[3%]"
           >
-            <p class="md:text-[min(1.8vw,1.62rem)] text-[min(3.6vw,3.24rem)] font-semibold tracking-tight">
+            <p class="md:text-[1.8cqw] text-[3.6cqw] font-semibold tracking-tight">
               {entry.year}
             </p>
-            <p class="md:text-[min(1vw,0.9rem)] text-[min(2.2vw,1.98rem)] font-extralight text-white/80 mt-[min(0.6vw,0.54rem)]">
+            <p class="md:text-[1cqw] text-[2.2cqw] font-extralight text-white/80 mt-[0.6cqw]">
               {entry.summary}
             </p>
-            <p class="mt-[min(1.2vw,1.08rem)] text-ieee-yellow md:text-[min(0.9vw,0.81rem)] text-[min(2vw,1.8rem)] group-hover:text-white transition-colors">
+            <p class="mt-[1.2cqw] text-ieee-yellow md:text-[0.9cqw] text-[2cqw] group-hover:text-white transition-colors">
               View board
             </p>
           </a>

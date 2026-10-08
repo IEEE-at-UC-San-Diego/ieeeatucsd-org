@@ -9,10 +9,10 @@
     --duration-press: 140ms;
     --duration-ui: 200ms;
     --page-gutter: clamp(1.25rem, 4vw, 3rem);
-    /* Viewport-relative so wide screens and browser zoom-out keep a usable
-       content width. A rem cap (previously 72rem) stayed physically thin
-       when zoom dropped, which made every public page look margin-heavy. */
-    --page-max: 92vw;
+    /* Grows with the viewport up to a generous cap so large screens don't
+       leave the content stranded in a narrow 72rem column. The actual width
+       is still bounded by `100% - 2 * gutter`, so it stays fluid below the cap. */
+    --page-max: 90rem;
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -92,6 +92,15 @@
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+  }
+
+  /* Decorative full-bleed elements (e.g. the RoboCup hero) use 100vw, which
+     can be wider than the document by the scrollbar width. `clip` prevents a
+     stray horizontal scrollbar without creating a scroll container, so
+     `position: sticky` keeps working. */
+  html,
+  body {
+    overflow-x: clip;
   }
 
   body {
@@ -211,6 +220,10 @@
   .page-main {
     width: min(100% - var(--page-gutter) * 2, var(--page-max));
     margin-inline: auto;
+    /* Make the content column the reference for `cqw` units so legacy
+       viewport-sized sections scale with the column instead of overflowing
+       it on large screens. */
+    container-type: inline-size;
   }
 
   .page-section {
