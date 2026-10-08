@@ -64,3 +64,41 @@ export function isConstitutionDataLoading({
 		constitution === null
 	);
 }
+
+export interface RetryOptions {
+	maxAttempts: number;
+	baseDelayMs: number;
+	/** Overridable for tests; defaults to a real timer. */
+	sleep?: (ms: number) => Promise<void>;
+}
+
+function defaultSleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Runs an operation, retrying transient failures with linear backoff.
+ *
+ * `ensureDefaultConstitution` can fail on a cold connection; without a bounded
+ * retry the builder would stay on its loading skeleton with nothing to trigger
+ * another attempt. The final error is rethrown so the caller can surface it.
+ */
+export async function retryWithBackoff<T>(
+	operation: () => Promise<T>,
+	{ maxAttempts, baseDelayMs, sleep = defaultSleep }: RetryOptions,
+): Promise<T> {
+	let lastError: unknown;
+
+	for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+		try {
+			return await operation();
+		} catch (error) {
+			lastError = error;
+			if (attempt < maxAttempts) {
+				await sleep(baseDelayMs * attempt);
+			}
+		}
+	}
+
+	throw lastError;
+}

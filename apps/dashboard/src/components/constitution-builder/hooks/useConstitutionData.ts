@@ -13,14 +13,25 @@ import type {
 import {
 	isConstitutionDataLoading,
 	resolveStableValue,
+	retryWithBackoff,
 } from "./constitutionDataState";
 
 type ConstitutionDoc = Doc<"constitutions">;
+
+const MAX_ENSURE_ATTEMPTS = 3;
+const ENSURE_RETRY_DELAY_MS = 1_000;
+
+function ensureErrorMessage(error: unknown): string {
+	return error instanceof Error && error.message
+		? error.message
+		: "Failed to initialize the constitution";
+}
 
 export function useConstitutionData() {
 	const { isAuthenticated, logtoId } = useAuth();
 	const [initialized, setInitialized] = useState(false);
 	const [ensuringDefault, setEnsuringDefault] = useState(false);
+	const [ensureError, setEnsureError] = useState<string | null>(null);
 
 	// Remember the last successfully resolved values so a transient `undefined`
 	// (e.g. an authed query re-subscribing after the auth session token rotates)
@@ -97,32 +108,66 @@ export function useConstitutionData() {
 		initialized,
 	});
 
-	// Auto-initialize constitution when authenticated
+	const initializeConstitution = useCallback(async () => {
+		if (!isAuthenticated || !logtoId) return;
+		if (constitution) {
+			setInitialized(true);
+			setEnsureError(null);
+			return;
+		}
+		if (ensuringDefaultRef.current) return;
+
+		ensuringDefaultRef.current = true;
+		setEnsuringDefault(true);
+		setEnsureError(null);
+
+		try {
+			await retryWithBackoff(() => ensureConstitutionRef.current({ logtoId }), {
+				maxAttempts: MAX_ENSURE_ATTEMPTS,
+				baseDelayMs: ENSURE_RETRY_DELAY_MS,
+			});
+			setInitialized(true);
+		} catch (error) {
+			setEnsureError(ensureErrorMessage(error));
+		} finally {
+			ensuringDefaultRef.current = false;
+			setEnsuringDefault(false);
+		}
+	}, [isAuthenticated, logtoId, constitution]);
+
+	const retryInitialize = useCallback(() => {
+		setEnsureError(null);
+		void initializeConstitution();
+	}, [initializeConstitution]);
+
+	// Auto-initialize the default constitution when authenticated and none
+	// exists yet. Failures surface `ensureError` (with `retryInitialize`)
+	// instead of leaving the builder stuck on its loading skeleton.
 	useEffect(() => {
 		if (!isAuthenticated || !logtoId) {
 			setInitialized(false);
 			setEnsuringDefault(false);
+			setEnsureError(null);
 			ensuringDefaultRef.current = false;
 			return;
 		}
 
 		if (constitution) {
 			setInitialized(true);
+			setEnsureError(null);
 			return;
 		}
 
-		if (constitution === null && !ensuringDefaultRef.current) {
-			ensuringDefaultRef.current = true;
-			setEnsuringDefault(true);
-			ensureConstitutionRef
-				.current({ logtoId })
-				.then(() => setInitialized(true))
-				.finally(() => {
-					ensuringDefaultRef.current = false;
-					setEnsuringDefault(false);
-				});
+		if (constitution === null && !ensureError) {
+			void initializeConstitution();
 		}
-	}, [isAuthenticated, logtoId, constitution]);
+	}, [
+		isAuthenticated,
+		logtoId,
+		constitution,
+		ensureError,
+		initializeConstitution,
+	]);
 
 	const handleAddSection = async (
 		type: ConstitutionSection["type"],
@@ -225,27 +270,6 @@ export function useConstitutionData() {
 		});
 	};
 
-	const initializeConstitution = useCallback(async () => {
-		if (!isAuthenticated || !logtoId) return;
-
-		if (constitution) {
-			setInitialized(true);
-			return;
-		}
-
-		if (ensuringDefaultRef.current) return;
-
-		ensuringDefaultRef.current = true;
-		setEnsuringDefault(true);
-		try {
-			await ensureConstitutionRef.current({ logtoId });
-			setInitialized(true);
-		} finally {
-			ensuringDefaultRef.current = false;
-			setEnsuringDefault(false);
-		}
-	}, [isAuthenticated, logtoId, constitution]);
-
 	const handleSaveDocumentSections = useCallback(
 		async (
 			parsedSections: ConstitutionDocumentSectionInput[],
@@ -316,6 +340,8 @@ export function useConstitutionData() {
 		saveVersion: handleSaveVersion,
 		restoreVersion: handleRestoreVersion,
 		initializeConstitution,
+		retryInitialize,
+		ensureError,
 		constitutionId: constitution?._id,
 	};
 }

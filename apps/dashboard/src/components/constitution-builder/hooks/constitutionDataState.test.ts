@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	isConstitutionDataLoading,
 	resolveStableValue,
+	retryWithBackoff,
 } from "./constitutionDataState";
 
 describe("resolveStableValue", () => {
@@ -103,5 +104,44 @@ describe("isConstitutionDataLoading", () => {
 				initialized: false,
 			}),
 		).toBe(false);
+	});
+});
+
+describe("retryWithBackoff", () => {
+	const options = { maxAttempts: 3, baseDelayMs: 10, sleep: async () => {} };
+
+	it("returns the result without retrying on success", async () => {
+		const operation = vi.fn().mockResolvedValue("ok");
+
+		await expect(retryWithBackoff(operation, options)).resolves.toBe("ok");
+		expect(operation).toHaveBeenCalledTimes(1);
+	});
+
+	it("retries a transient failure and then succeeds", async () => {
+		const operation = vi
+			.fn()
+			.mockRejectedValueOnce(new Error("transient"))
+			.mockResolvedValue("ok");
+
+		await expect(retryWithBackoff(operation, options)).resolves.toBe("ok");
+		expect(operation).toHaveBeenCalledTimes(2);
+	});
+
+	it("stops after the max attempts and rethrows the last error", async () => {
+		const operation = vi.fn().mockRejectedValue(new Error("boom"));
+
+		await expect(retryWithBackoff(operation, options)).rejects.toThrow("boom");
+		expect(operation).toHaveBeenCalledTimes(3);
+	});
+
+	it("waits between attempts with linear backoff", async () => {
+		const sleep = vi.fn(async () => {});
+		const operation = vi.fn().mockRejectedValue(new Error("boom"));
+
+		await expect(
+			retryWithBackoff(operation, { ...options, sleep }),
+		).rejects.toThrow("boom");
+		expect(sleep).toHaveBeenNthCalledWith(1, 10);
+		expect(sleep).toHaveBeenNthCalledWith(2, 20);
 	});
 });
