@@ -3,10 +3,10 @@ const { text, number, col, position, width } = Astro.props;
 ---
 
 <div
-  class={`relative col-span-${col} border-[min(0.1vw,0.09rem)] border-white/30 text-[min(1.5vw,1.35rem)] md:text-[min(1.2vw,1.08rem)] bg-gradient-to-b from-white/10 to-ieee-blue-300/10 px-[min(1vw,0.9rem)] py-[min(2vw,1.8rem)] rounded-[min(1vw,0.9rem)] `}
+  class={`relative col-span-${col} border-[0.1cqw] border-white/30 text-[1.5cqw] md:text-[1.2cqw] bg-gradient-to-b from-white/10 to-ieee-blue-300/10 px-[1cqw] py-[2cqw] rounded-[1cqw] `}
 >
   <p
-    class={`${position} text-[min(4vw,3.6rem)] opacity-10 font-bold absolute leading-tight `}
+    class={`${position} text-[4cqw] opacity-10 font-bold absolute leading-tight `}
   >
     {number}
   </p>
