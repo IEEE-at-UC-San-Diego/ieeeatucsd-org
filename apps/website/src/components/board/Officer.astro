@@ -29,7 +29,7 @@ const initials = officerInitials(name);
     class="group w-full min-w-0 aspect-[334/440] bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[10%] flex flex-col items-center relative border border-white/10"
   >
     <div
-      class="relative w-[90%] aspect-[334/440] md:rounded-[1.5vw] rounded-[3vw] overflow-hidden mt-[5%] mb-[3%]"
+      class="relative w-[90%] aspect-[334/440] md:rounded-[min(1.5vw,1.35rem)] rounded-[min(3vw,2.7rem)] overflow-hidden mt-[5%] mb-[3%]"
     >
       {
         picture ? (
@@ -60,11 +60,11 @@ const initials = officerInitials(name);
               <Image
                 src={ieeeMark}
                 alt=""
-                class="w-[28%] opacity-70 mb-[0.8vw]"
+                class="w-[28%] opacity-70 mb-[min(0.8vw,0.72rem)]"
                 widths={[80, 120, 160]}
                 sizes="(max-width: 768px) 9vw, 5vw"
               />
-              <span class="font-display font-extrabold tracking-tight text-white md:text-[3.8vw] text-[7.2vw] leading-none">
+              <span class="font-display font-extrabold tracking-tight text-white md:text-[min(3.8vw,3.42rem)] text-[min(7.2vw,6.48rem)] leading-none">
                 {initials}
               </span>
             </div>
@@ -83,10 +83,10 @@ const initials = officerInitials(name);
       </div>
       <div class="absolute inset-x-0 bottom-0 backdrop-blur-sm">
         <div
-          class="flex items-center justify-center px-[1vw] py-[0.8vw] md:py-[0.6vw]"
+          class="flex items-center justify-center px-[min(1vw,0.9rem)] py-[min(0.8vw,0.72rem)] md:py-[min(0.6vw,0.54rem)]"
         >
           <span
-            class="text-white md:text-[1vw] text-[2vw] font-semibold uppercase tracking-wide leading-tight text-center"
+            class="text-white md:text-[min(1vw,0.9rem)] text-[min(2vw,1.8rem)] font-semibold uppercase tracking-wide leading-tight text-center"
           >
             {position}
           </span>
@@ -96,7 +96,7 @@ const initials = officerInitials(name);
 
     <div class="w-[85%] flex flex-col items-center text-center">
       <p
-        class="md:text-[1.6vw] text-[3.2vw] font-semibold tracking-tight md:leading-[2.1vw] leading-[4.2vw]"
+        class="md:text-[min(1.6vw,1.44rem)] text-[min(3.2vw,2.88rem)] font-semibold tracking-tight md:leading-[min(2.1vw,1.89rem)] leading-[min(4.2vw,3.78rem)]"
       >
         {name}
       </p>
@@ -104,15 +104,17 @@ const initials = officerInitials(name);
 
     {
       email && (
-        <div class="w-[85%] pb-[1.2vw] pt-[0.6vw] flex justify-center">
+        <div class="w-[85%] pb-[min(1.2vw,1.08rem)] pt-[min(0.6vw,0.54rem)] flex justify-center">
           <a
             href={`mailto:${email}`}
-            class="group/email inline-flex items-center gap-[0.6vw] rounded-full bg-white/5 hover:bg-white/10 border border-white/10 px-[1.2vw] py-[0.4vw] text-ieee-yellow md:text-[0.85vw] text-[1.7vw] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ieee-yellow/60"
+            class="group/email inline-flex items-center gap-[min(0.6vw,0.54rem)] rounded-full bg-white/5 hover:bg-white/10 border border-white/10 px-[min(1.2vw,1.08rem)] py-[min(0.4vw,0.36rem)] text-ieee-yellow md:text-[min(0.85vw,0.765rem)] text-[min(1.7vw,1.53rem)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ieee-yellow/60"
             aria-label={`Email ${name}`}
             title={email}
           >
-            <MdEmail className="md:text-[1.1vw] text-[2.2vw] opacity-80 group-hover/email:opacity-100 transition-opacity" />
-            <span class="truncate max-w-[14vw] md:max-w-[12vw]">{email}</span>
+            <MdEmail className="md:text-[min(1.1vw,0.99rem)] text-[min(2.2vw,1.98rem)] opacity-80 group-hover/email:opacity-100 transition-opacity" />
+            <span class="truncate max-w-[min(14vw,12.6rem)] md:max-w-[min(12vw,10.8rem)]">
+              {email}
+            </span>
           </a>
         </div>
       )

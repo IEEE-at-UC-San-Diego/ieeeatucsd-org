@@ -8,7 +8,7 @@ const { filters, currentFilter }: Props = Astro.props;
 ---
 
 <div
-  class="inline-flex border border-white/20 rounded-full md:p-[0.2vw] p-[0.4vw] relative my-[3vw]"
+  class="inline-flex border border-white/20 rounded-full md:p-[min(0.2vw,0.18rem)] p-[min(0.4vw,0.36rem)] relative my-[min(3vw,2.7rem)]"
   role="group"
   aria-label="Filter officers by team"
 >
@@ -24,7 +24,7 @@ const { filters, currentFilter }: Props = Astro.props;
         type="button"
         data-filter={filter}
         aria-pressed={currentFilter === filter ? "true" : "false"}
-        class={`md:text-[1.3vw] text-[2.5vw] md:px-[1.8vw] px-[3vw] md:py-[0.2vw] py-[0.4vw] rounded-full relative z-10 ${
+        class={`md:text-[min(1.3vw,1.17rem)] text-[min(2.5vw,2.25rem)] md:px-[min(1.8vw,1.62rem)] px-[min(3vw,2.7rem)] md:py-[min(0.2vw,0.18rem)] py-[min(0.4vw,0.36rem)] rounded-full relative z-10 ${
           currentFilter === filter
             ? "text-black"
             : "text-white hover:bg-white/10"

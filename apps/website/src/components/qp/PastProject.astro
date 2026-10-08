@@ -14,22 +14,22 @@ const resolvedImage = resolveImage(image);
   <Image
     src={resolvedImage}
     alt="past projects image"
-    class="md:h-[30vh] h-[15vh] object-cover w-full rounded-[1.5vw] opacity-80 group-hover:opacity-40 duration-300"
+    class="md:h-[30vh] h-[15vh] object-cover w-full rounded-[min(1.5vw,1.35rem)] opacity-80 group-hover:opacity-40 duration-300"
   />
 
   <div
-    class="absolute bottom-0 px-[3%] w-full bg-gradient-to-t from-black via-black to-transparent rounded-b-[1.5vw] pb-[1vw] pt-[5%]"
+    class="absolute bottom-0 px-[3%] w-full bg-gradient-to-t from-black via-black to-transparent rounded-b-[min(1.5vw,1.35rem)] pb-[min(1vw,0.9rem)] pt-[5%]"
   >
     <div
-      class="text-[1.4vw] md:text-[1.1vw] flex w-full px-[2%] justify-between items-end"
+      class="text-[min(1.4vw,1.26rem)] md:text-[min(1.1vw,0.99rem)] flex w-full px-[2%] justify-between items-end"
     >
       <p
-        class="py-[0.3vw] px-[1vw] border-[0.1vw] text-nowrap border-white rounded-full group-hover:text-ieee-yellow group-hover:border-ieee-yellow duration-300 font-light"
+        class="py-[min(0.3vw,0.27rem)] px-[min(1vw,0.9rem)] border-[min(0.1vw,0.09rem)] text-nowrap border-white rounded-full group-hover:text-ieee-yellow group-hover:border-ieee-yellow duration-300 font-light"
       >
         {title}
       </p>
       <GoArrowDownRight
-        className="text-[3vw] leading-none group-hover:text-ieee-yellow duration-300"
+        className="text-[min(3vw,2.7rem)] leading-none group-hover:text-ieee-yellow duration-300"
       />
     </div>
   </div>

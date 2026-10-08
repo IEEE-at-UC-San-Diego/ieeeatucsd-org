@@ -9,7 +9,10 @@
     --duration-press: 140ms;
     --duration-ui: 200ms;
     --page-gutter: clamp(1.25rem, 4vw, 3rem);
-    --page-max: 72rem;
+    /* Viewport-relative so wide screens and browser zoom-out keep a usable
+       content width. A rem cap (previously 72rem) stayed physically thin
+       when zoom dropped, which made every public page look margin-heavy. */
+    --page-max: 92vw;
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
