@@ -338,3 +338,42 @@
   letter-spacing: 0.04em;
   color: rgba(255, 255, 255, 0.5);
 }
+
+/* ---------- All-day row ---------- */
+.oah-allday {
+  display: grid;
+  grid-template-columns: var(--oah-gutter) repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--oah-line);
+}
+
+.oah-allday-label {
+  padding: 0.55rem 0.75rem 0 0;
+  text-align: right;
+  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.oah-allday-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 2rem;
+  padding: 3px 2px;
+  border-left: 1px solid var(--oah-line);
+}
+
+.oah-allday-item {
+  margin: 0;
+  padding: 0.2rem 0.5rem 0.2rem 0.6rem;
+  border-left: 2px solid #f3c135;
+  border-radius: 0 0.3rem 0.3rem 0;
+  background: rgba(243, 193, 53, 0.1);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: #fff;
+  overflow-wrap: anywhere;
+}

@@ -2,7 +2,7 @@
 // feed (weekly/daily repeats, per-date overrides, exceptions) into concrete
 // occurrences for a time window.
 
-import { utcToZoned, zonedToUtc, OAH_TZ } from "./tz";
+import { zonedToUtc, OAH_TZ } from "./tz";
 
 export interface Occurrence {
   id: string;
@@ -83,13 +83,13 @@ function parseStamp(prop: Prop, fallbackTz: string): Stamp | null {
   const mi = Number(m[5] ?? 0);
   const tz = prop.params.TZID || fallbackTz;
   if (m[7] === "Z") {
-    const ms = Date.UTC(y, mo - 1, d, h, mi);
-    const z = utcToZoned(ms, fallbackTz);
+    // A UTC stamp stays in UTC: repeats of it keep the same UTC time across
+    // daylight saving changes. Conversion to Pacific happens only on display.
     return {
-      ms,
+      ms: Date.UTC(y, mo - 1, d, h, mi),
       allDay,
-      tz: fallbackTz,
-      local: { y: z.y, m: z.m, d: z.d, h: z.h, mi: z.mi },
+      tz: "UTC",
+      local: { y, m: mo, d, h, mi },
     };
   }
   return {

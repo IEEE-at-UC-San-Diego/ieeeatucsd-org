@@ -50,6 +50,8 @@ const MONTHS = [
   "Dec",
 ];
 const HOUR_PX = 56;
+// matches the server cache; older weeks are refetched when revisited
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const dayKey = (y: number, m: number, d: number) => `${y}-${pad(m)}-${pad(d)}`;
@@ -157,7 +159,7 @@ export default function OpenAccessCalendar({ calendarUrl }: Props) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading",
   );
-  const cache = useRef(new Map<string, Occurrence[]>());
+  const cache = useRef(new Map<string, { at: number; events: Occurrence[] }>());
 
   const days = useMemo(() => buildDays(monday), [monday]);
   const weekKey = days[0].key;
@@ -170,8 +172,8 @@ export default function OpenAccessCalendar({ calendarUrl }: Props) {
 
   useEffect(() => {
     const cached = cache.current.get(weekKey);
-    if (cached) {
-      setEvents(cached);
+    if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+      setEvents(cached.events);
       setStatus("ready");
       return;
     }
@@ -186,7 +188,7 @@ export default function OpenAccessCalendar({ calendarUrl }: Props) {
         r.ok ? r.json() : Promise.reject(new Error(String(r.status))),
       )
       .then((data: { events: Occurrence[] }) => {
-        cache.current.set(weekKey, data.events);
+        cache.current.set(weekKey, { at: Date.now(), events: data.events });
         setEvents(data.events);
         setStatus("ready");
       })
@@ -212,6 +214,21 @@ export default function OpenAccessCalendar({ calendarUrl }: Props) {
       ),
     [days, events],
   );
+
+  // all-day notices (e.g. a closure) get their own row instead of the grid
+  const allDayByDay = useMemo(
+    () =>
+      days.map((day) =>
+        events.filter(
+          (ev) =>
+            ev.allDay &&
+            Date.parse(ev.end) > day.startUtc &&
+            Date.parse(ev.start) < day.endUtc,
+        ),
+      ),
+    [days, events],
+  );
+  const hasAllDay = allDayByDay.some((col) => col.length > 0);
 
   // visible hour window follows the week's events (never shorter than 8h)
   const [firstHour, lastHour] = useMemo(() => {
@@ -258,7 +275,9 @@ export default function OpenAccessCalendar({ calendarUrl }: Props) {
       ? String(first.y)
       : `${first.y}/${String(last.y).slice(2)}`;
 
-  const totalEvents = placedByDay.reduce((n, c) => n + c.length, 0);
+  const totalEvents =
+    placedByDay.reduce((n, c) => n + c.length, 0) +
+    allDayByDay.reduce((n, c) => n + c.length, 0);
 
   return (
     <div className="oah" data-status={status}>
@@ -317,6 +336,21 @@ export default function OpenAccessCalendar({ calendarUrl }: Props) {
             );
           })}
         </div>
+
+        {hasAllDay && (
+          <div className="oah-allday">
+            <div className="oah-allday-label">All day</div>
+            {allDayByDay.map((col, di) => (
+              <div key={days[di].key} className="oah-allday-cell">
+                {col.map((ev) => (
+                  <p key={ev.id} className="oah-allday-item" title={ev.title}>
+                    {ev.title}
+                  </p>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="oah-body" style={{ height: bodyHeight }}>
           <div className="oah-gutter" aria-hidden="true">
@@ -388,6 +422,7 @@ export default function OpenAccessCalendar({ calendarUrl }: Props) {
         {days.map((day, di) => {
           const isToday = day.key === todayKey;
           const items = placedByDay[di];
+          const allDay = allDayByDay[di];
           return (
             <li key={day.key} className={isToday ? "is-today" : ""}>
               <div className="oah-agenda-day">
@@ -395,7 +430,15 @@ export default function OpenAccessCalendar({ calendarUrl }: Props) {
                 <span className="oah-date">{day.d}</span>
               </div>
               <ul>
-                {items.length === 0 && <li className="oah-none">—</li>}
+                {items.length === 0 && allDay.length === 0 && (
+                  <li className="oah-none">—</li>
+                )}
+                {allDay.map((ev) => (
+                  <li key={ev.id}>
+                    <p className="oah-agenda-time">All day</p>
+                    <p className="oah-agenda-title">{ev.title}</p>
+                  </li>
+                ))}
                 {items.map((p) => (
                   <li
                     key={p.ev.id}

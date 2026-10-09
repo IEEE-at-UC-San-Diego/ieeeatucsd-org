@@ -324,9 +324,11 @@
     }
 
     function setRunning(run: boolean) {
-      if (reduceMotion.matches) return;
-      if (run && !raf) raf = requestAnimationFrame(loop);
-      if (!run && raf) {
+      // reduced motion means "do not animate", including stopping a loop
+      // that was already running when the preference changed
+      const animate = run && !reduceMotion.matches;
+      if (animate && !raf) raf = requestAnimationFrame(loop);
+      if (!animate && raf) {
         cancelAnimationFrame(raf);
         raf = 0;
       }

@@ -65,11 +65,11 @@ const { filters, currentFilter }: Props = Astro.props;
   const slider = document.getElementById("slider") as HTMLElement;
 
   function moveSlider(button: HTMLElement) {
-    if (!slider || !button.parentElement) return;
-    const buttonRect = button.getBoundingClientRect();
-    const containerRect = button.parentElement.getBoundingClientRect();
-    slider.style.width = `${buttonRect.width}px`;
-    slider.style.left = `${buttonRect.left - containerRect.left}px`;
+    if (!slider) return;
+    // offsetLeft is measured inside the scrolling rail, so the underline
+    // stays under the right tab even after the rail has been scrolled.
+    slider.style.width = `${button.offsetWidth}px`;
+    slider.style.left = `${button.offsetLeft}px`;
   }
 
   function activeButton() {

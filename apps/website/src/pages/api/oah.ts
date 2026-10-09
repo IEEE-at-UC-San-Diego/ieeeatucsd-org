@@ -8,17 +8,30 @@ import { OAH_CALENDAR_ID } from "../../config/oah";
 export const prerender = false;
 
 const CACHE_MS = 5 * 60 * 1000;
-let cache: { at: number; events: ReturnType<typeof parseIcs> } | null = null;
+const FETCH_TIMEOUT_MS = 8000;
 
-async function loadEvents() {
-  if (cache && Date.now() - cache.at < CACHE_MS) return cache.events;
+type ParsedEvents = ReturnType<typeof parseIcs>;
+let cache: { at: number; events: ParsedEvents } | null = null;
+// One refresh at a time: concurrent requests share the same download.
+let inflight: Promise<ParsedEvents> | null = null;
+
+async function refreshEvents(): Promise<ParsedEvents> {
   const res = await fetch(buildGoogleCalendarIcsUrl(OAH_CALENDAR_ID), {
     headers: { Accept: "text/calendar" },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`calendar responded ${res.status}`);
   const events = parseIcs(await res.text());
   cache = { at: Date.now(), events };
   return events;
+}
+
+async function loadEvents(): Promise<ParsedEvents> {
+  if (cache && Date.now() - cache.at < CACHE_MS) return cache.events;
+  inflight ??= refreshEvents().finally(() => {
+    inflight = null;
+  });
+  return inflight;
 }
 
 export const GET: APIRoute = async ({ url }) => {
@@ -37,6 +50,7 @@ export const GET: APIRoute = async ({ url }) => {
       "Cache-Control": "public, max-age=60",
     });
   } catch (err) {
+    console.error("[api/oah] could not refresh the calendar feed:", err);
     if (cache) {
       return json(
         { events: expandEvents(cache.events, start, end), stale: true },
