@@ -5,6 +5,22 @@ import {
   downloadEventIcs,
 } from "../../lib/calendarLinks";
 
+const DAY_FORMAT = { dateStyle: "medium" };
+const TIME_FORMAT = { hour: "numeric", minute: "2-digit" };
+
+/** "Oct 8, 2026, 6:00 PM – 8:00 PM" (no seconds; end date only when it differs). */
+function formatEventRange(event) {
+  const start = new Date(Number(event.startDate));
+  const end = new Date(Number(event.endDate));
+  const startText = `${start.toLocaleDateString("en-US", DAY_FORMAT)}, ${start.toLocaleTimeString("en-US", TIME_FORMAT)}`;
+  if (Number.isNaN(end.getTime())) return startText;
+  const sameDay = start.toDateString() === end.toDateString();
+  const endText = sameDay
+    ? end.toLocaleTimeString("en-US", TIME_FORMAT)
+    : `${end.toLocaleDateString("en-US", DAY_FORMAT)}, ${end.toLocaleTimeString("en-US", TIME_FORMAT)}`;
+  return `${startText} – ${endText}`;
+}
+
 /** @param {{ events?: any[]; publicCalendarId?: string }} props */
 const Calendar = ({ events = [], publicCalendarId = "" }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -58,7 +74,10 @@ const Calendar = ({ events = [], publicCalendarId = "" }) => {
     return days;
   };
 
-  const formatDate = (date) => date.toISOString().split("T")[0];
+  // Local calendar day, matching how the grid cells are built. toISOString()
+  // would use UTC and push evening events onto the next day.
+  const formatDate = (date) =>
+    `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
   const getEventsForDay = (day) => {
     if (!day) return [];
     const dayKey = formatDate(day);
@@ -242,8 +261,7 @@ const Calendar = ({ events = [], publicCalendarId = "" }) => {
             </div>
 
             <p className="font-mono-tech text-sm text-ieee-blue-100">
-              {new Date(Number(selectedEvent.startDate)).toLocaleString()} -{" "}
-              {new Date(Number(selectedEvent.endDate)).toLocaleTimeString()}
+              {formatEventRange(selectedEvent)}
             </p>
             {selectedEvent.location && (
               <p className="mt-1 text-sm text-white/70">

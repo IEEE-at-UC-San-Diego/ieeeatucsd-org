@@ -24,7 +24,7 @@ const { index, title, text, link } = Astro.props;
   <div class="md:pt-1.5">
     <p class="copy max-w-xl">{text}</p>
     <a
-      class="btn-link mt-5 after:absolute after:inset-0 after:content-['']"
+      class="btn-link mt-5 text-white/70 transition-colors duration-300 hover:text-ieee-blue-100 group-hover:text-ieee-blue-100 after:absolute after:inset-0 after:content-['']"
       href={link}
     >
       <span class="activity-more">More details</span>
