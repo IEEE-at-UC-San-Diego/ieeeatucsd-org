@@ -6,8 +6,7 @@ const { picture, name, description, link, linktext } = Astro.props;
 <section class="page-section">
   <div class="grid items-center gap-10 md:grid-cols-12 md:gap-12" data-reveal>
     <div class="md:col-span-5">
-      <p class="eyebrow">Competition</p>
-      <h2 class="headline mt-6 text-white">{name}</h2>
+      <h2 class="headline text-white">{name}</h2>
       <p class="lead mt-6 max-w-[52ch]">{description}</p>
       <a
         href={link}

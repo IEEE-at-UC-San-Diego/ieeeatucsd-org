@@ -40,7 +40,7 @@ const emailBreakable = email ? email.replace("@", "@\u200B") : "";
   class:list={[
     "group min-w-0",
     isFeature
-      ? "grid items-center gap-7 sm:grid-cols-[minmax(0,17rem)_1fr] sm:gap-10"
+      ? "grid grid-cols-[minmax(0,9.5rem)_minmax(0,1fr)] items-center gap-5 sm:grid-cols-[minmax(0,17rem)_1fr] sm:gap-10"
       : "flex h-full flex-col",
   ]}
 >
@@ -64,7 +64,7 @@ const emailBreakable = email ? email.replace("@", "@\u200B") : "";
             widths={[240, 334, 440, 640]}
             sizes={
               isFeature
-                ? "(max-width: 640px) 88vw, 272px"
+                ? "(max-width: 640px) 152px, 272px"
                 : "(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 22vw"
             }
             loading={eager ? "eager" : "lazy"}
@@ -98,7 +98,7 @@ const emailBreakable = email ? email.replace("@", "@\u200B") : "";
       class:list={[
         "font-semibold tracking-tight text-white",
         isFeature
-          ? "text-[clamp(2.1rem,4.4vw,3.5rem)] leading-[1.02]"
+          ? "text-[1.6rem] leading-[1.05] sm:text-[clamp(2.1rem,4.4vw,3.5rem)] sm:leading-[1.02]"
           : "text-lg sm:text-xl",
       ]}
     >
@@ -107,7 +107,7 @@ const emailBreakable = email ? email.replace("@", "@\u200B") : "";
     <p
       class:list={[
         "mono-label text-ieee-blue-100",
-        isFeature ? "mt-4 text-[0.8rem]" : "mt-1.5",
+        isFeature ? "mt-2.5 text-[0.72rem] sm:mt-4 sm:text-[0.8rem]" : "mt-1.5",
       ]}
     >
       {position}
@@ -118,7 +118,7 @@ const emailBreakable = email ? email.replace("@", "@\u200B") : "";
         (isFeature ? (
           <a
             href={`mailto:${email}`}
-            class="group/email mt-6 inline-flex max-w-full items-center gap-2 text-[0.95rem] no-underline text-white/65 transition-colors hover:text-ieee-yellow"
+            class="group/email mt-4 inline-flex max-w-full items-center gap-2 text-[0.82rem] no-underline text-white/65 transition-colors hover:text-ieee-yellow sm:mt-6 sm:text-[0.95rem]"
             aria-label={`Email ${name}`}
             title={email}
           >

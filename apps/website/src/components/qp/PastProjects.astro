@@ -3,23 +3,24 @@ import PastProject from "./PastProject.astro";
 import projects from "../../data/pastProjects.json";
 import SectionHeading from "../core/SectionHeading.astro";
 
-// Orderly bento: every tile spans a whole number of 2-row units so rows stay
-// flush. Cols: 2 on mobile, 6 from md up.
+// Compact tile grid. Phones: 2 columns with a full-width last tile. Desktop:
+// 12 columns, four tiles on the first row and three on the second, so the
+// whole gallery stays two short rows tall.
 const spans = [
-  "col-span-2 md:col-span-4",
-  "col-span-1 md:col-span-2",
-  "col-span-1 md:col-span-2",
-  "col-span-2 md:col-span-4",
   "col-span-1 md:col-span-3",
   "col-span-1 md:col-span-3",
-  "col-span-2 md:col-span-6",
+  "col-span-1 md:col-span-3",
+  "col-span-1 md:col-span-3",
+  "col-span-1 md:col-span-4",
+  "col-span-1 md:col-span-4",
+  "col-span-2 md:col-span-4",
 ];
 ---
 
 <section class="page-section" aria-labelledby="past-heading">
   <SectionHeading id="past-heading" title="Past Projects" />
   <div
-    class="mt-10 grid auto-rows-[10.5rem] grid-cols-2 gap-4 md:auto-rows-[12rem] md:grid-cols-6 md:gap-5"
+    class="mt-8 grid auto-rows-[7.5rem] grid-cols-2 gap-3 sm:auto-rows-[9rem] md:auto-rows-[10rem] md:grid-cols-12 md:gap-4"
   >
     {
       projects.map((project, index) => (

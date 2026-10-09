@@ -1,20 +1,18 @@
 ---
-// Section opener: optional eyebrow, <h2> headline, optional lead (default slot).
+// Section opener: <h2> headline with an optional lead (default slot).
 interface Props {
   title: string;
   align?: "left" | "center";
   id?: string;
-  eyebrow?: string;
 }
 
-const { title, align = "left", id, eyebrow } = Astro.props;
+const { title, align = "left", id } = Astro.props;
 ---
 
 <div
   class:list={["max-w-3xl", align === "center" && "mx-auto text-center"]}
   data-reveal
 >
-  {eyebrow && <p class="eyebrow mb-5">{eyebrow}</p>}
   <h2 id={id} class="headline text-white">
     {title}
   </h2>

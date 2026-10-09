@@ -261,28 +261,6 @@
 
   /* ---------- Type ---------- */
 
-  /* Drafting-sheet annotation: mono, tracked, with a leader line */
-  .eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
-    font-size: 0.72rem;
-    font-weight: 500;
-    line-height: 1;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #88bfec;
-  }
-
-  .eyebrow::before {
-    content: "";
-    width: 1.75rem;
-    height: 1px;
-    background: currentColor;
-    opacity: 0.7;
-  }
-
   .mono-label {
     font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
     font-size: 0.72rem;

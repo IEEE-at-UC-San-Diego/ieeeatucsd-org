@@ -1,27 +1,15 @@
 ---
-// Opening block of an inner page: eyebrow + large display title (+ optional lead).
-// `eyebrow` is optional; the title text is always the page's <h1>.
+// Opening block of an inner page: large display title (+ optional lead).
+// The title text is always the page's <h1>.
 interface Props {
   title: string;
-  eyebrow?: string;
 }
 
-const { title, eyebrow } = Astro.props;
+const { title } = Astro.props;
 ---
 
 <header class="page-hero bp-grid">
-  {
-    eyebrow && (
-      <p class="eyebrow" data-reveal>
-        {eyebrow}
-      </p>
-    )
-  }
-  <h1
-    class:list={["display max-w-5xl", eyebrow && "mt-6"]}
-    data-reveal
-    style="--reveal-delay: 60ms"
-  >
+  <h1 class="display max-w-5xl" data-reveal style="--reveal-delay: 60ms">
     {title}
   </h1>
   {
