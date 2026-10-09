@@ -1,50 +1,42 @@
 ---
 import { Image } from "astro:assets";
-import { LiaDotCircle } from "react-icons/lia";
-import mentorship from "../../images/joinbg.webp";
-import jonathan from "../../images/about3.webp";
+import mentorPhoto from "../../images/about3.webp";
 ---
 
-<div class="flex justify-center mt-[10%] mb-[3%]">
-  <div class="flex md:w-[70%] w-[80%] items-center">
-    <div class="md:w-1/2 w-[60%] font-light md:text-[1.2cqw] text-[1.6cqw]">
-      <div class="flex items-center md:text-[2.3cqw] text-[4cqw] mb-[5%]">
-        <LiaDotCircle className="mr-[1cqw] pt-[0.5%]" />
-        <p
-          class="md:text-[2.3cqw] text-[4cqw] font-bold text-transparent bg-clip-text bg-gradient-to-l from-white to-ieee-yellow"
-        >
-          Mentorship
-        </p>
-      </div>
-      <p class="my-[10%]">
+<section class="page-section">
+  <div class="grid gap-8 md:grid-cols-2 md:items-center md:gap-12 lg:gap-16">
+    <div data-reveal>
+      <h2 class="headline text-white">Mentorship</h2>
+      <p class="copy mt-6 max-w-xl">
         Mentors are a fundamental part of QP, providing teams with advice and
         guidance through the ideation and execution of their project. Each team
         is paired with a mentor they can regularly consult for advice and
         insights. Mentors are matched with teams based on their expertise and
         the team’s project focus, ensuring aligned support for each group.
       </p>
-      <p class="mb-[12%]">
+      <p class="copy mt-5 max-w-xl">
         If you are interested in becoming a mentor, please follow this link to
         signup:
       </p>
-      <div class="w-full flex justify-center">
-        <a
-          href="https://forms.gle/pAVXShHpPHMdmnQg9"
-          target="_blank"
-          class="p-[2%] md:text-[1.2cqw] text-[1.6cqw] border-[0.1cqw] border-white rounded-[0.5cqw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"
-        >
-          BECOME A MENTOR
-        </a>
-      </div>
+      <a
+        href="https://forms.gle/pAVXShHpPHMdmnQg9"
+        target="_blank"
+        class="ieee-btn ieee-btn-ghost mt-8"
+      >
+        BECOME A MENTOR
+      </a>
     </div>
-
-    <div class="w-1/2 flex justify-center h-full items-center relative">
-      <Image src={mentorship} alt="blue background" />
+    <div
+      class="relative overflow-hidden rounded-[20px] border border-ieee-blue-100/15"
+      data-reveal
+      style="--reveal-delay: 80ms"
+    >
       <Image
-        src={jonathan}
+        src={mentorPhoto}
         alt="blue background"
-        class="absolute rounded-full object-cover aspect-[262/433] w-[54%] md:top-[5%] top-[15%] right-[10%]"
+        width={1200}
+        class="aspect-[4/3] w-full object-cover"
       />
     </div>
   </div>
-</div>
+</section>

@@ -5,28 +5,34 @@ import SectionHeading from "../core/SectionHeading.astro";
 ---
 
 <section class="page-section" aria-labelledby="about-heading">
-  <div class="grid gap-8 lg:grid-cols-2 items-center">
-    <div class="ieee-panel overflow-hidden">
-      <Image
-        src={about4}
-        alt="IEEE at UC San Diego members working together"
-        class="aspect-[4/5] w-full object-cover"
+  <div class="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
+    <figure class="lg:col-span-5" data-reveal>
+      <div class="ticks">
+        <Image
+          src={about4}
+          alt="IEEE at UC San Diego members working together"
+          class="aspect-[4/5] w-full rounded-[1.75rem] object-cover"
+        />
+      </div>
+    </figure>
+    <div class="text-center lg:col-span-7">
+      <SectionHeading
+        id="about-heading"
+        title="About IEEE at UC San Diego"
+        align="center"
       />
-    </div>
-    <div>
-      <SectionHeading id="about-heading" title="About IEEE at UC San Diego" />
-      <p class="mt-5 text-white/80 leading-relaxed">
+      <p class="lead mx-auto mt-8 max-w-2xl" data-reveal>
         A diverse engineering community seeking to empower students through
         hands-on projects, networking opportunities, and social events. Bonus
         points on having an open-access project studio!
       </p>
-      <p class="mt-4 text-white/80 leading-relaxed">
+      <p class="copy mx-auto mt-5 max-w-2xl" data-reveal>
         The IEEE UC San Diego student branch is part of the world’s largest
         technical professional organization. On campus we are consistently one
         of the largest student branches in the United States — including a 2nd
         Largest Student Branch Award in 2021 and 2022.
       </p>
-      <a class="ieee-btn ieee-btn-ghost mt-8" href="/join">Learn more</a>
+      <a class="btn-link mt-9" href="/join" data-reveal>Learn more</a>
     </div>
   </div>
 </section>

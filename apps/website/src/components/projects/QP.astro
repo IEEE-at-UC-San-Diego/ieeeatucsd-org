@@ -1,25 +1,32 @@
 ---
 import { Image } from "astro:assets";
 import qp from "../../images/qp.webp";
-import SectionHeading from "../core/SectionHeading.astro";
 ---
 
-<section class="page-section" aria-labelledby="qp-heading">
-  <SectionHeading id="qp-heading" title="Quarterly Project" />
-  <div class="mt-8 ieee-panel overflow-hidden">
-    <Image
-      src={qp}
-      alt="Students presenting a Quarterly Project"
-      class="w-full aspect-[2.5/1] object-cover"
-    />
-    <div class="p-6 sm:p-8">
-      <p class="text-white/80 leading-relaxed max-w-3xl">
-        New to hardware, or want a project on your resume? Quarterly Projects
-        gives teams ten weeks, mentors, and a public showcase.
-      </p>
-      <a class="ieee-btn ieee-btn-ghost mt-6" href="/projects/quarterly">
-        More details
-      </a>
+<section class="pb-0" aria-labelledby="qp-heading">
+  <a href="/projects/quarterly" class="group block no-underline" data-reveal>
+    <div class="surface surface-link overflow-hidden">
+      <div class="grid md:grid-cols-2">
+        <div class="relative overflow-hidden">
+          <Image
+            src={qp}
+            alt="Students presenting a Quarterly Project"
+            width={1200}
+            class="aspect-[16/10] w-full object-cover transition duration-700 ease-out group-hover:scale-[1.03] md:aspect-auto md:h-full md:min-h-[20rem]"
+          />
+        </div>
+        <div class="flex flex-col justify-center p-6 sm:p-8 md:p-10 lg:p-14">
+          <p class="mono-label">01</p>
+          <h2 id="qp-heading" class="headline mt-4 text-white">
+            Quarterly Project
+          </h2>
+          <p class="copy mt-5 max-w-md">
+            New to hardware, or want a project on your resume? Quarterly
+            Projects gives teams ten weeks, mentors, and a public showcase.
+          </p>
+          <span class="btn-link mt-7 text-ieee-blue-100">More details</span>
+        </div>
+      </div>
     </div>
-  </div>
+  </a>
 </section>

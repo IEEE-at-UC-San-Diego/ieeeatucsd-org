@@ -9,15 +9,16 @@ import SectionHeading from "../core/SectionHeading.astro";
     Involvement can follow your schedule, interests, and professional goals.
   </SectionHeading>
 
-  <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+  <ol class="mt-14 border-b border-white/10 md:mt-20">
     {
-      activities.map((activity) => (
+      activities.map((activity, index) => (
         <Activity
+          index={index + 1}
           title={activity.title}
           text={activity.text}
           link={activity.link}
         />
       ))
     }
-  </div>
+  </ol>
 </section>

@@ -1,45 +1,57 @@
 ---
 import { FaDiscord, FaGlobe } from "react-icons/fa";
-import { LiaDotCircle } from "react-icons/lia";
 ---
 
-<div class="flex justify-center my-[10%]">
-  <div class="w-1/2 flex justify-between">
-    <div>
-      <div class="flex items-center md:text-[2.5cqw] text-[4cqw]">
-        <LiaDotCircle className="mr-[1cqw] pt-[0.5%]" />
-        <p>Contacts</p>
-      </div>
-      <p class="md:text-[1.1cqw] text-[1.5cqw] ml-[5%] text-nowrap">
-        To stay up to date, join discord server
-      </p>
+<section class="page-section" aria-labelledby="contacts-heading">
+  <div class="grid gap-8 md:grid-cols-12 md:gap-12">
+    <div class="md:col-span-5">
+      <h2 id="contacts-heading" class="headline text-white">Contacts</h2>
+      <p class="copy mt-4 max-w-md">To stay up to date, join discord server</p>
     </div>
-    <div class="flex">
-      <a
-        href="https://ieee-ucsd-robocupssl.github.io/TeamWebsite/index.html"
-        target="_blank"
-        class="mr-[20%] flex flex-col items-center"
-      >
-        <div
-          class="border-[0.15cqw] rounded-full shadow-glow hover:scale-110 duration-300 p-[1cqw] md:text-[2.2cqw] text-[3.5cqw] text-ieee-black/80 border-ieee-blue-100 bg-gradient-radial from-white via-white to-white/40"
-        >
-          <FaGlobe />
-        </div>
-        <p class="md:text-[1.3cqw] text-[2cqw] font-semibold">Website</p>
-      </a>
 
-      <a
-        href="https://discord.gg/XxfjqZSjca"
-        target="_blank"
-        class="flex flex-col items-center"
-      >
-        <div
-          class="border-[0.15cqw] rounded-full shadow-glow hover:scale-110 duration-300 p-[1cqw] md:text-[2.2cqw] text-[3.5cqw] text-ieee-black/80 border-ieee-blue-100 bg-gradient-radial from-white via-white to-white/40"
-        >
-          <FaDiscord />
-        </div>
-        <p class="md:text-[1.3cqw] text-[2cqw] font-semibold">Discord</p>
-      </a>
+    <div class="md:col-span-6 md:col-start-7">
+      <ul class="border-t border-white/10">
+        <li>
+          <a
+            href="https://ieee-ucsd-robocupssl.github.io/TeamWebsite/index.html"
+            target="_blank"
+            class="group flex items-center justify-between gap-4 border-b border-white/10 py-5 text-white no-underline transition-colors duration-200 hover:text-ieee-yellow"
+          >
+            <span class="flex items-center gap-3">
+              <span class="text-ieee-blue-100">
+                <FaGlobe />
+              </span>
+              Website
+            </span>
+            <span
+              aria-hidden="true"
+              class="text-ieee-blue-100 transition-transform duration-300 group-hover:translate-x-1 group-hover:text-ieee-yellow"
+            >
+              →
+            </span>
+          </a>
+        </li>
+        <li>
+          <a
+            href="https://discord.gg/XxfjqZSjca"
+            target="_blank"
+            class="group flex items-center justify-between gap-4 border-b border-white/10 py-5 text-white no-underline transition-colors duration-200 hover:text-ieee-yellow"
+          >
+            <span class="flex items-center gap-3">
+              <span class="text-ieee-blue-100">
+                <FaDiscord />
+              </span>
+              Discord
+            </span>
+            <span
+              aria-hidden="true"
+              class="text-ieee-blue-100 transition-transform duration-300 group-hover:translate-x-1 group-hover:text-ieee-yellow"
+            >
+              →
+            </span>
+          </a>
+        </li>
+      </ul>
     </div>
   </div>
-</div>
+</section>

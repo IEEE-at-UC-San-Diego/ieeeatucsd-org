@@ -3,28 +3,45 @@ import annualProjects from "../../data/annualProjects.json";
 import { Image } from "astro:assets";
 ---
 
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-5">
+<div class="flex flex-col gap-8 md:gap-10">
   {
-    Object.entries(annualProjects).map(([title, project]) => (
+    Object.entries(annualProjects).map(([title, project], index) => (
       <a
         href={project.url || "#"}
         target={title === "Supercomputing" ? "_blank" : "_self"}
         rel={title === "Supercomputing" ? "noreferrer" : undefined}
-        class="ieee-panel overflow-hidden group flex flex-col"
+        class="group block no-underline"
+        data-reveal
+        style={`--reveal-delay: ${index * 80}ms`}
       >
-        <Image
-          src={project.image}
-          alt=""
-          width={668}
-          height={990}
-          class="w-full aspect-[2/3] object-cover"
-        />
-        <div class="p-5 flex flex-col flex-1">
-          <h3 class="font-display font-semibold text-xl">{title}</h3>
-          <p class="mt-2 text-sm text-white/75 leading-relaxed flex-1">
-            {project.description}
-          </p>
-          <p class="mt-4 text-ieee-yellow text-sm">More details</p>
+        <div class="surface surface-link overflow-hidden">
+          <div class="grid md:grid-cols-2">
+            <div
+              class:list={[
+                "relative overflow-hidden",
+                index % 2 === 1 && "md:order-2",
+              ]}
+            >
+              <Image
+                src={project.image}
+                alt=""
+                width={668}
+                height={990}
+                class="aspect-[16/10] w-full object-cover transition duration-700 ease-out group-hover:scale-[1.03] md:aspect-auto md:h-full md:min-h-[16rem]"
+              />
+            </div>
+            <div
+              class:list={[
+                "flex flex-col justify-center p-6 sm:p-8 md:p-10 lg:p-12",
+                index % 2 === 1 && "md:order-1",
+              ]}
+            >
+              <p class="mono-label">{String(index + 2).padStart(2, "0")}</p>
+              <h3 class="headline mt-4 text-white">{title}</h3>
+              <p class="copy mt-5 max-w-lg">{project.description}</p>
+              <span class="btn-link mt-7 text-ieee-blue-100">More details</span>
+            </div>
+          </div>
         </div>
       </a>
     ))

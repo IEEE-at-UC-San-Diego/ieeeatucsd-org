@@ -7,8 +7,8 @@ services:
       args:
         PUBLIC_DASHBOARD_URL: ${PUBLIC_DASHBOARD_URL}
         PUBLIC_GOOGLE_CALENDAR_ID: ${PUBLIC_GOOGLE_CALENDAR_ID}
-    ports:
-      - "4321:4321"
+    expose:
+      - "4321"
     environment:
       PORT: 4321
       HOST: 0.0.0.0
@@ -56,8 +56,8 @@ services:
         VITE_LOGTO_SCOPES: ${VITE_LOGTO_SCOPES}
         VITE_LOGTO_DIRECT_SIGN_IN_TARGET: ${VITE_LOGTO_DIRECT_SIGN_IN_TARGET}
         VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
-    ports:
-      - "4323:4323"
+    expose:
+      - "4323"
     restart: always
     environment:
       PORT: 4323
