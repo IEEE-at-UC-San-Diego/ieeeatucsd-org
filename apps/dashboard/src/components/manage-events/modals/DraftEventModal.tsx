@@ -66,7 +66,7 @@ export function DraftEventModal({
 	onConvertToRequest,
 }: DraftEventModalProps) {
 	const formId = useId();
-	const isEditing = !!initialData;
+	const isEditing = Boolean(initialData?._id);
 	const [formData, setFormData] = useState<Partial<EventRequest>>(
 		initialData
 			? { ...defaultDraftData, ...initialData }
