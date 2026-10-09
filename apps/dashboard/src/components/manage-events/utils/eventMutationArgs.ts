@@ -1,4 +1,5 @@
-import { normalizeDepartment, normalizeEventType } from "../constants";
+import type { Id } from "@convex/_generated/dataModel";
+import { normalizeEventType } from "../constants";
 import type { EventFormData, EventRequest, Invoice } from "../types";
 
 export type ConvexInvoiceArgs = {
@@ -28,6 +29,10 @@ export function resolvePersistedEventId(
 	...candidates: Array<string | null | undefined>
 ): string | undefined {
 	return candidates.find(hasPersistedEventId);
+}
+
+export function asEventId(id: string): Id<"events"> {
+	return id as Id<"events">;
 }
 
 export function mapInvoicesForConvex(
@@ -113,7 +118,7 @@ export function buildUpdateEventArgs(
 
 	return {
 		logtoId,
-		id,
+		id: asEventId(id),
 		...buildSharedEventFormFields(data),
 	};
 }

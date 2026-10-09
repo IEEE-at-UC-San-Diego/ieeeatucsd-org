@@ -34,6 +34,7 @@ import {
 	normalizeEventType,
 } from "@/components/manage-events/constants";
 import {
+	asEventId,
 	buildCreateEventArgs,
 	buildEditingRequestFromConvertedDraft,
 	buildUpdateEventArgs,
@@ -445,7 +446,7 @@ function ManageEventsPage() {
 			if (convertingDraft) {
 				await updateEventStatus({
 					logtoId,
-					id: eventId,
+					id: asEventId(eventId),
 					status: "submitted",
 				});
 				toast.success("Event request submitted successfully!");
