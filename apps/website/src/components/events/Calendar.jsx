@@ -44,10 +44,16 @@ const Calendar = ({ events = [], publicCalendarId = "" }) => {
     const lastDay = new Date(year, month + 1, 0);
     const days = [];
 
-    for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
+    for (let i = firstDay.getDay(); i > 0; i--)
+      days.push(new Date(year, month, 1 - i));
     for (let i = 1; i <= lastDay.getDate(); i++)
       days.push(new Date(year, month, i));
-    while (days.length % 7 !== 0) days.push(null);
+    while (days.length % 7 !== 0) {
+      const last = days[days.length - 1];
+      days.push(
+        new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1),
+      );
+    }
 
     return days;
   };
@@ -81,202 +87,227 @@ const Calendar = ({ events = [], publicCalendarId = "" }) => {
     );
   };
 
+  const isSameMonth = (day) =>
+    day.getMonth() === currentDate.getMonth() &&
+    day.getFullYear() === currentDate.getFullYear();
+
   return (
-    <div className="w-full py-6 sm:py-8 relative z-10">
-      <div className="flex justify-center mb-4 sm:mb-6">
-        <div className="bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-2xl p-2 sm:p-3 backdrop-blur-sm w-fit max-w-full px-3 sm:px-5">
-          <div className="flex items-center gap-3 sm:gap-6">
-            <button
-              onClick={() => changeMonth(-1)}
-              className="text-white hover:text-ieee-yellow transition-colors text-lg sm:text-2xl bg-ieee-black/40 w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center"
-            >
-              ←
-            </button>
-            <h2 className="text-white text-xl sm:text-2xl md:text-3xl font-bold whitespace-nowrap">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </h2>
-            <button
-              onClick={() => changeMonth(1)}
-              className="text-white hover:text-gray transition-colors text-lg sm:text-2xl bg-ieee-black/40 w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center"
-            >
-              →
-            </button>
-          </div>
+    <div className="w-full">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ieee-blue-100/15 pb-5">
+        <h2 className="text-2xl font-semibold tracking-[-0.02em] text-white sm:text-3xl md:text-4xl">
+          {monthNames[currentDate.getMonth()]}{" "}
+          <span className="font-mono-tech font-normal text-white/45">
+            {currentDate.getFullYear()}
+          </span>
+        </h2>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Previous month"
+            onClick={() => changeMonth(-1)}
+            className="ieee-btn ieee-btn-ghost h-11 w-11 rounded-lg !px-0 text-base"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            aria-label="Next month"
+            onClick={() => changeMonth(1)}
+            className="ieee-btn ieee-btn-ghost h-11 w-11 rounded-lg !px-0 text-base"
+          >
+            →
+          </button>
         </div>
       </div>
 
       {publicCalendarId && (
-        <div className="flex justify-center mb-4">
-          <div className="w-full max-w-3xl bg-gradient-to-r from-ieee-blue-100/35 to-ieee-black/50 border border-ieee-yellow/40 rounded-2xl px-4 py-3 md:px-5 md:py-4 shadow-lg shadow-black/30">
-            <p className="text-white font-semibold text-sm md:text-base mb-2">
+        <div className="surface-flat mt-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+          <div className="max-w-xl">
+            <p className="font-medium text-white">
               Add IEEE Events To Your Calendar
             </p>
-            <p className="text-white/80 text-xs md:text-sm mb-3">
+            <p className="mt-1 text-sm text-white/60">
               Subscribe once to stay synced, or open an individual event below.
             </p>
-            <div className="flex flex-wrap gap-2">
-              <a
-                href={buildGoogleCalendarSubscribeUrl(publicCalendarId)}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs md:text-sm text-black bg-ieee-yellow px-3 py-1.5 rounded-full font-semibold hover:brightness-95 transition"
-              >
-                Subscribe in Google Calendar
-              </a>
-              <a
-                href={buildGoogleCalendarIcsUrl(publicCalendarId)}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs md:text-sm text-white bg-white/15 px-3 py-1.5 rounded-full hover:bg-white/25 transition"
-              >
-                Subscribe via ICS Feed
-              </a>
-            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={buildGoogleCalendarSubscribeUrl(publicCalendarId)}
+              target="_blank"
+              rel="noreferrer"
+              className="ieee-btn ieee-btn-primary ieee-btn-sm"
+            >
+              Subscribe in Google Calendar
+            </a>
+            <a
+              href={buildGoogleCalendarIcsUrl(publicCalendarId)}
+              target="_blank"
+              rel="noreferrer"
+              className="ieee-btn ieee-btn-ghost ieee-btn-sm"
+            >
+              Subscribe via ICS Feed
+            </a>
           </div>
         </div>
       )}
 
-      <div className="bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-2xl p-2 sm:p-3 relative">
-        <div className="grid grid-cols-7 gap-1 sm:gap-1.5 mb-2">
-          {weekDays.map((day, index) => (
-            <div key={day} className="flex justify-center w-full">
+      <div className="mt-6 border-l border-t border-ieee-blue-100/15">
+        <div className="grid grid-cols-7">
+          {weekDays.map((day) => (
+            <div
+              key={day}
+              className="mono-label border-b border-r border-ieee-blue-100/15 py-2.5 text-center"
+            >
+              {day}
+            </div>
+          ))}
+
+          {getDaysInMonth(currentDate).map((day, index) => {
+            const inMonth = isSameMonth(day);
+            const dayEvents = inMonth ? getEventsForDay(day) : [];
+            return (
               <div
-                className={`text-white text-center font-semibold px-1 py-2 text-[0.65rem] sm:text-sm md:text-base bg-ieee-black/60 w-full min-h-9 sm:min-h-11 flex items-center justify-center
-                ${
-                  index === 0
-                    ? "rounded-tl-2xl rounded-md"
-                    : index === 6
-                      ? "rounded-tr-2xl rounded-md"
-                      : "rounded-md"
+                key={index}
+                className={`flex min-h-[3.75rem] flex-col border-b border-r border-ieee-blue-100/15 p-1.5 sm:min-h-[6rem] sm:p-2 ${
+                  inMonth ? "" : "bg-white/[0.012]"
                 }`}
               >
-                {day}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-1 sm:gap-1.5 relative">
-          {getDaysInMonth(currentDate).map((day, index) => (
-            <div
-              key={index}
-              className={`min-h-20 sm:min-h-24 md:min-h-28 p-1 sm:p-1.5 rounded relative ${day ? "bg-white/5" : "bg-transparent"} border border-white/10 ${
-                isToday(day)
-                  ? "ring-2 ring-ieee-yellow/60 bg-ieee-yellow/10"
-                  : ""
-              }`}
-            >
-              {day && (
-                <>
-                  <div className="text-white mb-1 text-xs sm:text-sm md:text-base">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`font-mono-tech text-xs sm:text-sm ${
+                      isToday(day)
+                        ? "text-ieee-yellow"
+                        : inMonth
+                          ? "text-white/60"
+                          : "text-white/25"
+                    }`}
+                  >
                     {day.getDate()}
-                  </div>
-                  <div className="space-y-1">
-                    {getEventsForDay(day)
-                      .slice(0, 3)
-                      .map((event) => (
-                        <button
-                          type="button"
-                          key={event._id}
-                          className="w-full text-left text-[0.65rem] sm:text-xs border border-ieee-yellow text-white px-1 py-0.5 rounded truncate hover:bg-white/10 transition-colors"
-                          onClick={() => setSelectedEvent(event)}
-                        >
-                          {event.eventName}
-                        </button>
-                      ))}
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {selectedEvent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
-            <div className="w-full max-w-lg bg-gradient-to-b from-ieee-blue-100/90 to-ieee-black border border-ieee-yellow/40 rounded-2xl p-5 shadow-2xl">
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <h3 className="text-white text-lg md:text-xl font-bold leading-tight">
-                  {selectedEvent.eventName}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setSelectedEvent(null)}
-                  className="text-white/70 hover:text-white text-xl leading-none"
-                  aria-label="Close event details"
-                >
-                  ×
-                </button>
-              </div>
-
-              <p className="text-white/90 text-sm mb-1">
-                {new Date(Number(selectedEvent.startDate)).toLocaleString()} -{" "}
-                {new Date(Number(selectedEvent.endDate)).toLocaleTimeString()}
-              </p>
-              {selectedEvent.location && (
-                <p className="text-white/80 text-sm mb-2">
-                  {selectedEvent.location}
-                </p>
-              )}
-              {selectedEvent.eventDescription && (
-                <p className="text-white/75 text-sm mb-4 line-clamp-4">
-                  {selectedEvent.eventDescription}
-                </p>
-              )}
-
-              <div className="flex flex-wrap gap-2">
-                {selectedEvent.publicGoogleEventUrl && (
-                  <a
-                    href={selectedEvent.publicGoogleEventUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs md:text-sm px-3 py-1.5 rounded-full bg-ieee-yellow text-black font-semibold hover:brightness-95 transition"
-                  >
-                    Add This Event (Google)
-                  </a>
-                )}
-                <button
-                  type="button"
-                  onClick={() =>
-                    downloadEventIcs({
-                      id:
-                        selectedEvent.publicGoogleEventId || selectedEvent._id,
-                      title: selectedEvent.eventName,
-                      description: selectedEvent.eventDescription,
-                      location: selectedEvent.location,
-                      startDate: Number(selectedEvent.startDate),
-                      endDate: Number(selectedEvent.endDate),
-                    })
-                  }
-                  className="text-xs md:text-sm px-3 py-1.5 rounded-full bg-white/15 text-white hover:bg-white/25 transition"
-                >
-                  Download Event ICS
-                </button>
-              </div>
-
-              {publicCalendarId && (
-                <div className="mt-4 pt-4 border-t border-white/20 flex flex-wrap gap-2">
-                  <a
-                    href={buildGoogleCalendarSubscribeUrl(publicCalendarId)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs px-3 py-1.5 rounded-full bg-white/15 text-white hover:bg-white/25 transition"
-                  >
-                    Subscribe Full Calendar
-                  </a>
-                  <a
-                    href={buildGoogleCalendarIcsUrl(publicCalendarId)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs px-3 py-1.5 rounded-full bg-white/15 text-white hover:bg-white/25 transition"
-                  >
-                    Full Calendar ICS Feed
-                  </a>
+                  </span>
+                  {isToday(day) && (
+                    <span
+                      className="h-1 w-1 bg-ieee-yellow"
+                      aria-hidden="true"
+                    />
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+
+                {dayEvents.length > 0 && (
+                  <div className="mt-1.5 space-y-0.5">
+                    {dayEvents.slice(0, 3).map((event) => (
+                      <button
+                        type="button"
+                        key={event._id}
+                        onClick={() => setSelectedEvent(event)}
+                        aria-label={event.eventName}
+                        className="flex w-full items-center gap-1.5 px-0.5 py-0.5 text-left transition-colors hover:bg-ieee-blue-100/10 focus-visible:bg-ieee-blue-100/10 focus-visible:outline-none"
+                      >
+                        <span
+                          className="h-3 w-[2px] shrink-0 bg-ieee-blue-100/80"
+                          aria-hidden="true"
+                        />
+                        <span className="min-w-0 truncate text-[0.62rem] leading-tight text-ieee-blue-100 sm:text-xs">
+                          {event.eventName}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {selectedEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ieee-black/85 px-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={selectedEvent.eventName}
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-ieee-blue-100/20 bg-[#0d1324] p-6 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.7)]"
+          >
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <h3 className="text-lg font-semibold leading-tight text-white md:text-xl">
+                {selectedEvent.eventName}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSelectedEvent(null)}
+                aria-label="Close event details"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-white/15 text-xl leading-none text-white/60 transition-colors hover:border-white/30 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="font-mono-tech text-sm text-ieee-blue-100">
+              {new Date(Number(selectedEvent.startDate)).toLocaleString()} -{" "}
+              {new Date(Number(selectedEvent.endDate)).toLocaleTimeString()}
+            </p>
+            {selectedEvent.location && (
+              <p className="mt-1 text-sm text-white/70">
+                {selectedEvent.location}
+              </p>
+            )}
+            {selectedEvent.eventDescription && (
+              <p className="line-clamp-4 mt-3 text-sm text-white/70">
+                {selectedEvent.eventDescription}
+              </p>
+            )}
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              {selectedEvent.publicGoogleEventUrl && (
+                <a
+                  href={selectedEvent.publicGoogleEventUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ieee-btn ieee-btn-primary ieee-btn-sm"
+                >
+                  Add This Event (Google)
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() =>
+                  downloadEventIcs({
+                    id: selectedEvent.publicGoogleEventId || selectedEvent._id,
+                    title: selectedEvent.eventName,
+                    description: selectedEvent.eventDescription,
+                    location: selectedEvent.location,
+                    startDate: Number(selectedEvent.startDate),
+                    endDate: Number(selectedEvent.endDate),
+                  })
+                }
+                className="ieee-btn ieee-btn-ghost ieee-btn-sm"
+              >
+                Download Event ICS
+              </button>
+            </div>
+
+            {publicCalendarId && (
+              <div className="mt-5 flex flex-wrap gap-2 border-t border-ieee-blue-100/15 pt-5">
+                <a
+                  href={buildGoogleCalendarSubscribeUrl(publicCalendarId)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ieee-btn ieee-btn-ghost ieee-btn-sm"
+                >
+                  Subscribe Full Calendar
+                </a>
+                <a
+                  href={buildGoogleCalendarIcsUrl(publicCalendarId)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ieee-btn ieee-btn-ghost ieee-btn-sm"
+                >
+                  Full Calendar ICS Feed
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

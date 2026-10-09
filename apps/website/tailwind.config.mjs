@@ -19,7 +19,13 @@ export default {
       fontFamily: {
         sans: ibmPlexSans,
         display: ibmPlexSans,
-        mono: ibmPlexSans,
+        mono: [
+          "var(--font-ibm-plex-mono)",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "monospace",
+        ],
       },
     },
   },

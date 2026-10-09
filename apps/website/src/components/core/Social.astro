@@ -10,49 +10,102 @@ const links = [
   {
     href: "https://www.instagram.com/ieee.at.ucsd",
     label: "Instagram",
+    handle: "@ieee.at.ucsd",
     icon: RiInstagramFill,
   },
   {
     href: "https://discord.gg/XxfjqZSjca",
     label: "Discord",
+    handle: "discord.gg/XxfjqZSjca",
     icon: FaDiscord,
   },
   {
     href: "mailto:ieee@ucsd.edu",
     label: "Email",
+    handle: "ieee@ucsd.edu",
     icon: MdEmail,
   },
 ];
 ---
 
-<section class="page-section" aria-labelledby="social-heading">
-  <SectionHeading id="social-heading" title="Social media" align="center">
-    Stay connected with us on Discord and Instagram! We regularly post
-    information on upcoming events and competitions.
-  </SectionHeading>
+<section class="page-section !pt-4 md:!pt-8" aria-labelledby="social-heading">
+  <div class="flex items-end justify-between gap-8">
+    <SectionHeading
+      id="social-heading"
+      title="Social media"
+      eyebrow="Stay in the loop"
+    >
+      Stay connected with us on Discord and Instagram! We regularly post
+      information on upcoming events and competitions.
+    </SectionHeading>
+    <Image
+      src={jellyfish}
+      alt=""
+      class="pointer-events-none -mb-2 hidden w-32 shrink-0 -rotate-3 sm:block lg:w-40"
+    />
+  </div>
 
-  <div
-    class="mt-10 ieee-panel overflow-hidden px-6 py-8 sm:px-10 sm:py-10 relative"
+  <ul
+    class="mt-12 grid border-t border-white/10 sm:grid-cols-3 sm:border-x sm:border-b md:mt-14"
+    data-reveal
   >
-    <div class="relative z-10 flex flex-wrap justify-center gap-8 sm:gap-14">
-      {
-        links.map((link) => (
+    {
+      links.map((link) => (
+        <li class="social-cell border-b border-white/10 sm:border-b-0 sm:border-r sm:last:border-r-0">
           <a
             href={link.href}
             target={link.href.startsWith("mailto:") ? undefined : "_blank"}
             rel={link.href.startsWith("mailto:") ? undefined : "noreferrer"}
-            class="ieee-btn ieee-btn-ghost flex-col !rounded-2xl min-w-[7.5rem] py-5"
+            class="social-link group relative flex h-full flex-col gap-10 py-8 text-white no-underline sm:px-8 sm:py-10"
           >
-            <link.icon className="text-3xl" aria-hidden="true" />
-            <span class="mt-2 font-medium">{link.label}</span>
+            <span class="flex items-start justify-between">
+              <link.icon
+                className="text-[1.75rem] text-ieee-blue-100"
+                aria-hidden="true"
+              />
+              <span
+                class="social-arrow text-xl text-white/45"
+                aria-hidden="true"
+              >
+                ↗
+              </span>
+            </span>
+            <span>
+              <span class="block font-display text-[clamp(1.5rem,2.4vw,2rem)] font-semibold tracking-[-0.03em]">
+                {link.label}
+              </span>
+              <span class="mono-label mt-2 block !normal-case !tracking-[0.04em] !text-white/60">
+                {link.handle}
+              </span>
+            </span>
           </a>
-        ))
-      }
-    </div>
-    <Image
-      src={jellyfish}
-      alt=""
-      class="pointer-events-none absolute bottom-0 right-4 w-28 sm:w-40 opacity-80"
-    />
-  </div>
+        </li>
+      ))
+    }
+  </ul>
 </section>
+
+<style>
+  .social-arrow {
+    transition:
+      transform 300ms cubic-bezier(0.23, 1, 0.32, 1),
+      color 200ms ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .social-link:hover .social-arrow {
+      transform: translate(3px, -3px);
+      color: #f3c135;
+    }
+
+    .social-link {
+      transition: background-color 250ms ease;
+    }
+
+    @media (min-width: 640px) {
+      .social-link:hover {
+        background: rgba(136, 191, 236, 0.05);
+      }
+    }
+  }
+</style>

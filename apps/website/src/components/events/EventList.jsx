@@ -1,33 +1,36 @@
 import React, { useEffect, useState } from "react";
 
+const SHRUG = "¯\\_(ツ)_/¯";
+
 const UpcomingEvent = ({ name, location, date, time, description }) => (
-  <div className="text-white w-full max-w-4xl pl-4 md:pl-8 border-l-2 md:border-l-4 border-white/70 pb-8 md:pb-12 relative">
-    <p className="py-2 px-4 md:px-6 w-fit border border-white/30 font-light rounded-full text-sm md:text-lg lg:text-xl">
-      {name}
-    </p>
-    <div className="space-y-2 md:space-y-0 md:flex md:flex-wrap md:gap-4 text-sm md:text-base lg:text-lg my-4">
-      <div className="flex items-center flex-wrap">
-        <span className="font-medium mr-2">Location:</span>
-        <span className="break-words">{location}</span>
+  <article className="border-b border-ieee-blue-100/15 py-6 last:border-b-0">
+    <h3 className="title-3 text-white">{name}</h3>
+    <dl className="mt-3 space-y-1.5 text-sm">
+      <div className="flex gap-3">
+        <dt className="mono-label w-16 shrink-0 pt-0.5">Location:</dt>
+        <dd className="text-white/80">
+          {location === SHRUG ? (
+            <span className="whitespace-nowrap font-mono-tech">{location}</span>
+          ) : (
+            location
+          )}
+        </dd>
       </div>
       {date && (
-        <div className="flex items-center">
-          <span className="font-medium mr-2">Date:</span>
-          <span>{date}</span>
+        <div className="flex gap-3">
+          <dt className="mono-label w-16 shrink-0 pt-0.5">Date:</dt>
+          <dd className="font-mono-tech text-ieee-blue-100">{date}</dd>
         </div>
       )}
       {time && (
-        <div className="flex items-center">
-          <span className="font-medium mr-2">Time:</span>
-          <span>{time}</span>
+        <div className="flex gap-3">
+          <dt className="mono-label w-16 shrink-0 pt-0.5">Time:</dt>
+          <dd className="font-mono-tech text-ieee-blue-100">{time}</dd>
         </div>
       )}
-    </div>
-    <p className="text-xs md:text-sm lg:text-base text-white/60 break-words">
-      {description}
-    </p>
-    <div className="bg-ieee-yellow w-3 h-3 md:w-4 md:h-4 rounded-full absolute -top-1.5 -left-1.5" />
-  </div>
+    </dl>
+    <p className="mt-4 text-sm leading-relaxed text-white/70">{description}</p>
+  </article>
 );
 
 const EventList = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
@@ -111,12 +114,12 @@ const EventList = ({ CALENDAR_API_KEY, EVENT_CALENDAR_ID }) => {
   }
 
   return (
-    <div>
+    <div className="border-t border-ieee-blue-100/15">
       {error && <p className="text-white">Error: {error}</p>}
       {!loading && !error && events.length === 0 && (
         <UpcomingEvent
           name="No Upcoming Events!"
-          location="¯\_(ツ)_/¯"
+          location={SHRUG}
           date=""
           time=""
           description="There are no upcoming events. Check back soon."

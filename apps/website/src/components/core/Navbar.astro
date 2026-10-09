@@ -4,47 +4,61 @@ import whiteLogoHorizontal from "../../images/logos/white_logo_horizontal.svg";
 import pages from "../../data/pages.json";
 
 const currentPath = Astro.url.pathname;
+
+const isCurrent = (path: string, subpages?: { path: string }[]) =>
+  currentPath === path ||
+  (path !== "/" && currentPath.startsWith(`${path}/`)) ||
+  Boolean(subpages?.some((subpage) => currentPath === subpage.path));
 ---
 
-<nav
-  class="page-main my-2 rounded-2xl border border-white/10 bg-ieee-black/80 backdrop-blur-md px-3 py-2"
-  aria-label="Primary"
->
-  <div class="flex items-center justify-between gap-3">
-    <a href="/" class="shrink-0">
+<nav class="nav-shell" aria-label="Primary">
+  <div class="nav-inner">
+    <a
+      href="/"
+      class="nav-logo shrink-0"
+      aria-label="IEEE at UC San Diego home"
+    >
       <Image
-        class="w-40 md:w-44"
+        class="w-36 md:w-40"
         src={whiteLogoHorizontal}
         alt="IEEE at UC San Diego"
       />
     </a>
 
-    <ul class="hidden md:flex items-center gap-2 lg:gap-3">
+    <ul class="hidden md:flex items-center gap-1 lg:gap-2">
       {
         pages.map((page) => (
           <li class="relative group">
-            <a
-              href={page.path}
-              class:list={[
-                "ieee-btn uppercase text-xs lg:text-sm tracking-wide px-3 lg:px-4",
-                page.name === "Dashboard"
-                  ? "ieee-btn-primary"
-                  : "ieee-btn-ghost",
-                currentPath === page.path &&
-                  page.name !== "Dashboard" &&
-                  "border-white/70",
-              ]}
-            >
-              {page.name}
-            </a>
+            {page.name === "Dashboard" ? (
+              <a
+                href={page.path}
+                class="ieee-btn ieee-btn-primary ieee-btn-sm ml-2"
+              >
+                {page.name}
+              </a>
+            ) : (
+              <a
+                href={page.path}
+                class:list={[
+                  "nav-link",
+                  isCurrent(page.path, page.subpages) && "is-current",
+                ]}
+                aria-current={currentPath === page.path ? "page" : undefined}
+              >
+                {page.name}
+              </a>
+            )}
             {page.subpages && (
-              <div class="nav-submenu absolute left-1/2 top-full z-50 w-max min-w-[12rem] -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible">
-                <ul class="rounded-xl border border-white/15 bg-ieee-black/95 p-1">
+              <div class="nav-submenu absolute left-1/2 top-full z-50 w-max min-w-[14rem] -translate-x-1/2 pt-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible">
+                <ul class="nav-sheet p-1.5">
                   {page.subpages.map((subpage) => (
                     <li>
                       <a
                         href={subpage.path}
-                        class="block rounded-lg px-3 py-2 text-sm text-white/90 hover:bg-white/10 hover:text-white"
+                        class="nav-sublink"
+                        aria-current={
+                          currentPath === subpage.path ? "page" : undefined
+                        }
                       >
                         {subpage.name}
                       </a>
@@ -58,59 +72,223 @@ const currentPath = Astro.url.pathname;
       }
     </ul>
 
-    <details class="md:hidden relative">
+    <details class="nav-mobile md:hidden">
       <summary
-        class="ieee-btn ieee-btn-ghost !min-h-11 !px-3 list-none cursor-pointer [&::-webkit-details-marker]:hidden"
+        class="nav-burger list-none cursor-pointer [&::-webkit-details-marker]:hidden"
+        aria-label="Menu"
       >
-        Menu
+        <span class="sr-only">Menu</span>
+        <span class="nav-burger-lines" aria-hidden="true"></span>
       </summary>
-      <ul
-        class="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[min(18rem,calc(100vw-2rem))] rounded-2xl border border-white/15 bg-ieee-black p-3 space-y-2"
-      >
-        {
-          pages.map((page) => (
-            <li>
-              <a
-                href={page.path}
-                class:list={[
-                  "ieee-btn w-full uppercase text-sm",
-                  page.name === "Dashboard"
-                    ? "ieee-btn-primary"
-                    : "ieee-btn-ghost",
-                ]}
-              >
-                {page.name}
-              </a>
-              {page.subpages && (
-                <ul class="mt-2 space-y-2 pl-2">
-                  {page.subpages.map((subpage) => (
-                    <li>
-                      <a
-                        href={subpage.path}
-                        class="ieee-btn ieee-btn-ghost w-full text-sm"
-                      >
-                        {subpage.name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))
-        }
-      </ul>
+      <div class="nav-mobile-panel">
+        <ul>
+          {
+            pages.map((page) => (
+              <li>
+                {page.name === "Dashboard" ? (
+                  <a
+                    href={page.path}
+                    class="ieee-btn ieee-btn-primary mt-4 w-full"
+                  >
+                    {page.name}
+                  </a>
+                ) : (
+                  <a
+                    href={page.path}
+                    class:list={[
+                      "nav-mobile-link",
+                      isCurrent(page.path, page.subpages) && "is-current",
+                    ]}
+                  >
+                    {page.name}
+                  </a>
+                )}
+                {page.subpages && (
+                  <ul class="mb-2 ml-1 border-l border-white/10 pl-4">
+                    {page.subpages.map((subpage) => (
+                      <li>
+                        <a href={subpage.path} class="nav-mobile-sublink">
+                          {subpage.name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))
+          }
+        </ul>
+      </div>
     </details>
   </div>
 </nav>
 
 <style>
-  .nav-submenu a {
-    @apply no-underline;
+  .nav-shell {
+    position: relative;
+    width: 100%;
+    border-bottom: 1px solid rgba(136, 191, 236, 0.12);
+    background: rgba(10, 14, 26, 0.72);
+    -webkit-backdrop-filter: saturate(160%) blur(22px);
+    backdrop-filter: saturate(160%) blur(22px);
+  }
+
+  .nav-inner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    height: 3.75rem;
+    width: min(100% - var(--page-gutter) * 2, var(--page-max));
+    margin-inline: auto;
+  }
+
+  .nav-logo,
+  .nav-link,
+  .nav-sublink,
+  .nav-mobile-link,
+  .nav-mobile-sublink {
+    text-decoration: none;
+  }
+
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    height: 2.25rem;
+    padding-inline: 0.85rem;
+    border-radius: 0.55rem;
+    font-size: 0.875rem;
+    font-weight: 450;
+    letter-spacing: -0.005em;
+    color: rgba(255, 255, 255, 0.68);
+    transition:
+      color 200ms ease,
+      background-color 200ms ease;
+  }
+
+  .nav-link.is-current {
+    color: #fff;
+    background: rgba(136, 191, 236, 0.12);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .nav-link:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.07);
+    }
+  }
+
+  .nav-sheet {
+    border: 1px solid rgba(136, 191, 236, 0.18);
+    border-radius: 1.1rem;
+    background: rgba(13, 19, 36, 0.92);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+    box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.55);
+  }
+
+  .nav-sublink {
+    display: block;
+    border-radius: 0.7rem;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    transition:
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+
+  .nav-sublink[aria-current="page"] {
+    color: #88bfec;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .nav-sublink:hover {
+      background: rgba(136, 191, 236, 0.12);
+      color: #fff;
+    }
   }
 
   @media (prefers-reduced-motion: no-preference) {
     .nav-submenu {
-      transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
+      transition:
+        opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+        visibility 180ms;
     }
+  }
+
+  /* Mobile */
+  .nav-burger {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-right: -0.5rem;
+    border-radius: 0.6rem;
+  }
+
+  .nav-burger-lines,
+  .nav-burger-lines::before {
+    display: block;
+    width: 1.1rem;
+    height: 1.5px;
+    background: #fff;
+    border-radius: 2px;
+    transition: transform 260ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .nav-burger-lines {
+    position: relative;
+    transform: translateY(-3px);
+  }
+
+  .nav-burger-lines::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 0;
+  }
+
+  .nav-mobile[open] .nav-burger-lines {
+    transform: translateY(0) rotate(45deg);
+  }
+
+  .nav-mobile[open] .nav-burger-lines::before {
+    top: 0;
+    transform: rotate(-90deg);
+  }
+
+  .nav-mobile-panel {
+    position: absolute;
+    left: calc(var(--page-gutter) * -1);
+    right: calc(var(--page-gutter) * -1);
+    top: 100%;
+    max-height: calc(100dvh - 3.75rem);
+    overflow-y: auto;
+    padding: 0.5rem var(--page-gutter) 1.5rem;
+    border-bottom: 1px solid rgba(136, 191, 236, 0.18);
+    background: #0a0e1a;
+  }
+
+  .nav-mobile-link {
+    display: block;
+    padding-block: 0.8rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: rgba(255, 255, 255, 0.9);
+    border-bottom: 1px solid rgba(136, 191, 236, 0.1);
+  }
+
+  .nav-mobile-link.is-current {
+    color: #88bfec;
+  }
+
+  .nav-mobile-sublink {
+    display: block;
+    padding-block: 0.55rem;
+    font-size: 1.05rem;
+    color: rgba(255, 255, 255, 0.65);
   }
 </style>

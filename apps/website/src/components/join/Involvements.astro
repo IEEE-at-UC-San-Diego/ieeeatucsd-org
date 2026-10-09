@@ -9,10 +9,18 @@ import SectionHeading from "../core/SectionHeading.astro";
     Projects, events, and H.A.R.D. Hack. Pick what fits this quarter.
   </SectionHeading>
 
-  <div class="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+  <div class="mt-12 border-t border-ieee-blue-100/12 md:mt-16">
     {
-      involve.map((item) => (
-        <Involvement text={item.text} image={item.image} link={item.link} />
+      involve.map((item, index) => (
+        <div class="border-b border-ieee-blue-100/12" data-reveal>
+          <Involvement
+            text={item.text}
+            image={item.image}
+            link={item.link}
+            index={String(index + 1).padStart(2, "0")}
+            reverse={index % 2 === 1}
+          />
+        </div>
       ))
     }
   </div>

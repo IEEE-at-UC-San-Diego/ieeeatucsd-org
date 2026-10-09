@@ -8,14 +8,14 @@ const { filters, currentFilter }: Props = Astro.props;
 ---
 
 <div
-  class="inline-flex border border-white/20 rounded-full md:p-[0.2cqw] p-[0.4cqw] relative my-[3cqw]"
+  class="filter-rail relative flex max-w-full flex-nowrap items-stretch gap-1 overflow-x-auto"
   role="group"
   aria-label="Filter officers by team"
 >
   <div
     id="slider"
-    class="filter-slider absolute h-[calc(100%-15%)] bg-[#FFB81C] rounded-full"
-    style="left: 1%;"
+    class="filter-slider pointer-events-none absolute bottom-0 h-0.5 bg-ieee-yellow"
+    style="left: 0px; width: 0px;"
   >
   </div>
   {
@@ -24,10 +24,10 @@ const { filters, currentFilter }: Props = Astro.props;
         type="button"
         data-filter={filter}
         aria-pressed={currentFilter === filter ? "true" : "false"}
-        class={`md:text-[1.3cqw] text-[2.5cqw] md:px-[1.8cqw] px-[3cqw] md:py-[0.2cqw] py-[0.4cqw] rounded-full relative z-10 ${
+        class={`relative z-10 inline-flex min-h-[44px] shrink-0 items-center whitespace-nowrap px-3 text-sm font-medium tracking-tight transition-colors sm:px-4 ${
           currentFilter === filter
-            ? "text-black"
-            : "text-white hover:bg-white/10"
+            ? "text-white"
+            : "text-white/55 hover:text-white"
         }`}
       >
         {filter}
@@ -37,6 +37,15 @@ const { filters, currentFilter }: Props = Astro.props;
 </div>
 
 <style>
+  .filter-rail {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .filter-rail::-webkit-scrollbar {
+    display: none;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .filter-slider {
       transition:
@@ -63,12 +72,18 @@ const { filters, currentFilter }: Props = Astro.props;
     slider.style.left = `${buttonRect.left - containerRect.left}px`;
   }
 
+  function activeButton() {
+    return Array.from(buttons).find(
+      (btn) => btn.getAttribute("aria-pressed") === "true",
+    );
+  }
+
   function updateFilter(selectedFilter: string, clickedButton: HTMLElement) {
     buttons.forEach((btn) => {
       const isSelected = btn.getAttribute("data-filter") === selectedFilter;
-      btn.classList.toggle("text-black", isSelected);
-      btn.classList.toggle("text-white", !isSelected);
-      btn.classList.toggle("hover:bg-white/10", !isSelected);
+      btn.classList.toggle("text-white", isSelected);
+      btn.classList.toggle("text-white/55", !isSelected);
+      btn.classList.toggle("hover:text-white", !isSelected);
       btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
     });
 
@@ -86,6 +101,19 @@ const { filters, currentFilter }: Props = Astro.props;
   );
   if (initialButton) {
     moveSlider(initialButton);
+  }
+
+  // Keep the underline aligned after late font loading or a resize.
+  window.addEventListener("resize", () => {
+    const active = activeButton();
+    if (active) moveSlider(active);
+  });
+
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => {
+      const active = activeButton();
+      if (active) moveSlider(active);
+    });
   }
 
   buttons.forEach((button) => {

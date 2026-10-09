@@ -1,11 +1,49 @@
 ---
-const { title, text, link } = Astro.props;
+interface Props {
+  index: number;
+  title: string;
+  text: string;
+  link: string;
+}
+
+const { index, title, text, link } = Astro.props;
 ---
 
-<article class="ieee-panel p-6 flex flex-col h-full">
-  <h3 class="font-display font-semibold text-xl md:text-2xl">{title}</h3>
-  <p class="mt-3 text-white/75 leading-relaxed flex-1">{text}</p>
-  <a class="ieee-btn ieee-btn-ghost mt-6 self-start" href={link}>
-    More details
-  </a>
-</article>
+<li
+  class="activity group relative grid gap-x-8 gap-y-3 border-t border-white/10 py-8 md:grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1.15fr)] md:py-10"
+  data-reveal
+>
+  <span class="mono-label pt-2" aria-hidden="true">
+    {String(index).padStart(2, "0")}
+  </span>
+  <h3
+    class="font-display text-[clamp(1.7rem,3.2vw,2.6rem)] font-semibold tracking-[-0.035em] leading-[1.05] transition-colors duration-300 group-hover:text-ieee-blue-100"
+  >
+    {title}
+  </h3>
+  <div class="md:pt-1.5">
+    <p class="copy max-w-xl">{text}</p>
+    <a
+      class="btn-link mt-5 after:absolute after:inset-0 after:content-['']"
+      href={link}
+    >
+      <span class="activity-more">More details</span>
+    </a>
+  </div>
+</li>
+
+<style>
+  /* The link's ::after is the row-wide hit area; the arrow lives on the label. */
+  .activity-more::after {
+    content: "→";
+    display: inline-block;
+    margin-left: 0.4rem;
+    transition: transform 280ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .activity:hover .activity-more::after {
+      transform: translateX(5px);
+    }
+  }
+</style>

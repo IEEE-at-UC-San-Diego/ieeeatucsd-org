@@ -1,124 +1,177 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { Image } from "astro:assets";
-import Title from "@/components/core/Title.astro";
-import { LiaDotCircle } from "react-icons/lia";
 import sponsors from "../data/sponsors.json";
 import { resolveImage } from "../lib/images";
+
+// Some marks ship with a lot of transparent padding or are very thin
+// wordmarks. Scale those up inside their cell so they read at the same
+// optical size as the rest of the wall.
+//
+// The tsmc mark has an opaque white background, so a plain brightness(0)
+// invert(1) collapses it into a solid white disc. For it we invert and
+// grayscale instead and screen the result over the dark cell, which keeps the
+// artwork white and drops the white background away.
+const logoOverrides: Record<string, { scale?: number; className?: string }> = {
+  "Northrop_Grumman_Logo.png": { scale: 2 },
+  "Lockheed_Martin_logo.png": { scale: 2 },
+  "Tsmc_logo.png": {
+    scale: 1.4,
+    className: "invert grayscale [mix-blend-mode:screen]",
+  },
+};
+
+function logoOverride(path: string) {
+  const filename = path.split("/").pop() ?? path;
+  return logoOverrides[filename];
+}
+
+function logoStyle(path: string): string | undefined {
+  const entry = logoOverride(path);
+  if (!entry?.scale) return undefined;
+  return `transform: scale(${entry.scale});`;
+}
 ---
 
 <Layout>
-  <Title title="Sponsorship" />
-  <div class="w-full flex justify-center text-[1.2cqw]">
-    <p
-      class="w-[70%] my-[4cqw] text-white/90 border-l-[0.5cqw] pl-[1cqw] border-ieee-yellow"
-    >
-      Sponsors have played a vital role in the growth and success of IEEE at UC
-      San Diego.<br /><br /> Through their generous support, our organization has
-      been able to expand its projects, host impactful workshops, and empower students
-      to turn their ideas into real engineering achievements. Thanks to our sponsors,
-      teams like TritonBot have continuously represented UCSD on the international
-      stage at the RoboCup competition, showcasing years of innovation and dedication
-      made possible by sustained collaboration and resources. <br /><br />We
-      sincerely thank our current sponsors for their continued belief in our
-      mission and warmly welcome new sponsors to join us in shaping the future
-      of student innovation. To get involved, please email us or fill out the
-      contact form below — we look forward to partnering with you in growing the
-      next generation of engineers.
-    </p>
-  </div>
+  <header class="page-hero bp-grid">
+    <div class="grid gap-12 lg:grid-cols-12 lg:items-start lg:gap-x-12">
+      <div class="lg:col-span-5">
+        <p class="eyebrow" data-reveal>Sponsors</p>
+        <h1 class="display mt-6" data-reveal style="--reveal-delay: 60ms">
+          Sponsorship
+        </h1>
 
-  <div class="flex flex-col items-center text-white my-[5cqw]">
-    <div class="flex items-center text-[4.5cqw] md:text-[2.5cqw] mb-[3%]">
-      <LiaDotCircle className="mr-[1cqw] pt-[0.5%]" />
-      <p
-        class="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ieee-black"
-      >
-        Interested in sponsoring us?
-      </p>
-    </div>
-
-    <a
-      href="mailto:ieee@ucsd.edu"
-      class="ieee-btn ieee-btn-ghost md:text-[1.2cqw] text-[2cqw]"
-    >
-      Please email ieee@ucsd.edu
-    </a>
-
-    <div class="flex items-center text-[4.5cqw] md:text-[2.5cqw] mt-[10cqw]">
-      <LiaDotCircle className="mr-[1cqw] pt-[0.5%]" />
-      <p
-        class="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ieee-black"
-      >
-        Our Sponsors
-      </p>
-    </div>
-
-    <div class="grid grid-cols-3 mb-[10cqw]">
-      {
-        sponsors.map((sponsor) => (
-          <div class="flex items-center justify-center p-[1cqw] aspect-video w-[20cqw]">
-            <Image
-              src={resolveImage(sponsor)}
-              alt={sponsor}
-              class="object-contain"
-            />
-          </div>
-        ))
-      }
-    </div>
-
-    <div class="flex">
-      <div class="w-2/5 flex flex-col items-end mr-[5%]">
-        <div class="flex items-center text-[4.7cqw] md:text-[2.5cqw] mb-[15%]">
-          <LiaDotCircle className="mr-[1cqw] pt-[0.5%]" />
-          <p
-            class="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ieee-black"
+        <div class="mt-10 max-w-md" data-reveal style="--reveal-delay: 140ms">
+          <h2
+            class="text-[clamp(1.4rem,2.2vw,1.9rem)] font-semibold tracking-tight text-white"
           >
-            Become a Sponsor
+            Interested in sponsoring us?
+          </h2>
+          <a href="mailto:ieee@ucsd.edu" class="ieee-btn ieee-btn-primary mt-5">
+            Please email ieee@ucsd.edu
+          </a>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7" data-reveal style="--reveal-delay: 100ms">
+        <div class="max-w-[62ch] space-y-5">
+          <p class="lead">
+            Sponsors have played a vital role in the growth and success of IEEE
+            at UC San Diego.
+          </p>
+          <p class="lead">
+            Through their generous support, our organization has been able to
+            expand its projects, host impactful workshops, and empower students
+            to turn their ideas into real engineering achievements. Thanks to
+            our sponsors, teams like TritonBot have continuously represented
+            UCSD on the international stage at the RoboCup competition,
+            showcasing years of innovation and dedication made possible by
+            sustained collaboration and resources.
+          </p>
+          <p class="lead">
+            We sincerely thank our current sponsors for their continued belief
+            in our mission and warmly welcome new sponsors to join us in shaping
+            the future of student innovation. To get involved, please email us
+            or fill out the contact form below — we look forward to partnering
+            with you in growing the next generation of engineers.
           </p>
         </div>
-        <p class="text-end w-[75%] text-[1.3cqw]">
-          To get involved, please email us <br /> or fill out the contact form to
-          the right — we look forward to partnering with you in growing the next generation
-          of engineers.
+      </div>
+    </div>
+  </header>
+
+  <section
+    id="our-sponsors"
+    class="border-t border-white/10 py-[clamp(3.5rem,7vw,6rem)]"
+  >
+    <h2 class="headline" data-reveal>Our Sponsors</h2>
+
+    <div
+      class="mt-10 overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#0d1324]"
+      data-reveal
+    >
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+        {
+          sponsors.map((sponsor) => (
+            <div class="group relative flex aspect-[4/3] items-center justify-center overflow-hidden border-b border-r border-white/10 p-6 sm:p-8">
+              <Image
+                src={resolveImage(sponsor)}
+                alt={sponsor}
+                class={`h-auto max-h-[5.5rem] w-[74%] object-contain opacity-[0.85] transition-opacity duration-300 group-hover:opacity-100 ${
+                  logoOverride(sponsor)?.className ?? "brightness-0 invert"
+                }`}
+                style={logoStyle(sponsor)}
+              />
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section
+    id="become-a-sponsor"
+    class="border-t border-white/10 py-[clamp(3.5rem,7vw,6rem)]"
+  >
+    <div class="grid gap-10 lg:grid-cols-12 lg:items-center lg:gap-x-12">
+      <div class="lg:col-span-6" data-reveal>
+        <h2 class="headline">Become a Sponsor</h2>
+        <p class="copy mt-5 max-w-xl">
+          To get involved, please email us or fill out the contact form to the
+          right — we look forward to partnering with you in growing the next
+          generation of engineers.
         </p>
       </div>
 
       <form
         method="POST"
         action="/api/email/send-sponsor-confirmation"
-        class="border-white rounded-[3cqw] border w-[45%] h-[33cqw] py-[3%] px-[5%] bg-white/5 font-extralight text-[1.1cqw]"
+        class="surface p-6 sm:p-8 lg:col-span-5 lg:col-start-8"
+        data-reveal
+        style="--reveal-delay: 80ms"
       >
-        <p>Email</p>
-        <input
-          type="email"
-          name="email"
-          placeholder="ieee@ucsd.edu"
-          required
-          class="mb-[1cqw] w-full bg-transparent border-b-[0.1cqw] border-white/80"
-        />
+        <div class="grid gap-5">
+          <div class="grid gap-2">
+            <label for="sponsor-email" class="mono-label">Email</label>
+            <input
+              id="sponsor-email"
+              type="email"
+              name="email"
+              placeholder="ieee@ucsd.edu"
+              required
+              class="min-h-[44px] w-full rounded-xl border border-white/[0.15] bg-white/5 px-4 text-white placeholder:text-white/[0.35] transition-colors focus:border-ieee-blue-100/70"
+            />
+          </div>
 
-        <p>Phone</p>
-        <input
-          type="text"
-          name="phone"
-          placeholder="123-456-7890"
-          class="mb-[1cqw] w-full bg-transparent border-b-[0.1cqw] border-white/80"
-        />
+          <div class="grid gap-2">
+            <label for="sponsor-phone" class="mono-label">Phone</label>
+            <input
+              id="sponsor-phone"
+              type="text"
+              name="phone"
+              placeholder="123-456-7890"
+              class="min-h-[44px] w-full rounded-xl border border-white/[0.15] bg-white/5 px-4 text-white placeholder:text-white/[0.35] transition-colors focus:border-ieee-blue-100/70"
+            />
+          </div>
 
-        <p>Message</p>
-        <textarea
-          name="message"
-          class="w-full bg-transparent border-[0.1cqw] mb-[1cqw] border-white h-[50%] mt-[0.5cqw]"
-          required></textarea>
+          <div class="grid gap-2">
+            <label for="sponsor-message" class="mono-label">Message</label>
+            <textarea
+              id="sponsor-message"
+              name="message"
+              required
+              class="min-h-[10rem] w-full rounded-xl border border-white/[0.15] bg-white/5 px-4 py-3 text-white placeholder:text-white/[0.35] transition-colors focus:border-ieee-blue-100/70"
+            ></textarea>
+          </div>
 
-        <div class="flex justify-end">
-          <button type="submit" class="ieee-btn ieee-btn-ghost">
-            Submit
-          </button>
+          <div class="flex justify-end">
+            <button type="submit" class="ieee-btn ieee-btn-primary">
+              Submit
+            </button>
+          </div>
         </div>
       </form>
     </div>
-  </div>
+  </section>
 </Layout>

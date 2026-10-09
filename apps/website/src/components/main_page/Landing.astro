@@ -1,38 +1,46 @@
 ---
-import { Image } from "astro:assets";
-import landingimg from "../../images/landing.webp";
+import ArduinoModel from "./ArduinoModel.astro";
 ---
 
-<section class="page-section pt-8 md:pt-12" aria-labelledby="home-heading">
+<section
+  class="relative pt-4 pb-10 md:pt-8 md:pb-16"
+  aria-labelledby="home-heading"
+>
   <div
-    class="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] items-stretch"
+    class="bp-grid grid items-center gap-2 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-6"
   >
-    <div class="ieee-panel p-6 sm:p-8 lg:p-10 flex flex-col">
+    <div class="relative z-10 pt-10 lg:py-20">
+      <p class="eyebrow" data-reveal>IEEE @ UCSD</p>
       <h1
         id="home-heading"
-        class="font-display font-bold text-[clamp(1.9rem,4.4vw,3.4rem)]"
+        class="display mt-7 text-[clamp(2.5rem,4.9vw,4.9rem)]"
+        data-reveal
+        style="--reveal-delay: 70ms"
       >
         Join one of the largest IEEE student branches in the US!
       </h1>
-      <p class="mt-5 text-lead text-white/80 max-w-xl">
+      <p class="lead mt-7 max-w-xl" data-reveal style="--reveal-delay: 150ms">
         IEEE @ UCSD is a pre-professional organization aiming to empower
         engineers with practical experience through hands-on project
         opportunities, insightful workshops, and panels with industry
         professionals. We are a branch of the International IEEE organization.
       </p>
-      <div class="mt-8 flex flex-wrap gap-3">
+      <div
+        class="mt-10 flex flex-wrap items-center gap-3"
+        data-reveal
+        style="--reveal-delay: 230ms"
+      >
         <a class="ieee-btn ieee-btn-primary" href="/join">Join the club</a>
         <a class="ieee-btn ieee-btn-ghost" href="/join#project-space">
           Visit Project Space
         </a>
       </div>
     </div>
-    <div class="ieee-panel overflow-hidden min-h-[16rem]">
-      <Image
-        src={landingimg}
-        alt="Circuit board artwork for IEEE at UC San Diego"
-        class="h-full w-full object-cover"
-      />
+
+    <div
+      class="relative h-[25rem] sm:h-[31rem] lg:h-[41rem] lg:-mr-10 xl:-mr-16"
+    >
+      <ArduinoModel />
     </div>
   </div>
 </section>

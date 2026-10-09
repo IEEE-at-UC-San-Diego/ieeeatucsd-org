@@ -27,36 +27,46 @@ const EventCard = ({ event, publicCalendarId }) => {
   const isPast = endDate < new Date();
 
   return (
-    <div className="bg-white/10 rounded-lg p-6 mb-6 border border-white/20">
-      <div className="flex justify-between items-start mb-4">
-        <h3 className="text-white text-xl font-bold">{event.eventName}</h3>
+    <article className="border-b border-ieee-blue-100/15 py-8">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <h3 className="title-3 text-white">{event.eventName}</h3>
         <span
-          className={`px-3 py-1 rounded-full text-sm font-medium ${
+          className={`rounded-md border px-3 py-1 text-xs font-medium ${
             isUpcoming
-              ? "bg-green-500/20 text-green-300"
+              ? "border-ieee-yellow/40 bg-ieee-yellow/10 text-ieee-yellow"
               : isPast
-                ? "bg-gray-500/20 text-gray-300"
-                : "bg-blue-500/20 text-blue-300"
+                ? "border-white/15 bg-white/5 text-white/50"
+                : "border-ieee-blue-100/40 bg-ieee-blue-100/10 text-ieee-blue-100"
           }`}
         >
           {isUpcoming ? "Upcoming" : isPast ? "Past" : "Ongoing"}
         </span>
       </div>
 
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center text-white/80">
-          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+      <div className="mt-4 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-white/80">
+        <div className="flex items-center gap-2">
+          <svg
+            className="h-4 w-4 text-ieee-blue-100"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
             <path
               fillRule="evenodd"
               d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
               clipRule="evenodd"
             />
           </svg>
-          <span>{formatDate(startDate)}</span>
+          <span className="font-mono-tech text-ieee-blue-100">
+            {formatDate(startDate)}
+          </span>
         </div>
 
-        <div className="flex items-center text-white/80">
-          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+        <div className="flex items-center gap-2">
+          <svg
+            className="h-4 w-4 text-ieee-blue-100"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
             <path
               fillRule="evenodd"
               d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
@@ -69,9 +79,9 @@ const EventCard = ({ event, publicCalendarId }) => {
         </div>
 
         {event.location && (
-          <div className="flex items-center text-white/80">
+          <div className="flex items-center gap-2">
             <svg
-              className="w-4 h-4 mr-2"
+              className="h-4 w-4 text-ieee-blue-100"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -87,18 +97,18 @@ const EventCard = ({ event, publicCalendarId }) => {
       </div>
 
       {event.eventDescription && (
-        <p className="text-white/70 text-sm leading-relaxed mb-4">
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/70">
           {event.eventDescription}
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 mt-4">
+      <div className="mt-5 flex flex-wrap items-center gap-2">
         {event.publicGoogleEventUrl && (
           <a
             href={event.publicGoogleEventUrl}
             target="_blank"
             rel="noreferrer"
-            className="px-3 py-1.5 rounded-full bg-white/15 text-white text-xs hover:bg-white/25 transition-colors"
+            className="ieee-btn ieee-btn-ghost ieee-btn-sm"
           >
             Open in Google Calendar
           </a>
@@ -115,7 +125,7 @@ const EventCard = ({ event, publicCalendarId }) => {
               endDate: Number(event.endDate),
             })
           }
-          className="px-3 py-1.5 rounded-full bg-ieee-yellow/80 text-black text-xs font-medium hover:bg-ieee-yellow transition-colors"
+          className="ieee-btn ieee-btn-primary ieee-btn-sm"
         >
           Download Event ICS
         </button>
@@ -124,13 +134,13 @@ const EventCard = ({ event, publicCalendarId }) => {
             href={buildGoogleCalendarSubscribeUrl(publicCalendarId)}
             target="_blank"
             rel="noreferrer"
-            className="px-3 py-1.5 rounded-full bg-white/15 text-white text-xs hover:bg-white/25 transition-colors"
+            className="ieee-btn ieee-btn-ghost ieee-btn-sm"
           >
             Subscribe Calendar
           </a>
         )}
       </div>
-    </div>
+    </article>
   );
 };
 
@@ -156,16 +166,16 @@ const AllEventsList = ({ events = [], publicCalendarId = "" }) => {
   }, [filter, sortedEvents]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl py-8">
       <div className="mb-8">
-        <h2 className="text-white text-3xl font-bold mb-4">All Events</h2>
+        <h2 className="headline text-white">All Events</h2>
         {publicCalendarId && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <a
               href={buildGoogleCalendarSubscribeUrl(publicCalendarId)}
               target="_blank"
               rel="noreferrer"
-              className="px-3 py-1.5 rounded-full bg-ieee-yellow/90 text-black text-xs font-semibold hover:bg-ieee-yellow transition-colors"
+              className="ieee-btn ieee-btn-primary ieee-btn-sm"
             >
               Subscribe Public Calendar
             </a>
@@ -173,14 +183,14 @@ const AllEventsList = ({ events = [], publicCalendarId = "" }) => {
               href={buildGoogleCalendarIcsUrl(publicCalendarId)}
               target="_blank"
               rel="noreferrer"
-              className="px-3 py-1.5 rounded-full bg-white/15 text-white text-xs hover:bg-white/25 transition-colors"
+              className="ieee-btn ieee-btn-ghost ieee-btn-sm"
             >
               Public Calendar ICS Feed
             </a>
           </div>
         )}
 
-        <div className="flex space-x-4 mb-6">
+        <div className="mt-6 flex flex-wrap gap-2">
           {[
             { key: "all", label: "All Events" },
             { key: "upcoming", label: "Upcoming" },
@@ -189,10 +199,8 @@ const AllEventsList = ({ events = [], publicCalendarId = "" }) => {
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`px-4 py-2 rounded-full transition-all duration-200 ${
-                filter === key
-                  ? "bg-ieee-yellow text-black font-medium"
-                  : "bg-white/10 text-white hover:bg-white/20"
+              className={`ieee-btn ieee-btn-sm ${
+                filter === key ? "ieee-btn-primary" : "ieee-btn-ghost"
               }`}
             >
               {label}
@@ -202,11 +210,11 @@ const AllEventsList = ({ events = [], publicCalendarId = "" }) => {
       </div>
 
       {filteredEvents.length === 0 ? (
-        <div className="text-center text-white/70 py-12">
+        <div className="border-t border-ieee-blue-100/15 py-12 text-white/70">
           <p className="text-xl">No events found for the selected filter.</p>
         </div>
       ) : (
-        <div>
+        <div className="border-t border-ieee-blue-100/15">
           {filteredEvents.map((event) => (
             <EventCard
               key={event._id}

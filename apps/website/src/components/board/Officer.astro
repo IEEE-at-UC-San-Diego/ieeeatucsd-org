@@ -1,8 +1,6 @@
 ---
-import { MdEmail } from "react-icons/md";
 import { Image } from "astro:assets";
 import type { ImageMetadata } from "astro";
-import ieeeMark from "../../images/logos/white_logo_only.svg";
 
 interface Props {
   name: string;
@@ -10,9 +8,19 @@ interface Props {
   picture: ImageMetadata | null;
   email?: string;
   eager?: boolean;
+  variant?: "card" | "feature";
 }
 
-const { name, position, picture, email, eager = false } = Astro.props as Props;
+const {
+  name,
+  position,
+  picture,
+  email,
+  eager = false,
+  variant = "card",
+} = Astro.props as Props;
+
+const isFeature = variant === "feature";
 
 function officerInitials(fullName: string): string {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -22,100 +30,124 @@ function officerInitials(fullName: string): string {
 }
 
 const initials = officerInitials(name);
+
+// Let long addresses break after the "@" rather than mid-domain. The zero
+// width space is invisible but gives the line breaker a clean break point.
+const emailBreakable = email ? email.replace("@", "@\u200B") : "";
 ---
 
-<div class="text-white min-w-0 w-full">
-  <div
-    class="group w-full min-w-0 aspect-[334/440] bg-gradient-to-t from-ieee-blue-100/5 to-ieee-blue-100/25 rounded-[10%] flex flex-col items-center relative border border-white/10"
-  >
+<article
+  class:list={[
+    "group min-w-0",
+    isFeature
+      ? "grid items-center gap-7 sm:grid-cols-[minmax(0,17rem)_1fr] sm:gap-10"
+      : "flex h-full flex-col",
+  ]}
+>
+  <div class:list={[isFeature && "w-full"]}>
     <div
-      class="relative w-[90%] aspect-[334/440] md:rounded-[1.5cqw] rounded-[3cqw] overflow-hidden mt-[5%] mb-[3%]"
+      class:list={[
+        "relative w-full overflow-hidden border border-white/10 bg-[#0d1324]",
+        isFeature
+          ? "aspect-[4/5] rounded-[1.25rem]"
+          : "aspect-[4/5] rounded-2xl",
+      ]}
     >
       {
         picture ? (
           <Image
             src={picture}
             alt={`${name} portrait`}
-            class="w-full h-full object-cover"
-            width={334}
-            height={440}
-            widths={[160, 240, 334, 440]}
-            sizes="(max-width: 768px) 31vw, 18vw"
+            class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+            width={440}
+            height={550}
+            widths={[240, 334, 440, 640]}
+            sizes={
+              isFeature
+                ? "(max-width: 640px) 88vw, 272px"
+                : "(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 22vw"
+            }
             loading={eager ? "eager" : "lazy"}
             decoding="async"
           />
         ) : (
           <div
-            class="relative w-full h-full overflow-hidden bg-[#121a2e]"
+            class="relative h-full w-full overflow-hidden bg-[#0d1324]"
             role="img"
             aria-label={`${name}`}
           >
-            <div
-              class="absolute inset-0"
-              style="background:
-                radial-gradient(80% 55% at 50% 18%, rgba(136, 191, 236, 0.22) 0%, rgba(136, 191, 236, 0.08) 36%, rgba(35, 51, 99, 0) 68%),
-                linear-gradient(180deg, #2a3f6e 0%, #1a2744 46%, #0d1528 100%);"
-            />
-            <div class="absolute inset-x-0 top-[36%] flex -translate-y-1/2 flex-col items-center">
-              <Image
-                src={ieeeMark}
-                alt=""
-                class="w-[28%] opacity-70 mb-[0.8cqw]"
-                widths={[80, 120, 160]}
-                sizes="(max-width: 768px) 9vw, 5vw"
-              />
-              <span class="font-display font-extrabold tracking-tight text-white md:text-[3.8cqw] text-[7.2cqw] leading-none">
-                {initials}
-              </span>
-            </div>
+            <div class="bp-grid absolute inset-0" aria-hidden="true" />
+            <span
+              class:list={[
+                "absolute inset-0 grid place-items-center font-display font-extrabold leading-none tracking-tight text-ieee-blue-100/85",
+                isFeature
+                  ? "text-[clamp(3rem,7vw,4.5rem)]"
+                  : "text-[clamp(2rem,5vw,2.75rem)]",
+              ]}
+            >
+              {initials}
+            </span>
           </div>
         )
       }
-      <div
-        class="absolute inset-0 pointer-events-none"
-        style="background:
-          radial-gradient(66% 46% at 50% 104%, rgba(23, 37, 84, 0.60) 0%, rgba(23, 37, 84, 0.42) 20%, rgba(30, 58, 138, 0.22) 38%, rgba(30, 58, 138, 0) 56%),
-          radial-gradient(55% 42% at 0% 100%, rgba(23, 37, 84, 0.62) 0%, rgba(23, 37, 84, 0.44) 16%, rgba(30, 58, 138, 0.24) 28%, rgba(30, 58, 138, 0) 44%),
-          radial-gradient(55% 42% at 100% 100%, rgba(23, 37, 84, 0.62) 0%, rgba(23, 37, 84, 0.44) 16%, rgba(30, 58, 138, 0.24) 28%, rgba(30, 58, 138, 0) 44%),
-          linear-gradient(to top, rgba(23, 37, 84, 0.96) 0%, rgba(23, 37, 84, 0.84) 8%, rgba(30, 58, 138, 0.46) 16%, rgba(30, 58, 138, 0) 30%);
-        "
-      >
-      </div>
-      <div class="absolute inset-x-0 bottom-0 backdrop-blur-sm">
-        <div
-          class="flex items-center justify-center px-[1cqw] py-[0.8cqw] md:py-[0.6cqw]"
-        >
-          <span
-            class="text-white md:text-[1cqw] text-[2cqw] font-semibold uppercase tracking-wide leading-tight text-center"
-          >
-            {position}
-          </span>
-        </div>
-      </div>
     </div>
+  </div>
 
-    <div class="w-[85%] flex flex-col items-center text-center">
-      <p
-        class="md:text-[1.6cqw] text-[3.2cqw] font-semibold tracking-tight md:leading-[2.1cqw] leading-[4.2cqw]"
-      >
-        {name}
-      </p>
-    </div>
+  <div class:list={[isFeature ? "" : "mt-4 flex flex-1 flex-col"]}>
+    <p
+      class:list={[
+        "font-semibold tracking-tight text-white",
+        isFeature
+          ? "text-[clamp(2.1rem,4.4vw,3.5rem)] leading-[1.02]"
+          : "text-lg sm:text-xl",
+      ]}
+    >
+      {name}
+    </p>
+    <p
+      class:list={[
+        "mono-label text-ieee-blue-100",
+        isFeature ? "mt-4 text-[0.8rem]" : "mt-1.5",
+      ]}
+    >
+      {position}
+    </p>
 
     {
-      email && (
-        <div class="w-[85%] pb-[1.2cqw] pt-[0.6cqw] flex justify-center">
+      email &&
+        (isFeature ? (
           <a
             href={`mailto:${email}`}
-            class="group/email inline-flex items-center gap-[0.6cqw] rounded-full bg-white/5 hover:bg-white/10 border border-white/10 px-[1.2cqw] py-[0.4cqw] text-ieee-yellow md:text-[0.85cqw] text-[1.7cqw] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ieee-yellow/60"
+            class="group/email mt-6 inline-flex max-w-full items-center gap-2 text-[0.95rem] no-underline text-white/65 transition-colors hover:text-ieee-yellow"
             aria-label={`Email ${name}`}
             title={email}
           >
-            <MdEmail className="md:text-[1.1cqw] text-[2.2cqw] opacity-80 group-hover/email:opacity-100 transition-opacity" />
-            <span class="truncate max-w-[14cqw] md:max-w-[12cqw]">{email}</span>
+            <span class="min-w-0 break-words">{emailBreakable}</span>
+            <span
+              aria-hidden="true"
+              class="shrink-0 transition-transform duration-300 ease-out group-hover/email:translate-x-1"
+            >
+              →
+            </span>
           </a>
-        </div>
-      )
+        ) : (
+          <a
+            href={`mailto:${email}`}
+            class="group/email mt-auto flex items-baseline gap-1.5 border-t border-white/10 pt-3 text-[0.78rem] no-underline text-white/50 transition-colors hover:text-ieee-yellow"
+            aria-label={`Email ${name}`}
+            title={email}
+          >
+            <span class="min-w-0 break-words leading-snug">
+              {emailBreakable}
+            </span>
+            <span
+              aria-hidden="true"
+              class="shrink-0 transition-transform duration-300 ease-out group-hover/email:translate-x-0.5"
+            >
+              →
+            </span>
+          </a>
+        ))
     }
   </div>
-</div>
+</article>
