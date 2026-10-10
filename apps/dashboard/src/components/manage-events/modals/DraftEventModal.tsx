@@ -26,6 +26,7 @@ import {
 	parseFlexibleDate,
 	parseFlexibleTime,
 } from "../utils/parseTime";
+import { getDraftEventModalPresentation } from "./draftEventModalState";
 
 interface DraftEventModalProps {
 	isOpen: boolean;
@@ -66,7 +67,8 @@ export function DraftEventModal({
 	onConvertToRequest,
 }: DraftEventModalProps) {
 	const formId = useId();
-	const isEditing = Boolean(initialData?._id);
+	const { isEditing, showConvertToRequest, title, submitLabel } =
+		getDraftEventModalPresentation(initialData, Boolean(onConvertToRequest));
 	const [formData, setFormData] = useState<Partial<EventRequest>>(
 		initialData
 			? { ...defaultDraftData, ...initialData }
@@ -176,7 +178,7 @@ export function DraftEventModal({
 	const footer = (
 		<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 			<div className="w-full sm:w-auto sm:flex-1">
-				{isEditing && onConvertToRequest && (
+				{showConvertToRequest && onConvertToRequest && (
 					<Button
 						type="button"
 						variant="secondary"
@@ -208,7 +210,7 @@ export function DraftEventModal({
 					form={formId}
 					className="h-11 flex-1 sm:h-9 sm:flex-none"
 				>
-					{isEditing ? "Save Draft" : "Create Draft"}
+					{submitLabel}
 				</Button>
 			</div>
 		</div>
@@ -218,7 +220,7 @@ export function DraftEventModal({
 		<ResponsiveOverlay
 			open={isOpen}
 			onOpenChange={onClose}
-			title={isEditing ? "Edit Draft Event" : "Create Quick Draft"}
+			title={title}
 			variant="fullscreen"
 			className="sm:max-w-2xl"
 			footer={footer}
