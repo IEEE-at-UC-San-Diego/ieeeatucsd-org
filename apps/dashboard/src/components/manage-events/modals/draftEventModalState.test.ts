@@ -12,7 +12,9 @@ import {
 	isEditingPersistedDraft,
 } from "./draftEventModalState";
 
-function calendarDateStub(startDate = 1_791_571_319_974): Partial<EventRequest> {
+function calendarDateStub(
+	startDate = 1_791_571_319_974,
+): Partial<EventRequest> {
 	return {
 		startDate,
 		endDate: startDate + 3_600_000,
@@ -125,9 +127,9 @@ describe("calendar-date convert still uses create, saved drafts use update", () 
 		});
 
 		expect(hasPersistedEventId(editingRequest._id)).toBe(false);
-		expect(buildCreateEventArgs("logto-user", makeFormData())).not.toHaveProperty(
-			"id",
-		);
+		expect(
+			buildCreateEventArgs("logto-user", makeFormData()),
+		).not.toHaveProperty("id");
 		expect(() =>
 			buildUpdateEventArgs("logto-user", editingRequest._id, makeFormData()),
 		).toThrow(/persisted id/i);
