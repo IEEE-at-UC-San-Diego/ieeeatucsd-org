@@ -34,6 +34,14 @@ import {
 	normalizeEventType,
 } from "@/components/manage-events/constants";
 import {
+	asEventId,
+	buildCreateEventArgs,
+	buildEditingRequestFromConvertedDraft,
+	buildUpdateEventArgs,
+	hasPersistedEventId,
+	resolvePersistedEventId,
+} from "@/components/manage-events/utils/eventMutationArgs";
+import {
 	defaultWeekLabelSettings,
 	getWeekLabelForDate,
 	loadWeekLabelSettings,
@@ -125,66 +133,6 @@ function mapEventToType(event: any): EventRequest {
 		additionalSpecifications: event.additionalSpecifications || "",
 		flyersCompleted: event.flyersCompleted || false,
 		graphicsUploadNote: event.graphicsUploadNote || "",
-	};
-}
-
-function buildUpdateEventArgs(
-	logtoId: string,
-	eventId: string,
-	data: EventFormData,
-) {
-	return {
-		logtoId,
-		id: eventId as any,
-		eventName: data.eventName,
-		location: data.location,
-		startDate: data.startDate,
-		endDate: data.endDate,
-		eventDescription: data.eventDescription,
-		eventType: normalizeEventType(data.eventType),
-		department: data.department,
-		expectedAttendance: data.estimatedAttendance,
-		flyersNeeded: data.needsFlyers,
-		needsGraphics: data.needsGraphics,
-		needsAsFunding: data.needsASFunding,
-		hasFood: data.hasFood,
-		eventCode: data.eventCode,
-		invoices: data.invoices.map((inv) => ({
-			id: inv._id,
-			vendor: inv.vendor,
-			items:
-				inv.items.length > 0
-					? inv.items
-					: [
-							{
-								description: inv.description,
-								quantity: 1,
-								unitPrice: inv.amount,
-								total: inv.amount,
-							},
-						],
-			tax: inv.tax || 0,
-			tip: inv.tip || 0,
-			subtotal: inv.subtotal || inv.amount,
-			total: inv.total || inv.amount,
-			additionalFiles: inv.additionalFiles || [],
-			invoiceFile: inv.invoiceFile,
-		})),
-		flyerType: data.flyerType,
-		otherFlyerType: data.otherFlyerType,
-		flyerAdvertisingStartDate: data.flyerAdvertisingStartDate,
-		flyerAdditionalRequests: data.flyerAdditionalRequests,
-		photographyNeeded: data.photographyNeeded,
-		requiredLogos: data.requiredLogos,
-		otherLogos: data.otherLogos,
-		advertisingFormat: data.advertisingFormat,
-		willOrHaveRoomBooking: data.willOrHaveRoomBooking,
-		roomBookingFiles: data.roomBookingFiles,
-		asFundingRequired: data.asFundingRequired,
-		foodDrinksBeingServed: data.foodDrinksBeingServed,
-		additionalSpecifications: data.additionalSpecifications,
-		flyersCompleted: data.flyersCompleted,
-		graphicsUploadNote: data.graphicsUploadNote || undefined,
 	};
 }
 
@@ -430,58 +378,7 @@ function ManageEventsPage() {
 		if (!logtoId) return;
 		setIsProcessing(true);
 		try {
-			await createEvent({
-				logtoId,
-				eventName: data.eventName,
-				location: data.location,
-				startDate: data.startDate,
-				endDate: data.endDate,
-				eventDescription: data.eventDescription,
-				eventCode: data.eventCode,
-				eventType: normalizeEventType(data.eventType),
-				department: data.department,
-				expectedAttendance: data.estimatedAttendance,
-				flyersNeeded: data.needsFlyers,
-				needsGraphics: data.needsGraphics,
-				needsAsFunding: data.needsASFunding,
-				invoices: data.invoices.map((inv) => ({
-					id: inv._id,
-					vendor: inv.vendor,
-					items:
-						inv.items.length > 0
-							? inv.items
-							: [
-									{
-										description: inv.description,
-										quantity: 1,
-										unitPrice: inv.amount,
-										total: inv.amount,
-									},
-								],
-					tax: inv.tax || 0,
-					tip: inv.tip || 0,
-					subtotal: inv.subtotal || inv.amount,
-					total: inv.total || inv.amount,
-					additionalFiles: inv.additionalFiles || ([] as string[]),
-					invoiceFile: inv.invoiceFile,
-				})),
-				isDraft: false,
-				flyersCompleted: data.flyersCompleted,
-				photographyNeeded: data.photographyNeeded,
-				requiredLogos: data.requiredLogos,
-				otherFlyerType: data.otherFlyerType,
-				flyerAdvertisingStartDate: data.flyerAdvertisingStartDate,
-				flyerAdditionalRequests: data.flyerAdditionalRequests,
-				advertisingFormat: data.advertisingFormat,
-				otherLogos: data.otherLogos,
-				asFundingRequired: data.asFundingRequired,
-				flyerType: data.flyerType,
-				willOrHaveRoomBooking: data.willOrHaveRoomBooking,
-				roomBookingFiles: data.roomBookingFiles,
-				foodDrinksBeingServed: data.foodDrinksBeingServed,
-				additionalSpecifications: data.additionalSpecifications,
-				graphicsUploadNote: data.graphicsUploadNote || undefined,
-			});
+			await createEvent(buildCreateEventArgs(logtoId, data));
 			toast.success("Event request submitted successfully!");
 
 			// Fire-and-forget email notification
@@ -513,11 +410,16 @@ function ManageEventsPage() {
 
 	const handleSaveRequest = async (data: EventFormData) => {
 		if (!logtoId || !editingRequest) return;
+		const eventId = resolvePersistedEventId(editingRequest._id);
+		if (!eventId) {
+			toast.error(
+				"This draft is not saved yet. Submit the request to create it.",
+			);
+			return;
+		}
 		setIsProcessing(true);
 		try {
-			await updateEvent(
-				buildUpdateEventArgs(logtoId, editingRequest._id, data),
-			);
+			await updateEvent(buildUpdateEventArgs(logtoId, eventId, data));
 			toast.success("Event saved successfully!");
 		} catch (error: any) {
 			toast.error(error.message || "Failed to save event");
@@ -530,19 +432,21 @@ function ManageEventsPage() {
 	// Update event handler
 	const handleUpdateRequest = async (data: EventFormData) => {
 		if (!logtoId || !editingRequest) return;
+		const eventId = resolvePersistedEventId(editingRequest._id);
+		if (!eventId) {
+			await handleCreateRequest(data);
+			return;
+		}
 		setIsProcessing(true);
 		try {
 			const convertingDraft = editingRequest.status === "draft";
-			const eventId = editingRequest._id as any;
 
-			await updateEvent(
-				buildUpdateEventArgs(logtoId, editingRequest._id, data),
-			);
+			await updateEvent(buildUpdateEventArgs(logtoId, eventId, data));
 
 			if (convertingDraft) {
 				await updateEventStatus({
 					logtoId,
-					id: eventId,
+					id: asEventId(eventId),
 					status: "submitted",
 				});
 				toast.success("Event request submitted successfully!");
@@ -1168,8 +1072,16 @@ function ManageEventsPage() {
 					setIsWizardOpen(false);
 					setEditingRequest(null);
 				}}
-				onSubmit={editingRequest ? handleUpdateRequest : handleCreateRequest}
-				onSave={editingRequest ? handleSaveRequest : undefined}
+				onSubmit={
+					hasPersistedEventId(editingRequest?._id)
+						? handleUpdateRequest
+						: handleCreateRequest
+				}
+				onSave={
+					hasPersistedEventId(editingRequest?._id)
+						? handleSaveRequest
+						: undefined
+				}
 				initialData={editingRequest || undefined}
 				aiEnabled={aiEnabled}
 			/>
@@ -1208,10 +1120,14 @@ function ManageEventsPage() {
 				onConvertToRequest={(event) => {
 					setIsDraftViewModalOpen(false);
 					setSelectedRequest(null);
-					setEditingRequest({
-						...event,
-						status: "draft",
-					} as EventRequest);
+					setEditingRequest(
+						buildEditingRequestFromConvertedDraft({
+							draftData: event,
+							persistedId: event._id,
+							createdBy: event.createdBy,
+							creationTime: event._creationTime,
+						}),
+					);
 					setIsWizardOpen(true);
 				}}
 			/>
@@ -1238,14 +1154,14 @@ function ManageEventsPage() {
 					setIsDraftModalOpen(false);
 					setEditingDraft(null);
 					setDraftDate(null);
-					// Open wizard with draft data prefilled
-					setEditingRequest({
-						...data,
-						_id: editingDraft?._id,
-						_creationTime: editingDraft?._creationTime || Date.now(),
-						status: "draft",
-						createdBy: editingDraft?.createdBy || "Unknown",
-					} as EventRequest);
+					setEditingRequest(
+						buildEditingRequestFromConvertedDraft({
+							draftData: data,
+							persistedId: editingDraft?._id,
+							createdBy: editingDraft?.createdBy,
+							creationTime: editingDraft?._creationTime,
+						}),
+					);
 					setIsWizardOpen(true);
 				}}
 			/>
