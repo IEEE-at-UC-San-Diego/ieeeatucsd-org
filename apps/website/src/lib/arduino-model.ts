@@ -222,6 +222,47 @@ export const LINE_WIDTHS: Record<LineKind, number> = {
   dim: 0.9,
 };
 
+/** Vertical FOV used by the hero viewer. */
+export const ARDUINO_FOV = 24;
+
+/**
+ * Half-extents the camera fits, in board millimetres. Width sets on-screen
+ * scale; height is a floor so a very wide, short canvas cannot blow the model
+ * up. Extra canvas height (when width is the tighter fit) becomes margin
+ * around the board instead of zooming out — so a taller hero frame does not
+ * shrink the model.
+ */
+export const ARDUINO_FIT_HALF_WIDTH = 64;
+export const ARDUINO_FIT_HALF_HEIGHT = 35;
+
+/** Nudge the drafting so left-hand dimension lines and the DC jack clear the frame. */
+export const ARDUINO_FRAME_SHIFT = { x: 9, y: 3.5 };
+
+/** Camera distance that preserves board scale for a canvas of `width`×`height`. */
+export function arduinoCameraDistance(
+  width: number,
+  height: number,
+  fovDeg = ARDUINO_FOV,
+): number {
+  const tanH = Math.tan((fovDeg * Math.PI) / 360);
+  const aspect = Math.max(width, 1) / Math.max(height, 1);
+  return Math.max(
+    ARDUINO_FIT_HALF_WIDTH / (tanH * aspect),
+    ARDUINO_FIT_HALF_HEIGHT / tanH,
+  );
+}
+
+/** On-screen pixels per board millimetre at the look-at plane. */
+export function arduinoPixelsPerWorldUnit(
+  width: number,
+  height: number,
+  fovDeg = ARDUINO_FOV,
+): number {
+  const distance = arduinoCameraDistance(width, height, fovDeg);
+  const tanH = Math.tan((fovDeg * Math.PI) / 360);
+  return Math.max(height, 1) / (2 * distance * tanH);
+}
+
 /* ------------------------------------------------------------------ */
 
 function mulberry32(seed: number) {
