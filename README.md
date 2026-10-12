@@ -62,6 +62,8 @@ docker compose up dashboard # http://localhost:4323
 
 Health endpoints: `/api/health` on both services.
 
+The compose file uses `expose`, not `ports`: the services are reachable on the Docker network (for the reverse proxy) but do not bind a host port. To open one from your machine, publish its port for that run, e.g. `docker compose run --rm -p 4321:4321 website`.
+
 See [`docs/deployment.md`](docs/deployment.md) for Dokploy configuration and rollout steps.
 
 ## Package ownership

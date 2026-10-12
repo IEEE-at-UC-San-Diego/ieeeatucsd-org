@@ -4,42 +4,44 @@ import { Image } from "astro:assets";
 import robocup from "../../images/robocup.webp";
 ---
 
-<div class="flex flex-col items-center relative my-[10%]">
-  <Image
-    src={robocup}
-    alt="robocub competition image"
-    class="md:w-3/5 w-[90%] rounded-[2cqw] object-cover aspect-[8/5] opacity-40"
-  />
+<section class="page-section">
   <a
     href="https://docs.google.com/forms/d/e/1FAIpQLSex5VejEiClvgcfhSBQJ9IH5Q008j-HWC5Y9YAa56yIHgGBvw/viewform?usp=sf_link"
     target="_blank"
-    class="absolute aspect-[8/5] md:w-3/5 w-[90%] p-[5%] group -bottom-[3%]"
+    class="group grid items-center gap-10 no-underline md:grid-cols-12 md:gap-12"
   >
-    <div class="w-full flex justify-end items-center h-4/5">
-      <p class="md:text-[4.5cqw] text-[7cqw] font-bold w-fit">
-        We Are<br />
-        Hiring
-      </p>
-    </div>
-    <div class="md:text-[1cqw] text-[1.5cqw] md:pt-[3%]">
-      <p>
-        Join a community of novice to experienced engineers from a wide range of
-        disciplines and backgrounds.
-      </p>
-      <p>
-        Fill out this application form (due week 2 of each quarter if space
-        permits)
-      </p>
-    </div>
-    <div
-      class="flex w-full justify-end items-end md:text-[3.5cqw] text-[6cqw] mt-[3%] group-hover:text-ieee-yellow duration-300"
-    >
-      <p
-        class="mr-[2%] w-fit py-[1%] px-[2%] md:text-[1.2cqw] text-[2cqw] border-[0.1cqw] group-hover:text-ieee-yellow border-white rounded-full group-hover:border-ieee-yellow duration-300 font-light"
+    <div class="md:col-span-5">
+      <h2 class="display text-white">We Are<br />Hiring</h2>
+      <div class="copy mt-6 max-w-xl">
+        <p>
+          Join a community of novice to experienced engineers from a wide range
+          of disciplines and backgrounds.
+        </p>
+        <p class="mt-3">
+          Fill out this application form (due week 2 of each quarter if space
+          permits)
+        </p>
+      </div>
+      <span
+        class="mt-8 inline-flex w-fit items-center gap-2 text-ieee-blue-100 transition-colors duration-200 group-hover:text-ieee-yellow"
       >
         Application form
-      </p>
-      <GoArrowDownRight />
+        <GoArrowDownRight
+          className="text-xl transition duration-300 group-hover:translate-x-1 group-hover:translate-y-1"
+        />
+      </span>
+    </div>
+
+    <div class="md:col-span-7">
+      <div
+        class="overflow-hidden rounded-[28px] border border-ieee-blue-100/15"
+      >
+        <Image
+          src={robocup}
+          alt="robocub competition image"
+          class="aspect-[16/10] w-full object-cover"
+        />
+      </div>
     </div>
   </a>
-</div>
+</section>

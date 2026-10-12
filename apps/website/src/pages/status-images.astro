@@ -23,99 +23,160 @@ const imageHeight = 150;
     <meta name="generator" content={Astro.generator} />
     <title>Reimbursement Status Images</title>
     <Font cssVariable="--font-ibm-plex-sans" />
+    <Font cssVariable="--font-ibm-plex-mono" />
     <style>
+      :root {
+        --ink: #101828;
+        --muted: #5b6b85;
+        --line: #dbe3ef;
+        --canvas: #f4f6fb;
+        --card: #ffffff;
+        --navy: #0a2463;
+        --deep: #233363;
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
         font-family: var(--font-ibm-plex-sans);
-        background: #f8fafc;
+        background: var(--canvas);
+        color: var(--ink);
         margin: 0;
-        padding: 40px 20px;
+        padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 2rem);
         line-height: 1.6;
+      }
+      .mono {
+        font-family: var(--font-ibm-plex-mono);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        font-size: 0.72rem;
+        color: var(--muted);
       }
       .container {
         max-width: 1200px;
         margin: 0 auto;
-        background: white;
-        border-radius: 12px;
-        padding: 40px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+      header {
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 1.5rem;
+        margin-bottom: 2rem;
       }
       h1 {
-        color: #1e293b;
-        text-align: center;
-        margin-bottom: 40px;
-        font-size: 2rem;
-        font-weight: 700;
+        margin: 0.5rem 0 0;
+        font-size: clamp(1.7rem, 4vw, 2.5rem);
+        letter-spacing: -0.03em;
+        line-height: 1.05;
       }
       h2 {
-        color: #475569;
-        margin: 40px 0 20px 0;
-        font-size: 1.5rem;
-        font-weight: 600;
-        border-bottom: 2px solid #e2e8f0;
-        padding-bottom: 10px;
+        color: var(--ink);
+        margin: 0;
+        font-size: 1.2rem;
+        letter-spacing: -0.02em;
+      }
+      .section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 1.5rem;
+        padding: clamp(1.25rem, 3vw, 2rem);
+        margin-bottom: 1.5rem;
+      }
+      .section-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.75rem 1rem;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+      }
+      .section-head p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        max-width: 65ch;
       }
       .status-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        gap: 30px;
-        margin-bottom: 50px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.25rem;
       }
       .status-item {
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 20px;
-        background: #f8fafc;
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        padding: 1.25rem;
+        background: var(--canvas);
       }
       .status-title {
-        font-size: 18px;
+        margin: 0 0 0.75rem;
+        color: var(--ink);
+        font-size: 0.95rem;
         font-weight: 600;
-        color: #475569;
-        margin-bottom: 15px;
+        letter-spacing: -0.01em;
         text-transform: capitalize;
       }
       .status-image {
+        display: block;
         width: 100%;
         height: auto;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        background: white;
+        border: 1px solid var(--line);
+        border-radius: 0.6rem;
+        background: var(--card);
       }
       .image-url {
-        margin-top: 10px;
-        padding: 8px 12px;
-        background: #f1f5f9;
-        border-radius: 4px;
-        font-family: "Courier New", monospace;
-        font-size: 12px;
-        color: #64748b;
+        margin-top: 0.85rem;
+        padding: 0.6rem 0.75rem;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 0.5rem;
+        font-family: var(--font-ibm-plex-mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.02em;
+        color: var(--muted);
         word-break: break-all;
       }
-      .demo-section {
-        background: #f8f9fa;
-        padding: 30px;
-        border-radius: 12px;
-        margin: 30px 0;
-        border: 2px solid #e2e8f0;
-      }
       .email-demo {
-        background: white;
-        padding: 30px;
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
-        margin: 20px 0;
+        background: linear-gradient(135deg, var(--navy) 0%, var(--deep) 100%);
+        color: #ffffff;
+        padding: clamp(1.5rem, 3vw, 2rem);
+        border-radius: 1rem;
+      }
+      .email-demo h3 {
+        margin: 0 0 1rem;
+        color: #ffffff;
+        font-size: 1.1rem;
+      }
+      .email-demo p {
+        margin: 0 0 1.25rem;
+        color: rgba(255, 255, 255, 0.78);
+      }
+      .email-demo p:last-child {
+        margin: 1.25rem 0 0;
+        font-size: 0.85rem;
+      }
+      .email-demo img {
+        width: 100%;
+        max-width: 500px;
+        height: auto;
+        border-radius: 0.6rem;
+        display: block;
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>Reimbursement Status Progress Images</h1>
+      <header>
+        <p class="mono">IEEE at UC San Diego · Reimbursement</p>
+        <h1>Reimbursement Status Progress Images</h1>
+      </header>
 
-      <div class="demo-section">
-        <h2>🖼️ PNG Status Progress Images</h2>
-        <p>
-          High-quality PNG images generated from SVG using Puppeteer with
-          transparent backgrounds:
-        </p>
+      <section class="section">
+        <div class="section-head">
+          <h2>PNG Status Progress Images</h2>
+          <p>
+            High-quality PNG images generated from SVG using Puppeteer with
+            transparent backgrounds:
+          </p>
+        </div>
 
         <div class="status-grid">
           {
@@ -129,45 +190,39 @@ const imageHeight = 150;
                   loading="lazy"
                 />
                 <div class="image-url">
-                  🖼️ PNG API: /api/generate-status-image?status={status}
+                  PNG API: /api/generate-status-image?status={status}
                 </div>
               </div>
             ))
           }
         </div>
-      </div>
+      </section>
 
-      <div class="demo-section">
-        <h2>📨 Email Integration Demo</h2>
-        <p>
-          Here's how the PNG images look when embedded in an email-like
-          environment:
-        </p>
-
-        <div
-          class="email-demo"
-          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;"
-        >
-          <h3 style="color: white; margin: 0 0 20px 0;">
-            IEEE UCSD Reimbursement Update
-          </h3>
-          <p style="color: #f1f5f9; margin-bottom: 20px;">
-            Your reimbursement request has been updated:
+      <section class="section">
+        <div class="section-head">
+          <h2>Email Integration Demo</h2>
+          <p>
+            Here's how the PNG images look when embedded in an email-like
+            environment:
           </p>
+        </div>
+
+        <div class="email-demo">
+          <h3>IEEE UCSD Reimbursement Update</h3>
+          <p>Your reimbursement request has been updated:</p>
 
           <img
             src={`/api/generate-status-image?status=approved&width=500&height=150`}
             alt="Status progress embedded in email"
-            style="width: 100%; max-width: 500px; height: auto; border-radius: 8px;"
             loading="lazy"
           />
 
-          <p style="color: #f1f5f9; margin-top: 20px; font-size: 14px;">
-            ✨ PNG images with transparent backgrounds work perfectly in all
-            email clients
+          <p>
+            PNG images with transparent backgrounds work perfectly in all email
+            clients
           </p>
         </div>
-      </div>
+      </section>
     </div>
   </body>
 </html>

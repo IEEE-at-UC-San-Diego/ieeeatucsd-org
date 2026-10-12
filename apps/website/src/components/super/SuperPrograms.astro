@@ -1,13 +1,12 @@
 ---
 import SuperProgram from "../../components/super/SuperProgram.astro";
-import Subtitle from "../core/Subtitle.astro";
+import SectionHeading from "../core/SectionHeading.astro";
 import programs from "../../data/programs.json";
 ---
 
-<div class="max-w-5xl mx-auto">
-  <div class="flex flex-col items-center pb-[5%]">
-    <Subtitle title="Our Programs" />
+<section class="page-section" aria-labelledby="programs-heading">
+  <SectionHeading id="programs-heading" title="Our Programs" />
+  <div class="mt-10 md:mt-14">
+    {programs.map((program) => <SuperProgram {...program} />)}
   </div>
-
-  {programs.map((program) => <SuperProgram {...program} />)}
-</div>
+</section>

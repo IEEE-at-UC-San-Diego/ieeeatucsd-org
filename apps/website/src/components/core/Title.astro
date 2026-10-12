@@ -1,9 +1,22 @@
 ---
+// Opening block of an inner page: large display title (+ optional lead).
+// The title text is always the page's <h1>.
+interface Props {
+  title: string;
+}
+
 const { title } = Astro.props;
 ---
 
-<header class="page-section pt-10 md:pt-16 pb-4">
-  <h1 class="font-display font-bold text-[clamp(2rem,5vw,3.6rem)]">
+<header class="page-hero bp-grid">
+  <h1 class="display max-w-5xl" data-reveal style="--reveal-delay: 60ms">
     {title}
   </h1>
+  {
+    Astro.slots.has("default") && (
+      <p class="lead mt-6 max-w-2xl" data-reveal style="--reveal-delay: 140ms">
+        <slot />
+      </p>
+    )
+  }
 </header>

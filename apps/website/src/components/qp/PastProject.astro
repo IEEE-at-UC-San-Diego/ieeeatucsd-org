@@ -2,35 +2,39 @@
 import { GoArrowDownRight } from "react-icons/go";
 import { Image } from "astro:assets";
 import { resolveImage } from "../../lib/images";
-const { title, link, image, col } = Astro.props;
+const { title, link, image, span = "", delay = 0 } = Astro.props;
 const resolvedImage = resolveImage(image);
 ---
 
 <a
   href={link}
   target="_blank"
-  class={`ease-in-out group relative col-span-${col} text-white`}
+  class:list={[
+    "group relative block row-span-1 overflow-hidden rounded-[18px] border border-ieee-blue-100/15",
+    span,
+  ]}
+  data-reveal
+  style={`--reveal-delay: ${delay}ms`}
 >
   <Image
     src={resolvedImage}
     alt="past projects image"
-    class="md:h-[30vh] h-[15vh] object-cover w-full rounded-[1.5cqw] opacity-80 group-hover:opacity-40 duration-300"
+    class="absolute inset-0 h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.04]"
   />
 
   <div
-    class="absolute bottom-0 px-[3%] w-full bg-gradient-to-t from-black via-black to-transparent rounded-b-[1.5cqw] pb-[1cqw] pt-[5%]"
+    class="pointer-events-none absolute inset-0 bg-gradient-to-t from-ieee-black/90 via-ieee-black/20 to-transparent"
   >
-    <div
-      class="text-[1.4cqw] md:text-[1.1cqw] flex w-full px-[2%] justify-between items-end"
-    >
-      <p
-        class="py-[0.3cqw] px-[1cqw] border-[0.1cqw] text-nowrap border-white rounded-full group-hover:text-ieee-yellow group-hover:border-ieee-yellow duration-300 font-light"
-      >
-        {title}
-      </p>
-      <GoArrowDownRight
-        className="text-[3cqw] leading-none group-hover:text-ieee-yellow duration-300"
-      />
-    </div>
+  </div>
+
+  <div
+    class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-2.5 md:p-3"
+  >
+    <p class="text-xs font-medium leading-tight tracking-wide text-white">
+      {title}
+    </p>
+    <GoArrowDownRight
+      className="shrink-0 text-lg text-white/80 transition duration-300 group-hover:translate-x-1 group-hover:translate-y-1 group-hover:text-ieee-yellow md:text-xl"
+    />
   </div>
 </a>

@@ -27,8 +27,20 @@ const seoProps = {
 
 <Layout {...seoProps}>
   <EventTitle />
-  <UpcomingEvents events={events} />
-  <div class="w-full pb-[10%]">
-    <Calendar client:load events={events} publicCalendarId={publicCalendarId} />
-  </div>
+  <section class="pb-24 md:pb-32">
+    <div
+      class="grid grid-cols-1 gap-y-16 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-0 xl:gap-x-20"
+    >
+      <div class="lg:col-span-4">
+        <UpcomingEvents events={events} />
+      </div>
+      <div class="lg:col-span-8">
+        <Calendar
+          client:load
+          events={events}
+          publicCalendarId={publicCalendarId}
+        />
+      </div>
+    </div>
+  </section>
 </Layout>

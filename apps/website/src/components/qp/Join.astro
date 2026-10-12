@@ -1,48 +1,36 @@
 ---
 import { Image } from "astro:assets";
-import mentorship from "../../images/mentorship.webp";
-import join from "../../images/join.png";
+import joinPhoto from "../../images/join.png";
 ---
 
-<div class="flex justify-center mb-[10%]">
-  <div class="flex md:w-[70%] w-[80%] items-center">
-    <div class="w-1/2 flex justify-center h-full relative">
-      <Image src={mentorship} alt="blue background" class="mr-[20%]" />
+<section class="page-section">
+  <div class="grid gap-8 md:grid-cols-2 md:items-center md:gap-12 lg:gap-16">
+    <div
+      class="relative overflow-hidden rounded-[20px] border border-ieee-blue-100/15"
+      data-reveal
+    >
       <Image
-        src={join}
+        src={joinPhoto}
         alt="blue background"
-        class="absolute rounded-full object-cover aspect-[262/433] w-[54%] md:top-[5%] top-[9%] left-0 opacity-80"
+        class="aspect-[4/3] w-full object-cover object-top"
       />
     </div>
-    <div class="w-1/2 font-light md:text-[1.2cqw] text-[1.6cqw]">
-      <div class="flex items-center md:text-[2.3cqw] text-[4cqw] mb-[5%]">
-        <div class="mr-[1cqw] pt-[0.5%]">
-          <span class="text-ieee-yellow">●</span>
-        </div>
-        <p
-          class="md:text-[2.3cqw] text-[4cqw] font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-ieee-yellow"
-        >
-          How to join
-        </p>
-      </div>
-      <p class="my-[10%]">
+    <div data-reveal style="--reveal-delay: 80ms">
+      <h2 class="headline text-white">How to join</h2>
+      <p class="copy mt-6 max-w-xl">
         We will create a QP Application every quarter and send it out to
         prospective participants via the IEEE discord or Instagram page.
       </p>
-      <!-- <p class="mb-[12%]">
-        URL to Drive Folder with every school year’s QP Application forms (3 per
-        school year):
-      </p> -->
-      <p class="mb-[12%]">Links to this quarter's application forms:</p>
-      <div class="w-full flex flex-col items-center gap-4">
-        <a
-          href="https://forms.gle/QNxqwCkFCPPsxtAq8"
-          target="_blank"
-          class="py-[2%] px-[15%] md:text-[1.2cqw] text-[1.6cqw] border-[0.1cqw] border-white rounded-[0.5cqw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300 font-light"
-        >
-          QP APPLICATION
-        </a>
-      </div>
+      <p class="copy mt-5 max-w-xl">
+        Links to this quarter's application forms:
+      </p>
+      <a
+        href="https://forms.gle/QNxqwCkFCPPsxtAq8"
+        target="_blank"
+        class="ieee-btn ieee-btn-ghost mt-8"
+      >
+        QP APPLICATION
+      </a>
     </div>
   </div>
-</div>
+</section>

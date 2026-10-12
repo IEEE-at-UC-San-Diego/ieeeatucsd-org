@@ -1,50 +1,222 @@
 ---
+// Horizontal drafting-style timeline: label above, a single hairline with
+// diamond nodes, description below. Used by Quarterly Project and RoboCup.
 const { timeline } = Astro.props;
-import Subtitle from "../core/Subtitle.astro";
+import SectionHeading from "../core/SectionHeading.astro";
 ---
 
-<div
-  class="flex flex-col items-center md:mt-[10%] mt-[25%] md:mb-[15%] mb-[35%]"
->
-  <Subtitle title="Timeline" />
+<section class="page-section" aria-labelledby="timeline-heading">
+  <div class="flex items-end justify-between gap-6">
+    <SectionHeading id="timeline-heading" title="Timeline" />
+    <div class="tl-controls" hidden>
+      <button type="button" class="tl-btn" data-dir="-1" aria-label="Earlier">
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+          <path
+            d="M12 4 6 10l6 6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"></path>
+        </svg>
+      </button>
+      <button type="button" class="tl-btn" data-dir="1" aria-label="Later">
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+          <path
+            d="m8 4 6 6-6 6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
 
   <div
-    class="relative flex items-center justify-between w-full md:max-w-[75cqw] max-w-[85cqw] py-[10%] md:mt-[7%] mt-[10%]"
+    class="tl-scroll mt-12 md:mt-16"
+    tabindex="0"
+    role="region"
+    aria-label="Timeline"
+    data-reveal
   >
-    <div
-      class="absolute top-1/2 w-full h-[0.1cqw] bg-gray-200 transform -translate-y-1/2"
-    >
-    </div>
-
-    {
-      timeline.map((event: any, index: number) => (
-        <div class="relative flex flex-col items-center" style={`flex: 1`}>
-          <div
-            class={`absolute ${
-              index % 2 === 0 ? "bottom-0 mb-[70%]" : "top-0 mt-[70%]"
-            } flex flex-col items-center`}
-          >
-            <div class="text-center">
-              <div class="font-bold text-ieee-yellow md:text-[1.4cqw] text-[2cqw]">
-                {event.week}
-              </div>
-              <div class="md:text-[1.1cqw] text-[1.5cqw] text-gray-300 md:max-w-[10cqw] max-w-[15cqw]">
-                {event.description}
-              </div>
-            </div>
-          </div>
-
-          <div
-            class={`absolute ${
-              index % 2 === 1 ? "h-[5cqw] top-1/2" : "h-[5cqw] bottom-1/2"
-            } w-[0.1cqw] bg-white`}
-          />
-
-          <div class="absolute top-1/2 transform -translate-y-1/2">
-            <div class="w-[1.2cqw] h-[1.2cqw] bg-white border-2 rounded-full" />
-          </div>
-        </div>
-      ))
-    }
+    <ol class="tl-track">
+      {
+        timeline.map((event: any) => (
+          <li class="tl-item">
+            <p class="tl-label">{event.week}</p>
+            <span class="tl-node" aria-hidden="true" />
+            <p class="tl-desc">{event.description}</p>
+          </li>
+        ))
+      }
+    </ol>
   </div>
-</div>
+</section>
+
+<style>
+  .tl-scroll {
+    --tl-fade: 0px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      #000 calc(100% - var(--tl-fade)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      90deg,
+      #000 calc(100% - var(--tl-fade)),
+      transparent
+    );
+  }
+
+  .tl-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tl-scroll[data-more="true"] {
+    --tl-fade: 4rem;
+  }
+
+  .tl-track {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(11.5rem, 1fr);
+    width: 100%;
+    min-width: min-content;
+  }
+
+  .tl-item {
+    scroll-snap-align: start;
+    padding-right: 1.5rem;
+  }
+
+  .tl-label {
+    display: flex;
+    align-items: flex-end;
+    min-height: 2.6rem;
+    font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+    font-size: 0.74rem;
+    line-height: 1.35;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #88bfec;
+  }
+
+  /* the hairline: runs from each node to the next one */
+  .tl-node {
+    position: relative;
+    display: block;
+    height: 2rem;
+  }
+
+  .tl-node::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: -1.5rem; /* bridges the item's right padding */
+    top: 50%;
+    height: 1px;
+    background: rgba(136, 191, 236, 0.28);
+  }
+
+  .tl-item:last-child .tl-node::before {
+    display: none;
+  }
+
+  .tl-node::after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    translate: -50% -50%;
+    transform: rotate(45deg);
+    background: #0a0e1a;
+    border: 1.5px solid #f3c135;
+  }
+
+  .tl-desc {
+    max-width: 16rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.84);
+  }
+
+  .tl-controls {
+    display: flex;
+    gap: 0.5rem;
+    padding-bottom: 0.4rem;
+  }
+
+  .tl-controls[hidden] {
+    display: none;
+  }
+
+  .tl-btn {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 0.65rem;
+    color: #fff;
+    transition:
+      border-color 200ms ease,
+      background-color 200ms ease,
+      opacity 200ms ease;
+  }
+
+  .tl-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .tl-btn:not(:disabled):hover {
+      border-color: rgba(136, 191, 236, 0.7);
+      background: rgba(136, 191, 236, 0.1);
+    }
+  }
+
+  @media (max-width: 639px) {
+    .tl-controls {
+      display: none !important;
+    }
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>(".tl-scroll").forEach((scroller) => {
+    const section = scroller.closest("section")!;
+    const controls = section.querySelector<HTMLElement>(".tl-controls")!;
+    const [prev, next] = Array.from(
+      controls.querySelectorAll<HTMLButtonElement>(".tl-btn"),
+    );
+
+    function update() {
+      const max = scroller.scrollWidth - scroller.clientWidth;
+      const overflow = max > 4;
+      controls.hidden = !overflow;
+      scroller.dataset.more = String(overflow && scroller.scrollLeft < max - 4);
+      prev.disabled = scroller.scrollLeft <= 4;
+      next.disabled = scroller.scrollLeft >= max - 4;
+    }
+
+    controls.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(
+        ".tl-btn",
+      );
+      if (!btn) return;
+      scroller.scrollBy({
+        left: Number(btn.dataset.dir) * scroller.clientWidth * 0.8,
+        behavior: "smooth",
+      });
+    });
+
+    scroller.addEventListener("scroll", update, { passive: true });
+    new ResizeObserver(update).observe(scroller);
+    update();
+  });
+</script>

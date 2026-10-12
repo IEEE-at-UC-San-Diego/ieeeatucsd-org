@@ -3,15 +3,39 @@ import { Image } from "astro:assets";
 import eventbg from "../../images/eventbg.webp";
 ---
 
-<header class="page-section pt-10 md:pt-16">
-  <div class="ieee-panel overflow-hidden">
-    <Image
-      src={eventbg}
-      alt="IEEE at UC San Diego event"
-      class="w-full aspect-[2/1] max-h-[28rem] object-cover"
-    />
+<header class="pt-[clamp(1.5rem,3vw,2.5rem)] pb-[clamp(2.5rem,5vw,4rem)]">
+  <div class="ticks">
+    <div
+      class="event-hero relative isolate overflow-hidden rounded-[1.75rem] border border-white/10"
+      data-reveal
+    >
+      <Image
+        src={eventbg}
+        alt="IEEE at UC San Diego event"
+        loading="eager"
+        class="absolute inset-0 -z-20 h-full w-full object-cover object-[50%_30%]"
+      />
+      <!-- scrim: keeps the title legible and melts the photo into the page -->
+      <div
+        class="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(10,14,26,0)_0%,rgba(10,14,26,0)_45%,rgba(10,14,26,0.78)_100%)]"
+      >
+      </div>
+      <div
+        class="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(10,14,26,0.4)_0%,rgba(10,14,26,0)_50%)]"
+      >
+      </div>
+
+      <div
+        class="flex h-full flex-col justify-end p-[clamp(1.5rem,4vw,3.5rem)]"
+      >
+        <h1 class="display text-white">Events</h1>
+      </div>
+    </div>
   </div>
-  <h1 class="mt-8 font-display font-bold text-[clamp(2rem,5vw,3.6rem)]">
-    Events
-  </h1>
 </header>
+
+<style>
+  .event-hero {
+    height: clamp(17rem, 40vw, 31rem);
+  }
+</style>

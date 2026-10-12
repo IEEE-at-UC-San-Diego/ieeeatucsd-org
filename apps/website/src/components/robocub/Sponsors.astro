@@ -1,41 +1,38 @@
 ---
-import { LiaDotCircle } from "react-icons/lia";
 import { Image } from "astro:assets";
 import northropLogo from "../../images/logos/Northrop_Grumman_Logo.png";
 import altiumLogo from "../../images/logos/Altium_logo.png";
 import solidworksLogo from "../../images/logos/SolidWorks_logo.png";
 import rivianLogo from "../../images/logos/Rivian_logo.png";
+import SectionHeading from "../core/SectionHeading.astro";
+
+const cell =
+  "flex h-28 items-center justify-center overflow-hidden border-b border-r border-ieee-blue-100/12 p-6 md:h-36";
+const logo =
+  "max-h-[78%] w-auto max-w-[86%] object-contain brightness-0 invert opacity-80 transition duration-300 hover:opacity-100";
 ---
 
-<div class="flex flex-col items-center text-white my-[5%]">
-  <div class="flex items-center text-[4.5cqw] md:text-[2.5cqw] mb-[3%]">
-    <LiaDotCircle className=" mr-[1cqw] pt-[0.5%]" />
-    <p
-      class="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-ieee-black"
-    >
-      Meet Our Sponsors
-    </p>
+<section class="page-section" aria-labelledby="sponsors-heading">
+  <SectionHeading id="sponsors-heading" title="Meet Our Sponsors" />
+  <div
+    class="mt-10 grid grid-cols-2 border-l border-t border-ieee-blue-100/12 md:mt-12 md:grid-cols-4"
+    data-reveal
+  >
+    <div class={cell}>
+      <Image
+        src={northropLogo}
+        alt="Northrop Logo"
+        class="h-[160%] w-auto max-w-none object-contain brightness-0 invert opacity-80 transition duration-300 hover:opacity-100"
+      />
+    </div>
+    <div class={cell}>
+      <Image src={altiumLogo} alt="Altium Logo" class={logo} />
+    </div>
+    <div class={cell}>
+      <Image src={solidworksLogo} alt="Solidworks Logo" class={logo} />
+    </div>
+    <div class={cell}>
+      <Image src={rivianLogo} alt="Rivian Logo" class={logo} />
+    </div>
   </div>
-  <div class="flex items-center pl-[2cqw] gap-[0.5cqw]">
-    <Image
-      src={northropLogo}
-      alt="Northrop Logo"
-      class="w-[17cqw] object-contain"
-    />
-    <Image
-      src={altiumLogo}
-      alt="Altium Logo"
-      class="w-[17cqw] object-contain"
-    />
-    <Image
-      src={solidworksLogo}
-      alt="Solidworks Logo"
-      class="w-[17cqw] object-contain"
-    />
-    <Image
-      src={rivianLogo}
-      alt="Rivian Logo"
-      class="w-[17cqw] object-contain"
-    />
-  </div>
-</div>
+</section>

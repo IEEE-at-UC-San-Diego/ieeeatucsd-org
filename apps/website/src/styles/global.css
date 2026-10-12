@@ -106,10 +106,29 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-ibm-plex-sans);
-    line-height: 1.65;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    font-feature-settings:
+      "kern" 1,
+      "liga" 1;
+  }
+
+  /* One deep-navy canvas with a single cool light source at the top —
+     the page reads like a lit drafting table rather than a flat fill. */
+  html {
+    background-color: #0a0e1a;
+  }
+
+  body {
+    background:
+      radial-gradient(
+        1100px 520px at 50% -140px,
+        rgba(136, 191, 236, 0.1),
+        transparent 70%
+      ),
+      #0a0e1a;
   }
 
   h1,
@@ -120,18 +139,22 @@
   h6,
   .font-display {
     font-family: var(--font-ibm-plex-sans);
-    letter-spacing: -0.02em;
-    line-height: 1.08;
+    letter-spacing: -0.022em;
+    line-height: 1.1;
     text-wrap: balance;
   }
 
   h1 {
-    letter-spacing: -0.035em;
+    letter-spacing: -0.04em;
     line-height: 1.02;
   }
 
   h2 {
-    letter-spacing: -0.03em;
+    letter-spacing: -0.035em;
+  }
+
+  p {
+    text-wrap: pretty;
   }
 
   /* Tabular figures wherever numbers should line up */
@@ -158,7 +181,7 @@
   }
 
   a:where(:not(.ieee-btn):not(.skip-link):not(:has(img))) {
-    @apply text-ieee-blue-100 underline underline-offset-[0.18em] decoration-ieee-blue-100/55;
+    @apply text-ieee-blue-100 underline underline-offset-[0.22em] decoration-ieee-blue-100/35;
     transition:
       color var(--duration-ui) ease,
       text-decoration-color var(--duration-ui) ease;
@@ -166,7 +189,7 @@
 
   @media (hover: hover) and (pointer: fine) {
     a:where(:not(.ieee-btn):not(.skip-link):not(:has(img))):hover {
-      @apply text-ieee-yellow decoration-ieee-yellow/85;
+      @apply text-ieee-yellow decoration-ieee-yellow/70;
     }
   }
 
@@ -214,7 +237,7 @@
     clip: auto;
     clip-path: none;
     white-space: normal;
-    border-radius: 999px;
+    border-radius: 0.5rem;
   }
 
   .page-main {
@@ -227,32 +250,194 @@
   }
 
   .page-section {
-    padding-block: clamp(3rem, 7vw, 5.5rem);
+    padding-block: clamp(4rem, 9vw, 8rem);
   }
 
+  /* Opening block of every inner page */
+  .page-hero {
+    padding-top: clamp(3.5rem, 9vw, 7rem);
+    padding-bottom: clamp(2.5rem, 6vw, 4.5rem);
+  }
+
+  /* ---------- Type ---------- */
+
+  .mono-label {
+    font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .display {
+    font-weight: 600;
+    font-size: clamp(2.6rem, 6.6vw, 5.75rem);
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+
+  .headline {
+    font-weight: 600;
+    font-size: clamp(2rem, 4.4vw, 3.5rem);
+    letter-spacing: -0.04em;
+    line-height: 1.04;
+  }
+
+  .title-3 {
+    font-weight: 600;
+    font-size: clamp(1.25rem, 2vw, 1.6rem);
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+  }
+
+  .lead {
+    font-size: clamp(1.05rem, 1.5vw, 1.3rem);
+    line-height: 1.55;
+    font-weight: 300;
+    letter-spacing: -0.01em;
+    color: rgba(255, 255, 255, 0.74);
+  }
+
+  .copy {
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: rgba(255, 255, 255, 0.68);
+  }
+
+  /* ---------- Surfaces ---------- */
+
+  .surface,
   .ieee-panel {
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 1.25rem;
+    position: relative;
+    border: 1px solid rgba(136, 191, 236, 0.14);
+    border-radius: 1.75rem;
     background:
       linear-gradient(
         180deg,
-        rgba(136, 191, 236, 0.08) 0%,
-        rgba(10, 14, 26, 0.4) 42%
+        rgba(255, 255, 255, 0.04),
+        rgba(255, 255, 255, 0)
       ),
-      rgba(13, 19, 36, 0.72);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+      #0d1324;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
+
+  .surface-flat {
+    border: 1px solid rgba(136, 191, 236, 0.14);
+    border-radius: 1.75rem;
+    background: rgba(13, 19, 36, 0.6);
+  }
+
+  .surface-link {
+    transition:
+      border-color var(--duration-ui) ease,
+      transform 320ms var(--ease-out),
+      background-color var(--duration-ui) ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .surface-link:hover {
+      border-color: rgba(136, 191, 236, 0.42);
+      transform: translateY(-3px);
+    }
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 0.4rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 0.875rem;
+    line-height: 1.2;
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  /* Spec-sheet rows: hairline-separated label / value pairs */
+  .spec-row {
+    display: flex;
+    gap: 1rem;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-block: 0.95rem;
+    border-top: 1px solid rgba(136, 191, 236, 0.14);
+  }
+
+  /* ---------- Blueprint motifs ---------- */
+
+  /* Fine drafting grid that fades out toward the edges */
+  .bp-grid {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .bp-grid::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(136, 191, 236, 0.075) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(136, 191, 236, 0.075) 1px, transparent 1px),
+      linear-gradient(rgba(136, 191, 236, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(136, 191, 236, 0.03) 1px, transparent 1px);
+    background-size:
+      80px 80px,
+      80px 80px,
+      16px 16px,
+      16px 16px;
+    -webkit-mask-image: radial-gradient(
+      ellipse 80% 80% at 50% 35%,
+      #000 25%,
+      transparent 78%
+    );
+    mask-image: radial-gradient(
+      ellipse 80% 80% at 50% 35%,
+      #000 25%,
+      transparent 78%
+    );
+  }
+
+  /* Corner registration marks, like the trim corners of a drawing sheet */
+  .ticks {
+    position: relative;
+    color: rgba(136, 191, 236, 0.55);
+  }
+
+  .ticks::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    pointer-events: none;
+    background:
+      linear-gradient(currentColor, currentColor) top left / 14px 1px,
+      linear-gradient(currentColor, currentColor) top left / 1px 14px,
+      linear-gradient(currentColor, currentColor) top right / 14px 1px,
+      linear-gradient(currentColor, currentColor) top right / 1px 14px,
+      linear-gradient(currentColor, currentColor) bottom left / 14px 1px,
+      linear-gradient(currentColor, currentColor) bottom left / 1px 14px,
+      linear-gradient(currentColor, currentColor) bottom right / 14px 1px,
+      linear-gradient(currentColor, currentColor) bottom right / 1px 14px;
+    background-repeat: no-repeat;
+  }
+
+  /* ---------- Buttons ---------- */
 
   .ieee-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.5rem;
     min-height: 2.75rem;
-    padding: 0.65rem 1.15rem;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.38);
+    padding: 0.7rem 1.4rem;
+    border-radius: 0.65rem;
+    border: 1px solid rgba(255, 255, 255, 0.22);
     color: #fff;
+    font-size: 0.95rem;
     font-weight: 500;
+    letter-spacing: -0.01em;
     line-height: 1.2;
     text-align: center;
     text-decoration: none;
@@ -274,14 +459,20 @@
   }
 
   .ieee-btn-ghost {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .ieee-btn-sm {
+    min-height: 2.25rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.875rem;
   }
 
   @media (hover: hover) and (pointer: fine) {
     .ieee-btn-ghost:hover {
-      color: #f3c135;
-      border-color: #f3c135;
-      background: rgba(243, 193, 53, 0.06);
+      color: #fff;
+      border-color: rgba(136, 191, 236, 0.7);
+      background: rgba(136, 191, 236, 0.1);
     }
 
     .ieee-btn-primary:hover {
@@ -289,13 +480,57 @@
       border-color: #ffd25a;
     }
   }
+
+  /* Quiet text link with a travelling arrow, like a "Learn more" in a keynote */
+  .btn-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+  }
+
+  .btn-link::after {
+    content: "→";
+    transition: transform 280ms var(--ease-out);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .btn-link:hover::after {
+      transform: translateX(4px);
+    }
+  }
+
+  /* ---------- Scroll reveal (progressive: only hides when JS is on) ---------- */
+
+  .js [data-reveal] {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 900ms var(--ease-out),
+      transform 900ms var(--ease-out);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  .js [data-reveal].is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .js [data-reveal] {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 /* Typographic Utilities */
 @layer utilities {
-  /* Monospace technical labels — instrument-panel precision */
   .font-mono-tech {
-    font-family: var(--font-ibm-plex-sans);
+    font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+    letter-spacing: 0.04em;
   }
 
   /* Lead paragraph — slightly larger, airier body copy */

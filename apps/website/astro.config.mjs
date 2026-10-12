@@ -58,6 +58,15 @@ export default defineConfig({
         subsets: ["latin"],
         fallbacks: ["sans-serif"],
       },
+      {
+        provider: fontProviders.fontsource(),
+        name: "IBM Plex Mono",
+        cssVariable: "--font-ibm-plex-mono",
+        weights: [400, 500],
+        styles: ["normal"],
+        subsets: ["latin"],
+        fallbacks: ["ui-monospace", "monospace"],
+      },
     ],
   },
 
@@ -76,6 +85,9 @@ export default defineConfig({
         "react-dom",
         "react/jsx-runtime",
         "react/jsx-dev-runtime",
+        // Pre-bundle up front: discovering it mid-session triggers a
+        // re-optimize that can load a second copy of React in dev.
+        "three",
       ],
       exclude: [
         "chunk-GP4JL5D5.js",

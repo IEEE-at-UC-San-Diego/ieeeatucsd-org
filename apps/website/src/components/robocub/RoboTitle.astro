@@ -4,37 +4,35 @@ import background from "../../images/robocup_bg.jpeg";
 import roboLogo from "../../images/triton_bots_logo.png";
 ---
 
-<div
-  class="flex items-center md:h-[35cqw] h-[45cqw] relative w-full pl-[10%] md:mt-[3%] mt-[10%] mb-[10%]"
+<header
+  class="relative isolate mt-6 mb-4 overflow-hidden rounded-[28px] border border-ieee-blue-100/15 md:mt-10 md:mb-8"
 >
   <Image
     src={background}
     alt="Robocup Background"
-    class="absolute left-1/2 -translate-x-1/2 w-screen top-0 opacity-90 h-[40cqw] object-cover"
+    class="absolute inset-0 h-full w-full object-cover opacity-80"
   />
   <div
-    class="absolute left-1/2 -translate-x-1/2 w-screen top-0 h-[40cqw] bg-gradient-to-r from-ieee-black via-ieee-black/80"
+    class="absolute inset-0 bg-gradient-to-r from-ieee-black via-ieee-black/85 to-ieee-black/30"
   >
   </div>
   <div
-    class="z-10 flex items-center md:text-[4cqw] text-[4.5cqw] ml-[7%] md:pt-[5%] pt-[10%] text-white font-semibold"
+    class="relative z-10 flex min-h-[clamp(16rem,38vw,26rem)] flex-col justify-end gap-6 p-6 md:p-12"
   >
-    <Image
-      src={roboLogo}
-      alt="Triton RoboCup Team Logo"
-      class="mr-[1cqw] w-[10cqw]"
-    />
-    <div class="flex flex-col">
-      <p>TritonBots RoboCup SSL Team</p>
-      <div class="-mt-[2cqw]">
-        <a
-          href="https://docs.google.com/forms/d/e/1FAIpQLSdigg2WPFvAGwaeY_i7uTEPkDplRUkPFb3w5SJLEQeZYNviXw/viewform?usp=sharing&ouid=108575348199269065111"
-          target="_blank"
-          class="md:text-[1.2cqw] text-[2cqw] font-light border-white/70 border-[0.1cqw] py-[1.5%] px-[10%] rounded-[0.5cqw] hover:text-ieee-yellow hover:border-ieee-yellow duration-300"
-        >
-          Interested? Apply Here
-        </a>
-      </div>
+    <div class="flex items-center gap-4 md:gap-6">
+      <Image
+        src={roboLogo}
+        alt="Triton RoboCup Team Logo"
+        class="w-14 shrink-0 md:w-20"
+      />
     </div>
+    <h1 class="display max-w-4xl text-white">TritonBots RoboCup SSL Team</h1>
+    <a
+      href="https://docs.google.com/forms/d/e/1FAIpQLSdigg2WPFvAGwaeY_i7uTEPkDplRUkPFb3w5SJLEQeZYNviXw/viewform?usp=sharing&ouid=108575348199269065111"
+      target="_blank"
+      class="ieee-btn ieee-btn-primary w-fit"
+    >
+      Interested? Apply Here
+    </a>
   </div>
-</div>
+</header>

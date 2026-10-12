@@ -7,7 +7,7 @@ const { faq } = Astro.props;
 
 <section class="page-section" aria-labelledby="faq-heading">
   <SectionHeading id="faq-heading" title="Frequently asked questions" />
-  <div class="mt-6">
+  <div class="mt-10 max-w-4xl border-t border-ieee-blue-100/12" data-reveal>
     {
       faq.map((item: { question: string; answer: string }) => (
         <Question question={item.question} answer={item.answer} />

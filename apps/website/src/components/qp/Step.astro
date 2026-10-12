@@ -1,14 +1,13 @@
 ---
-const { text, number, col, position, width } = Astro.props;
+const { text, number } = Astro.props;
 ---
 
-<div
-  class={`relative col-span-${col} border-[0.1cqw] border-white/30 text-[1.5cqw] md:text-[1.2cqw] bg-gradient-to-b from-white/10 to-ieee-blue-300/10 px-[1cqw] py-[2cqw] rounded-[1cqw] `}
+<li
+  class="grid grid-cols-[2.75rem_1fr] items-baseline gap-5 py-7 md:grid-cols-[5rem_1fr] md:gap-8 md:py-9"
+  data-reveal
 >
-  <p
-    class={`${position} text-[4cqw] opacity-10 font-bold absolute leading-tight `}
-  >
+  <span class="font-mono-tech text-lg text-ieee-blue-100/80 md:text-xl">
     {number}
-  </p>
-  {text}
-</div>
+  </span>
+  <p class="copy max-w-2xl text-white/80">{text}</p>
+</li>
