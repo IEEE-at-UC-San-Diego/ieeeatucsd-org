@@ -2,6 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import Title from "../components/core/Title.astro";
 import { LEGAL_VERSIONS, formatEffectiveDate } from "../config/legalVersions";
+import { PUBLIC_CONTACT_EMAIL } from "../config/contact";
 
 const pageData = {
   title: "Privacy Policy",
@@ -479,8 +480,8 @@ const toc = [
           <aside class="legal-note">
             <p>
               To exercise these rights, contact the Webmaster at
-              <a href="mailto:webmaster@ieeeatucsd.org"
-                >webmaster@ieeeatucsd.org</a
+              <a href={`mailto:${PUBLIC_CONTACT_EMAIL}`}
+                >{PUBLIC_CONTACT_EMAIL}</a
               >
             </p>
           </aside>
@@ -597,8 +598,8 @@ const toc = [
           <aside class="legal-note">
             <h3>IEEE at UCSD Webmaster</h3>
             <p>
-              Email: <a href="mailto:webmaster@ieeeatucsd.org"
-                >webmaster@ieeeatucsd.org</a
+              Email: <a href={`mailto:${PUBLIC_CONTACT_EMAIL}`}
+                >{PUBLIC_CONTACT_EMAIL}</a
               >
             </p>
             <p>

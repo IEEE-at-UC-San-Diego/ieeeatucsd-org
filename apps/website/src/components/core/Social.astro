@@ -5,6 +5,7 @@ import { FaDiscord } from "react-icons/fa";
 import { RiInstagramFill } from "react-icons/ri";
 import { MdEmail } from "react-icons/md";
 import SectionHeading from "./SectionHeading.astro";
+import { PUBLIC_CONTACT_EMAIL } from "../../config/contact";
 
 const links = [
   {
@@ -20,9 +21,9 @@ const links = [
     icon: FaDiscord,
   },
   {
-    href: "mailto:ieee@ucsd.edu",
+    href: `mailto:${PUBLIC_CONTACT_EMAIL}`,
     label: "Email",
-    handle: "ieee@ucsd.edu",
+    handle: PUBLIC_CONTACT_EMAIL,
     icon: MdEmail,
   },
 ];

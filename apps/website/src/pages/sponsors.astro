@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import { Image } from "astro:assets";
 import sponsors from "../data/sponsors.json";
 import { resolveImage } from "../lib/images";
+import { PUBLIC_CONTACT_EMAIL } from "../config/contact";
 
 // Some marks ship with a lot of transparent padding or are very thin
 // wordmarks. Scale those up inside their cell so they read at the same
@@ -47,8 +48,11 @@ function logoStyle(path: string): string | undefined {
           >
             Interested in sponsoring us?
           </h2>
-          <a href="mailto:ieee@ucsd.edu" class="ieee-btn ieee-btn-primary mt-5">
-            Please email ieee@ucsd.edu
+          <a
+            href={`mailto:${PUBLIC_CONTACT_EMAIL}`}
+            class="ieee-btn ieee-btn-primary mt-5"
+          >
+            Please email {PUBLIC_CONTACT_EMAIL}
           </a>
         </div>
       </div>

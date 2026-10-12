@@ -4,6 +4,8 @@
  * Provides comprehensive meta tags, Open Graph, Twitter Card, and structured data
  */
 
+import { PUBLIC_CONTACT_EMAIL } from "../../config/contact";
+
 export interface Props {
   title?: string;
   description?: string;
@@ -78,7 +80,7 @@ const defaultStructuredData = {
   ],
   contactPoint: {
     "@type": "ContactPoint",
-    email: "ieee@ucsd.edu",
+    email: PUBLIC_CONTACT_EMAIL,
     contactType: "General Inquiries",
   },
   address: {
