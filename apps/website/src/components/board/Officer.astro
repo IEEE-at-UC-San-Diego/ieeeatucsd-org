@@ -1,6 +1,7 @@
 ---
 import { Image } from "astro:assets";
 import type { ImageMetadata } from "astro";
+import { PUBLIC_CONTACT_EMAIL } from "../../config/contact";
 
 interface Props {
   name: string;
@@ -33,7 +34,10 @@ const initials = officerInitials(name);
 
 // Let long addresses break after the "@" rather than mid-domain. The zero
 // width space is invisible but gives the line breaker a clean break point.
-const emailBreakable = email ? email.replace("@", "@\u200B") : "";
+const displayEmail = email ? PUBLIC_CONTACT_EMAIL : undefined;
+const emailBreakable = displayEmail
+  ? displayEmail.replace("@", "@\u200B")
+  : "";
 ---
 
 <article
@@ -114,13 +118,13 @@ const emailBreakable = email ? email.replace("@", "@\u200B") : "";
     </p>
 
     {
-      email &&
+      displayEmail &&
         (isFeature ? (
           <a
-            href={`mailto:${email}`}
+            href={`mailto:${displayEmail}`}
             class="group/email mt-4 inline-flex max-w-full items-center gap-2 text-[0.82rem] no-underline text-white/65 transition-colors hover:text-ieee-yellow sm:mt-6 sm:text-[0.95rem]"
             aria-label={`Email ${name}`}
-            title={email}
+            title={displayEmail}
           >
             <span class="min-w-0 break-words">{emailBreakable}</span>
             <span
@@ -132,10 +136,10 @@ const emailBreakable = email ? email.replace("@", "@\u200B") : "";
           </a>
         ) : (
           <a
-            href={`mailto:${email}`}
+            href={`mailto:${displayEmail}`}
             class="group/email mt-auto flex items-baseline gap-1.5 border-t border-white/10 pt-3 text-[0.78rem] no-underline text-white/50 transition-colors hover:text-ieee-yellow"
             aria-label={`Email ${name}`}
-            title={email}
+            title={displayEmail}
           >
             <span class="min-w-0 break-words leading-snug">
               {emailBreakable}

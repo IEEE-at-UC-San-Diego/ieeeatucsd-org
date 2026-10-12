@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { PUBLIC_CONTACT_EMAIL } from "../../config/contact";
 import {
   CheckCircle,
   XCircle,
@@ -402,7 +403,9 @@ export default function AcceptInvitationContent({
 
           <p className="mt-6 text-center text-sm text-white/50">
             Questions? Contact us at{" "}
-            <a href="mailto:ieee@ucsd.edu">ieee@ucsd.edu</a>
+            <a href={`mailto:${PUBLIC_CONTACT_EMAIL}`}>
+              {PUBLIC_CONTACT_EMAIL}
+            </a>
           </p>
         </div>
       </div>
