@@ -104,10 +104,19 @@ const isCurrent = (path: string, subpages?: { path: string }[]) =>
                   </a>
                 )}
                 {page.subpages && (
-                  <ul class="mb-2 ml-1 border-l border-white/10 pl-4">
+                  <ul class="nav-mobile-subpages">
                     {page.subpages.map((subpage) => (
                       <li>
-                        <a href={subpage.path} class="nav-mobile-sublink">
+                        <a
+                          href={subpage.path}
+                          class:list={[
+                            "nav-mobile-sublink",
+                            currentPath === subpage.path && "is-current",
+                          ]}
+                          aria-current={
+                            currentPath === subpage.path ? "page" : undefined
+                          }
+                        >
                           {subpage.name}
                         </a>
                       </li>
@@ -271,24 +280,33 @@ const isCurrent = (path: string, subpages?: { path: string }[]) =>
     background: #0a0e1a;
   }
 
-  .nav-mobile-link {
+  .nav-mobile-link,
+  .nav-mobile-sublink {
     display: block;
-    padding-block: 0.8rem;
-    font-size: 1.5rem;
     font-weight: 600;
     letter-spacing: -0.03em;
     color: rgba(255, 255, 255, 0.9);
+  }
+
+  .nav-mobile-link {
+    padding-block: 0.8rem;
+    font-size: 1.5rem;
     border-bottom: 1px solid rgba(136, 191, 236, 0.1);
   }
 
-  .nav-mobile-link.is-current {
+  .nav-mobile-link.is-current,
+  .nav-mobile-sublink.is-current {
     color: #88bfec;
   }
 
+  .nav-mobile-subpages {
+    margin: 0 0 0.5rem 0.75rem;
+    padding-left: 1rem;
+    border-left: 1px solid rgba(136, 191, 236, 0.22);
+  }
+
   .nav-mobile-sublink {
-    display: block;
-    padding-block: 0.55rem;
-    font-size: 1.05rem;
-    color: rgba(255, 255, 255, 0.65);
+    padding-block: 0.7rem;
+    font-size: 1.35rem;
   }
 </style>
