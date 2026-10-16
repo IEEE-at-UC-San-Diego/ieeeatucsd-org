@@ -30,21 +30,21 @@
   {
     "name": "Riya Bhatia",
     "position": "Vice Chair Finance",
-    "picture": "",
+    "picture": "/officers/riya.webp",
     "email": "treasurer@ieeeatucsd.org",
     "type": ["Executives"]
   },
   {
     "name": "Daniel Xu",
     "position": "Vice Chair Operations",
-    "picture": "/officers/daniel.webp",
+    "picture": "/officers/daniel-x.webp",
     "email": "coordinators@ieeeatucsd.org",
     "type": ["Executives", "Events"]
   },
   {
     "name": "Hannah Fletcher",
     "position": "Vice Chair Operations",
-    "picture": "",
+    "picture": "/officers/hannah.webp",
     "email": "coordinators@ieeeatucsd.org",
     "type": ["Executives", "Events"]
   },
@@ -56,51 +56,44 @@
     "type": ["Executives"]
   },
   {
-    "name": "Oscar Canizales",
-    "position": "Project Space Chair",
-    "picture": "",
-    "email": "projects@ieeeatucsd.org",
-    "type": ["Projects"]
-  },
-  {
     "name": "Gabriel Haresco",
     "position": "Robocup Soccer Chair",
-    "picture": "",
+    "picture": "/officers/gabriel.webp",
     "email": "robocup@ieeeatucsd.org",
     "type": ["Projects"]
   },
   {
     "name": "Clover Li",
     "position": "Supercomputing Chair",
-    "picture": "",
+    "picture": "/officers/clover.webp",
     "email": "projects@ieeeatucsd.org",
     "type": ["Projects"]
   },
   {
     "name": "Sukhjeet Sekhon",
     "position": "Quarterly Projects Chair",
-    "picture": "",
+    "picture": "/officers/sukhjeet.webp",
     "email": "qp@ieeeatucsd.org",
     "type": ["Projects"]
   },
   {
     "name": "Samuel Park",
     "position": "Professional Chair",
-    "picture": "",
+    "picture": "/officers/samuel.webp",
     "email": "professional@ieeeatucsd.org",
     "type": ["Events"]
   },
   {
     "name": "Johnathon Reidel",
     "position": "Technical Chair",
-    "picture": "",
+    "picture": "/officers/johnathon.webp",
     "email": "technical@ieeeatucsd.org",
     "type": ["Events"]
   },
   {
     "name": "Derrick Do",
     "position": "Technical Chair",
-    "picture": "",
+    "picture": "/officers/derrick.webp",
     "email": "technical@ieeeatucsd.org",
     "type": ["Events"]
   },
@@ -114,7 +107,7 @@
   {
     "name": "Nishant Sharma",
     "position": "Social Chair",
-    "picture": "",
+    "picture": "/officers/nishant.webp",
     "email": "social@ieeeatucsd.org",
     "type": ["Events"]
   },
@@ -128,28 +121,28 @@
   {
     "name": "Ki Diaz",
     "position": "Webmaster",
-    "picture": "",
+    "picture": "/officers/ki.webp",
     "email": "webmaster@ieeeatucsd.org",
     "type": ["Internal"]
   },
   {
     "name": "Daniel Hong",
     "position": "Marketing Chair",
-    "picture": "",
+    "picture": "/officers/daniel-h.webp",
     "email": "marketing@ieeeatucsd.org",
     "type": ["Internal"]
   },
   {
     "name": "Royce Li",
     "position": "Marketing Chair",
-    "picture": "",
+    "picture": "/officers/royce.webp",
     "email": "marketing@ieeeatucsd.org",
     "type": ["Internal"]
   },
   {
     "name": "Anthony Zheng",
     "position": "Design Chair",
-    "picture": "",
+    "picture": "/officers/anthony.webp",
     "email": "design@ieeeatucsd.org",
     "type": ["Internal"]
   }
