@@ -78,6 +78,39 @@ const { filters, currentFilter }: Props = Astro.props;
     );
   }
 
+  const features = document.querySelectorAll(
+    "[data-feature]",
+  ) as NodeListOf<HTMLElement>;
+  const captions = document.querySelectorAll(
+    "[data-feature-caption]",
+  ) as NodeListOf<HTMLElement>;
+
+  const frame = document.querySelector("[data-board-frame]");
+  const stage = document.querySelector("[data-board-stage]");
+
+  function showFeature(selectedFilter: string) {
+    const showStage = selectedFilter !== "All";
+    stage?.toggleAttribute("hidden", !showStage);
+
+    features.forEach((el) => {
+      const on = el.getAttribute("data-feature") === selectedFilter;
+      el.classList.toggle("is-active", on);
+      el.setAttribute("aria-hidden", on ? "false" : "true");
+      if (on && frame) {
+        frame.setAttribute(
+          "data-aspect",
+          el.getAttribute("data-aspect") || "portrait",
+        );
+      }
+    });
+    captions.forEach((el) => {
+      el.classList.toggle(
+        "is-active",
+        el.getAttribute("data-feature-caption") === selectedFilter,
+      );
+    });
+  }
+
   function updateFilter(selectedFilter: string, clickedButton: HTMLElement) {
     buttons.forEach((btn) => {
       const isSelected = btn.getAttribute("data-filter") === selectedFilter;
@@ -88,6 +121,7 @@ const { filters, currentFilter }: Props = Astro.props;
     });
 
     moveSlider(clickedButton);
+    showFeature(selectedFilter);
 
     officers.forEach((officer) => {
       const types = JSON.parse(officer.getAttribute("data-types") || "[]");

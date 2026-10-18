@@ -9,6 +9,8 @@ interface Props {
   email?: string;
   eager?: boolean;
   variant?: "card" | "feature";
+  /** Full-body 2:3 portraits. Headshots stay in the slightly wider card frame. */
+  frame?: "headshot" | "portrait";
 }
 
 const {
@@ -18,9 +20,11 @@ const {
   email,
   eager = false,
   variant = "card",
+  frame = "headshot",
 } = Astro.props as Props;
 
 const isFeature = variant === "feature";
+const isPortrait = frame === "portrait";
 
 function officerInitials(fullName: string): string {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -47,10 +51,10 @@ const emailBreakable = email ? email.replace("@", "@\u200B") : "";
   <div class:list={[isFeature && "w-full"]}>
     <div
       class:list={[
-        "relative w-full overflow-hidden border border-white/10 bg-[#0d1324]",
-        isFeature
-          ? "aspect-[4/5] rounded-[1.25rem]"
-          : "aspect-[4/5] rounded-2xl",
+        "relative w-full overflow-hidden border border-white/10 bg-[#0d1324] transition-colors duration-200",
+        isFeature && "aspect-[4/5] rounded-[1.25rem]",
+        !isFeature && isPortrait && "aspect-[2/3] rounded-2xl group-hover:border-white/25",
+        !isFeature && !isPortrait && "aspect-[4/5] rounded-2xl",
       ]}
     >
       {
@@ -58,10 +62,14 @@ const emailBreakable = email ? email.replace("@", "@\u200B") : "";
           <Image
             src={picture}
             alt={`${name} portrait`}
-            class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-            width={440}
-            height={550}
-            widths={[240, 334, 440, 640]}
+            class:list={[
+              "h-full w-full object-cover",
+              !isPortrait &&
+                "transition-transform duration-700 ease-out group-hover:scale-[1.03]",
+            ]}
+            width={isPortrait ? 480 : 440}
+            height={isPortrait ? 720 : 550}
+            widths={isPortrait ? [320, 480, 640, 800] : [240, 334, 440, 640]}
             sizes={
               isFeature
                 ? "(max-width: 640px) 152px, 272px"
@@ -96,7 +104,7 @@ const emailBreakable = email ? email.replace("@", "@\u200B") : "";
   <div class:list={[isFeature ? "" : "mt-4 flex flex-1 flex-col"]}>
     <p
       class:list={[
-        "font-semibold tracking-tight text-white",
+        "break-words font-semibold tracking-tight text-white",
         isFeature
           ? "text-[1.6rem] leading-[1.05] sm:text-[clamp(2.1rem,4.4vw,3.5rem)] sm:leading-[1.02]"
           : "text-lg sm:text-xl",

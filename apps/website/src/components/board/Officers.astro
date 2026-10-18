@@ -1,4 +1,5 @@
 ---
+import { Image } from "astro:assets";
 import type { ImageMetadata } from "astro";
 import Officer from "../board/Officer.astro";
 import Filter from "../board/Filter.astro";
@@ -19,6 +20,17 @@ interface Props {
     href: string;
     label: string;
   };
+  /** Use the current-year portraits and the team photos that follow each filter. */
+  portraits?: boolean;
+}
+
+interface FeaturePanel {
+  id: string;
+  image: ImageMetadata | null;
+  alt: string;
+  title: string;
+  label: string;
+  aspect: "portrait" | "landscape";
 }
 
 const {
@@ -26,46 +38,121 @@ const {
   heading = "Meet the board",
   description,
   footerLink,
+  portraits = false,
 } = Astro.props;
 
 const blurb =
   description ??
   `Our board comprises ${officers.length} students of varying majors, colleges, and interests! Feel free to reach out for any questions about our position or experiences.`;
 
-const officerImages = import.meta.glob<{ default: ImageMetadata }>(
+const archiveImages = import.meta.glob<{ default: ImageMetadata }>(
   "../../images/officers/*.webp",
-  {
-    eager: true,
-  },
+  { eager: true },
 );
+
+const portraitImages = import.meta.glob<{ default: ImageMetadata }>(
+  "../../images/officers/photos/*.{JPG,jpg,jpeg}",
+  { eager: true },
+);
+
+// Samuel Park's file is sam.JPG.
+const portraitAliases: Record<string, string> = {
+  samuel: "sam",
+};
+
+function fileStem(filePath: string): string {
+  const base = filePath.split("/").pop() ?? "";
+  return base.replace(/\.[^.]+$/, "").toLowerCase();
+}
+
+function findImage(
+  images: Record<string, { default: ImageMetadata }>,
+  stem: string,
+): ImageMetadata | null {
+  if (!stem) return null;
+  const key = Object.keys(images).find((k) => fileStem(k) === stem);
+  return key ? (images[key]?.default ?? null) : null;
+}
 
 function resolveOfficerImage(picturePath: string): ImageMetadata | null {
   if (!picturePath || picturePath.startsWith("http")) return null;
-
-  const base = picturePath.split("/").pop() || "";
-  const filename = base.endsWith(".webp") ? base : `${base}.webp`;
-
-  const key = Object.keys(officerImages).find((k) =>
-    k.endsWith(`/${filename}`),
-  );
-  return key ? (officerImages[key]?.default ?? null) : null;
+  const stem = fileStem(picturePath);
+  if (portraits) {
+    const portrait = findImage(portraitImages, portraitAliases[stem] ?? stem);
+    if (portrait) return portrait;
+  }
+  return findImage(archiveImages, stem);
 }
 
-const typeOrder = ["Executives", "Internal", "Events", "Projects"];
+const typeOrder = ["Executives", "Internal", "Events", "Projects"] as const;
 const types = ["All", ...typeOrder];
+
+const teamPhotoStem: Record<(typeof typeOrder)[number], string> = {
+  Executives: "execs",
+  Internal: "internal",
+  Events: "events",
+  Projects: "projects",
+};
+
+const teamNotes: Record<(typeof typeOrder)[number], string> = {
+  Executives: "Chair and vice chairs",
+  Internal: "Webmaster, marketing, and design",
+  Events: "Social, technical, and professional",
+  Projects: "RoboCup, supercomputing, and quarterly projects",
+};
+
+const teamAlt: Record<(typeof typeOrder)[number], string> = {
+  Executives: "Executive board",
+  Internal: "Internal team",
+  Events: "Events team",
+  Projects: "Projects team",
+};
 
 const currentFilter = "All";
 const eagerCount = 5;
 
 const [lead, ...rest] = officers;
+const gridOfficers = portraits ? officers : rest;
+
+const featurePanels: FeaturePanel[] = [];
+if (portraits) {
+  for (const type of typeOrder) {
+    const image = findImage(portraitImages, teamPhotoStem[type]);
+    featurePanels.push({
+      id: type,
+      image,
+      alt: teamAlt[type],
+      title: type,
+      label: teamNotes[type],
+      aspect: photoAspect(image),
+    });
+  }
+}
+
+function photoAspect(image: ImageMetadata | null): "portrait" | "landscape" {
+  if (!image) return "portrait";
+  return image.width > image.height ? "landscape" : "portrait";
+}
 ---
 
 <div class="pb-24 sm:pb-32">
   <header
     class="bp-grid pt-[clamp(1.75rem,3.5vw,2.75rem)] pb-[clamp(1.5rem,3vw,2.25rem)]"
   >
-    <div class="board-hero grid items-center gap-10 lg:grid-cols-12 lg:gap-12">
-      <div class="board-hero-intro lg:col-span-6">
+    <div
+      class:list={[
+        "board-hero items-start gap-10",
+        portraits
+          ? "flex flex-col lg:flex-row lg:gap-x-14"
+          : "grid lg:grid-cols-12 lg:items-center lg:gap-12",
+      ]}
+    >
+      <div
+        class:list={[
+          "board-hero-intro min-w-0",
+          !portraits && "lg:col-span-6",
+        ]}
+      >
         <h1
           class="display text-[clamp(2.5rem,5vw,3.75rem)]"
           data-reveal
@@ -96,31 +183,95 @@ const [lead, ...rest] = officers;
       </div>
 
       {
-        lead && (
+        portraits ? (
           <div
-            class="board-hero-lead lg:col-span-6"
-            data-reveal
-            style="--reveal-delay: 160ms"
+            class="board-stage mx-auto w-full min-w-0 max-w-[22rem] sm:max-w-[24rem] lg:mx-0 lg:w-fit"
+            data-board-stage
+            hidden
           >
-            <Officer
-              name={lead.name}
-              position={lead.position}
-              picture={resolveOfficerImage(lead.picture)}
-              email={lead.email}
-              variant="feature"
-              eager
-            />
+            <div
+              class="board-frame relative w-full overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#0d1324]"
+              data-board-frame
+              data-aspect={featurePanels[0]?.aspect ?? "portrait"}
+            >
+              {featurePanels.map((panel) => (
+                <div
+                  class="board-feature absolute inset-0"
+                  data-feature={panel.id}
+                  data-aspect={panel.aspect}
+                  aria-hidden="true"
+                >
+                  {panel.image ? (
+                    <Image
+                      src={panel.image}
+                      alt={panel.alt}
+                      class="h-full w-full object-contain"
+                      width={panel.aspect === "landscape" ? 1200 : 800}
+                      height={panel.aspect === "landscape" ? 800 : 1200}
+                      widths={[480, 720, 960, 1280]}
+                      sizes="(max-width: 1024px) 92vw, 640px"
+                      loading="eager"
+                      decoding="async"
+                    />
+                  ) : (
+                    <div
+                      class="grid h-full w-full place-items-center px-6 text-center font-display text-3xl font-semibold tracking-tight text-ieee-blue-100/85"
+                      role="img"
+                      aria-label={panel.alt}
+                    >
+                      {panel.title}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div class="board-captions mt-4 grid">
+              {featurePanels.map((panel) => (
+                <div
+                  class="board-caption min-w-0"
+                  data-feature-caption={panel.id}
+                >
+                  <p class="break-words text-[1.35rem] font-semibold leading-tight tracking-tight text-white sm:text-2xl">
+                    {panel.title}
+                  </p>
+                  <p class="mt-2 max-w-[28ch] text-sm leading-snug text-white/62">
+                    {panel.label}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
+        ) : (
+          lead && (
+            <div
+              class="board-hero-lead lg:col-span-6"
+              data-reveal
+              style="--reveal-delay: 160ms"
+            >
+              <Officer
+                name={lead.name}
+                position={lead.position}
+                picture={resolveOfficerImage(lead.picture)}
+                email={lead.email}
+                variant="feature"
+                eager
+              />
+            </div>
+          )
         )
       }
     </div>
   </header>
 
   <div
-    class="mt-10 grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4"
+    class:list={[
+      "grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4",
+      portraits ? "mt-12 sm:mt-16" : "mt-10",
+    ]}
   >
     {
-      rest.map((officer, i) => (
+      gridOfficers.map((officer, i) => (
         <div
           class="min-w-0"
           data-officer
@@ -131,10 +282,87 @@ const [lead, ...rest] = officers;
             position={officer.position}
             picture={resolveOfficerImage(officer.picture)}
             email={officer.email}
-            eager={i < eagerCount}
+            frame={portraits ? "portrait" : "headshot"}
+            eager={portraits ? i < 8 : i < eagerCount}
           />
         </div>
       ))
     }
   </div>
 </div>
+
+<style>
+  .board-frame[data-aspect="portrait"] {
+    aspect-ratio: 2 / 3;
+  }
+
+  .board-frame[data-aspect="landscape"] {
+    aspect-ratio: 3 / 2;
+  }
+
+  /* Wide team photo can use the column. Tall ones stay a fixed portrait. */
+  .board-stage:has(.board-frame[data-aspect="landscape"]) {
+    max-width: none;
+  }
+
+  @media (min-width: 1024px) {
+    .board-hero:has(.board-stage:not([hidden])) {
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .board-hero:has(.board-stage:not([hidden])) .board-hero-intro {
+      flex: 1 1 22rem;
+      max-width: 36rem;
+    }
+
+    /* Size the portrait from the leftover screen height so the caption
+       stays on screen, and keep it beside the intro instead of the far edge. */
+    .board-stage {
+      max-width: min(28rem, 48%);
+    }
+
+    .board-frame[data-aspect="portrait"] {
+      width: min(28rem, calc((100svh - 15rem) * 2 / 3));
+      max-width: 100%;
+    }
+
+    .board-stage:has(.board-frame[data-aspect="landscape"]) {
+      max-width: none;
+    }
+
+    .board-frame[data-aspect="landscape"] {
+      width: min(34rem, calc(100vw - 44rem));
+    }
+  }
+
+  .board-feature {
+    opacity: 0;
+  }
+
+  .board-feature.is-active {
+    opacity: 1;
+    z-index: 1;
+  }
+
+  .board-caption {
+    grid-area: 1 / 1;
+    visibility: hidden;
+  }
+
+  .board-caption.is-active {
+    visibility: visible;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .board-frame {
+      transition:
+        aspect-ratio 220ms cubic-bezier(0.23, 1, 0.32, 1),
+        width 220ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    .board-feature {
+      transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+  }
+</style>
