@@ -1,6 +1,6 @@
 import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
-import { Crown, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useState } from "react";
 import {
 	DashboardPage,
@@ -48,27 +48,37 @@ type PodiumMember = {
 	avatar?: string;
 };
 
-/** Visual treatment per place. Index = rank - 1. */
+/**
+ * Visual treatment per place (index = rank - 1). The pedestals share one
+ * brand-blue family, lightest to deepest, so the winner reads by depth rather
+ * than by a medal color.
+ */
 const PODIUM_STYLES = [
 	{
-		place: "1st",
-		pedestal: "h-40 bg-ds-amber-200 border-ds-amber-400 sm:h-52",
-		numeral: "text-tone-warning",
-		ring: "ring-ds-amber-700",
+		pedestal:
+			"h-44 bg-gradient-to-b from-ds-blue-700 to-ds-blue-800 text-on-accent sm:h-60",
+		points: "text-on-accent",
+		unit: "text-on-accent/70",
+		numeral: "text-white/[0.14] text-[140px] sm:text-[200px]",
+		ring: "ring-ds-blue-700",
 		avatar: "size-20 sm:size-24",
 	},
 	{
-		place: "2nd",
-		pedestal: "h-28 bg-ds-gray-100 border-ds-gray-400 sm:h-36",
-		numeral: "text-ds-gray-900",
-		ring: "ring-ds-gray-600",
+		pedestal:
+			"h-32 bg-gradient-to-b from-ds-blue-400 to-ds-blue-500 text-ds-blue-1000 sm:h-48",
+		points: "text-ds-blue-1000",
+		unit: "text-ds-blue-1000/65",
+		numeral: "text-ds-blue-1000/[0.10] text-[96px] sm:text-[140px]",
+		ring: "ring-ds-blue-500",
 		avatar: "size-16 sm:size-20",
 	},
 	{
-		place: "3rd",
-		pedestal: "h-20 bg-ds-amber-100 border-ds-amber-300 sm:h-28",
-		numeral: "text-ds-amber-900",
-		ring: "ring-ds-amber-900",
+		pedestal:
+			"h-28 bg-gradient-to-b from-ds-blue-200 to-ds-blue-300 text-ds-blue-1000 sm:h-36",
+		points: "text-ds-blue-1000",
+		unit: "text-ds-blue-1000/65",
+		numeral: "text-ds-blue-1000/[0.08] text-[56px] sm:text-[80px]",
+		ring: "ring-ds-blue-400",
 		avatar: "size-16 sm:size-20",
 	},
 ] as const;
@@ -85,29 +95,21 @@ function PodiumColumn({
 	const style = PODIUM_STYLES[rank];
 	return (
 		<li className="flex min-w-0 flex-1 basis-0 flex-col items-center">
-			<div className="relative">
-				{rank === 0 && (
-					<Crown
-						aria-hidden
-						className="absolute -top-6 left-1/2 size-5 -translate-x-1/2 text-ds-amber-700"
-					/>
+			<Avatar
+				className={cn(
+					"shadow-[0_6px_16px_-6px_rgba(0,0,0,0.28)] ring-2 ring-offset-2 ring-offset-card",
+					style.avatar,
+					style.ring,
 				)}
-				<Avatar
-					className={cn(
-						"ring-2 ring-offset-2 ring-offset-background",
-						style.avatar,
-						style.ring,
-					)}
-				>
-					<AvatarImage src={member.avatar} alt="" />
-					<AvatarFallback>
-						<UserAvatarFallback
-							name={member.name}
-							className="size-full text-base sm:text-lg"
-						/>
-					</AvatarFallback>
-				</Avatar>
-			</div>
+			>
+				<AvatarImage src={member.avatar} alt="" />
+				<AvatarFallback>
+					<UserAvatarFallback
+						name={member.name}
+						className="size-full text-base sm:text-lg"
+					/>
+				</AvatarFallback>
+			</Avatar>
 			<p className="mt-3 w-full truncate px-1 text-center text-sm font-semibold text-foreground">
 				{member.name}
 				{isYou && (
@@ -121,24 +123,32 @@ function PodiumColumn({
 			</p>
 			<div
 				className={cn(
-					"mt-4 flex w-full flex-col items-center justify-start rounded-t-md border border-b-0 pt-3",
+					"relative mt-4 w-full overflow-hidden rounded-t-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_-8px_24px_-12px_rgba(0,0,0,0.25)]",
 					style.pedestal,
 				)}
 			>
+				{/* Oversized numeral, cropped by the pedestal like a stamped face. */}
 				<span
+					aria-hidden
 					className={cn(
-						"text-4xl font-semibold leading-none tracking-[-0.03em] tabular-nums sm:text-5xl",
+						"pointer-events-none absolute -bottom-[0.2em] left-1/2 -translate-x-1/2 select-none font-semibold leading-none tracking-[-0.04em] tabular-nums",
 						style.numeral,
 					)}
 				>
 					{rank + 1}
 				</span>
-				<span className="mt-2 text-sm font-semibold tabular-nums text-foreground">
-					{member.points.toLocaleString()}
-					<span className="ml-1 text-xs font-normal text-muted-foreground">
-						pts
+				<div className="relative flex flex-col items-center pt-4">
+					<span className="sr-only">Rank {rank + 1}.</span>
+					<span
+						className={cn(
+							"text-xl font-semibold leading-none tabular-nums sm:text-2xl",
+							style.points,
+						)}
+					>
+						{member.points.toLocaleString()}
 					</span>
-				</span>
+					<span className={cn("mt-1 text-xs", style.unit)}>points</span>
+				</div>
 			</div>
 		</li>
 	);
@@ -222,8 +232,15 @@ function LeaderboardPage() {
 			/>
 
 			{showPodium && (
-				<section aria-label="Top three members" className="px-2 pt-6 sm:px-8">
-					<ol className="mx-auto flex max-w-2xl items-end gap-2 border-b sm:gap-3">
+				<section
+					aria-label="Top three members"
+					className="relative overflow-hidden rounded-md border bg-card px-4 pt-10 sm:px-12"
+				>
+					<div
+						aria-hidden
+						className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_90%_at_50%_0%,var(--ds-blue-200),transparent_75%)] opacity-70"
+					/>
+					<ol className="relative mx-auto flex max-w-2xl items-end gap-2 sm:gap-3">
 						<PodiumColumn
 							member={topThree[1]}
 							rank={1}
