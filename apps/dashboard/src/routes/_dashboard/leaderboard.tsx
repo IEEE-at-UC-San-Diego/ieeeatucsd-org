@@ -49,36 +49,30 @@ type PodiumMember = {
 };
 
 /**
- * Visual treatment per place (index = rank - 1). The pedestals share one
- * brand-blue family, lightest to deepest, so the winner reads by depth rather
- * than by a medal color.
+ * Visual treatment per place (index = rank - 1): muted gold, silver and bronze.
+ * Each pedestal is a lit block: a soft vertical shade, a bright top edge and a
+ * pressed-in numeral, standing on the stage floor.
  */
 const PODIUM_STYLES = [
 	{
 		pedestal:
-			"h-44 bg-gradient-to-b from-ds-blue-700 to-ds-blue-800 text-on-accent sm:h-60",
-		points: "text-on-accent",
-		unit: "text-on-accent/70",
-		numeral: "text-white/[0.14] text-[140px] sm:text-[200px]",
-		ring: "ring-ds-blue-700",
+			"h-44 from-ds-amber-300 to-ds-amber-400 border-ds-amber-500/60 sm:h-56",
+		numeral: "text-ds-amber-900",
+		ring: "ring-ds-amber-600",
 		avatar: "size-20 sm:size-24",
 	},
 	{
 		pedestal:
-			"h-32 bg-gradient-to-b from-ds-blue-400 to-ds-blue-500 text-ds-blue-1000 sm:h-48",
-		points: "text-ds-blue-1000",
-		unit: "text-ds-blue-1000/65",
-		numeral: "text-ds-blue-1000/[0.10] text-[96px] sm:text-[140px]",
-		ring: "ring-ds-blue-500",
+			"h-32 from-ds-gray-100 to-ds-gray-300 border-ds-gray-500/60 sm:h-44",
+		numeral: "text-ds-gray-900",
+		ring: "ring-ds-gray-600",
 		avatar: "size-16 sm:size-20",
 	},
 	{
 		pedestal:
-			"h-28 bg-gradient-to-b from-ds-blue-200 to-ds-blue-300 text-ds-blue-1000 sm:h-36",
-		points: "text-ds-blue-1000",
-		unit: "text-ds-blue-1000/65",
-		numeral: "text-ds-blue-1000/[0.08] text-[56px] sm:text-[80px]",
-		ring: "ring-ds-blue-400",
+			"h-24 from-ds-amber-100 to-ds-amber-200 border-ds-amber-400/60 sm:h-32",
+		numeral: "text-ds-amber-900",
+		ring: "ring-ds-amber-800",
 		avatar: "size-16 sm:size-20",
 	},
 ] as const;
@@ -97,7 +91,7 @@ function PodiumColumn({
 		<li className="flex min-w-0 flex-1 basis-0 flex-col items-center">
 			<Avatar
 				className={cn(
-					"shadow-[0_6px_16px_-6px_rgba(0,0,0,0.28)] ring-2 ring-offset-2 ring-offset-card",
+					"shadow-[0_8px_18px_-8px_rgba(0,0,0,0.35)] ring-2 ring-offset-2 ring-offset-card",
 					style.avatar,
 					style.ring,
 				)}
@@ -123,32 +117,25 @@ function PodiumColumn({
 			</p>
 			<div
 				className={cn(
-					"relative mt-4 w-full overflow-hidden rounded-t-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_-8px_24px_-12px_rgba(0,0,0,0.25)]",
+					"mt-4 flex w-full flex-col items-center rounded-t-[10px] border border-b-0 bg-gradient-to-b pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_-10px_28px_-14px_rgba(0,0,0,0.3)]",
 					style.pedestal,
 				)}
 			>
-				{/* Oversized numeral, cropped by the pedestal like a stamped face. */}
 				<span
-					aria-hidden
 					className={cn(
-						"pointer-events-none absolute -bottom-[0.2em] left-1/2 -translate-x-1/2 select-none font-semibold leading-none tracking-[-0.04em] tabular-nums",
+						"text-5xl font-semibold leading-none tracking-[-0.04em] tabular-nums [text-shadow:0_1px_0_rgba(255,255,255,0.55)] sm:text-6xl",
 						style.numeral,
 					)}
 				>
+					<span className="sr-only">Rank </span>
 					{rank + 1}
 				</span>
-				<div className="relative flex flex-col items-center pt-4">
-					<span className="sr-only">Rank {rank + 1}.</span>
-					<span
-						className={cn(
-							"text-xl font-semibold leading-none tabular-nums sm:text-2xl",
-							style.points,
-						)}
-					>
-						{member.points.toLocaleString()}
+				<span className="mt-2 text-sm font-semibold tabular-nums text-foreground">
+					{member.points.toLocaleString()}
+					<span className="ml-1 text-xs font-normal text-muted-foreground">
+						pts
 					</span>
-					<span className={cn("mt-1 text-xs", style.unit)}>points</span>
-				</div>
+				</span>
 			</div>
 		</li>
 	);
@@ -234,11 +221,11 @@ function LeaderboardPage() {
 			{showPodium && (
 				<section
 					aria-label="Top three members"
-					className="relative overflow-hidden rounded-md border bg-card px-4 pt-10 sm:px-12"
+					className="relative overflow-hidden rounded-md border bg-gradient-to-b from-card to-muted/50 px-4 pt-10 sm:px-12"
 				>
 					<div
 						aria-hidden
-						className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_90%_at_50%_0%,var(--ds-blue-200),transparent_75%)] opacity-70"
+						className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[radial-gradient(ellipse_38%_70%_at_50%_0%,var(--ds-amber-100),transparent_80%)] opacity-80"
 					/>
 					<ol className="relative mx-auto flex max-w-2xl items-end gap-2 sm:gap-3">
 						<PodiumColumn
