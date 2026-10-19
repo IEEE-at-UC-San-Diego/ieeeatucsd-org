@@ -158,7 +158,7 @@ export function FundDepositList({
 	};
 
 	const StatCard = ({ title, value, icon: Icon, color, subValue }: any) => (
-		<Card className="border-none shadow-sm bg-card">
+		<Card className="border-none bg-card">
 			<CardContent className="p-4 flex items-center justify-between">
 				<div>
 					<p className="text-sm font-medium text-muted-foreground">{title}</p>

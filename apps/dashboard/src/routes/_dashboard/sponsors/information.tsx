@@ -1,18 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-	Award,
-	Building2,
-	Check,
-	Loader2,
-	Mail,
-	Sparkles,
-	X,
-} from "lucide-react";
+import { Check, Loader2, Mail, X } from "lucide-react";
 import {
 	DashboardPage,
 	PageHeader,
 } from "@/components/dashboard/DashboardPage";
-import { Badge } from "@/components/ui/badge";
+import { DotLabel, type DotTone } from "@/components/dashboard/DotLabel";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -108,20 +100,17 @@ function SponsorInformationPage() {
 
 	const sponsorData = user;
 
-	const getTierColor = (tier?: string | null) => {
+	const tierTone = (tier?: string | null): DotTone => {
 		switch (tier) {
 			case "Diamond":
-				return "bg-cyan-50 text-cyan-700 border-cyan-200";
+				return "blue";
 			case "Platinum":
-				return "bg-muted text-foreground border-border";
+				return "purple";
 			case "Gold":
-				return "bg-ds-amber-100 text-tone-warning border-ds-amber-100";
-			case "Silver":
-				return "bg-muted text-foreground border-zinc-300";
 			case "Bronze":
-				return "bg-ds-amber-100 text-tone-warning border-ds-amber-100";
+				return "amber";
 			default:
-				return "bg-muted text-muted-foreground border-border";
+				return "gray";
 		}
 	};
 
@@ -158,22 +147,12 @@ function SponsorInformationPage() {
 				title={sponsorData?.sponsorOrganization || "Sponsor"}
 				description="Thank you for supporting IEEE at UC San Diego."
 				hideTitleOnMobile
-				eyebrow={
-					<span className="inline-flex items-center gap-1.5">
-						<Sparkles className="h-3.5 w-3.5" />
-						Sponsor Workspace
-					</span>
-				}
 				actions={
-					<Badge
-						variant="outline"
-						className={cn(
-							"px-3 py-1.5 text-sm font-semibold",
-							getTierColor(sponsorData?.sponsorTier),
-						)}
-					>
-						{sponsorData?.sponsorTier || "Tier not assigned"}
-					</Badge>
+					<DotLabel tone={tierTone(sponsorData?.sponsorTier)}>
+						{sponsorData?.sponsorTier
+							? `${sponsorData.sponsorTier} sponsor`
+							: "Tier not assigned"}
+					</DotLabel>
 				}
 			/>
 
@@ -182,57 +161,42 @@ function SponsorInformationPage() {
 				<h2 className="text-sm font-semibold text-foreground md:sr-only">
 					Account
 				</h2>
-				<ul className="-mx-4 divide-y border-y bg-background md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:divide-y-0 md:border-0 md:bg-transparent">
-					<li className="flex min-h-[52px] items-center gap-3 px-4 py-3 md:rounded-md md:border md:px-4">
-						<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-blue-100 text-tone-info">
-							<Building2 className="size-5" />
-						</div>
-						<div className="min-w-0">
-							<p className="text-xs text-muted-foreground">Organization</p>
-							<p className="truncate text-sm font-medium">
-								{sponsorData?.sponsorOrganization || "Not specified"}
-							</p>
-						</div>
+				<ul className="-mx-4 divide-y border-y md:mx-0 md:grid md:grid-cols-3 md:divide-x md:divide-y-0 md:rounded-md md:border">
+					<li className="min-h-[52px] px-4 py-3 md:py-4">
+						<p className="text-xs text-muted-foreground">Organization</p>
+						<p className="mt-0.5 truncate text-sm font-medium">
+							{sponsorData?.sponsorOrganization || "Not specified"}
+						</p>
 					</li>
-					<li className="min-w-0 md:rounded-md md:border">
+					<li className="min-w-0">
 						<a
 							href={
 								sponsorData?.email ? `mailto:${sponsorData.email}` : undefined
 							}
 							className={cn(
-								"flex min-h-[52px] items-center gap-3 px-4 py-3 active:bg-muted/60",
+								"block min-h-[52px] px-4 py-3 transition-colors hover:bg-muted/40 md:py-4",
 								!sponsorData?.email && "pointer-events-none",
 							)}
 						>
-							<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-green-100 text-tone-success">
-								<Mail className="size-5" />
-							</div>
-							<div className="min-w-0 flex-1">
-								<p className="text-xs text-muted-foreground">Contact email</p>
-								<p className="truncate text-sm font-medium text-tone-link">
-									{sponsorData?.email || "Not specified"}
-								</p>
-							</div>
+							<p className="text-xs text-muted-foreground">Contact email</p>
+							<p className="mt-0.5 truncate text-sm font-medium text-tone-link">
+								{sponsorData?.email || "Not specified"}
+							</p>
 						</a>
 					</li>
-					<li className="flex min-h-[52px] items-center gap-3 px-4 py-3 md:col-span-2 md:rounded-md md:border md:px-4">
-						<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-ds-amber-100 text-tone-warning">
-							<Award className="size-5" />
-						</div>
-						<div className="min-w-0 flex-1">
-							<p className="text-xs text-muted-foreground">Current tier</p>
-							<p className="text-sm font-medium">
-								{sponsorData?.sponsorTier || "Not assigned"}
-								<span className="ml-2 text-muted-foreground">
-									· {getTierAmount(sponsorData?.sponsorTier)}
-								</span>
+					<li className="min-h-[52px] px-4 py-3 md:py-4">
+						<p className="text-xs text-muted-foreground">Current tier</p>
+						<p className="mt-0.5 text-sm font-medium">
+							{sponsorData?.sponsorTier || "Not assigned"}
+							<span className="ml-2 font-normal text-muted-foreground">
+								{getTierAmount(sponsorData?.sponsorTier)}
+							</span>
+						</p>
+						{sponsorData?.autoAssignedSponsor && (
+							<p className="mt-0.5 text-xs text-muted-foreground">
+								Auto-assigned from your company email domain.
 							</p>
-							{sponsorData?.autoAssignedSponsor && (
-								<p className="mt-0.5 text-xs text-tone-info">
-									Auto-assigned from your company email domain.
-								</p>
-							)}
-						</div>
+						)}
 					</li>
 				</ul>
 			</section>
@@ -280,12 +244,12 @@ function SponsorInformationPage() {
 										<div
 											key={tier}
 											className={cn(
-												"rounded-md border px-2.5 py-2",
+												"rounded-sm border px-2.5 py-2",
 												sponsorData?.sponsorTier === tier &&
 													"border-ieee-blue bg-ds-blue-100/40",
 											)}
 										>
-											<p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+											<p className="text-xs font-medium text-muted-foreground">
 												{tier}
 											</p>
 											<p className="mt-0.5 flex items-center gap-1 text-xs font-medium">
@@ -314,20 +278,24 @@ function SponsorInformationPage() {
 				<div className="hidden overflow-x-auto rounded-md border md:block">
 					<table className="w-full text-sm">
 						<thead>
-							<tr className="border-b bg-muted/40">
-								<th className="px-4 py-3 text-left font-medium text-muted-foreground">
+							<tr className="border-b">
+								<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
 									Benefit
 								</th>
 								{(["Bronze", "Silver", "Gold", "Diamond"] as const).map(
 									(tier) => (
-										<th key={tier} className="px-3 py-3 text-center">
+										<th
+											key={tier}
+											className={cn(
+												"px-3 py-3 text-center",
+												sponsorData?.sponsorTier === tier &&
+													"bg-ds-blue-100/50",
+											)}
+										>
 											<div className="flex flex-col items-center gap-1">
-												<Badge
-													variant="outline"
-													className={cn("font-semibold", getTierColor(tier))}
-												>
+												<span className="text-sm font-semibold text-foreground">
 													{tier}
-												</Badge>
+												</span>
 												<span className="text-xs text-muted-foreground">
 													{getTierAmount(tier)}
 												</span>
@@ -339,7 +307,10 @@ function SponsorInformationPage() {
 						</thead>
 						<tbody>
 							{benefits.map((benefit) => (
-								<tr key={benefit.name} className="border-b last:border-0">
+								<tr
+									key={benefit.name}
+									className="border-b transition-colors last:border-0 hover:bg-muted/30"
+								>
 									<td className="px-4 py-3 font-medium">{benefit.name}</td>
 									{(
 										[
@@ -349,7 +320,16 @@ function SponsorInformationPage() {
 											benefit.diamond,
 										] as const
 									).map((value, i) => (
-										<td key={i} className="px-3 py-3 text-center">
+										<td
+											key={i}
+											className={cn(
+												"px-3 py-3 text-center",
+												sponsorData?.sponsorTier ===
+													(["Bronze", "Silver", "Gold", "Diamond"] as const)[
+														i
+													] && "bg-ds-blue-100/40",
+											)}
+										>
 											<div className="flex items-center justify-center gap-1.5">
 												{value === true ? (
 													<Check className="size-4 text-tone-success" />
@@ -371,12 +351,14 @@ function SponsorInformationPage() {
 			</section>
 
 			{/* Support — one-tap contact */}
-			<section className="space-y-3">
-				<h2 className="text-base font-semibold">Support</h2>
-				<p className="text-sm text-muted-foreground">
-					Questions about sponsorship terms, resume access, or activations?
-					Reach the IEEE UCSD team directly.
-				</p>
+			<section className="flex flex-col gap-4 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+				<div className="space-y-1">
+					<h2 className="text-base font-semibold">Support</h2>
+					<p className="text-sm text-muted-foreground">
+						Questions about sponsorship terms, resume access, or activations?
+						Reach the IEEE UCSD team directly.
+					</p>
+				</div>
 				<Button asChild className="h-12 w-full gap-2 sm:h-10 sm:w-auto">
 					<a href="mailto:ieee@ucsd.edu">
 						<Mail className="size-4" />

@@ -4,15 +4,16 @@ import {
 	AlertCircle,
 	CheckCircle,
 	FileText,
-	Palette,
 	Save,
 	Shield,
-	Sparkles,
 	Upload,
-	UserCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+	DashboardPage,
+	PageHeader,
+} from "@/components/dashboard/DashboardPage";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { AppearancePicker } from "@/components/theme";
 import {
@@ -241,8 +242,8 @@ function SettingsPage() {
 
 	if (isLoading) {
 		return (
-			<div className="flex-1 overflow-auto p-6">
-				<div className="max-w-4xl mx-auto space-y-6">
+			<DashboardPage>
+				<div className="space-y-6">
 					{/* Header */}
 					<div className="mb-8">
 						<Skeleton className="h-8 w-48 mb-2" />
@@ -252,13 +253,8 @@ function SettingsPage() {
 					{/* Appearance */}
 					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
-							<div className="w-8 h-8 bg-ds-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<Palette className="w-5 h-5 text-foreground" />
-							</div>
 							<div>
-								<h2 className="text-base md:text-lg font-semibold">
-									Appearance
-								</h2>
+								<h2 className="text-base font-semibold">Appearance</h2>
 								<p className="text-sm text-muted-foreground">
 									Choose how the dashboard looks on this device
 								</p>
@@ -270,15 +266,10 @@ function SettingsPage() {
 					{/* AI Features Settings */}
 					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
-							<div className="w-8 h-8 bg-ds-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<Sparkles className="w-5 h-5 text-tone-warning" />
-							</div>
-							<h2 className="text-base md:text-lg font-semibold">
-								AI Features
-							</h2>
+							<h2 className="text-base font-semibold">AI Features</h2>
 						</div>
 
-						<div className="rounded-lg border p-4 space-y-3">
+						<div className="rounded-md border p-4 space-y-3">
 							<div className="flex items-center justify-between gap-4">
 								<div>
 									<p className="font-medium">
@@ -361,37 +352,31 @@ function SettingsPage() {
 						</div>
 					</div>
 				</div>
-			</div>
+			</DashboardPage>
 		);
 	}
 
 	return (
-		<div className="flex-1 overflow-auto">
-			{/* Header */}
-			<header className="bg-background shadow-sm border-b px-6 py-4">
-				<div className="flex items-center justify-between">
-					<div>
-						<h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-						<p className="text-muted-foreground">
-							Manage your account settings and preferences
-						</p>
-					</div>
-				</div>
-			</header>
+		<DashboardPage>
+			<PageHeader
+				hideTitleOnMobile
+				title="Settings"
+				description="Manage your account settings and preferences."
+			/>
 
 			{/* Settings Content */}
-			<main className="px-4 py-5 sm:px-6 md:p-6">
-				<div className="mx-auto max-w-4xl min-w-0 space-y-4 md:space-y-6">
+			<main>
+				<div className="min-w-0 space-y-4 md:space-y-6">
 					{/* Status Messages */}
 					{error && (
-						<div className="flex items-center space-x-2 p-4 bg-ds-red-100 border border-ds-red-100 rounded-lg text-tone-danger">
+						<div className="flex items-center space-x-2 p-4 bg-ds-red-100 border border-ds-red-100 rounded-md text-tone-danger">
 							<AlertCircle className="w-5 h-5 flex-shrink-0" />
 							<span className="text-sm md:text-base">{error}</span>
 						</div>
 					)}
 
 					{success && (
-						<div className="flex items-center space-x-2 p-4 bg-ds-green-100 border border-ds-green-100 rounded-lg text-tone-success">
+						<div className="flex items-center space-x-2 p-4 bg-ds-green-100 border border-ds-green-100 rounded-md text-tone-success">
 							<CheckCircle className="w-5 h-5 flex-shrink-0" />
 							<span className="text-sm md:text-base">{success}</span>
 						</div>
@@ -400,13 +385,8 @@ function SettingsPage() {
 					{/* Appearance */}
 					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
-							<div className="w-8 h-8 bg-ds-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<Palette className="w-5 h-5 text-foreground" />
-							</div>
 							<div>
-								<h2 className="text-base md:text-lg font-semibold">
-									Appearance
-								</h2>
+								<h2 className="text-base font-semibold">Appearance</h2>
 								<p className="text-sm text-muted-foreground">
 									Choose how the dashboard looks on this device
 								</p>
@@ -418,15 +398,10 @@ function SettingsPage() {
 					{/* AI Features Settings */}
 					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
-							<div className="w-8 h-8 bg-ds-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<Sparkles className="w-5 h-5 text-tone-warning" />
-							</div>
-							<h2 className="text-base md:text-lg font-semibold">
-								AI Features
-							</h2>
+							<h2 className="text-base font-semibold">AI Features</h2>
 						</div>
 
-						<div className="rounded-lg border p-4 space-y-3">
+						<div className="rounded-md border p-4 space-y-3">
 							<div className="flex items-center justify-between gap-4">
 								<div>
 									<p className="font-medium">
@@ -459,12 +434,7 @@ function SettingsPage() {
 					{/* Profile Settings */}
 					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
-							<div className="w-8 h-8 bg-ds-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<UserCircle className="w-5 h-5 text-tone-info" />
-							</div>
-							<h2 className="text-base md:text-lg font-semibold">
-								Profile Settings
-							</h2>
+							<h2 className="text-base font-semibold">Profile Settings</h2>
 						</div>
 
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -558,9 +528,6 @@ function SettingsPage() {
 					{/* Resume Settings */}
 					<div className="rounded-md border bg-card p-6">
 						<div className="flex items-center space-x-3 mb-6">
-							<div className="w-8 h-8 bg-ds-green-100 rounded-lg flex items-center justify-center">
-								<FileText className="w-5 h-5 text-tone-success" />
-							</div>
 							<h2 className="text-lg font-semibold">Resume</h2>
 						</div>
 
@@ -570,7 +537,7 @@ function SettingsPage() {
 
 						{user?.resume ? (
 							<div className="space-y-4">
-								<div className="flex flex-col gap-4 p-4 bg-muted rounded-lg sm:flex-row sm:items-center sm:justify-between">
+								<div className="flex flex-col gap-4 p-4 bg-muted rounded-md sm:flex-row sm:items-center sm:justify-between">
 									<div className="flex items-center space-x-3">
 										<FileText className="w-8 h-8 text-muted-foreground shrink-0" />
 										<div>
@@ -837,12 +804,7 @@ function SettingsPage() {
 					{/* Account Information */}
 					<div className="rounded-md border bg-card p-4 md:p-6">
 						<div className="flex items-center space-x-3 mb-4 md:mb-6">
-							<div className="w-8 h-8 bg-ds-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-								<Shield className="w-5 h-5 text-tone-purple" />
-							</div>
-							<h2 className="text-base md:text-lg font-semibold">
-								Account Information
-							</h2>
+							<h2 className="text-base font-semibold">Account Information</h2>
 						</div>
 
 						<div className="space-y-2 text-sm">
@@ -877,7 +839,7 @@ function SettingsPage() {
 
 					{/* Security Note for OAuth users */}
 					{isOAuthUser() && (
-						<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-lg p-6">
+						<div className="bg-ds-blue-100 border border-ds-blue-100 rounded-md p-6">
 							<div className="flex items-center space-x-2 text-tone-info">
 								<Shield className="w-5 h-5" />
 								<span className="font-medium">OAuth Account</span>
@@ -890,6 +852,6 @@ function SettingsPage() {
 					)}
 				</div>
 			</main>
-		</div>
+		</DashboardPage>
 	);
 }

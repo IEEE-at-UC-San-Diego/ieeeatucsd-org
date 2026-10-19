@@ -157,7 +157,7 @@ export function FileManagerModal({
 				)}
 
 				<div className="border rounded-lg overflow-hidden">
-					<div className="bg-muted px-4 py-2 border-b text-xs font-medium text-muted-foreground uppercase">
+					<div className="bg-muted px-4 py-2 border-b text-xs font-medium text-muted-foreground">
 						{files.length} file{files.length !== 1 ? "s" : ""}
 					</div>
 

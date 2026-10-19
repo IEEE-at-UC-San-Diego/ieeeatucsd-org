@@ -27,6 +27,7 @@ import {
 	type UserModalData,
 	type UserRole,
 } from "@/components/dashboard/manage-users/types";
+import { UserStatsCards } from "@/components/dashboard/manage-users/UserStatsCards";
 import { UserTable } from "@/components/dashboard/manage-users/UserTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -341,6 +342,26 @@ function ManageUsersPage() {
 
 	const availableTeams: OfficerTeam[] = ["Internal", "Events", "Projects"];
 
+	const userStats = useMemo(() => {
+		const list = users ?? [];
+		const monthStart = new Date();
+		monthStart.setDate(1);
+		monthStart.setHours(0, 0, 0, 0);
+		return {
+			totalMembers: list.length,
+			activeMembers: list.filter((u) => u.status === "active").length,
+			officers: list.filter(
+				(u) =>
+					u.role === "General Officer" ||
+					u.role === "Executive Officer" ||
+					u.role === "Administrator",
+			).length,
+			newThisMonth: list.filter(
+				(u) => (u.joinDate ?? u._creationTime) >= monthStart.getTime(),
+			).length,
+		};
+	}, [users]);
+
 	// Loading state
 	if (isLoading) {
 		return (
@@ -417,8 +438,10 @@ function ManageUsersPage() {
 				}
 			/>
 
+			<UserStatsCards stats={userStats} loading={!users} />
+
 			{/* Filters */}
-			<div className="border-b pb-4">
+			<div>
 				<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 					{/* Search and Filters */}
 					<div className="flex flex-col sm:flex-row gap-4 flex-1">
@@ -515,7 +538,7 @@ function ManageUsersPage() {
 							</span>
 
 							{filters.searchTerm && (
-								<Badge variant="secondary" className="rounded-full">
+								<Badge variant="secondary" className="rounded-[3px]">
 									Search: "{filters.searchTerm}"
 									<Button
 										variant="ghost"
@@ -530,7 +553,7 @@ function ManageUsersPage() {
 							)}
 
 							{filters.roleFilter !== "all" && (
-								<Badge variant="secondary" className="rounded-full">
+								<Badge variant="secondary" className="rounded-[3px]">
 									Role: {filters.roleFilter}
 									<Button
 										variant="ghost"
@@ -547,7 +570,7 @@ function ManageUsersPage() {
 							)}
 
 							{filters.statusFilter !== "all" && (
-								<Badge variant="secondary" className="rounded-full">
+								<Badge variant="secondary" className="rounded-[3px]">
 									Status: {filters.statusFilter}
 									<Button
 										variant="ghost"
@@ -564,7 +587,7 @@ function ManageUsersPage() {
 							)}
 
 							{filters.teamFilter !== "all" && (
-								<Badge variant="secondary" className="rounded-full">
+								<Badge variant="secondary" className="rounded-[3px]">
 									Team: {filters.teamFilter}
 									<Button
 										variant="ghost"

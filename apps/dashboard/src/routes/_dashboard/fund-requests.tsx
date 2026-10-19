@@ -17,7 +17,6 @@ import {
 	Search,
 	Tag,
 	Trash2,
-	TrendingUp,
 	XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -75,15 +74,6 @@ const statusColors: Record<string, string> = {
 	approved: "bg-ds-green-100 text-tone-success",
 	denied: "bg-ds-red-100 text-tone-danger",
 	completed: "bg-ds-blue-100 text-tone-purple",
-};
-
-const statusIconColors: Record<string, string> = {
-	draft: "bg-muted text-muted-foreground",
-	submitted: "bg-ds-blue-100 text-tone-info",
-	needs_info: "bg-ds-amber-100 text-tone-warning",
-	approved: "bg-ds-green-100 text-tone-success",
-	denied: "bg-ds-red-100 text-tone-danger",
-	completed: "bg-ds-purple-100 text-tone-info",
 };
 
 const getStatusIcon = (status: FundRequestStatus) => {
@@ -167,9 +157,7 @@ function FundRequestDetailPage({
 				</div>
 				<div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
 					<div className="rounded-lg border bg-card px-4 py-2 sm:text-right">
-						<p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-							Amount
-						</p>
+						<p className="text-xs font-medium text-muted-foreground">Amount</p>
 						<p className="text-xl font-bold text-tone-success">
 							{formatCurrency(request.amount)}
 						</p>
@@ -231,9 +219,9 @@ function FundRequestDetailPage({
 
 			<div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
 				<div className="space-y-6">
-					<Card className="border-border/60 shadow-sm">
+					<Card className="border-border/60">
 						<CardContent className="p-5 space-y-3">
-							<h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+							<h2 className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
 								<FileText className="w-3.5 h-3.5" /> Purpose
 							</h2>
 							<p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -243,9 +231,9 @@ function FundRequestDetailPage({
 					</Card>
 
 					{request.infoResponseNotes && (
-						<Card className="border-ds-amber-100/70 bg-ds-amber-100/50 shadow-sm">
+						<Card className="border-ds-amber-100/70 bg-ds-amber-100/50">
 							<CardContent className="p-5 space-y-2">
-								<h2 className="text-xs font-semibold text-tone-warning uppercase tracking-wide">
+								<h2 className="text-xs font-medium text-tone-warning">
 									Response to Info Request
 								</h2>
 								<p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -255,9 +243,9 @@ function FundRequestDetailPage({
 						</Card>
 					)}
 
-					<Card className="border-border/60 shadow-sm">
+					<Card className="border-border/60">
 						<CardContent className="p-5 space-y-3">
-							<h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+							<h2 className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
 								<ExternalLink className="w-3.5 h-3.5" /> Links
 							</h2>
 							{vendorLinks.length > 0 ? (
@@ -305,9 +293,9 @@ function FundRequestDetailPage({
 					</Card>
 
 					{auditLogs.length > 0 && (
-						<Card className="border-border/60 shadow-sm">
+						<Card className="border-border/60">
 							<CardContent className="p-5">
-								<h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-4">
+								<h2 className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-4">
 									<History className="w-3.5 h-3.5" /> Activity History
 								</h2>
 								<div className="space-y-0 pl-2">
@@ -345,9 +333,9 @@ function FundRequestDetailPage({
 				</div>
 
 				<div className="space-y-6">
-					<Card className="border-border/60 shadow-sm">
+					<Card className="border-border/60">
 						<CardContent className="p-5 space-y-3">
-							<h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+							<h2 className="text-xs font-medium text-muted-foreground">
 								Details
 							</h2>
 							<div className="space-y-3 text-sm">
@@ -388,9 +376,9 @@ function FundRequestDetailPage({
 						</CardContent>
 					</Card>
 
-					<Card className="border-border/60 shadow-sm">
+					<Card className="border-border/60">
 						<CardContent className="p-5 space-y-3">
-							<h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+							<h2 className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
 								<Download className="w-3.5 h-3.5" /> Attachments
 							</h2>
 							{attachments.length > 0 ? (
@@ -790,12 +778,9 @@ function FundRequestsPage() {
 				{/* Budget Tracking Section */}
 				{hasOfficerAccess && budgetsConfigured && (
 					<div className="space-y-4">
-						<div className="flex items-center gap-2">
-							<TrendingUp className="w-5 h-5 text-primary" />
-							<h2 className="text-lg font-semibold text-foreground">
-								Department Budgets
-							</h2>
-						</div>
+						<h2 className="text-base font-semibold text-foreground">
+							Department Budgets
+						</h2>
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
 							{(
 								["events", "projects", "internal"] as FundRequestDepartment[]
@@ -856,67 +841,56 @@ function FundRequestsPage() {
 									<TabsList className="w-max">
 										<TabsTrigger value="all" className="gap-2">
 											<span>All Requests</span>
-											<Badge variant="secondary">{stats.total}</Badge>
+											<span className="text-xs tabular-nums text-muted-foreground">
+												{stats.total}
+											</span>
 										</TabsTrigger>
 										<TabsTrigger value="draft" className="gap-2">
 											<span>Draft</span>
 											{stats.draft > 0 && (
-												<Badge variant="secondary">{stats.draft}</Badge>
+												<span className="text-xs tabular-nums text-muted-foreground">
+													{stats.draft}
+												</span>
 											)}
 										</TabsTrigger>
 										<TabsTrigger value="submitted" className="gap-2">
 											<span>Submitted</span>
 											{stats.submitted > 0 && (
-												<Badge
-													variant="secondary"
-													className="bg-ds-blue-100 text-tone-info"
-												>
+												<span className="text-xs tabular-nums text-muted-foreground">
 													{stats.submitted}
-												</Badge>
+												</span>
 											)}
 										</TabsTrigger>
 										<TabsTrigger value="needs_info" className="gap-2">
 											<span>Needs Info</span>
 											{stats.needsInfo > 0 && (
-												<Badge
-													variant="secondary"
-													className="bg-ds-amber-100 text-tone-warning"
-												>
+												<span className="text-xs tabular-nums text-muted-foreground">
 													{stats.needsInfo}
-												</Badge>
+												</span>
 											)}
 										</TabsTrigger>
 										<TabsTrigger value="approved" className="gap-2">
 											<span>Approved</span>
 											{stats.approved > 0 && (
-												<Badge
-													variant="secondary"
-													className="bg-ds-green-100 text-tone-success"
-												>
+												<span className="text-xs tabular-nums text-muted-foreground">
 													{stats.approved}
-												</Badge>
+												</span>
 											)}
 										</TabsTrigger>
 										<TabsTrigger value="denied" className="gap-2">
 											<span>Denied</span>
 											{stats.denied > 0 && (
-												<Badge
-													variant="secondary"
-													className="bg-ds-red-100 text-tone-danger"
-												>
+												<span className="text-xs tabular-nums text-muted-foreground">
 													{stats.denied}
-												</Badge>
+												</span>
 											)}
 										</TabsTrigger>
 										<TabsTrigger value="completed" className="gap-2">
 											<span>Completed</span>
 											{stats.completed > 0 && (
-												<Badge
-													variant="secondary"
-													className="bg-ds-purple-100 text-tone-info"
-												>
+												<span className="text-xs tabular-nums text-muted-foreground">
 													{stats.completed}
-												</Badge>
+												</span>
 											)}
 										</TabsTrigger>
 									</TabsList>
@@ -992,27 +966,18 @@ function FundRequestsPage() {
 						))}
 					</MobileDataList>
 				) : (
-					<div className="grid grid-cols-1 gap-4">
+					<div className="divide-y overflow-hidden rounded-md border">
 						{paginatedRequests.map((r) => (
-							<Card
+							<div
 								key={r._id}
-								className="group w-full cursor-pointer border-border/60 shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/40 focus-within:border-primary/40"
+								className="group w-full cursor-pointer transition-colors hover:bg-muted/40"
 								onClick={() => handleViewRequest(r)}
 							>
-								<CardContent className="p-4">
+								<div className="p-4">
 									<div className="flex flex-col gap-3 md:flex-row md:items-center">
 										{/* Main Content */}
 										<div className="flex-1 min-w-0 space-y-1 w-full">
 											<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-												<div
-													className={cn(
-														"flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
-														statusIconColors[r.status] ||
-															"bg-muted text-muted-foreground",
-													)}
-												>
-													{getStatusIcon(r.status as FundRequestStatus)}
-												</div>
 												<h3
 													className="min-w-0 max-w-full truncate text-base font-semibold text-foreground"
 													title={r.title}
@@ -1038,11 +1003,9 @@ function FundRequestsPage() {
 											</p>
 
 											<div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-1">
-												<div className="flex items-center gap-1.5 bg-muted px-2 py-0.5 rounded">
-													<span className="font-semibold text-foreground text-xs">
-														{formatCurrency(r.amount)}
-													</span>
-												</div>
+												<span className="text-sm font-semibold tabular-nums text-foreground">
+													{formatCurrency(r.amount)}
+												</span>
 												<div className="flex items-center gap-1.5">
 													<div className="w-1 h-1 rounded-full bg-muted-foreground" />
 													<span className="text-xs">
@@ -1084,7 +1047,7 @@ function FundRequestsPage() {
 														e.stopPropagation();
 														handleEditRequest(r);
 													}}
-													className="h-9 w-9 bg-primary/10 text-primary hover:bg-primary/20"
+													className="h-9 w-9 text-muted-foreground hover:text-foreground"
 													aria-label={`Edit ${r.title}`}
 												>
 													<Edit className="w-3.5 h-3.5" />
@@ -1099,7 +1062,7 @@ function FundRequestsPage() {
 														handleDeleteRequest(r);
 													}}
 													disabled={isDeleting}
-													className="h-9 w-9 bg-destructive/10 text-destructive hover:bg-destructive/20"
+													className="h-9 w-9 text-muted-foreground hover:text-destructive"
 													aria-label={`Delete ${r.title}`}
 												>
 													<Trash2 className="w-3.5 h-3.5" />
@@ -1107,8 +1070,8 @@ function FundRequestsPage() {
 											)}
 										</div>
 									</div>
-								</CardContent>
-							</Card>
+								</div>
+							</div>
 						))}
 					</div>
 				)}

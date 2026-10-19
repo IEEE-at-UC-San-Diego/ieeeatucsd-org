@@ -47,7 +47,7 @@ export function ActivityLedger({ items }: { items: ActivityItem[] }) {
 								>
 									<span
 										className={cn(
-											"mt-0.5 grid size-7 shrink-0 place-items-center rounded-[4px] border bg-ds-background-200",
+											"mt-0.5 grid size-5 shrink-0 place-items-center",
 											config.tone,
 										)}
 									>

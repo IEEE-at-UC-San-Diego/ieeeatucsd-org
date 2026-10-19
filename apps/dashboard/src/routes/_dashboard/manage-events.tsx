@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -1076,34 +1077,21 @@ function ManageEventsPage() {
 			</ResponsiveOverlay>
 
 			{/* View Toggle */}
-			<div className="flex items-center gap-2">
-				<Button
-					variant={viewMode === "list" ? "default" : "secondary"}
-					type="button"
-					onClick={() => setViewMode("list")}
-					className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-						viewMode === "list"
-							? "bg-primary text-primary-foreground"
-							: "bg-muted hover:bg-muted/80 text-muted-foreground"
-					}`}
-				>
-					<List className="h-4 w-4" />
-					Events List
-				</Button>
-				<Button
-					variant={viewMode === "calendar" ? "default" : "secondary"}
-					type="button"
-					onClick={() => setViewMode("calendar")}
-					className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-						viewMode === "calendar"
-							? "bg-primary text-primary-foreground"
-							: "bg-muted hover:bg-muted/80 text-muted-foreground"
-					}`}
-				>
-					<CalendarIcon className="h-4 w-4" />
-					Event Planning
-				</Button>
-			</div>
+			<Tabs
+				value={viewMode}
+				onValueChange={(value) => setViewMode(value as "list" | "calendar")}
+			>
+				<TabsList>
+					<TabsTrigger value="list" className="gap-2 px-4">
+						<List className="h-4 w-4" />
+						Events List
+					</TabsTrigger>
+					<TabsTrigger value="calendar" className="gap-2 px-4">
+						<CalendarIcon className="h-4 w-4" />
+						Event Planning
+					</TabsTrigger>
+				</TabsList>
+			</Tabs>
 
 			{/* Filters */}
 			<EventsFilters

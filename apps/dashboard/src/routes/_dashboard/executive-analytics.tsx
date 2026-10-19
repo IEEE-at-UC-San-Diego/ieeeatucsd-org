@@ -345,34 +345,29 @@ function ExecutiveAnalyticsPage() {
 
 			{/* Metrics — stacked on mobile (one insight per block), grid on desktop */}
 			<div
-				className={`grid grid-cols-1 gap-4 ${
-					isMobile
-						? ""
-						: nonZeroMetricCount <= 1
-							? "sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
-							: "sm:grid-cols-2 xl:grid-cols-5"
+				className={`grid grid-cols-1 ${
+					!isMobile && nonZeroMetricCount <= 1
+						? "gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
+						: "gap-px overflow-hidden rounded-md border bg-border sm:grid-cols-2 xl:grid-cols-5"
 				}`}
 			>
 				{statsCards.map((card) => {
-					const Icon = card.icon;
 					if (!isMobile && nonZeroMetricCount <= 1 && card.key !== "events") {
 						return null;
 					}
 					return (
-						<Card key={card.key} className="border-border bg-background">
-							<CardHeader className="space-y-2 pb-2">
-								<CardDescription className="text-muted-foreground">
-									{card.title}
-								</CardDescription>
-								<div className="flex items-center justify-between">
-									<CardTitle className="text-3xl text-foreground">
-										{formatNumber.format(card.value)}
-										{card.valueSuffix ?? ""}
-									</CardTitle>
-									<Icon className="h-5 w-5 text-muted-foreground" />
-								</div>
-							</CardHeader>
-							<CardContent className="pt-0">
+						<div
+							key={card.key}
+							className={`bg-card p-4 ${
+								!isMobile && nonZeroMetricCount <= 1 ? "rounded-md border" : ""
+							}`}
+						>
+							<p className="text-sm text-muted-foreground">{card.title}</p>
+							<p className="mt-2 text-3xl font-semibold leading-none tracking-[-0.025em] tabular-nums text-foreground">
+								{formatNumber.format(card.value)}
+								{card.valueSuffix ?? ""}
+							</p>
+							<div className="mt-2">
 								{card.change !== null ? (
 									<GrowthBadge value={card.change} />
 								) : (
@@ -380,8 +375,8 @@ function ExecutiveAnalyticsPage() {
 										Fiscal-year aggregate
 									</p>
 								)}
-							</CardContent>
-						</Card>
+							</div>
+						</div>
 					);
 				})}
 				{!isMobile && nonZeroMetricCount <= 1 && (
@@ -401,7 +396,7 @@ function ExecutiveAnalyticsPage() {
 
 			{/* Charts — no nested page scroll; fixed chart height */}
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-				<Card className="border-border bg-background xl:col-span-2">
+				<Card className="border-border bg-background shadow-none xl:col-span-2">
 					<CardHeader>
 						<CardTitle className="text-foreground">Monthly Trend</CardTitle>
 						<CardDescription className="text-muted-foreground">
@@ -526,7 +521,7 @@ function ExecutiveAnalyticsPage() {
 					</CardContent>
 				</Card>
 
-				<Card className="border-border bg-background">
+				<Card className="border-border bg-background shadow-none">
 					<CardHeader>
 						<CardTitle className="text-foreground">Event Type Mix</CardTitle>
 						<CardDescription className="text-muted-foreground">
@@ -608,7 +603,7 @@ function ExecutiveAnalyticsPage() {
 			</div>
 
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-				<Card className="border-border bg-background xl:col-span-2">
+				<Card className="border-border bg-background shadow-none xl:col-span-2">
 					<CardHeader>
 						<CardTitle className="text-foreground">
 							Top Events by Attendance
@@ -659,7 +654,7 @@ function ExecutiveAnalyticsPage() {
 					</CardContent>
 				</Card>
 
-				<Card className="border-border bg-background">
+				<Card className="border-border bg-background shadow-none">
 					<CardHeader>
 						<CardTitle className="text-foreground">
 							Engagement Quality
@@ -670,7 +665,7 @@ function ExecutiveAnalyticsPage() {
 					</CardHeader>
 					<CardContent className="space-y-5">
 						<div className="rounded-lg bg-muted p-4">
-							<p className="text-xs uppercase tracking-wide text-muted-foreground">
+							<p className="text-xs text-muted-foreground">
 								Average Attendance / Event
 							</p>
 							<p className="mt-1 text-2xl font-semibold text-foreground">
@@ -679,7 +674,7 @@ function ExecutiveAnalyticsPage() {
 						</div>
 						<div className="space-y-2 rounded-lg bg-muted p-4">
 							<div className="flex items-center justify-between">
-								<p className="text-xs uppercase tracking-wide text-muted-foreground">
+								<p className="text-xs text-muted-foreground">
 									Attendee Coverage
 								</p>
 								<p className="text-sm font-semibold text-foreground">

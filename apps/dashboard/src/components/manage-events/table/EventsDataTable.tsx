@@ -203,7 +203,7 @@ export function EventsDataTable({
 			<div className="overflow-x-auto scrollbar-thin">
 				<Table className="w-full">
 					<TableHeader>
-						<TableRow className="border-b bg-muted/40 hover:bg-muted/40">
+						<TableRow className="border-b hover:bg-transparent">
 							<TableHead
 								className="cursor-pointer hover:bg-muted/50 transition-colors w-[30%] py-3 px-4 pl-6"
 								onClick={() => onSort("eventName")}

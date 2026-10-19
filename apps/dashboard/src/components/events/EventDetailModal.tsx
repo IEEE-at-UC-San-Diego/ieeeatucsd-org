@@ -1,28 +1,17 @@
 "use client";
 
 import {
-	Award,
 	CalendarPlus,
-	Clock,
 	Download,
 	ExternalLink,
-	Eye,
 	FileText,
-	MapPin,
 	UserCheck,
-	Users,
 } from "lucide-react";
+import { DotLabel, type DotTone } from "@/components/dashboard/DotLabel";
 import { ResponsiveOverlay } from "@/components/mobile";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { downloadEventIcs } from "@/lib/calendarLinks";
-import {
-	EVENT_TYPE_COLORS,
-	EVENT_TYPE_LABELS,
-	type Event,
-	formatEventDate,
-	getEventStatus,
-} from "./types";
+import { EVENT_TYPE_LABELS, type Event, getEventStatus } from "./types";
 
 interface EventDetailModalProps {
 	event: Event | null;
@@ -32,6 +21,29 @@ interface EventDetailModalProps {
 	userHasAttended?: boolean;
 	attendeeCount?: number;
 	capacity?: number;
+}
+
+function DetailRow({
+	label,
+	children,
+}: {
+	label: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="flex items-baseline justify-between gap-6 px-4 py-3 text-sm">
+			<dt className="shrink-0 text-muted-foreground">{label}</dt>
+			<dd className="min-w-0 text-right font-medium text-foreground">
+				{children}
+			</dd>
+		</div>
+	);
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+	return (
+		<h3 className="mb-2 text-sm font-semibold text-foreground">{children}</h3>
+	);
 }
 
 export function EventDetailModal({
@@ -49,23 +61,40 @@ export function EventDetailModal({
 	const isLive = status === "live";
 	const isUpcoming = status === "upcoming";
 
+	const statusTone: DotTone = userHasAttended
+		? "green"
+		: isLive
+			? "green"
+			: isUpcoming
+				? "blue"
+				: "gray";
+	const statusLabel = userHasAttended
+		? "Attended"
+		: isLive
+			? "Live now"
+			: isUpcoming
+				? "Upcoming"
+				: "Ended";
+
 	const getFileType = (url: string) => {
-		const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url);
-		const isPdf = /\.pdf$/i.test(url);
-		if (isPdf) return "PDF";
-		if (isImage) return "Image";
+		if (/\.pdf$/i.test(url)) return "PDF";
+		if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url)) return "Image";
 		return "File";
 	};
 
+	const dateLabel = new Date(event.startDate).toLocaleDateString(undefined, {
+		weekday: "long",
+		month: "long",
+		day: "numeric",
+	});
+
 	const formatTimeRange = () => {
-		const start = new Date(event.startDate).toLocaleTimeString([], {
-			hour: "2-digit",
+		const opts: Intl.DateTimeFormatOptions = {
+			hour: "numeric",
 			minute: "2-digit",
-		});
-		const end = new Date(event.endDate).toLocaleTimeString([], {
-			hour: "2-digit",
-			minute: "2-digit",
-		});
+		};
+		const start = new Date(event.startDate).toLocaleTimeString([], opts);
+		const end = new Date(event.endDate).toLocaleTimeString([], opts);
 		return `${start} – ${end}`;
 	};
 
@@ -93,139 +122,60 @@ export function EventDetailModal({
 				if (!open) onClose();
 			}}
 			title={event.eventName}
+			description={
+				<span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+					<DotLabel tone={statusTone} className="text-sm">
+						{statusLabel}
+					</DotLabel>
+					<span>{EVENT_TYPE_LABELS[event.eventType]}</span>
+				</span>
+			}
 			variant="large-sheet"
-			className="sm:max-w-2xl"
+			className="sm:max-w-xl"
 			footer={
 				showCheckIn ? (
 					<Button onClick={onCheckIn} className="h-11 w-full sm:h-9">
-						<UserCheck className="w-4 h-4 mr-2" />
-						Check In Now
+						<UserCheck className="mr-2 h-4 w-4" />
+						Check in
 					</Button>
 				) : undefined
 			}
 		>
-			<div className="space-y-5 pb-2">
-				<div className="flex flex-wrap items-center gap-1.5">
-					<Badge
-						variant="secondary"
-						className={EVENT_TYPE_COLORS[event.eventType]}
-					>
-						{EVENT_TYPE_LABELS[event.eventType]}
-					</Badge>
-
-					{isLive && (
-						<Badge className="bg-ds-green-700 text-on-accent border-ds-green-700">
-							<span className="relative flex h-1.5 w-1.5 mr-1.5">
-								<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-background opacity-75" />
-								<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-background" />
-							</span>
-							Live Now
-						</Badge>
-					)}
-					{isUpcoming && (
-						<Badge
-							variant="secondary"
-							className="bg-ds-blue-100 text-tone-info border-ds-blue-100"
-						>
-							Upcoming
-						</Badge>
-					)}
-					{!isLive && !isUpcoming && (
-						<Badge variant="secondary" className="text-muted-foreground">
-							Ended
-						</Badge>
-					)}
-
-					{userHasAttended && (
-						<Badge
-							variant="secondary"
-							className="bg-ds-green-100 text-tone-success border-ds-green-100"
-						>
-							<UserCheck className="w-3 h-3 mr-1" />
-							Attended
-						</Badge>
-					)}
+			<div className="space-y-6 pb-2">
+				<div>
+					<p className="text-2xl font-semibold leading-tight tracking-[-0.025em] text-foreground">
+						{dateLabel}
+					</p>
+					<p className="mt-1 text-base tabular-nums text-muted-foreground">
+						{formatTimeRange()}
+					</p>
 				</div>
 
-				<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-					<div className="flex items-center gap-3 rounded-lg border bg-card px-3.5 py-2.5">
-						<Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-						<div className="min-w-0">
-							<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-								When
-							</p>
-							<p className="text-sm font-medium text-foreground truncate">
-								{formatEventDate(event.startDate)}
-							</p>
-							<p className="text-xs text-muted-foreground">
-								{formatTimeRange()}
-							</p>
-						</div>
-					</div>
-
-					<div className="flex items-center gap-3 rounded-lg border bg-card px-3.5 py-2.5">
-						<MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
-						<div className="min-w-0">
-							<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-								Where
-							</p>
-							<p className="text-sm font-medium text-foreground truncate">
-								{event.location}
-							</p>
-						</div>
-					</div>
-
-					<div className="flex items-center gap-3 rounded-lg border bg-card px-3.5 py-2.5">
-						<Award className="w-4 h-4 text-muted-foreground shrink-0" />
-						<div className="min-w-0">
-							<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-								Points
-							</p>
-							<p className="text-sm font-bold text-foreground tabular-nums">
-								{event.pointsToReward}
-							</p>
-						</div>
-					</div>
-
-					<div className="flex items-center gap-3 rounded-lg border bg-card px-3.5 py-2.5">
-						<Users className="w-4 h-4 text-muted-foreground shrink-0" />
-						<div className="min-w-0">
-							<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-								Attendance
-							</p>
-							<p className="text-sm font-medium text-foreground tabular-nums">
-								{attendeeCount} checked in
-								{capacity ? ` / ${capacity}` : ""}
-							</p>
-						</div>
-					</div>
-				</div>
-
-				{event.hasFood && (
-					<div className="flex items-center gap-2 text-sm text-foreground rounded-lg border px-3.5 py-2.5 bg-card">
-						<span className="text-muted-foreground text-xs font-medium">
-							Food will be provided at this event.
+				<dl className="divide-y rounded-md border">
+					<DetailRow label="Location">{event.location}</DetailRow>
+					<DetailRow label="Points">
+						<span className="tabular-nums">{event.pointsToReward}</span>
+					</DetailRow>
+					{event.hasFood && <DetailRow label="Food">Provided</DetailRow>}
+					<DetailRow label="Checked in">
+						<span className="tabular-nums">
+							{attendeeCount}
+							{capacity ? ` of ${capacity}` : ""}
 						</span>
-					</div>
-				)}
+					</DetailRow>
+				</dl>
 
 				{event.eventDescription && (
-					<div>
-						<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
-							About
+					<section>
+						<SectionTitle>About</SectionTitle>
+						<p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+							{event.eventDescription}
 						</p>
-						<div className="rounded-lg border bg-card px-4 py-3">
-							<p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-								{event.eventDescription}
-							</p>
-						</div>
-					</div>
+					</section>
 				)}
 
-				<div>
-					<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
-						Add to Phone
-					</p>
+				<section>
+					<SectionTitle>Add to calendar</SectionTitle>
 					<div className="flex flex-wrap gap-2">
 						{event.publicGoogleEventUrl && (
 							<Button
@@ -240,8 +190,8 @@ export function EventDetailModal({
 									)
 								}
 							>
-								<ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-								Open in Google Calendar
+								<ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+								Google Calendar
 							</Button>
 						)}
 						<Button
@@ -250,69 +200,51 @@ export function EventDetailModal({
 							className="h-11 sm:h-9"
 							onClick={handleDownloadIcs}
 						>
-							<CalendarPlus className="w-3.5 h-3.5 mr-1.5" />
-							Download ICS
+							<CalendarPlus className="mr-1.5 h-3.5 w-3.5" />
+							Download .ics
 						</Button>
 					</div>
-				</div>
+				</section>
 
 				{event.files && event.files.length > 0 && (
-					<div>
-						<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
-							Resources
-						</p>
-						<div className="space-y-1.5">
-							{event.files.map((fileUrl, index) => {
-								const fileType = getFileType(fileUrl);
-								return (
-									<div
-										key={index}
-										className="flex items-center gap-3 rounded-lg border bg-card px-3.5 py-2.5 transition-colors cursor-pointer active:bg-muted/50 sm:hover:border-primary/30"
-										onClick={() => window.open(fileUrl, "_blank")}
+					<section>
+						<SectionTitle>Resources</SectionTitle>
+						<ul className="divide-y rounded-md border">
+							{event.files.map((fileUrl, index) => (
+								<li
+									key={fileUrl}
+									className="flex items-center gap-3 px-4 py-2.5"
+								>
+									<FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+									<a
+										href={fileUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="min-w-0 flex-1 text-sm hover:underline"
 									>
-										<FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-										<div className="flex-1 min-w-0">
-											<p className="text-sm font-medium truncate">
-												Event File {index + 1}
-											</p>
-											<p className="text-xs text-muted-foreground">
-												{fileType}
-											</p>
-										</div>
-										<div className="flex gap-1">
-											<Button
-												variant="ghost"
-												size="icon"
-												className="h-11 w-11 sm:h-9 sm:w-9"
-												onClick={(e) => {
-													e.stopPropagation();
-													window.open(fileUrl, "_blank");
-												}}
-												aria-label={`Open event file ${index + 1}`}
-											>
-												<Eye className="w-3.5 h-3.5" />
-											</Button>
-											<Button
-												variant="ghost"
-												size="icon"
-												className="h-11 w-11 sm:h-9 sm:w-9"
-												onClick={(e) => {
-													e.stopPropagation();
-													const a = document.createElement("a");
-													a.href = fileUrl;
-													a.download = `Event_File_${index + 1}`;
-													a.click();
-												}}
-												aria-label={`Download event file ${index + 1}`}
-											>
-												<Download className="w-3.5 h-3.5" />
-											</Button>
-										</div>
-									</div>
-								);
-							})}
-						</div>
-					</div>
+										<span className="font-medium">Event file {index + 1}</span>
+										<span className="ml-2 text-muted-foreground">
+											{getFileType(fileUrl)}
+										</span>
+									</a>
+									<Button
+										variant="ghost"
+										size="icon"
+										className="h-11 w-11 sm:h-9 sm:w-9"
+										onClick={() => {
+											const a = document.createElement("a");
+											a.href = fileUrl;
+											a.download = `Event_File_${index + 1}`;
+											a.click();
+										}}
+										aria-label={`Download event file ${index + 1}`}
+									>
+										<Download className="h-3.5 w-3.5" />
+									</Button>
+								</li>
+							))}
+						</ul>
+					</section>
 				)}
 			</div>
 		</ResponsiveOverlay>

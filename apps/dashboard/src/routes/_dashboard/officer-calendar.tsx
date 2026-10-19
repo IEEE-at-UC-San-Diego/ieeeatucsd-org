@@ -3,6 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ExternalLink, Loader2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import {
+	DashboardPage,
+	PageHeader,
+} from "@/components/dashboard/DashboardPage";
 import { EventCalendar } from "@/components/manage-events/calendar/EventCalendar";
 import { InternalEventModal } from "@/components/manage-events/modals/InternalEventModal";
 import { OfficerCalendarEventModal } from "@/components/manage-events/modals/OfficerCalendarEventModal";
@@ -299,39 +303,37 @@ function OfficerCalendarPage() {
 	}
 
 	return (
-		<div
-			className={cn(
-				"space-y-4 p-4 md:space-y-6 md:p-6",
-				MOBILE_TAB_BAR_OFFSET,
-				"md:pb-6",
-			)}
+		<DashboardPage
+			variant="list"
+			className={cn(MOBILE_TAB_BAR_OFFSET, "md:pb-6")}
 		>
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h1 className="text-xl font-bold md:text-2xl">Officer Calendar</h1>
-					<p className="text-sm text-muted-foreground md:text-base">
-						View published events and manage internal officer events
-					</p>
-				</div>
-				<div className="hidden gap-2 md:flex">
-					{officerCalendarId && (
-						<Button variant="outline" asChild>
-							<a
-								href={buildGoogleCalendarSubscribeUrl(officerCalendarId)}
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								<ExternalLink className="h-4 w-4 mr-2" />
-								Subscribe Officer Calendar
-							</a>
-						</Button>
-					)}
-					<Button onClick={() => openCreateModal()}>
-						<Plus className="h-4 w-4 mr-2" />
-						Add Internal Event
-					</Button>
-				</div>
-			</div>
+			<PageHeader
+				hideTitleOnMobile
+				title="Officer Calendar"
+				description="View published events and manage internal officer events."
+				actions={
+					isMobile ? undefined : (
+						<>
+							{officerCalendarId && (
+								<Button variant="outline" asChild>
+									<a
+										href={buildGoogleCalendarSubscribeUrl(officerCalendarId)}
+										target="_blank"
+										rel="noopener noreferrer"
+									>
+										<ExternalLink className="h-4 w-4 mr-2" />
+										Subscribe Officer Calendar
+									</a>
+								</Button>
+							)}
+							<Button onClick={() => openCreateModal()}>
+								<Plus className="h-4 w-4 mr-2" />
+								Add Internal Event
+							</Button>
+						</>
+					)
+				}
+			/>
 
 			{isLoading ? (
 				<div className="flex items-center justify-center h-64">
@@ -386,6 +388,6 @@ function OfficerCalendarPage() {
 				calendarId={officerCalendarId}
 				calendarLabel="Officer Calendar"
 			/>
-		</div>
+		</DashboardPage>
 	);
 }

@@ -17,9 +17,10 @@ import {
 	subDays,
 	subMonths,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import type { EventRequest, EventStatus } from "../types";
@@ -43,17 +44,17 @@ const statusColors: Record<EventStatus, string> = {
 	needs_review: "bg-ds-amber-700",
 	approved: "bg-ds-green-600",
 	declined: "bg-ds-red-600",
-	published: "bg-ds-pink-600",
+	published: "bg-ds-blue-700",
 };
 
 const statusBgColors: Record<EventStatus, string> = {
-	draft: "bg-muted hover:bg-ds-gray-300",
-	submitted: "bg-ds-purple-100 hover:bg-ds-purple-100",
-	pending: "bg-ds-amber-100 hover:bg-ds-amber-100",
-	needs_review: "bg-ds-amber-100 hover:bg-ds-amber-100",
-	approved: "bg-ds-green-100 hover:bg-ds-green-100",
-	declined: "bg-ds-red-100 hover:bg-ds-red-100",
-	published: "bg-ds-pink-100 hover:bg-ds-blue-100",
+	draft: "bg-muted hover:bg-ds-gray-200",
+	submitted: "bg-ds-purple-100/70 hover:bg-ds-purple-100",
+	pending: "bg-ds-amber-100/70 hover:bg-ds-amber-100",
+	needs_review: "bg-ds-amber-100/70 hover:bg-ds-amber-100",
+	approved: "bg-ds-green-100/70 hover:bg-ds-green-100",
+	declined: "bg-ds-red-100/70 hover:bg-ds-red-100",
+	published: "bg-ds-blue-100/70 hover:bg-ds-blue-100",
 };
 
 const legendItems: { status: EventStatus; label: string }[] = [
@@ -80,7 +81,6 @@ export function EventCalendar({
 	);
 	const [currentMonth, setCurrentMonth] = useState(new Date());
 	const [selectedDay, setSelectedDay] = useState(new Date());
-	const [hoveredEvent, setHoveredEvent] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (defaultView) return;
@@ -125,62 +125,69 @@ export function EventCalendar({
 
 	return (
 		<div className="overflow-hidden rounded-md border bg-background">
-			<div className="flex flex-col gap-3 border-b p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-				<div className="flex items-center gap-2">
-					<Button
-						variant="outline"
-						size="sm"
-						className="size-11 md:size-9"
-						onClick={() => {
-							if (view === "month") goToPreviousMonth();
-							else setSelectedDay(subDays(selectedDay, view === "day" ? 1 : 7));
-						}}
-						aria-label="Previous"
-					>
-						<ChevronLeft className="h-4 w-4" />
-					</Button>
-					<Button
-						variant="outline"
-						size="sm"
-						className="size-11 md:size-9"
-						onClick={() => {
-							if (view === "month") goToNextMonth();
-							else setSelectedDay(addDays(selectedDay, view === "day" ? 1 : 7));
-						}}
-						aria-label="Next"
-					>
-						<ChevronRight className="h-4 w-4" />
-					</Button>
-					<Button
-						variant="ghost"
-						size="sm"
-						className="h-11 md:h-9"
-						onClick={goToToday}
-					>
-						Today
-					</Button>
-				</div>
-				<h2 className="text-base font-semibold text-foreground sm:text-lg">
-					{view === "month"
-						? format(currentMonth, "MMMM yyyy")
-						: format(selectedDay, "EEE, MMM d")}
-				</h2>
-				<div className="flex rounded-md bg-muted p-1">
-					{(["agenda", "day", "month"] as const).map((mode) => (
+			<div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+				<div className="flex items-center gap-3">
+					<h2 className="min-w-[10.5rem] text-xl font-semibold tracking-[-0.02em] text-foreground">
+						{view === "month" ? (
+							<>
+								{format(currentMonth, "MMMM")}{" "}
+								<span className="font-normal text-muted-foreground">
+									{format(currentMonth, "yyyy")}
+								</span>
+							</>
+						) : (
+							format(selectedDay, "EEE, MMM d")
+						)}
+					</h2>
+					<div className="flex items-center gap-1">
 						<Button
-							key={mode}
 							variant="ghost"
-							size="sm"
-							className={cn(
-								"h-9 min-w-[4.5rem] capitalize",
-								view === mode && "bg-background shadow-sm",
-							)}
-							onClick={() => setView(mode)}
+							size="icon"
+							className="size-11 md:size-8"
+							onClick={() => {
+								if (view === "month") goToPreviousMonth();
+								else
+									setSelectedDay(subDays(selectedDay, view === "day" ? 1 : 7));
+							}}
+							aria-label="Previous"
 						>
-							{mode}
+							<ChevronLeft className="h-4 w-4" />
 						</Button>
-					))}
+						<Button
+							variant="outline"
+							size="sm"
+							className="h-11 md:h-8"
+							onClick={goToToday}
+						>
+							Today
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="size-11 md:size-8"
+							onClick={() => {
+								if (view === "month") goToNextMonth();
+								else
+									setSelectedDay(addDays(selectedDay, view === "day" ? 1 : 7));
+							}}
+							aria-label="Next"
+						>
+							<ChevronRight className="h-4 w-4" />
+						</Button>
+					</div>
 				</div>
+				<Tabs
+					value={view}
+					onValueChange={(value) => setView(value as CalendarView)}
+				>
+					<TabsList>
+						{(["agenda", "day", "month"] as const).map((mode) => (
+							<TabsTrigger key={mode} value={mode} className="px-4 capitalize">
+								{mode}
+							</TabsTrigger>
+						))}
+					</TabsList>
+				</Tabs>
 			</div>
 
 			{view === "agenda" && (
@@ -227,7 +234,7 @@ export function EventCalendar({
 								if (dayItems.length === 0) return null;
 								return (
 									<li key={day.toISOString()} className="border-t">
-										<div className="bg-muted/50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+										<div className="bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground">
 											{format(day, "EEEE, MMM d")}
 											{isToday(day) ? " · Today" : ""}
 										</div>
@@ -332,19 +339,19 @@ export function EventCalendar({
 
 			{view === "month" && (
 				<>
-					<div className="grid grid-cols-7 gap-px bg-muted">
+					<div className="grid grid-cols-7 border-b">
 						{weekDays.map((day) => (
 							<div
 								key={day}
-								className="bg-muted p-2 text-center text-sm font-medium text-muted-foreground"
+								className="px-3 py-2 text-xs font-medium text-muted-foreground"
 							>
 								{day}
 							</div>
 						))}
 					</div>
 
-					<div className="grid grid-cols-7 gap-px bg-muted">
-						{days.map((day) => {
+					<div className="grid grid-cols-7">
+						{days.map((day, index) => {
 							const dayEventList = getEventsForDay(day);
 							const isCurrentMonth = isSameMonth(day, currentMonth);
 							const isTodayDate = isToday(day);
@@ -352,16 +359,18 @@ export function EventCalendar({
 							const sundayWeekLabel = isSunday ? getDayLabel?.(day) : null;
 							const isFinalsWeekLabel =
 								sundayWeekLabel?.includes("Finals") ?? false;
+							const isLastRow = index >= days.length - 7;
 
 							return (
 								<div
 									key={day.toISOString()}
 									className={cn(
-										"min-h-[72px] min-w-0 cursor-pointer overflow-hidden p-2 transition-colors md:min-h-[100px]",
+										"min-h-[84px] min-w-0 cursor-pointer overflow-hidden border-r p-1.5 transition-colors last:border-r-0 md:min-h-[116px]",
+										index % 7 === 6 && "border-r-0",
+										!isLastRow && "border-b",
 										isTodayDate && todayHighlightMode === "background"
-											? "border border-ds-blue-400 bg-ds-blue-100 hover:bg-ds-blue-100"
-											: "bg-background hover:bg-muted",
-										!isCurrentMonth && "opacity-50",
+											? "bg-ds-blue-100/40 hover:bg-ds-blue-100/60"
+											: "hover:bg-muted/50",
 									)}
 									onClick={() => {
 										setSelectedDay(day);
@@ -376,69 +385,62 @@ export function EventCalendar({
 									}}
 									role="button"
 									tabIndex={0}
+									aria-label={format(day, "EEEE, MMMM d")}
 								>
-									<div className="mb-1 flex items-start justify-between gap-1">
-										<div className="min-w-0">
+									<div className="mb-1 flex items-center justify-between gap-1 px-0.5">
+										<span
+											className={cn(
+												"inline-flex size-6 items-center justify-center rounded-full text-sm tabular-nums",
+												isTodayDate
+													? "bg-ds-blue-700 font-semibold text-on-accent"
+													: isCurrentMonth
+														? "font-medium text-foreground"
+														: "text-muted-foreground/60",
+											)}
+										>
+											{format(day, "d")}
+										</span>
+										{sundayWeekLabel && (
 											<span
 												className={cn(
-													"text-sm font-medium",
-													isTodayDate && todayHighlightMode === "text"
-														? "text-tone-info"
-														: "text-foreground",
+													"truncate text-[11px] font-medium",
+													isFinalsWeekLabel
+														? "text-tone-danger"
+														: "text-muted-foreground",
 												)}
 											>
-												{format(day, "d")}
-											</span>
-											{sundayWeekLabel && (
-												<div className="mt-1">
-													<div
-														className={cn(
-															"rounded-md px-2 py-1",
-															isFinalsWeekLabel
-																? "border border-ds-red-400 bg-ds-red-800/85"
-																: "border border-ds-blue-400 bg-ds-blue-800/85",
-														)}
-													>
-														<span className="block truncate text-[10px] font-semibold tracking-normal text-on-accent">
-															{sundayWeekLabel}
-														</span>
-													</div>
-												</div>
-											)}
-										</div>
-										{isTodayDate && (
-											<span className="shrink-0 text-xs font-medium text-tone-info">
-												Today
+												{sundayWeekLabel}
 											</span>
 										)}
 									</div>
 
-									<div className="min-w-0 space-y-1">
+									<div
+										className={cn(
+											"min-w-0 space-y-0.5",
+											!isCurrentMonth && "opacity-55",
+										)}
+									>
 										{dayEventList.slice(0, 3).map((event) => (
 											<button
 												type="button"
 												key={event._id}
 												className={cn(
-													"flex h-auto w-full min-w-0 items-center gap-1 overflow-hidden rounded px-1.5 py-0.5 text-left text-xs transition-shadow duration-150",
+													"flex h-auto w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-[4px] px-1.5 py-0.5 text-left text-xs transition-colors",
 													statusBgColors[event.status],
-													hoveredEvent === event._id &&
-														"ring-2 ring-gray-300 ring-offset-1",
 												)}
 												onClick={(e) => {
 													e.stopPropagation();
 													onEventClick?.(event);
 												}}
-												onMouseEnter={() => setHoveredEvent(event._id)}
-												onMouseLeave={() => setHoveredEvent(null)}
 												title={event.eventName}
 											>
 												<span
 													className={cn(
-														"size-2 shrink-0 rounded-full",
+														"size-1.5 shrink-0 rounded-full",
 														statusColors[event.status],
 													)}
 												/>
-												<span className="min-w-0 truncate">
+												<span className="min-w-0 truncate font-medium">
 													{event.eventName}
 												</span>
 											</button>
@@ -454,24 +456,21 @@ export function EventCalendar({
 						})}
 					</div>
 
-					<div className="border-t bg-muted/50 p-4">
-						<div className="flex flex-wrap items-center gap-4">
-							<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-								<Info className="h-4 w-4" />
-								<span className="font-medium">Status:</span>
+					<div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t px-4 py-3">
+						{legendItems.map((item) => (
+							<div
+								key={item.status}
+								className="flex items-center gap-1.5 text-xs text-muted-foreground"
+							>
+								<span
+									className={cn(
+										"size-1.5 rounded-full",
+										statusColors[item.status],
+									)}
+								/>
+								<span>{item.label}</span>
 							</div>
-							{legendItems.map((item) => (
-								<div
-									key={item.status}
-									className="flex items-center gap-1.5 text-xs text-muted-foreground"
-								>
-									<span
-										className={`h-2.5 w-2.5 rounded-full ${statusColors[item.status]}`}
-									/>
-									<span>{item.label}</span>
-								</div>
-							))}
-						</div>
+						))}
 					</div>
 				</>
 			)}

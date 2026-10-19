@@ -155,7 +155,7 @@ export function FundDepositDetail({
 										<StatusIcon className="w-3 h-3" />
 										{STATUS_LABELS[deposit.status]}
 									</Badge>
-									<span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+									<span className="text-xs text-muted-foreground font-medium">
 										• {deposit.purpose}
 									</span>
 								</SheetDescription>
@@ -178,7 +178,7 @@ export function FundDepositDetail({
 								{/* Meta Grid */}
 								<div className="grid grid-cols-2 gap-4">
 									<div className="space-y-1">
-										<Label className="text-xs text-muted-foreground uppercase tracking-wider">
+										<Label className="text-xs text-muted-foreground">
 											Method
 										</Label>
 										<div className="font-medium flex items-center gap-2 capitalize">
@@ -190,7 +190,7 @@ export function FundDepositDetail({
 									</div>
 									{deposit.referenceNumber && (
 										<div className="space-y-1">
-											<Label className="text-xs text-muted-foreground uppercase tracking-wider">
+											<Label className="text-xs text-muted-foreground">
 												Reference
 											</Label>
 											<div className="font-mono text-sm">
@@ -199,7 +199,7 @@ export function FundDepositDetail({
 										</div>
 									)}
 									<div className="space-y-1">
-										<Label className="text-xs text-muted-foreground uppercase tracking-wider">
+										<Label className="text-xs text-muted-foreground">
 											Submitted By
 										</Label>
 										<div className="font-medium">
@@ -207,7 +207,7 @@ export function FundDepositDetail({
 										</div>
 									</div>
 									<div className="space-y-1">
-										<Label className="text-xs text-muted-foreground uppercase tracking-wider">
+										<Label className="text-xs text-muted-foreground">
 											Submitted On
 										</Label>
 										<div className="text-sm">
@@ -226,7 +226,7 @@ export function FundDepositDetail({
 								{/* Description */}
 								{deposit.description && (
 									<div className="space-y-2">
-										<Label className="text-xs text-muted-foreground uppercase tracking-wider">
+										<Label className="text-xs text-muted-foreground">
 											Description
 										</Label>
 										<div className="text-sm bg-muted/50 p-3 rounded-md whitespace-pre-wrap">

@@ -143,7 +143,7 @@ export function AppSidebar({ currentPath = "" }: AppSidebarProps) {
 							<SidebarGroupLabel asChild>
 								<button
 									type="button"
-									className="flex h-10 w-full cursor-pointer items-center justify-between hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+									className="flex h-10 w-full cursor-pointer items-center justify-between rounded-[4px] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
 									onClick={() => toggleGroup(category.title)}
 									aria-expanded={expandedGroups.has(category.title)}
 								>

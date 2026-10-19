@@ -391,7 +391,7 @@ export function FundingSection({
 									className="p-4 border rounded-lg space-y-4 bg-muted/50"
 								>
 									<div className="flex items-center justify-between">
-										<span className="text-xs font-medium text-muted-foreground uppercase">
+										<span className="text-xs font-medium text-muted-foreground">
 											Invoice #{data.invoices.indexOf(invoice) + 1}
 										</span>
 										<Button

@@ -29,6 +29,7 @@ import {
 	clearAuthRecoveryLatches,
 	resolveNativeAuthRecoveryAction,
 } from "@/lib/auth/recovery";
+import { resolveLogtoRedirectUri } from "@/lib/auth/redirectUri";
 import { refreshSessionWithRetry } from "@/lib/auth/sessionRefresh";
 import { buildLogtoSignInOptions, type SignInOptions } from "@/lib/auth/signIn";
 import { setAuthTokens } from "@/lib/prefetch/authTokens";
@@ -57,36 +58,6 @@ type AuthBootstrapResult = {
 	sessionToken: string;
 	expiresAt: number;
 };
-
-function resolveLogtoRedirectUri(
-	redirectUri: string | undefined,
-	origin: string,
-): string {
-	const trimmedRedirectUri = redirectUri?.trim();
-
-	if (!trimmedRedirectUri) {
-		return `${origin}/callback`;
-	}
-
-	try {
-		const configuredUrl = new URL(trimmedRedirectUri, origin);
-
-		if (configuredUrl.origin === origin) {
-			return configuredUrl.toString();
-		}
-
-		if (
-			configuredUrl.hostname.includes("localhost") &&
-			!window.location.hostname.includes("localhost")
-		) {
-			return `${origin}/callback`;
-		}
-
-		return configuredUrl.toString();
-	} catch {
-		return `${origin}/callback`;
-	}
-}
 
 async function fetchWithTimeout(
 	input: RequestInfo | URL,

@@ -8,14 +8,22 @@ type DashboardPageVariant =
 	| "immersive"
 	| "default";
 
+/**
+ * Every top-level dashboard page shares one content width so switching
+ * between sidebar tabs never makes the layout jump.
+ */
+export const DASHBOARD_PAGE_MAX_WIDTH = "max-w-[1360px]";
+
 type DashboardPageProps = React.ComponentProps<"div"> & {
+	/** @deprecated All pages share one width; kept so existing call sites compile. */
 	width?: "standard" | "wide";
 	variant?: DashboardPageVariant;
 };
 
 export function DashboardPage({
 	className,
-	width = "standard",
+	// biome-ignore lint/correctness/noUnusedVariables: accepted for backwards compatibility
+	width,
 	variant = "default",
 	...props
 }: DashboardPageProps) {
@@ -29,7 +37,7 @@ export function DashboardPage({
 				variant === "list" && "space-y-4 md:space-y-6",
 				variant === "form" && "space-y-5",
 				variant === "editor" && "space-y-3 px-3 sm:px-4",
-				width === "wide" ? "max-w-[1440px]" : "max-w-[1120px]",
+				DASHBOARD_PAGE_MAX_WIDTH,
 				className,
 			)}
 			{...props}
