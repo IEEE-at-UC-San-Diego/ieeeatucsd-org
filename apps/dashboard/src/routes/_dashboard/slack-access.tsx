@@ -6,18 +6,20 @@ import {
 	ExternalLink,
 	Eye,
 	EyeOff,
-	Inbox,
-	Info,
-	Key,
 	Loader2,
 	Mail,
-	MessageSquare,
 	RefreshCw,
-	Shield,
 } from "lucide-react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
-import { EmailModal } from "@/components/dashboard/slack-access/EmailModal";
+import {
+	DashboardPage,
+	PageHeader,
+} from "@/components/dashboard/DashboardPage";
+import {
+	EmailModal,
+	parseSender,
+} from "@/components/dashboard/slack-access/EmailModal";
 import { PasswordStrengthIndicator } from "@/components/dashboard/slack-access/PasswordStrengthIndicator";
 import type {
 	EmailGenerationState,
@@ -29,6 +31,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
+
+/**
+ * Domain of the Slack IEEE mailboxes created on this page. This matches the
+ * server's MXROUTE_EMAIL_DOMAIN and is not the org's main ieeeatucsd.org domain.
+ */
+const IEEE_EMAIL_DOMAIN = "ieeeucsd.org";
 
 export const Route = createFileRoute("/_dashboard/slack-access")({
 	component: SlackAccessPage,
@@ -178,7 +186,7 @@ function SlackAccessPage() {
 
 		try {
 			const username = extractUsername(user.email);
-			const proposedEmail = `${username}@ieeeatucsd.org`;
+			const proposedEmail = `${username}@${IEEE_EMAIL_DOMAIN}`;
 
 			const checkResponse = await fetch("/api/check-email-exists", {
 				method: "POST",
@@ -405,295 +413,278 @@ function SlackAccessPage() {
 	};
 
 	return (
-		<div className="w-full">
-			<main className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 lg:px-6">
-				<section className="rounded-md border bg-muted/20 p-4">
-					<h3 className="mb-4 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground">
-						How to Join
-					</h3>
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+		<DashboardPage>
+			<PageHeader
+				hideTitleOnMobile
+				title="Slack Access"
+				description="Create your IEEE email and join the IEEE UCSD Slack workspace."
+			/>
+			<main className="space-y-8">
+				<section>
+					<h2 className="mb-3 text-sm font-semibold">How to join</h2>
+					<ol className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
 						{[
-							{ n: 1, t: "Create Email", d: "Generate your IEEE email above." },
-							{ n: 2, t: "Sign Up", d: "Use it on the Slack sign-up page." },
-							{ n: 3, t: "Verify", d: "Check this inbox for your code." },
-							{ n: 4, t: "Join", d: "Finish setup and join channels." },
-						].map((s) => (
-							<div
-								key={s.n}
-								className="flex items-start gap-2 rounded-md border bg-card p-2.5"
-							>
-								<div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-									{s.n}
-								</div>
-								<div>
-									<div className="text-xs font-semibold">{s.t}</div>
-									<div className="text-[11px] text-muted-foreground">{s.d}</div>
-								</div>
-							</div>
+							{
+								n: 1,
+								t: "Create your email",
+								d: "Set a password and generate it below.",
+							},
+							{
+								n: 2,
+								t: "Sign up",
+								d: (
+									<>
+										Use your{" "}
+										<span className="font-medium text-foreground">
+											@{IEEE_EMAIL_DOMAIN}
+										</span>{" "}
+										email on the Slack sign-up page, not your personal one.
+									</>
+								),
+							},
+							{
+								n: 3,
+								t: "Verify",
+								d: "Read your code in the inbox here.",
+							},
+							{
+								n: 4,
+								t: "Join",
+								d: "Finish setup and join channels.",
+							},
+						].map((step) => (
+							<li key={step.n} className="border-t pt-3">
+								<p className="text-xs tabular-nums text-muted-foreground">
+									Step {step.n}
+								</p>
+								<p className="mt-0.5 text-sm font-medium">{step.t}</p>
+								<p className="text-sm text-muted-foreground">{step.d}</p>
+							</li>
 						))}
-					</div>
+					</ol>
 				</section>
 
-				<section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-					<div className="rounded-md border bg-card p-5 shadow-sm lg:col-span-5">
-						<div className="mb-4 flex items-center gap-3 border-b pb-3">
-							<div className="rounded-lg bg-ds-blue-100 p-2">
-								<Mail className="h-5 w-5 text-tone-info" />
-							</div>
-							<div>
-								<h2 className="text-base font-semibold">
-									{hasIEEEEmail ? "Email Management" : "Create Email"}
-								</h2>
-								<p className="text-xs text-muted-foreground">
-									{hasIEEEEmail
-										? "Manage your IEEE account credentials."
-										: "Create your @ieeeatucsd.org account."}
-								</p>
-							</div>
-						</div>
+				<section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+					{/* Account */}
+					<div className="flex flex-col overflow-hidden rounded-md border lg:col-span-5">
+						<header className="border-b px-5 py-4">
+							<h2 className="text-base font-semibold">
+								{hasIEEEEmail ? "Your IEEE email" : "Create your IEEE email"}
+							</h2>
+							<p className="mt-0.5 text-sm text-muted-foreground">
+								{hasIEEEEmail
+									? "Manage your IEEE account credentials."
+									: `Create your @${IEEE_EMAIL_DOMAIN} account for Slack.`}
+							</p>
+						</header>
 
-						<div className="space-y-4">
-							<div className="space-y-2 rounded-lg border bg-muted/20 p-3 text-sm">
-								<div className="grid grid-cols-[92px_1fr] items-center gap-2">
-									<span className="text-xs font-medium text-muted-foreground">
-										Personal
-									</span>
-									<span className="truncate font-medium" title={user?.email}>
-										{user?.email}
-									</span>
-								</div>
-								<div className="grid grid-cols-[92px_1fr] items-center gap-2">
-									<span className="text-xs font-medium text-muted-foreground">
-										IEEE Email
-									</span>
-									{hasIEEEEmail || ieeeEmail ? (
-										<span className="flex min-w-0 items-center gap-1.5 break-all font-medium text-tone-link">
+						<dl className="divide-y border-b text-sm">
+							<div className="flex items-center justify-between gap-4 px-5 py-3">
+								<dt className="shrink-0 text-muted-foreground">Personal</dt>
+								<dd
+									className="min-w-0 truncate font-medium"
+									title={user?.email}
+								>
+									{user?.email}
+								</dd>
+							</div>
+							<div className="flex items-center justify-between gap-4 px-5 py-3">
+								<dt className="shrink-0 text-muted-foreground">IEEE email</dt>
+								{hasIEEEEmail || ieeeEmail ? (
+									<dd className="flex min-w-0 items-center gap-1 font-medium">
+										<span
+											className="min-w-0 truncate"
+											title={ieeeEmail ?? undefined}
+										>
 											{ieeeEmail}
-											<Button
-												variant="ghost"
-												size="icon"
-												aria-label="Copy IEEE email"
-												onClick={copyEmail}
-												className="text-muted-foreground hover:text-foreground"
-												type="button"
-											>
-												<Copy className="h-3.5 w-3.5" />
-											</Button>
 										</span>
-									) : (
-										<span className="text-xs italic text-muted-foreground">
-											Not created yet
-										</span>
-									)}
-								</div>
-							</div>
-
-							<div className="space-y-3">
-								<div className="space-y-1.5">
-									<Label
-										htmlFor={passwordInputId}
-										className="text-xs font-medium"
-									>
-										{hasIEEEEmail ? "New Password (Reset)" : "Create Password"}
-									</Label>
-									<div className="relative">
-										<Input
-											id={passwordInputId}
-											type={showPassword ? "text" : "password"}
-											placeholder={
-												hasIEEEEmail
-													? "Enter new password"
-													: "Create secure password"
-											}
-											value={customPassword}
-											onChange={(e) => setCustomPassword(e.target.value)}
-											onKeyDown={handleIEEEPasswordKeyDown}
-											disabled={hasIEEEEmail && !canResetPassword}
-											className="h-11 pr-12 text-base md:h-10 md:text-sm"
-											autoComplete={
-												hasIEEEEmail ? "new-password" : "new-password"
-											}
-											autoCapitalize="off"
-											autoCorrect="off"
-											spellCheck={false}
-											enterKeyHint="done"
-										/>
 										<Button
 											variant="ghost"
 											size="icon"
-											aria-label={
-												showPassword ? "Hide password" : "Show password"
-											}
-											className="absolute right-1 top-1/2 size-11 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-											onClick={() => setShowPassword(!showPassword)}
+											aria-label="Copy IEEE email"
+											onClick={copyEmail}
+											className="-my-2 text-muted-foreground hover:text-foreground"
 											type="button"
 										>
-											{showPassword ? (
-												<EyeOff className="h-4 w-4" />
-											) : (
-												<Eye className="h-4 w-4" />
-											)}
+											<Copy className="h-3.5 w-3.5" />
 										</Button>
-									</div>
-									{customPassword && (
-										<PasswordStrengthIndicator
-											validation={passwordValidation}
-										/>
-									)}
-								</div>
-
-								{hasIEEEEmail ? (
-									canResetPassword ? (
-										<Button
-											onClick={resetEmailPassword}
-											disabled={
-												!customPassword.trim() ||
-												!passwordValidation.isValid ||
-												emailState.isResetting
-											}
-											className="h-11 w-full bg-ieee-blue text-sm text-on-accent hover:bg-ieee-blue-light md:h-10"
-										>
-											{emailState.isResetting ? (
-												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-											) : (
-												<RefreshCw className="mr-2 h-4 w-4" />
-											)}
-											Reset Password
-										</Button>
-									) : (
-										<div className="rounded-md border border-ds-amber-100 bg-ds-amber-100 p-2.5 text-xs text-muted-foreground">
-											<span className="font-medium text-tone-warning">
-												Password reset
-											</span>{" "}
-											is only available to officers and admins.
-										</div>
-									)
+									</dd>
 								) : (
+									<dd className="text-muted-foreground">Not created yet</dd>
+								)}
+							</div>
+						</dl>
+
+						<div className="space-y-4 px-5 py-5">
+							<div className="space-y-1.5">
+								<Label
+									htmlFor={passwordInputId}
+									className="text-sm font-medium"
+								>
+									{hasIEEEEmail ? "New password" : "Password"}
+								</Label>
+								<div className="relative">
+									<Input
+										id={passwordInputId}
+										type={showPassword ? "text" : "password"}
+										placeholder={
+											hasIEEEEmail
+												? "Enter new password"
+												: "Create a secure password"
+										}
+										value={customPassword}
+										onChange={(e) => setCustomPassword(e.target.value)}
+										onKeyDown={handleIEEEPasswordKeyDown}
+										disabled={hasIEEEEmail && !canResetPassword}
+										className="h-11 pr-12 text-base md:h-10 md:text-sm"
+										autoComplete="new-password"
+										autoCapitalize="off"
+										autoCorrect="off"
+										spellCheck={false}
+										enterKeyHint="done"
+									/>
 									<Button
-										onClick={generateIEEEEmail}
+										variant="ghost"
+										size="icon"
+										aria-label={
+											showPassword ? "Hide password" : "Show password"
+										}
+										className="absolute right-1 top-1/2 size-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+										onClick={() => setShowPassword(!showPassword)}
+										type="button"
+									>
+										{showPassword ? (
+											<EyeOff className="h-4 w-4" />
+										) : (
+											<Eye className="h-4 w-4" />
+										)}
+									</Button>
+								</div>
+								{customPassword && (
+									<PasswordStrengthIndicator validation={passwordValidation} />
+								)}
+							</div>
+
+							{hasIEEEEmail ? (
+								canResetPassword ? (
+									<Button
+										onClick={resetEmailPassword}
 										disabled={
 											!customPassword.trim() ||
 											!passwordValidation.isValid ||
-											emailState.isGenerating
+											emailState.isResetting
 										}
-										className="h-11 w-full bg-ieee-blue text-sm text-on-accent hover:bg-ieee-blue-light md:h-10"
+										className="h-11 w-full md:h-10"
 									>
-										{emailState.isGenerating ? (
+										{emailState.isResetting ? (
 											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 										) : (
-											<Mail className="mr-2 h-4 w-4" />
+											<RefreshCw className="mr-2 h-4 w-4" />
 										)}
-										Generate Email
+										Reset password
 									</Button>
-								)}
+								) : (
+									<p className="text-sm text-muted-foreground">
+										Password reset is only available to officers and admins.
+									</p>
+								)
+							) : (
+								<Button
+									onClick={generateIEEEEmail}
+									disabled={
+										!customPassword.trim() ||
+										!passwordValidation.isValid ||
+										emailState.isGenerating
+									}
+									className="h-11 w-full md:h-10"
+								>
+									{emailState.isGenerating ? (
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									) : (
+										<Mail className="mr-2 h-4 w-4" />
+									)}
+									Generate email
+								</Button>
+							)}
 
-								{emailState.success && (
-									<div className="flex items-center gap-2 rounded-md border border-ds-green-100 bg-ds-green-100 p-2.5 text-xs text-tone-success">
-										<CheckCircle className="h-3.5 w-3.5" />
-										{emailState.success}
-									</div>
-								)}
-								{emailState.error && (
-									<div className="flex items-center gap-2 rounded-md border border-ds-red-100 bg-ds-red-100 p-2.5 text-xs text-tone-danger">
-										<AlertCircle className="h-3.5 w-3.5" />
-										{emailState.error}
-									</div>
-								)}
-							</div>
-
-							<div className="space-y-3 border-t pt-4">
-								<div className="rounded-lg border bg-ds-purple-100/40 p-3">
-									<div className="flex items-start gap-3">
-										<div className="rounded-md bg-ds-purple-100 p-2">
-											<MessageSquare className="h-4 w-4 text-tone-purple" />
-										</div>
-										<div className="space-y-1">
-											<h3 className="text-sm font-semibold">Slack Workspace</h3>
-											<a
-												href="https://ieeeucsdofficers.slack.com"
-												target="_blank"
-												rel="noopener noreferrer"
-												className="inline-flex items-center gap-1 text-xs font-medium text-tone-link hover:underline"
-											>
-												ieeeucsdofficers.slack.com
-												<ExternalLink className="h-3 w-3" />
-											</a>
-											<p className="text-xs text-muted-foreground">
-												Use this IEEE email for workspace access and account
-												verification.
-											</p>
-										</div>
-									</div>
-								</div>
-
-								<div className="rounded-lg border border-ds-amber-100 bg-ds-amber-100 p-3">
-									<div className="flex items-start gap-2.5">
-										<Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-tone-warning" />
-										<div className="space-y-1">
-											<p className="text-xs font-semibold text-tone-warning">
-												Access Restriction
-											</p>
-											<p className="text-xs text-muted-foreground">
-												This account is for Slack authentication only.
-											</p>
-											<div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-												<Info className="h-3.5 w-3.5 text-tone-warning" />
-												Do not use for external communication.
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
+							{emailState.success && (
+								<p className="flex items-center gap-2 text-sm text-tone-success">
+									<CheckCircle className="h-4 w-4 shrink-0" />
+									{emailState.success}
+								</p>
+							)}
+							{emailState.error && (
+								<p className="flex items-center gap-2 text-sm text-tone-danger">
+									<AlertCircle className="h-4 w-4 shrink-0" />
+									{emailState.error}
+								</p>
+							)}
 						</div>
+
+						<footer className="mt-auto space-y-2 border-t bg-muted/30 px-5 py-4 text-sm">
+							<p className="flex flex-wrap items-center gap-x-2">
+								<span className="text-muted-foreground">Workspace</span>
+								<a
+									href="https://ieeeucsdofficers.slack.com"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="inline-flex items-center gap-1 font-medium text-tone-link hover:underline"
+								>
+									ieeeucsdofficers.slack.com
+									<ExternalLink className="h-3 w-3" />
+								</a>
+							</p>
+							<p className="text-xs leading-relaxed text-muted-foreground">
+								This account is for Slack authentication only. Don't use it for
+								external communication.
+							</p>
+						</footer>
 					</div>
 
-					<div className="flex h-[560px] flex-col rounded-md border bg-card p-5 shadow-sm lg:col-span-7">
-						<div className="mb-4 flex items-center justify-between border-b pb-3">
-							<div className="flex items-center gap-3">
-								<div className="rounded-lg bg-ds-purple-100 p-2">
-									<Inbox className="h-5 w-5 text-tone-purple" />
-								</div>
-								<div>
-									<h2 className="text-base font-semibold">Inbox</h2>
-									<p className="text-xs text-muted-foreground">
-										Verification codes and account updates.
-									</p>
-								</div>
+					{/* Inbox */}
+					<div className="flex h-[600px] flex-col overflow-hidden rounded-md border lg:col-span-7">
+						<header className="flex items-center justify-between gap-3 border-b px-5 py-4">
+							<div>
+								<h2 className="text-base font-semibold">Inbox</h2>
+								<p className="mt-0.5 text-sm text-muted-foreground">
+									Verification codes and account updates.
+								</p>
 							</div>
 							{inboxState.isAuthenticated && (
 								<Button
 									variant="ghost"
-									size="sm"
+									size="icon"
 									onClick={refreshInbox}
 									disabled={inboxState.isRefreshing}
-									className="h-8 w-8 p-0"
+									aria-label="Refresh inbox"
+									className="text-muted-foreground hover:text-foreground"
 								>
 									{inboxState.isRefreshing ? (
-										<Loader2 className="h-4 w-4 animate-spin text-tone-purple" />
+										<Loader2 className="h-4 w-4 animate-spin" />
 									) : (
-										<RefreshCw className="h-4 w-4 text-tone-purple" />
+										<RefreshCw className="h-4 w-4" />
 									)}
 								</Button>
 							)}
-						</div>
+						</header>
 
-						<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+						<div className="flex min-h-0 flex-1 flex-col">
 							{!ieeeEmail ? (
-								<div className="flex flex-1 flex-col items-center justify-center p-6 text-center text-muted-foreground/60">
-									<Mail className="mb-3 h-10 w-10 opacity-20" />
-									<p className="text-sm">
-										Create an IEEE email first to access inbox messages.
+								<div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+									<p className="text-sm font-medium">No inbox yet</p>
+									<p className="mt-1 max-w-xs text-sm text-muted-foreground">
+										Create your IEEE email first, then your messages will show
+										up here.
 									</p>
 								</div>
 							) : !inboxState.isAuthenticated ? (
-								<div className="flex flex-1 items-center justify-center p-6">
-									<div className="w-full max-w-[300px] space-y-4 rounded-lg border bg-muted/20 p-4">
+								<div className="flex flex-1 items-center justify-center px-6">
+									<div className="w-full max-w-[320px] space-y-4">
 										<div className="text-center">
-											<div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-ds-blue-100">
-												<Key className="h-5 w-5 text-tone-purple" />
-											</div>
-											<h3 className="text-sm font-semibold">Login to Inbox</h3>
-											<p className="mt-0.5 break-all text-xs text-muted-foreground">
+											<h3 className="text-base font-semibold">
+												Sign in to inbox
+											</h3>
+											<p className="mt-0.5 break-all text-sm text-muted-foreground">
 												{ieeeEmail}
 											</p>
 										</div>
@@ -701,7 +692,8 @@ function SlackAccessPage() {
 											<div className="relative">
 												<Input
 													type={showInboxPassword ? "text" : "password"}
-													placeholder="Enter email password"
+													placeholder="Email password"
+													aria-label="Email password"
 													value={inboxPassword}
 													onChange={(e) => setInboxPassword(e.target.value)}
 													onKeyDown={handleInboxPasswordKeyDown}
@@ -720,7 +712,7 @@ function SlackAccessPage() {
 															? "Hide password"
 															: "Show password"
 													}
-													className="absolute right-1 top-1/2 size-11 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+													className="absolute right-1 top-1/2 size-9 -translate-y-1/2 text-muted-foreground hover:text-foreground"
 													onClick={() =>
 														setShowInboxPassword(!showInboxPassword)
 													}
@@ -736,12 +728,12 @@ function SlackAccessPage() {
 											<Button
 												onClick={authenticateInbox}
 												disabled={!inboxPassword.trim() || inboxState.isLoading}
-												className="h-11 w-full bg-ds-purple-700 text-sm text-on-accent hover:bg-ds-purple-800 md:h-10"
+												className="h-11 w-full md:h-10"
 											>
 												{inboxState.isLoading ? (
 													<Loader2 className="h-4 w-4 animate-spin" />
 												) : (
-													"Access Inbox"
+													"Open inbox"
 												)}
 											</Button>
 										</div>
@@ -749,65 +741,75 @@ function SlackAccessPage() {
 								</div>
 							) : (
 								<>
-									<div className="flex-1 space-y-2 overflow-y-auto pr-1">
+									<div className="min-h-0 flex-1 overflow-y-auto">
 										{inboxState.emails.length === 0 ? (
 											<div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-												<p className="text-sm">Inbox is empty</p>
+												<p className="text-sm">Your inbox is empty</p>
 											</div>
 										) : (
-											getPaginatedEmails().map((email) => {
-												const isSlackRelated =
-													email.subject.toLowerCase().includes("slack") ||
-													email.from.toLowerCase().includes("slack");
-												return (
-													<Button
-														variant="outline"
-														key={email.id}
-														onClick={() => setSelectedEmail(email)}
-														type="button"
-														className={`group cursor-pointer rounded-lg border p-3 transition-colors hover:shadow-sm ${
-															email.isRead
-																? "border-border bg-card hover:border-ds-purple-400"
-																: "border-ds-purple-100 bg-ds-purple-100/60"
-														}`}
-													>
-														<div className="mb-1 flex items-start justify-between gap-2">
-															<div className="flex min-w-0 items-center gap-2">
-																{!email.isRead && (
-																	<span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-ds-purple-1000" />
-																)}
-																{isSlackRelated && (
-																	<span className="rounded bg-ds-blue-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-tone-info">
-																		Slack
+											<ul className="divide-y">
+												{getPaginatedEmails().map((email) => {
+													const isSlackRelated =
+														email.subject.toLowerCase().includes("slack") ||
+														email.from.toLowerCase().includes("slack");
+													return (
+														<li key={email.id}>
+															<button
+																onClick={() => setSelectedEmail(email)}
+																type="button"
+																className="flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-muted/50"
+															>
+																<span
+																	aria-hidden
+																	className={`mt-1.5 size-2 shrink-0 rounded-full ${
+																		email.isRead
+																			? "bg-transparent"
+																			: "bg-ds-blue-700"
+																	}`}
+																/>
+																<span className="min-w-0 flex-1">
+																	<span className="flex items-baseline justify-between gap-3">
+																		<span
+																			className={`truncate text-sm ${
+																				email.isRead
+																					? "text-muted-foreground"
+																					: "font-semibold text-foreground"
+																			}`}
+																		>
+																			{parseSender(email.from).name}
+																		</span>
+																		<span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+																			{email.date}
+																		</span>
 																	</span>
-																)}
-																<h4
-																	className={`truncate text-xs ${!email.isRead ? "font-bold text-foreground" : "font-medium text-muted-foreground"}`}
-																>
-																	{email.subject || "(No Subject)"}
-																</h4>
-															</div>
-															<span className="whitespace-nowrap text-[10px] text-muted-foreground">
-																{email.date}
-															</span>
-														</div>
-														<p className="flex items-center gap-1 truncate text-[11px] text-muted-foreground">
-															<span className="font-medium text-foreground">
-																{email.from}
-															</span>
-															<span className="mx-1 text-border">|</span>
-															<span className="truncate opacity-80">
-																{email.preview}
-															</span>
-														</p>
-													</Button>
-												);
-											})
+																	<span
+																		className={`block truncate text-sm ${
+																			email.isRead
+																				? "text-muted-foreground"
+																				: "font-medium text-foreground"
+																		}`}
+																	>
+																		{email.subject || "(No subject)"}
+																		{isSlackRelated && (
+																			<span className="ml-2 text-xs font-normal text-tone-link">
+																				Slack
+																			</span>
+																		)}
+																	</span>
+																	<span className="block truncate text-xs text-muted-foreground">
+																		{email.preview}
+																	</span>
+																</span>
+															</button>
+														</li>
+													);
+												})}
+											</ul>
 										)}
 									</div>
 
 									{Math.ceil(inboxState.emails.length / emailsPerPage) > 1 && (
-										<div className="mt-2 flex justify-center gap-1 border-t pt-2">
+										<div className="flex justify-center gap-1 border-t px-3 py-2">
 											{Array.from(
 												{
 													length: Math.ceil(
@@ -831,9 +833,9 @@ function SlackAccessPage() {
 								</>
 							)}
 							{inboxState.error && (
-								<div className="mt-2 flex items-center justify-center border-t border-ds-red-100 bg-ds-red-100 p-2.5 text-xs text-tone-danger">
+								<p className="border-t px-5 py-3 text-sm text-tone-danger">
 									{inboxState.error}
-								</div>
+								</p>
 							)}
 						</div>
 					</div>
@@ -847,6 +849,6 @@ function SlackAccessPage() {
 					onClose={() => setSelectedEmail(null)}
 				/>
 			)}
-		</div>
+		</DashboardPage>
 	);
 }

@@ -65,9 +65,7 @@ function MetaField({
 		<div className={cn("min-w-0 space-y-1", className)}>
 			<div className="flex items-center gap-1.5 text-muted-foreground">
 				{Icon ? <Icon className="size-3.5 shrink-0 opacity-70" /> : null}
-				<span className="text-[11px] font-medium uppercase tracking-wider">
-					{label}
-				</span>
+				<span className="text-xs font-medium">{label}</span>
 			</div>
 			<div className="text-sm font-medium text-foreground">{children}</div>
 		</div>
@@ -620,7 +618,7 @@ export function EventViewModal({
 
 						{requirements.length > 0 && (
 							<div className="border-t border-border/50 pt-5">
-								<span className="mb-2.5 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+								<span className="mb-2.5 block text-xs font-medium text-muted-foreground">
 									Requirements
 								</span>
 								<div className="flex flex-wrap gap-1.5">
@@ -641,7 +639,7 @@ export function EventViewModal({
 						)}
 
 						<div className="border-t border-border/50 pt-5">
-							<span className="mb-2.5 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+							<span className="mb-2.5 block text-xs font-medium text-muted-foreground">
 								Description
 							</span>
 							<div className="rounded-lg bg-muted/25 px-3.5 py-3 text-sm leading-relaxed text-pretty whitespace-pre-wrap text-foreground">
@@ -732,7 +730,7 @@ export function EventViewModal({
 								{graphicsUploadNote &&
 									graphicsUploadNote.split("\n").filter(isUrl).length > 0 && (
 										<div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
-											<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+											<p className="text-xs font-medium text-muted-foreground">
 												Linked Files
 											</p>
 											{graphicsUploadNote
@@ -880,7 +878,7 @@ export function EventViewModal({
 										return (
 											<div
 												key={invoice._id}
-												className="border rounded-md bg-card overflow-hidden shadow-sm"
+												className="border rounded-md bg-card overflow-hidden"
 											>
 												<div className="p-3 bg-muted/30 border-b flex justify-between items-center">
 													<span className="font-medium text-sm">
@@ -1001,7 +999,7 @@ export function EventViewModal({
 								</div>
 							) : (
 								<div className="rounded-md border overflow-hidden">
-									<div className="grid grid-cols-12 bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+									<div className="grid grid-cols-12 bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
 										<div className="col-span-5">Attendee</div>
 										<div className="col-span-3">Checked In</div>
 										<div className="col-span-2">Food</div>

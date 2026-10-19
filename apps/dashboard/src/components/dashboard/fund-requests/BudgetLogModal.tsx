@@ -143,9 +143,7 @@ export function BudgetLogModal({
 						<div className="rounded-md border bg-ds-green-100/50 p-4">
 							<div className="flex items-center gap-2 mb-2 text-tone-success">
 								<User className="w-4 h-4" />
-								<span className="text-xs font-bold uppercase tracking-wide">
-									Approved
-								</span>
+								<span className="text-xs font-medium">Approved</span>
 							</div>
 							<p className="text-2xl font-bold text-tone-success">
 								{formatCurrency(stats.approved)}
@@ -154,9 +152,7 @@ export function BudgetLogModal({
 						<div className="rounded-md border bg-ds-amber-100/50 p-4">
 							<div className="flex items-center gap-2 mb-2 text-tone-warning">
 								<Loader2 className="w-4 h-4" />
-								<span className="text-xs font-bold uppercase tracking-wide">
-									Pending
-								</span>
+								<span className="text-xs font-medium">Pending</span>
 							</div>
 							<p className="text-2xl font-bold text-tone-warning">
 								{formatCurrency(stats.pending)}
@@ -165,9 +161,7 @@ export function BudgetLogModal({
 						<div className="rounded-md border bg-muted p-4">
 							<div className="flex items-center gap-2 mb-2 text-foreground">
 								<DollarSign className="w-4 h-4" />
-								<span className="text-xs font-bold uppercase tracking-wide">
-									Total
-								</span>
+								<span className="text-xs font-medium">Total</span>
 							</div>
 							<p className="text-2xl font-bold text-foreground">
 								{formatCurrency(stats.total)}

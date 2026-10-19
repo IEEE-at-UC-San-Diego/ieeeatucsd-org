@@ -1,6 +1,6 @@
-import { Building2, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
+import { DotLabel, type DotTone } from "@/components/dashboard/DotLabel";
 import { MobileDataList, MobileDataListItem } from "@/components/mobile";
-import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { SortConfig, SponsorDomain, SponsorTier } from "./types";
 
@@ -11,13 +11,17 @@ interface SponsorTableProps {
 	onRowClick?: (sponsor: SponsorDomain) => void;
 }
 
-const tierColors: Record<SponsorTier, string> = {
-	Bronze: "bg-ds-amber-100 text-tone-warning",
-	Silver: "bg-muted text-foreground",
-	Gold: "bg-ds-amber-100 text-tone-warning",
-	Platinum: "bg-ds-purple-100 text-tone-purple",
-	Diamond: "bg-ds-blue-100 text-tone-info",
+const tierTone: Record<SponsorTier, DotTone> = {
+	Bronze: "amber",
+	Silver: "gray",
+	Gold: "amber",
+	Platinum: "purple",
+	Diamond: "blue",
 };
+
+function TierChip({ tier }: { tier: SponsorTier }) {
+	return <DotLabel tone={tierTone[tier]}>{tier}</DotLabel>;
+}
 
 export function SponsorTable({
 	sponsors,
@@ -28,26 +32,44 @@ export function SponsorTable({
 	const isMobile = useIsMobile();
 
 	const getSortIcon = (field: string) => {
-		if (sortConfig.field === field) {
-			return sortConfig.direction === "asc" ? (
-				<ChevronUp className="w-3.5 h-3.5" />
-			) : (
-				<ChevronDown className="w-3.5 h-3.5" />
-			);
-		}
-		return null;
+		if (sortConfig.field !== field) return null;
+		return sortConfig.direction === "asc" ? (
+			<ChevronUp className="size-3" />
+		) : (
+			<ChevronDown className="size-3" />
+		);
 	};
+
+	const sortableHead = (field: string, label: string) => (
+		<th
+			scope="col"
+			aria-sort={
+				sortConfig.field === field
+					? sortConfig.direction === "asc"
+						? "ascending"
+						: "descending"
+					: "none"
+			}
+			className="p-0 text-left"
+		>
+			<button
+				type="button"
+				onClick={() => onSort(field)}
+				className="flex w-full items-center gap-1.5 px-4 py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+			>
+				{label}
+				{getSortIcon(field)}
+			</button>
+		</th>
+	);
 
 	if (sponsors.length === 0) {
 		return (
-			<div className="bg-background rounded-md border p-8 text-center">
-				<div className="text-muted-foreground mb-4">
-					<Building2 className="w-12 h-12 mx-auto" />
-				</div>
-				<h3 className="text-lg font-medium text-foreground mb-2">
+			<div className="flex flex-col items-center rounded-md border border-dashed px-6 py-14 text-center">
+				<h3 className="text-sm font-semibold text-foreground">
 					No sponsor domains found
 				</h3>
-				<p className="text-muted-foreground">
+				<p className="mt-1 max-w-md text-sm text-muted-foreground">
 					Add a sponsor domain to automatically assign sponsor status to users
 					with matching email addresses.
 				</p>
@@ -65,13 +87,7 @@ export function SponsorTable({
 						subtitle={
 							<span className="font-mono text-xs">{sponsor.domain}</span>
 						}
-						status={
-							<Badge
-								className={`text-[10px] ${tierColors[sponsor.sponsorTier]}`}
-							>
-								{sponsor.sponsorTier}
-							</Badge>
-						}
+						status={<TierChip tier={sponsor.sponsorTier} />}
 						onClick={() => onRowClick?.(sponsor)}
 					/>
 				))}
@@ -80,60 +96,39 @@ export function SponsorTable({
 	}
 
 	return (
-		<div className="bg-background rounded-md border overflow-hidden">
+		<div className="overflow-hidden rounded-md border">
 			<div className="overflow-x-auto">
 				<table className="w-full text-sm">
 					<thead>
-						<tr className="border-b bg-muted/50">
-							<th
-								className="text-left p-4 font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors"
-								onClick={() => onSort("organizationName")}
-							>
-								<span className="flex items-center gap-1">
-									Organization {getSortIcon("organizationName")}
-								</span>
-							</th>
-							<th
-								className="text-left p-4 font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors"
-								onClick={() => onSort("domain")}
-							>
-								<span className="flex items-center gap-1">
-									Domain {getSortIcon("domain")}
-								</span>
-							</th>
-							<th
-								className="text-left p-4 font-medium text-muted-foreground cursor-pointer hover:bg-muted transition-colors"
-								onClick={() => onSort("sponsorTier")}
-							>
-								<span className="flex items-center gap-1">
-									Tier {getSortIcon("sponsorTier")}
-								</span>
-							</th>
+						<tr className="border-b">
+							{sortableHead("organizationName", "Organization")}
+							{sortableHead("domain", "Domain")}
+							{sortableHead("sponsorTier", "Tier")}
+							<th scope="col" className="w-10" />
 						</tr>
 					</thead>
-					<tbody>
-						{sponsors.map((sponsor, idx) => (
+					<tbody className="divide-y">
+						{sponsors.map((sponsor) => (
 							<tr
 								key={sponsor._id}
-								className={`border-b last:border-b-0 hover:bg-muted transition-colors cursor-pointer ${idx % 2 === 1 ? "bg-muted/30" : ""}`}
+								className="group cursor-pointer transition-colors hover:bg-muted/50"
 								onClick={() => onRowClick?.(sponsor)}
 							>
-								<td className="p-4">
-									<div className="text-sm font-medium text-foreground">
+								<td className="px-4 py-3">
+									<span className="font-medium text-foreground">
 										{sponsor.organizationName}
-									</div>
+									</span>
 								</td>
-								<td className="p-4">
-									<div className="text-sm font-mono text-foreground">
+								<td className="px-4 py-3">
+									<span className="text-sm text-muted-foreground">
 										{sponsor.domain}
-									</div>
+									</span>
 								</td>
-								<td className="p-4">
-									<Badge
-										className={`text-xs ${tierColors[sponsor.sponsorTier]}`}
-									>
-										{sponsor.sponsorTier}
-									</Badge>
+								<td className="px-4 py-3">
+									<TierChip tier={sponsor.sponsorTier} />
+								</td>
+								<td className="px-3 py-3 text-right">
+									<ChevronRight className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
 								</td>
 							</tr>
 						))}

@@ -14,6 +14,7 @@ import {
 	RotateCcw,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { ResponsiveOverlay, useMobileShell } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -77,7 +78,7 @@ const ConstitutionBuilderContent = () => {
 	if (isLoading) {
 		if (ensureError) {
 			return (
-				<div className="w-full max-w-none p-4 md:p-6">
+				<DashboardPage>
 					<div className="max-w-md mx-auto text-center">
 						<div className="rounded-md border border-border bg-card p-8 shadow-sm">
 							<div className="w-14 h-14 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -100,19 +101,17 @@ const ConstitutionBuilderContent = () => {
 							</Button>
 						</div>
 					</div>
-				</div>
+				</DashboardPage>
 			);
 		}
 
 		return (
-			<div className="w-full max-w-none p-4 md:p-6">
-				<div className="max-w-7xl mx-auto">
-					<div className="space-y-4">
-						<div className="h-10 bg-muted rounded animate-pulse" />
-						<div className="h-64 bg-muted rounded animate-pulse" />
-					</div>
+			<DashboardPage>
+				<div className="space-y-4">
+					<div className="h-10 bg-muted rounded animate-pulse" />
+					<div className="h-64 bg-muted rounded animate-pulse" />
 				</div>
-			</div>
+			</DashboardPage>
 		);
 	}
 
@@ -144,8 +143,8 @@ const ConstitutionBuilderContent = () => {
 	);
 
 	return (
-		<div className="w-full max-w-none p-4 md:p-6">
-			<div className="max-w-7xl mx-auto">
+		<DashboardPage className="space-y-0">
+			<div>
 				{/* Header — full layout on lg+; below lg the desktop block is hidden, so we show a compact bar with Preview + tabs */}
 				<div className="mb-4 md:mb-6 lg:mb-8">
 					<div className="lg:hidden space-y-3 mb-4">
@@ -470,7 +469,7 @@ const ConstitutionBuilderContent = () => {
 					</Button>
 				</div>
 			</ResponsiveOverlay>
-		</div>
+		</DashboardPage>
 	);
 };
 

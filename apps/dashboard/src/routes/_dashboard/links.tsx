@@ -23,7 +23,6 @@ import {
 	MobileFilters,
 	ResponsiveOverlay,
 } from "@/components/mobile";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,7 +33,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_dashboard/links")({
 	loader: (ctx) => prefetchAuthedQuery(api.links.list, undefined, ctx),
@@ -42,18 +40,6 @@ export const Route = createFileRoute("/_dashboard/links")({
 });
 
 const ITEMS_PER_PAGE = 12;
-
-const categoryColors: Record<string, string> = {
-	General: "bg-ds-blue-100 text-tone-info",
-	"Social Media": "bg-ds-pink-100 text-tone-pink",
-	Resources: "bg-ds-green-100 text-tone-success",
-	Events: "bg-ds-purple-100 text-tone-purple",
-	Projects: "bg-ds-amber-100 text-tone-warning",
-};
-
-function getCategoryColor(category: string) {
-	return categoryColors[category] || "bg-muted text-foreground";
-}
 
 function getLinkDomain(url: string) {
 	try {
@@ -409,21 +395,14 @@ function LinksPage() {
 								<MobileDataListItem
 									key={link._id}
 									leading={
-										<div className="flex size-10 items-center justify-center rounded-lg bg-ds-blue-100">
-											<LinkIcon className="size-4 text-tone-info" />
-										</div>
+										<LinkIcon className="size-4 text-muted-foreground" />
 									}
 									title={link.title}
 									subtitle={getLinkDomain(link.url)}
 									status={
-										<Badge
-											className={cn(
-												"text-[10px]",
-												getCategoryColor(link.category),
-											)}
-										>
+										<span className="text-xs text-muted-foreground">
 											{link.category}
-										</Badge>
+										</span>
 									}
 									trailing={
 										<ExternalLink
@@ -450,40 +429,33 @@ function LinksPage() {
 							))}
 						</MobileDataList>
 					) : (
-						<div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+						<div className="divide-y overflow-hidden rounded-md border">
 							{paginated.map((link) => (
 								<div
 									key={link._id}
-									className="group relative flex items-start gap-3 rounded-md border bg-card p-4 transition-colors hover:bg-accent/50"
+									className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/40"
 								>
 									<a
 										href={link.url}
 										target="_blank"
 										rel="noopener noreferrer"
-										className="flex min-w-0 flex-1 items-start gap-3"
+										className="flex min-w-0 flex-1 items-center gap-4"
 									>
-										<div className="shrink-0 rounded-lg bg-ds-blue-100 p-2">
-											<LinkIcon className="h-4 w-4 text-tone-info" />
-										</div>
 										<div className="min-w-0 flex-1">
-											<div className="flex items-center gap-2">
-												<p className="truncate font-medium">{link.title}</p>
+											<p className="flex items-center gap-1.5 truncate font-medium">
+												{link.title}
 												<ExternalLink
-													className="h-3 w-3 shrink-0 text-muted-foreground"
+													className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
 													aria-hidden
 												/>
-											</div>
-											{link.description && (
-												<p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-													{link.description}
-												</p>
-											)}
-											<Badge
-												className={`mt-2 text-xs ${getCategoryColor(link.category)}`}
-											>
-												{link.category}
-											</Badge>
+											</p>
+											<p className="truncate text-sm text-muted-foreground">
+												{link.description || getLinkDomain(link.url)}
+											</p>
 										</div>
+										<span className="hidden shrink-0 text-sm text-muted-foreground sm:block">
+											{link.category}
+										</span>
 									</a>
 									{hasOfficerAccess && (
 										<div className="flex shrink-0 gap-1">

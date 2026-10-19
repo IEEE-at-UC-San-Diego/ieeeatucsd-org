@@ -334,7 +334,7 @@ export function FundRequestFormModal({
 				return (
 					<div className="space-y-4">
 						<div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-							<Card className="border-border/60 shadow-sm">
+							<Card className="border-border/60">
 								<CardContent className="space-y-4 p-5">
 									<div className="flex items-center gap-2">
 										<FileText className="h-4 w-4 text-primary" />
@@ -384,7 +384,7 @@ export function FundRequestFormModal({
 								</CardContent>
 							</Card>
 
-							<Card className="border-border/60 shadow-sm">
+							<Card className="border-border/60">
 								<CardContent className="space-y-4 p-5">
 									<div className="flex items-center gap-2">
 										<Tags className="h-4 w-4 text-primary" />
@@ -442,7 +442,7 @@ export function FundRequestFormModal({
 									</div>
 
 									<div className="rounded-lg border border-dashed bg-muted/20 p-3">
-										<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+										<p className="text-xs font-medium text-muted-foreground mb-2">
 											Current selection
 										</p>
 										<div className="flex flex-wrap gap-2">
@@ -465,7 +465,7 @@ export function FundRequestFormModal({
 					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
 						{/* Left Column: Line Items */}
 						<div className="lg:col-span-2 flex flex-col gap-4 min-h-0">
-							<Card className="border-border/60 shadow-sm flex-1 flex flex-col overflow-hidden">
+							<Card className="border-border/60 flex-1 flex flex-col overflow-hidden">
 								<CardContent className="p-0 flex-1 flex flex-col relative bg-muted/10">
 									<div className="px-5 py-4 border-b bg-background flex items-center justify-between sticky top-0 z-10">
 										<div className="space-y-1">
@@ -501,7 +501,7 @@ export function FundRequestFormModal({
 														<div className="flex gap-3 items-start">
 															<div className="flex-1 space-y-1.5 min-w-0">
 																<Label
-																	className="text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+																	className="text-xs font-medium text-muted-foreground"
 																	htmlFor={`item-${link.id}`}
 																>
 																	Item Name
@@ -523,7 +523,7 @@ export function FundRequestFormModal({
 
 															<div className="w-24 space-y-1.5 flex-shrink-0">
 																<Label
-																	className="text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+																	className="text-xs font-medium text-muted-foreground"
 																	htmlFor={`qty-${link.id}`}
 																>
 																	Qty
@@ -560,7 +560,7 @@ export function FundRequestFormModal({
 
 														<div className="space-y-1.5">
 															<Label
-																className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5"
+																className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"
 																htmlFor={`url-${link.id}`}
 															>
 																<LinkIcon className="w-3 h-3" />
@@ -611,7 +611,7 @@ export function FundRequestFormModal({
 
 						{/* Right Column: Budget & Snapshot */}
 						<div className="flex flex-col gap-4 min-h-0">
-							<Card className="border-border/60 shadow-sm">
+							<Card className="border-border/60">
 								<CardContent className="space-y-5 p-5">
 									<div className="flex items-center gap-2">
 										<DollarSign className="h-4 w-4 text-primary" />
@@ -664,7 +664,7 @@ export function FundRequestFormModal({
 								</CardContent>
 							</Card>
 
-							<Card className="border-border/60 shadow-sm flex-1">
+							<Card className="border-border/60 flex-1">
 								<CardContent className="space-y-4 p-5">
 									<div className="flex items-center gap-2">
 										<Landmark className="h-4 w-4 text-primary" />
@@ -720,7 +720,7 @@ export function FundRequestFormModal({
 
 				return (
 					<div className="space-y-4">
-						<Card className="border-border/60 shadow-sm">
+						<Card className="border-border/60">
 							<CardContent className="p-5 space-y-4">
 								<div className="flex flex-wrap items-start justify-between gap-4">
 									<div className="space-y-1">
@@ -742,7 +742,7 @@ export function FundRequestFormModal({
 								</div>
 
 								<div className="border-t pt-4 space-y-2">
-									<span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1">
+									<span className="text-xs font-medium text-muted-foreground block mb-1">
 										Purpose
 									</span>
 									<p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
@@ -753,7 +753,7 @@ export function FundRequestFormModal({
 								<div className="rounded-lg border bg-muted/20 p-3">
 									<div className="flex items-center gap-2 mb-2">
 										<LinkIcon className="w-4 h-4 text-primary" />
-										<span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+										<span className="text-xs font-medium text-muted-foreground">
 											Items / Links ({cleanedLinks.length})
 										</span>
 									</div>

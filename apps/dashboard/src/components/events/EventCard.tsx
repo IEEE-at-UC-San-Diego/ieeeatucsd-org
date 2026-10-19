@@ -1,12 +1,5 @@
-import {
-	Award,
-	Calendar,
-	Clock,
-	Loader2,
-	MapPin,
-	UserCheck,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Loader2, UserCheck } from "lucide-react";
+import { DotLabel } from "@/components/dashboard/DotLabel";
 import { Button } from "@/components/ui/button";
 import {
 	type Event,
@@ -37,43 +30,10 @@ export function EventCard({
 	const isUpcoming = status === "upcoming";
 
 	const statusBadge = () => {
-		if (isAttended) {
-			return (
-				<Badge
-					variant="secondary"
-					className="bg-ds-green-100 text-tone-success border-ds-green-100"
-				>
-					<UserCheck className="w-3 h-3 mr-1" />
-					Attended
-				</Badge>
-			);
-		}
-		if (isLive) {
-			return (
-				<Badge className="bg-ds-green-700 text-on-accent border-ds-green-700">
-					<span className="relative flex h-1.5 w-1.5 mr-1.5">
-						<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-background opacity-75" />
-						<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-background" />
-					</span>
-					Live
-				</Badge>
-			);
-		}
-		if (isUpcoming) {
-			return (
-				<Badge
-					variant="secondary"
-					className="bg-ds-blue-100 text-tone-info border-ds-blue-100"
-				>
-					Upcoming
-				</Badge>
-			);
-		}
-		return (
-			<Badge variant="secondary" className="text-muted-foreground">
-				Ended
-			</Badge>
-		);
+		if (isAttended) return <DotLabel tone="green">Attended</DotLabel>;
+		if (isLive) return <DotLabel tone="green">Live</DotLabel>;
+		if (isUpcoming) return <DotLabel tone="blue">Upcoming</DotLabel>;
+		return <DotLabel tone="gray">Ended</DotLabel>;
 	};
 
 	const actionButton = () => {
@@ -118,15 +78,9 @@ export function EventCard({
 			);
 		}
 		return (
-			<div className="space-y-1.5 text-center">
-				<Button variant="outline" size="sm" disabled className="w-full text-xs">
-					Check-in not open
-				</Button>
-				<p className="text-xs text-muted-foreground tabular-nums">
-					Opens when the event begins, {formatEventDate(event.startDate)} at{" "}
-					{formatEventTime(event.startDate)}.
-				</p>
-			</div>
+			<p className="text-xs text-muted-foreground">
+				Check-in opens when the event begins.
+			</p>
 		);
 	};
 
@@ -134,52 +88,33 @@ export function EventCard({
 
 	return (
 		<div
-			className={`group rounded-md border bg-card shadow-sm hover:shadow-md transition-[box-shadow,opacity] duration-150 ease-[ease] cursor-pointer ${
+			className={`group rounded-md border bg-card transition-colors hover:bg-muted/40 cursor-pointer ${
 				isPast ? "opacity-70 hover:opacity-100" : ""
 			}`}
 			onClick={onClick}
 		>
-			<div className="p-4 flex flex-col gap-3 h-full">
-				{/* Header */}
+			<div className="flex h-full flex-col gap-3 p-4">
 				<div className="flex items-start justify-between gap-3">
-					<h3 className="font-semibold text-base leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+					<h3 className="line-clamp-2 text-base font-semibold leading-snug tracking-[-0.01em] text-foreground">
 						{event.eventName}
 					</h3>
-					<div className="shrink-0">{statusBadge()}</div>
+					<div className="shrink-0 pt-0.5">{statusBadge()}</div>
 				</div>
 
-				{/* Meta */}
-				<div className="space-y-1.5 flex-1">
-					<div className="flex items-center gap-2 text-xs text-muted-foreground">
-						<Calendar className="w-3.5 h-3.5 shrink-0" />
-						<span>{formatEventDate(event.startDate)}</span>
-						<span className="text-border">·</span>
-						<Clock className="w-3.5 h-3.5 shrink-0" />
-						<span>{formatEventTime(event.startDate)}</span>
-					</div>
-
-					<div className="flex items-center gap-2 text-xs text-muted-foreground">
-						<MapPin className="w-3.5 h-3.5 shrink-0" />
-						<span className="truncate">{event.location}</span>
-					</div>
-
-					<div className="flex items-center gap-2 text-xs text-muted-foreground">
-						<Award className="w-3.5 h-3.5 shrink-0" />
+				<div className="flex-1 space-y-0.5 text-sm text-muted-foreground">
+					<p className="tabular-nums">
+						{formatEventDate(event.startDate)} ·{" "}
+						{formatEventTime(event.startDate)}
+					</p>
+					<p className="truncate">{event.location}</p>
+					<p>
 						<span className="font-medium text-foreground">
 							{event.pointsToReward} pts
 						</span>
-						{event.hasFood && (
-							<>
-								<span className="text-border">·</span>
-								<span className="text-foreground font-medium">
-									Food provided
-								</span>
-							</>
-						)}
-					</div>
+						{event.hasFood && " · Food provided"}
+					</p>
 				</div>
 
-				{/* Action */}
 				{action && (
 					<div className="pt-1" onClick={(e) => e.stopPropagation()}>
 						{action}

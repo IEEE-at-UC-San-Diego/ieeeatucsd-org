@@ -76,7 +76,7 @@ export function OfficerCalendarEventModal({
 
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					<div className="rounded-md border border-border bg-muted px-3 py-2.5">
-						<div className="flex items-center gap-1.5 text-muted-foreground text-xs uppercase tracking-wide">
+						<div className="flex items-center gap-1.5 text-muted-foreground text-xs">
 							<Calendar className="h-3.5 w-3.5" />
 							Date
 						</div>
@@ -85,7 +85,7 @@ export function OfficerCalendarEventModal({
 						</p>
 					</div>
 					<div className="rounded-md border border-border bg-muted px-3 py-2.5">
-						<div className="flex items-center gap-1.5 text-muted-foreground text-xs uppercase tracking-wide">
+						<div className="flex items-center gap-1.5 text-muted-foreground text-xs">
 							<Clock3 className="h-3.5 w-3.5" />
 							Time
 						</div>
@@ -96,7 +96,7 @@ export function OfficerCalendarEventModal({
 				</div>
 
 				<div className="rounded-md border border-border bg-muted px-3 py-2.5">
-					<div className="flex items-center gap-1.5 text-muted-foreground text-xs uppercase tracking-wide">
+					<div className="flex items-center gap-1.5 text-muted-foreground text-xs">
 						<MapPin className="h-3.5 w-3.5" />
 						Location
 					</div>
@@ -107,9 +107,7 @@ export function OfficerCalendarEventModal({
 
 				{event.eventDescription && (
 					<div className="rounded-md border border-border bg-muted px-3 py-2.5">
-						<p className="text-muted-foreground text-xs uppercase tracking-wide">
-							Details
-						</p>
+						<p className="text-muted-foreground text-xs">Details</p>
 						<p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
 							{event.eventDescription}
 						</p>
@@ -117,9 +115,7 @@ export function OfficerCalendarEventModal({
 				)}
 
 				<div className="rounded-md border border-border bg-muted px-3 py-3 space-y-2">
-					<p className="text-muted-foreground text-xs uppercase tracking-wide">
-						Add to Calendar
-					</p>
+					<p className="text-muted-foreground text-xs">Add to Calendar</p>
 					<div className="flex flex-wrap gap-2">
 						{subscribeUrl && (
 							<Button size="sm" variant="outline" asChild>

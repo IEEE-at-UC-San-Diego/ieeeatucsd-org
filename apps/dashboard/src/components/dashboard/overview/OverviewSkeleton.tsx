@@ -10,7 +10,7 @@ export function OverviewSkeleton() {
 				<Skeleton className="h-4 w-72" />
 			</div>
 
-			<div className="grid grid-cols-2 gap-px overflow-hidden rounded-[6px] border bg-border shadow-raised lg:grid-cols-4">
+			<div className="grid grid-cols-2 gap-px overflow-hidden rounded-md border bg-border lg:grid-cols-4">
 				{[
 					{ key: "points", span: true },
 					{ key: "rank", span: false },

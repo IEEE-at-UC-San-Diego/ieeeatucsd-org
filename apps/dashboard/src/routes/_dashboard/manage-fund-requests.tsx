@@ -7,7 +7,6 @@ import {
 	ChevronDown,
 	ChevronUp,
 	Clock,
-	DollarSign,
 	ExternalLink,
 	FileText,
 	Loader2,
@@ -17,6 +16,11 @@ import {
 } from "lucide-react";
 import { type ReactElement, useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+	DashboardPage,
+	PageHeader,
+} from "@/components/dashboard/DashboardPage";
+import { SummaryStrip } from "@/components/dashboard/SummaryStrip";
 import BudgetManagementModal from "@/components/fund-requests/BudgetManagementModal";
 import {
 	MobileDataList,
@@ -260,7 +264,7 @@ function FundRequestDetailView({
 					</div>
 				</div>
 				<div className="text-right shrink-0 ml-4">
-					<p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+					<p className="text-xs text-muted-foreground font-medium">
 						Requested Amount
 					</p>
 					<p className="text-xl font-bold tabular-nums">
@@ -276,7 +280,7 @@ function FundRequestDetailView({
 					<div className="p-5 space-y-5">
 						{/* Officer Actions Section */}
 						<section className="space-y-4">
-							<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground">
+							<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground">
 								Officer Actions
 							</h3>
 
@@ -369,7 +373,7 @@ function FundRequestDetailView({
 
 						{/* Request Details */}
 						<section className="space-y-3">
-							<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground">
+							<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground">
 								Request Details
 							</h3>
 							<div className="space-y-3 text-sm">
@@ -416,7 +420,7 @@ function FundRequestDetailView({
 						{/* Vendor Links */}
 						{request.vendorLinks && request.vendorLinks.length > 0 && (
 							<section className="space-y-3">
-								<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground">
+								<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground">
 									Purchase Links
 								</h3>
 								<div className="space-y-2">
@@ -441,7 +445,7 @@ function FundRequestDetailView({
 						{/* Existing Review Notes */}
 						{(request.reviewNotes || request.infoRequestNotes) && (
 							<section className="space-y-3">
-								<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground">
+								<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground">
 									Previous Review Notes
 								</h3>
 								<div className="text-sm bg-muted/50 p-3 rounded-lg">
@@ -453,7 +457,7 @@ function FundRequestDetailView({
 						{/* Audit Log */}
 						{request.auditLogs && request.auditLogs.length > 0 && (
 							<section className="space-y-4">
-								<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground">
+								<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground">
 									Audit Log
 								</h3>
 								<div className="space-y-2">
@@ -499,7 +503,7 @@ function FundRequestDetailView({
 					<div className="p-5">
 						{/* Attachments Section */}
 						<section className="space-y-3">
-							<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground">
+							<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground">
 								Attachments
 							</h3>
 							{request.attachments && request.attachments.length > 0 ? (
@@ -658,88 +662,38 @@ function ManageFundRequestsPage() {
 	const stats = getStats();
 
 	return (
-		<div className="p-6 space-y-6 w-full">
+		<DashboardPage>
 			{/* Header */}
-			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-				<div>
-					<h1 className="text-2xl font-bold tracking-tight">
-						Manage Fund Requests
-					</h1>
-					<p className="text-muted-foreground">
-						Review and manage funding requests from all departments.
-					</p>
-				</div>
-				{hasAdminAccess && (
-					<Button variant="outline" onClick={() => setIsBudgetModalOpen(true)}>
-						<Settings className="h-4 w-4 mr-2" />
-						Configure Budgets
-					</Button>
-				)}
-			</div>
+			<PageHeader
+				title="Manage Fund Requests"
+				description="Review and manage funding requests from all departments."
+				actions={
+					hasAdminAccess ? (
+						<Button
+							variant="outline"
+							onClick={() => setIsBudgetModalOpen(true)}
+						>
+							<Settings className="h-4 w-4 mr-2" />
+							Configure Budgets
+						</Button>
+					) : undefined
+				}
+			/>
 
-			{/* Stats Cards */}
-			<div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-				<div className="rounded-md border bg-card p-4">
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="text-xs text-muted-foreground font-medium">
-								Pending Review
-							</p>
-							<p className="text-xl font-bold mt-1 text-tone-info">
-								{stats.pendingCount}
-							</p>
-						</div>
-						<div className="w-8 h-8 bg-ds-blue-100 rounded-lg flex items-center justify-center">
-							<Clock className="w-4 h-4 text-tone-info" />
-						</div>
-					</div>
-				</div>
-				<div className="rounded-md border bg-card p-4">
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="text-xs text-muted-foreground font-medium">
-								Needs Information
-							</p>
-							<p className="text-xl font-bold mt-1 text-tone-warning">
-								{stats.needsInfoCount}
-							</p>
-						</div>
-						<div className="w-8 h-8 bg-ds-amber-100 rounded-lg flex items-center justify-center">
-							<AlertCircle className="w-4 h-4 text-tone-warning" />
-						</div>
-					</div>
-				</div>
-				<div className="rounded-md border bg-card p-4">
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="text-xs text-muted-foreground font-medium">
-								Pending Amount
-							</p>
-							<p className="text-xl font-bold mt-1 text-foreground">
-								{formatCurrencyUSD(stats.pendingValue)}
-							</p>
-						</div>
-						<div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
-							<DollarSign className="w-4 h-4 text-muted-foreground" />
-						</div>
-					</div>
-				</div>
-				<div className="rounded-md border bg-card p-4">
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="text-xs text-muted-foreground font-medium">
-								Total Approved
-							</p>
-							<p className="text-xl font-bold mt-1 text-tone-success">
-								{formatCurrencyUSD(stats.approvedValue)}
-							</p>
-						</div>
-						<div className="w-8 h-8 bg-ds-green-100 rounded-lg flex items-center justify-center">
-							<CheckCircle className="w-4 h-4 text-tone-success" />
-						</div>
-					</div>
-				</div>
-			</div>
+			<SummaryStrip
+				items={[
+					{ label: "pending review", value: stats.pendingCount },
+					{ label: "need information", value: stats.needsInfoCount },
+					{
+						label: "pending amount",
+						value: formatCurrencyUSD(stats.pendingValue),
+					},
+					{
+						label: "approved total",
+						value: formatCurrencyUSD(stats.approvedValue),
+					},
+				]}
+			/>
 
 			{/* Search & Filters */}
 			<div className="flex flex-col sm:flex-row gap-3">
@@ -1114,6 +1068,6 @@ function ManageFundRequestsPage() {
 					logtoId={logtoId}
 				/>
 			)}
-		</div>
+		</DashboardPage>
 	);
 }

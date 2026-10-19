@@ -31,6 +31,7 @@ import {
 	EmptyState,
 	PageHeader,
 } from "@/components/dashboard/DashboardPage";
+import { SummaryStrip } from "@/components/dashboard/SummaryStrip";
 import {
 	MobileTaskStepper,
 	NetworkErrorState,
@@ -652,7 +653,7 @@ function ReimbursementDetailView({
 					</div>
 				</div>
 				<div className="text-right shrink-0 ml-4">
-					<p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+					<p className="text-xs text-muted-foreground font-medium">
 						Total Amount
 					</p>
 					<p className="text-xl font-bold tabular-nums">
@@ -668,7 +669,7 @@ function ReimbursementDetailView({
 					{/* Receipt Navigation */}
 					{hasReceipts && (
 						<div className="flex items-center justify-between px-6 py-3 border-b border-border bg-muted/50">
-							<span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+							<span className="text-xs font-medium text-muted-foreground">
 								Expense {activeReceiptIndex + 1} of {receipts.length}
 							</span>
 							<div className="flex gap-1">
@@ -701,13 +702,13 @@ function ReimbursementDetailView({
 								<section className="bg-ds-green-100 border border-ds-green-100 rounded-md p-5 space-y-4">
 									<div className="flex items-center gap-2 border-b border-ds-green-100 pb-2 mb-2">
 										<CheckCircle className="w-5 h-5 text-tone-success" />
-										<h3 className="text-sm font-bold text-tone-success uppercase tracking-wide">
+										<h3 className="text-sm font-medium text-tone-success">
 											Payment Confirmation
 										</h3>
 									</div>
 									<div className="grid grid-cols-2 gap-y-4 gap-x-4">
 										<div>
-											<p className="text-xs font-semibold text-tone-success uppercase mb-1">
+											<p className="text-xs font-medium text-tone-success mb-1">
 												Confirmation Number
 											</p>
 											<p className="text-sm font-mono font-medium bg-background/50 px-2 py-1 rounded border border-ds-green-100 inline-block">
@@ -715,7 +716,7 @@ function ReimbursementDetailView({
 											</p>
 										</div>
 										<div>
-											<p className="text-xs font-semibold text-tone-success uppercase mb-1">
+											<p className="text-xs font-medium text-tone-success mb-1">
 												Payment Date
 											</p>
 											<div className="flex items-center gap-1.5 text-sm">
@@ -726,7 +727,7 @@ function ReimbursementDetailView({
 											</div>
 										</div>
 										<div>
-											<p className="text-xs font-semibold text-tone-success uppercase mb-1">
+											<p className="text-xs font-medium text-tone-success mb-1">
 												Amount Paid
 											</p>
 											<p className="text-lg font-bold flex items-center gap-1">
@@ -735,7 +736,7 @@ function ReimbursementDetailView({
 											</p>
 										</div>
 										<div>
-											<p className="text-xs font-semibold text-tone-success uppercase mb-1">
+											<p className="text-xs font-medium text-tone-success mb-1">
 												Payment Proof
 											</p>
 											{reimbursement.paymentDetails.proofFileUrl ? (
@@ -757,7 +758,7 @@ function ReimbursementDetailView({
 										</div>
 										{reimbursement.paymentDetails.memo && (
 											<div className="col-span-2 mt-1">
-												<p className="text-xs font-semibold text-tone-success uppercase mb-1">
+												<p className="text-xs font-medium text-tone-success mb-1">
 													Memo
 												</p>
 												<p className="text-sm bg-background/50 p-2 rounded border border-ds-green-100">
@@ -771,12 +772,12 @@ function ReimbursementDetailView({
 
 						{/* Expense details */}
 						<section className="space-y-3">
-							<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground">
+							<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground">
 								{currentIsMileage ? "Mileage details" : "Receipt details"}
 							</h3>
 							<div className="grid grid-cols-2 gap-3">
 								<div className="space-y-0.5">
-									<p className="text-[11px] font-medium text-muted-foreground uppercase">
+									<p className="text-xs font-medium text-muted-foreground">
 										{currentIsMileage ? "Trip or purpose" : "Vendor"}
 									</p>
 									<p className="text-sm">
@@ -784,7 +785,7 @@ function ReimbursementDetailView({
 									</p>
 								</div>
 								<div className="space-y-0.5">
-									<p className="text-[11px] font-medium text-muted-foreground uppercase">
+									<p className="text-xs font-medium text-muted-foreground">
 										{currentIsMileage ? "Date of trip" : "Date of purchase"}
 									</p>
 									<p className="text-sm">
@@ -798,7 +799,7 @@ function ReimbursementDetailView({
 								{currentIsMileage ? (
 									<>
 										<div className="space-y-0.5">
-											<p className="text-[11px] font-medium text-muted-foreground uppercase">
+											<p className="text-xs font-medium text-muted-foreground">
 												Miles
 											</p>
 											<p className="text-sm tabular-nums">
@@ -809,7 +810,7 @@ function ReimbursementDetailView({
 											</p>
 										</div>
 										<div className="space-y-0.5">
-											<p className="text-[11px] font-medium text-muted-foreground uppercase">
+											<p className="text-xs font-medium text-muted-foreground">
 												Rate
 											</p>
 											<p className="text-sm tabular-nums">
@@ -822,7 +823,7 @@ function ReimbursementDetailView({
 											</p>
 										</div>
 										<div className="col-span-2 space-y-0.5">
-											<p className="text-[11px] font-medium text-muted-foreground uppercase">
+											<p className="text-xs font-medium text-muted-foreground">
 												From
 											</p>
 											<p className="text-sm">
@@ -830,7 +831,7 @@ function ReimbursementDetailView({
 											</p>
 										</div>
 										<div className="col-span-2 space-y-0.5">
-											<p className="text-[11px] font-medium text-muted-foreground uppercase">
+											<p className="text-xs font-medium text-muted-foreground">
 												To
 											</p>
 											<p className="text-sm">
@@ -840,7 +841,7 @@ function ReimbursementDetailView({
 										{currentReceipt.mileageStops &&
 										currentReceipt.mileageStops.length > 0 ? (
 											<div className="col-span-2 space-y-0.5">
-												<p className="text-[11px] font-medium text-muted-foreground uppercase">
+												<p className="text-xs font-medium text-muted-foreground">
 													Stops
 												</p>
 												<ol className="list-decimal list-inside text-sm space-y-0.5">
@@ -860,7 +861,7 @@ function ReimbursementDetailView({
 											) &&
 											currentReceipt.location?.trim() && (
 												<div className="col-span-2 space-y-0.5">
-													<p className="text-[11px] font-medium text-muted-foreground uppercase">
+													<p className="text-xs font-medium text-muted-foreground">
 														Route
 													</p>
 													<p className="text-sm">{currentReceipt.location}</p>
@@ -869,7 +870,7 @@ function ReimbursementDetailView({
 									</>
 								) : (
 									<div className="col-span-2 space-y-0.5">
-										<p className="text-[11px] font-medium text-muted-foreground uppercase">
+										<p className="text-xs font-medium text-muted-foreground">
 											Location
 										</p>
 										<p className="text-sm">
@@ -882,18 +883,18 @@ function ReimbursementDetailView({
 
 						{/* Report Details */}
 						<section className="space-y-3">
-							<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground">
+							<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground">
 								Report Details
 							</h3>
 							<div className="grid grid-cols-2 gap-3">
 								<div className="space-y-0.5">
-									<p className="text-[11px] font-medium text-muted-foreground uppercase">
+									<p className="text-xs font-medium text-muted-foreground">
 										Payment Method
 									</p>
 									<p className="text-sm">{reimbursement.paymentMethod}</p>
 								</div>
 								<div className="space-y-0.5">
-									<p className="text-[11px] font-medium text-muted-foreground uppercase">
+									<p className="text-xs font-medium text-muted-foreground">
 										Submitted On
 									</p>
 									<p className="text-sm">
@@ -902,7 +903,7 @@ function ReimbursementDetailView({
 								</div>
 								{reimbursement.businessPurpose && (
 									<div className="space-y-0.5 col-span-2">
-										<p className="text-[11px] font-medium text-muted-foreground uppercase">
+										<p className="text-xs font-medium text-muted-foreground">
 											Business Purpose
 										</p>
 										<p className="text-sm">{reimbursement.businessPurpose}</p>
@@ -910,7 +911,7 @@ function ReimbursementDetailView({
 								)}
 								{reimbursement.additionalInfo && (
 									<div className="space-y-0.5 col-span-2">
-										<p className="text-[11px] font-medium text-muted-foreground uppercase">
+										<p className="text-xs font-medium text-muted-foreground">
 											Additional Info
 										</p>
 										<p className="text-sm">{reimbursement.additionalInfo}</p>
@@ -921,12 +922,12 @@ function ReimbursementDetailView({
 
 						{/* Financials */}
 						<section className="space-y-3">
-							<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground">
+							<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground">
 								Financials
 							</h3>
 							<div className="grid grid-cols-3 gap-3">
 								<div className="space-y-0.5">
-									<p className="text-[11px] font-medium text-muted-foreground uppercase">
+									<p className="text-xs font-medium text-muted-foreground">
 										Subtotal
 									</p>
 									<p className="text-sm tabular-nums">
@@ -934,7 +935,7 @@ function ReimbursementDetailView({
 									</p>
 								</div>
 								<div className="space-y-0.5">
-									<p className="text-[11px] font-medium text-muted-foreground uppercase">
+									<p className="text-xs font-medium text-muted-foreground">
 										Tax
 									</p>
 									<p className="text-sm tabular-nums">
@@ -942,7 +943,7 @@ function ReimbursementDetailView({
 									</p>
 								</div>
 								<div className="space-y-0.5">
-									<p className="text-[11px] font-medium text-muted-foreground uppercase">
+									<p className="text-xs font-medium text-muted-foreground">
 										Tip
 									</p>
 									<p className="text-sm tabular-nums">
@@ -950,7 +951,7 @@ function ReimbursementDetailView({
 									</p>
 								</div>
 								<div className="space-y-0.5">
-									<p className="text-[11px] font-medium text-muted-foreground uppercase">
+									<p className="text-xs font-medium text-muted-foreground">
 										Shipping
 									</p>
 									<p className="text-sm tabular-nums">
@@ -958,9 +959,7 @@ function ReimbursementDetailView({
 									</p>
 								</div>
 								<div className="space-y-0.5">
-									<p className="text-[11px] font-bold text-tone-success uppercase">
-										Total
-									</p>
+									<p className="text-xs font-medium text-tone-success">Total</p>
 									<p className="text-base font-bold tabular-nums text-tone-success">
 										${(currentReceipt.total || 0).toFixed(2)}
 									</p>
@@ -970,7 +969,7 @@ function ReimbursementDetailView({
 
 						{/* Line Items */}
 						<section className="space-y-3">
-							<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground flex justify-between items-center">
+							<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground flex justify-between items-center">
 								<span>Line Items</span>
 								<span className="text-[10px] font-normal text-muted-foreground/70 normal-case">
 									{currentLineItems.length} items
@@ -979,7 +978,7 @@ function ReimbursementDetailView({
 							{currentLineItems.length > 0 ? (
 								<div className="border rounded-lg overflow-hidden">
 									<table className="w-full text-sm">
-										<thead className="bg-muted text-muted-foreground text-xs uppercase font-semibold">
+										<thead className="bg-muted text-muted-foreground text-xs font-medium">
 											<tr>
 												<th className="px-3 py-2 text-left">Item</th>
 												<th className="px-3 py-2 text-center">Qty</th>
@@ -1018,7 +1017,7 @@ function ReimbursementDetailView({
 						{/* Audit Log */}
 						{reimbursement.auditLog && reimbursement.auditLog.length > 0 && (
 							<section className="space-y-4">
-								<h3 className="text-xs font-bold border-b pb-2 uppercase tracking-wide text-muted-foreground">
+								<h3 className="text-xs font-medium border-b pb-2 text-muted-foreground">
 									Audit History
 								</h3>
 								<div className="space-y-0 relative ml-3">
@@ -1090,7 +1089,7 @@ function ReimbursementDetailView({
 							<div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
 								<Car className="h-7 w-7 text-primary" />
 							</div>
-							<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+							<p className="text-xs font-medium text-muted-foreground">
 								Mileage reimbursement
 							</p>
 							<p className="mt-2 max-w-md text-center text-sm leading-snug text-muted-foreground">
@@ -1178,7 +1177,7 @@ function AIWarningStep({
 }) {
 	return (
 		<div className="flex flex-col items-center justify-center flex-1 p-6">
-			<div className="bg-card border shadow-sm rounded-md p-8 text-center space-y-6 max-w-lg w-full">
+			<div className="bg-card border rounded-md p-8 text-center space-y-6 max-w-lg w-full">
 				<div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
 					<AlertTriangle className="w-10 h-10 text-primary" />
 				</div>
@@ -1230,7 +1229,7 @@ function BasicInfoStep({
 
 	return (
 		<div className="flex flex-col items-center justify-center flex-1 p-6">
-			<Card className="w-full max-w-2xl shadow-sm">
+			<Card className="w-full max-w-2xl">
 				<CardContent className="gap-8 p-8">
 					<div className="border-b pb-4">
 						<h2 className="text-xl font-bold">Report Details</h2>
@@ -2296,8 +2295,8 @@ function ReceiptsStep({
 								</div>
 							</div>
 							<div className="flex min-h-[280px] items-center justify-center bg-muted/20 p-6 lg:min-h-0">
-								<div className="w-full max-w-sm space-y-4 rounded-md border bg-card p-6 shadow-sm">
-									<p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+								<div className="w-full max-w-sm space-y-4 rounded-md border bg-card p-6">
+									<p className="text-xs font-medium text-muted-foreground">
 										Summary
 									</p>
 									<div className="flex justify-between text-sm">
@@ -2852,21 +2851,19 @@ function ReviewStep({
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 				{/* Summary Card */}
 				<div className="lg:col-span-1 space-y-6">
-					<Card className="shadow-sm">
+					<Card>
 						<CardContent className="p-6 space-y-6">
 							<div>
-								<h3 className="text-sm font-bold uppercase tracking-wide mb-4">
-									Report Summary
-								</h3>
+								<h3 className="text-sm font-medium mb-4">Report Summary</h3>
 								<div className="space-y-4">
 									<div>
-										<label className="text-xs text-muted-foreground uppercase block mb-1">
+										<label className="text-xs text-muted-foreground block mb-1">
 											Title
 										</label>
 										<p className="font-medium">{formData.title}</p>
 									</div>
 									<div>
-										<label className="text-xs text-muted-foreground uppercase block mb-1">
+										<label className="text-xs text-muted-foreground block mb-1">
 											Department
 										</label>
 										<p className="font-medium">
@@ -2875,14 +2872,14 @@ function ReviewStep({
 										</p>
 									</div>
 									<div>
-										<label className="text-xs text-muted-foreground uppercase block mb-1">
+										<label className="text-xs text-muted-foreground block mb-1">
 											Payment Method
 										</label>
 										<p className="font-medium">{formData.paymentMethod}</p>
 									</div>
 									{formData.additionalInfo && (
 										<div>
-											<label className="text-xs text-muted-foreground uppercase block mb-1">
+											<label className="text-xs text-muted-foreground block mb-1">
 												Payment Details
 											</label>
 											<p className="font-medium">{formData.additionalInfo}</p>
@@ -2921,7 +2918,7 @@ function ReviewStep({
 				{/* Detailed Breakdown */}
 				<div className="lg:col-span-2 space-y-6">
 					{receipts.map((r, i) => (
-						<Card key={r.id} className="shadow-sm">
+						<Card key={r.id}>
 							<CardContent className="p-0">
 								<div className="px-6 py-4 bg-muted border-b flex justify-between items-center">
 									<div className="flex items-center gap-3">
@@ -2989,7 +2986,7 @@ function ReviewStep({
 								<div className="p-6">
 									<div className="border rounded-lg overflow-hidden">
 										<table className="w-full text-sm text-left">
-											<thead className="bg-muted text-muted-foreground text-xs uppercase font-semibold">
+											<thead className="bg-muted text-muted-foreground text-xs font-medium">
 												<tr>
 													<th className="px-4 py-2">Line Item</th>
 													<th className="px-4 py-2 text-center">Category</th>
@@ -3028,7 +3025,7 @@ function ReviewStep({
 													<tr className="bg-muted/50 text-xs text-muted-foreground">
 														<td
 															colSpan={4}
-															className="px-4 py-2 text-right uppercase font-semibold tracking-wide"
+															className="px-4 py-2 text-right font-medium"
 														>
 															Additional (Tax/Tip/Ship)
 														</td>
@@ -3482,75 +3479,25 @@ function ReimbursementPage() {
 					</Button>
 				}
 			/>
-			{/* Stats Row */}
-			{allReimbursements.length === 0 ? (
-				<div className="flex items-center justify-between rounded-md border bg-muted/20 px-4 py-3">
-					<div>
-						<p className="text-sm font-medium">No submitted reimbursements</p>
-						<p className="text-xs text-muted-foreground">
-							Amounts and processing totals will appear after your first
-							request.
-						</p>
-					</div>
-					<p className="text-xl font-semibold tabular-nums">$0.00</p>
-				</div>
-			) : (
-				<div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-					<div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
-						<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-							Total Submitted
-						</p>
-						<p className="text-xl font-bold tabular-nums mt-0.5">
-							${statsTotal.toFixed(2)}
-						</p>
-						<p className="mt-0.5 text-xs text-muted-foreground">
-							{allReimbursements.length} requests
-						</p>
-					</div>
-					<div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
-						<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-							Pending
-						</p>
-						<p className="text-xl font-bold tabular-nums mt-0.5">
-							${statsPendingAmt.toFixed(2)}
-						</p>
-						<p className="mt-0.5 text-xs text-muted-foreground">
-							{allReimbursements.filter((r) => r.status === "submitted").length}{" "}
-							requests
-						</p>
-					</div>
-					<div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
-						<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-							Approved
-						</p>
-						<p className="text-xl font-bold tabular-nums mt-0.5">
-							${statsApprovedAmt.toFixed(2)}
-						</p>
-						<p className="mt-0.5 text-xs text-muted-foreground">
-							{allReimbursements.filter((r) => r.status === "approved").length}{" "}
-							requests
-						</p>
-					</div>
-					<div className="rounded-lg border bg-card px-4 py-3 shadow-sm">
-						<p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-							Paid
-						</p>
-						<p className="text-xl font-bold tabular-nums mt-0.5">
-							${statsPaidAmt.toFixed(2)}
-						</p>
-						<p className="mt-0.5 text-xs text-muted-foreground">
-							{allReimbursements.filter((r) => r.status === "paid").length}{" "}
-							requests
-						</p>
-					</div>
-				</div>
+			{allReimbursements.length > 0 && (
+				<SummaryStrip
+					items={[
+						{
+							label: `submitted · ${allReimbursements.length} requests`,
+							value: `$${statsTotal.toFixed(2)}`,
+						},
+						{ label: "pending", value: `$${statsPendingAmt.toFixed(2)}` },
+						{ label: "approved", value: `$${statsApprovedAmt.toFixed(2)}` },
+						{ label: "paid", value: `$${statsPaidAmt.toFixed(2)}` },
+					]}
+				/>
 			)}
 
 			{/* List Container */}
-			<div className="rounded-md border bg-card shadow-sm overflow-hidden">
+			<div className="rounded-md border bg-card overflow-hidden">
 				{/* Search + Filter Bar */}
 				{allReimbursements.length > 0 && (
-					<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-5 py-3 border-b bg-muted/30">
+					<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-5 py-3 border-b">
 						<div className="relative flex-1">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 							<Input
@@ -3592,55 +3539,57 @@ function ReimbursementPage() {
 						</div>
 					)
 				) : filteredReimbursements.length > 0 ? (
-					<div className="divide-y divide-border">
-						{filteredReimbursements.map((r) => (
-							<button
-								type="button"
-								key={r._id}
-								className="flex w-full min-h-[52px] items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-accent/50 sm:gap-4 sm:px-5 md:hover:bg-accent/40"
-								onClick={() => handleViewDetail(r as ReimbursementData)}
-							>
-								{/* Left: Title + Meta */}
-								<div className="min-w-0 flex-1">
-									<p className="line-clamp-2 text-sm font-medium leading-5">
-										{r.title}
-									</p>
-									<div className="mt-1 flex flex-wrap items-center gap-1.5">
-										<span className="inline-flex items-center rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-											{r.department}
-										</span>
-										<span className="text-xs text-muted-foreground">
-											{r.paymentMethod}
-										</span>
-									</div>
-								</div>
-
-								{/* Right: Amount + Status */}
-								<div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-4">
-									<div className="text-right">
-										<p className="text-sm font-bold tabular-nums">
-											${r.totalAmount.toFixed(2)}
+					<div>
+						<div
+							className="hidden items-center gap-x-4 border-b px-5 py-2 text-xs font-medium text-muted-foreground sm:grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_7.5rem_6.5rem_7rem]"
+							aria-hidden
+						>
+							<span>Request</span>
+							<span>Date</span>
+							<span className="text-right">Amount</span>
+							<span>Status</span>
+						</div>
+						<div className="divide-y divide-border">
+							{filteredReimbursements.map((r) => (
+								<button
+									type="button"
+									key={r._id}
+									className="grid w-full min-h-[52px] items-center gap-x-4 px-4 py-3.5 text-left transition-colors active:bg-accent/50 sm:px-5 md:hover:bg-accent/40 grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_7.5rem_6.5rem_7rem]"
+									onClick={() => handleViewDetail(r as ReimbursementData)}
+								>
+									<div className="min-w-0">
+										<p className="line-clamp-2 text-sm font-medium leading-5">
+											{r.title}
 										</p>
-										<p className="hidden text-xs tabular-nums text-muted-foreground sm:block">
+										<p className="mt-0.5 truncate text-xs text-muted-foreground">
+											{r.department} · {r.paymentMethod}
+										</p>
+									</div>
+
+									<div className="flex flex-col items-end gap-1.5 sm:contents">
+										<span className="hidden text-sm tabular-nums text-muted-foreground sm:block">
 											{new Date(r._creationTime).toLocaleDateString(undefined, {
 												month: "short",
 												day: "numeric",
 												year: "numeric",
 											})}
-										</p>
+										</span>
+										<span className="text-right text-sm font-semibold tabular-nums">
+											${r.totalAmount.toFixed(2)}
+										</span>
+										<span
+											className={cn(
+												"inline-flex items-center justify-self-start whitespace-nowrap rounded-[4px] px-2 py-0.5 text-xs font-medium capitalize",
+												statusColors[r.status] ||
+													"bg-muted text-muted-foreground",
+											)}
+										>
+											{r.status}
+										</span>
 									</div>
-									<span
-										className={cn(
-											"inline-flex items-center gap-1.5 text-xs font-medium capitalize px-2.5 py-1 rounded-full whitespace-nowrap",
-											statusColors[r.status] ||
-												"bg-muted text-muted-foreground",
-										)}
-									>
-										{r.status}
-									</span>
-								</div>
-							</button>
-						))}
+								</button>
+							))}
+						</div>
 					</div>
 				) : (
 					<EmptyState

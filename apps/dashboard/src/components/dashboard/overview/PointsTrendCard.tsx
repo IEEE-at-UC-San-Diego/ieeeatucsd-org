@@ -57,7 +57,7 @@ function ChartTooltip({ active, payload, label }: Record<string, unknown>) {
 
 	return (
 		<div className="pointer-events-none rounded-[6px] border bg-popover px-3 py-2 shadow-popover">
-			<p className="text-[11px] font-medium uppercase tracking-[0.07em] text-muted-foreground">
+			<p className="text-xs font-medium text-muted-foreground">
 				{label as string}
 			</p>
 			<p className="mt-0.5 text-base font-semibold leading-5 tabular-nums text-popover-foreground">

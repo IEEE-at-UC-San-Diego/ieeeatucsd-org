@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { DotLabel, type DotTone } from "@/components/dashboard/DotLabel";
 import type { EventStatus } from "../types";
 
 interface StatusBadgeProps {
@@ -6,14 +6,14 @@ interface StatusBadgeProps {
 	className?: string;
 }
 
-const statusStyles: Record<EventStatus, string> = {
-	draft: "bg-muted text-foreground border-border",
-	submitted: "bg-ds-purple-100 text-tone-purple border-ds-purple-100",
-	pending: "bg-ds-amber-100 text-tone-warning border-ds-amber-100",
-	needs_review: "bg-ds-amber-100 text-tone-warning border-ds-amber-100",
-	approved: "bg-ds-green-100 text-tone-success border-ds-green-100",
-	declined: "bg-ds-red-100 text-tone-danger border-ds-red-100",
-	published: "bg-ds-pink-100 text-tone-pink border-ds-pink-100",
+const statusTones: Record<EventStatus, DotTone> = {
+	draft: "gray",
+	submitted: "purple",
+	pending: "amber",
+	needs_review: "amber",
+	approved: "green",
+	declined: "red",
+	published: "blue",
 };
 
 const statusLabels: Record<EventStatus, string> = {
@@ -28,11 +28,8 @@ const statusLabels: Record<EventStatus, string> = {
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
 	return (
-		<Badge
-			variant="outline"
-			className={`text-xs font-medium capitalize ${statusStyles[status]} ${className || ""}`}
-		>
+		<DotLabel tone={statusTones[status]} className={className}>
 			{statusLabels[status]}
-		</Badge>
+		</DotLabel>
 	);
 }

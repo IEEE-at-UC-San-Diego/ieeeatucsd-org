@@ -27,7 +27,7 @@ export function HappeningToday({
 					<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-ds-green-600 opacity-75" />
 					<span className="relative inline-flex rounded-full h-2 w-2 bg-ds-green-1000" />
 				</span>
-				<h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+				<h2 className="text-sm font-medium text-muted-foreground">
 					Happening Now
 				</h2>
 			</div>

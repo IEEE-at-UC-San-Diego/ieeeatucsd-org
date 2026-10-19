@@ -24,6 +24,10 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
+	DashboardPage,
+	PageHeader,
+} from "@/components/dashboard/DashboardPage";
+import {
 	MobileDataList,
 	MobileDataListItem,
 	ResponsiveOverlay,
@@ -732,7 +736,7 @@ function ManageReimbursementsPage() {
 						</div>
 					</div>
 					<div className="text-right shrink-0 ml-4">
-						<p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+						<p className="text-xs text-muted-foreground font-medium">
 							Total Amount
 						</p>
 						<p className="text-xl font-bold tabular-nums">
@@ -750,7 +754,7 @@ function ManageReimbursementsPage() {
 							{(selectedReimbursement.status === "submitted" ||
 								selectedReimbursement.status === "approved") && (
 								<section className="border-b border-border pb-6 space-y-3">
-									<h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+									<h3 className="text-xs font-medium text-muted-foreground">
 										Actions
 									</h3>
 									<div className="flex flex-wrap gap-2">
@@ -1024,13 +1028,13 @@ function ManageReimbursementsPage() {
 								<section className="bg-ds-green-100 border border-ds-green-100 rounded-md p-4 space-y-3">
 									<div className="flex items-center gap-2 border-b border-ds-green-100 pb-2">
 										<CheckCircle className="w-4 h-4 text-tone-success" />
-										<h3 className="text-xs font-bold text-tone-success uppercase tracking-wide">
+										<h3 className="text-xs font-medium text-tone-success">
 											Payment Confirmed
 										</h3>
 									</div>
 									<div className="grid grid-cols-2 gap-3">
 										<div className="space-y-0.5">
-											<p className="text-[11px] font-medium text-tone-success uppercase">
+											<p className="text-xs font-medium text-tone-success">
 												Confirmation #
 											</p>
 											<p className="text-sm font-mono font-medium">
@@ -1041,7 +1045,7 @@ function ManageReimbursementsPage() {
 											</p>
 										</div>
 										<div className="space-y-0.5">
-											<p className="text-[11px] font-medium text-tone-success uppercase">
+											<p className="text-xs font-medium text-tone-success">
 												Amount Paid
 											</p>
 											<p className="text-sm tabular-nums font-medium">
@@ -1053,7 +1057,7 @@ function ManageReimbursementsPage() {
 										</div>
 										{selectedReimbursement.paymentDetails.paymentDate && (
 											<div className="space-y-0.5">
-												<p className="text-[11px] font-medium text-tone-success uppercase">
+												<p className="text-xs font-medium text-tone-success">
 													Payment Date
 												</p>
 												<p className="text-sm">
@@ -1066,7 +1070,7 @@ function ManageReimbursementsPage() {
 										)}
 										{selectedReimbursement.paymentDetails.memo && (
 											<div className="space-y-0.5 col-span-2">
-												<p className="text-[11px] font-medium text-tone-success uppercase">
+												<p className="text-xs font-medium text-tone-success">
 													Memo
 												</p>
 												<p className="text-sm">
@@ -1186,7 +1190,7 @@ function ManageReimbursementsPage() {
 										<div className="h-full flex flex-col">
 											<div className="bg-background border border-border rounded-lg overflow-hidden flex flex-col h-full">
 												{/* Header */}
-												<div className="px-5 py-4 border-b border-border bg-gradient-to-r from-slate-50 to-white">
+												<div className="px-5 py-4 border-b border-border ">
 													<div className="flex justify-between items-center">
 														<div>
 															<h3 className="text-base font-semibold text-foreground">
@@ -1212,16 +1216,16 @@ function ManageReimbursementsPage() {
 													<table className="w-full">
 														<thead className="sticky top-0 bg-muted border-b border-border z-10">
 															<tr>
-																<th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+																<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
 																	Description
 																</th>
-																<th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-32">
+																<th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground w-32">
 																	Category
 																</th>
-																<th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">
+																<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground w-16">
 																	Qty
 																</th>
-																<th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider w-28">
+																<th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground w-28">
 																	Amount
 																</th>
 															</tr>
@@ -1467,7 +1471,7 @@ function ManageReimbursementsPage() {
 
 							{/* Right: Preview */}
 							<div className="w-full shrink-0 md:w-1/3">
-								<p className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
+								<p className="text-xs font-medium text-muted-foreground mb-2">
 									Proof Preview
 								</p>
 								<div className="border rounded-lg overflow-hidden h-64 bg-muted flex items-center justify-center relative">
@@ -1580,15 +1584,11 @@ function ManageReimbursementsPage() {
 
 	// List View
 	return (
-		<div className="p-6 space-y-6 w-full">
-			<div>
-				<h1 className="text-2xl font-bold tracking-tight">
-					Manage Reimbursements
-				</h1>
-				<p className="text-muted-foreground">
-					Review and process reimbursement requests.
-				</p>
-			</div>
+		<DashboardPage>
+			<PageHeader
+				title="Manage Reimbursements"
+				description="Review and process reimbursement requests."
+			/>
 
 			{/* Search & Filter */}
 			<div className="flex flex-col sm:flex-row gap-4">
@@ -1883,6 +1883,6 @@ function ManageReimbursementsPage() {
 					</p>
 				</div>
 			)}
-		</div>
+		</DashboardPage>
 	);
 }

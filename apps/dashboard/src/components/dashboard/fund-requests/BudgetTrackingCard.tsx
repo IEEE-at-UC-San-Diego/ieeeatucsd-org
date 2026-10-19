@@ -1,4 +1,3 @@
-import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -34,74 +33,45 @@ export function BudgetTrackingCard({
 			onClick={isConfigured ? onClick : undefined}
 			disabled={!isConfigured}
 			className={cn(
-				"flex h-full w-full flex-col items-stretch justify-start gap-0 whitespace-normal rounded-md border bg-card p-4 text-left shadow-sm transition-colors",
-				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+				"flex h-full w-full flex-col items-stretch justify-start gap-0 whitespace-normal rounded-md border bg-card p-4 text-left transition-colors",
 				isConfigured
-					? "hover:border-primary/50 hover:bg-accent/40"
+					? "hover:bg-muted/40"
 					: "cursor-not-allowed bg-muted/40 opacity-75",
 			)}
 			aria-label={`${DEPARTMENT_LABELS[department]} budget details`}
 		>
-			<div className="mb-3 flex w-full items-center justify-between gap-3">
-				<div className="flex min-w-0 items-center gap-2">
-					<div
-						className={cn(
-							"shrink-0 rounded-md p-1.5",
-							isConfigured
-								? "bg-primary/10 text-primary"
-								: "bg-muted text-muted-foreground",
-						)}
-					>
-						<Users className="h-3.5 w-3.5" />
-					</div>
-					<span className="truncate text-sm font-semibold">
-						{DEPARTMENT_LABELS[department]}
-					</span>
-				</div>
+			<div className="flex w-full items-center justify-between gap-3">
+				<span className="truncate text-sm font-medium text-muted-foreground">
+					{DEPARTMENT_LABELS[department]}
+				</span>
 				{!isConfigured && (
-					<span className="shrink-0 rounded-full border bg-muted px-2 py-1 text-xs text-muted-foreground">
-						Not Configured
+					<span className="shrink-0 text-xs text-muted-foreground">
+						Not configured
 					</span>
 				)}
 			</div>
 
 			{isConfigured ? (
 				<>
-					<div className="mb-4 flex w-full items-end justify-between gap-3">
-						<div className="min-w-0">
-							<p className="text-xl font-bold leading-none">
-								{formatCurrency(remainingBudget)}
-							</p>
-							<p className="mt-1 text-xs font-medium text-muted-foreground">
-								of {formatCurrency(totalBudget)} remaining
-							</p>
-						</div>
+					<p className="mt-2 text-2xl font-semibold leading-none tracking-[-0.02em] tabular-nums">
+						{formatCurrency(remainingBudget)}
+					</p>
+					<p className="mt-1 text-xs text-muted-foreground tabular-nums">
+						remaining of {formatCurrency(totalBudget)}
 						{pendingBudget > 0 && (
-							<div className="shrink-0 rounded border border-ds-amber-100 bg-ds-amber-100 px-1.5 py-0.5 text-right">
-								<p className="text-xs font-semibold text-tone-warning">
-									-{formatCurrency(pendingBudget)}
-								</p>
-								<p className="text-xs font-medium text-tone-warning">pending</p>
-							</div>
+							<> · {formatCurrency(pendingBudget)} pending</>
 						)}
-					</div>
-
-					<div className="mt-auto w-full space-y-1">
-						<Progress value={Math.min(percentUsed, 100)} className="h-1.5" />
-						<div className="flex justify-between text-xs font-medium text-muted-foreground">
-							<span>0%</span>
-							<span>50%</span>
-							<span>100%</span>
-						</div>
-					</div>
+					</p>
+					<Progress
+						value={Math.min(percentUsed, 100)}
+						className="mt-4 h-1"
+						aria-label={`${Math.round(percentUsed)}% of budget used`}
+					/>
 				</>
 			) : (
-				<div className="flex w-full flex-1 flex-col justify-center py-2 text-center">
-					<div className="mb-1 h-1 w-full rounded-full bg-muted opacity-50" />
-					<p className="text-xs text-muted-foreground">
-						Budget not configured.
-					</p>
-				</div>
+				<p className="mt-2 text-xs text-muted-foreground">
+					Budget not configured.
+				</p>
 			)}
 		</Button>
 	);

@@ -26,9 +26,7 @@ function Metric({
 				className,
 			)}
 		>
-			<p className="text-[11px] font-medium uppercase tracking-[0.07em] text-muted-foreground">
-				{label}
-			</p>
+			<p className="text-xs font-medium text-muted-foreground">{label}</p>
 			<div className="space-y-1.5">{children}</div>
 		</div>
 	);
@@ -62,7 +60,7 @@ export function StandingPanel({
 	return (
 		<section
 			aria-label="Your standing"
-			className="grid grid-cols-2 gap-px overflow-hidden rounded-[6px] border bg-border shadow-raised lg:grid-cols-4"
+			className="grid grid-cols-2 gap-px overflow-hidden rounded-md border bg-border lg:grid-cols-4"
 		>
 			<Metric label="Points" className="col-span-2">
 				<p className="text-[32px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-foreground lg:text-[40px]">

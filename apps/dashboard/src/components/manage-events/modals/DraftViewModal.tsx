@@ -109,9 +109,7 @@ export function DraftViewModal({
 					<div className="space-y-1">
 						<div className="flex items-center gap-2 text-muted-foreground mb-1">
 							<Calendar className="h-4 w-4" />
-							<span className="text-xs font-semibold uppercase tracking-wider">
-								Date & Time
-							</span>
+							<span className="text-xs font-medium">Date & Time</span>
 						</div>
 						<p className="font-medium">{formatDate(event.startDate)}</p>
 						<p className="text-sm text-muted-foreground">
@@ -122,9 +120,7 @@ export function DraftViewModal({
 					<div className="space-y-1">
 						<div className="flex items-center gap-2 text-muted-foreground mb-1">
 							<MapPin className="h-4 w-4" />
-							<span className="text-xs font-semibold uppercase tracking-wider">
-								Location
-							</span>
+							<span className="text-xs font-medium">Location</span>
 						</div>
 						<p className="font-medium">{event.location}</p>
 					</div>
@@ -132,9 +128,7 @@ export function DraftViewModal({
 					<div className="space-y-1">
 						<div className="flex items-center gap-2 text-muted-foreground mb-1">
 							<Users className="h-4 w-4" />
-							<span className="text-xs font-semibold uppercase tracking-wider">
-								Expected Attendees
-							</span>
+							<span className="text-xs font-medium">Expected Attendees</span>
 						</div>
 						<p className="font-medium">{event.estimatedAttendance || "N/A"}</p>
 					</div>
@@ -142,9 +136,7 @@ export function DraftViewModal({
 					<div className="space-y-1">
 						<div className="flex items-center gap-2 text-muted-foreground mb-1">
 							<User className="h-4 w-4" />
-							<span className="text-xs font-semibold uppercase tracking-wider">
-								Organizer
-							</span>
+							<span className="text-xs font-medium">Organizer</span>
 						</div>
 						<p className="font-medium truncate" title={event.createdBy}>
 							{event.createdBy}
@@ -159,9 +151,7 @@ export function DraftViewModal({
 					<div className="space-y-1">
 						<div className="flex items-center gap-2 text-muted-foreground mb-1">
 							<FileText className="h-4 w-4" />
-							<span className="text-xs font-semibold uppercase tracking-wider">
-								Event Code
-							</span>
+							<span className="text-xs font-medium">Event Code</span>
 						</div>
 						<p className="font-mono bg-muted/50 px-2 py-0.5 rounded text-sm w-fit">
 							{event.eventCode}
@@ -170,7 +160,7 @@ export function DraftViewModal({
 
 					{event.department && (
 						<div className="space-y-1">
-							<span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1">
+							<span className="text-xs font-medium text-muted-foreground block mb-1">
 								Department
 							</span>
 							<p className="font-medium">
@@ -181,7 +171,7 @@ export function DraftViewModal({
 				</div>
 
 				<div className="pt-4 border-t">
-					<span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-2">
+					<span className="text-xs font-medium text-muted-foreground block mb-2">
 						Description
 					</span>
 					<div className="bg-muted/30 p-4 rounded-lg text-sm text-foreground whitespace-pre-wrap leading-relaxed border">
