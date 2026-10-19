@@ -40,107 +40,6 @@ function ordinal(n: number) {
 	}
 }
 
-type PodiumMember = {
-	_id: string;
-	name: string;
-	points: number;
-	major?: string;
-	avatar?: string;
-};
-
-/**
- * Visual treatment per place (index = rank - 1): muted gold, silver and bronze.
- * Each pedestal is a lit block: a soft vertical shade, a bright top edge and a
- * pressed-in numeral, standing on the stage floor.
- */
-const PODIUM_STYLES = [
-	{
-		pedestal:
-			"h-44 from-ds-amber-300 to-ds-amber-400 border-ds-amber-500/60 sm:h-56",
-		numeral: "text-ds-amber-900",
-		ring: "ring-ds-amber-600",
-		avatar: "size-20 sm:size-24",
-	},
-	{
-		pedestal:
-			"h-32 from-ds-gray-100 to-ds-gray-300 border-ds-gray-500/60 sm:h-44",
-		numeral: "text-ds-gray-900",
-		ring: "ring-ds-gray-600",
-		avatar: "size-16 sm:size-20",
-	},
-	{
-		pedestal:
-			"h-24 from-ds-amber-100 to-ds-amber-200 border-ds-amber-400/60 sm:h-32",
-		numeral: "text-ds-amber-900",
-		ring: "ring-ds-amber-800",
-		avatar: "size-16 sm:size-20",
-	},
-] as const;
-
-function PodiumColumn({
-	member,
-	rank,
-	isYou,
-}: {
-	member: PodiumMember;
-	rank: 0 | 1 | 2;
-	isYou: boolean;
-}) {
-	const style = PODIUM_STYLES[rank];
-	return (
-		<li className="flex min-w-0 flex-1 basis-0 flex-col items-center">
-			<Avatar
-				className={cn(
-					"shadow-[0_8px_18px_-8px_rgba(0,0,0,0.35)] ring-2 ring-offset-2 ring-offset-card",
-					style.avatar,
-					style.ring,
-				)}
-			>
-				<AvatarImage src={member.avatar} alt="" />
-				<AvatarFallback>
-					<UserAvatarFallback
-						name={member.name}
-						className="size-full text-base sm:text-lg"
-					/>
-				</AvatarFallback>
-			</Avatar>
-			<p className="mt-3 w-full truncate px-1 text-center text-sm font-semibold text-foreground">
-				{member.name}
-				{isYou && (
-					<span className="ml-1.5 text-xs font-normal text-muted-foreground">
-						You
-					</span>
-				)}
-			</p>
-			<p className="w-full truncate px-1 text-center text-xs text-muted-foreground">
-				{member.major || "Member"}
-			</p>
-			<div
-				className={cn(
-					"mt-4 flex w-full flex-col items-center rounded-t-[10px] border border-b-0 bg-gradient-to-b pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_-10px_28px_-14px_rgba(0,0,0,0.3)]",
-					style.pedestal,
-				)}
-			>
-				<span
-					className={cn(
-						"text-5xl font-semibold leading-none tracking-[-0.04em] tabular-nums [text-shadow:0_1px_0_rgba(255,255,255,0.55)] sm:text-6xl",
-						style.numeral,
-					)}
-				>
-					<span className="sr-only">Rank </span>
-					{rank + 1}
-				</span>
-				<span className="mt-2 text-sm font-semibold tabular-nums text-foreground">
-					{member.points.toLocaleString()}
-					<span className="ml-1 text-xs font-normal text-muted-foreground">
-						pts
-					</span>
-				</span>
-			</div>
-		</li>
-	);
-}
-
 function LeaderboardPage() {
 	const { user, logtoId } = useAuth();
 	const leaderboard = useAuthedQuery(
@@ -164,9 +63,6 @@ function LeaderboardPage() {
 	const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 	const endIndex = startIndex + ITEMS_PER_PAGE;
 	const paginatedData = filteredData?.slice(startIndex, endIndex);
-
-	const topThree = leaderboard?.slice(0, 3) ?? [];
-	const showPodium = !loading && topThree.length >= 3 && !searchTerm;
 
 	const currentUserRank = user?._id
 		? (leaderboard?.findIndex((u) => u._id === user._id) ?? -1)
@@ -217,35 +113,6 @@ function LeaderboardPage() {
 					{ label: "average per member", value: avgPoints },
 				]}
 			/>
-
-			{showPodium && (
-				<section
-					aria-label="Top three members"
-					className="relative overflow-hidden rounded-md border bg-gradient-to-b from-card to-muted/50 px-4 pt-10 sm:px-12"
-				>
-					<div
-						aria-hidden
-						className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[radial-gradient(ellipse_38%_70%_at_50%_0%,var(--ds-amber-100),transparent_80%)] opacity-80"
-					/>
-					<ol className="relative mx-auto flex max-w-2xl items-end gap-2 sm:gap-3">
-						<PodiumColumn
-							member={topThree[1]}
-							rank={1}
-							isYou={user?._id === topThree[1]._id}
-						/>
-						<PodiumColumn
-							member={topThree[0]}
-							rank={0}
-							isYou={user?._id === topThree[0]._id}
-						/>
-						<PodiumColumn
-							member={topThree[2]}
-							rank={2}
-							isYou={user?._id === topThree[2]._id}
-						/>
-					</ol>
-				</section>
-			)}
 
 			<section className="overflow-hidden rounded-md border">
 				{loading ? (
