@@ -73,6 +73,8 @@ export default defineConfig({
   server: {
     host: true,
     port: process.env.PORT ? Number(process.env.PORT) : 4321,
+    // Free ngrok hostnames rotate; the leading dot allows any subdomain.
+    allowedHosts: [".ngrok-free.dev"],
   },
   // Define environment variables that should be available to client components
   vite: {

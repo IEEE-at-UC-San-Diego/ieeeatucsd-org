@@ -39,6 +39,10 @@ function shouldExternalizeServerPackage(id: string) {
 
 const config = defineConfig(({ command }) => ({
 	root: appRoot,
+	server: {
+		// Free ngrok hostnames rotate; the leading dot allows any subdomain.
+		allowedHosts: [".ngrok-free.dev"],
+	},
 	resolve: {
 		alias: {
 			"@": fileURLToPath(new URL("./src", import.meta.url)),
