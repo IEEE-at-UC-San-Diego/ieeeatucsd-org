@@ -7,10 +7,10 @@ catalog:
   convex: "1.27.3"
   class-variance-authority: "^0.7.1"
   clsx: "^2.1.1"
-  date-fns: "^4.1.0"
-  input-otp: "^1.4.2"
-  react-hook-form: "^7.71.1"
-  sonner: "^2.0.7"
+  date-fns: "^4.4.0"
+  input-otp: "^1.5.0"
+  react-hook-form: "^7.90.0"
+  sonner: "^2.0.8"
   vaul: "^1.1.2"
 
 nodeLinker: isolated
@@ -26,3 +26,29 @@ allowBuilds:
 
 overrides:
   google-auth-library: "10.9.1"
+  # Security overrides (Oct 2026 advisories) — see PR description.
+  tinypool: "2.2.0"
+  next: "16.4.3"
+  undici: "6.29.1"
+  fast-uri: "3.1.9"
+  source-map-js: "1.2.2"
+  basic-ftp: "6.2.3"
+  sharp: "0.35.5"
+minimumReleaseAgeExclude:
+  - "@pnpm/exe@11.28.8"
+  - "@pnpm/linux-arm64@11.28.8"
+  - "@pnpm/linux-x64@11.28.8"
+  - "@pnpm/linuxstatic-x64@11.28.8"
+  - "@pnpm/macos-arm64@11.28.8"
+  - "@pnpm/win-arm64@11.28.8"
+  - "@pnpm/win-x64@11.28.8"
+  - '@next/env@16.4.3'
+  - '@next/swc-darwin-arm64@16.4.3'
+  - '@next/swc-darwin-x64@16.4.3'
+  - '@next/swc-linux-arm64-gnu@16.4.3'
+  - '@next/swc-linux-arm64-musl@16.4.3'
+  - '@next/swc-linux-x64-gnu@16.4.3'
+  - '@next/swc-linux-x64-musl@16.4.3'
+  - '@next/swc-win32-arm64-msvc@16.4.3'
+  - '@next/swc-win32-x64-msvc@16.4.3'
+  - next@16.4.3

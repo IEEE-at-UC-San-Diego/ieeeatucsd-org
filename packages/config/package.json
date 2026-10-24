@@ -7,10 +7,10 @@
         "./tailwind": "./tailwind-preset.js"
     },
     "dependencies": {
-        "@heroui/react": "^2.7.5",
+        "@heroui/react": "^2.8.10",
+        "daisyui": "^4.12.24",
         "tailwindcss-animate": "^1.0.7",
-        "tailwindcss-motion": "^1.0.0",
         "tailwindcss-animated": "^1.1.2",
-        "daisyui": "^4.12.23"
+        "tailwindcss-motion": "^1.1.1"
     }
 }

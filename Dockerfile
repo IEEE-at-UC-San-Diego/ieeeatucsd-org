@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:24-bookworm-slim AS base
+FROM node:24.22.1-bookworm-slim AS base
 ENV PNPM_HOME="/pnpm" \
     PATH="/pnpm:$PATH"
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@11.21.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.28.8 --activate
 
 FROM base AS pruner
 COPY . .
