@@ -6,7 +6,7 @@ This is a pnpm + Turborepo monorepo with two runnable apps: the public **website
 
 ### Toolchain
 
-- Package manager is **pnpm 11.21.0** (pinned in `package.json` `packageManager`) on **Node.js 24**. The Nix flake (`nix develop` / direnv) provides both. The startup update script (`pnpm install`) already refreshes dependencies.
+- Package manager is **pnpm 11.28.8** (pinned in `package.json` `packageManager`) on **Node.js 24**. The Nix flake (`nix develop` / direnv) provides both. The startup update script (`pnpm install`) already refreshes dependencies.
 
 ### Local `.env` is required (and where it must live)
 

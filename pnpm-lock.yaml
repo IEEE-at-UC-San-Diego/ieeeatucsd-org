@@ -293,8 +293,8 @@ importers:
         specifier: 4.3.3
         version: 4.3.3(astro@5.18.2(@types/node@24.19.2)(db0@0.3.4)(jiti@1.21.7)(lightningcss@1.33.0)(rollup@4.62.4)(supports-color@7.2.0)(terser@5.50.0)(tsx@4.23.15)(typescript@5.9.3)(yaml@2.9.1))(supports-color@7.2.0)
       '@astrojs/node':
-        specifier: 9.3.3
-        version: 9.3.3(astro@5.18.2(@types/node@24.19.2)(db0@0.3.4)(jiti@1.21.7)(lightningcss@1.33.0)(rollup@4.62.4)(supports-color@7.2.0)(terser@5.50.0)(tsx@4.23.15)(typescript@5.9.3)(yaml@2.9.1))(supports-color@7.2.0)
+        specifier: 9.5.5
+        version: 9.5.5(astro@5.18.2(@types/node@24.19.2)(db0@0.3.4)(jiti@1.21.7)(lightningcss@1.33.0)(rollup@4.62.4)(supports-color@7.2.0)(terser@5.50.0)(tsx@4.23.15)(typescript@5.9.3)(yaml@2.9.1))(supports-color@7.2.0)
       '@astrojs/react':
         specifier: 4.3.0
         version: 4.3.0(@types/node@24.19.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@1.21.7)(lightningcss@1.33.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(supports-color@7.2.0)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)
@@ -762,10 +762,10 @@ packages:
     peerDependencies:
       astro: ^5.0.0
 
-  '@astrojs/node@9.3.3':
-    resolution: {integrity: sha512-5jVuDbSxrY7rH7H+6QoRiN78AITLobYXWu+t1A2wRaFPKywaXNr8YHSXfOE4i2YN4c+VqMCv83SjZLWjTK6f9w==}
+  '@astrojs/node@9.5.5':
+    resolution: {integrity: sha512-rtU2BGU5u3SfGURpANfMxVzCIoR86MkaN05ncza9rbtuMKJ/XnRJt/BbyVknDbOJ71hoci0SIsJwKcJR8vvi/A==}
     peerDependencies:
-      astro: ^5.3.0
+      astro: ^5.17.3
 
   '@astrojs/prism@3.3.0':
     resolution: {integrity: sha512-q8VwfU/fDZNoDOf+r7jUnMC2//H2l0TuQ6FkGJL8vD8nw/q5KiL3DS1KKBI3QhI9UQhpJ5dc7AtqfbXWuOgLCQ==}
@@ -11661,9 +11661,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@astrojs/node@9.3.3(astro@5.18.2(@types/node@24.19.2)(db0@0.3.4)(jiti@1.21.7)(lightningcss@1.33.0)(rollup@4.62.4)(supports-color@7.2.0)(terser@5.50.0)(tsx@4.23.15)(typescript@5.9.3)(yaml@2.9.1))(supports-color@7.2.0)':
+  '@astrojs/node@9.5.5(astro@5.18.2(@types/node@24.19.2)(db0@0.3.4)(jiti@1.21.7)(lightningcss@1.33.0)(rollup@4.62.4)(supports-color@7.2.0)(terser@5.50.0)(tsx@4.23.15)(typescript@5.9.3)(yaml@2.9.1))(supports-color@7.2.0)':
     dependencies:
-      '@astrojs/internal-helpers': 0.7.1
+      '@astrojs/internal-helpers': 0.7.6
       astro: 5.18.2(@types/node@24.19.2)(db0@0.3.4)(jiti@1.21.7)(lightningcss@1.33.0)(rollup@4.62.4)(supports-color@7.2.0)(terser@5.50.0)(tsx@4.23.15)(typescript@5.9.3)(yaml@2.9.1)
       send: 1.2.1(supports-color@7.2.0)
       server-destroy: 1.0.1
