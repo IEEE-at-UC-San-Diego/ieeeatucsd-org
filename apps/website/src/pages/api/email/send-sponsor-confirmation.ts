@@ -21,9 +21,10 @@ export const POST: APIRoute = async ({ request }) => {
     const fromEmail =
       import.meta.env.FROM_EMAIL || "IEEE UCSD <onboarding@resend.dev>";
 
-    const toEmail = import.meta.env.CONTACT_TO || "ieee@ucsd.edu";
+    const toEmail = import.meta.env.CONTACT_TO || "president@ieeeatucsd.org";
 
-    const replyToEmail = import.meta.env.REPLY_TO_EMAIL || "ieee@ucsd.edu";
+    const replyToEmail =
+      import.meta.env.REPLY_TO_EMAIL || "president@ieeeatucsd.org";
 
     // Send to IEEE includes user's email + message
     await resend.emails.send({

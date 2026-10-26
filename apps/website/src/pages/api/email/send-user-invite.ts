@@ -27,7 +27,8 @@ export const POST: APIRoute = async ({ request }) => {
     const fromEmail =
       import.meta.env.FROM_EMAIL ||
       "IEEE UCSD <noreply@transactional.ieeeatucsd.org>";
-    const replyToEmail = import.meta.env.REPLY_TO_EMAIL || "ieee@ucsd.edu";
+    const replyToEmail =
+      import.meta.env.REPLY_TO_EMAIL || "president@ieeeatucsd.org";
 
     // Create invite link (you can customize this URL)
     const baseUrl = new URL(request.url).origin;

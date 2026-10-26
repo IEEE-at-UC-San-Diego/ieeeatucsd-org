@@ -505,7 +505,7 @@ function generateUserProfileUpdateTestEmail(): string {
     preheader: "Your IEEE UCSD profile has been updated",
     headerText: "IEEE at UC San Diego",
     bodyContent,
-    contactEmail: "ieee@ucsd.edu",
+    contactEmail: "president@ieeeatucsd.org",
     ctaButton: {
       text: "View Profile",
       url: "https://ieeeatucsd.org/dashboard",
@@ -531,7 +531,7 @@ function generateUserRoleChangeTestEmail(): string {
     preheader: "You have been promoted to Executive Officer",
     headerText: "IEEE at UC San Diego",
     bodyContent,
-    contactEmail: "ieee@ucsd.edu",
+    contactEmail: "president@ieeeatucsd.org",
     ctaButton: {
       text: "Access Dashboard",
       url: "https://ieeeatucsd.org/dashboard",

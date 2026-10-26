@@ -11,7 +11,7 @@
  * Environment:
  *   RESEND_API_KEY   — required for sending (not needed for --preview)
  *   FROM_EMAIL       — optional, defaults to IEEE noreply
- *   REPLY_TO_EMAIL   — optional, defaults to ieee@ucsd.edu
+ *   REPLY_TO_EMAIL   — optional, defaults to president@ieeeatucsd.org
  */
 
 import { Resend } from "resend";
@@ -426,7 +426,7 @@ async function main() {
   }
 
   const fromEmail = process.env.FROM_EMAIL || "IEEE at UC San Diego <noreply@transactional.ieeeatucsd.org>";
-  const replyTo = process.env.REPLY_TO_EMAIL || "ieee@ucsd.edu";
+  const replyTo = process.env.REPLY_TO_EMAIL || "president@ieeeatucsd.org";
 
   if (isPreview) {
     mkdirSync(join(import.meta.dirname, "../preview"), { recursive: true }); // gitignored

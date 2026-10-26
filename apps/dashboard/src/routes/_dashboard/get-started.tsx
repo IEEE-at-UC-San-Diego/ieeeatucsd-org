@@ -488,8 +488,8 @@ function GetStartedPage() {
 
 				<p className="mt-6 text-center text-xs text-muted-foreground">
 					Need help?{" "}
-					<a href="mailto:ieee@ucsd.edu" className="text-tone-info">
-						ieee@ucsd.edu
+					<a href="mailto:president@ieeeatucsd.org" className="text-tone-info">
+						president@ieeeatucsd.org
 					</a>
 				</p>
 			</div>

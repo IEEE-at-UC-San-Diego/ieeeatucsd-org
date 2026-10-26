@@ -117,7 +117,7 @@ function SignInPage() {
 					<div className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
 						Need access?{" "}
 						<a
-							href="mailto:ieee@ucsd.edu"
+							href="mailto:president@ieeeatucsd.org"
 							className="font-medium text-tone-info hover:underline"
 						>
 							Contact IEEE UCSD
