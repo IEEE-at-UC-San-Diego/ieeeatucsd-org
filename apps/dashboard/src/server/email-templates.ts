@@ -74,6 +74,8 @@ export function createInfoBox(
 
 // ── Invitation Email ──
 
+const OFFICER_CONTACT_EMAIL = "president@ieeeatucsd.org";
+
 interface InvitationEmailData {
 	inviteId: string;
 	name: string;
@@ -179,10 +181,16 @@ export async function sendInvitationEmail(
 			},
 			ctaButton: { text: "Accept Position", url: acceptLink },
 			referenceId: data.inviteId,
+			contactEmail: OFFICER_CONTACT_EMAIL,
 			footerText: "IEEE at UC San Diego — Officer Onboarding",
 		});
 
-		await sendEmail({ to: data.email, subject, html });
+		await sendEmail({
+			to: data.email,
+			subject,
+			html,
+			replyTo: OFFICER_CONTACT_EMAIL,
+		});
 		return true;
 	} catch (error) {
 		console.error("Error sending invitation email:", error);
@@ -296,10 +304,16 @@ export async function sendDirectOnboardingEmail(
 					? [{ label: "Team Lead", value: escapeHtml(data.leaderName) }]
 					: []),
 			],
+			contactEmail: OFFICER_CONTACT_EMAIL,
 			footerText: "IEEE at UC San Diego — Officer Onboarding",
 		});
 
-		await sendEmail({ to: data.email, subject, html });
+		await sendEmail({
+			to: data.email,
+			subject,
+			html,
+			replyTo: OFFICER_CONTACT_EMAIL,
+		});
 		return true;
 	} catch (error) {
 		console.error("Error sending direct onboarding email:", error);
