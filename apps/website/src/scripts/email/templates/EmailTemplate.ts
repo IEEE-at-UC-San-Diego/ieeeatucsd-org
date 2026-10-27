@@ -84,7 +84,7 @@ export function generateEmailTemplate(options: EmailTemplateOptions): string {
     footerText = "IEEE at UC San Diego Dashboard",
     ctaButton,
     referenceId,
-    contactEmail = "ieee@ucsd.edu",
+    contactEmail = "president@ieeeatucsd.org",
   } = options;
 
   return `

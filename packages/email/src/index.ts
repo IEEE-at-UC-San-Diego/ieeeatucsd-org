@@ -144,7 +144,7 @@ export interface UniversalEmailOptions {
   };
   /** Reference ID shown in footer */
   referenceId?: string;
-  /** Contact email in footer (default: ieee@ucsd.edu) */
+  /** Contact email in footer (default: president@ieeeatucsd.org) */
   contactEmail?: string;
   /** Footer system name (default: "IEEE at UC San Diego Dashboard") */
   footerText?: string;
@@ -171,7 +171,7 @@ export function renderEmail(opts: UniversalEmailOptions): string {
     bulletSection,
     ctaButton,
     referenceId,
-    contactEmail = "ieee@ucsd.edu",
+    contactEmail = "president@ieeeatucsd.org",
     footerText = "IEEE at UC San Diego Dashboard",
   } = opts;
 

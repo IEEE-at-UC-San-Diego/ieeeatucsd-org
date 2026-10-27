@@ -360,7 +360,7 @@ function SponsorInformationPage() {
 					</p>
 				</div>
 				<Button asChild className="h-12 w-full gap-2 sm:h-10 sm:w-auto">
-					<a href="mailto:ieee@ucsd.edu">
+					<a href="mailto:president@ieeeatucsd.org">
 						<Mail className="size-4" />
 						Contact IEEE UCSD
 					</a>

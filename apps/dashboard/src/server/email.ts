@@ -14,7 +14,7 @@ export function getFromEmail() {
 }
 
 export function getReplyTo() {
-	return process.env.REPLY_TO_EMAIL || "ieee@ucsd.edu";
+	return process.env.REPLY_TO_EMAIL || "president@ieeeatucsd.org";
 }
 
 export async function sendEmail(params: {

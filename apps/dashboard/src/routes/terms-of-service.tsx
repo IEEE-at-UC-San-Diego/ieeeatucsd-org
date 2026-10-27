@@ -116,10 +116,10 @@ function TermsOfServicePage() {
 						<p className="text-muted-foreground leading-relaxed">
 							For questions about these Terms of Service, please contact us at{" "}
 							<a
-								href="mailto:ieee@ucsd.edu"
+								href="mailto:president@ieeeatucsd.org"
 								className="text-primary hover:underline"
 							>
-								ieee@ucsd.edu
+								president@ieeeatucsd.org
 							</a>
 							.
 						</p>
