@@ -21,6 +21,7 @@ export async function sendEmail(params: {
 	to: string | string[];
 	subject: string;
 	html: string;
+	replyTo?: string;
 }) {
 	const resend = getResend();
 	const result = await resend.emails.send({
@@ -28,7 +29,7 @@ export async function sendEmail(params: {
 		to: Array.isArray(params.to) ? params.to : [params.to],
 		subject: params.subject,
 		html: params.html,
-		replyTo: getReplyTo(),
+		replyTo: params.replyTo ?? getReplyTo(),
 	});
 
 	if (result.error) {
