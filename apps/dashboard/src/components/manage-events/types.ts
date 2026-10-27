@@ -44,6 +44,7 @@ export interface EventFile {
 export interface EventRequest {
 	_id: string;
 	_creationTime: number;
+	createdAt?: number;
 	eventName: string;
 	eventDescription: string;
 	eventType: EventTypeValue;

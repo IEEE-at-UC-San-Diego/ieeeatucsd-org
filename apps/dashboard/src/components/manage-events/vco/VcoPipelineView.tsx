@@ -130,7 +130,7 @@ export function VcoPipelineView({
 					eventName: event.eventName,
 					startDate: event.startDate,
 					dateTbd: event.dateTbd,
-					createdAt: event._creationTime,
+					createdAt: event.createdAt ?? event._creationTime,
 					location: event.location,
 					expectedAttendance: event.estimatedAttendance,
 					invoices: event.invoices,

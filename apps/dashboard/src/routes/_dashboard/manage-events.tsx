@@ -76,6 +76,7 @@ function mapEventToType(event: any): EventRequest {
 	return {
 		_id: event._id,
 		_creationTime: event._creationTime,
+		createdAt: event.createdAt,
 		eventName: event.eventName || "Untitled Event",
 		eventDescription: event.eventDescription || "",
 		eventType: normalizeEventType(event.eventType),
