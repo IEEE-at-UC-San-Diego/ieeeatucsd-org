@@ -66,10 +66,12 @@ describe("AuthSession.refreshWithRetry", () => {
 
 describe("AuthSession.load", () => {
 	it("mints a session from Logto claims and the latest access token", async () => {
-		const mintSession = vi.spyOn(AuthSession, "mintBridgeToken").mockResolvedValue({
-			sessionToken: "session-token",
-			expiresAt: 1_700_000_000_000,
-		});
+		const mintSession = vi
+			.spyOn(AuthSession, "mintBridgeToken")
+			.mockResolvedValue({
+				sessionToken: "session-token",
+				expiresAt: 1_700_000_000_000,
+			});
 
 		const result = await AuthSession.load({
 			getIdTokenClaims: async () => ({ sub: "logto|member" }),

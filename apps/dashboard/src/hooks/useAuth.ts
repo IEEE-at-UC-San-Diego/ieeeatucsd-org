@@ -11,7 +11,7 @@ import {
 	useState,
 } from "react";
 import { AuthFlow } from "@/lib/auth/AuthFlow";
-import { AuthSession, type AuthBootstrapResult } from "@/lib/auth/AuthSession";
+import { type AuthBootstrapResult, AuthSession } from "@/lib/auth/AuthSession";
 import { errorMessage, logAuthEvent } from "@/lib/auth/logging";
 import { resolveLogtoRedirectUri } from "@/lib/auth/redirectUri";
 import { buildLogtoSignInOptions } from "@/lib/auth/signIn";
