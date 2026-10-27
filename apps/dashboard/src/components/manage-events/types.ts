@@ -88,6 +88,10 @@ export interface EventRequest {
 	additionalSpecifications?: string;
 	flyersCompleted?: boolean;
 	graphicsUploadNote?: string;
+	dateTbd?: boolean;
+	finId?: string;
+	funded?: boolean;
+	tresOwner?: "vco" | "president";
 	publicGoogleEventId?: string | null;
 	publicGoogleEventUrl?: string | null;
 	publicGoogleCalendarId?: string | null;

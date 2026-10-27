@@ -1,3 +1,4 @@
+import { canViewVcoPipeline as hasVcoPipelineAccess } from "@/lib/vco/vcoAccess";
 import { useAuth } from "./useAuth";
 
 export function usePermissions() {
@@ -22,6 +23,10 @@ export function usePermissions() {
 
 	const canAccessResumeDatabase =
 		isAdmin || (isSponsorRole && user?.sponsorTier !== "Bronze");
+	const canViewVcoPipeline = hasVcoPipelineAccess(
+		userRole,
+		(user as { position?: string } | null)?.position,
+	);
 
 	return {
 		user,
@@ -39,5 +44,6 @@ export function usePermissions() {
 		hasAdminAccess,
 		hasOfficerAccess,
 		canAccessResumeDatabase,
+		canViewVcoPipeline,
 	};
 }
