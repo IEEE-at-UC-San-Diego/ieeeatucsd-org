@@ -14,10 +14,10 @@ type AuditActorUser = {
  * Resolves the display identity stored on constitution audit entries and
  * version snapshots.
  *
- * The dashboard authenticates Convex with an app-minted bridge token by default
- * (`VITE_CONVEX_AUTH_STRATEGY=bridge`). In that mode `ctx.auth.getUserIdentity()`
- * returns null, so the bridge-authenticated database user record returned by
- * `requireAdminAccess` is the only reliable source for the actor's name/email.
+ * The dashboard authenticates Convex with an app-minted HMAC bridge token.
+ * `ctx.auth.getUserIdentity()` is therefore null, so the bridge-authenticated
+ * database user record returned by `requireAdminAccess` is the only reliable
+ * source for the actor's name/email.
  */
 export function resolveAuditActor(
   user: AuditActorUser | null | undefined,

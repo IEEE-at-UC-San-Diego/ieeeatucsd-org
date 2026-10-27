@@ -107,10 +107,10 @@ async function getNativeIdentity(ctx: AuthContext) {
 /**
  * Get the current user document from the database using their Logto ID.
  *
- * Self-hosted Convex supports OIDC JWT auth via auth.config.ts. Prefer the
- * native identity from ctx.auth.getUserIdentity() when AUTH_BRIDGE_MODE=native.
- * Legacy mode still accepts the app-minted HMAC bridge token (authToken), which
- * must match the explicit logtoId from the client.
+ * The dashboard authenticates Convex calls with an app-minted HMAC bridge
+ * token (`authToken`) that must match the explicit `logtoId`. If Convex has
+ * a native OIDC identity (unused today; Logto defaults to ES384), that
+ * subject is preferred and must still match `logtoId` when both are present.
  */
 export async function getCurrentUser(
   ctx: AuthContext,
@@ -158,19 +158,6 @@ export async function requireCurrentUser(
     throw new Error("User not found in database");
   }
   return user;
-}
-
-/**
- * Extract roles from the JWT custom claims.
- * The custom JWT adds `roles` as an array of role name strings.
- */
-export function getRolesFromIdentity(identity: {
-  roles?: string[];
-  [key: string]: unknown;
-}): UserRole[] {
-  const roles = identity.roles;
-  if (!roles || !Array.isArray(roles)) return ["Member"];
-  return roles as UserRole[];
 }
 
 // --- Role check helpers ---

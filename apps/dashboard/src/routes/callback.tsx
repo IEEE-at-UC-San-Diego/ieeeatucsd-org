@@ -4,13 +4,13 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "convex/react";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { finalizeSignInAndGetRedirect } from "@/lib/auth/callbackFlow";
+import { AuthFlow } from "@/lib/auth/AuthFlow";
+import { AuthSession } from "@/lib/auth/AuthSession";
 import {
 	createAuthRequestId,
 	errorMessage,
 	logAuthEvent,
 } from "@/lib/auth/logging";
-import { isConvexJwtAuthEnabled } from "@/lib/auth/mode";
 
 export const Route = createFileRoute("/callback")({
 	component: CallbackPage,
@@ -40,8 +40,7 @@ function CallbackLoading({ label = "Signing you in..." }: { label?: string }) {
 }
 
 function CallbackClient() {
-	const { getIdTokenClaims, getAccessToken, getIdToken, clearAllTokens } =
-		useLogto();
+	const { getIdTokenClaims, getAccessToken, clearAllTokens } = useLogto();
 	const upsertUser = useMutation(api.users.upsertFromAuth);
 	const navigate = useNavigate();
 	const upsertStarted = useRef(false);
@@ -57,34 +56,11 @@ function CallbackClient() {
 		const requestId = createAuthRequestId("callback");
 		logAuthEvent("callback_finalize_started", { requestId });
 
-		void finalizeSignInAndGetRedirect({
+		void AuthFlow.finalizeSignIn({
 			getIdTokenClaims: getIdTokenClaims as any,
 			getAccessToken: getAccessToken as any,
-			createSession: async (accessToken: string) => {
-				if (isConvexJwtAuthEnabled()) {
-					const idToken = await getIdToken?.();
-					if (!idToken) {
-						throw new Error("Missing ID token for native Convex auth");
-					}
-					return { sessionToken: idToken };
-				}
-
-				const sessionResponse = await fetch("/api/auth/convex-session", {
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${accessToken}`,
-						"Content-Type": "application/json",
-						"X-Auth-Request-Id": requestId,
-					},
-					body: JSON.stringify({}),
-				});
-				if (!sessionResponse.ok) {
-					throw new Error(
-						`Failed to create Convex session (${sessionResponse.status})`,
-					);
-				}
-				return (await sessionResponse.json()) as { sessionToken: string };
-			},
+			createSession: async (accessToken: string) =>
+				AuthSession.mintBridgeToken(accessToken, "callback"),
 			upsertUser,
 		})
 			.then(async (targetRoute) => {

@@ -1,97 +1,65 @@
 # Dashboard Auth Runbook
 
-## Current Modes
+The dashboard has one auth path:
 
-- `AUTH_BRIDGE_MODE=native` (**default**): Logto refresh tokens persist in `localStorage`, so users stay signed in until they explicitly sign out.
-- `AUTH_BRIDGE_MODE=legacy`: older recovery behavior (rollback only).
+1. **Logto** owns the browser session (Google OIDC, refresh token in `localStorage`).
+2. The app mints a short-lived **HMAC Convex bridge token** from a validated Logto access token (`POST /api/auth/convex-session`).
+3. Convex queries/mutations receive `{ logtoId, authToken }` and verify the HMAC token.
+4. Roles and access come from the Convex `users` document, not Logto claims.
 
-### Convex auth strategy (under native mode)
+This exists because Logto Cloud defaults to **ES384** ID tokens, which Convex cannot verify. Switching Convex to native JWT auth would require rotating Logto private keys to RSA/ES256 and rewriting every Convex function signature — that is out of scope here.
 
-- `CONVEX_AUTH_STRATEGY=bridge` (**default**): mint short-lived HMAC Convex session tokens from a validated Logto access token. Works with Logto’s default **ES384** signing keys.
-- `CONVEX_AUTH_STRATEGY=jwt`: Convex validates Logto ID tokens via `convex/auth.config.ts`. Requires Logto private keys rotated to **RSA (RS256)** or **ES256** — Convex cannot verify ES384.
+`convex/auth.config.ts` stays in place for self-hosted Convex deploy-time issuer checks. It is not used for the dashboard session.
 
-Self-hosted Convex supports `auth.config.ts` JWT validation. What is unsupported out of the box is the separate `@convex-dev/auth` component product.
-
-## Required Self-Hosted Settings
+## Required Settings
 
 ### App container
 
-- `AUTH_BRIDGE_MODE=native`
-- `VITE_AUTH_BRIDGE_MODE=native` (must match)
 - `LOGTO_ENDPOINT` (Logto base URL, e.g. `https://auth.example.com`)
 - `VITE_LOGTO_ENDPOINT`
 - `VITE_LOGTO_APP_ID`
 - `VITE_LOGTO_REDIRECT_URI`
 - `VITE_LOGTO_SCOPES`
 - `VITE_CONVEX_URL`
+- `CONVEX_SESSION_SECRET` (must match Convex)
 
 ### Convex deployment
 
-- `LOGTO_ENDPOINT` (same base URL as the app; `auth.config.ts` appends `/oidc` to match the ID token `iss`)
-- `LOGTO_APP_ID`
+- `LOGTO_ENDPOINT` + `LOGTO_APP_ID` (needed at deploy time by `auth.config.ts`)
+- `CONVEX_SESSION_SECRET` (must match the dashboard)
 
-## Why Sessions Felt Short-Lived / Broken Before
-
-1. Bridge tokens expire every 5 minutes and recovery cleared Logto tokens on mint failure.
-2. Enabling Convex JWT auth against Logto ES384 ID tokens fails verification (`Could not verify OIDC token claim`).
-3. Convex `auth.config.ts` must use the Logto OIDC issuer (`{endpoint}/oidc`), not the bare base URL.
-4. To enable `CONVEX_AUTH_STRATEGY=jwt`, rotate Logto OIDC private keys to RSA in Console → Tenant settings → OIDC configs, confirm `/oidc/jwks` serves `RS256`, then set both app + Vite strategy envs to `jwt`.
-
-## Flow Diagrams
-
-### Native Sign-In (default)
+## Flow
 
 ```mermaid
 sequenceDiagram
   participant B as Browser
   participant L as Logto
   participant A as Dashboard App
+  participant S as POST /api/auth/convex-session
   participant C as Convex
 
   B->>L: signIn()
   L-->>B: redirect to /callback
   B->>A: callback finalization
-  A->>L: refresh access token (rotates ID token)
-  A->>C: websocket/query auth with ID token
-  C-->>A: authenticated identity
-  A->>C: upsert/get user
+  A->>S: Bearer access token
+  S->>L: /oidc/me validate
+  S-->>A: HMAC session token (5m TTL)
+  A->>C: upsertFromAuth / getMe
   C-->>B: dashboard data
   Note over B,L: Refresh token stays in localStorage until signOut()
-```
-
-### Legacy Sign-In (rollback)
-
-```mermaid
-sequenceDiagram
-  participant B as Browser
-  participant L as Logto
-  participant A as Dashboard App
-  participant S as App Server
-  participant C as Convex
-
-  B->>L: signIn()
-  L-->>B: redirect to /callback
-  B->>A: callback finalization
-  A->>S: POST /api/auth/convex-session
-  S->>L: validate bearer token
-  S-->>A: app-minted bridge token
-  A->>C: query/mutation with logtoId + bridge token
-  C-->>B: dashboard data
 ```
 
 ## Validation Checklist
 
 1. Confirm app + Convex both have matching Logto app id and endpoint.
-2. Confirm Convex accepts Logto identities and `ctx.auth.getUserIdentity()` resolves.
+2. Confirm `CONVEX_SESSION_SECRET` matches on the app and Convex deployment.
 3. Validate login, hard refresh, browser restart, stale `/callback`, logout, and account switch.
 4. Confirm no flow requires clearing cookies or local storage except explicit Sign out.
-5. Validate rollback by switching only `AUTH_BRIDGE_MODE=legacy` / `VITE_AUTH_BRIDGE_MODE=legacy`.
 
 ## Failure Triage
 
 - `reason=stale-callback`: browser callback state drifted; the app clears local SDK tokens and retries.
-- `reason=session-init`: bootstrap failed after bounded retry. Native mode preserves the Logto refresh token and re-bootstraps once before offering another OAuth login.
-- Native-mode regression: switch `AUTH_BRIDGE_MODE=legacy`, redeploy app, keep Convex auth config in place.
+- `reason=session-init`: bootstrap failed after bounded retry. The app preserves the Logto refresh token when it still works and re-bootstraps once before offering another OAuth login.
 
 ## Evidence To Capture In Staging
 

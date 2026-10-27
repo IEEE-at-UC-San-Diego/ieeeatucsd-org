@@ -25,7 +25,7 @@ import {
 } from "@/config/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
-import { resolveDashboardRedirect } from "@/lib/auth/dashboardRouting";
+import { AuthFlow } from "@/lib/auth/AuthFlow";
 import { cn } from "@/lib/utils";
 import { AppSidebar } from "./AppSidebar";
 
@@ -123,7 +123,7 @@ export function DashboardLayout() {
 	const isMobile = useIsMobile();
 	const redirectPath = authFailureReason
 		? "/signin"
-		: resolveDashboardRedirect({
+		: AuthFlow.resolveDashboardRedirect({
 				isAuthResolved,
 				isAuthenticated,
 				user,
