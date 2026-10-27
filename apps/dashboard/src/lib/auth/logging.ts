@@ -1,5 +1,3 @@
-import { getAuthBridgeMode } from "./mode";
-
 type AuthLogFields = Record<string, unknown>;
 
 function safeFields(fields: AuthLogFields) {
@@ -23,7 +21,6 @@ export function logAuthEvent(event: string, fields: AuthLogFields = {}) {
 	const payload = {
 		type: "auth_event",
 		event,
-		authBridgeMode: getAuthBridgeMode(),
 		timestamp: new Date().toISOString(),
 		...safeFields(fields),
 	};

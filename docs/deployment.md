@@ -23,7 +23,6 @@ Configure these in Dokploy **Build Time Arguments** or Docker Compose `build.arg
 ### Dashboard build arguments (browser-visible `VITE_*`)
 
 - `VITE_APP_TITLE`
-- `VITE_AUTH_BRIDGE_MODE`
 - `VITE_CONVEX_URL`
 - `VITE_LOGTO_ENDPOINT`
 - `VITE_LOGTO_APP_ID`

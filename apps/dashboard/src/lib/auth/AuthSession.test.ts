@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { refreshSessionWithRetry } from "./sessionRefresh";
+import { AuthSession } from "./AuthSession";
 
-describe("refreshSessionWithRetry", () => {
+describe("AuthSession.refreshWithRetry", () => {
 	it("uses the latest access token when available", async () => {
 		const getLatestAccessToken = vi.fn(async () => "fresh-access-token");
 		const mintSession = vi.fn(async (accessToken: string) => ({
@@ -9,7 +9,7 @@ describe("refreshSessionWithRetry", () => {
 			expiresAt: Date.now() + 60_000,
 		}));
 
-		const result = await refreshSessionWithRetry({
+		const result = await AuthSession.refreshWithRetry({
 			currentAccessToken: "stale-access-token",
 			getLatestAccessToken,
 			mintSession,
@@ -32,7 +32,7 @@ describe("refreshSessionWithRetry", () => {
 				expiresAt: Date.now() + 60_000,
 			});
 
-		const result = await refreshSessionWithRetry({
+		const result = await AuthSession.refreshWithRetry({
 			currentAccessToken: "stable-token",
 			getLatestAccessToken,
 			mintSession,
@@ -51,7 +51,7 @@ describe("refreshSessionWithRetry", () => {
 		});
 
 		await expect(
-			refreshSessionWithRetry({
+			AuthSession.refreshWithRetry({
 				currentAccessToken: "stable-token",
 				getLatestAccessToken,
 				mintSession,
@@ -61,5 +61,41 @@ describe("refreshSessionWithRetry", () => {
 		).rejects.toThrow("persistent failure");
 
 		expect(mintSession).toHaveBeenCalledTimes(3);
+	});
+});
+
+describe("AuthSession.load", () => {
+	it("mints a session from Logto claims and the latest access token", async () => {
+		const mintSession = vi
+			.spyOn(AuthSession, "mintBridgeToken")
+			.mockResolvedValue({
+				sessionToken: "session-token",
+				expiresAt: 1_700_000_000_000,
+			});
+
+		const result = await AuthSession.load({
+			getIdTokenClaims: async () => ({ sub: "logto|member" }),
+			getAccessToken: async () => "access-token",
+			baseDelayMs: 0,
+		});
+
+		expect(mintSession).toHaveBeenCalledWith("access-token", "session");
+		expect(result).toEqual({
+			logtoId: "logto|member",
+			accessToken: "access-token",
+			sessionToken: "session-token",
+			expiresAt: 1_700_000_000_000,
+		});
+
+		mintSession.mockRestore();
+	});
+
+	it("throws when Logto claims are missing", async () => {
+		await expect(
+			AuthSession.load({
+				getIdTokenClaims: async () => null,
+				getAccessToken: async () => "access-token",
+			}),
+		).rejects.toThrow("Missing Logto claims");
 	});
 });

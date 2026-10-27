@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireApiAuthMock = vi.fn();
 const createConvexSessionTokenMock = vi.fn();
-const isConvexJwtAuthEnabledMock = vi.fn(() => false);
 
 vi.mock("@/server/auth", () => ({
 	requireApiAuth: requireApiAuthMock,
@@ -12,16 +11,9 @@ vi.mock("@/server/convex-session", () => ({
 	createConvexSessionToken: createConvexSessionTokenMock,
 }));
 
-vi.mock("@/lib/auth/mode", () => ({
-	isConvexJwtAuthEnabled: isConvexJwtAuthEnabledMock,
-	isNativeAuthBridgeMode: () => true,
-	getAuthBridgeMode: () => "native",
-}));
-
 describe("POST /api/auth/convex-session", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		isConvexJwtAuthEnabledMock.mockReturnValue(false);
 	});
 
 	it("mints a session for a valid but unprovisioned user", async () => {
@@ -79,21 +71,6 @@ describe("POST /api/auth/convex-session", () => {
 		});
 
 		expect(response.status).toBe(401);
-		expect(createConvexSessionTokenMock).not.toHaveBeenCalled();
-	});
-
-	it("rejects bridge minting when Convex JWT auth strategy is enabled", async () => {
-		isConvexJwtAuthEnabledMock.mockReturnValue(true);
-
-		const { handleConvexSession } = await import("./convex-session");
-		const response = await handleConvexSession({
-			request: new Request("http://localhost/api/auth/convex-session", {
-				method: "POST",
-			}),
-		});
-
-		expect(response.status).toBe(409);
-		expect(requireApiAuthMock).not.toHaveBeenCalled();
 		expect(createConvexSessionTokenMock).not.toHaveBeenCalled();
 	});
 });

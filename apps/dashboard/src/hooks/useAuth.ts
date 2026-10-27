@@ -1,5 +1,5 @@
 import { useLogto } from "@logto/react";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
 	createContext,
 	createElement,
@@ -10,28 +10,11 @@ import {
 	useRef,
 	useState,
 } from "react";
-import {
-	resolveAuthState,
-	resolveStableAuthUser,
-	shouldAttemptProvisioning,
-} from "@/lib/auth/authState";
-import {
-	createAuthRequestId,
-	errorMessage,
-	logAuthEvent,
-} from "@/lib/auth/logging";
-import {
-	isConvexJwtAuthEnabled,
-	isNativeAuthBridgeMode,
-} from "@/lib/auth/mode";
-import { loadNativeSession } from "@/lib/auth/nativeSession";
-import {
-	clearAuthRecoveryLatches,
-	resolveNativeAuthRecoveryAction,
-} from "@/lib/auth/recovery";
+import { AuthFlow } from "@/lib/auth/AuthFlow";
+import { type AuthBootstrapResult, AuthSession } from "@/lib/auth/AuthSession";
+import { errorMessage, logAuthEvent } from "@/lib/auth/logging";
 import { resolveLogtoRedirectUri } from "@/lib/auth/redirectUri";
-import { refreshSessionWithRetry } from "@/lib/auth/sessionRefresh";
-import { buildLogtoSignInOptions, type SignInOptions } from "@/lib/auth/signIn";
+import { buildLogtoSignInOptions } from "@/lib/auth/signIn";
 import { setAuthTokens } from "@/lib/prefetch/authTokens";
 import type { UserRole } from "@/types/roles";
 import { api } from "../../convex/_generated/api";
@@ -44,63 +27,12 @@ export type AuthFailureReason =
 	| null;
 
 const isServer = typeof window === "undefined";
-const SESSION_MINT_TIMEOUT_MS = 10_000;
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 15_000;
 const REFRESH_INTERVAL_MS = 30_000;
 const TOKEN_REFRESH_GRACE_MS = 60_000;
 const RECOVERY_REASON = "session-init";
 
 type AuthContextValue = ReturnType<typeof useAuthClient>;
-
-type AuthBootstrapResult = {
-	logtoId: string;
-	accessToken: string;
-	sessionToken: string;
-	expiresAt: number;
-};
-
-async function fetchWithTimeout(
-	input: RequestInfo | URL,
-	init: RequestInit,
-	timeoutMs: number,
-) {
-	const controller = new AbortController();
-	const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-
-	try {
-		return await fetch(input, { ...init, signal: controller.signal });
-	} catch (error) {
-		if (error instanceof DOMException && error.name === "AbortError") {
-			throw new Error(`Request timed out after ${timeoutMs}ms`);
-		}
-		throw error;
-	} finally {
-		window.clearTimeout(timeout);
-	}
-}
-
-async function retryAsync<T>(
-	task: () => Promise<T>,
-	maxAttempts = 3,
-	baseDelayMs = 750,
-) {
-	let lastError: unknown;
-
-	for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-		try {
-			return await task();
-		} catch (error) {
-			lastError = error;
-			if (attempt < maxAttempts) {
-				await new Promise((resolve) =>
-					window.setTimeout(resolve, baseDelayMs * attempt),
-				);
-			}
-		}
-	}
-
-	throw lastError ?? new Error("Operation failed");
-}
 
 const ssrDefaults = {
 	isAuthenticated: false as const,
@@ -135,43 +67,17 @@ export function useAuth() {
 }
 
 function useAuthClient() {
-	if (isNativeAuthBridgeMode()) {
-		return useNativeAuthClient();
-	}
-
-	return useLegacyAuthClient();
-}
-
-function useSharedAuthClient(options: {
-	logtoLoading: boolean;
-	isAuthenticated: boolean;
-	signIn: (options: SignInOptions) => Promise<unknown>;
-	signOut: (redirectUri?: string) => Promise<void>;
-	clearAllTokens?: () => Promise<void>;
-	getIdTokenClaims?: () => Promise<Record<string, any> | null | undefined>;
-	getAccessToken?: () => Promise<string | null | undefined>;
-	bootstrapSession: () => Promise<AuthBootstrapResult>;
-	refreshSession: (current: {
-		accessToken: string;
-		sessionToken: string;
-		expiresAt: number | null;
-		logtoId: string | null;
-	}) => Promise<AuthBootstrapResult>;
-	mode: "legacy" | "native";
-}) {
 	const {
-		logtoLoading,
-		isAuthenticated,
+		isAuthenticated: logtoAuthenticated,
+		isLoading: logtoLoading,
 		signIn,
 		signOut,
 		clearAllTokens,
 		getIdTokenClaims,
 		getAccessToken,
-		bootstrapSession,
-		refreshSession,
-		mode,
-	} = options;
+	} = useLogto();
 
+	const isAuthenticated = Boolean(logtoAuthenticated);
 	const [logtoId, setLogtoId] = useState<string | null>(null);
 	const [accessToken, setAccessToken] = useState<string | null>(null);
 	const [convexSessionToken, setConvexSessionToken] = useState<string | null>(
@@ -198,6 +104,14 @@ function useSharedAuthClient(options: {
 	getIdTokenClaimsRef.current = getIdTokenClaims;
 	getAccessTokenRef.current = getAccessToken;
 	clearAllTokensRef.current = clearAllTokens;
+
+	const applySession = useCallback((session: AuthBootstrapResult) => {
+		setLogtoId(session.logtoId);
+		setAccessToken(session.accessToken);
+		setConvexSessionToken(session.sessionToken);
+		setConvexSessionExpiresAt(session.expiresAt);
+		setAuthFailureReason(null);
+	}, []);
 
 	const getAuthHeaders = useCallback((): Record<string, string> => {
 		if (!accessToken) return {};
@@ -228,10 +142,10 @@ function useSharedAuthClient(options: {
 
 	const markAuthFailure = useCallback(
 		(reason: Exclude<AuthFailureReason, null>) => {
-			logAuthEvent("auth_marked_failed", { reason, mode });
+			logAuthEvent("auth_marked_failed", { reason });
 			setAuthFailureReason(reason);
 		},
-		[mode],
+		[],
 	);
 
 	const origin = window.location.origin;
@@ -242,12 +156,12 @@ function useSharedAuthClient(options: {
 	);
 
 	const performSignOut = useCallback(() => {
-		logAuthEvent("auth_signout_requested", { mode });
+		logAuthEvent("auth_signout_requested");
 		clearLocalAuthState();
 		setAuthFailureReason(null);
 		recoveryTriggeredRef.current = false;
 		void signOut(`${origin}/signin`);
-	}, [clearLocalAuthState, mode, origin, signOut]);
+	}, [clearLocalAuthState, origin, signOut]);
 
 	const triggerSignIn = useCallback(async () => {
 		try {
@@ -259,11 +173,37 @@ function useSharedAuthClient(options: {
 			);
 		} catch (error) {
 			logAuthEvent("auth_signin_failed", {
-				mode,
 				error: errorMessage(error),
 			});
 		}
-	}, [mode, resolvedRedirectUri, signIn]);
+	}, [resolvedRedirectUri, signIn]);
+
+	const bootstrapSession = useCallback(async () => {
+		const [claims, token] = await Promise.all([
+			getIdTokenClaims?.(),
+			getAccessToken?.(),
+		]);
+		if (!claims?.sub || !token) {
+			throw new Error("Missing Logto claims or access token");
+		}
+
+		return AuthSession.load({
+			getIdTokenClaims: async () => claims,
+			getAccessToken: async () => getAccessToken?.(),
+			currentAccessToken: token,
+			maxAttempts: 3,
+			baseDelayMs: 500,
+		});
+	}, [getAccessToken, getIdTokenClaims]);
+
+	const refreshSession = useCallback(async () => {
+		return AuthSession.load({
+			getIdTokenClaims: async () => getIdTokenClaims?.(),
+			getAccessToken: async () => getAccessToken?.(),
+			maxAttempts: 3,
+			baseDelayMs: 750,
+		});
+	}, [getAccessToken, getIdTokenClaims]);
 
 	useEffect(() => {
 		if (!isAuthenticated) {
@@ -288,23 +228,17 @@ function useSharedAuthClient(options: {
 				const session = await bootstrapSession();
 				if (cancelled) return;
 
-				setLogtoId(session.logtoId);
-				setAccessToken(session.accessToken);
-				setConvexSessionToken(session.sessionToken);
-				setConvexSessionExpiresAt(session.expiresAt);
-				setAuthFailureReason(null);
+				applySession(session);
 				authInitializedRef.current = true;
 				recoveryTriggeredRef.current = false;
-				clearAuthRecoveryLatches();
+				AuthFlow.clearRecoveryLatches();
 				logAuthEvent("auth_bootstrap_succeeded", {
-					mode,
 					logtoId: session.logtoId,
 					expiresAt: session.expiresAt,
 				});
 			} catch (error) {
 				if (cancelled) return;
 				logAuthEvent("auth_bootstrap_failed", {
-					mode,
 					error: errorMessage(error),
 				});
 				markAuthFailure("session_mint_failed");
@@ -316,14 +250,13 @@ function useSharedAuthClient(options: {
 		};
 	}, [
 		accessToken,
-		authFailureReason,
+		applySession,
 		bootstrapSession,
 		clearLocalAuthState,
 		convexSessionToken,
 		isAuthenticated,
 		logtoId,
 		markAuthFailure,
-		mode,
 	]);
 
 	useEffect(() => {
@@ -363,21 +296,10 @@ function useSharedAuthClient(options: {
 			refreshInFlightRef.current = true;
 			void (async () => {
 				try {
-					const nextSession = await refreshSession({
-						accessToken,
-						sessionToken: convexSessionToken,
-						expiresAt: convexSessionExpiresAt,
-						logtoId,
-					});
-
-					setLogtoId(nextSession.logtoId);
-					setAccessToken(nextSession.accessToken);
-					setConvexSessionToken(nextSession.sessionToken);
-					setConvexSessionExpiresAt(nextSession.expiresAt);
-					setAuthFailureReason(null);
-					clearAuthRecoveryLatches();
+					const nextSession = await refreshSession();
+					applySession(nextSession);
+					AuthFlow.clearRecoveryLatches();
 					logAuthEvent("auth_refresh_succeeded", {
-						mode,
 						logtoId: nextSession.logtoId,
 						expiresAt: nextSession.expiresAt,
 					});
@@ -385,7 +307,6 @@ function useSharedAuthClient(options: {
 					const isExpired =
 						!convexSessionExpiresAt || Date.now() >= convexSessionExpiresAt;
 					logAuthEvent("auth_refresh_failed", {
-						mode,
 						isExpired,
 						error: errorMessage(error),
 					});
@@ -398,12 +319,11 @@ function useSharedAuthClient(options: {
 		return () => window.clearInterval(timer);
 	}, [
 		accessToken,
+		applySession,
 		authFailureReason,
 		convexSessionExpiresAt,
 		convexSessionToken,
 		isAuthenticated,
-		logtoId,
-		mode,
 		refreshSession,
 	]);
 
@@ -414,7 +334,7 @@ function useSharedAuthClient(options: {
 			: "skip",
 	);
 
-	const stableAuthUser = resolveStableAuthUser({
+	const stableAuthUser = AuthFlow.resolveStableUser({
 		logtoId,
 		convexUser,
 		lastResolvedUser: lastResolvedUserRef.current as {
@@ -453,7 +373,7 @@ function useSharedAuthClient(options: {
 		}
 
 		if (
-			!shouldAttemptProvisioning({
+			!AuthFlow.shouldAttemptProvisioning({
 				isAuthenticated,
 				logtoId,
 				convexSessionToken,
@@ -483,14 +403,13 @@ function useSharedAuthClient(options: {
 				await upsertUser({
 					logtoId: claims.sub,
 					authToken: convexSessionToken,
-					email: (claims as any).email || "",
-					name: (claims as any).name || claims.sub,
-					avatar: (claims as any).picture,
+					email: (claims as { email?: string }).email || "",
+					name: (claims as { name?: string }).name || claims.sub,
+					avatar: (claims as { picture?: string }).picture,
 					signInMethod: "logto",
 				});
 			} catch (error) {
 				logAuthEvent("auth_provision_failed", {
-					mode,
 					logtoId,
 					error: errorMessage(error),
 				});
@@ -511,7 +430,6 @@ function useSharedAuthClient(options: {
 		stableConvexUser,
 		isAuthenticated,
 		logtoId,
-		mode,
 		upsertUser,
 	]);
 
@@ -521,80 +439,51 @@ function useSharedAuthClient(options: {
 		recoveryTriggeredRef.current = true;
 		void (async () => {
 			logAuthEvent("auth_recovery_started", {
-				mode,
 				reason: authFailureReason,
 			});
 
-			// Native mode: keep Logto tokens only when the refresh token still
-			// works (Convex-side failure). If Logto refresh is dead ("Grant
-			// request is invalid"), clear storage so the next sign-in is clean.
-			if (mode === "native") {
-				let refreshStillValid = false;
-				try {
-					const token = await getAccessTokenRef.current?.();
-					refreshStillValid = Boolean(token);
-				} catch (error) {
-					logAuthEvent("auth_recovery_refresh_probe_failed", {
-						mode,
-						reason: authFailureReason,
-						error: errorMessage(error),
-					});
-				}
-
-				const recoveryAction =
-					resolveNativeAuthRecoveryAction(refreshStillValid);
-				logAuthEvent("auth_recovery_action", {
-					mode,
+			// Keep Logto tokens only when the refresh token still works
+			// (Convex-side failure). If Logto refresh is dead ("Grant request
+			// is invalid"), clear storage so the next sign-in is clean.
+			let refreshStillValid = false;
+			try {
+				const token = await getAccessTokenRef.current?.();
+				refreshStillValid = Boolean(token);
+			} catch (error) {
+				logAuthEvent("auth_recovery_refresh_probe_failed", {
 					reason: authFailureReason,
-					recoveryAction,
+					error: errorMessage(error),
 				});
+			}
 
-				if (recoveryAction === "soft_rebootstrap") {
-					clearLocalAuthState();
-					const url = new URL(`${origin}/signin`);
-					url.searchParams.set("reason", RECOVERY_REASON);
-					window.location.replace(url.toString());
-					return;
-				}
+			const recoveryAction = AuthFlow.resolveRecoveryAction(refreshStillValid);
+			logAuthEvent("auth_recovery_action", {
+				reason: authFailureReason,
+				recoveryAction,
+			});
 
+			if (recoveryAction !== "soft_rebootstrap") {
 				try {
 					await clearAllTokensRef.current?.();
 				} catch (error) {
 					logAuthEvent("auth_recovery_clear_tokens_failed", {
-						mode,
 						reason: authFailureReason,
 						error: errorMessage(error),
 					});
-				} finally {
-					clearLocalAuthState();
-					const url = new URL(`${origin}/signin`);
-					url.searchParams.set("reason", RECOVERY_REASON);
-					window.location.replace(url.toString());
 				}
-				return;
 			}
 
-			try {
-				await clearAllTokensRef.current?.();
-			} catch (error) {
-				logAuthEvent("auth_recovery_clear_tokens_failed", {
-					mode,
-					reason: authFailureReason,
-					error: errorMessage(error),
-				});
-			} finally {
-				clearLocalAuthState();
-				const url = new URL(`${origin}/signin`);
-				url.searchParams.set("reason", RECOVERY_REASON);
-				window.location.replace(url.toString());
-			}
+			clearLocalAuthState();
+			const url = new URL(`${origin}/signin`);
+			url.searchParams.set("reason", RECOVERY_REASON);
+			window.location.replace(url.toString());
 		})();
-	}, [authFailureReason, clearLocalAuthState, mode, origin]);
+	}, [authFailureReason, clearLocalAuthState, origin]);
 
 	const userRole: UserRole = (stableConvexUser?.role as UserRole) ?? "Member";
 	const hasProvisioningAttempt =
 		!!logtoId && lastProvisioningAttemptRef.current === logtoId;
-	const { isAuthResolved, isLoading } = resolveAuthState({
+	const { isAuthResolved, isLoading } = AuthFlow.resolveState({
 		logtoLoading,
 		isAuthenticated,
 		logtoId,
@@ -640,296 +529,4 @@ function useSharedAuthClient(options: {
 			userRole,
 		],
 	);
-}
-
-function useLegacyAuthClient() {
-	const {
-		isAuthenticated,
-		isLoading,
-		signIn,
-		signOut,
-		clearAllTokens,
-		getIdTokenClaims,
-		getAccessToken,
-	} = useLogto();
-
-	const mintConvexSession = useCallback(async (token: string) => {
-		const requestId = createAuthRequestId("legacy_session");
-		logAuthEvent("legacy_session_mint_started", { requestId });
-
-		const response = await fetchWithTimeout(
-			"/api/auth/convex-session",
-			{
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${token}`,
-					"Content-Type": "application/json",
-					"X-Auth-Request-Id": requestId,
-				},
-				body: JSON.stringify({}),
-			},
-			SESSION_MINT_TIMEOUT_MS,
-		);
-
-		if (!response.ok) {
-			throw new Error(`Failed to mint Convex session (${response.status})`);
-		}
-
-		const data = (await response.json()) as {
-			sessionToken: string;
-			expiresAt: number;
-		};
-		logAuthEvent("legacy_session_mint_succeeded", {
-			requestId,
-			expiresAt: data.expiresAt,
-		});
-		return data;
-	}, []);
-
-	const bootstrapSession =
-		useCallback(async (): Promise<AuthBootstrapResult> => {
-			const [claims, token] = await Promise.all([
-				getIdTokenClaims?.(),
-				getAccessToken?.(),
-			]);
-
-			if (!claims?.sub || !token) {
-				throw new Error("Missing Logto claims or access token");
-			}
-
-			const { session, accessToken } = await refreshSessionWithRetry({
-				currentAccessToken: token,
-				getLatestAccessToken: async () => getAccessToken?.(),
-				mintSession: mintConvexSession,
-				maxAttempts: 3,
-				baseDelayMs: 500,
-			});
-
-			return {
-				logtoId: claims.sub,
-				accessToken,
-				sessionToken: session.sessionToken,
-				expiresAt: session.expiresAt,
-			};
-		}, [getAccessToken, getIdTokenClaims, mintConvexSession]);
-
-	const refreshSession = useCallback(
-		async (current: {
-			accessToken: string;
-			sessionToken: string;
-			expiresAt: number | null;
-			logtoId: string | null;
-		}): Promise<AuthBootstrapResult> => {
-			const claims = await getIdTokenClaims?.();
-			if (!claims?.sub) {
-				throw new Error("Missing Logto claims");
-			}
-
-			const { session, accessToken } = await refreshSessionWithRetry({
-				currentAccessToken: current.accessToken,
-				getLatestAccessToken: async () => getAccessToken?.(),
-				mintSession: mintConvexSession,
-				maxAttempts: 3,
-				baseDelayMs: 750,
-			});
-
-			return {
-				logtoId: claims.sub,
-				accessToken,
-				sessionToken: session.sessionToken,
-				expiresAt: session.expiresAt,
-			};
-		},
-		[getAccessToken, getIdTokenClaims, mintConvexSession],
-	);
-
-	return useSharedAuthClient({
-		logtoLoading: isLoading,
-		isAuthenticated: isAuthenticated ?? false,
-		signIn,
-		signOut,
-		clearAllTokens,
-		getIdTokenClaims,
-		getAccessToken,
-		bootstrapSession,
-		refreshSession,
-		mode: "legacy",
-	});
-}
-
-function useNativeAuthClient() {
-	// Env-fixed strategy (same pattern as legacy vs native above).
-	if (isConvexJwtAuthEnabled()) {
-		return useNativeJwtAuthClient();
-	}
-	return useNativeBridgeAuthClient();
-}
-
-function useMintConvexBridgeSession(eventPrefix: string) {
-	return useCallback(
-		async (token: string) => {
-			const requestId = createAuthRequestId(eventPrefix);
-			logAuthEvent(`${eventPrefix}_mint_started`, { requestId });
-
-			const response = await fetchWithTimeout(
-				"/api/auth/convex-session",
-				{
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "application/json",
-						"X-Auth-Request-Id": requestId,
-					},
-					body: JSON.stringify({}),
-				},
-				SESSION_MINT_TIMEOUT_MS,
-			);
-
-			if (!response.ok) {
-				throw new Error(`Failed to mint Convex session (${response.status})`);
-			}
-
-			const data = (await response.json()) as {
-				sessionToken: string;
-				expiresAt: number;
-			};
-			logAuthEvent(`${eventPrefix}_mint_succeeded`, {
-				requestId,
-				expiresAt: data.expiresAt,
-			});
-			return data;
-		},
-		[eventPrefix],
-	);
-}
-
-/** Persistent Logto session + app-minted Convex bridge token (ES384-safe). */
-function useNativeBridgeAuthClient() {
-	const {
-		isAuthenticated,
-		isLoading,
-		signIn,
-		signOut,
-		clearAllTokens,
-		getIdTokenClaims,
-		getAccessToken,
-	} = useLogto();
-	const mintConvexSession = useMintConvexBridgeSession("native_bridge_session");
-
-	const bootstrapSession =
-		useCallback(async (): Promise<AuthBootstrapResult> => {
-			const [claims, token] = await Promise.all([
-				getIdTokenClaims?.(),
-				getAccessToken?.(),
-			]);
-			if (!claims?.sub || !token) {
-				throw new Error("Missing Logto claims or access token");
-			}
-
-			const { session, accessToken } = await refreshSessionWithRetry({
-				currentAccessToken: token,
-				getLatestAccessToken: async () => getAccessToken?.(),
-				mintSession: mintConvexSession,
-				maxAttempts: 3,
-				baseDelayMs: 500,
-			});
-
-			return {
-				logtoId: claims.sub,
-				accessToken,
-				sessionToken: session.sessionToken,
-				expiresAt: session.expiresAt,
-			};
-		}, [getAccessToken, getIdTokenClaims, mintConvexSession]);
-
-	const refreshSession = useCallback(async (): Promise<AuthBootstrapResult> => {
-		const claims = await getIdTokenClaims?.();
-		if (!claims?.sub) {
-			throw new Error("Missing Logto claims");
-		}
-
-		const { session, accessToken } = await refreshSessionWithRetry({
-			currentAccessToken: null,
-			getLatestAccessToken: async () => getAccessToken?.(),
-			mintSession: mintConvexSession,
-			maxAttempts: 3,
-			baseDelayMs: 750,
-		});
-
-		return {
-			logtoId: claims.sub,
-			accessToken,
-			sessionToken: session.sessionToken,
-			expiresAt: session.expiresAt,
-		};
-	}, [getAccessToken, getIdTokenClaims, mintConvexSession]);
-
-	return useSharedAuthClient({
-		logtoLoading: isLoading,
-		isAuthenticated: Boolean(isAuthenticated),
-		signIn,
-		signOut,
-		clearAllTokens,
-		getIdTokenClaims,
-		getAccessToken,
-		bootstrapSession,
-		refreshSession,
-		mode: "native",
-	});
-}
-
-/** Opt-in path: Convex validates Logto ID tokens (requires RS256/ES256). */
-function useNativeJwtAuthClient() {
-	const {
-		isAuthenticated,
-		isLoading,
-		signIn,
-		signOut,
-		clearAllTokens,
-		getIdTokenClaims,
-		getIdToken,
-		getAccessToken,
-	} = useLogto();
-	const convexAuth = useConvexAuth();
-
-	const bootstrapSession =
-		useCallback(async (): Promise<AuthBootstrapResult> => {
-			return await retryAsync(
-				async () =>
-					loadNativeSession({
-						getAccessToken: async () => getAccessToken?.(),
-						getIdToken: async () => getIdToken?.(),
-						getIdTokenClaims: async () => getIdTokenClaims?.(),
-					}),
-				3,
-				500,
-			);
-		}, [getAccessToken, getIdToken, getIdTokenClaims]);
-
-	const refreshSession = useCallback(async (): Promise<AuthBootstrapResult> => {
-		return await retryAsync(
-			async () =>
-				loadNativeSession({
-					getAccessToken: async () => getAccessToken?.(),
-					getIdToken: async () => getIdToken?.(),
-					getIdTokenClaims: async () => getIdTokenClaims?.(),
-				}),
-			3,
-			500,
-		);
-	}, [getAccessToken, getIdToken, getIdTokenClaims]);
-
-	return useSharedAuthClient({
-		logtoLoading:
-			isLoading || (Boolean(isAuthenticated) && convexAuth.isLoading),
-		isAuthenticated: Boolean(isAuthenticated),
-		signIn,
-		signOut,
-		clearAllTokens,
-		getIdTokenClaims,
-		getAccessToken,
-		bootstrapSession,
-		refreshSession,
-		mode: "native",
-	});
 }

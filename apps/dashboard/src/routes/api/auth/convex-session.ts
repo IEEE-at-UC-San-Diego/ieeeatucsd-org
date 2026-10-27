@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { errorMessage, logAuthEvent } from "@/lib/auth/logging";
-import { isConvexJwtAuthEnabled } from "@/lib/auth/mode";
 import { requireApiAuth } from "@/server/auth";
 import { createConvexSessionToken } from "@/server/convex-session";
 import type { UserRole } from "@/types/roles";
@@ -15,22 +14,6 @@ export async function handleConvexSession({ request }: { request: Request }) {
 			});
 		}
 
-		// When Convex JWT auth is enabled, clients must use Logto ID tokens
-		// instead of app-minted bridge tokens.
-		if (isConvexJwtAuthEnabled()) {
-			logAuthEvent("legacy_session_endpoint_rejected", { requestId });
-			return new Response(
-				JSON.stringify({
-					error:
-						"Bridge session minting is disabled while CONVEX_AUTH_STRATEGY=jwt",
-				}),
-				{
-					status: 409,
-					headers: { "Content-Type": "application/json" },
-				},
-			);
-		}
-
 		const authResult = await requireApiAuth(request, {
 			allowMissingBody: true,
 			allowUnprovisionedUser: true,
@@ -38,13 +21,13 @@ export async function handleConvexSession({ request }: { request: Request }) {
 		if (authResult instanceof Response) return authResult;
 
 		const { logtoId, user } = authResult;
-		logAuthEvent("legacy_session_endpoint_started", { requestId, logtoId });
+		logAuthEvent("convex_session_started", { requestId, logtoId });
 		const { token, payload } = createConvexSessionToken({
 			sub: logtoId,
 			role: user.role as UserRole | undefined,
 		});
 
-		logAuthEvent("legacy_session_endpoint_succeeded", {
+		logAuthEvent("convex_session_succeeded", {
 			requestId,
 			logtoId,
 			expiresAt: payload.exp * 1000,
@@ -61,7 +44,7 @@ export async function handleConvexSession({ request }: { request: Request }) {
 			},
 		);
 	} catch (error) {
-		logAuthEvent("legacy_session_endpoint_failed", {
+		logAuthEvent("convex_session_failed", {
 			requestId,
 			error: errorMessage(error),
 		});

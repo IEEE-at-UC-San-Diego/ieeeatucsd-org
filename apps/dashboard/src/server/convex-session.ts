@@ -3,7 +3,6 @@ import { env } from "@/env";
 import type { UserRole } from "@/types/roles";
 
 export const CONVEX_SESSION_TTL_SECONDS = 5 * 60;
-export const CONVEX_SESSION_REFRESH_WINDOW_SECONDS = 60;
 
 export type ConvexSessionPayload = {
 	sub: string;
@@ -89,12 +88,4 @@ export function verifyConvexSessionToken(token: string): ConvexSessionPayload {
 	}
 
 	return payload;
-}
-
-export function shouldRefreshConvexSessionToken(
-	expUnixSeconds: number,
-	nowMs = Date.now(),
-) {
-	const now = Math.floor(nowMs / 1000);
-	return expUnixSeconds - now <= CONVEX_SESSION_REFRESH_WINDOW_SECONDS;
 }
