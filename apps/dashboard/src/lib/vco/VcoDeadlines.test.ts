@@ -151,6 +151,39 @@ describe("VcoDeadlines event display formatting", () => {
 		expect(VcoDeadlines.formatEventDate(lastMinuteTalk)).toBe("Nov 18, 2026");
 		expect(VcoDeadlines.formatEventTime(lastMinuteTalk)).toBe("4:00 PM");
 	});
+
+	it("renders an evening Pacific event on the same calendar date in both tabs", () => {
+		// Events List used date-fns local/UTC formatting and showed Nov 19 / Dec 22.
+		// VCO Pipeline already used these America/Los_Angeles helpers (Nov 18 / Dec 21).
+		const lateWorkshop = Date.parse("2026-11-19T02:00:00.000Z");
+		const industryNight = Date.parse("2026-12-22T02:00:00.000Z");
+
+		const utcDate = (ms: number) =>
+			new Intl.DateTimeFormat("en-US", {
+				timeZone: "UTC",
+				month: "short",
+				day: "numeric",
+				year: "numeric",
+			}).format(new Date(ms));
+
+		expect(utcDate(lateWorkshop)).toBe("Nov 19, 2026");
+		expect(utcDate(industryNight)).toBe("Dec 22, 2026");
+
+		const listLateWorkshop = VcoDeadlines.formatEventDate(lateWorkshop);
+		const pipelineLateWorkshop = VcoDeadlines.formatEventDate(lateWorkshop);
+		const listIndustryNight = VcoDeadlines.formatEventDate(industryNight);
+		const pipelineIndustryNight = VcoDeadlines.formatEventDate(industryNight);
+
+		expect(listLateWorkshop).toBe("Nov 18, 2026");
+		expect(pipelineLateWorkshop).toBe(listLateWorkshop);
+		expect(listIndustryNight).toBe("Dec 21, 2026");
+		expect(pipelineIndustryNight).toBe(listIndustryNight);
+		const listLateWorkshopTime = VcoDeadlines.formatEventTime(lateWorkshop);
+		const pipelineLateWorkshopTime = VcoDeadlines.formatEventTime(lateWorkshop);
+		expect(listLateWorkshopTime).toBe("6:00 PM");
+		expect(pipelineLateWorkshopTime).toBe(listLateWorkshopTime);
+		expect(VcoDeadlines.formatEventTime(industryNight)).toBe("6:00 PM");
+	});
 });
 
 describe("VcoDeadlines.isLateCreated", () => {
