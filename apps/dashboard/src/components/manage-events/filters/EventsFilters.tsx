@@ -1,6 +1,5 @@
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -23,7 +22,6 @@ interface EventsFiltersProps {
 	filters: EventFilters;
 	onFiltersChange: (filters: EventFilters) => void;
 	onClearFilters: () => void;
-	showVcoFilters?: boolean;
 }
 
 const statusOptions: { value: EventStatus; label: string }[] = [
@@ -49,17 +47,12 @@ export function EventsFilters({
 	filters,
 	onFiltersChange,
 	onClearFilters,
-	showVcoFilters = false,
 }: EventsFiltersProps) {
 	const selectedStatuses = filters.statuses || [];
 	const hasActiveFilters =
 		filters.search.trim().length > 0 ||
 		selectedStatuses.length > 0 ||
-		Boolean(filters.teamPreset) ||
-		Boolean(
-			showVcoFilters &&
-				(filters.flaggedOnly || filters.thisQuarter || filters.needsDate),
-		);
+		Boolean(filters.teamPreset);
 
 	const statusLabel = (() => {
 		if (selectedStatuses.length === 0) return "All statuses";
@@ -175,47 +168,6 @@ export function EventsFilters({
 						))}
 					</DropdownMenuContent>
 				</DropdownMenu>
-
-				{showVcoFilters && (
-					<div className="flex flex-wrap items-center gap-4">
-						<label className="inline-flex items-center gap-2 text-sm">
-							<Checkbox
-								checked={Boolean(filters.flaggedOnly)}
-								onCheckedChange={(checked) =>
-									onFiltersChange({
-										...filters,
-										flaggedOnly: checked === true,
-									})
-								}
-							/>
-							Flagged only
-						</label>
-						<label className="inline-flex items-center gap-2 text-sm">
-							<Checkbox
-								checked={Boolean(filters.thisQuarter)}
-								onCheckedChange={(checked) =>
-									onFiltersChange({
-										...filters,
-										thisQuarter: checked === true,
-									})
-								}
-							/>
-							This quarter
-						</label>
-						<label className="inline-flex items-center gap-2 text-sm">
-							<Checkbox
-								checked={Boolean(filters.needsDate)}
-								onCheckedChange={(checked) =>
-									onFiltersChange({
-										...filters,
-										needsDate: checked === true,
-									})
-								}
-							/>
-							Needs date
-						</label>
-					</div>
-				)}
 			</div>
 
 			{hasActiveFilters && (

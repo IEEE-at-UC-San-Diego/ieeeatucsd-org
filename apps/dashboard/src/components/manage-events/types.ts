@@ -115,9 +115,6 @@ export interface EventFilters {
 	search: string;
 	statuses?: EventStatus[];
 	teamPreset?: "for_events" | "for_internal" | "for_operations";
-	flaggedOnly?: boolean;
-	thisQuarter?: boolean;
-	needsDate?: boolean;
 }
 
 export interface SortConfig {

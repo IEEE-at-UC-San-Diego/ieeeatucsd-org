@@ -30,16 +30,12 @@ import {
 	FileManagerModal,
 	type SortConfig,
 	type VcoPipelinePatch,
+	VcoPipelineView,
 } from "@/components/manage-events";
 import {
 	normalizeDepartment,
 	normalizeEventType,
 } from "@/components/manage-events/constants";
-import {
-	matchesListFilters,
-	matchesVcoExtraFilters,
-	sortEvents,
-} from "@/components/manage-events/table/eventTableLogic";
 import {
 	defaultWeekLabelSettings,
 	getWeekLabelForDate,
@@ -63,8 +59,6 @@ import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import { sendNotification } from "@/lib/send-notification";
-import { VcoDeadlines } from "@/lib/vco/VcoDeadlines";
-import { computeEventPipelineStatus } from "@/lib/vco/vcoEventStatus";
 
 export const Route = createFileRoute("/_dashboard/manage-events")({
 	loader: (ctx) => prefetchAuthedQuery(api.events.listAll, undefined, ctx),
@@ -264,9 +258,6 @@ function ManageEventsPage() {
 		search: "",
 		statuses: [],
 		teamPreset: undefined,
-		flaggedOnly: false,
-		thisQuarter: false,
-		needsDate: false,
 	});
 
 	// Sort state
@@ -350,54 +341,61 @@ function ManageEventsPage() {
 		return (stableEventsData || []).map(mapEventToType);
 	}, [stableEventsData]);
 
-	const finalsWeeks = useMemo(
-		() => VcoDeadlines.resolveFinalsWeeks(weekLabelSettings),
-		[weekLabelSettings],
-	);
-
-	const { pipelineById, today } = useMemo(() => {
-		const nowMs = Date.now();
-		const next: Record<
-			string,
-			ReturnType<typeof computeEventPipelineStatus>
-		> = {};
-		for (const event of allEvents) {
-			next[event._id] = computeEventPipelineStatus(event, {
-				nowMs,
-				finalsWeeks,
-			});
-		}
-		return {
-			pipelineById: next,
-			today: VcoDeadlines.toCalendarDate(nowMs),
-		};
-	}, [allEvents, finalsWeeks]);
-
 	// Filter events
 	const filteredEvents = useMemo(() => {
 		return allEvents.filter((event) => {
-			if (
-				!matchesListFilters(event, filters, {
-					includePipelineSearch: viewMode === "vco",
-				})
-			) {
-				return false;
+			// Search filter
+			const searchMatch =
+				!filters.search ||
+				event.eventName.toLowerCase().includes(filters.search.toLowerCase()) ||
+				event.eventDescription
+					.toLowerCase()
+					.includes(filters.search.toLowerCase()) ||
+				event.location.toLowerCase().includes(filters.search.toLowerCase());
+
+			// Status multi-select filter
+			const statusMatch =
+				!filters.statuses || filters.statuses.length === 0
+					? true
+					: filters.statuses.includes(event.status);
+
+			// Team presets
+			let teamPresetMatch = true;
+			if (filters.teamPreset === "for_internal") {
+				const hasMarketingNeed = Boolean(
+					event.needsGraphics || event.needsFlyers || event.photographyNeeded,
+				);
+				teamPresetMatch =
+					(event.status === "approved" || event.status === "published") &&
+					hasMarketingNeed;
+			} else if (filters.teamPreset === "for_operations") {
+				teamPresetMatch = ["submitted", "pending", "needs_review"].includes(
+					event.status,
+				);
 			}
-			if (viewMode !== "vco") return true;
-			const status = pipelineById[event._id];
-			if (!status) return false;
-			return matchesVcoExtraFilters(status, filters, today, weekLabelSettings);
+
+			return searchMatch && statusMatch && teamPresetMatch;
 		});
-	}, [allEvents, filters, pipelineById, today, viewMode, weekLabelSettings]);
+	}, [allEvents, filters]);
 
 	// Sort events
 	const sortedEvents = useMemo(() => {
-		return sortEvents(
-			filteredEvents,
-			sortConfig,
-			viewMode === "vco" ? pipelineById : undefined,
-		);
-	}, [filteredEvents, pipelineById, sortConfig, viewMode]);
+		return [...filteredEvents].sort((a, b) => {
+			const aValue = a[sortConfig.field as keyof EventRequest];
+			const bValue = b[sortConfig.field as keyof EventRequest];
+
+			if (
+				aValue === undefined ||
+				aValue === null ||
+				bValue === undefined ||
+				bValue === null
+			)
+				return 0;
+
+			const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+			return sortConfig.direction === "asc" ? comparison : -comparison;
+		});
+	}, [filteredEvents, sortConfig]);
 
 	// Pagination
 	const totalPages = Math.ceil(sortedEvents.length / itemsPerPage);
@@ -406,9 +404,10 @@ function ManageEventsPage() {
 		return sortedEvents.slice(startIndex, startIndex + itemsPerPage);
 	}, [sortedEvents, currentPage]);
 
-	useEffect(() => {
+	// Reset page on filter/sort change
+	useMemo(() => {
 		setCurrentPage(1);
-	}, [filters, viewMode]);
+	}, []);
 
 	// Loading state
 	if (isLoading) {
@@ -938,9 +937,6 @@ function ManageEventsPage() {
 			search: "",
 			statuses: [],
 			teamPreset: undefined,
-			flaggedOnly: false,
-			thisQuarter: false,
-			needsDate: false,
 		});
 		setCurrentPage(1);
 	};
@@ -1109,16 +1105,9 @@ function ManageEventsPage() {
 			{/* View Toggle */}
 			<Tabs
 				value={viewMode}
-				onValueChange={(value) => {
-					const next = value as "list" | "calendar" | "vco";
-					setViewMode(next);
-					setCurrentPage(1);
-					if (next === "vco") {
-						setSortConfig({ field: "nextDeadline", direction: "asc" });
-					} else if (sortConfig.field === "nextDeadline") {
-						setSortConfig({ field: "startDate", direction: "desc" });
-					}
-				}}
+				onValueChange={(value) =>
+					setViewMode(value as "list" | "calendar" | "vco")
+				}
 			>
 				<TabsList>
 					<TabsTrigger value="list" className="gap-2 px-4">
@@ -1139,12 +1128,13 @@ function ManageEventsPage() {
 			</Tabs>
 
 			{/* Filters */}
-			<EventsFilters
-				filters={filters}
-				onFiltersChange={setFilters}
-				onClearFilters={handleClearFilters}
-				showVcoFilters={viewMode === "vco"}
-			/>
+			{viewMode !== "vco" && (
+				<EventsFilters
+					filters={filters}
+					onFiltersChange={setFilters}
+					onClearFilters={handleClearFilters}
+				/>
+			)}
 
 			{/* Loading State */}
 			{!stableEventsData && (
@@ -1156,7 +1146,7 @@ function ManageEventsPage() {
 
 			{/* Content */}
 			{stableEventsData &&
-				(viewMode === "list" || (viewMode === "vco" && canViewVcoPipeline) ? (
+				(viewMode === "list" ? (
 					<EventsDataTable
 						events={paginatedEvents}
 						sortConfig={sortConfig}
@@ -1184,13 +1174,21 @@ function ManageEventsPage() {
 							currentPage,
 							totalPages,
 							onPageChange: setCurrentPage,
-							totalCount: sortedEvents.length,
 						}}
-						variant={viewMode === "vco" ? "vco" : "list"}
-						pipelineById={viewMode === "vco" ? pipelineById : undefined}
-						onPipelineChange={
-							viewMode === "vco" ? handleVcoPipelineChange : undefined
-						}
+					/>
+				) : viewMode === "vco" && canViewVcoPipeline ? (
+					<VcoPipelineView
+						events={allEvents}
+						weekLabelSettings={weekLabelSettings}
+						onView={(event) => {
+							setSelectedRequest(event);
+							if (event.status === "draft") {
+								setIsDraftViewModalOpen(true);
+							} else {
+								setIsViewModalOpen(true);
+							}
+						}}
+						onPipelineChange={handleVcoPipelineChange}
 					/>
 				) : (
 					<EventCalendar

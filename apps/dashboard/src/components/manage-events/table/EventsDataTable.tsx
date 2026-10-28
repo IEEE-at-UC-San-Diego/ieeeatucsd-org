@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import {
 	ChevronDown,
 	ChevronUp,
@@ -29,22 +30,9 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { VcoPipelineStatus } from "@/lib/vco/VcoDeadlines";
 import { formatEventTypeLabel } from "../constants";
 import { StatusBadge } from "../filters/StatusBadge";
 import type { EventRequest, SortConfig } from "../types";
-import { formatManageEventDate } from "../utils/eventDate";
-import {
-	VcoDeadlineCell,
-	VcoFinIdField,
-	VcoFlagBadges,
-	VcoFoodCostCell,
-	VcoFundedToggle,
-	type VcoPipelinePatch,
-	VcoTresOwnerSelect,
-} from "../vco/VcoPipelineCells";
-
-export type EventsDataTableVariant = "list" | "vco";
 
 interface EventsDataTableProps {
 	events: EventRequest[];
@@ -58,11 +46,7 @@ interface EventsDataTableProps {
 		currentPage: number;
 		totalPages: number;
 		onPageChange: (page: number) => void;
-		totalCount?: number;
 	};
-	variant?: EventsDataTableVariant;
-	pipelineById?: Record<string, VcoPipelineStatus>;
-	onPipelineChange?: (event: EventRequest, patch: VcoPipelinePatch) => void;
 }
 
 export function EventsDataTable({
@@ -73,12 +57,8 @@ export function EventsDataTable({
 	onEdit,
 	onDelete,
 	pagination,
-	variant = "list",
-	pipelineById,
-	onPipelineChange,
 }: EventsDataTableProps) {
 	const isMobile = useIsMobile();
-	const isVco = variant === "vco";
 
 	const getSortIcon = (field: string) => {
 		if (sortConfig.field === field) {
@@ -123,9 +103,6 @@ export function EventsDataTable({
 		return reqs;
 	};
 
-	const eventDateLabel = (event: EventRequest) =>
-		formatManageEventDate(event.startDate, { dateTbd: event.dateTbd });
-
 	if (events.length === 0) {
 		return (
 			<div className="bg-background rounded-md border p-8 text-center">
@@ -146,63 +123,49 @@ export function EventsDataTable({
 		return (
 			<div className="space-y-3">
 				<MobileDataList>
-					{events.map((event) => {
-						const status = pipelineById?.[event._id];
-						return (
-							<MobileDataListItem
-								key={event._id}
-								title={
-									<span className="block">
-										<span className="block">{event.eventName}</span>
-										{isVco && status && <VcoFlagBadges status={status} />}
-									</span>
-								}
-								subtitle={
-									<span className="flex items-center gap-1">
-										<MapPin className="size-3 shrink-0" />
-										{event.location}
-									</span>
-								}
-								meta={
-									isVco && status ? (
-										<VcoDeadlineCell status={status} />
-									) : (
-										eventDateLabel(event)
-									)
-								}
-								status={<StatusBadge status={event.status} />}
-								onClick={() => onView(event)}
-								actions={
-									<DropdownMenu>
-										<DropdownMenuTrigger asChild>
-											<Button
-												variant="ghost"
-												size="icon"
-												className="size-11"
-												aria-label={`More actions for ${event.eventName}`}
-											>
-												<MoreHorizontal className="size-4" />
-											</Button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent align="end">
-											<DropdownMenuItem onSelect={() => onView(event)}>
-												<Eye /> View
-											</DropdownMenuItem>
-											<DropdownMenuItem onSelect={() => onEdit(event)}>
-												<Pencil /> Edit
-											</DropdownMenuItem>
-											<DropdownMenuItem
-												variant="destructive"
-												onSelect={() => onDelete(event)}
-											>
-												<Trash2 /> Delete
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
-								}
-							/>
-						);
-					})}
+					{events.map((event) => (
+						<MobileDataListItem
+							key={event._id}
+							title={event.eventName}
+							subtitle={
+								<span className="flex items-center gap-1">
+									<MapPin className="size-3 shrink-0" />
+									{event.location}
+								</span>
+							}
+							meta={format(event.startDate, "MMM d, yyyy")}
+							status={<StatusBadge status={event.status} />}
+							onClick={() => onView(event)}
+							actions={
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="size-11"
+											aria-label={`More actions for ${event.eventName}`}
+										>
+											<MoreHorizontal className="size-4" />
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end">
+										<DropdownMenuItem onSelect={() => onView(event)}>
+											<Eye /> View
+										</DropdownMenuItem>
+										<DropdownMenuItem onSelect={() => onEdit(event)}>
+											<Pencil /> Edit
+										</DropdownMenuItem>
+										<DropdownMenuItem
+											variant="destructive"
+											onSelect={() => onDelete(event)}
+										>
+											<Trash2 /> Delete
+										</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+							}
+						/>
+					))}
 				</MobileDataList>
 				{pagination && pagination.totalPages > 1 && (
 					<div className="flex items-center justify-between gap-3 px-1">
@@ -234,8 +197,6 @@ export function EventsDataTable({
 			</div>
 		);
 	}
-
-	const totalCount = pagination?.totalCount ?? events.length;
 
 	return (
 		<div className="bg-background rounded-md border overflow-hidden max-w-full">
@@ -269,22 +230,6 @@ export function EventsDataTable({
 									Date {getSortIcon("startDate")}
 								</span>
 							</TableHead>
-							{isVco && (
-								<>
-									<TableHead
-										className="cursor-pointer hover:bg-muted/50 transition-colors py-3 px-4"
-										onClick={() => onSort("nextDeadline")}
-									>
-										<span className="flex items-center gap-1">
-											Next deadline {getSortIcon("nextDeadline")}
-										</span>
-									</TableHead>
-									<TableHead className="py-3 px-4">Funded</TableHead>
-									<TableHead className="py-3 px-4">FIN-ID</TableHead>
-									<TableHead className="py-3 px-4">T-Res</TableHead>
-									<TableHead className="py-3 px-4 text-right">$/head</TableHead>
-								</>
-							)}
 							<TableHead className="text-right py-3 px-4 pr-6">
 								Actions
 							</TableHead>
@@ -293,7 +238,6 @@ export function EventsDataTable({
 					<TableBody>
 						{events.map((event) => {
 							const requirements = getRequirements(event);
-							const status = pipelineById?.[event._id];
 							return (
 								<TableRow
 									key={event._id}
@@ -310,7 +254,6 @@ export function EventsDataTable({
 										<div className="text-xs text-muted-foreground">
 											{formatEventTypeLabel(event.eventType)}
 										</div>
-										{isVco && status && <VcoFlagBadges status={status} />}
 									</TableCell>
 									<TableCell className="py-3 px-4">
 										<StatusBadge status={event.status} />
@@ -353,40 +296,9 @@ export function EventsDataTable({
 									</TableCell>
 									<TableCell className="py-3 px-4 text-right">
 										<div className="text-sm font-medium text-foreground tabular-nums">
-											{eventDateLabel(event)}
+											{format(event.startDate, "MMM d, yyyy")}
 										</div>
 									</TableCell>
-									{isVco && status && onPipelineChange && (
-										<>
-											<TableCell className="min-w-[170px] py-3 px-4">
-												<VcoDeadlineCell status={status} />
-											</TableCell>
-											<TableCell className="py-3 px-4">
-												<VcoFundedToggle
-													event={event}
-													status={status}
-													onPipelineChange={onPipelineChange}
-												/>
-											</TableCell>
-											<TableCell className="py-3 px-4">
-												<VcoFinIdField
-													key={event._id}
-													event={event}
-													onPipelineChange={onPipelineChange}
-												/>
-											</TableCell>
-											<TableCell className="py-3 px-4">
-												<VcoTresOwnerSelect
-													event={event}
-													status={status}
-													onPipelineChange={onPipelineChange}
-												/>
-											</TableCell>
-											<TableCell className="py-3 px-4 text-right">
-												<VcoFoodCostCell status={status} />
-											</TableCell>
-										</>
-									)}
 									<TableCell className="py-3 px-4 pr-6 text-right">
 										<div className="flex items-center justify-end gap-1">
 											<Button
@@ -433,8 +345,11 @@ export function EventsDataTable({
 					<span className="text-sm text-muted-foreground">
 						Showing {((pagination.currentPage - 1) * 10 + 1).toLocaleString()}{" "}
 						to{" "}
-						{Math.min(pagination.currentPage * 10, totalCount).toLocaleString()}{" "}
-						of {totalCount.toLocaleString()} events
+						{Math.min(
+							pagination.currentPage * 10,
+							events.length,
+						).toLocaleString()}{" "}
+						of {events.length.toLocaleString()} events
 					</span>
 					<Pagination
 						currentPage={pagination.currentPage}

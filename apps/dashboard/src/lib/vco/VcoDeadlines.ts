@@ -185,20 +185,6 @@ export class VcoDeadlines {
 			.replace(/\u202f/g, " ");
 	}
 
-	static formatCalendarDate(date: CalendarDate): string {
-		return new Intl.DateTimeFormat("en-US", {
-			timeZone: "UTC",
-			month: "short",
-			day: "numeric",
-		}).format(new Date(Date.UTC(date.year, date.month - 1, date.day)));
-	}
-
-	static countdownLabel(daysUntil: number): string {
-		if (daysUntil < 0) return `${Math.abs(daysUntil)}d late`;
-		if (daysUntil === 0) return "due today";
-		return `${daysUntil}d`;
-	}
-
 	static compare(a: CalendarDate, b: CalendarDate): number {
 		if (a.year !== b.year) return a.year - b.year;
 		if (a.month !== b.month) return a.month - b.month;
