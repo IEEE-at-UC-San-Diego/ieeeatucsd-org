@@ -162,6 +162,33 @@ export class VcoDeadlines {
 		return `${date.year}-${month}-${day}`;
 	}
 
+	static formatEventDate(
+		ms: number,
+		timeZone: string = VcoDeadlines.TIME_ZONE,
+	): string {
+		return new Intl.DateTimeFormat("en-US", {
+			timeZone,
+			month: "short",
+			day: "numeric",
+			year: "numeric",
+		}).format(new Date(ms));
+	}
+
+	static formatEventTime(
+		ms: number,
+		timeZone: string = VcoDeadlines.TIME_ZONE,
+	): string {
+		if (!ms) return "";
+		return new Intl.DateTimeFormat("en-US", {
+			timeZone,
+			hour: "numeric",
+			minute: "2-digit",
+			hour12: true,
+		})
+			.format(new Date(ms))
+			.replace(/\u202f/g, " ");
+	}
+
 	static compare(a: CalendarDate, b: CalendarDate): number {
 		if (a.year !== b.year) return a.year - b.year;
 		if (a.month !== b.month) return a.month - b.month;

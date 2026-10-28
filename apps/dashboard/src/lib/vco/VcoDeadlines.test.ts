@@ -144,6 +144,20 @@ describe("VcoDeadlines finals week", () => {
 	});
 });
 
+describe("VcoDeadlines event display formatting", () => {
+	it("formats date and time in America/Los_Angeles, not UTC", () => {
+		// 2026-11-19T02:00:00.000Z is 6:00 PM PST on Nov 18.
+		const lateWorkshop = Date.parse("2026-11-19T02:00:00.000Z");
+		expect(VcoDeadlines.formatEventDate(lateWorkshop)).toBe("Nov 18, 2026");
+		expect(VcoDeadlines.formatEventTime(lateWorkshop)).toBe("6:00 PM");
+
+		// UTC midnight would render as 12:00 AM in a UTC browser.
+		const lastMinuteTalk = Date.parse("2026-11-19T00:00:00.000Z");
+		expect(VcoDeadlines.formatEventDate(lastMinuteTalk)).toBe("Nov 18, 2026");
+		expect(VcoDeadlines.formatEventTime(lastMinuteTalk)).toBe("4:00 PM");
+	});
+});
+
 describe("VcoDeadlines.isLateCreated", () => {
 	const progApp = d(2026, 10, 12);
 

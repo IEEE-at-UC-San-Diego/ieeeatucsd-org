@@ -37,7 +37,6 @@ import {
 	type VcoTresOwner,
 } from "@/lib/vco/VcoDeadlines";
 import type { EventRequest } from "../types";
-import { formatTimeShort } from "../utils/parseTime";
 
 export type VcoPipelinePatch = {
 	dateTbd?: boolean;
@@ -337,7 +336,7 @@ function VcoTable({
 								<TableCell className="px-4 py-3 text-sm tabular-nums">
 									{row.status.needsDate
 										? "Needs date"
-										: format(row.event.startDate, "MMM d, yyyy")}
+										: VcoDeadlines.formatEventDate(row.event.startDate)}
 								</TableCell>
 								<TableCell className="px-4 py-3 text-sm">
 									{row.event.createdBy}
@@ -352,7 +351,7 @@ function VcoTable({
 									<div className="mt-0.5 text-xs text-muted-foreground">
 										{row.status.needsDate
 											? "—"
-											: formatTimeShort(row.event.startDate)}
+											: VcoDeadlines.formatEventTime(row.event.startDate)}
 									</div>
 								</TableCell>
 								<TableCell className="px-4 py-3 text-sm tabular-nums">
@@ -411,7 +410,7 @@ function VcoMobileList({
 							<p className="text-xs text-muted-foreground">
 								{row.status.needsDate
 									? "Needs date"
-									: format(row.event.startDate, "MMM d, yyyy")}
+									: VcoDeadlines.formatEventDate(row.event.startDate)}
 							</p>
 						</button>
 						<FlagBadges flags={row.status.flags} />
@@ -439,7 +438,7 @@ function VcoMobileList({
 								{row.event.location || "TBD"}
 								{!row.status.needsDate && (
 									<span className="block text-xs text-muted-foreground">
-										{formatTimeShort(row.event.startDate)}
+										{VcoDeadlines.formatEventTime(row.event.startDate)}
 									</span>
 								)}
 							</dd>
