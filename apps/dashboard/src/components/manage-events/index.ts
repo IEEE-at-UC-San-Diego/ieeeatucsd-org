@@ -36,8 +36,7 @@ export {
 	parseFlexibleDate,
 	parseFlexibleTime,
 } from "./utils/parseTime";
-export type { VcoPipelinePatch } from "./vco/VcoPipelineView";
-export { VcoPipelineView } from "./vco/VcoPipelineView";
+export type { VcoPipelinePatch } from "./vco/VcoPipelineCells";
 export { BasicInfoSection } from "./wizard/BasicInfoSection";
 export { BudgetCalculation } from "./wizard/BudgetCalculation";
 // Wizard Sections

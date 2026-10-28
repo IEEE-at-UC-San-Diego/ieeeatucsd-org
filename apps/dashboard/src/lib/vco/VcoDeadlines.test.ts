@@ -150,6 +150,15 @@ describe("VcoDeadlines event display formatting", () => {
 		const lastMinuteTalk = Date.parse("2026-11-19T00:00:00.000Z");
 		expect(VcoDeadlines.formatEventDate(lastMinuteTalk)).toBe("Nov 18, 2026");
 		expect(VcoDeadlines.formatEventTime(lastMinuteTalk)).toBe("4:00 PM");
+
+		const industryNight = Date.parse("2026-12-22T02:00:00.000Z");
+		expect(VcoDeadlines.formatEventDate(industryNight)).toBe("Dec 21, 2026");
+		expect(
+			VcoDeadlines.formatCalendarDate({ year: 2026, month: 11, day: 18 }),
+		).toBe("Nov 18");
+		expect(VcoDeadlines.countdownLabel(-15)).toBe("15d late");
+		expect(VcoDeadlines.countdownLabel(0)).toBe("due today");
+		expect(VcoDeadlines.countdownLabel(20)).toBe("20d");
 	});
 });
 
