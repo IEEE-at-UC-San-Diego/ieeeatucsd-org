@@ -193,6 +193,30 @@ export function hasOfficerAccess(role: UserRole): boolean {
 }
 
 /**
+ * Vice Chair Operations title as stored on `users.position`.
+ */
+export function isVcoPosition(position?: string | null): boolean {
+  if (!position) return false;
+  const normalized = position.trim().toLowerCase();
+  return (
+    normalized === "vco" ||
+    normalized === "vice chair operations" ||
+    normalized.includes("vice chair operations")
+  );
+}
+
+/**
+ * VCO pipeline view: Administrators, Executive Officers, or an officer
+ * whose position is Vice Chair Operations.
+ */
+export function hasVcoViewAccess(
+  role: UserRole,
+  position?: string | null,
+): boolean {
+  return hasAdminAccess(role) || (hasOfficerAccess(role) && isVcoPosition(position));
+}
+
+/**
  * Check if user can access the resume database (Bronze sponsors cannot)
  */
 export function canAccessResumeDatabase(
@@ -233,6 +257,21 @@ export async function requireAdminAccess(
   const user = await requireCurrentUser(ctx, logtoId, authToken);
   if (!hasAdminAccess(user.role)) {
     throw new Error("Insufficient permissions: admin access required");
+  }
+  return user;
+}
+
+/**
+ * Require VCO pipeline access (admin/exec, or VCO by position).
+ */
+export async function requireVcoViewAccess(
+  ctx: AuthContext,
+  logtoId?: string,
+  authToken?: string,
+) {
+  const user = await requireCurrentUser(ctx, logtoId, authToken);
+  if (!hasVcoViewAccess(user.role, user.position)) {
+    throw new Error("Insufficient permissions: VCO or admin access required");
   }
   return user;
 }

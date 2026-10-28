@@ -2,6 +2,7 @@ import { api } from "@convex/_generated/api";
 import { createFileRoute } from "@tanstack/react-router";
 import {
 	Calendar as CalendarIcon,
+	ClipboardList,
 	FilePlus,
 	List,
 	Loader2,
@@ -28,6 +29,8 @@ import {
 	EventViewModal,
 	FileManagerModal,
 	type SortConfig,
+	type VcoPipelinePatch,
+	VcoPipelineView,
 } from "@/components/manage-events";
 import {
 	normalizeDepartment,
@@ -73,6 +76,7 @@ function mapEventToType(event: any): EventRequest {
 	return {
 		_id: event._id,
 		_creationTime: event._creationTime,
+		createdAt: event.createdAt,
 		eventName: event.eventName || "Untitled Event",
 		eventDescription: event.eventDescription || "",
 		eventType: normalizeEventType(event.eventType),
@@ -126,6 +130,10 @@ function mapEventToType(event: any): EventRequest {
 		additionalSpecifications: event.additionalSpecifications || "",
 		flyersCompleted: event.flyersCompleted || false,
 		graphicsUploadNote: event.graphicsUploadNote || "",
+		dateTbd: event.dateTbd || false,
+		finId: event.finId || "",
+		funded: event.funded,
+		tresOwner: event.tresOwner,
 	};
 }
 
@@ -193,6 +201,7 @@ function ManageEventsPage() {
 	const {
 		hasOfficerAccess,
 		hasAdminAccess,
+		canViewVcoPipeline,
 		logtoId,
 		user,
 		getAuthHeaders,
@@ -230,6 +239,7 @@ function ManageEventsPage() {
 	// Convex mutations (all unified under api.events)
 	const createEvent = useAuthedMutation(api.events.create);
 	const updateEvent = useAuthedMutation(api.events.update);
+	const updateVcoPipeline = useAuthedMutation(api.events.updateVcoPipeline);
 	const updateEventStatus = useAuthedMutation(api.events.updateStatus);
 	const removeEvent = useAuthedMutation(api.events.remove);
 	const updateWeekLabelSettingsMutation = useAuthedMutation(
@@ -241,7 +251,7 @@ function ManageEventsPage() {
 	);
 
 	// View mode state
-	const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+	const [viewMode, setViewMode] = useState<"list" | "calendar" | "vco">("list");
 
 	// Filters state
 	const [filters, setFilters] = useState<EventFilters>({
@@ -906,6 +916,22 @@ function ManageEventsPage() {
 	};
 
 	// Clear filters handler
+	const handleVcoPipelineChange = async (
+		event: EventRequest,
+		patch: VcoPipelinePatch,
+	) => {
+		if (!logtoId) return;
+		try {
+			await updateVcoPipeline({
+				logtoId,
+				id: event._id as never,
+				...patch,
+			});
+		} catch (error: any) {
+			toast.error(error.message || "Failed to update pipeline fields");
+		}
+	};
+
 	const handleClearFilters = () => {
 		setFilters({
 			search: "",
@@ -1079,7 +1105,9 @@ function ManageEventsPage() {
 			{/* View Toggle */}
 			<Tabs
 				value={viewMode}
-				onValueChange={(value) => setViewMode(value as "list" | "calendar")}
+				onValueChange={(value) =>
+					setViewMode(value as "list" | "calendar" | "vco")
+				}
 			>
 				<TabsList>
 					<TabsTrigger value="list" className="gap-2 px-4">
@@ -1090,15 +1118,23 @@ function ManageEventsPage() {
 						<CalendarIcon className="h-4 w-4" />
 						Event Planning
 					</TabsTrigger>
+					{canViewVcoPipeline && (
+						<TabsTrigger value="vco" className="gap-2 px-4">
+							<ClipboardList className="h-4 w-4" />
+							VCO Pipeline
+						</TabsTrigger>
+					)}
 				</TabsList>
 			</Tabs>
 
 			{/* Filters */}
-			<EventsFilters
-				filters={filters}
-				onFiltersChange={setFilters}
-				onClearFilters={handleClearFilters}
-			/>
+			{viewMode !== "vco" && (
+				<EventsFilters
+					filters={filters}
+					onFiltersChange={setFilters}
+					onClearFilters={handleClearFilters}
+				/>
+			)}
 
 			{/* Loading State */}
 			{!stableEventsData && (
@@ -1139,6 +1175,20 @@ function ManageEventsPage() {
 							totalPages,
 							onPageChange: setCurrentPage,
 						}}
+					/>
+				) : viewMode === "vco" && canViewVcoPipeline ? (
+					<VcoPipelineView
+						events={allEvents}
+						weekLabelSettings={weekLabelSettings}
+						onView={(event) => {
+							setSelectedRequest(event);
+							if (event.status === "draft") {
+								setIsDraftViewModalOpen(true);
+							} else {
+								setIsViewModalOpen(true);
+							}
+						}}
+						onPipelineChange={handleVcoPipelineChange}
 					/>
 				) : (
 					<EventCalendar

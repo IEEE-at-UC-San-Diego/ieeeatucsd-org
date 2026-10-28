@@ -285,6 +285,11 @@ export default defineSchema({
     graphicsCompleted: v.optional(v.boolean()),
     graphicsFiles: v.optional(v.array(v.string())),
     submittedAt: v.optional(v.number()),
+    // Optional VCO pipeline fields. Existing rows stay valid without them.
+    dateTbd: v.optional(v.boolean()),
+    finId: v.optional(v.string()),
+    funded: v.optional(v.boolean()),
+    tresOwner: v.optional(v.union(v.literal("vco"), v.literal("president"))),
   })
     .index("by_eventCode", ["eventCode"])
     .index("by_startDate", ["startDate"])

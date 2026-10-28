@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import {
 	ChevronDown,
 	ChevronUp,
@@ -30,6 +29,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { VcoDeadlines } from "@/lib/vco/VcoDeadlines";
 import { formatEventTypeLabel } from "../constants";
 import { StatusBadge } from "../filters/StatusBadge";
 import type { EventRequest, SortConfig } from "../types";
@@ -133,7 +133,7 @@ export function EventsDataTable({
 									{event.location}
 								</span>
 							}
-							meta={format(event.startDate, "MMM d, yyyy")}
+							meta={`${VcoDeadlines.formatEventDate(event.startDate)} · ${VcoDeadlines.formatEventTime(event.startDate)}`}
 							status={<StatusBadge status={event.status} />}
 							onClick={() => onView(event)}
 							actions={
@@ -296,7 +296,10 @@ export function EventsDataTable({
 									</TableCell>
 									<TableCell className="py-3 px-4 text-right">
 										<div className="text-sm font-medium text-foreground tabular-nums">
-											{format(event.startDate, "MMM d, yyyy")}
+											{VcoDeadlines.formatEventDate(event.startDate)}
+										</div>
+										<div className="text-xs text-muted-foreground tabular-nums">
+											{VcoDeadlines.formatEventTime(event.startDate)}
 										</div>
 									</TableCell>
 									<TableCell className="py-3 px-4 pr-6 text-right">

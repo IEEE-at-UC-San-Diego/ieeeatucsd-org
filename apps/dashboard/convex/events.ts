@@ -4,6 +4,7 @@ import { v, ConvexError } from "convex/values";
 import {
   requireCurrentUser,
   requireOfficerAccess,
+  requireVcoViewAccess,
   hasAdminAccess,
   hasOfficerAccess,
   isGeneralOfficer,
@@ -622,6 +623,31 @@ export const update = mutation({
       await enqueuePublishedEventGoogleCalendarDeletion(ctx, id, "event_unpublished");
     }
 
+    return id;
+  },
+});
+
+export const updateVcoPipeline = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    id: v.id("events"),
+    dateTbd: v.optional(v.boolean()),
+    finId: v.optional(v.string()),
+    funded: v.optional(v.boolean()),
+    tresOwner: v.optional(v.union(v.literal("vco"), v.literal("president"))),
+  },
+  handler: async (ctx, args) => {
+    await requireVcoViewAccess(ctx, args.logtoId, args.authToken);
+    const event = await ctx.db.get(args.id);
+    if (!event) throw new Error("Event not found");
+
+    const { id, ...updates } = args;
+    const cleanUpdates = removeUndefinedFields(stripAuthFields(updates));
+    if (typeof cleanUpdates.finId === "string") {
+      cleanUpdates.finId = cleanUpdates.finId.trim();
+    }
+    await ctx.db.patch(id, cleanUpdates);
     return id;
   },
 });
