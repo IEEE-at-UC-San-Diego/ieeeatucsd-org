@@ -475,10 +475,6 @@ export const create = mutation({
     needsGraphics: v.optional(v.boolean()),
     needsAsFunding: v.optional(v.boolean()),
     isDraft: v.optional(v.boolean()),
-    dateTbd: v.optional(v.boolean()),
-    finId: v.optional(v.string()),
-    funded: v.optional(v.boolean()),
-    tresOwner: v.optional(v.union(v.literal("vco"), v.literal("president"))),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
@@ -574,10 +570,6 @@ export const update = mutation({
     ),
     needsGraphics: v.optional(v.boolean()),
     needsAsFunding: v.optional(v.boolean()),
-    dateTbd: v.optional(v.boolean()),
-    finId: v.optional(v.string()),
-    funded: v.optional(v.boolean()),
-    tresOwner: v.optional(v.union(v.literal("vco"), v.literal("president"))),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);

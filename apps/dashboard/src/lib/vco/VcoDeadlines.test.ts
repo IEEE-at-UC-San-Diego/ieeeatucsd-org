@@ -131,6 +131,17 @@ describe("VcoDeadlines finals week", () => {
 			d(2027, 3, 12),
 		);
 	});
+
+	it("moves a Tuesday-start finals range to the Friday before, not the Monday", () => {
+		const tuesdayFinals = [{ start: d(2026, 12, 8), end: d(2026, 12, 14) }];
+		expect(VcoDeadlines.dayOfWeek(d(2026, 12, 8))).toBe(2);
+		expect(
+			VcoDeadlines.moveOutOfFinalsWeek(d(2026, 12, 9), tuesdayFinals),
+		).toEqual(d(2026, 12, 4));
+		expect(VcoDeadlines.fridayOnOrBefore(d(2026, 12, 7))).toEqual(
+			d(2026, 12, 4),
+		);
+	});
 });
 
 describe("VcoDeadlines.isLateCreated", () => {
@@ -238,6 +249,7 @@ describe("VcoDeadlines.compute", () => {
 				createdAt: pacificAfternoon(2026, 9, 1),
 				location: "Faculty Club",
 				expectedAttendance: 20,
+				hasFood: true,
 				needsAsFunding: true,
 				invoices: [{ vendor: "Caterer", total: 260 }],
 			},
@@ -245,6 +257,48 @@ describe("VcoDeadlines.compute", () => {
 		);
 		expect(status.foodCostPerHead).toBe(13);
 		expect(status.flags).toContain("food_over_cap");
+	});
+
+	it("does not treat a no-food equipment invoice as food cost per head", () => {
+		const status = VcoDeadlines.compute(
+			{
+				eventName: "Workshop",
+				startDate: pacificAfternoon(2026, 12, 21),
+				createdAt: pacificAfternoon(2026, 9, 1),
+				location: "CSE 1202",
+				expectedAttendance: 20,
+				hasFood: false,
+				needsAsFunding: true,
+				invoices: [
+					{
+						vendor: "Campus AV",
+						total: 500,
+						items: [{ description: "Projector equipment rental" }],
+					},
+				],
+			},
+			{ nowMs: now },
+		);
+		expect(status.foodCostPerHead).toBeNull();
+		expect(status.flags).not.toContain("food_over_cap");
+		expect(status.invoiceTotal).toBe(500);
+	});
+
+	it("counts only food invoices when an event also has equipment costs", () => {
+		expect(
+			VcoDeadlines.foodCostPerHead(
+				[
+					{ vendor: "Caterer", total: 180 },
+					{
+						vendor: "Campus AV",
+						total: 500,
+						items: [{ description: "Projector equipment rental" }],
+					},
+				],
+				20,
+				{ hasFood: true },
+			),
+		).toBe(9);
 	});
 
 	it("puts date-TBD events in the needs-date bucket", () => {

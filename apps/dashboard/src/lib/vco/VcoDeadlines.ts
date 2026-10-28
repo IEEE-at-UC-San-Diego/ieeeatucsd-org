@@ -41,6 +41,8 @@ export type VcoInvoiceInput = {
 	total?: number;
 	vendor?: string;
 	invoiceFile?: string;
+	description?: string;
+	items?: { description?: string }[];
 };
 
 export type VcoEventInput = {
@@ -51,6 +53,8 @@ export type VcoEventInput = {
 	location?: string | null;
 	expectedAttendance?: number | null;
 	invoices?: VcoInvoiceInput[];
+	hasFood?: boolean;
+	foodDrinksBeingServed?: boolean;
 	needsAsFunding?: boolean;
 	asFundingRequired?: boolean;
 	funded?: boolean | null;
@@ -101,6 +105,10 @@ const PHASE_LABELS: Record<VcoPhase, string> = {
 
 const TBD_LOCATION = /^(tbd|tba|to be (determined|announced)|n\/?a)?$/i;
 const GBM_OR_TABLING = /\b(gbm|tabling)\b/i;
+const FOOD_COST_SIGNAL =
+	/\b(food|cater|pizza|costco|restaurant|grocery|snack|meal|lunch|dinner|breakfast|beverage|drink|chipotle|panera|doordash|uber\s*eats)\b/i;
+const NON_FOOD_COST_SIGNAL =
+	/\b(equipment|rental|projector|microphone|speaker|banner|flyer|print|t-?shirt|swag|decal|camera|audio|visual|\bav\b|lighting)\b/i;
 
 export class VcoDeadlines {
 	static readonly TIME_ZONE = "America/Los_Angeles";
@@ -211,6 +219,13 @@ export class VcoDeadlines {
 		);
 	}
 
+	static fridayOnOrBefore(date: CalendarDate): CalendarDate {
+		return VcoDeadlines.addDays(
+			date,
+			-((VcoDeadlines.dayOfWeek(date) + 2) % 7),
+		);
+	}
+
 	static moveOutOfFinalsWeek(
 		date: CalendarDate,
 		finalsWeeks: FinalsWeek[] = VcoDeadlines.DEFAULT_FINALS_WEEKS,
@@ -220,7 +235,7 @@ export class VcoDeadlines {
 		);
 		if (!containing) return date;
 		const beforeStart = VcoDeadlines.addDays(containing.start, -1);
-		return VcoDeadlines.moveWeekendToFriday(beforeStart);
+		return VcoDeadlines.fridayOnOrBefore(beforeStart);
 	}
 
 	static programmingAppDeadline(eventDate: CalendarDate): CalendarDate {
@@ -282,6 +297,45 @@ export class VcoDeadlines {
 		return invoices.reduce((sum, invoice) => sum + (invoice.total ?? 0), 0);
 	}
 
+	static invoiceText(invoice: VcoInvoiceInput): string {
+		return [
+			invoice.vendor,
+			invoice.description,
+			...(invoice.items ?? []).map((item) => item.description),
+		]
+			.filter(Boolean)
+			.join(" ");
+	}
+
+	static isServingFood(
+		event?: Pick<VcoEventInput, "hasFood" | "foodDrinksBeingServed">,
+	): boolean {
+		return Boolean(event?.hasFood || event?.foodDrinksBeingServed);
+	}
+
+	static isFoodEligibleInvoice(
+		invoice: VcoInvoiceInput,
+		event?: Pick<VcoEventInput, "hasFood" | "foodDrinksBeingServed">,
+	): boolean {
+		const text = VcoDeadlines.invoiceText(invoice);
+		const looksLikeFood = FOOD_COST_SIGNAL.test(text);
+		const looksLikeNonFood = NON_FOOD_COST_SIGNAL.test(text);
+		if (looksLikeFood) return true;
+		if (looksLikeNonFood) return false;
+		return VcoDeadlines.isServingFood(event);
+	}
+
+	static foodEligibleTotal(
+		invoices: VcoInvoiceInput[] | undefined,
+		event?: Pick<VcoEventInput, "hasFood" | "foodDrinksBeingServed">,
+	): number {
+		if (!invoices?.length) return 0;
+		return invoices.reduce((sum, invoice) => {
+			if (!VcoDeadlines.isFoodEligibleInvoice(invoice, event)) return sum;
+			return sum + (invoice.total ?? 0);
+		}, 0);
+	}
+
 	static hasInvoice(invoices?: VcoInvoiceInput[]): boolean {
 		if (!invoices?.length) return false;
 		return invoices.some(
@@ -295,10 +349,11 @@ export class VcoDeadlines {
 	static foodCostPerHead(
 		invoices: VcoInvoiceInput[] | undefined,
 		expectedAttendance?: number | null,
+		event?: Pick<VcoEventInput, "hasFood" | "foodDrinksBeingServed">,
 	): number | null {
 		if (VcoDeadlines.isMissingHeadcount(expectedAttendance)) return null;
 		if (!invoices?.length) return null;
-		const total = VcoDeadlines.invoiceTotal(invoices);
+		const total = VcoDeadlines.foodEligibleTotal(invoices, event);
 		if (total <= 0) return null;
 		return total / (expectedAttendance as number);
 	}
@@ -307,8 +362,13 @@ export class VcoDeadlines {
 		invoices: VcoInvoiceInput[] | undefined,
 		expectedAttendance?: number | null,
 		cap: number = VcoDeadlines.FOOD_CAP_PER_HEAD,
+		event?: Pick<VcoEventInput, "hasFood" | "foodDrinksBeingServed">,
 	): boolean {
-		const perHead = VcoDeadlines.foodCostPerHead(invoices, expectedAttendance);
+		const perHead = VcoDeadlines.foodCostPerHead(
+			invoices,
+			expectedAttendance,
+			event,
+		);
 		return perHead !== null && perHead > cap;
 	}
 
@@ -444,6 +504,7 @@ export class VcoDeadlines {
 		const foodCostPerHead = VcoDeadlines.foodCostPerHead(
 			event.invoices,
 			event.expectedAttendance,
+			event,
 		);
 
 		if (needsDate) {
@@ -459,6 +520,7 @@ export class VcoDeadlines {
 					event.invoices,
 					event.expectedAttendance,
 					foodCap,
+					event,
 				)
 			) {
 				flags.push("food_over_cap");
@@ -540,6 +602,7 @@ export class VcoDeadlines {
 				event.invoices,
 				event.expectedAttendance,
 				foodCap,
+				event,
 			)
 		) {
 			flags.push("food_over_cap");
