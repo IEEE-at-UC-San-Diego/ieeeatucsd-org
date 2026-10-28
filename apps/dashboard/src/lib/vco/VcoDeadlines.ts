@@ -55,6 +55,9 @@ export type VcoEventInput = {
 	asFundingRequired?: boolean;
 	funded?: boolean | null;
 	tresOwner?: VcoTresOwner | null;
+	progAppDoneAt?: number | null;
+	tresStartDoneAt?: number | null;
+	tresFinishDoneAt?: number | null;
 };
 
 export type VcoFlag =
@@ -73,6 +76,7 @@ export type VcoPhaseDeadline = {
 	isoDate: string;
 	daysUntil: number;
 	overdue: boolean;
+	done: boolean;
 };
 
 export type VcoPipelineStatus = {
@@ -82,6 +86,7 @@ export type VcoPipelineStatus = {
 	tresOwner: VcoTresOwner;
 	phases: VcoPhaseDeadline[];
 	nextDeadline: VcoPhaseDeadline | null;
+	allDone: boolean;
 	flags: VcoFlag[];
 	overdueFlags: VcoFlag[];
 	foodCostPerHead: number | null;
@@ -405,6 +410,18 @@ export class VcoDeadlines {
 		return GBM_OR_TABLING.test(event.eventName) ? "president" : "vco";
 	}
 
+	static isPhaseDone(
+		event: Pick<
+			VcoEventInput,
+			"progAppDoneAt" | "tresStartDoneAt" | "tresFinishDoneAt"
+		>,
+		phase: VcoPhase,
+	): boolean {
+		if (phase === "prog_app") return Boolean(event.progAppDoneAt);
+		if (phase === "tres_start") return Boolean(event.tresStartDoneAt);
+		return Boolean(event.tresFinishDoneAt);
+	}
+
 	static finalsWeeksFromQuarterStarts(
 		settings: QuarterStartSettings,
 	): FinalsWeek[] {
@@ -556,6 +573,7 @@ export class VcoDeadlines {
 				tresOwner,
 				phases: [],
 				nextDeadline: null,
+				allDone: false,
 				flags,
 				overdueFlags: [],
 				foodCostPerHead,
@@ -576,12 +594,20 @@ export class VcoDeadlines {
 		);
 		const phases: VcoPhaseDeadline[] = [];
 		if (funded) {
-			phases.push(VcoDeadlines.toPhaseDeadline("prog_app", progApp, today));
+			phases.push(
+				VcoDeadlines.toPhaseDeadline(
+					"prog_app",
+					progApp,
+					today,
+					VcoDeadlines.isPhaseDone(event, "prog_app"),
+				),
+			);
 			phases.push(
 				VcoDeadlines.toPhaseDeadline(
 					"tres_start",
 					VcoDeadlines.tresStartDeadline(eventDate, finalsWeeks),
 					today,
+					VcoDeadlines.isPhaseDone(event, "tres_start"),
 				),
 			);
 			phases.push(
@@ -589,14 +615,21 @@ export class VcoDeadlines {
 					"invoices_tres_finish",
 					VcoDeadlines.tresFinishDeadline(eventDate, finalsWeeks),
 					today,
+					VcoDeadlines.isPhaseDone(event, "invoices_tres_finish"),
 				),
 			);
 		}
 
-		const overduePhase = phases.find((phase) => phase.overdue);
-		const upcoming = phases.find((phase) => !phase.overdue);
-		const nextDeadline =
-			overduePhase ?? upcoming ?? phases[phases.length - 1] ?? null;
+		const openPhases = phases.filter((phase) => !phase.done);
+		const overduePhase = openPhases.find((phase) => phase.overdue);
+		const upcoming = openPhases.find((phase) => !phase.overdue);
+		const nextDeadline = overduePhase ?? upcoming ?? null;
+		const allDone = funded && phases.length > 0 && openPhases.length === 0;
+		const progAppDone = VcoDeadlines.isPhaseDone(event, "prog_app");
+		const tresFinishDone = VcoDeadlines.isPhaseDone(
+			event,
+			"invoices_tres_finish",
+		);
 		const lateCreated = funded
 			? VcoDeadlines.isLateCreated(event.createdAt, progApp, timeZone)
 			: false;
@@ -605,13 +638,14 @@ export class VcoDeadlines {
 			(phase) => phase.phase === "invoices_tres_finish",
 		);
 		const invoicePhaseDue = Boolean(
-			invoicePhase && invoicePhase.daysUntil <= 0,
+			invoicePhase && !invoicePhase.done && invoicePhase.daysUntil <= 0,
 		);
 		const missingVenue = VcoDeadlines.isMissingVenue(event.location);
 		const missingHeadcount = VcoDeadlines.isMissingHeadcount(
 			event.expectedAttendance,
 		);
-		const missingFieldsOverdue = VcoDeadlines.compare(today, progApp) > 0;
+		const missingFieldsOverdue =
+			!progAppDone && VcoDeadlines.compare(today, progApp) > 0;
 
 		const flags: VcoFlag[] = [];
 		const overdueFlags: VcoFlag[] = [];
@@ -621,8 +655,10 @@ export class VcoDeadlines {
 			if (missingVenue) overdueFlags.push("missing_venue");
 			if (missingHeadcount) overdueFlags.push("missing_headcount");
 		}
-		if (funded && invoicePhaseDue && !invoiceIn) flags.push("missing_invoice");
-		if (lateCreated) flags.push("late");
+		if (funded && invoicePhaseDue && !invoiceIn && !tresFinishDone) {
+			flags.push("missing_invoice");
+		}
+		if (lateCreated && !progAppDone) flags.push("late");
 		if (
 			VcoDeadlines.isFoodOverCap(
 				event.invoices,
@@ -643,6 +679,7 @@ export class VcoDeadlines {
 			tresOwner,
 			phases,
 			nextDeadline,
+			allDone,
 			flags,
 			overdueFlags,
 			foodCostPerHead,
@@ -673,6 +710,7 @@ export class VcoDeadlines {
 		phase: VcoPhase,
 		date: CalendarDate,
 		today: CalendarDate,
+		done = false,
 	): VcoPhaseDeadline {
 		const daysUntil = Math.round(
 			(Date.UTC(date.year, date.month - 1, date.day) -
@@ -685,7 +723,8 @@ export class VcoDeadlines {
 			date,
 			isoDate: VcoDeadlines.formatIsoDate(date),
 			daysUntil,
-			overdue: daysUntil < 0,
+			overdue: !done && daysUntil < 0,
+			done,
 		};
 	}
 }

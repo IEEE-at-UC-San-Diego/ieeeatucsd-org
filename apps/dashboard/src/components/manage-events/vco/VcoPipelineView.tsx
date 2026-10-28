@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import {
 	AlertTriangle,
 	CalendarClock,
+	Check,
 	MapPin,
 	UserRound,
 	Users,
@@ -43,6 +44,9 @@ export type VcoPipelinePatch = {
 	finId?: string;
 	funded?: boolean;
 	tresOwner?: VcoTresOwner;
+	progAppDone?: boolean;
+	tresStartDone?: boolean;
+	tresFinishDone?: boolean;
 };
 
 type VcoRow = {
@@ -145,6 +149,9 @@ export function VcoPipelineView({
 					asFundingRequired: event.asFundingRequired,
 					funded: event.funded,
 					tresOwner: event.tresOwner,
+					progAppDoneAt: event.progAppDoneAt,
+					tresStartDoneAt: event.tresStartDoneAt,
+					tresFinishDoneAt: event.tresFinishDoneAt,
 				},
 				{ nowMs, finalsWeeks },
 			),
@@ -512,14 +519,35 @@ function FlagBadges({
 }
 
 function DeadlineCell({ status }: { status: VcoPipelineStatus }) {
+	if (status.allDone) {
+		return (
+			<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+				<Check className="h-3.5 w-3.5 shrink-0" />
+				All done
+			</div>
+		);
+	}
 	if (status.needsDate || !status.nextDeadline) {
 		return <span className="text-sm text-muted-foreground">No deadline</span>;
 	}
 	const overdue = status.nextDeadline.overdue;
+	const done = status.nextDeadline.done;
 	return (
-		<div className={overdue ? "text-tone-danger" : "text-foreground"}>
+		<div
+			className={
+				done
+					? "text-muted-foreground"
+					: overdue
+						? "text-tone-danger"
+						: "text-foreground"
+			}
+		>
 			<div className="flex items-center gap-1.5 text-sm font-medium">
-				<CalendarClock className="h-3.5 w-3.5 shrink-0" />
+				{done ? (
+					<Check className="h-3.5 w-3.5 shrink-0" />
+				) : (
+					<CalendarClock className="h-3.5 w-3.5 shrink-0" />
+				)}
 				{status.nextDeadline.label}
 			</div>
 			<div className="text-xs tabular-nums">
@@ -586,6 +614,42 @@ function PipelineEditor({
 					/>
 					Funded
 				</label>
+				{status.funded && (
+					<>
+						<label className="inline-flex items-center gap-1.5">
+							<Checkbox
+								checked={Boolean(event.progAppDoneAt)}
+								onCheckedChange={(checked) =>
+									onPipelineChange(event, { progAppDone: checked === true })
+								}
+								aria-label={`Prog app done for ${event.eventName}`}
+							/>
+							Prog app
+						</label>
+						<label className="inline-flex items-center gap-1.5">
+							<Checkbox
+								checked={Boolean(event.tresStartDoneAt)}
+								onCheckedChange={(checked) =>
+									onPipelineChange(event, { tresStartDone: checked === true })
+								}
+								aria-label={`T-Res START done for ${event.eventName}`}
+							/>
+							T-Res START
+						</label>
+						<label className="inline-flex items-center gap-1.5">
+							<Checkbox
+								checked={Boolean(event.tresFinishDoneAt)}
+								onCheckedChange={(checked) =>
+									onPipelineChange(event, {
+										tresFinishDone: checked === true,
+									})
+								}
+								aria-label={`T-Res FINISH done for ${event.eventName}`}
+							/>
+							T-Res FINISH
+						</label>
+					</>
+				)}
 				<label className="inline-flex items-center gap-1.5">
 					<Checkbox
 						checked={Boolean(event.dateTbd)}

@@ -10,6 +10,10 @@ import {
   isGeneralOfficer,
 } from "./permissions";
 import {
+  buildVcoPhaseDonePatch,
+  vcoPipelineActorId,
+} from "./vcoPipeline";
+import {
   buildGoogleCalendarEventUrl,
   buildGoogleCalendarIcsUrl,
   buildGoogleCalendarSubscribeUrl,
@@ -636,18 +640,32 @@ export const updateVcoPipeline = mutation({
     finId: v.optional(v.string()),
     funded: v.optional(v.boolean()),
     tresOwner: v.optional(v.union(v.literal("vco"), v.literal("president"))),
+    progAppDone: v.optional(v.boolean()),
+    tresStartDone: v.optional(v.boolean()),
+    tresFinishDone: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    await requireVcoViewAccess(ctx, args.logtoId, args.authToken);
+    const user = await requireVcoViewAccess(ctx, args.logtoId, args.authToken);
     const event = await ctx.db.get(args.id);
     if (!event) throw new Error("Event not found");
 
-    const { id, ...updates } = args;
+    const {
+      id,
+      progAppDone,
+      tresStartDone,
+      tresFinishDone,
+      ...updates
+    } = args;
     const cleanUpdates = removeUndefinedFields(stripAuthFields(updates));
     if (typeof cleanUpdates.finId === "string") {
       cleanUpdates.finId = cleanUpdates.finId.trim();
     }
-    await ctx.db.patch(id, cleanUpdates);
+    const donePatch = buildVcoPhaseDonePatch(
+      { progAppDone, tresStartDone, tresFinishDone },
+      vcoPipelineActorId(user),
+      Date.now(),
+    );
+    await ctx.db.patch(id, { ...cleanUpdates, ...donePatch });
     return id;
   },
 });

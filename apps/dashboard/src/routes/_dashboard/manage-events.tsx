@@ -134,6 +134,12 @@ function mapEventToType(event: any): EventRequest {
 		finId: event.finId || "",
 		funded: event.funded,
 		tresOwner: event.tresOwner,
+		progAppDoneAt: event.progAppDoneAt,
+		progAppDoneBy: event.progAppDoneBy,
+		tresStartDoneAt: event.tresStartDoneAt,
+		tresStartDoneBy: event.tresStartDoneBy,
+		tresFinishDoneAt: event.tresFinishDoneAt,
+		tresFinishDoneBy: event.tresFinishDoneBy,
 	};
 }
 
