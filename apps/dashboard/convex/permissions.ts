@@ -217,6 +217,37 @@ export function hasVcoViewAccess(
 }
 
 /**
+ * Fields writable only through `events.updateVcoPipeline`.
+ * `events.update` / `events.create` do not accept these.
+ */
+export const VCO_PIPELINE_EDIT_FIELDS = [
+  "dateTbd",
+  "finId",
+  "funded",
+  "tresOwner",
+  "progAppDoneAt",
+  "progAppDoneBy",
+  "tresStartDoneAt",
+  "tresStartDoneBy",
+  "tresFinishDoneAt",
+  "tresFinishDoneBy",
+] as const;
+
+export type VcoPipelineEditField = (typeof VCO_PIPELINE_EDIT_FIELDS)[number];
+
+/**
+ * Same gate as viewing the VCO pipeline: only VCO-titled officers,
+ * Executive Officers, and Administrators may edit pipeline fields
+ * (funded, FIN-ID, T-Res owner, and phase done timestamps).
+ */
+export function canEditVcoPipelineFields(
+  role: UserRole,
+  position?: string | null,
+): boolean {
+  return hasVcoViewAccess(role, position);
+}
+
+/**
  * Check if user can access the resume database (Bronze sponsors cannot)
  */
 export function canAccessResumeDatabase(

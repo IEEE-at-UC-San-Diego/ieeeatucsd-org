@@ -93,6 +93,12 @@ export interface EventRequest {
 	finId?: string;
 	funded?: boolean;
 	tresOwner?: "vco" | "president";
+	progAppDoneAt?: number | null;
+	progAppDoneBy?: string | null;
+	tresStartDoneAt?: number | null;
+	tresStartDoneBy?: string | null;
+	tresFinishDoneAt?: number | null;
+	tresFinishDoneBy?: string | null;
 	publicGoogleEventId?: string | null;
 	publicGoogleEventUrl?: string | null;
 	publicGoogleCalendarId?: string | null;

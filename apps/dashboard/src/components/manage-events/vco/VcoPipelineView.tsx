@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import {
 	AlertTriangle,
 	CalendarClock,
+	Check,
 	MapPin,
 	UserRound,
 	Users,
@@ -43,6 +44,9 @@ export type VcoPipelinePatch = {
 	finId?: string;
 	funded?: boolean;
 	tresOwner?: VcoTresOwner;
+	progAppDoneAt?: number | null;
+	tresStartDoneAt?: number | null;
+	tresFinishDoneAt?: number | null;
 };
 
 type VcoRow = {
@@ -145,6 +149,9 @@ export function VcoPipelineView({
 					asFundingRequired: event.asFundingRequired,
 					funded: event.funded,
 					tresOwner: event.tresOwner,
+					progAppDoneAt: event.progAppDoneAt,
+					tresStartDoneAt: event.tresStartDoneAt,
+					tresFinishDoneAt: event.tresFinishDoneAt,
 				},
 				{ nowMs, finalsWeeks },
 			),
@@ -512,6 +519,14 @@ function FlagBadges({
 }
 
 function DeadlineCell({ status }: { status: VcoPipelineStatus }) {
+	if (status.allDone) {
+		return (
+			<div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+				<Check className="h-3.5 w-3.5 shrink-0" />
+				All done
+			</div>
+		);
+	}
 	if (status.needsDate || !status.nextDeadline) {
 		return <span className="text-sm text-muted-foreground">No deadline</span>;
 	}
@@ -586,6 +601,34 @@ function PipelineEditor({
 					/>
 					Funded
 				</label>
+				{status.funded && (
+					<>
+						<PhaseDoneCheckbox
+							label="Prog app"
+							eventName={event.eventName}
+							doneAt={event.progAppDoneAt}
+							onToggle={(doneAt) =>
+								onPipelineChange(event, { progAppDoneAt: doneAt })
+							}
+						/>
+						<PhaseDoneCheckbox
+							label="T-Res START"
+							eventName={event.eventName}
+							doneAt={event.tresStartDoneAt}
+							onToggle={(doneAt) =>
+								onPipelineChange(event, { tresStartDoneAt: doneAt })
+							}
+						/>
+						<PhaseDoneCheckbox
+							label="T-Res FINISH"
+							eventName={event.eventName}
+							doneAt={event.tresFinishDoneAt}
+							onToggle={(doneAt) =>
+								onPipelineChange(event, { tresFinishDoneAt: doneAt })
+							}
+						/>
+					</>
+				)}
 				<label className="inline-flex items-center gap-1.5">
 					<Checkbox
 						checked={Boolean(event.dateTbd)}
@@ -597,5 +640,37 @@ function PipelineEditor({
 				</label>
 			</div>
 		</div>
+	);
+}
+
+function PhaseDoneCheckbox({
+	label,
+	eventName,
+	doneAt,
+	onToggle,
+}: {
+	label: string;
+	eventName: string;
+	doneAt?: number | null;
+	onToggle: (doneAt: number | null) => void;
+}) {
+	const done = VcoDeadlines.isPhaseDone(doneAt);
+	return (
+		<label
+			className={
+				done
+					? "inline-flex items-center gap-1.5 text-muted-foreground"
+					: "inline-flex items-center gap-1.5"
+			}
+		>
+			<Checkbox
+				checked={done}
+				onCheckedChange={(checked) =>
+					onToggle(checked === true ? Date.now() : null)
+				}
+				aria-label={`${label} done for ${eventName}`}
+			/>
+			{label}
+		</label>
 	);
 }

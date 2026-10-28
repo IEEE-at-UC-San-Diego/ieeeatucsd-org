@@ -8,6 +8,7 @@ import {
   hasAdminAccess,
   hasOfficerAccess,
   isGeneralOfficer,
+  canEditVcoPipelineFields,
 } from "./permissions";
 import {
   buildGoogleCalendarEventUrl,
@@ -627,6 +628,23 @@ export const update = mutation({
   },
 });
 
+const vcoDoneTimestamp = v.optional(v.union(v.number(), v.null()));
+
+function applyDoneAttribution(
+  updates: Record<string, unknown>,
+  atKey: "progAppDoneAt" | "tresStartDoneAt" | "tresFinishDoneAt",
+  byKey: "progAppDoneBy" | "tresStartDoneBy" | "tresFinishDoneBy",
+  actorId: string,
+) {
+  if (!(atKey in updates)) return;
+  const value = updates[atKey];
+  if (typeof value === "number") {
+    updates[byKey] = actorId;
+  } else if (value === null) {
+    updates[byKey] = null;
+  }
+}
+
 export const updateVcoPipeline = mutation({
   args: {
     logtoId: v.string(),
@@ -636,9 +654,15 @@ export const updateVcoPipeline = mutation({
     finId: v.optional(v.string()),
     funded: v.optional(v.boolean()),
     tresOwner: v.optional(v.union(v.literal("vco"), v.literal("president"))),
+    progAppDoneAt: vcoDoneTimestamp,
+    tresStartDoneAt: vcoDoneTimestamp,
+    tresFinishDoneAt: vcoDoneTimestamp,
   },
   handler: async (ctx, args) => {
-    await requireVcoViewAccess(ctx, args.logtoId, args.authToken);
+    const user = await requireVcoViewAccess(ctx, args.logtoId, args.authToken);
+    if (!canEditVcoPipelineFields(user.role, user.position)) {
+      throw new Error("Insufficient permissions: VCO or admin access required");
+    }
     const event = await ctx.db.get(args.id);
     if (!event) throw new Error("Event not found");
 
@@ -647,6 +671,10 @@ export const updateVcoPipeline = mutation({
     if (typeof cleanUpdates.finId === "string") {
       cleanUpdates.finId = cleanUpdates.finId.trim();
     }
+    const actorId = user.logtoId ?? user.authUserId ?? user.email;
+    applyDoneAttribution(cleanUpdates, "progAppDoneAt", "progAppDoneBy", actorId);
+    applyDoneAttribution(cleanUpdates, "tresStartDoneAt", "tresStartDoneBy", actorId);
+    applyDoneAttribution(cleanUpdates, "tresFinishDoneAt", "tresFinishDoneBy", actorId);
     await ctx.db.patch(id, cleanUpdates);
     return id;
   },
