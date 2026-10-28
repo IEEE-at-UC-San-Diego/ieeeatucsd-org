@@ -366,8 +366,7 @@ export class VcoDeadlines {
 	static hasInvoice(invoices?: VcoInvoiceInput[]): boolean {
 		if (!invoices?.length) return false;
 		return invoices.some(
-			(invoice) =>
-				Boolean(invoice.invoiceFile) || (invoice.total ?? 0) > 0,
+			(invoice) => Boolean(invoice.invoiceFile) || (invoice.total ?? 0) > 0,
 		);
 	}
 
@@ -463,12 +462,10 @@ export class VcoDeadlines {
 			: null;
 
 		if (fallStart && winterStart && springStart) {
-			const byMonthDay = [fallStart, winterStart, springStart].sort(
-				(a, b) => {
-					if (a.month !== b.month) return a.month - b.month;
-					return a.day - b.day;
-				},
-			);
+			const byMonthDay = [fallStart, winterStart, springStart].sort((a, b) => {
+				if (a.month !== b.month) return a.month - b.month;
+				return a.day - b.day;
+			});
 			for (const year of [today.year - 1, today.year]) {
 				const aligned = byMonthDay.map((start) => ({
 					year,
@@ -477,12 +474,11 @@ export class VcoDeadlines {
 				}));
 				for (let i = 0; i < aligned.length; i++) {
 					const start = aligned[i];
-					const next =
-						aligned[i + 1] ?? {
-							year: year + 1,
-							month: aligned[0].month,
-							day: aligned[0].day,
-						};
+					const next = aligned[i + 1] ?? {
+						year: year + 1,
+						month: aligned[0].month,
+						day: aligned[0].day,
+					};
 					const end = VcoDeadlines.addDays(next, -1);
 					if (VcoDeadlines.isInRange(today, start, end)) {
 						return { start, end };

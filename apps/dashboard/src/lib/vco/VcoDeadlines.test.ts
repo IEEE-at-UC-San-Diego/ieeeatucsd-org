@@ -440,29 +440,19 @@ describe("VcoDeadlines.currentQuarterRange", () => {
 			end: d(2027, 1, 4),
 		});
 		expect(
-			VcoDeadlines.isInCurrentQuarter(
-				october,
-				october,
-				academicYearSettings,
-			),
+			VcoDeadlines.isInCurrentQuarter(october, october, academicYearSettings),
 		).toBe(true);
 	});
 
 	it("rolls winter and spring into the following year after fall", () => {
 		expect(
-			VcoDeadlines.currentQuarterRange(
-				d(2027, 1, 10),
-				academicYearSettings,
-			),
+			VcoDeadlines.currentQuarterRange(d(2027, 1, 10), academicYearSettings),
 		).toEqual({
 			start: d(2027, 1, 5),
 			end: d(2027, 3, 29),
 		});
 		expect(
-			VcoDeadlines.currentQuarterRange(
-				d(2026, 2, 1),
-				academicYearSettings,
-			),
+			VcoDeadlines.currentQuarterRange(d(2026, 2, 1), academicYearSettings),
 		).toEqual({
 			start: d(2026, 1, 5),
 			end: d(2026, 3, 29),
