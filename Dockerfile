@@ -112,9 +112,14 @@ ENV VITE_APP_TITLE=$VITE_APP_TITLE \
 COPY --from=dashboard_pruner /app/out/full/ .
 RUN --mount=type=cache,target=/app/.turbo,id=turbo-dashboard \
     pnpm exec turbo run build --filter=@ieeeatucsd/dashboard
+# Keep convex/ and the start wrapper in the portable image so the
+# container can push functions at start. A build-time RUN is cacheable
+# and Dokploy rollbacks reuse the previous image without rebuilding.
 RUN pnpm --filter=@ieeeatucsd/dashboard --prod deploy --legacy /prod/dashboard \
     && rm -rf /prod/dashboard/.output \
-    && cp -a /app/apps/dashboard/.output /prod/dashboard/.output
+    && cp -a /app/apps/dashboard/.output /prod/dashboard/.output \
+    && cp -a /app/apps/dashboard/scripts /prod/dashboard/scripts \
+    && cp -a /app/apps/dashboard/convex /prod/dashboard/convex
 
 FROM base AS dashboard
 WORKDIR /app
@@ -128,7 +133,7 @@ ENV NODE_ENV=production \
 
 EXPOSE 4323
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:4323/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
 
-CMD ["node", ".output/server/index.mjs"]
+CMD ["node", "./scripts/start-dashboard.mjs"]
