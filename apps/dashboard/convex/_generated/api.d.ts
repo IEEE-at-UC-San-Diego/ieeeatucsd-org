@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as ai from "../ai.js";
+import type * as constitutionAudit from "../constitutionAudit.js";
 import type * as constitutions from "../constitutions.js";
 import type * as crons from "../crons.js";
 import type * as directOnboardings from "../directOnboardings.js";
@@ -52,6 +53,7 @@ import type * as weekLabelSettings from "../weekLabelSettings.js";
  */
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
+  constitutionAudit: typeof constitutionAudit;
   constitutions: typeof constitutions;
   crons: typeof crons;
   directOnboardings: typeof directOnboardings;
