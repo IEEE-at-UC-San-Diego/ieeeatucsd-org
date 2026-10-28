@@ -379,4 +379,93 @@ describe("VcoDeadlines.compute", () => {
 		);
 		expect(status.flags).toContain("missing_invoice");
 	});
+
+	it("still flags missing_invoice when the only vendor is a display placeholder", () => {
+		const status = VcoDeadlines.compute(
+			{
+				eventName: "Invoice Due Social",
+				startDate: pacificAfternoon(2026, 11, 4),
+				createdAt: pacificAfternoon(2026, 8, 1),
+				location: "Sun God Lawn",
+				expectedAttendance: 50,
+				needsAsFunding: true,
+				invoices: [{ vendor: "Unknown", total: 0 }],
+			},
+			{ nowMs: now },
+		);
+		expect(VcoDeadlines.hasInvoice([{ vendor: "Unknown", total: 0 }])).toBe(
+			false,
+		);
+		expect(status.invoiceIn).toBe(false);
+		expect(status.flags).toContain("missing_invoice");
+	});
+
+	it("treats an attached file or a positive total as invoice evidence", () => {
+		expect(
+			VcoDeadlines.hasInvoice([{ vendor: "Unknown", invoiceFile: "file_1" }]),
+		).toBe(true);
+		expect(VcoDeadlines.hasInvoice([{ vendor: "Unknown", total: 12 }])).toBe(
+			true,
+		);
+		const status = VcoDeadlines.compute(
+			{
+				eventName: "Invoice Due Social",
+				startDate: pacificAfternoon(2026, 11, 4),
+				createdAt: pacificAfternoon(2026, 8, 1),
+				location: "Sun God Lawn",
+				expectedAttendance: 50,
+				needsAsFunding: true,
+				invoices: [{ vendor: "Unknown", invoiceFile: "file_1" }],
+			},
+			{ nowMs: now },
+		);
+		expect(status.invoiceIn).toBe(true);
+		expect(status.flags).not.toContain("missing_invoice");
+	});
+});
+
+describe("VcoDeadlines.currentQuarterRange", () => {
+	const academicYearSettings = {
+		fallWeek0Start: "2026-09-21",
+		winterWeek1Start: "2026-01-05",
+		springWeek1Start: "2026-03-30",
+	};
+
+	it("keeps October inside fall when winter is stored as January of the same calendar year", () => {
+		const october = d(2026, 10, 15);
+		expect(
+			VcoDeadlines.currentQuarterRange(october, academicYearSettings),
+		).toEqual({
+			start: d(2026, 9, 21),
+			end: d(2027, 1, 4),
+		});
+		expect(
+			VcoDeadlines.isInCurrentQuarter(
+				october,
+				october,
+				academicYearSettings,
+			),
+		).toBe(true);
+	});
+
+	it("rolls winter and spring into the following year after fall", () => {
+		expect(
+			VcoDeadlines.currentQuarterRange(
+				d(2027, 1, 10),
+				academicYearSettings,
+			),
+		).toEqual({
+			start: d(2027, 1, 5),
+			end: d(2027, 3, 29),
+		});
+		expect(
+			VcoDeadlines.currentQuarterRange(
+				d(2026, 2, 1),
+				academicYearSettings,
+			),
+		).toEqual({
+			start: d(2026, 1, 5),
+			end: d(2026, 3, 29),
+		});
+	});
 });
