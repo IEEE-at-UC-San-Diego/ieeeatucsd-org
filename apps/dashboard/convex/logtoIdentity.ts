@@ -38,11 +38,13 @@ export type AuthLike = {
 };
 
 const JWKS_TTL_MS = 10 * 60 * 1000;
+const JWKS_REFRESH_COOLDOWN_MS = 30 * 1000;
 const CLOCK_SKEW_MS = 60 * 1000;
 const SUPPORTED_ALGS = new Set(["ES256", "ES384", "RS256"]);
 
 let jwksCache: { uri: string; keys: JsonWebKeyWithKid[]; expiresAt: number } | null =
   null;
+const jwksRefreshAtByUri = new Map<string, number>();
 
 /**
  * Resolves a verified Logto identity for Convex functions.
@@ -56,8 +58,11 @@ export class LogtoIdentity {
   static fetchImpl: typeof fetch = fetch;
   static nowMs: () => number = () => Date.now();
 
+  static jwksRefreshCooldownMs = JWKS_REFRESH_COOLDOWN_MS;
+
   static clearCache() {
     jwksCache = null;
+    jwksRefreshAtByUri.clear();
   }
 
   static resolveOidcIssuer(endpoint: string): string {
@@ -177,15 +182,11 @@ export class LogtoIdentity {
       throw new Error("Unsupported Logto token algorithm");
     }
 
-    const keys = await LogtoIdentity.getJwks(issuer);
-    const candidates = keys.filter((key) => {
-      if (header.kid && key.kid && key.kid !== header.kid) return false;
-      if (key.alg && key.alg !== alg) return false;
-      return true;
-    });
-    if (candidates.length === 0) {
-      throw new Error("Logto token signing key not found");
-    }
+    const candidates = await LogtoIdentity.resolveSigningKeys(
+      issuer,
+      header.kid,
+      alg,
+    );
 
     const signingInput = new TextEncoder().encode(
       `${encodedHeader}.${encodedPayload}`,
@@ -233,6 +234,67 @@ export class LogtoIdentity {
     }
 
     return payload;
+  }
+
+  static matchSigningKeys(
+    keys: JsonWebKeyWithKid[],
+    kid: string | undefined,
+    alg: string,
+  ): JsonWebKeyWithKid[] {
+    return keys.filter((key) => {
+      if (kid && key.kid && key.kid !== kid) return false;
+      if (key.alg && key.alg !== alg) return false;
+      return true;
+    });
+  }
+
+  /**
+   * After a cached JWKS miss, drop the cache and fetch once. Cooldown is
+   * recorded before the request so concurrent unknown kids cannot stampede
+   * Logto.
+   */
+  static async refreshJwksOnKeyMiss(
+    issuer: string,
+  ): Promise<JsonWebKeyWithKid[] | null> {
+    const jwksUri = `${issuer}/jwks`;
+    const now = LogtoIdentity.nowMs();
+    const lastRefresh = jwksRefreshAtByUri.get(jwksUri) ?? 0;
+    if (now - lastRefresh < LogtoIdentity.jwksRefreshCooldownMs) {
+      return null;
+    }
+    jwksRefreshAtByUri.set(jwksUri, now);
+    jwksCache = null;
+    return await LogtoIdentity.getJwks(issuer);
+  }
+
+  /**
+   * Match a token's kid/alg against JWKS. A miss against a still-fresh cache
+   * triggers one throttled refetch so a newly published rotation is accepted
+   * without waiting for JWKS_TTL_MS.
+   */
+  static async resolveSigningKeys(
+    issuer: string,
+    kid: string | undefined,
+    alg: string,
+  ): Promise<JsonWebKeyWithKid[]> {
+    const jwksUri = `${issuer}/jwks`;
+    const servedFromCache = Boolean(
+      jwksCache &&
+        jwksCache.uri === jwksUri &&
+        jwksCache.expiresAt > LogtoIdentity.nowMs(),
+    );
+    const keys = await LogtoIdentity.getJwks(issuer);
+    let candidates = LogtoIdentity.matchSigningKeys(keys, kid, alg);
+    if (candidates.length === 0 && servedFromCache) {
+      const refreshed = await LogtoIdentity.refreshJwksOnKeyMiss(issuer);
+      if (refreshed) {
+        candidates = LogtoIdentity.matchSigningKeys(refreshed, kid, alg);
+      }
+    }
+    if (candidates.length === 0) {
+      throw new Error("Logto token signing key not found");
+    }
+    return candidates;
   }
 
   private static async getJwks(issuer: string): Promise<JsonWebKeyWithKid[]> {

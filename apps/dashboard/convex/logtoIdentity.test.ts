@@ -81,6 +81,7 @@ describe("LogtoIdentity", () => {
     LogtoIdentity.clearCache();
     LogtoIdentity.fetchImpl = fetch;
     LogtoIdentity.nowMs = () => Date.now();
+    LogtoIdentity.jwksRefreshCooldownMs = 30 * 1000;
     delete process.env.LOGTO_ENDPOINT;
     delete process.env.LOGTO_APP_ID;
   });
@@ -198,5 +199,99 @@ describe("LogtoIdentity", () => {
     await expect(
       LogtoIdentity.fromJwt("%7B%22sub%22%3A%22x%22%7D.deadbeef"),
     ).rejects.toThrow("Invalid Logto token format");
+  });
+
+  it("verifies a rotated-kid token after one throttled JWKS refetch", async () => {
+    const rotated = await generateEs256Pair();
+    const rotatedJwk = (await crypto.subtle.exportKey(
+      "jwk",
+      rotated.publicKey,
+    )) as JsonWebKey & { kid?: string; alg?: string };
+    rotatedJwk.kid = "rotated-key";
+    rotatedJwk.alg = "ES256";
+    rotatedJwk.use = "sig";
+
+    const fetchImpl = vi.fn(async (input) => {
+      expect(String(input)).toBe(`${ISSUER}/jwks`);
+      return jsonResponse({
+        keys: fetchImpl.mock.calls.length === 1 ? [publicJwk] : [rotatedJwk],
+      });
+    });
+    LogtoIdentity.fetchImpl = fetchImpl as typeof fetch;
+
+    const staleToken = await signEs256Jwt(
+      privateKey,
+      {
+        sub: "logto|stale",
+        email: "stale@example.com",
+        iss: ISSUER,
+        aud: AUDIENCE,
+        exp: 1_700_000_600,
+      },
+      { alg: "ES256", typ: "JWT", kid: "test-key" },
+    );
+    await LogtoIdentity.fromJwt(staleToken);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+    const rotatedToken = await signEs256Jwt(
+      rotated.privateKey,
+      {
+        sub: "logto|rotated",
+        email: "rotated@example.com",
+        name: "Rotated User",
+        iss: ISSUER,
+        aud: AUDIENCE,
+        exp: 1_700_000_600,
+      },
+      { alg: "ES256", typ: "JWT", kid: "rotated-key" },
+    );
+
+    await expect(LogtoIdentity.fromJwt(rotatedToken)).resolves.toEqual({
+      subject: "logto|rotated",
+      email: "rotated@example.com",
+      name: "Rotated User",
+    });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects an unknown kid without unbounded JWKS refetches", async () => {
+    const knownToken = await signEs256Jwt(
+      privateKey,
+      {
+        sub: "logto|known",
+        email: "known@example.com",
+        iss: ISSUER,
+        aud: AUDIENCE,
+        exp: 1_700_000_600,
+      },
+      { alg: "ES256", typ: "JWT", kid: "test-key" },
+    );
+    await LogtoIdentity.fromJwt(knownToken);
+    expect(LogtoIdentity.fetchImpl).toHaveBeenCalledTimes(1);
+
+    const unknownToken = await signEs256Jwt(
+      privateKey,
+      {
+        sub: "logto|unknown",
+        email: "unknown@example.com",
+        iss: ISSUER,
+        aud: AUDIENCE,
+        exp: 1_700_000_600,
+      },
+      { alg: "ES256", typ: "JWT", kid: "unknown-key" },
+    );
+
+    await expect(LogtoIdentity.fromJwt(unknownToken)).rejects.toThrow(
+      "Logto token signing key not found",
+    );
+    expect(LogtoIdentity.fetchImpl).toHaveBeenCalledTimes(2);
+
+    await expect(LogtoIdentity.fromJwt(unknownToken)).rejects.toThrow(
+      "Logto token signing key not found",
+    );
+    await expect(LogtoIdentity.fromJwt(unknownToken)).rejects.toThrow(
+      "Logto token signing key not found",
+    );
+    expect(LogtoIdentity.fetchImpl).toHaveBeenCalledTimes(2);
   });
 });
