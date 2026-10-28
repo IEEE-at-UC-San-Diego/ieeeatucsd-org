@@ -58,27 +58,22 @@ describe("VcoDeadlines.moveWeekendToFriday", () => {
 	});
 });
 
-describe("VcoDeadlines programming-app and officer-plan dates", () => {
+describe("VcoDeadlines programming-app dates", () => {
 	it("uses E-35 when that day is a Monday", () => {
 		const eventDate = d(2026, 12, 14);
 		expect(VcoDeadlines.programmingAppDeadline(eventDate)).toEqual(
 			d(2026, 11, 9),
 		);
-		expect(VcoDeadlines.officerPlanDeadline(eventDate)).toEqual(
-			d(2026, 10, 26),
-		);
+		expect(VcoDeadlines.dayOfWeek(d(2026, 11, 9))).toBe(1);
 	});
 
-	it("uses the Monday on or before E-35 and locks the officer plan 14 days earlier", () => {
+	it("uses the Monday on or before E-35", () => {
 		const eventDate = d(2026, 11, 18);
 		const progApp = VcoDeadlines.programmingAppDeadline(eventDate);
-		const officerPlan = VcoDeadlines.officerPlanDeadline(eventDate);
 		expect(progApp).toEqual(d(2026, 10, 12));
-		expect(officerPlan).toEqual(d(2026, 9, 28));
 		expect(VcoDeadlines.dayOfWeek(progApp)).toBe(1);
-		expect(VcoDeadlines.dayOfWeek(officerPlan)).toBe(1);
 		expect(
-			VcoDeadlines.compare(officerPlan, VcoDeadlines.addDays(eventDate, -49)),
+			VcoDeadlines.compare(progApp, VcoDeadlines.addDays(eventDate, -35)),
 		).toBeLessThanOrEqual(0);
 	});
 });
@@ -200,11 +195,18 @@ describe("VcoDeadlines.compute", () => {
 		expect(status.funded).toBe(true);
 		expect(status.lateCreated).toBe(false);
 		expect(status.flags).toEqual([]);
-		expect(status.nextDeadline?.phase).toBe("officer_plan");
+		expect(status.overdueFlags).toEqual([]);
+		expect(status.phases.map((phase) => phase.phase)).toEqual([
+			"prog_app",
+			"tres_start",
+			"invoices_tres_finish",
+		]);
+		expect(status.nextDeadline?.phase).toBe("prog_app");
 		expect(status.nextDeadline?.overdue).toBe(false);
+		expect(status.nextDeadline?.isoDate).toBe("2026-11-16");
 	});
 
-	it("marks an overdue prog-app phase red", () => {
+	it("marks an overdue prog-app phase red and uses it as the next deadline", () => {
 		const status = VcoDeadlines.compute(
 			{
 				eventName: "Late Workshop",
@@ -216,14 +218,16 @@ describe("VcoDeadlines.compute", () => {
 			},
 			{ nowMs: now },
 		);
-		expect(status.nextDeadline?.phase).toBe("officer_plan");
+		expect(status.nextDeadline?.phase).toBe("prog_app");
 		expect(status.nextDeadline?.overdue).toBe(true);
+		expect(status.nextDeadline?.isoDate).toBe("2026-10-12");
 		expect(
 			status.phases.find((phase) => phase.phase === "prog_app")?.overdue,
 		).toBe(true);
+		expect(status.flags).toContain("overdue");
 	});
 
-	it("flags missing venue and missing headcount", () => {
+	it("shows missing venue and headcount before the prog-app deadline without marking them overdue", () => {
 		const status = VcoDeadlines.compute(
 			{
 				eventName: "Social Mixer",
@@ -235,8 +239,33 @@ describe("VcoDeadlines.compute", () => {
 			},
 			{ nowMs: now },
 		);
+		expect(status.nextDeadline?.phase).toBe("prog_app");
+		expect(status.nextDeadline?.overdue).toBe(false);
+		expect(status.nextDeadline?.isoDate).toBe("2026-11-09");
 		expect(status.flags).toContain("missing_venue");
 		expect(status.flags).toContain("missing_headcount");
+		expect(status.overdueFlags).not.toContain("missing_venue");
+		expect(status.overdueFlags).not.toContain("missing_headcount");
+	});
+
+	it("marks missing venue and headcount overdue after the prog-app deadline", () => {
+		const status = VcoDeadlines.compute(
+			{
+				eventName: "Social Mixer",
+				startDate: pacificAfternoon(2026, 11, 18),
+				createdAt: pacificAfternoon(2026, 9, 1),
+				location: "TBD",
+				expectedAttendance: 0,
+				needsAsFunding: true,
+			},
+			{ nowMs: now },
+		);
+		expect(status.nextDeadline?.phase).toBe("prog_app");
+		expect(status.nextDeadline?.overdue).toBe(true);
+		expect(status.flags).toContain("missing_venue");
+		expect(status.flags).toContain("missing_headcount");
+		expect(status.overdueFlags).toContain("missing_venue");
+		expect(status.overdueFlags).toContain("missing_headcount");
 	});
 
 	it("flags late-created events", () => {
@@ -345,9 +374,11 @@ describe("VcoDeadlines.compute", () => {
 		);
 		expect(status.funded).toBe(false);
 		expect(status.tresOwner).toBe("president");
-		expect(status.phases.map((phase) => phase.phase)).toEqual(["officer_plan"]);
+		expect(status.phases).toEqual([]);
+		expect(status.nextDeadline).toBeNull();
 		expect(status.lateCreated).toBe(false);
 		expect(status.flags).not.toContain("missing_invoice");
+		expect(status.flags).not.toContain("late");
 	});
 
 	it("assigns the President as T-Res owner for GBMs", () => {
@@ -421,6 +452,75 @@ describe("VcoDeadlines.compute", () => {
 		);
 		expect(status.invoiceIn).toBe(true);
 		expect(status.flags).not.toContain("missing_invoice");
+	});
+});
+
+describe("VcoDeadlines.sortByNextDeadline", () => {
+	const now = pacificAfternoon(2026, 10, 27);
+
+	function row(
+		eventName: string,
+		input: Parameters<typeof VcoDeadlines.compute>[0],
+	) {
+		return {
+			eventName,
+			status: VcoDeadlines.compute(input, { nowMs: now }),
+		};
+	}
+
+	it("orders funded events by the next remaining phase, then undated last", () => {
+		const overdueProgApp = row("Late Workshop", {
+			eventName: "Late Workshop",
+			startDate: pacificAfternoon(2026, 11, 18),
+			createdAt: pacificAfternoon(2026, 9, 1),
+			location: "CSE 1202",
+			expectedAttendance: 40,
+			needsAsFunding: true,
+		});
+		const upcomingProgApp = row("Industry Night", {
+			eventName: "Industry Night",
+			startDate: pacificAfternoon(2026, 12, 21),
+			createdAt: pacificAfternoon(2026, 9, 1),
+			location: "Qualcomm Room",
+			expectedAttendance: 80,
+			needsAsFunding: true,
+		});
+		const laterProgApp = row("Winter Banquet", {
+			eventName: "Winter Banquet",
+			startDate: pacificAfternoon(2026, 12, 28),
+			createdAt: pacificAfternoon(2026, 9, 1),
+			location: "Faculty Club",
+			expectedAttendance: 60,
+			needsAsFunding: true,
+		});
+		const needsDate = row("Undated Mixer", {
+			eventName: "Undated Mixer",
+			dateTbd: true,
+			startDate: pacificAfternoon(2026, 12, 14),
+			createdAt: pacificAfternoon(2026, 10, 1),
+			location: "TBD",
+		});
+
+		expect(overdueProgApp.status.nextDeadline?.phase).toBe("prog_app");
+		expect(overdueProgApp.status.nextDeadline?.isoDate).toBe("2026-10-12");
+		expect(upcomingProgApp.status.nextDeadline?.phase).toBe("prog_app");
+		expect(upcomingProgApp.status.nextDeadline?.isoDate).toBe("2026-11-16");
+		expect(laterProgApp.status.nextDeadline?.phase).toBe("prog_app");
+		expect(laterProgApp.status.nextDeadline?.isoDate).toBe("2026-11-23");
+		expect(needsDate.status.nextDeadline).toBeNull();
+
+		const sorted = VcoDeadlines.sortByNextDeadline([
+			laterProgApp,
+			needsDate,
+			upcomingProgApp,
+			overdueProgApp,
+		]);
+		expect(sorted.map((item) => item.eventName)).toEqual([
+			"Late Workshop",
+			"Industry Night",
+			"Winter Banquet",
+			"Undated Mixer",
+		]);
 	});
 });
 

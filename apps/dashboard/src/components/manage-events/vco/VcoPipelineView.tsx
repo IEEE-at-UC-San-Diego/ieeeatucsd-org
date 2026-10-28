@@ -330,7 +330,10 @@ function VcoTable({
 										{row.event.eventName}
 									</button>
 									<div className="mt-1 flex flex-wrap gap-1">
-										<FlagBadges flags={row.status.flags} />
+										<FlagBadges
+											flags={row.status.flags}
+											overdueFlags={row.status.overdueFlags}
+										/>
 									</div>
 								</TableCell>
 								<TableCell className="px-4 py-3 text-sm tabular-nums">
@@ -413,7 +416,10 @@ function VcoMobileList({
 									: VcoDeadlines.formatEventDate(row.event.startDate)}
 							</p>
 						</button>
-						<FlagBadges flags={row.status.flags} />
+						<FlagBadges
+							flags={row.status.flags}
+							overdueFlags={row.status.overdueFlags}
+						/>
 					</div>
 					<dl className="grid grid-cols-2 gap-2 text-sm">
 						<div>
@@ -464,12 +470,24 @@ function VcoMobileList({
 	);
 }
 
-function FlagBadges({ flags }: { flags: VcoFlag[] }) {
+function FlagBadges({
+	flags,
+	overdueFlags = [],
+}: {
+	flags: VcoFlag[];
+	overdueFlags?: VcoFlag[];
+}) {
 	if (flags.length === 0) return null;
 	return (
 		<div className="flex flex-wrap gap-1">
 			{flags.map((flag) => {
-				const warning = flag === "food_over_cap" || flag === "in_finals_week";
+				const missingField =
+					flag === "missing_venue" || flag === "missing_headcount";
+				const missingOverdue = missingField && overdueFlags.includes(flag);
+				const warning =
+					flag === "food_over_cap" ||
+					flag === "in_finals_week" ||
+					(missingField && !missingOverdue);
 				const late = flag === "late";
 				return (
 					<Badge

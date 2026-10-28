@@ -5,11 +5,7 @@
  * overrides `timeZone`. Date-only arithmetic uses UTC midnight of the
  * Y-M-D triple so DST does not shift day-of-week or day counts.
  */
-export type VcoPhase =
-	| "officer_plan"
-	| "prog_app"
-	| "tres_start"
-	| "invoices_tres_finish";
+export type VcoPhase = "prog_app" | "tres_start" | "invoices_tres_finish";
 
 export type VcoTresOwner = "vco" | "president";
 
@@ -87,6 +83,7 @@ export type VcoPipelineStatus = {
 	phases: VcoPhaseDeadline[];
 	nextDeadline: VcoPhaseDeadline | null;
 	flags: VcoFlag[];
+	overdueFlags: VcoFlag[];
 	foodCostPerHead: number | null;
 	invoiceTotal: number;
 	invoiceIn: boolean;
@@ -97,7 +94,6 @@ export type VcoPipelineStatus = {
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const PHASE_LABELS: Record<VcoPhase, string> = {
-	officer_plan: "Officer plan",
 	prog_app: "Prog app",
 	tres_start: "T-Res START",
 	invoices_tres_finish: "Invoices / T-Res FINISH",
@@ -267,13 +263,6 @@ export class VcoDeadlines {
 
 	static programmingAppDeadline(eventDate: CalendarDate): CalendarDate {
 		return VcoDeadlines.mondayOnOrBefore(VcoDeadlines.addDays(eventDate, -35));
-	}
-
-	static officerPlanDeadline(eventDate: CalendarDate): CalendarDate {
-		return VcoDeadlines.addDays(
-			VcoDeadlines.programmingAppDeadline(eventDate),
-			-14,
-		);
 	}
 
 	static tresStartDeadline(
@@ -568,6 +557,7 @@ export class VcoDeadlines {
 				phases: [],
 				nextDeadline: null,
 				flags,
+				overdueFlags: [],
 				foodCostPerHead,
 				invoiceTotal,
 				invoiceIn,
@@ -580,17 +570,11 @@ export class VcoDeadlines {
 			event.startDate as number,
 			timeZone,
 		);
-		const officerPlan = VcoDeadlines.moveOutOfFinalsWeek(
-			VcoDeadlines.officerPlanDeadline(eventDate),
-			finalsWeeks,
-		);
 		const progApp = VcoDeadlines.moveOutOfFinalsWeek(
 			VcoDeadlines.programmingAppDeadline(eventDate),
 			finalsWeeks,
 		);
-		const phases: VcoPhaseDeadline[] = [
-			VcoDeadlines.toPhaseDeadline("officer_plan", officerPlan, today),
-		];
+		const phases: VcoPhaseDeadline[] = [];
 		if (funded) {
 			phases.push(VcoDeadlines.toPhaseDeadline("prog_app", progApp, today));
 			phases.push(
@@ -623,12 +607,19 @@ export class VcoDeadlines {
 		const invoicePhaseDue = Boolean(
 			invoicePhase && invoicePhase.daysUntil <= 0,
 		);
+		const missingVenue = VcoDeadlines.isMissingVenue(event.location);
+		const missingHeadcount = VcoDeadlines.isMissingHeadcount(
+			event.expectedAttendance,
+		);
+		const missingFieldsOverdue = VcoDeadlines.compare(today, progApp) > 0;
 
 		const flags: VcoFlag[] = [];
-		if (VcoDeadlines.isMissingVenue(event.location))
-			flags.push("missing_venue");
-		if (VcoDeadlines.isMissingHeadcount(event.expectedAttendance)) {
-			flags.push("missing_headcount");
+		const overdueFlags: VcoFlag[] = [];
+		if (missingVenue) flags.push("missing_venue");
+		if (missingHeadcount) flags.push("missing_headcount");
+		if (missingFieldsOverdue) {
+			if (missingVenue) overdueFlags.push("missing_venue");
+			if (missingHeadcount) overdueFlags.push("missing_headcount");
 		}
 		if (funded && invoicePhaseDue && !invoiceIn) flags.push("missing_invoice");
 		if (lateCreated) flags.push("late");
@@ -653,6 +644,7 @@ export class VcoDeadlines {
 			phases,
 			nextDeadline,
 			flags,
+			overdueFlags,
 			foodCostPerHead,
 			invoiceTotal,
 			invoiceIn,
