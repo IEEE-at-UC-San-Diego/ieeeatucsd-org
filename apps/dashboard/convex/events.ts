@@ -16,6 +16,7 @@ import {
   generateGoogleCalendarEventId,
 } from "./googleCalendarIds";
 import { assertValidEventTimeRange } from "./eventTimeRange";
+import { PublicPublishedEvent } from "./publicPublishedEvent";
 
 function getLegacyAttendeeIds(event: Record<string, unknown>): string[] {
   const legacy = (event as { attendees?: unknown }).attendees;
@@ -187,11 +188,10 @@ export const listPublished = query({
           ...legacyAttendeeIds,
         ]).size;
 
-        return {
-          ...event,
+        return PublicPublishedEvent.fromDocument(event, {
           attendeeCount,
           ...getPublicCalendarMeta(event._id),
-        };
+        });
       }),
     );
   },
