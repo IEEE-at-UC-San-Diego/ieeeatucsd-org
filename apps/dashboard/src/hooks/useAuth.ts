@@ -1,5 +1,5 @@
 import { useLogto } from "@logto/react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import {
 	createContext,
 	createElement,
@@ -75,6 +75,7 @@ function useAuthClient() {
 		clearAllTokens,
 		getIdTokenClaims,
 		getAccessToken,
+		getIdToken,
 	} = useLogto();
 
 	const isAuthenticated = Boolean(logtoAuthenticated);
@@ -96,13 +97,15 @@ function useAuthClient() {
 	const lastResolvedUserRef = useRef<{ logtoId: string; user: unknown } | null>(
 		null,
 	);
-	const upsertUser = useMutation(api.users.upsertFromAuth);
+	const upsertUser = useAction(api.users.upsertFromAuth);
 
 	const getIdTokenClaimsRef = useRef(getIdTokenClaims);
 	const getAccessTokenRef = useRef(getAccessToken);
+	const getIdTokenRef = useRef(getIdToken);
 	const clearAllTokensRef = useRef(clearAllTokens);
 	getIdTokenClaimsRef.current = getIdTokenClaims;
 	getAccessTokenRef.current = getAccessToken;
+	getIdTokenRef.current = getIdToken;
 	clearAllTokensRef.current = clearAllTokens;
 
 	const applySession = useCallback((session: AuthBootstrapResult) => {
@@ -392,18 +395,16 @@ function useAuthClient() {
 		void (async () => {
 			try {
 				const claims = await getIdTokenClaimsRef.current?.();
-				const token = accessToken ?? (await getAccessTokenRef.current?.());
+				const idToken = await getIdTokenRef.current?.();
 
-				if (!claims?.sub || !token || !convexSessionToken) {
+				if (!claims?.sub || !idToken) {
 					throw new Error(
-						"Missing claims, access token, or auth token during user provisioning",
+						"Missing claims or ID token during user provisioning",
 					);
 				}
 
 				await upsertUser({
-					logtoId: claims.sub,
-					authToken: convexSessionToken,
-					email: (claims as { email?: string }).email || "",
+					authToken: idToken,
 					name: (claims as { name?: string }).name || claims.sub,
 					avatar: (claims as { picture?: string }).picture,
 					signInMethod: "logto",

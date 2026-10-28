@@ -1,7 +1,7 @@
 import { api } from "@convex/_generated/api";
 import { useHandleSignInCallback, useLogto } from "@logto/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMutation } from "convex/react";
+import { useAction } from "convex/react";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AuthFlow } from "@/lib/auth/AuthFlow";
@@ -40,8 +40,9 @@ function CallbackLoading({ label = "Signing you in..." }: { label?: string }) {
 }
 
 function CallbackClient() {
-	const { getIdTokenClaims, getAccessToken, clearAllTokens } = useLogto();
-	const upsertUser = useMutation(api.users.upsertFromAuth);
+	const { getIdTokenClaims, getAccessToken, getIdToken, clearAllTokens } =
+		useLogto();
+	const upsertUser = useAction(api.users.upsertFromAuth);
 	const navigate = useNavigate();
 	const upsertStarted = useRef(false);
 	const [finalizeInProgress, setFinalizeInProgress] = useState(false);
@@ -59,6 +60,7 @@ function CallbackClient() {
 		void AuthFlow.finalizeSignIn({
 			getIdTokenClaims: getIdTokenClaims as any,
 			getAccessToken: getAccessToken as any,
+			getIdToken: getIdToken as any,
 			createSession: async (accessToken: string) =>
 				AuthSession.mintBridgeToken(accessToken, "callback"),
 			upsertUser,
