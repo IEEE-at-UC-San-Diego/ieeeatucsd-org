@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { UserRole } from "@/types/roles";
-import { hasVcoViewAccess } from "../../../convex/permissions";
-import { canViewVcoPipeline, isVcoPosition } from "./vcoAccess";
+import {
+	canEditVcoPipelineFields as canEditVcoPipelineFieldsConvex,
+	hasVcoViewAccess,
+} from "../../../convex/permissions";
+import {
+	canEditVcoPipelineFields,
+	canViewVcoPipeline,
+	isVcoPosition,
+} from "./vcoAccess";
 
 const ROLES: UserRole[] = [
 	"Member",
@@ -20,7 +27,23 @@ describe("client VCO access matches Convex helpers", () => {
 			expect(canViewVcoPipeline(role, "Vice Chair Operations")).toBe(
 				hasVcoViewAccess(role, "Vice Chair Operations"),
 			);
+			expect(canEditVcoPipelineFields(role)).toBe(
+				canEditVcoPipelineFieldsConvex(role),
+			);
+			expect(canEditVcoPipelineFields(role, "Vice Chair Operations")).toBe(
+				canEditVcoPipelineFieldsConvex(role, "Vice Chair Operations"),
+			);
 		}
+	});
+
+	it("blocks non-VCO officers from editing pipeline done fields", () => {
+		expect(canEditVcoPipelineFields("General Officer")).toBe(false);
+		expect(
+			canEditVcoPipelineFields("General Officer", "Vice Chair Events"),
+		).toBe(false);
+		expect(
+			canEditVcoPipelineFields("General Officer", "Vice Chair Operations"),
+		).toBe(true);
 	});
 
 	it("recognizes VCO titles the same way", () => {

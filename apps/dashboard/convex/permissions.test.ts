@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  canEditVcoPipelineFields,
   hasAdminAccess,
   hasOfficerAccess,
   hasVcoViewAccess,
   isVcoPosition,
+  VCO_PIPELINE_EDIT_FIELDS,
   type UserRole,
 } from "./permissions";
 
@@ -51,5 +53,34 @@ describe("VCO view access", () => {
     );
     expect(hasVcoViewAccess("General Officer")).toBe(false);
     expect(hasVcoViewAccess("Member", "Vice Chair Operations")).toBe(false);
+  });
+});
+
+describe("VCO pipeline field edits", () => {
+  it("uses the same gate as funded, FIN-ID, and T-Res owner for done timestamps", () => {
+    expect(VCO_PIPELINE_EDIT_FIELDS).toEqual(
+      expect.arrayContaining([
+        "funded",
+        "finId",
+        "tresOwner",
+        "progAppDoneAt",
+        "tresStartDoneAt",
+        "tresFinishDoneAt",
+      ]),
+    );
+    expect(canEditVcoPipelineFields("Administrator")).toBe(
+      hasVcoViewAccess("Administrator"),
+    );
+    expect(canEditVcoPipelineFields("Executive Officer")).toBe(true);
+    expect(
+      canEditVcoPipelineFields("General Officer", "Vice Chair Operations"),
+    ).toBe(true);
+    expect(canEditVcoPipelineFields("General Officer")).toBe(false);
+    expect(
+      canEditVcoPipelineFields("General Officer", "Vice Chair Events"),
+    ).toBe(false);
+    expect(canEditVcoPipelineFields("Member", "Vice Chair Operations")).toBe(
+      false,
+    );
   });
 });

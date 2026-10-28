@@ -18,3 +18,10 @@ export function canViewVcoPipeline(
 	const isOfficer = isAdmin || role === "General Officer";
 	return isAdmin || (isOfficer && isVcoPosition(position));
 }
+
+export function canEditVcoPipelineFields(
+	role: UserRole,
+	position?: string | null,
+): boolean {
+	return canViewVcoPipeline(role, position);
+}
