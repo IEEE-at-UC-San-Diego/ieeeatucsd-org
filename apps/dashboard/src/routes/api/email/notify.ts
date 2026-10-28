@@ -17,12 +17,15 @@ import {
  * If submitterName/submitterEmail are missing but submittedBy (logtoId) is present,
  * resolve the user info server-side from Convex.
  */
-async function resolveSubmitter(body: Record<string, unknown>) {
+async function resolveSubmitter(
+	body: Record<string, unknown>,
+	callerLogtoId: string,
+) {
 	if (body.submitterEmail && body.submitterName) return body;
 	const userId = (body.submittedBy || body.requestedUser) as string | undefined;
 	if (!userId) return body;
 
-	const user = await lookupUser(userId);
+	const user = await lookupUser(userId, callerLogtoId);
 	return {
 		...body,
 		submitterName: body.submitterName || user.name,
@@ -43,7 +46,7 @@ async function handle({ request }: { request: Request }) {
 			requiredRoles: ["Administrator", "Executive Officer", "General Officer"],
 		});
 		if (authResult instanceof Response) return authResult;
-		const { body: rawBody } = authResult;
+		const { body: rawBody, logtoId } = authResult;
 		const type = rawBody.type as string;
 
 		if (!type) {
@@ -54,7 +57,7 @@ async function handle({ request }: { request: Request }) {
 		}
 
 		// Resolve submitter info for types that need it
-		const body = await resolveSubmitter(rawBody);
+		const body = await resolveSubmitter(rawBody, logtoId);
 
 		switch (type) {
 			case "reimbursement_submitted":

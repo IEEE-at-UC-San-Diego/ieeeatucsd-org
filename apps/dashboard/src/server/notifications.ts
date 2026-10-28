@@ -7,6 +7,7 @@
 
 import { ConvexHttpClient } from "convex/browser";
 import type { FunctionReference } from "convex/server";
+import { createConvexSessionToken } from "@/server/convex-session";
 import { sendEmail } from "./email";
 import {
 	type DetailRow,
@@ -32,9 +33,13 @@ interface UserInfo {
 
 /**
  * Look up a user's name and email from Convex by their logtoId.
- * Returns fallback values if lookup fails.
+ * Requires the authenticated officer caller's logtoId so Convex can enforce
+ * officer/admin access. Returns fallback values if lookup fails.
  */
-export async function lookupUser(logtoId: string): Promise<UserInfo> {
+export async function lookupUser(
+	targetLogtoId: string,
+	callerLogtoId: string,
+): Promise<UserInfo> {
 	try {
 		const url =
 			process.env.CONVEX_URL ||
@@ -43,9 +48,14 @@ export async function lookupUser(logtoId: string): Promise<UserInfo> {
 				.env?.VITE_CONVEX_URL;
 		if (!url) return { name: "Unknown", email: "" };
 
+		const { token } = createConvexSessionToken({ sub: callerLogtoId });
 		const client = new ConvexHttpClient(url);
 		const fn = "users:getByLogtoId" as unknown as FunctionReference<"query">;
-		const user = await client.query(fn, { logtoId });
+		const user = await client.query(fn, {
+			logtoId: callerLogtoId,
+			authToken: token,
+			targetLogtoId,
+		});
 		if (user) {
 			return { name: user.name || "Unknown", email: user.email || "" };
 		}

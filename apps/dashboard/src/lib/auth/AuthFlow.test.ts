@@ -226,6 +226,7 @@ describe("AuthFlow.finalizeSignIn", () => {
 				name: "New User",
 			}),
 			getAccessToken: async () => "access-token",
+			getIdToken: async () => "id-token",
 			createSession: async () => ({ sessionToken: "session-token" }),
 			upsertUser: async () => ({
 				signedUp: false,
@@ -244,6 +245,7 @@ describe("AuthFlow.finalizeSignIn", () => {
 				name: "Existing User",
 			}),
 			getAccessToken: async () => "access-token",
+			getIdToken: async () => "id-token",
 			createSession: async () => ({ sessionToken: "session-token" }),
 			upsertUser: async () => ({
 				signedUp: true,
@@ -252,6 +254,50 @@ describe("AuthFlow.finalizeSignIn", () => {
 		});
 
 		expect(redirect).toBe("/overview");
+	});
+
+	it("passes the Logto ID token to upsert, not the HMAC session", async () => {
+		const upsertUser = vi.fn(async () => ({
+			signedUp: true,
+			role: "Member",
+		}));
+
+		await AuthFlow.finalizeSignIn({
+			getIdTokenClaims: async () => ({
+				sub: "logto|member",
+				email: "member@example.com",
+				name: "Member",
+			}),
+			getAccessToken: async () => "access-token",
+			getIdToken: async () => "logto-id-token",
+			createSession: async () => ({ sessionToken: "hmac-session-token" }),
+			upsertUser,
+		});
+
+		expect(upsertUser).toHaveBeenCalledWith({
+			authToken: "logto-id-token",
+			name: "Member",
+			avatar: undefined,
+			signInMethod: "logto",
+		});
+	});
+
+	it("throws if the Logto ID token is missing", async () => {
+		await expect(
+			AuthFlow.finalizeSignIn({
+				getIdTokenClaims: async () => ({
+					sub: "logto|user",
+					email: "user@example.com",
+				}),
+				getAccessToken: async () => "access-token",
+				getIdToken: async () => null,
+				createSession: async () => ({ sessionToken: "session-token" }),
+				upsertUser: async () => ({
+					signedUp: false,
+					role: "Member",
+				}),
+			}),
+		).rejects.toThrow("Missing ID token");
 	});
 
 	it("throws if session creation fails so caller can route to signin", async () => {
@@ -266,6 +312,7 @@ describe("AuthFlow.finalizeSignIn", () => {
 					email: "user@example.com",
 				}),
 				getAccessToken: async () => "access-token",
+				getIdToken: async () => "id-token",
 				createSession,
 				upsertUser: async () => ({
 					signedUp: false,

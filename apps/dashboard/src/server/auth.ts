@@ -1,11 +1,13 @@
 import { ConvexHttpClient } from "convex/browser";
 import type { FunctionReference } from "convex/server";
 import { env } from "@/env";
+import { createConvexSessionToken } from "@/server/convex-session";
 import type { UserRole } from "@/types/roles";
 
 /**
- * Validates a logtoId by checking if the user exists in Convex.
- * Returns the user record if valid, null otherwise.
+ * Looks up the current provisioned dashboard user after Logto token validation.
+ * Uses the current-user query with a server-minted HMAC session — never the
+ * public unauthenticated user lookup.
  */
 export async function validateLogtoId(logtoId: string | undefined | null) {
 	if (!logtoId || typeof logtoId !== "string" || logtoId.trim().length === 0) {
@@ -21,9 +23,10 @@ export async function validateLogtoId(logtoId: string | undefined | null) {
 	if (!url) return null;
 
 	try {
+		const { token } = createConvexSessionToken({ sub: logtoId });
 		const client = new ConvexHttpClient(url);
-		const fn = "users:getByLogtoId" as unknown as FunctionReference<"query">;
-		const user = await client.query(fn, { logtoId });
+		const fn = "users:getMe" as unknown as FunctionReference<"query">;
+		const user = await client.query(fn, { logtoId, authToken: token });
 		return user ?? null;
 	} catch {
 		return null;
