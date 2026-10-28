@@ -1,6 +1,5 @@
-import { action, internalMutation, mutation, query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
 import {
   requireCurrentUser,
   requireAdminAccess,
@@ -151,40 +150,6 @@ export const getUserInfo = query({
       zelleInformation: user.zelleInformation,
       email: user.email,
     };
-  },
-});
-
-export const applyVerifiedAuthUpsert = internalMutation({
-  args: {
-    logtoId: v.string(),
-    email: v.string(),
-    name: v.string(),
-    avatar: v.optional(v.string()),
-    signInMethod: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    return await UserAuth.applyVerifiedAuthUpsert(ctx, args);
-  },
-});
-
-/**
- * Provision or refresh the signed-in Logto user.
- *
- * `authToken` must be a Logto ID token (JWT). Client-supplied logtoId/email
- * are not accepted — those fields are taken from Convex native auth or from
- * a JWKS-verified ID token.
- */
-export const upsertFromAuth = action({
-  args: {
-    authToken: v.string(),
-    name: v.optional(v.string()),
-    avatar: v.optional(v.string()),
-    signInMethod: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    return await UserAuth.upsertFromAuth(ctx, args, (verified) =>
-      ctx.runMutation(internal.users.applyVerifiedAuthUpsert, verified),
-    );
   },
 });
 

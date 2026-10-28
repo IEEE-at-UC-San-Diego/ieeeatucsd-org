@@ -97,7 +97,7 @@ function useAuthClient() {
 	const lastResolvedUserRef = useRef<{ logtoId: string; user: unknown } | null>(
 		null,
 	);
-	const upsertUser = useAction(api.users.upsertFromAuth);
+	const upsertUser = useAction(api.userAuth.upsertFromAuth);
 
 	const getIdTokenClaimsRef = useRef(getIdTokenClaims);
 	const getAccessTokenRef = useRef(getAccessToken);
@@ -425,7 +425,6 @@ function useAuthClient() {
 			cancelled = true;
 		};
 	}, [
-		accessToken,
 		authFailureReason,
 		convexSessionToken,
 		stableConvexUser,

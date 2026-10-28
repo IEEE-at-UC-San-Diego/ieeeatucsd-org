@@ -39,6 +39,8 @@ import type * as permissions from "../permissions.js";
 import type * as reimbursements from "../reimbursements.js";
 import type * as resume from "../resume.js";
 import type * as sponsorDomains from "../sponsorDomains.js";
+import type * as userAuth from "../userAuth.js";
+import type * as userAuthWrite from "../userAuthWrite.js";
 import type * as userProvisioning from "../userProvisioning.js";
 import type * as users from "../users.js";
 import type * as vcoPipeline from "../vcoPipeline.js";
@@ -79,6 +81,8 @@ declare const fullApi: ApiFromModules<{
   reimbursements: typeof reimbursements;
   resume: typeof resume;
   sponsorDomains: typeof sponsorDomains;
+  userAuth: typeof userAuth;
+  userAuthWrite: typeof userAuthWrite;
   userProvisioning: typeof userProvisioning;
   users: typeof users;
   vcoPipeline: typeof vcoPipeline;

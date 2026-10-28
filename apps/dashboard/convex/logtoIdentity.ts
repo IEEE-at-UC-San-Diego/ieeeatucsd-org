@@ -31,8 +31,10 @@ type JwksDocument = {
   keys?: JsonWebKeyWithKid[];
 };
 
-type AuthLike = {
-  getUserIdentity: () => Promise<UserIdentity | null>;
+export type AuthLike = {
+  auth: {
+    getUserIdentity: () => Promise<UserIdentity | null>;
+  };
 };
 
 const JWKS_TTL_MS = 10 * 60 * 1000;

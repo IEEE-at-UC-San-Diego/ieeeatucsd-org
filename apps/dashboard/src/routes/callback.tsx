@@ -42,7 +42,7 @@ function CallbackLoading({ label = "Signing you in..." }: { label?: string }) {
 function CallbackClient() {
 	const { getIdTokenClaims, getAccessToken, getIdToken, clearAllTokens } =
 		useLogto();
-	const upsertUser = useAction(api.users.upsertFromAuth);
+	const upsertUser = useAction(api.userAuth.upsertFromAuth);
 	const navigate = useNavigate();
 	const upsertStarted = useRef(false);
 	const [finalizeInProgress, setFinalizeInProgress] = useState(false);

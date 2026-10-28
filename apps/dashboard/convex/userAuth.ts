@@ -1,6 +1,11 @@
+import { anyApi } from "convex/server";
+import { v } from "convex/values";
+import { action } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { hasOfficerAccess, requireCurrentUser } from "./permissions";
+import type { AuthLike } from "./logtoIdentity";
 import { LogtoIdentity } from "./logtoIdentity";
+import { hasOfficerAccess, requireCurrentUser } from "./permissions";
+import type { AuthUpsertResult } from "./userProvisioning";
 import { buildAuthUpsertResult } from "./userProvisioning";
 
 export type VerifiedAuthUpsertArgs = {
@@ -43,7 +48,7 @@ const OFFICER_VISIBLE_USER_FIELDS = [
  */
 export class UserAuth {
   static async upsertFromAuth<T>(
-    ctx: { auth: { getUserIdentity: () => Promise<import("convex/server").UserIdentity | null> } },
+    ctx: AuthLike,
     args: UpsertFromAuthArgs,
     persist: (verified: VerifiedAuthUpsertArgs) => Promise<T>,
   ): Promise<T> {
@@ -257,3 +262,24 @@ export class UserAuth {
     return visible as Pick<T, Extract<keyof T, (typeof OFFICER_VISIBLE_USER_FIELDS)[number]>>;
   }
 }
+
+/**
+ * Provision or refresh the signed-in Logto user.
+ *
+ * `authToken` must be a Logto ID token (JWT). Client-supplied logtoId/email
+ * are not accepted — those fields are taken from Convex native auth or from
+ * a JWKS-verified ID token.
+ */
+export const upsertFromAuth = action({
+  args: {
+    authToken: v.string(),
+    name: v.optional(v.string()),
+    avatar: v.optional(v.string()),
+    signInMethod: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<AuthUpsertResult> => {
+    return await UserAuth.upsertFromAuth(ctx, args, (verified) =>
+      ctx.runMutation(anyApi.userAuthWrite.applyVerifiedAuthUpsert, verified),
+    );
+  },
+});
