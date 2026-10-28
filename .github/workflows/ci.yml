@@ -52,7 +52,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            DEPLOY_CONVEX=0
             PUBLIC_DASHBOARD_URL=https://dashboard.example.com
             PUBLIC_GOOGLE_CALENDAR_ID=placeholder@group.calendar.google.com
             VITE_APP_TITLE=IEEE at UC San Diego Dashboard

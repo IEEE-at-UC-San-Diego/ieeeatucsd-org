@@ -7,7 +7,7 @@ describe("resolveConvexDeploy", () => {
 		expect(result).toEqual({
 			action: "skip",
 			message:
-				"Skipping Convex deploy (DEPLOY_CONVEX is unset). CI and local image builds do not push functions.",
+				"Skipping Convex deploy (DEPLOY_CONVEX is unset). CI and local compose do not push functions.",
 		});
 	});
 

@@ -31,25 +31,26 @@ Configure these in Dokploy **Build Time Arguments** or Docker Compose `build.arg
 - `VITE_LOGTO_DIRECT_SIGN_IN_TARGET`
 - `VITE_GOOGLE_MAPS_API_KEY`
 
-### Dashboard Convex deploy arguments (Dokploy production only)
+### Dashboard Convex deploy (Dokploy production only)
 
-Set these on the **dashboard** application only. The website image never deploys Convex.
+Set these on the **dashboard** application **Environment Variables** (runtime), not as build arguments, and not on the website app.
 
-| Argument | Where in Dokploy | Required when |
+| Variable | Where in Dokploy | Required when |
 | --- | --- | --- |
-| `DEPLOY_CONVEX=1` | Dashboard **Build Time Arguments** | Production Dokploy deploys |
-| `CONVEX_SELF_HOSTED_ADMIN_KEY` | Dashboard **Build Time Arguments** (secret) | `DEPLOY_CONVEX=1` |
-| `CONVEX_SELF_HOSTED_URL` | Dashboard **Build Time Arguments** | Optional if `VITE_CONVEX_URL` is already the self-hosted Convex URL |
+| `DEPLOY_CONVEX=1` | Dashboard **Environment Variables** | Production Dokploy deploys |
+| `CONVEX_SELF_HOSTED_ADMIN_KEY` | Dashboard **Environment Variables** (secret) | `DEPLOY_CONVEX=1` |
+| `CONVEX_SELF_HOSTED_URL` | Dashboard **Environment Variables** | Optional if it is already set and matches the Convex HTTP URL |
+| `LOGTO_ENDPOINT` + `LOGTO_APP_ID` | Dashboard **Environment Variables** | `DEPLOY_CONVEX=1` (`convex/auth.config.ts` reads them at push time) |
 
-`apps/dashboard/scripts/deploy-convex.mjs` runs during the `dashboard` image build:
+The dashboard container entrypoint (`scripts/start-dashboard.mjs`) pushes Convex, then starts the Node server:
 
-- `DEPLOY_CONVEX` unset / `0` (CI, local `docker compose build`): skip Convex and succeed.
-- `DEPLOY_CONVEX=1` without URL or admin key: fail the build.
-- `DEPLOY_CONVEX=1` with credentials: `pnpm exec convex deploy -y` against the self-hosted backend. A failed push fails the Dokploy deploy.
+- `DEPLOY_CONVEX` unset / `0` (CI image builds, local compose): skip Convex and start the server.
+- `DEPLOY_CONVEX=1` without URL or admin key: exit non-zero and the container does not start.
+- `DEPLOY_CONVEX=1` with credentials: `pnpm exec convex deploy -y`. A failed push fails container start, so the Dokploy deploy is unhealthy.
 
-The admin key is an `ARG` on the `dashboard_builder` stage only. It is not `ENV`'d into the runtime `dashboard` image. Do not set `DEPLOY_CONVEX` on the website app.
+The push runs at **container start**, not during `docker build`. Dokploy's default Dockerfile builder reuses cached `RUN` layers when source and build args are unchanged (`--no-cache` only if Clean Cache is enabled). Registry and Swarm rollbacks restart a previous image and do not rebuild, so a build-time `convex deploy` would stay on the newer schema. Start-time push uses the `convex/` tree baked into that image, so a rollback to release A also pushes A's functions.
 
-This backend is **self-hosted Convex**, not Convex Cloud. There is no `CONVEX_DEPLOY_KEY`. Production already uses `CONVEX_SELF_HOSTED_URL` + `CONVEX_SELF_HOSTED_ADMIN_KEY` (see `AGENTS.md` and local `pnpm exec convex deploy -y`). `convex/auth.config.ts` also needs `VITE_LOGTO_ENDPOINT` / `VITE_LOGTO_APP_ID` (already dashboard build args) or `LOGTO_ENDPOINT` / `LOGTO_APP_ID` at deploy time.
+Do not set `DEPLOY_CONVEX` on the website app. This backend is **self-hosted Convex**, not Convex Cloud. There is no `CONVEX_DEPLOY_KEY`.
 
 ### Runtime-only secrets
 
@@ -57,12 +58,11 @@ Never pass these as Docker `ARG` values. Configure them as Dokploy runtime **Env
 
 - `RESEND_API_KEY`
 - `LOGTO_M2M_APP_SECRET`
+- `CONVEX_SELF_HOSTED_ADMIN_KEY`
 - `CONVEX_SESSION_SECRET`
 - `OPENROUTER_API_KEY`
 - MXRoute credentials
 - Google service account private keys
-
-`CONVEX_SELF_HOSTED_ADMIN_KEY` is the exception: Dokploy production must pass it as a **dashboard build-time** argument so `convex deploy` can run. Keep it marked secret in Dokploy. It is still fine to leave it as a runtime variable, but the runtime image does not need it.
 
 Public API keys are still restricted in their provider consoles. "Public" means browser-visible, not unrestricted.
 
@@ -102,7 +102,7 @@ Compose passes only browser-visible values through `build.args`. Private configu
 | Application port | `4323` |
 | Health path | `/api/health` |
 
-On the dashboard app only, add build-time arguments `DEPLOY_CONVEX=1` and `CONVEX_SELF_HOSTED_ADMIN_KEY`. If the Convex HTTP URL is not already `VITE_CONVEX_URL`, also set `CONVEX_SELF_HOSTED_URL`. Leave all three unset on the website app so functions deploy exactly once.
+On the dashboard app only, add runtime environment variables `DEPLOY_CONVEX=1` and `CONVEX_SELF_HOSTED_ADMIN_KEY`. If the Convex HTTP URL is not already present as `CONVEX_SELF_HOSTED_URL`, set that too. Leave all three unset on the website app so functions deploy exactly once.
 
 ## Rollout checklist
 
@@ -110,18 +110,27 @@ On the dashboard app only, add build-time arguments `DEPLOY_CONVEX=1` and `CONVE
 2. Classify every variable as build-time public, dashboard Convex-deploy secret, or runtime secret.
 3. Merge this repository change after CI passes.
 4. Update Dokploy website build arguments to public values only.
-5. On the dashboard app, set public `VITE_*` build arguments plus `DEPLOY_CONVEX=1` and `CONVEX_SELF_HOSTED_ADMIN_KEY` (secret).
-6. Confirm remaining runtime secrets are present.
+5. On the dashboard app, set public `VITE_*` build arguments and runtime `DEPLOY_CONVEX=1` plus `CONVEX_SELF_HOSTED_ADMIN_KEY` (secret).
+6. Confirm remaining runtime secrets are present, including `LOGTO_ENDPOINT` and `LOGTO_APP_ID`.
 7. Redeploy website, verify health, public pages, sponsor form, and server APIs.
-8. Redeploy dashboard, confirm the build log contains `Deploying Convex functions and schema to …`, then verify health, sign-in, Convex, onboarding, email actions, and file workflows.
-9. Confirm build logs and image history do not print the admin key.
-10. Remove obsolete private build-argument entries from Dokploy (except the dashboard Convex deploy key).
+8. Redeploy dashboard, confirm the **container** log contains `Deploying Convex functions and schema to …`, then verify health, sign-in, Convex, onboarding, email actions, and file workflows.
+9. Confirm image history does not contain the admin key (it is runtime-only).
+10. Remove obsolete private build-argument entries from Dokploy.
 
 ## Rollback
 
-1. Redeploy the previously successful image or commit in Dokploy.
-2. Restore the previous build-argument configuration if the old Dockerfile required private build args.
-3. Keep runtime variables in place; they are compatible with both configurations.
+Dokploy rollbacks do **not** rebuild:
+
+- Registry rollback starts the image saved for that deployment.
+- Swarm health-check rollback restarts the previous task.
+
+A build-time `convex deploy` would therefore stay on the newer schema when the dashboard image rolls back. The dashboard entrypoint pushes the `convex/` tree that shipped in **that** image, then starts the server. Rolling back to release A pushes A's functions before A listens.
+
+1. Roll back the dashboard application to the previous successful deployment (or redeploy that commit).
+2. Confirm the container log for the rolled-back image contains `Deploying Convex functions and schema to …` and that the push finished before `/api/health` became ready.
+3. Restore the previous build-argument configuration only if the old Dockerfile required different public `VITE_*` / `PUBLIC_*` values.
+4. Keep runtime variables in place, including `DEPLOY_CONVEX=1` and `CONVEX_SELF_HOSTED_ADMIN_KEY`. Do not unset `DEPLOY_CONVEX` during a rollback.
+5. Website-only rollback does not change Convex. Always roll the dashboard back when the functions must match an older UI.
 
 ## Health checks
 

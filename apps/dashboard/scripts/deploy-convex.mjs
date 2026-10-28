@@ -8,8 +8,11 @@ const TRUTHY = new Set(["1", "true", "yes", "on"]);
  * Decide whether this image build should push Convex functions.
  *
  * Production Dokploy sets DEPLOY_CONVEX=1 on the dashboard app only.
- * CI and local `docker compose build` leave it unset so we never push
- * from a pull-request or a laptop.
+ * The dashboard entrypoint runs this on every container start so a
+ * cached image rebuild or a Dokploy rollback still pushes the Convex
+ * source that shipped in that image.
+ * CI image builds and local compose leave the flag unset so we never
+ * push from a pull-request or a laptop.
  *
  * @param {NodeJS.ProcessEnv} env
  * @returns {{ action: "skip"; message: string } | { action: "fail"; message: string } | { action: "deploy"; url: string }}
@@ -20,7 +23,7 @@ export function resolveConvexDeploy(env) {
 		return {
 			action: "skip",
 			message:
-				"Skipping Convex deploy (DEPLOY_CONVEX is unset). CI and local image builds do not push functions.",
+				"Skipping Convex deploy (DEPLOY_CONVEX is unset). CI and local compose do not push functions.",
 		};
 	}
 
@@ -73,10 +76,10 @@ function runConvexDeploy(url) {
 
 	if (spawned.error) {
 		console.error(spawned.error);
-		process.exit(1);
+		return 1;
 	}
 
-	process.exit(spawned.status ?? 1);
+	return spawned.status ?? 1;
 }
 
 export function main(env = process.env) {
@@ -89,8 +92,7 @@ export function main(env = process.env) {
 		console.error(result.message);
 		return 1;
 	}
-	runConvexDeploy(result.url);
-	return 0;
+	return runConvexDeploy(result.url);
 }
 
 if (isDirectRun()) {

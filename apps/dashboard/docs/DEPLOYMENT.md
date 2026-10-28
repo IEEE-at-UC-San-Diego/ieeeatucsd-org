@@ -6,17 +6,18 @@ Shared Docker targets, Dokploy fields, and build-time vs runtime variable policy
 
 Convex is **self-hosted**. Functions and schema live in `apps/dashboard/convex/` and are not deployed by the website image.
 
-Today a Dokploy deploy builds the website and dashboard images only. `convex deploy` is a separate CLI step (`CONVEX_SELF_HOSTED_URL=… CONVEX_SELF_HOSTED_ADMIN_KEY=… pnpm exec convex deploy -y` from `apps/dashboard`). The dashboard Docker build now runs that step when `DEPLOY_CONVEX=1`.
+Today a Dokploy deploy builds the website and dashboard images only. `convex deploy` is a separate CLI step (`CONVEX_SELF_HOSTED_URL=… CONVEX_SELF_HOSTED_ADMIN_KEY=… pnpm exec convex deploy -y` from `apps/dashboard`). The dashboard container now runs that step on start when `DEPLOY_CONVEX=1`.
 
-Set these on the **dashboard** Dokploy application **Build Time Arguments** (not on the website app):
+Set these on the **dashboard** Dokploy application **Environment Variables** (not build arguments, not on the website app):
 
 | Variable | Value |
 | --- | --- |
 | `DEPLOY_CONVEX` | `1` |
 | `CONVEX_SELF_HOSTED_ADMIN_KEY` | Admin key from the self-hosted Convex instance (secret) |
-| `CONVEX_SELF_HOSTED_URL` | Convex HTTP URL, if it is not already `VITE_CONVEX_URL` |
+| `CONVEX_SELF_HOSTED_URL` | Convex HTTP URL, if it is not already set |
+| `LOGTO_ENDPOINT` / `LOGTO_APP_ID` | Required by `convex/auth.config.ts` at push time |
 
-CI docker jobs pass `DEPLOY_CONVEX=0` and skip the push. A production build with the flag set and a missing key or a failed `convex deploy` fails the image build.
+CI docker jobs only build the image and do not start it, so they never push. Local compose leaves `DEPLOY_CONVEX` unset and the start wrapper skips. A production start with the flag set and a missing key or a failed `convex deploy` exits before the server listens.
 
 ## Quick Start
 
@@ -96,7 +97,7 @@ docker build -t dashboard . --target dashboard \
   # ... additional build args
 ```
 
-Production Dokploy also passes `--build-arg DEPLOY_CONVEX=1` and `--build-arg CONVEX_SELF_HOSTED_ADMIN_KEY=…`. Omit those locally; the build logs `Skipping Convex deploy` and continues.
+Production Dokploy sets `DEPLOY_CONVEX=1` as a **runtime** environment variable. Omit it locally; the start wrapper logs `Skipping Convex deploy` and continues.
 
 ### Run
 
