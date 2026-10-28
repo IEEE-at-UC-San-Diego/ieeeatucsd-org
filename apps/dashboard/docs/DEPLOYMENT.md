@@ -2,6 +2,22 @@
 
 Shared Docker targets, Dokploy fields, and build-time vs runtime variable policy live in the root guide: [`docs/deployment.md`](../../../docs/deployment.md).
 
+## Convex functions (Dokploy)
+
+Convex is **self-hosted**. Functions and schema live in `apps/dashboard/convex/` and are not deployed by the website image.
+
+Today a Dokploy deploy builds the website and dashboard images only. `convex deploy` is a separate CLI step (`CONVEX_SELF_HOSTED_URL=… CONVEX_SELF_HOSTED_ADMIN_KEY=… pnpm exec convex deploy -y` from `apps/dashboard`). The dashboard Docker build now runs that step when `DEPLOY_CONVEX=1`.
+
+Set these on the **dashboard** Dokploy application **Build Time Arguments** (not on the website app):
+
+| Variable | Value |
+| --- | --- |
+| `DEPLOY_CONVEX` | `1` |
+| `CONVEX_SELF_HOSTED_ADMIN_KEY` | Admin key from the self-hosted Convex instance (secret) |
+| `CONVEX_SELF_HOSTED_URL` | Convex HTTP URL, if it is not already `VITE_CONVEX_URL` |
+
+CI docker jobs pass `DEPLOY_CONVEX=0` and skip the push. A production build with the flag set and a missing key or a failed `convex deploy` fails the image build.
+
 ## Quick Start
 
 ```bash
@@ -79,6 +95,8 @@ docker build -t dashboard . --target dashboard \
   --build-arg VITE_LOGTO_ENDPOINT=${VITE_LOGTO_ENDPOINT} \
   # ... additional build args
 ```
+
+Production Dokploy also passes `--build-arg DEPLOY_CONVEX=1` and `--build-arg CONVEX_SELF_HOSTED_ADMIN_KEY=…`. Omit those locally; the build logs `Skipping Convex deploy` and continues.
 
 ### Run
 

@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "format": "biome format",
     "lint": "biome lint",
-    "check": "biome check --linter-enabled=false"
+    "check": "biome check --linter-enabled=false",
+    "deploy:convex": "node ./scripts/deploy-convex.mjs"
   },
   "dependencies": {
     "@convex-dev/react-query": "0.1.0",

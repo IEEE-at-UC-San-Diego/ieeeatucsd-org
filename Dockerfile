@@ -112,6 +112,14 @@ ENV VITE_APP_TITLE=$VITE_APP_TITLE \
 COPY --from=dashboard_pruner /app/out/full/ .
 RUN --mount=type=cache,target=/app/.turbo,id=turbo-dashboard \
     pnpm exec turbo run build --filter=@ieeeatucsd/dashboard
+# Convex functions live in apps/dashboard/convex. Push them only from this
+# dashboard image so a Dokploy deploy of website + dashboard hits Convex once.
+# CI and local compose leave DEPLOY_CONVEX unset and the script exits 0.
+# Dokploy production must set DEPLOY_CONVEX=1; a failed push fails the build.
+ARG DEPLOY_CONVEX
+ARG CONVEX_SELF_HOSTED_URL
+ARG CONVEX_SELF_HOSTED_ADMIN_KEY
+RUN pnpm --filter=@ieeeatucsd/dashboard deploy:convex
 RUN pnpm --filter=@ieeeatucsd/dashboard --prod deploy --legacy /prod/dashboard \
     && rm -rf /prod/dashboard/.output \
     && cp -a /app/apps/dashboard/.output /prod/dashboard/.output

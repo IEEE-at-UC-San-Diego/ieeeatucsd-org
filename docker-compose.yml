@@ -47,6 +47,8 @@ services:
       dockerfile: Dockerfile
       target: dashboard
       args:
+        # DEPLOY_CONVEX is omitted on purpose: local compose must not push
+        # Convex functions. Dokploy production sets it on the dashboard app.
         VITE_APP_TITLE: ${VITE_APP_TITLE:-IEEE at UC San Diego Dashboard}
         VITE_CONVEX_URL: ${VITE_CONVEX_URL}
         VITE_LOGTO_ENDPOINT: ${VITE_LOGTO_ENDPOINT}
