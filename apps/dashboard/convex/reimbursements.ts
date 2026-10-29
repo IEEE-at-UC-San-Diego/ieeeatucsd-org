@@ -101,7 +101,7 @@ export const create = mutation({
       data.receipts,
       attachedIds,
     );
-    return await ctx.db.insert("reimbursements", {
+    const reimbursementId = await ctx.db.insert("reimbursements", {
       ...data,
       receipts,
       status: "submitted",
@@ -114,6 +114,12 @@ export const create = mutation({
         },
       ],
     });
+    await ReimbursementStorageAccess.recordFileRefs(
+      ctx,
+      reimbursementId,
+      attachedIds,
+    );
+    return reimbursementId;
   },
 });
 
@@ -220,6 +226,11 @@ export const updatePaymentDetails = mutation({
       },
       auditLogs,
     });
+    await ReimbursementStorageAccess.recordFileRefs(
+      ctx,
+      args.id,
+      attachedIds,
+    );
     return args.id;
   },
 });
@@ -235,6 +246,7 @@ export const remove = mutation({
     const reimbursement = await ctx.db.get(args.id);
     if (!reimbursement) throw new Error("Reimbursement not found");
     assertReimbursementDeletable(reimbursement.status);
+    await ReimbursementStorageAccess.deleteFileRefs(ctx, args.id);
     await ctx.db.delete(args.id);
     return args.id;
   },
