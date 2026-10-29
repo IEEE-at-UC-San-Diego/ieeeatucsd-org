@@ -55,6 +55,8 @@ export class OfficerInvitationAccess {
   static readonly AUTH_REQUIRED = "Authentication required";
   static readonly EMAIL_MISMATCH =
     "Invitation email does not match authenticated user";
+  static readonly SUBJECT_CONFLICT =
+    "User is already bound to another account";
 
   static normalizeEmail(email: string) {
     return email.trim().toLowerCase();
@@ -138,6 +140,15 @@ export class OfficerInvitationAccess {
     };
   }
 
+  static assertReusableGrantTarget(
+    existingUser: { logtoId?: string | null } | null | undefined,
+    subject: string,
+  ) {
+    if (existingUser?.logtoId && existingUser.logtoId !== subject) {
+      throw new Error(OfficerInvitationAccess.SUBJECT_CONFLICT);
+    }
+  }
+
   static async findExistingUserForGrant(
     ctx: Pick<MutationCtx, "db">,
     subject: string,
@@ -150,10 +161,12 @@ export class OfficerInvitationAccess {
         .first();
       if (bySubject) return bySubject;
     }
-    return await ctx.db
+    const byEmail = await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
       .first();
+    OfficerInvitationAccess.assertReusableGrantTarget(byEmail, subject);
+    return byEmail;
   }
 
   static async accept(
@@ -209,6 +222,10 @@ export class OfficerInvitationAccess {
     );
 
     let roleGranted = false;
+    OfficerInvitationAccess.assertReusableGrantTarget(
+      existingUser,
+      caller.subject,
+    );
     if (existingUser) {
       await ctx.db.patch(existingUser._id, {
         role: invitation.role,

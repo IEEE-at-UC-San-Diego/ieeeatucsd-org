@@ -311,6 +311,61 @@ describe("OfficerInvitationAccess.accept", () => {
     expect(db._tables.officerInvitations[0]?.status).toBe("accepted");
   });
 
+  it("rejects accept when the invitation email is already bound to another Logto subject", async () => {
+    const db = createMockDb({
+      invitations: [invitation()],
+      users: [
+        memberUser({
+          _id: "users_other",
+          logtoId: "logto|other",
+          email: "alex@ucsd.edu",
+        }),
+      ],
+    });
+    const authToken = await mintSessionToken("logto|alex", "alex@ucsd.edu");
+
+    await expect(
+      OfficerInvitationAccess.accept(ctxFrom(db) as never, {
+        id: INVITE_ID,
+        logtoId: "logto|alex",
+        authToken,
+      }),
+    ).rejects.toThrow(OfficerInvitationAccess.SUBJECT_CONFLICT);
+    expect(db._tables.officerInvitations[0]?.status).toBe("pending");
+    expect(db._tables.users).toHaveLength(1);
+    expect(db._tables.users[0]?._id).toBe("users_other");
+    expect(db._tables.users[0]?.logtoId).toBe("logto|other");
+    expect(db._tables.users[0]?.role).toBe("Member");
+    expect(db._tables.users[0]?.position).toBeUndefined();
+  });
+
+  it("reuses an email-matched user only when that row is not bound to a subject", async () => {
+    const db = createMockDb({
+      invitations: [invitation()],
+      users: [
+        memberUser({
+          _id: "users_unbound",
+          logtoId: undefined,
+          email: "alex@ucsd.edu",
+        }),
+      ],
+    });
+    const authToken = await mintSessionToken("logto|alex", "alex@ucsd.edu");
+
+    const result = await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
+      id: INVITE_ID,
+      logtoId: "logto|alex",
+      authToken,
+    });
+
+    expect(result.status).toBe("accepted");
+    expect(result.roleGranted).toBe(true);
+    expect(db._tables.users).toHaveLength(1);
+    expect(db._tables.users[0]?._id).toBe("users_unbound");
+    expect(db._tables.users[0]?.logtoId).toBe("logto|alex");
+    expect(db._tables.users[0]?.role).toBe("General Officer");
+  });
+
   it("rejects a first-time invitee whose session has no matching email", async () => {
     const db = createMockDb({
       invitations: [invitation()],
