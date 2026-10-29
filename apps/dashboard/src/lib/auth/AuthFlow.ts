@@ -74,6 +74,27 @@ export type AuthRecoveryAction = "soft_rebootstrap" | "hard_clear";
  */
 export class AuthFlow {
 	static readonly REBOOTSTRAP_LATCH_KEY = "auth-retry:session-init-rebootstrap";
+	static readonly POST_LOGIN_REDIRECT_KEY = "auth:post-login-redirect";
+
+	static isSafePostLoginRedirect(path: string) {
+		return /^\/accept-invitation\/[A-Za-z0-9_-]+$/.test(path);
+	}
+
+	static stashPostLoginRedirect(path: string) {
+		if (typeof window === "undefined") return;
+		if (!AuthFlow.isSafePostLoginRedirect(path)) return;
+		window.sessionStorage.setItem(AuthFlow.POST_LOGIN_REDIRECT_KEY, path);
+	}
+
+	static consumePostLoginRedirect() {
+		if (typeof window === "undefined") return null;
+		const path = window.sessionStorage.getItem(
+			AuthFlow.POST_LOGIN_REDIRECT_KEY,
+		);
+		window.sessionStorage.removeItem(AuthFlow.POST_LOGIN_REDIRECT_KEY);
+		if (!path || !AuthFlow.isSafePostLoginRedirect(path)) return null;
+		return path;
+	}
 
 	static resolveStableUser<TUser>({
 		logtoId,
@@ -250,6 +271,9 @@ export class AuthFlow {
 			signInMethod: "logto",
 		});
 
-		return AuthFlow.postSignInRedirectPath(user.signedUp, user.role);
+		return (
+			AuthFlow.consumePostLoginRedirect() ??
+			AuthFlow.postSignInRedirectPath(user.signedUp, user.role)
+		);
 	}
 }

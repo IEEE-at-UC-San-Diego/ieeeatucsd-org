@@ -3,29 +3,34 @@ import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { ReimbursementStorageAccess } from "./reimbursementStorageAccess";
 
-const http = httpRouter();
+export class ReimbursementUploadHttp {
+  static readonly corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
-
-function jsonResponse(body: unknown, status: number) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "application/json",
-    },
-  });
+  static jsonResponse(body: unknown, status: number) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: {
+        ...ReimbursementUploadHttp.corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
+  }
 }
+
+const http = httpRouter();
 
 http.route({
   path: "/reimbursement-upload",
   method: "OPTIONS",
   handler: httpAction(async () => {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: ReimbursementUploadHttp.corsHeaders,
+    });
   }),
 });
 
@@ -37,7 +42,7 @@ http.route({
     try {
       await ctx.runQuery(internal.reimbursements.assertUploadTicket, { token });
     } catch {
-      return jsonResponse(
+      return ReimbursementUploadHttp.jsonResponse(
         { error: ReimbursementStorageAccess.UNAUTHORIZED },
         401,
       );
@@ -45,7 +50,7 @@ http.route({
 
     const blob = await request.blob();
     if (!blob.size) {
-      return jsonResponse(
+      return ReimbursementUploadHttp.jsonResponse(
         { error: ReimbursementStorageAccess.UNAUTHORIZED },
         401,
       );
@@ -59,13 +64,13 @@ http.route({
       });
     } catch {
       await ctx.storage.delete(storageId);
-      return jsonResponse(
+      return ReimbursementUploadHttp.jsonResponse(
         { error: ReimbursementStorageAccess.UNAUTHORIZED },
         401,
       );
     }
 
-    return jsonResponse({ storageId }, 200);
+    return ReimbursementUploadHttp.jsonResponse({ storageId }, 200);
   }),
 });
 

@@ -136,12 +136,15 @@ export class AcceptInvitationApi {
 			googleGroupAssigned?: boolean;
 			googleGroup?: string;
 		},
+		auth: { logtoId: string; authToken: string },
 	) {
 		const recordFn =
 			"officerInvitations:recordAcceptanceSideEffects" as unknown as FunctionReference<"mutation">;
 		await convex.mutation(recordFn, {
 			id: inviteId,
 			serverSecret: process.env.CONVEX_SESSION_SECRET ?? "",
+			logtoId: auth.logtoId,
+			authToken: auth.authToken,
 			...data,
 		});
 	}
@@ -177,7 +180,9 @@ export class AcceptInvitationApi {
 
 	static async handlePost({ request }: { request: Request }) {
 		try {
-			const authResult = await AcceptInvitationApi.requireAuth(request);
+			const authResult = await AcceptInvitationApi.requireAuth(request, {
+				allowUnprovisionedUser: true,
+			});
 			if (authResult instanceof Response) return authResult;
 
 			const { body, logtoId, user, claims } = authResult;
@@ -187,6 +192,7 @@ export class AcceptInvitationApi {
 				typeof body.selectedPosition === "string"
 					? body.selectedPosition
 					: undefined;
+			const email = typeof body.email === "string" ? body.email : "";
 
 			if (!inviteId) {
 				return AcceptInvitationApi.json({ error: "Missing inviteId" }, 400);
@@ -220,9 +226,28 @@ export class AcceptInvitationApi {
 				AcceptInvitationApi.invitationUnavailableResponse(invitation);
 			if (unavailable) return unavailable;
 
+			if (action === "accept" && !email.trim()) {
+				return AcceptInvitationApi.json(
+					{
+						error: "Enter the email address that received this invitation",
+					},
+					400,
+				);
+			}
+			if (
+				action === "accept" &&
+				!OfficerInvitationAccess.emailsMatch(email, invitation.email)
+			) {
+				return AcceptInvitationApi.json(
+					{ error: "Invitation email does not match" },
+					403,
+				);
+			}
+
 			const { token } = AcceptInvitationApi.createSession({
 				sub: logtoId,
 				role: user.role as UserRole | undefined,
+				email: callerEmail,
 			});
 
 			if (action === "decline") {
@@ -306,13 +331,20 @@ export class AcceptInvitationApi {
 				warnings.push(...googleGroupResult.warnings);
 			}
 
-			await AcceptInvitationApi.recordAcceptanceSideEffects(convex, inviteId, {
-				onboardingEmailSent,
-				roleGranted: Boolean(acceptedInvitation.roleGranted || logtoUpdated),
-				userCreatedOrUpdated: Boolean(acceptedInvitation.userCreatedOrUpdated),
-				googleGroupAssigned,
-				googleGroup: resolvedGoogleGroup || undefined,
-			});
+			await AcceptInvitationApi.recordAcceptanceSideEffects(
+				convex,
+				inviteId,
+				{
+					onboardingEmailSent,
+					roleGranted: Boolean(acceptedInvitation.roleGranted || logtoUpdated),
+					userCreatedOrUpdated: Boolean(
+						acceptedInvitation.userCreatedOrUpdated,
+					),
+					googleGroupAssigned,
+					googleGroup: resolvedGoogleGroup || undefined,
+				},
+				{ logtoId, authToken: token },
+			);
 
 			return AcceptInvitationApi.json({
 				success: true,
