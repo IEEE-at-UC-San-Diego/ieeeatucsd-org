@@ -5,6 +5,7 @@ import {
   type PendingReimbursementUpload,
   type ReimbursementStorageRecord,
   type ReimbursementStorageUser,
+  type ReimbursementUploadTicket,
 } from "./reimbursementStorageAccess";
 
 const STORAGE_A = "kg2receiptA" as Id<"_storage">;
@@ -32,11 +33,18 @@ function ctxWith(
   reimbursements: ReimbursementStorageRecord[],
   metadata: Record<string, { _creationTime?: number } | null> = {},
   pending: PendingReimbursementUpload[] = [],
+  tickets: ReimbursementUploadTicket[] = [],
 ) {
   const pendingRows = pending.map((row, index) => ({
     _id:
       row._id ??
       (`pending_${row.storageId}_${index}` as Id<"pendingReimbursementUploads">),
+    ...row,
+  }));
+  const ticketRows = tickets.map((row, index) => ({
+    _id:
+      row._id ??
+      (`ticket_${row.tokenHash}_${index}` as Id<"reimbursementUploadTickets">),
     ...row,
   }));
   return {
@@ -75,16 +83,65 @@ function ctxWith(
             },
           };
         }
+        if (table === "reimbursementUploadTickets") {
+          return {
+            collect: async () => ticketRows,
+            withIndex(
+              name: string,
+              builder: (q: {
+                eq: (field: string, value: unknown) => unknown;
+              }) => unknown,
+            ) {
+              let value: unknown;
+              builder({
+                eq: (_field, nextValue) => {
+                  value = nextValue;
+                  return { value };
+                },
+              });
+              const matched = ticketRows.filter((row) =>
+                name === "by_uploadedBy"
+                  ? row.uploadedBy === value
+                  : row.tokenHash === value,
+              );
+              return {
+                first: async () => matched[0] ?? null,
+              };
+            },
+          };
+        }
         throw new Error(`unexpected table ${table}`);
       },
-      insert: async (table: string, doc: PendingReimbursementUpload) => {
-        if (table !== "pendingReimbursementUploads") {
-          throw new Error(`unexpected insert ${table}`);
+      insert: async (
+        table: string,
+        doc: PendingReimbursementUpload | ReimbursementUploadTicket,
+      ) => {
+        if (table === "pendingReimbursementUploads") {
+          const id =
+            `pending_${pendingRows.length + 1}` as Id<"pendingReimbursementUploads">;
+          pendingRows.push({
+            _id: id,
+            ...(doc as PendingReimbursementUpload),
+          });
+          return id;
         }
-        const id =
-          `pending_${pendingRows.length + 1}` as Id<"pendingReimbursementUploads">;
-        pendingRows.push({ _id: id, ...doc });
-        return id;
+        if (table === "reimbursementUploadTickets") {
+          const id =
+            `ticket_${ticketRows.length + 1}` as Id<"reimbursementUploadTickets">;
+          ticketRows.push({
+            _id: id,
+            ...(doc as ReimbursementUploadTicket),
+          });
+          return id;
+        }
+        throw new Error(`unexpected insert ${table}`);
+      },
+      patch: async (
+        id: Id<"reimbursementUploadTickets">,
+        fields: Partial<ReimbursementUploadTicket>,
+      ) => {
+        const row = ticketRows.find((ticket) => ticket._id === id);
+        if (row) Object.assign(row, fields);
       },
       delete: async (id: Id<"pendingReimbursementUploads">) => {
         const index = pendingRows.findIndex((row) => row._id === id);
@@ -95,6 +152,7 @@ function ctxWith(
       },
     },
     _pending: pendingRows,
+    _tickets: ticketRows,
   };
 }
 
@@ -309,51 +367,86 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
   });
 });
 
+describe("ReimbursementStorageAccess.uploadUrlForToken", () => {
+  it("builds a site URL that carries the caller-issued token", () => {
+    const previous = process.env.CONVEX_SITE_URL;
+    process.env.CONVEX_SITE_URL = "https://example.convex.site";
+    expect(ReimbursementStorageAccess.uploadUrlForToken("alice-token")).toBe(
+      "https://example.convex.site/reimbursement-upload?token=alice-token",
+    );
+    if (previous === undefined) {
+      delete process.env.CONVEX_SITE_URL;
+    } else {
+      process.env.CONVEX_SITE_URL = previous;
+    }
+  });
+});
+
 describe("ReimbursementStorageAccess.registerPendingUpload", () => {
-  it("records the caller as the uploader of a fresh storage id", async () => {
+  it("rejects another user who tries to claim a fresh upload", async () => {
     const now = Date.now();
     const ctx = ctxWith([], {
       [STORAGE_NEW]: { _creationTime: now - 1_000 },
     });
 
-    await ReimbursementStorageAccess.registerPendingUpload(
-      ctx as never,
-      member(),
-      STORAGE_NEW,
-      now,
-    );
-
-    expect(ctx._pending).toEqual([
-      {
-        _id: "pending_1",
-        storageId: STORAGE_NEW,
-        uploadedBy: "logto|alice",
-        createdAt: now,
-      },
-    ]);
     await expect(
-      ReimbursementStorageAccess.assertCanResolve(
+      ReimbursementStorageAccess.registerPendingUpload(
+        ctx as never,
+        member({ logtoId: "logto|bob" }),
+        STORAGE_NEW,
+        now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+    expect(ctx._pending).toEqual([]);
+  });
+
+  it("does not let the caller first-claim a storage id they did not upload", async () => {
+    const now = Date.now();
+    const ctx = ctxWith([], {
+      [STORAGE_NEW]: { _creationTime: now - 1_000 },
+    });
+
+    await expect(
+      ReimbursementStorageAccess.registerPendingUpload(
         ctx as never,
         member(),
         STORAGE_NEW,
         now,
       ),
-    ).resolves.toBeUndefined();
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+    expect(ctx._pending).toEqual([]);
   });
 
-  it("does not let a second signed-in user claim the same fresh upload", async () => {
+  it("confirms the ticketed uploader and rejects a second signed-in user", async () => {
     const now = Date.now();
     const ctx = ctxWith([], {
-      [STORAGE_NEW]: { _creationTime: now - 1_000 },
+      [STORAGE_NEW]: { _creationTime: now - 500 },
     });
-
-    await ReimbursementStorageAccess.registerPendingUpload(
+    const token = await ReimbursementStorageAccess.issueUploadTicket(
       ctx as never,
       member(),
+      now - 1_000,
+      "alice-upload-token",
+    );
+
+    await ReimbursementStorageAccess.completeTicketedUpload(
+      ctx as never,
+      token,
       STORAGE_NEW,
       now,
     );
 
+    await expect(
+      ReimbursementStorageAccess.registerPendingUpload(
+        ctx as never,
+        member(),
+        STORAGE_NEW,
+        now,
+      ),
+    ).resolves.toMatchObject({
+      storageId: STORAGE_NEW,
+      uploadedBy: "logto|alice",
+    });
     await expect(
       ReimbursementStorageAccess.registerPendingUpload(
         ctx as never,
@@ -370,6 +463,58 @@ describe("ReimbursementStorageAccess.registerPendingUpload", () => {
         now,
       ),
     ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+  });
+
+  it("rejects completing a ticketed upload with another user's token", async () => {
+    const now = Date.now();
+    const ctx = ctxWith([], {
+      [STORAGE_NEW]: { _creationTime: now - 500 },
+    });
+    await ReimbursementStorageAccess.issueUploadTicket(
+      ctx as never,
+      member(),
+      now - 1_000,
+      "alice-upload-token",
+    );
+
+    await expect(
+      ReimbursementStorageAccess.completeTicketedUpload(
+        ctx as never,
+        "bob-forged-token",
+        STORAGE_NEW,
+        now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+    expect(ctx._pending).toEqual([]);
+  });
+
+  it("rejects claiming a storage id that is already referenced", async () => {
+    const now = Date.now();
+    const ctx = ctxWith(
+      [
+        reimbursement({
+          submittedBy: "logto|alice",
+          receipts: [{ receiptFile: STORAGE_NEW }],
+        }),
+      ],
+      { [STORAGE_NEW]: { _creationTime: now - 500 } },
+    );
+    const token = await ReimbursementStorageAccess.issueUploadTicket(
+      ctx as never,
+      member({ logtoId: "logto|bob" }),
+      now - 1_000,
+      "bob-upload-token",
+    );
+
+    await expect(
+      ReimbursementStorageAccess.completeTicketedUpload(
+        ctx as never,
+        token,
+        STORAGE_NEW,
+        now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+    expect(ctx._pending).toEqual([]);
   });
 });
 

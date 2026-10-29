@@ -1,5 +1,5 @@
 import type { Id } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { hasAdminAccess, type UserRole } from "./permissions";
 
 export type ReimbursementStorageUser = {
@@ -21,6 +21,15 @@ export type PendingReimbursementUpload = {
   createdAt: number;
 };
 
+export type ReimbursementUploadTicket = {
+  _id?: Id<"reimbursementUploadTickets">;
+  tokenHash: string;
+  uploadedBy: string;
+  createdAt: number;
+  storageId?: Id<"_storage">;
+};
+
+type StorageReadCtx = Pick<QueryCtx, "db">;
 type StorageLookupCtx = Pick<MutationCtx, "db">;
 
 /**
@@ -34,6 +43,11 @@ type StorageLookupCtx = Pick<MutationCtx, "db">;
  * `create` / `updatePaymentDetails`: every caller-supplied storage ID
  * must have an unexpired pending claim by the same uploader. The claim
  * is consumed on attach so it cannot be reused.
+ *
+ * Upload ownership is established when the caller-specific ticket from
+ * `generateUploadUrl` is consumed by the HTTP upload action after
+ * `ctx.storage.store`. `registerPendingUpload` only confirms that claim;
+ * it cannot first-claim an arbitrary storage ID.
  */
 export class ReimbursementStorageAccess {
   static readonly UNAUTHORIZED = "Unauthorized";
@@ -41,6 +55,58 @@ export class ReimbursementStorageAccess {
 
   static callerId(user: ReimbursementStorageUser) {
     return user.logtoId ?? user.authUserId ?? "";
+  }
+
+  static createToken() {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
+      "",
+    );
+  }
+
+  static async hashToken(token: string) {
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(token),
+    );
+    return Array.from(new Uint8Array(digest), (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+  }
+
+  static siteUrl() {
+    const explicit =
+      process.env.CONVEX_SITE_URL ||
+      process.env.CONVEX_SITE_ORIGIN ||
+      process.env.VITE_CONVEX_SITE_URL;
+    if (explicit) return explicit.replace(/\/$/, "");
+
+    const backend =
+      process.env.CONVEX_URL ||
+      process.env.CONVEX_SELF_HOSTED_URL ||
+      process.env.VITE_CONVEX_URL;
+    if (backend) {
+      try {
+        const url = new URL(backend);
+        if (url.hostname.endsWith(".convex.cloud")) {
+          url.hostname = url.hostname.replace(/\.convex\.cloud$/, ".convex.site");
+          url.port = "";
+          return url.origin;
+        }
+        if (url.port === "3210") {
+          url.port = "3211";
+          return url.origin;
+        }
+      } catch {
+        // Fall through to the explicit error below.
+      }
+    }
+    throw new Error("CONVEX_SITE_URL is not configured");
+  }
+
+  static uploadUrlForToken(token: string) {
+    return `${ReimbursementStorageAccess.siteUrl()}/reimbursement-upload?token=${encodeURIComponent(token)}`;
   }
 
   static canViewAllReimbursementFiles(role: UserRole) {
@@ -158,7 +224,7 @@ export class ReimbursementStorageAccess {
   }
 
   static async findPendingUpload(
-    ctx: StorageLookupCtx,
+    ctx: StorageReadCtx,
     storageId: Id<"_storage">,
   ) {
     return await ctx.db
@@ -168,7 +234,7 @@ export class ReimbursementStorageAccess {
   }
 
   static async assertRecentOwnedUpload(
-    ctx: StorageLookupCtx,
+    ctx: StorageReadCtx,
     user: ReimbursementStorageUser,
     storageId: Id<"_storage">,
     nowMs = Date.now(),
@@ -200,14 +266,86 @@ export class ReimbursementStorageAccess {
     }
   }
 
-  static async registerPendingUpload(
+  static async findUploadTicket(
+    ctx: StorageReadCtx,
+    tokenHash: string,
+  ) {
+    return await ctx.db
+      .query("reimbursementUploadTickets")
+      .withIndex("by_tokenHash", (q) => q.eq("tokenHash", tokenHash))
+      .first();
+  }
+
+  static async issueUploadTicket(
     ctx: StorageLookupCtx,
     user: ReimbursementStorageUser,
-    storageId: Id<"_storage">,
     nowMs = Date.now(),
+    token = ReimbursementStorageAccess.createToken(),
   ) {
     const userId = ReimbursementStorageAccess.callerId(user);
     if (!userId) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+
+    const tokenHash = await ReimbursementStorageAccess.hashToken(token);
+    await ctx.db.insert("reimbursementUploadTickets", {
+      tokenHash,
+      uploadedBy: userId,
+      createdAt: nowMs,
+    });
+    return token;
+  }
+
+  static async assertUploadTicket(
+    ctx: StorageReadCtx,
+    token: string,
+    nowMs = Date.now(),
+  ) {
+    if (!token) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+    const tokenHash = await ReimbursementStorageAccess.hashToken(token);
+    const ticket = await ReimbursementStorageAccess.findUploadTicket(
+      ctx,
+      tokenHash,
+    );
+    if (!ticket) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+    if (
+      nowMs - ticket.createdAt >
+      ReimbursementStorageAccess.RECENT_UNREFERENCED_UPLOAD_MS
+    ) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+    return ticket;
+  }
+
+  static async referencedReimbursements(
+    ctx: StorageReadCtx,
+    storageId: Id<"_storage">,
+  ) {
+    const reimbursements = await ctx.db.query("reimbursements").collect();
+    return reimbursements.filter((reimbursement) =>
+      ReimbursementStorageAccess.reimbursementReferencesStorageId(
+        reimbursement,
+        storageId,
+      ),
+    );
+  }
+
+  static async completeTicketedUpload(
+    ctx: StorageLookupCtx,
+    token: string,
+    storageId: Id<"_storage">,
+    nowMs = Date.now(),
+  ) {
+    const ticket = await ReimbursementStorageAccess.assertUploadTicket(
+      ctx,
+      token,
+      nowMs,
+    );
+    if (ticket.storageId && ticket.storageId !== storageId) {
       throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
     }
 
@@ -221,42 +359,76 @@ export class ReimbursementStorageAccess {
     ) {
       throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
     }
+    if (metadata._creationTime + 1000 < ticket.createdAt) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+
+    const referenced = await ReimbursementStorageAccess.referencedReimbursements(
+      ctx,
+      storageId,
+    );
+    if (referenced.length > 0) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
 
     const existing = await ReimbursementStorageAccess.findPendingUpload(
       ctx,
       storageId,
     );
     if (existing) {
-      if (existing.uploadedBy !== userId) {
+      if (existing.uploadedBy !== ticket.uploadedBy) {
         throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
       }
-      return existing;
+    } else {
+      await ctx.db.insert("pendingReimbursementUploads", {
+        storageId,
+        uploadedBy: ticket.uploadedBy,
+        createdAt: nowMs,
+      });
     }
 
-    await ctx.db.insert("pendingReimbursementUploads", {
-      storageId,
-      uploadedBy: userId,
-      createdAt: nowMs,
-    });
+    if (ticket._id && ticket.storageId !== storageId) {
+      await ctx.db.patch(ticket._id, { storageId });
+    }
+
     return {
       storageId,
-      uploadedBy: userId,
+      uploadedBy: ticket.uploadedBy,
       createdAt: nowMs,
     };
   }
 
-  static async assertCanResolve(
-    ctx: StorageLookupCtx,
+  static async registerPendingUpload(
+    ctx: StorageReadCtx,
     user: ReimbursementStorageUser,
     storageId: Id<"_storage">,
     nowMs = Date.now(),
   ) {
-    const reimbursements = await ctx.db.query("reimbursements").collect();
-    const referenced = reimbursements.filter((reimbursement) =>
-      ReimbursementStorageAccess.reimbursementReferencesStorageId(
-        reimbursement,
-        storageId,
-      ),
+    await ReimbursementStorageAccess.assertRecentOwnedUpload(
+      ctx,
+      user,
+      storageId,
+      nowMs,
+    );
+    const pending = await ReimbursementStorageAccess.findPendingUpload(
+      ctx,
+      storageId,
+    );
+    if (!pending) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+    return pending;
+  }
+
+  static async assertCanResolve(
+    ctx: StorageReadCtx,
+    user: ReimbursementStorageUser,
+    storageId: Id<"_storage">,
+    nowMs = Date.now(),
+  ) {
+    const referenced = await ReimbursementStorageAccess.referencedReimbursements(
+      ctx,
+      storageId,
     );
 
     if (referenced.length > 0) {
