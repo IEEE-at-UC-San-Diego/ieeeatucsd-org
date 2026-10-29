@@ -869,4 +869,11 @@ export default defineSchema({
   })
     .index("by_tokenHash", ["tokenHash"])
     .index("by_uploadedBy", ["uploadedBy"]),
+
+  reimbursementFileRefs: defineTable({
+    storageId: v.id("_storage"),
+    reimbursementId: v.id("reimbursements"),
+  })
+    .index("by_storageId", ["storageId"])
+    .index("by_reimbursementId", ["reimbursementId"]),
 });

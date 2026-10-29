@@ -11,23 +11,6 @@ export const list = query({
   },
 });
 
-export const getByEmail = query({
-  args: { email: v.string() },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("officerInvitations")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .collect();
-  },
-});
-
-export const get = query({
-  args: { id: v.id("officerInvitations") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
-  },
-});
-
 export const getPublic = query({
   args: { id: v.id("officerInvitations") },
   handler: async (ctx, args) => {

@@ -9,9 +9,16 @@ export type ReimbursementStorageUser = {
 };
 
 export type ReimbursementStorageRecord = {
+  _id?: Id<"reimbursements">;
   submittedBy: string;
   receipts?: Array<{ receiptFile?: string | null }> | null;
   paymentDetails?: { proofFileUrl?: string | null } | null;
+};
+
+export type ReimbursementFileRef = {
+  _id?: Id<"reimbursementFileRefs">;
+  storageId: Id<"_storage">;
+  reimbursementId: Id<"reimbursements">;
 };
 
 export type PendingReimbursementUpload = {
@@ -384,21 +391,75 @@ export class ReimbursementStorageAccess {
     return ticket;
   }
 
+  static async findFileRefs(
+    ctx: StorageReadCtx,
+    storageId: Id<"_storage">,
+  ) {
+    return await ctx.db
+      .query("reimbursementFileRefs")
+      .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+      .collect();
+  }
+
+  static async findFileRefsByReimbursement(
+    ctx: StorageReadCtx,
+    reimbursementId: Id<"reimbursements">,
+  ) {
+    return await ctx.db
+      .query("reimbursementFileRefs")
+      .withIndex("by_reimbursementId", (q) =>
+        q.eq("reimbursementId", reimbursementId),
+      )
+      .collect();
+  }
+
+  static async recordFileRefs(
+    ctx: StorageLookupCtx,
+    reimbursementId: Id<"reimbursements">,
+    storageIds: Id<"_storage">[],
+  ) {
+    for (const storageId of storageIds) {
+      const existing = await ReimbursementStorageAccess.findFileRefs(
+        ctx,
+        storageId,
+      );
+      if (existing.some((ref) => ref.reimbursementId === reimbursementId)) {
+        continue;
+      }
+      if (existing.length > 0) {
+        throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+      }
+      await ctx.db.insert("reimbursementFileRefs", {
+        storageId,
+        reimbursementId,
+      });
+    }
+  }
+
+  static async deleteFileRefs(
+    ctx: StorageLookupCtx,
+    reimbursementId: Id<"reimbursements">,
+  ) {
+    const refs = await ReimbursementStorageAccess.findFileRefsByReimbursement(
+      ctx,
+      reimbursementId,
+    );
+    for (const ref of refs) {
+      if (ref._id) await ctx.db.delete(ref._id);
+    }
+  }
+
   static async referencedReimbursements(
     ctx: StorageReadCtx,
     storageId: Id<"_storage">,
   ) {
-    const publicUrl = ctx.storage?.getUrl
-      ? await ctx.storage.getUrl(storageId)
-      : null;
-    const reimbursements = await ctx.db.query("reimbursements").collect();
-    return reimbursements.filter((reimbursement) =>
-      ReimbursementStorageAccess.reimbursementReferencesStorageId(
-        reimbursement,
-        storageId,
-        publicUrl,
-      ),
-    );
+    const refs = await ReimbursementStorageAccess.findFileRefs(ctx, storageId);
+    const reimbursements: ReimbursementStorageRecord[] = [];
+    for (const ref of refs) {
+      const reimbursement = await ctx.db.get(ref.reimbursementId);
+      if (reimbursement) reimbursements.push(reimbursement);
+    }
+    return reimbursements;
   }
 
   static async completeTicketedUpload(

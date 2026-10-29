@@ -3,6 +3,7 @@ import type { Id } from "./_generated/dataModel";
 import {
   ReimbursementStorageAccess,
   type PendingReimbursementUpload,
+  type ReimbursementFileRef,
   type ReimbursementStorageRecord,
   type ReimbursementStorageUser,
   type ReimbursementUploadTicket,
@@ -24,6 +25,7 @@ function reimbursement(
   overrides: Partial<ReimbursementStorageRecord> & { submittedBy: string },
 ): ReimbursementStorageRecord {
   return {
+    _id: (overrides._id ?? "reimb_1") as Id<"reimbursements">,
     receipts: [],
     ...overrides,
   };
@@ -35,6 +37,7 @@ function ctxWith(
   pending: PendingReimbursementUpload[] = [],
   tickets: ReimbursementUploadTicket[] = [],
   publicUrls: Record<string, string> = {},
+  fileRefs: ReimbursementFileRef[] = [],
 ) {
   const pendingRows = pending.map((row, index) => ({
     _id:
@@ -48,15 +51,53 @@ function ctxWith(
       (`ticket_${row.tokenHash}_${index}` as Id<"reimbursementUploadTickets">),
     ...row,
   }));
+  const fileRefRows = fileRefs.map((row, index) => ({
+    _id:
+      row._id ??
+      (`fileref_${row.storageId}_${index}` as Id<"reimbursementFileRefs">),
+    ...row,
+  }));
   return {
     db: {
+      get: async (id: string) =>
+        reimbursements.find((row) => row._id === id) ?? null,
       query: (table: string) => {
         if (table === "reimbursements") {
           return {
-            collect: async () => reimbursements,
+            collect: async () => {
+              throw new Error("reimbursements.collect is no longer used");
+            },
             withIndex: () => ({
               first: async () => null,
             }),
+          };
+        }
+        if (table === "reimbursementFileRefs") {
+          return {
+            collect: async () => fileRefRows,
+            withIndex(
+              name: string,
+              builder: (q: {
+                eq: (field: string, value: unknown) => unknown;
+              }) => unknown,
+            ) {
+              let value: unknown;
+              builder({
+                eq: (_field, nextValue) => {
+                  value = nextValue;
+                  return { value };
+                },
+              });
+              const matched = fileRefRows.filter((row) =>
+                name === "by_reimbursementId"
+                  ? row.reimbursementId === value
+                  : row.storageId === value,
+              );
+              return {
+                first: async () => matched[0] ?? null,
+                collect: async () => matched,
+              };
+            },
           };
         }
         if (table === "pendingReimbursementUploads") {
@@ -118,7 +159,10 @@ function ctxWith(
       },
       insert: async (
         table: string,
-        doc: PendingReimbursementUpload | ReimbursementUploadTicket,
+        doc:
+          | PendingReimbursementUpload
+          | ReimbursementUploadTicket
+          | ReimbursementFileRef,
       ) => {
         if (table === "pendingReimbursementUploads") {
           const id =
@@ -138,6 +182,15 @@ function ctxWith(
           });
           return id;
         }
+        if (table === "reimbursementFileRefs") {
+          const id =
+            `fileref_${fileRefRows.length + 1}` as Id<"reimbursementFileRefs">;
+          fileRefRows.push({
+            _id: id,
+            ...(doc as ReimbursementFileRef),
+          });
+          return id;
+        }
         throw new Error(`unexpected insert ${table}`);
       },
       patch: async (
@@ -147,9 +200,16 @@ function ctxWith(
         const row = ticketRows.find((ticket) => ticket._id === id);
         if (row) Object.assign(row, fields);
       },
-      delete: async (id: Id<"pendingReimbursementUploads">) => {
-        const index = pendingRows.findIndex((row) => row._id === id);
-        if (index >= 0) pendingRows.splice(index, 1);
+      delete: async (
+        id: Id<"pendingReimbursementUploads"> | Id<"reimbursementFileRefs">,
+      ) => {
+        const pendingIndex = pendingRows.findIndex((row) => row._id === id);
+        if (pendingIndex >= 0) {
+          pendingRows.splice(pendingIndex, 1);
+          return;
+        }
+        const refIndex = fileRefRows.findIndex((row) => row._id === id);
+        if (refIndex >= 0) fileRefRows.splice(refIndex, 1);
       },
       system: {
         get: async (id: Id<"_storage">) => metadata[id] ?? null,
@@ -160,6 +220,7 @@ function ctxWith(
     },
     _pending: pendingRows,
     _tickets: ticketRows,
+    _refs: fileRefRows,
   };
 }
 
@@ -200,14 +261,26 @@ describe("ReimbursementStorageAccess.includesStorageId", () => {
 
 describe("ReimbursementStorageAccess.assertCanResolve", () => {
   it("denies a member who does not own the referencing reimbursement", async () => {
-    const ctx = ctxWith([
-      reimbursement({
-        submittedBy: "logto|bob",
-        receipts: [
-          { receiptFile: `https://convex.example/api/storage/${STORAGE_A}` },
-        ],
-      }),
-    ]);
+    const ctx = ctxWith(
+      [
+        reimbursement({
+          submittedBy: "logto|bob",
+          receipts: [
+            { receiptFile: `https://convex.example/api/storage/${STORAGE_A}` },
+          ],
+        }),
+      ],
+      {},
+      [],
+      [],
+      {},
+      [
+        {
+          storageId: STORAGE_A,
+          reimbursementId: "reimb_1" as Id<"reimbursements">,
+        },
+      ],
+    );
 
     await expect(
       ReimbursementStorageAccess.assertCanResolve(
@@ -219,14 +292,26 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
   });
 
   it("denies a General Officer who is not the owner", async () => {
-    const ctx = ctxWith([
-      reimbursement({
-        submittedBy: "logto|alice",
-        receipts: [
-          { receiptFile: `https://convex.example/api/storage/${STORAGE_A}` },
-        ],
-      }),
-    ]);
+    const ctx = ctxWith(
+      [
+        reimbursement({
+          submittedBy: "logto|alice",
+          receipts: [
+            { receiptFile: `https://convex.example/api/storage/${STORAGE_A}` },
+          ],
+        }),
+      ],
+      {},
+      [],
+      [],
+      {},
+      [
+        {
+          storageId: STORAGE_A,
+          reimbursementId: "reimb_1" as Id<"reimbursements">,
+        },
+      ],
+    );
 
     await expect(
       ReimbursementStorageAccess.assertCanResolve(
@@ -250,6 +335,12 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
       [],
       [],
       { [STORAGE_A]: publicUrl },
+      [
+        {
+          storageId: STORAGE_A,
+          reimbursementId: "reimb_1" as Id<"reimbursements">,
+        },
+      ],
     );
 
     await expect(
@@ -293,6 +384,12 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
       [],
       [],
       { [STORAGE_B]: publicUrl },
+      [
+        {
+          storageId: STORAGE_B,
+          reimbursementId: "reimb_1" as Id<"reimbursements">,
+        },
+      ],
     );
 
     await expect(
@@ -305,12 +402,24 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
   });
 
   it("allows an Administrator to resolve any referenced receipt", async () => {
-    const ctx = ctxWith([
-      reimbursement({
-        submittedBy: "logto|alice",
-        receipts: [{ receiptFile: STORAGE_A }],
-      }),
-    ]);
+    const ctx = ctxWith(
+      [
+        reimbursement({
+          submittedBy: "logto|alice",
+          receipts: [{ receiptFile: STORAGE_A }],
+        }),
+      ],
+      {},
+      [],
+      [],
+      {},
+      [
+        {
+          storageId: STORAGE_A,
+          reimbursementId: "reimb_1" as Id<"reimbursements">,
+        },
+      ],
+    );
 
     await expect(
       ReimbursementStorageAccess.assertCanResolve(
@@ -543,6 +652,15 @@ describe("ReimbursementStorageAccess.registerPendingUpload", () => {
         }),
       ],
       { [STORAGE_NEW]: { _creationTime: now - 500 } },
+      [],
+      [],
+      {},
+      [
+        {
+          storageId: STORAGE_NEW,
+          reimbursementId: "reimb_1" as Id<"reimbursements">,
+        },
+      ],
     );
     const token = await ReimbursementStorageAccess.issueUploadTicket(
       ctx as never,
@@ -868,5 +986,66 @@ describe("ReimbursementStorageAccess.resolveOwnedPendingStorageId", () => {
         `${STORAGE_A}?storageId=${STORAGE_B}`,
       ),
     ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+  });
+});
+
+describe("ReimbursementStorageAccess.referencedReimbursements", () => {
+  it("loads only reimbursements linked by the storageId index", async () => {
+    const owner = reimbursement({
+      _id: "reimb_owner" as Id<"reimbursements">,
+      submittedBy: "logto|alice",
+      receipts: [{ receiptFile: STORAGE_A }],
+    });
+    const other = reimbursement({
+      _id: "reimb_other" as Id<"reimbursements">,
+      submittedBy: "logto|bob",
+      receipts: [{ receiptFile: STORAGE_B }],
+    });
+    const ctx = ctxWith(
+      [owner, other],
+      {},
+      [],
+      [],
+      {},
+      [
+        {
+          storageId: STORAGE_A,
+          reimbursementId: "reimb_owner" as Id<"reimbursements">,
+        },
+      ],
+    );
+
+    await expect(
+      ReimbursementStorageAccess.referencedReimbursements(
+        ctx as never,
+        STORAGE_A,
+      ),
+    ).resolves.toEqual([owner]);
+    await expect(ctx.db.query("reimbursements").collect()).rejects.toThrow(
+      "reimbursements.collect is no longer used",
+    );
+  });
+
+  it("records a file ref so a later resolve uses the index", async () => {
+    const owner = reimbursement({
+      submittedBy: "logto|alice",
+      receipts: [{ receiptFile: STORAGE_A }],
+    });
+    const ctx = ctxWith([owner]);
+
+    await ReimbursementStorageAccess.recordFileRefs(
+      ctx as never,
+      owner._id as Id<"reimbursements">,
+      [STORAGE_A],
+    );
+
+    expect(ctx._refs.map((row) => row.storageId)).toEqual([STORAGE_A]);
+    await expect(
+      ReimbursementStorageAccess.assertCanResolve(
+        ctx as never,
+        member(),
+        STORAGE_A,
+      ),
+    ).resolves.toBeUndefined();
   });
 });
