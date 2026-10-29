@@ -15,6 +15,7 @@ export type ReimbursementStorageRecord = {
 };
 
 export type PendingReimbursementUpload = {
+  _id?: Id<"pendingReimbursementUploads">;
   storageId: Id<"_storage">;
   uploadedBy: string;
   createdAt: number;
@@ -23,12 +24,16 @@ export type PendingReimbursementUpload = {
 type StorageLookupCtx = Pick<MutationCtx, "db">;
 
 /**
- * Authorization for `reimbursements.getStorageUrl`.
+ * Authorization for reimbursement storage IDs.
  *
- * Referenced files require the reimbursement owner or the admin/exec
- * finance review role. Unreferenced files are only the just-uploaded
- * preview handshake: a pending row must already record this caller as
- * the uploader, and that claim must still be unexpired.
+ * `getStorageUrl`: referenced files require the reimbursement owner or
+ * the admin/exec finance review role. Unreferenced files are only the
+ * just-uploaded preview handshake: a pending row must already record
+ * this caller as the uploader, and that claim must still be unexpired.
+ *
+ * `create` / `updatePaymentDetails`: every caller-supplied storage ID
+ * must have an unexpired pending claim by the same uploader. The claim
+ * is consumed on attach so it cannot be reused.
  */
 export class ReimbursementStorageAccess {
   static readonly UNAUTHORIZED = "Unauthorized";
@@ -40,6 +45,59 @@ export class ReimbursementStorageAccess {
 
   static canViewAllReimbursementFiles(role: UserRole) {
     return hasAdminAccess(role);
+  }
+
+  static extractStorageIds(value: unknown) {
+    if (typeof value !== "string") return [];
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    const ids: string[] = [];
+    const add = (raw: string | null | undefined) => {
+      if (!raw) return;
+      let decoded = raw;
+      try {
+        decoded = decodeURIComponent(raw);
+      } catch {
+        decoded = raw;
+      }
+      const id = decoded.trim();
+      if (
+        id &&
+        id !== "api" &&
+        id !== "storage" &&
+        id !== "file" &&
+        id !== "files"
+      ) {
+        ids.push(id);
+      }
+    };
+
+    for (const match of trimmed.matchAll(/[?&]storageId=([^&#]*)/g)) {
+      add(match[1]);
+    }
+
+    const path = trimmed.split("#")[0]?.split("?")[0] ?? trimmed;
+    if (!path.includes("/")) {
+      add(path);
+      return [...new Set(ids)];
+    }
+
+    add(path.split("/").filter(Boolean).pop());
+    return [...new Set(ids)];
+  }
+
+  static receiptFileValues(receipts: unknown) {
+    if (receipts == null) return [];
+    if (!Array.isArray(receipts)) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+    return receipts.map((receipt) => {
+      if (!receipt || typeof receipt !== "object") return undefined;
+      return "receiptFile" in receipt
+        ? (receipt as { receiptFile?: unknown }).receiptFile
+        : undefined;
+    });
   }
 
   static includesStorageId(value: unknown, storageId: string) {
@@ -212,5 +270,53 @@ export class ReimbursementStorageAccess {
       storageId,
       nowMs,
     );
+  }
+
+  static storageIdsFromValues(values: unknown[]) {
+    const ids = new Set<string>();
+    for (const value of values) {
+      if (value == null) continue;
+      if (typeof value !== "string") {
+        throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+      }
+      if (!value.trim()) continue;
+      const extracted = ReimbursementStorageAccess.extractStorageIds(value);
+      if (extracted.length === 0) {
+        throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+      }
+      for (const id of extracted) ids.add(id);
+    }
+    return [...ids] as Id<"_storage">[];
+  }
+
+  static async assertCanAttachAndConsume(
+    ctx: StorageLookupCtx,
+    user: ReimbursementStorageUser,
+    values: unknown[],
+    nowMs = Date.now(),
+  ) {
+    const storageIds = ReimbursementStorageAccess.storageIdsFromValues(values);
+    const pendingIds: Id<"pendingReimbursementUploads">[] = [];
+
+    for (const storageId of storageIds) {
+      await ReimbursementStorageAccess.assertRecentOwnedUpload(
+        ctx,
+        user,
+        storageId,
+        nowMs,
+      );
+      const pending = await ReimbursementStorageAccess.findPendingUpload(
+        ctx,
+        storageId,
+      );
+      if (!pending?._id) {
+        throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+      }
+      pendingIds.push(pending._id);
+    }
+
+    for (const pendingId of pendingIds) {
+      await ctx.db.delete(pendingId);
+    }
   }
 }
