@@ -69,7 +69,11 @@ function authorized(overrides: Record<string, unknown> = {}) {
 	return {
 		logtoId: "logto|alex",
 		accessToken: "access-token",
-		body: { inviteId: "invite_1", action: "accept" },
+		body: {
+			inviteId: "invite_1",
+			action: "accept",
+			email: "alex@ucsd.edu",
+		},
 		claims: { sub: "logto|alex", email: "alex@ucsd.edu" },
 		user: { role: "Member", email: "alex@ucsd.edu" },
 		...overrides,
@@ -133,6 +137,9 @@ describe("AcceptInvitationApi.handlePost", () => {
 			request: postRequest({ inviteId: "invite_1", action: "accept" }),
 		});
 
+		expect(requireApiAuthMock).toHaveBeenCalledWith(expect.any(Request), {
+			allowUnprovisionedUser: true,
+		});
 		expect(response.status).toBe(401);
 		expect(queryMock).not.toHaveBeenCalled();
 		expect(mutationMock).not.toHaveBeenCalled();
@@ -189,6 +196,7 @@ describe("AcceptInvitationApi.handlePost", () => {
 				body: {
 					inviteId: "invite_1",
 					action: "accept",
+					email: "alex@ucsd.edu",
 					selectedPosition: "Project Lead",
 				},
 			}),
@@ -204,9 +212,13 @@ describe("AcceptInvitationApi.handlePost", () => {
 		});
 
 		expect(response.status).toBe(200);
+		expect(requireApiAuthMock).toHaveBeenCalledWith(expect.any(Request), {
+			allowUnprovisionedUser: true,
+		});
 		expect(createConvexSessionTokenMock).toHaveBeenCalledWith({
 			sub: "logto|alex",
 			role: "Member",
+			email: "alex@ucsd.edu",
 		});
 		expect(mutationMock).toHaveBeenCalledWith(
 			"officerInvitations:acceptPublic",
@@ -216,6 +228,15 @@ describe("AcceptInvitationApi.handlePost", () => {
 				authToken: "session-token",
 				selectedPosition: "Project Lead",
 			},
+		);
+		expect(mutationMock).toHaveBeenCalledWith(
+			"officerInvitations:recordAcceptanceSideEffects",
+			expect.objectContaining({
+				id: "invite_1",
+				logtoId: "logto|alex",
+				authToken: "session-token",
+				roleGranted: true,
+			}),
 		);
 		expect(syncOfficerRolesOnLogtoUserMock).toHaveBeenCalledWith(
 			"logto-target",
@@ -231,6 +252,35 @@ describe("AcceptInvitationApi.handlePost", () => {
 			roleGranted: true,
 			googleGroupAssigned: true,
 		});
+	});
+
+	it("accepts a first-time invitee who is authenticated but not yet provisioned", async () => {
+		requireApiAuthMock.mockResolvedValue(
+			authorized({
+				user: {},
+			}),
+		);
+		const { AcceptInvitationApi } = await import("./accept-invitation");
+
+		const response = await AcceptInvitationApi.handlePost({
+			request: postRequest({ inviteId: "invite_1", action: "accept" }),
+		});
+
+		expect(response.status).toBe(200);
+		expect(createConvexSessionTokenMock).toHaveBeenCalledWith({
+			sub: "logto|alex",
+			role: undefined,
+			email: "alex@ucsd.edu",
+		});
+		expect(mutationMock).toHaveBeenCalledWith(
+			"officerInvitations:acceptPublic",
+			{
+				id: "invite_1",
+				logtoId: "logto|alex",
+				authToken: "session-token",
+				selectedPosition: undefined,
+			},
+		);
 	});
 
 	it("declines when the session email matches and does not sync Logto or Groups", async () => {

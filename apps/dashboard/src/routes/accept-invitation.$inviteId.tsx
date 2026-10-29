@@ -19,6 +19,8 @@ import {
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthFlow } from "@/lib/auth/AuthFlow";
 import {
 	type Invitation,
 	initialInvitationPhase,
@@ -43,6 +45,12 @@ function getAcceptInvitationEndpoint() {
 
 function AcceptInvitationPage() {
 	const { inviteId } = Route.useParams();
+	const {
+		isAuthenticated,
+		isLoading: authLoading,
+		getAuthHeaders,
+		signIn,
+	} = useAuth();
 	const [phase, dispatch] = useReducer(
 		invitationPhaseReducer,
 		initialInvitationPhase,
@@ -98,12 +106,25 @@ function AcceptInvitationPage() {
 		};
 	}, [inviteId]);
 
+	const handleSignInToRespond = () => {
+		AuthFlow.stashPostLoginRedirect(`/accept-invitation/${inviteId}`);
+		signIn();
+	};
+
 	const handleAccept = async ({ email, selectedPosition }: AcceptDetails) => {
+		const authHeaders = getAuthHeaders();
 		dispatch({ type: "acceptStarted" });
 		try {
+			if (!authHeaders.Authorization) {
+				throw new Error("Sign in to accept this invitation.");
+			}
+
 			const response = await fetch(getAcceptInvitationEndpoint(), {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					...authHeaders,
+				},
 				body: JSON.stringify({
 					inviteId,
 					action: "accept",
@@ -146,11 +167,19 @@ function AcceptInvitationPage() {
 			return;
 		}
 
+		const authHeaders = getAuthHeaders();
 		dispatch({ type: "declineStarted" });
 		try {
+			if (!authHeaders.Authorization) {
+				throw new Error("Sign in to decline this invitation.");
+			}
+
 			const response = await fetch(getAcceptInvitationEndpoint(), {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					...authHeaders,
+				},
 				body: JSON.stringify({
 					inviteId,
 					action: "decline",
@@ -177,6 +206,17 @@ function AcceptInvitationPage() {
 			});
 		}
 	};
+
+	if (authLoading) {
+		return (
+			<CenteredShell>
+				<output className="block">
+					<Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
+					<p className="text-muted-foreground">Loading invitation…</p>
+				</output>
+			</CenteredShell>
+		);
+	}
 
 	switch (phase.kind) {
 		case "loading":
@@ -237,6 +277,8 @@ function AcceptInvitationPage() {
 					invitation={phase.invitation}
 					processing={phase.kind !== "pending"}
 					actionError={phase.kind === "pending" ? phase.actionError : undefined}
+					isAuthenticated={isAuthenticated}
+					onSignIn={handleSignInToRespond}
 					onAccept={handleAccept}
 					onDecline={handleDecline}
 				/>
@@ -252,12 +294,16 @@ function InvitationOfferForm({
 	invitation,
 	processing,
 	actionError,
+	isAuthenticated,
+	onSignIn,
 	onAccept,
 	onDecline,
 }: {
 	invitation: Invitation;
 	processing: boolean;
 	actionError: string | undefined;
+	isAuthenticated: boolean;
+	onSignIn: () => void;
 	onAccept: (details: AcceptDetails) => void;
 	onDecline: () => void;
 }) {
@@ -461,28 +507,44 @@ function InvitationOfferForm({
 						)}
 
 						<div className="sticky bottom-0 -mx-4 border-t bg-background/95 px-4 py-3 backdrop-blur-xl supports-[backdrop-filter]:bg-background/85 [@media(prefers-reduced-transparency:reduce)]:bg-background [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
-							<div className="flex flex-col gap-3 sm:flex-row">
-								<Button
-									type="button"
-									variant="outline"
-									onClick={onDecline}
-									disabled={processing}
-									className="h-12 flex-1"
-								>
-									Decline Position
-								</Button>
-								<Button
-									type="button"
-									onClick={handleAccept}
-									disabled={!canAccept}
-									className="h-12 flex-1"
-								>
-									{processing ? (
-										<Loader2 className="h-4 w-4 animate-spin" />
-									) : null}
-									{processing ? "Processing…" : "Accept Position"}
-								</Button>
-							</div>
+							{isAuthenticated ? (
+								<div className="flex flex-col gap-3 sm:flex-row">
+									<Button
+										type="button"
+										variant="outline"
+										onClick={onDecline}
+										disabled={processing}
+										className="h-12 flex-1"
+									>
+										Decline Position
+									</Button>
+									<Button
+										type="button"
+										onClick={handleAccept}
+										disabled={!canAccept}
+										className="h-12 flex-1"
+									>
+										{processing ? (
+											<Loader2 className="h-4 w-4 animate-spin" />
+										) : null}
+										{processing ? "Processing…" : "Accept Position"}
+									</Button>
+								</div>
+							) : (
+								<div className="space-y-3">
+									<p className="text-sm text-muted-foreground">
+										Sign in with {invitation.email || "the invited email"} to
+										accept or decline this invitation.
+									</p>
+									<Button
+										type="button"
+										onClick={onSignIn}
+										className="h-12 w-full"
+									>
+										Sign in to respond
+									</Button>
+								</div>
+							)}
 						</div>
 					</div>
 				</div>
