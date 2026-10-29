@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { ReimbursementStorageAccess } from "./reimbursementStorageAccess";
 import {
@@ -213,8 +213,31 @@ export const remove = mutation({
 export const generateUploadUrl = mutation({
   args: { logtoId: v.string(), authToken: v.string() },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    return await ctx.storage.generateUploadUrl();
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const token = await ReimbursementStorageAccess.issueUploadTicket(ctx, user);
+    return ReimbursementStorageAccess.uploadUrlForToken(token);
+  },
+});
+
+export const assertUploadTicket = internalQuery({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    await ReimbursementStorageAccess.assertUploadTicket(ctx, args.token);
+  },
+});
+
+export const completeTicketedUpload = internalMutation({
+  args: {
+    token: v.string(),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await ReimbursementStorageAccess.completeTicketedUpload(
+      ctx,
+      args.token,
+      args.storageId,
+    );
+    return args.storageId;
   },
 });
 

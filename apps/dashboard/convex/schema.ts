@@ -860,4 +860,13 @@ export default defineSchema({
   })
     .index("by_storageId", ["storageId"])
     .index("by_uploadedBy", ["uploadedBy"]),
+
+  reimbursementUploadTickets: defineTable({
+    tokenHash: v.string(),
+    uploadedBy: v.string(),
+    createdAt: v.number(),
+    storageId: v.optional(v.id("_storage")),
+  })
+    .index("by_tokenHash", ["tokenHash"])
+    .index("by_uploadedBy", ["uploadedBy"]),
 });
