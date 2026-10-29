@@ -572,26 +572,31 @@ export class ReimbursementStorageAccess {
     );
   }
 
+  static uniqueStorageIds(storageIds: Id<"_storage">[]) {
+    return [...new Set(storageIds)];
+  }
+
   static async storageIdsFromValues(
     ctx: StorageLookupCtx,
     user: ReimbursementStorageUser,
     values: unknown[],
   ) {
-    const ids = new Set<string>();
+    const ids: Id<"_storage">[] = [];
     for (const value of values) {
       if (value == null) continue;
       if (typeof value !== "string") {
         throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
       }
       if (!value.trim()) continue;
-      const resolved = await ReimbursementStorageAccess.resolveOwnedPendingStorageId(
-        ctx,
-        user,
-        value,
+      ids.push(
+        await ReimbursementStorageAccess.resolveOwnedPendingStorageId(
+          ctx,
+          user,
+          value,
+        ),
       );
-      ids.add(resolved);
     }
-    return [...ids] as Id<"_storage">[];
+    return ids;
   }
 
   static async assertOwnedPending(
@@ -679,7 +684,9 @@ export class ReimbursementStorageAccess {
     );
     const pendingIds: Id<"pendingReimbursementUploads">[] = [];
 
-    for (const storageId of storageIds) {
+    for (const storageId of ReimbursementStorageAccess.uniqueStorageIds(
+      storageIds,
+    )) {
       const pending = await ReimbursementStorageAccess.assertOwnedPending(
         ctx,
         user,
