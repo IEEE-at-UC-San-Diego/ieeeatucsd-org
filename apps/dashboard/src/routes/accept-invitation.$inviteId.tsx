@@ -117,6 +117,11 @@ function AcceptInvitationPage() {
 		};
 	}, [inviteId]);
 
+	useEffect(() => {
+		if (authLoading || isAuthenticated) return;
+		AuthFlow.stashPostLoginRedirect(`/accept-invitation/${inviteId}`);
+	}, [authLoading, inviteId, isAuthenticated]);
+
 	const handleSignInToRespond = () => {
 		AuthFlow.stashPostLoginRedirect(`/accept-invitation/${inviteId}`);
 		signIn();

@@ -470,7 +470,10 @@ describe("AuthFlow post-login redirect", () => {
 		};
 		Object.defineProperty(globalThis, "window", {
 			configurable: true,
-			value: { sessionStorage: sessionStorageMock },
+			value: {
+				sessionStorage: sessionStorageMock,
+				localStorage: sessionStorageMock,
+			},
 		});
 		return sessionStorageMock;
 	}
@@ -517,5 +520,48 @@ describe("AuthFlow post-login redirect", () => {
 		const sessionStorageMock = mockWindow();
 		sessionStorageMock.setItem(AuthFlow.POST_LOGIN_REDIRECT_KEY, "/overview");
 		expect(AuthFlow.consumePostLoginRedirect()).toBeNull();
+	});
+
+	it("falls back to localStorage when sessionStorage is empty", () => {
+		const storage = new Map<string, string>();
+		const sessionStorageMock = {
+			getItem: () => null,
+			setItem: () => {},
+			removeItem: () => {},
+			clear: () => {},
+			key: () => null,
+			length: 0,
+		};
+		const localStorageMock = {
+			getItem: (key: string) => storage.get(key) ?? null,
+			setItem: (key: string, value: string) => {
+				storage.set(key, value);
+			},
+			removeItem: (key: string) => {
+				storage.delete(key);
+			},
+			clear: () => {
+				storage.clear();
+			},
+			key: () => null,
+			length: 0,
+		};
+		Object.defineProperty(globalThis, "window", {
+			configurable: true,
+			value: {
+				sessionStorage: sessionStorageMock,
+				localStorage: localStorageMock,
+			},
+		});
+		localStorageMock.setItem(
+			AuthFlow.POST_LOGIN_REDIRECT_KEY,
+			"/accept-invitation/invite_1",
+		);
+		expect(AuthFlow.consumePostLoginRedirect()).toBe(
+			"/accept-invitation/invite_1",
+		);
+		expect(
+			localStorageMock.getItem(AuthFlow.POST_LOGIN_REDIRECT_KEY),
+		).toBeNull();
 	});
 });
