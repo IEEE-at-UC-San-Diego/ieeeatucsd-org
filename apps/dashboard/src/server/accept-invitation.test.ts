@@ -186,6 +186,45 @@ describe("AcceptInvitationApi.handlePost", () => {
 		expect(mutationMock).not.toHaveBeenCalled();
 	});
 
+	it("accepts when the verified session email matches and the stored user email is stale", async () => {
+		requireApiAuthMock.mockResolvedValue(
+			authorized({
+				body: {
+					inviteId: "invite_1",
+					action: "accept",
+					selectedPosition: "Project Lead",
+				},
+				claims: { sub: "logto|alex", email: "alex@ucsd.edu" },
+				user: { role: "Member", email: "alex.old@ucsd.edu" },
+			}),
+		);
+		const { AcceptInvitationApi } = await import("./accept-invitation");
+
+		const response = await AcceptInvitationApi.handlePost({
+			request: postRequest({
+				inviteId: "invite_1",
+				action: "accept",
+				selectedPosition: "Project Lead",
+			}),
+		});
+
+		expect(response.status).toBe(200);
+		expect(createConvexSessionTokenMock).toHaveBeenCalledWith({
+			sub: "logto|alex",
+			role: "Member",
+			email: "alex@ucsd.edu",
+		});
+		expect(mutationMock).toHaveBeenCalledWith(
+			"officerInvitations:acceptPublic",
+			{
+				id: "invite_1",
+				logtoId: "logto|alex",
+				authToken: "session-token",
+				selectedPosition: "Project Lead",
+			},
+		);
+	});
+
 	it("accepts when the session email matches and passes HMAC credentials through", async () => {
 		requireApiAuthMock.mockResolvedValue(
 			authorized({
