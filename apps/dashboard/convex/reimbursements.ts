@@ -207,6 +207,23 @@ export const generateUploadUrl = mutation({
   },
 });
 
+export const registerPendingUpload = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    await ReimbursementStorageAccess.registerPendingUpload(
+      ctx,
+      user,
+      args.storageId,
+    );
+    return args.storageId;
+  },
+});
+
 export const getStorageUrl = mutation({
   args: {
     logtoId: v.string(),

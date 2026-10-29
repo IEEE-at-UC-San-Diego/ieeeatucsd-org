@@ -852,4 +852,12 @@ export default defineSchema({
     createdByName: v.optional(v.string()),
   })
     .index("by_department", ["department"]),
+
+  pendingReimbursementUploads: defineTable({
+    storageId: v.id("_storage"),
+    uploadedBy: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_storageId", ["storageId"])
+    .index("by_uploadedBy", ["uploadedBy"]),
 });
