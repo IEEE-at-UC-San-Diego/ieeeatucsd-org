@@ -34,6 +34,7 @@ function ctxWith(
   metadata: Record<string, { _creationTime?: number } | null> = {},
   pending: PendingReimbursementUpload[] = [],
   tickets: ReimbursementUploadTicket[] = [],
+  publicUrls: Record<string, string> = {},
 ) {
   const pendingRows = pending.map((row, index) => ({
     _id:
@@ -62,7 +63,7 @@ function ctxWith(
           return {
             collect: async () => pendingRows,
             withIndex(
-              _name: string,
+              name: string,
               builder: (q: {
                 eq: (field: string, value: unknown) => unknown;
               }) => unknown,
@@ -74,11 +75,14 @@ function ctxWith(
                   return { value };
                 },
               });
-              const matched = pendingRows.filter(
-                (row) => row.storageId === value,
+              const matched = pendingRows.filter((row) =>
+                name === "by_uploadedBy"
+                  ? row.uploadedBy === value
+                  : row.storageId === value,
               );
               return {
                 first: async () => matched[0] ?? null,
+                collect: async () => matched,
               };
             },
           };
@@ -150,6 +154,9 @@ function ctxWith(
       system: {
         get: async (id: Id<"_storage">) => metadata[id] ?? null,
       },
+    },
+    storage: {
+      getUrl: async (id: Id<"_storage">) => publicUrls[id] ?? null,
     },
     _pending: pendingRows,
     _tickets: ticketRows,
@@ -650,5 +657,63 @@ describe("ReimbursementStorageAccess.assertCanAttachAndConsume", () => {
         ["https://convex.example/api/storage"],
       ),
     ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+  });
+
+  it("maps a self-hosted getUrl file UUID back to the uploader's pending storage id", async () => {
+    const now = Date.now();
+    const publicUrl =
+      "http://127.0.0.1:3210/api/storage/7e3fd37d-0057-4e22-ba19-88f0dda5b736";
+    const ctx = ctxWith(
+      [],
+      { [STORAGE_NEW]: { _creationTime: now - 1_000 } },
+      [
+        {
+          storageId: STORAGE_NEW,
+          uploadedBy: "logto|alice",
+          createdAt: now - 1_000,
+        },
+      ],
+      [],
+      { [STORAGE_NEW]: publicUrl },
+    );
+
+    await expect(
+      ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx as never,
+        member(),
+        [publicUrl],
+        now,
+      ),
+    ).resolves.toBeUndefined();
+    expect(ctx._pending).toEqual([]);
+  });
+
+  it("rejects a self-hosted getUrl UUID that belongs to another user's pending upload", async () => {
+    const now = Date.now();
+    const publicUrl =
+      "http://127.0.0.1:3210/api/storage/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    const ctx = ctxWith(
+      [],
+      { [STORAGE_A]: { _creationTime: now - 1_000 } },
+      [
+        {
+          storageId: STORAGE_A,
+          uploadedBy: "logto|bob",
+          createdAt: now - 1_000,
+        },
+      ],
+      [],
+      { [STORAGE_A]: publicUrl },
+    );
+
+    await expect(
+      ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx as never,
+        member(),
+        [publicUrl],
+        now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+    expect(ctx._pending).toHaveLength(1);
   });
 });
