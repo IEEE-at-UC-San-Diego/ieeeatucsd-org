@@ -1,4 +1,5 @@
 import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import { hasAdminAccess, type UserRole } from "./permissions";
 
 export type ReimbursementStorageUser = {
@@ -13,31 +14,29 @@ export type ReimbursementStorageRecord = {
   paymentDetails?: { proofFileUrl?: string | null } | null;
 };
 
-type StorageLookupCtx = {
-  db: {
-    query: (table: "reimbursements") => {
-      collect: () => Promise<ReimbursementStorageRecord[]>;
-    };
-    system: {
-      get: (id: Id<"_storage">) => Promise<{ _creationTime?: number } | null>;
-    };
-  };
+export type PendingReimbursementUpload = {
+  storageId: Id<"_storage">;
+  uploadedBy: string;
+  createdAt: number;
 };
+
+type StorageLookupCtx = Pick<MutationCtx, "db">;
 
 /**
  * Authorization for `reimbursements.getStorageUrl`.
  *
- * A signed-in caller is not enough: the storage id must belong to a
- * reimbursement they can already view (owner, or admin/exec finance review).
- *
- * The existing upload UI resolves a storage id immediately after
- * `generateUploadUrl` and before the file is attached. Unreferenced files are
- * therefore allowed only during a short post-upload window so old resume/event
- * objects cannot be fetched by id.
+ * Referenced files require the reimbursement owner or the admin/exec
+ * finance review role. Unreferenced files are only the just-uploaded
+ * preview handshake: a pending row must already record this caller as
+ * the uploader, and that claim must still be unexpired.
  */
 export class ReimbursementStorageAccess {
   static readonly UNAUTHORIZED = "Unauthorized";
   static readonly RECENT_UNREFERENCED_UPLOAD_MS = 15 * 60 * 1000;
+
+  static callerId(user: ReimbursementStorageUser) {
+    return user.logtoId ?? user.authUserId ?? "";
+  }
 
   static canViewAllReimbursementFiles(role: UserRole) {
     return hasAdminAccess(role);
@@ -78,7 +77,7 @@ export class ReimbursementStorageAccess {
     user: ReimbursementStorageUser,
     reimbursements: ReimbursementStorageRecord[],
   ) {
-    const userId = user.logtoId ?? user.authUserId ?? "";
+    const userId = ReimbursementStorageAccess.callerId(user);
     if (!userId) return false;
     return reimbursements.some(
       (reimbursement) => reimbursement.submittedBy === userId,
@@ -100,11 +99,37 @@ export class ReimbursementStorageAccess {
     throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
   }
 
-  static async assertRecentUnreferencedUpload(
+  static async findPendingUpload(
     ctx: StorageLookupCtx,
+    storageId: Id<"_storage">,
+  ) {
+    return await ctx.db
+      .query("pendingReimbursementUploads")
+      .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+      .first();
+  }
+
+  static async assertRecentOwnedUpload(
+    ctx: StorageLookupCtx,
+    user: ReimbursementStorageUser,
     storageId: Id<"_storage">,
     nowMs = Date.now(),
   ) {
+    const userId = ReimbursementStorageAccess.callerId(user);
+    const pending = await ReimbursementStorageAccess.findPendingUpload(
+      ctx,
+      storageId,
+    );
+    if (!pending || !userId || pending.uploadedBy !== userId) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+    if (
+      nowMs - pending.createdAt >
+      ReimbursementStorageAccess.RECENT_UNREFERENCED_UPLOAD_MS
+    ) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+
     const metadata = await ctx.db.system.get(storageId);
     if (!metadata || typeof metadata._creationTime !== "number") {
       throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
@@ -115,6 +140,51 @@ export class ReimbursementStorageAccess {
     ) {
       throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
     }
+  }
+
+  static async registerPendingUpload(
+    ctx: StorageLookupCtx,
+    user: ReimbursementStorageUser,
+    storageId: Id<"_storage">,
+    nowMs = Date.now(),
+  ) {
+    const userId = ReimbursementStorageAccess.callerId(user);
+    if (!userId) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+
+    const metadata = await ctx.db.system.get(storageId);
+    if (!metadata || typeof metadata._creationTime !== "number") {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+    if (
+      nowMs - metadata._creationTime >
+      ReimbursementStorageAccess.RECENT_UNREFERENCED_UPLOAD_MS
+    ) {
+      throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+    }
+
+    const existing = await ReimbursementStorageAccess.findPendingUpload(
+      ctx,
+      storageId,
+    );
+    if (existing) {
+      if (existing.uploadedBy !== userId) {
+        throw new Error(ReimbursementStorageAccess.UNAUTHORIZED);
+      }
+      return existing;
+    }
+
+    await ctx.db.insert("pendingReimbursementUploads", {
+      storageId,
+      uploadedBy: userId,
+      createdAt: nowMs,
+    });
+    return {
+      storageId,
+      uploadedBy: userId,
+      createdAt: nowMs,
+    };
   }
 
   static async assertCanResolve(
@@ -136,8 +206,9 @@ export class ReimbursementStorageAccess {
       return;
     }
 
-    await ReimbursementStorageAccess.assertRecentUnreferencedUpload(
+    await ReimbursementStorageAccess.assertRecentOwnedUpload(
       ctx,
+      user,
       storageId,
       nowMs,
     );

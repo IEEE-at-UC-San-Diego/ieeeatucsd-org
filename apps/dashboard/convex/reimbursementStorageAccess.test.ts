@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Id } from "./_generated/dataModel";
 import {
   ReimbursementStorageAccess,
+  type PendingReimbursementUpload,
   type ReimbursementStorageRecord,
   type ReimbursementStorageUser,
 } from "./reimbursementStorageAccess";
@@ -30,21 +31,59 @@ function reimbursement(
 function ctxWith(
   reimbursements: ReimbursementStorageRecord[],
   metadata: Record<string, { _creationTime?: number } | null> = {},
+  pending: PendingReimbursementUpload[] = [],
 ) {
+  const pendingRows = [...pending];
   return {
     db: {
-      query: (table: "reimbursements") => {
-        if (table !== "reimbursements") {
-          throw new Error(`unexpected table ${table}`);
+      query: (table: string) => {
+        if (table === "reimbursements") {
+          return {
+            collect: async () => reimbursements,
+            withIndex: () => ({
+              first: async () => null,
+            }),
+          };
         }
-        return {
-          collect: async () => reimbursements,
-        };
+        if (table === "pendingReimbursementUploads") {
+          return {
+            collect: async () => pendingRows,
+            withIndex(
+              _name: string,
+              builder: (q: {
+                eq: (field: string, value: unknown) => unknown;
+              }) => unknown,
+            ) {
+              let value: unknown;
+              builder({
+                eq: (_field, nextValue) => {
+                  value = nextValue;
+                  return { value };
+                },
+              });
+              const matched = pendingRows.filter(
+                (row) => row.storageId === value,
+              );
+              return {
+                first: async () => matched[0] ?? null,
+              };
+            },
+          };
+        }
+        throw new Error(`unexpected table ${table}`);
+      },
+      insert: async (table: string, doc: PendingReimbursementUpload) => {
+        if (table !== "pendingReimbursementUploads") {
+          throw new Error(`unexpected insert ${table}`);
+        }
+        pendingRows.push(doc);
+        return `${table}_${pendingRows.length}`;
       },
       system: {
         get: async (id: Id<"_storage">) => metadata[id] ?? null,
       },
     },
+    _pending: pendingRows,
   };
 }
 
@@ -86,7 +125,11 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
     ]);
 
     await expect(
-      ReimbursementStorageAccess.assertCanResolve(ctx, member(), STORAGE_A),
+      ReimbursementStorageAccess.assertCanResolve(
+        ctx as never,
+        member(),
+        STORAGE_A,
+      ),
     ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
   });
 
@@ -102,7 +145,7 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
 
     await expect(
       ReimbursementStorageAccess.assertCanResolve(
-        ctx,
+        ctx as never,
         member({ role: "General Officer", logtoId: "logto|officer" }),
         STORAGE_A,
       ),
@@ -120,7 +163,11 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
     ]);
 
     await expect(
-      ReimbursementStorageAccess.assertCanResolve(ctx, member(), STORAGE_A),
+      ReimbursementStorageAccess.assertCanResolve(
+        ctx as never,
+        member(),
+        STORAGE_A,
+      ),
     ).resolves.toBeUndefined();
   });
 
@@ -136,7 +183,7 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
 
     await expect(
       ReimbursementStorageAccess.assertCanResolve(
-        ctx,
+        ctx as never,
         member({ role: "Executive Officer", logtoId: "logto|finance" }),
         STORAGE_B,
       ),
@@ -153,22 +200,30 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
 
     await expect(
       ReimbursementStorageAccess.assertCanResolve(
-        ctx,
+        ctx as never,
         member({ role: "Administrator", logtoId: "logto|admin" }),
         STORAGE_A,
       ),
     ).resolves.toBeUndefined();
   });
 
-  it("allows a recent unreferenced upload so the existing preview handshake still works", async () => {
+  it("allows the uploader to resolve a fresh unreferenced upload", async () => {
     const now = Date.now();
-    const ctx = ctxWith([], {
-      [STORAGE_NEW]: { _creationTime: now - 30_000 },
-    });
+    const ctx = ctxWith(
+      [],
+      { [STORAGE_NEW]: { _creationTime: now - 30_000 } },
+      [
+        {
+          storageId: STORAGE_NEW,
+          uploadedBy: "logto|alice",
+          createdAt: now - 30_000,
+        },
+      ],
+    );
 
     await expect(
       ReimbursementStorageAccess.assertCanResolve(
-        ctx,
+        ctx as never,
         member(),
         STORAGE_NEW,
         now,
@@ -176,18 +231,49 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("denies an old unreferenced storage id so resumes and event files stay private", async () => {
+  it("denies another signed-in user a fresh unreferenced upload", async () => {
     const now = Date.now();
-    const ctx = ctxWith([], {
-      [STORAGE_NEW]: {
-        _creationTime:
-          now - ReimbursementStorageAccess.RECENT_UNREFERENCED_UPLOAD_MS - 1,
-      },
-    });
+    const ctx = ctxWith(
+      [],
+      { [STORAGE_NEW]: { _creationTime: now - 30_000 } },
+      [
+        {
+          storageId: STORAGE_NEW,
+          uploadedBy: "logto|alice",
+          createdAt: now - 30_000,
+        },
+      ],
+    );
 
     await expect(
       ReimbursementStorageAccess.assertCanResolve(
-        ctx,
+        ctx as never,
+        member({ logtoId: "logto|bob" }),
+        STORAGE_NEW,
+        now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+  });
+
+  it("denies an expired pending upload even for the uploader", async () => {
+    const now = Date.now();
+    const createdAt =
+      now - ReimbursementStorageAccess.RECENT_UNREFERENCED_UPLOAD_MS - 1;
+    const ctx = ctxWith(
+      [],
+      { [STORAGE_NEW]: { _creationTime: createdAt } },
+      [
+        {
+          storageId: STORAGE_NEW,
+          uploadedBy: "logto|alice",
+          createdAt,
+        },
+      ],
+    );
+
+    await expect(
+      ReimbursementStorageAccess.assertCanResolve(
+        ctx as never,
         member(),
         STORAGE_NEW,
         now,
@@ -195,11 +281,82 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
     ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
   });
 
-  it("denies an unreferenced storage id with no metadata", async () => {
-    const ctx = ctxWith([]);
+  it("denies an unreferenced storage id with no pending uploader", async () => {
+    const now = Date.now();
+    const ctx = ctxWith([], {
+      [STORAGE_NEW]: { _creationTime: now - 30_000 },
+    });
 
     await expect(
-      ReimbursementStorageAccess.assertCanResolve(ctx, member(), STORAGE_NEW),
+      ReimbursementStorageAccess.assertCanResolve(
+        ctx as never,
+        member(),
+        STORAGE_NEW,
+        now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+  });
+});
+
+describe("ReimbursementStorageAccess.registerPendingUpload", () => {
+  it("records the caller as the uploader of a fresh storage id", async () => {
+    const now = Date.now();
+    const ctx = ctxWith([], {
+      [STORAGE_NEW]: { _creationTime: now - 1_000 },
+    });
+
+    await ReimbursementStorageAccess.registerPendingUpload(
+      ctx as never,
+      member(),
+      STORAGE_NEW,
+      now,
+    );
+
+    expect(ctx._pending).toEqual([
+      {
+        storageId: STORAGE_NEW,
+        uploadedBy: "logto|alice",
+        createdAt: now,
+      },
+    ]);
+    await expect(
+      ReimbursementStorageAccess.assertCanResolve(
+        ctx as never,
+        member(),
+        STORAGE_NEW,
+        now,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it("does not let a second signed-in user claim the same fresh upload", async () => {
+    const now = Date.now();
+    const ctx = ctxWith([], {
+      [STORAGE_NEW]: { _creationTime: now - 1_000 },
+    });
+
+    await ReimbursementStorageAccess.registerPendingUpload(
+      ctx as never,
+      member(),
+      STORAGE_NEW,
+      now,
+    );
+
+    await expect(
+      ReimbursementStorageAccess.registerPendingUpload(
+        ctx as never,
+        member({ logtoId: "logto|bob" }),
+        STORAGE_NEW,
+        now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+    await expect(
+      ReimbursementStorageAccess.assertCanResolve(
+        ctx as never,
+        member({ logtoId: "logto|bob" }),
+        STORAGE_NEW,
+        now,
+      ),
     ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
   });
 });

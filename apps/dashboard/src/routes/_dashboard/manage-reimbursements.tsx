@@ -221,6 +221,9 @@ function ManageReimbursementsPage() {
 	const generateUploadUrl = useAuthedMutation(
 		api.reimbursements.generateUploadUrl,
 	);
+	const registerPendingUpload = useAuthedMutation(
+		api.reimbursements.registerPendingUpload,
+	);
 	const getStorageUrl = useAuthedMutation(api.reimbursements.getStorageUrl);
 
 	// Table state
@@ -616,6 +619,7 @@ function ManageReimbursementsPage() {
 			}
 
 			const { storageId } = await uploadResponse.json();
+			await registerPendingUpload({ storageId });
 			const proofUrl = await getStorageUrl({ storageId });
 			if (!proofUrl) {
 				throw new Error("Could not resolve uploaded proof file URL");
