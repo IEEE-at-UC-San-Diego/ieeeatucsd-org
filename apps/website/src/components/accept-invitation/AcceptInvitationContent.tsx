@@ -51,7 +51,6 @@ export default function AcceptInvitationContent({
 }: AcceptInvitationContentProps) {
   const [invitation, setInvitation] = useState<Invitation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [declined, setDeclined] = useState(false);
@@ -104,70 +103,17 @@ export default function AcceptInvitationContent({
     }
   };
 
-  const handleAccept = async () => {
-    try {
-      setProcessing(true);
-      setError(null);
-
-      const response = await fetch(getAcceptInvitationEndpoint(), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inviteId,
-          action: "accept",
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to accept invitation");
-      }
-
-      setSuccess(true);
-    } catch (err) {
-      console.error("Error accepting invitation:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to accept invitation",
-      );
-    } finally {
-      setProcessing(false);
-    }
+  const dashboardAcceptUrl = () => {
+    const envBaseUrl = import.meta.env.PUBLIC_DASHBOARD_URL?.trim();
+    const baseUrl = (envBaseUrl || "https://dashboard.ieeeatucsd.org").replace(
+      /\/$/,
+      "",
+    );
+    return `${baseUrl}/accept-invitation/${inviteId}`;
   };
 
-  const handleDecline = async () => {
-    if (!confirm("Are you sure you want to decline this position?")) {
-      return;
-    }
-
-    try {
-      setProcessing(true);
-      setError(null);
-
-      const response = await fetch(getAcceptInvitationEndpoint(), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inviteId,
-          action: "decline",
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to decline invitation");
-      }
-
-      setDeclined(true);
-    } catch (err) {
-      console.error("Error declining invitation:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to decline invitation",
-      );
-    } finally {
-      setProcessing(false);
-    }
+  const continueOnDashboard = () => {
+    window.location.assign(dashboardAcceptUrl());
   };
 
   if (loading) {
@@ -382,22 +328,17 @@ export default function AcceptInvitationContent({
             </div>
           </div>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8 space-y-3">
+            <p className="text-center text-sm text-white/70">
+              Sign in with {invitation?.email || "the invited email"} on the
+              dashboard to accept or decline this invitation.
+            </p>
             <button
               type="button"
-              onClick={handleDecline}
-              disabled={processing}
-              className="ieee-btn ieee-btn-ghost flex-1 font-semibold disabled:opacity-50"
+              onClick={continueOnDashboard}
+              className="ieee-btn ieee-btn-primary w-full font-semibold"
             >
-              Decline Position
-            </button>
-            <button
-              type="button"
-              onClick={handleAccept}
-              disabled={processing}
-              className="ieee-btn ieee-btn-primary flex-1 font-semibold disabled:opacity-50"
-            >
-              {processing ? "Processing..." : "Accept Position"}
+              Continue on dashboard
             </button>
           </div>
 

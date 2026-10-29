@@ -444,3 +444,124 @@ describe("AuthFlow.clearRecoveryLatches", () => {
 		Reflect.deleteProperty(globalThis, "window");
 	});
 });
+
+describe("AuthFlow post-login redirect", () => {
+	const storage = new Map<string, string>();
+
+	afterEach(() => {
+		storage.clear();
+		Reflect.deleteProperty(globalThis, "window");
+	});
+
+	function mockWindow() {
+		const sessionStorageMock = {
+			getItem: (key: string) => storage.get(key) ?? null,
+			setItem: (key: string, value: string) => {
+				storage.set(key, value);
+			},
+			removeItem: (key: string) => {
+				storage.delete(key);
+			},
+			clear: () => {
+				storage.clear();
+			},
+			key: () => null,
+			length: 0,
+		};
+		Object.defineProperty(globalThis, "window", {
+			configurable: true,
+			value: {
+				sessionStorage: sessionStorageMock,
+				localStorage: sessionStorageMock,
+			},
+		});
+		return sessionStorageMock;
+	}
+
+	it("only allows accept-invitation paths", () => {
+		expect(
+			AuthFlow.isSafePostLoginRedirect("/accept-invitation/invite_1"),
+		).toBe(true);
+		expect(AuthFlow.isSafePostLoginRedirect("/overview")).toBe(false);
+		expect(
+			AuthFlow.isSafePostLoginRedirect("/accept-invitation/../overview"),
+		).toBe(false);
+		expect(AuthFlow.isSafePostLoginRedirect("https://evil.example")).toBe(
+			false,
+		);
+	});
+
+	it("returns a stashed accept-invitation path after sign-in", async () => {
+		mockWindow();
+		AuthFlow.stashPostLoginRedirect("/accept-invitation/invite_1");
+
+		const redirect = await AuthFlow.finalizeSignIn({
+			getIdTokenClaims: async () => ({
+				sub: "logto|invitee",
+				email: "invitee@example.com",
+				name: "Invitee",
+			}),
+			getAccessToken: async () => "access-token",
+			getIdToken: async () => "id-token",
+			createSession: async () => ({ sessionToken: "session-token" }),
+			upsertUser: async () => ({
+				signedUp: false,
+				role: "Member",
+			}),
+		});
+
+		expect(redirect).toBe("/accept-invitation/invite_1");
+		expect(
+			window.sessionStorage.getItem(AuthFlow.POST_LOGIN_REDIRECT_KEY),
+		).toBeNull();
+	});
+
+	it("ignores an unsafe stashed path", () => {
+		const sessionStorageMock = mockWindow();
+		sessionStorageMock.setItem(AuthFlow.POST_LOGIN_REDIRECT_KEY, "/overview");
+		expect(AuthFlow.consumePostLoginRedirect()).toBeNull();
+	});
+
+	it("falls back to localStorage when sessionStorage is empty", () => {
+		const storage = new Map<string, string>();
+		const sessionStorageMock = {
+			getItem: () => null,
+			setItem: () => {},
+			removeItem: () => {},
+			clear: () => {},
+			key: () => null,
+			length: 0,
+		};
+		const localStorageMock = {
+			getItem: (key: string) => storage.get(key) ?? null,
+			setItem: (key: string, value: string) => {
+				storage.set(key, value);
+			},
+			removeItem: (key: string) => {
+				storage.delete(key);
+			},
+			clear: () => {
+				storage.clear();
+			},
+			key: () => null,
+			length: 0,
+		};
+		Object.defineProperty(globalThis, "window", {
+			configurable: true,
+			value: {
+				sessionStorage: sessionStorageMock,
+				localStorage: localStorageMock,
+			},
+		});
+		localStorageMock.setItem(
+			AuthFlow.POST_LOGIN_REDIRECT_KEY,
+			"/accept-invitation/invite_1",
+		);
+		expect(AuthFlow.consumePostLoginRedirect()).toBe(
+			"/accept-invitation/invite_1",
+		);
+		expect(
+			localStorageMock.getItem(AuthFlow.POST_LOGIN_REDIRECT_KEY),
+		).toBeNull();
+	});
+});

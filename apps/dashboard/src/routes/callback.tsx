@@ -67,6 +67,16 @@ function CallbackClient() {
 		})
 			.then(async (targetRoute) => {
 				logAuthEvent("callback_finalize_succeeded", { requestId, targetRoute });
+				const inviteMatch = /^\/accept-invitation\/([A-Za-z0-9_-]+)$/.exec(
+					targetRoute,
+				);
+				if (inviteMatch) {
+					await navigate({
+						to: "/accept-invitation/$inviteId",
+						params: { inviteId: inviteMatch[1] },
+					});
+					return;
+				}
 				await navigate({ to: targetRoute });
 			})
 			.catch((err: unknown) => {
