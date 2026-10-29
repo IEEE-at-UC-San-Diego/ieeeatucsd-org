@@ -846,6 +846,48 @@ describe("ReimbursementStorageAccess.assertCanAttachAndConsume", () => {
     ]);
   });
 
+  it("allows two receipt entries that reference the same owned upload", async () => {
+    const now = Date.now();
+    const publicUrl = `https://convex.example/api/storage/${STORAGE_A}`;
+    const ctx = ctxWith(
+      [],
+      { [STORAGE_A]: { _creationTime: now - 1_000 } },
+      [
+        {
+          storageId: STORAGE_A,
+          uploadedBy: "logto|alice",
+          createdAt: now - 1_000,
+        },
+      ],
+      [],
+      { [STORAGE_A]: publicUrl },
+    );
+    const receipts = [
+      { receiptFile: STORAGE_A, amount: 12 },
+      { receiptFile: STORAGE_A, amount: 8 },
+    ];
+
+    const attachedIds =
+      await ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx as never,
+        member(),
+        ReimbursementStorageAccess.receiptFileValues(receipts),
+        now,
+      );
+    const rewritten = await ReimbursementStorageAccess.rewriteReceiptFiles(
+      ctx as never,
+      receipts,
+      attachedIds,
+    );
+
+    expect(attachedIds).toEqual([STORAGE_A, STORAGE_A]);
+    expect(rewritten).toEqual([
+      { receiptFile: publicUrl, amount: 12 },
+      { receiptFile: publicUrl, amount: 8 },
+    ]);
+    expect(ctx._pending).toEqual([]);
+  });
+
   it("allows attaching no file (mileage receipts) without a claim", async () => {
     const ctx = ctxWith([]);
 
