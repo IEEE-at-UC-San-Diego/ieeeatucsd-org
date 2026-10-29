@@ -84,14 +84,16 @@ export class AuthFlow {
 		if (typeof window === "undefined") return;
 		if (!AuthFlow.isSafePostLoginRedirect(path)) return;
 		window.sessionStorage.setItem(AuthFlow.POST_LOGIN_REDIRECT_KEY, path);
+		window.localStorage.setItem(AuthFlow.POST_LOGIN_REDIRECT_KEY, path);
 	}
 
 	static consumePostLoginRedirect() {
 		if (typeof window === "undefined") return null;
-		const path = window.sessionStorage.getItem(
-			AuthFlow.POST_LOGIN_REDIRECT_KEY,
-		);
+		const path =
+			window.sessionStorage.getItem(AuthFlow.POST_LOGIN_REDIRECT_KEY) ??
+			window.localStorage.getItem(AuthFlow.POST_LOGIN_REDIRECT_KEY);
 		window.sessionStorage.removeItem(AuthFlow.POST_LOGIN_REDIRECT_KEY);
+		window.localStorage.removeItem(AuthFlow.POST_LOGIN_REDIRECT_KEY);
 		if (!path || !AuthFlow.isSafePostLoginRedirect(path)) return null;
 		return path;
 	}
