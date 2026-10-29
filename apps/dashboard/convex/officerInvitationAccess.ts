@@ -144,16 +144,37 @@ export class OfficerInvitationAccess {
           .withIndex("by_logtoId", (q) => q.eq("logtoId", session.subject))
           .first()
       : null;
-    const callerEmail = existingUser?.email || session.email;
+    const callerEmail = OfficerInvitationAccess.callerEmailFromAuth({
+      claimsEmail: session.email,
+      userEmail: existingUser?.email,
+    });
     if (!OfficerInvitationAccess.emailsMatch(callerEmail, invitationEmail)) {
       throw new Error(OfficerInvitationAccess.EMAIL_MISMATCH);
     }
 
     return {
-      email: OfficerInvitationAccess.normalizeEmail(callerEmail),
+      email: callerEmail,
       subject: session.subject,
       source: session.source,
     };
+  }
+
+  static async findExistingUserForGrant(
+    ctx: Pick<MutationCtx, "db">,
+    subject: string,
+    normalizedEmail: string,
+  ) {
+    if (subject.trim()) {
+      const bySubject = await ctx.db
+        .query("users")
+        .withIndex("by_logtoId", (q) => q.eq("logtoId", subject))
+        .first();
+      if (bySubject) return bySubject;
+    }
+    return await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+      .first();
   }
 
   static async accept(
@@ -212,10 +233,11 @@ export class OfficerInvitationAccess {
     const normalizedEmail = OfficerInvitationAccess.normalizeEmail(
       invitation.email,
     );
-    const existingUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-      .first();
+    const existingUser = await OfficerInvitationAccess.findExistingUserForGrant(
+      ctx,
+      caller.subject,
+      normalizedEmail,
+    );
 
     let roleGranted = false;
     if (existingUser) {
@@ -224,6 +246,7 @@ export class OfficerInvitationAccess {
         position: selectedPosition,
         lastUpdated: now,
         lastUpdatedBy: invitation.invitedBy,
+        email: normalizedEmail,
         ...(existingUser.logtoId ? {} : { logtoId: caller.subject }),
       });
       roleGranted = true;

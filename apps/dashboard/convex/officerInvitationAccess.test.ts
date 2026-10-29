@@ -161,6 +161,25 @@ describe("OfficerInvitationAccess.accept", () => {
     expect(db._tables.officerInvitations[0]?.status).toBe("pending");
   });
 
+  it("prefers the verified session email over a stored email that matches the invitation", async () => {
+    const db = createMockDb({
+      invitations: [invitation()],
+      users: [memberUser()],
+    });
+    const authToken = await mintSessionToken("logto|alex", "other@ucsd.edu");
+
+    await expect(
+      OfficerInvitationAccess.accept(ctxFrom(db) as never, {
+        id: INVITE_ID,
+        logtoId: "logto|alex",
+        authToken,
+      }),
+    ).rejects.toThrow(OfficerInvitationAccess.EMAIL_MISMATCH);
+    expect(db._tables.officerInvitations[0]?.status).toBe("pending");
+    expect(db._tables.users[0]?.role).toBe("Member");
+    expect(db._tables.users[0]?.email).toBe("alex@ucsd.edu");
+  });
+
   it("rejects a valid session whose email does not match the invitation", async () => {
     const db = createMockDb({
       invitations: [invitation()],
@@ -268,6 +287,30 @@ describe("OfficerInvitationAccess.accept", () => {
     expect(db._tables.users[0]?.role).toBe("General Officer");
   });
 
+  it("accepts an invitation sent to a newly verified email when the stored email is stale", async () => {
+    const db = createMockDb({
+      invitations: [invitation({ email: "alex.new@ucsd.edu" })],
+      users: [memberUser({ email: "alex.old@ucsd.edu" })],
+    });
+    const authToken = await mintSessionToken("logto|alex", "alex.new@ucsd.edu");
+
+    const result = await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
+      id: INVITE_ID,
+      logtoId: "logto|alex",
+      authToken,
+    });
+
+    expect(result.status).toBe("accepted");
+    expect(result.roleGranted).toBe(true);
+    expect(db._tables.users).toHaveLength(1);
+    expect(db._tables.users[0]?._id).toBe("users_alex");
+    expect(db._tables.users[0]?.email).toBe("alex.new@ucsd.edu");
+    expect(db._tables.users[0]?.logtoId).toBe("logto|alex");
+    expect(db._tables.users[0]?.role).toBe("General Officer");
+    expect(db._tables.users[0]?.position).toBe("Project Lead");
+    expect(db._tables.officerInvitations[0]?.status).toBe("accepted");
+  });
+
   it("rejects a first-time invitee whose session has no matching email", async () => {
     const db = createMockDb({
       invitations: [invitation()],
@@ -335,6 +378,26 @@ describe("OfficerInvitationAccess.decline", () => {
       }),
     ).rejects.toThrow(OfficerInvitationAccess.EMAIL_MISMATCH);
     expect(db._tables.officerInvitations[0]?.status).toBe("pending");
+  });
+
+  it("declines an invitation sent to a newly verified email when the stored email is stale", async () => {
+    const db = createMockDb({
+      invitations: [invitation({ email: "alex.new@ucsd.edu" })],
+      users: [memberUser({ email: "alex.old@ucsd.edu" })],
+    });
+    const authToken = await mintSessionToken("logto|alex", "alex.new@ucsd.edu");
+
+    const result = await OfficerInvitationAccess.decline(ctxFrom(db) as never, {
+      id: INVITE_ID,
+      logtoId: "logto|alex",
+      authToken,
+    });
+
+    expect(result.status).toBe("declined");
+    expect(db._tables.officerInvitations[0]?.status).toBe("declined");
+    expect(db._tables.users).toHaveLength(1);
+    expect(db._tables.users[0]?.email).toBe("alex.old@ucsd.edu");
+    expect(db._tables.users[0]?.role).toBe("Member");
   });
 
   it("lets the invited member decline", async () => {
