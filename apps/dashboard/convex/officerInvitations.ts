@@ -1,21 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { OfficerInvitationAccess } from "./officerInvitationAccess";
 import { requireAdminAccess } from "./permissions";
-
-const publicInvitationFields = (invitation: any) => ({
-  _id: invitation._id,
-  name: invitation.name,
-  email: invitation.email,
-  role: invitation.role,
-  position: invitation.position,
-  offeredPositions: invitation.offeredPositions,
-  status: invitation.status,
-  invitedAt: invitation.invitedAt,
-  expiresAt: invitation.expiresAt,
-  message: invitation.message,
-  acceptanceDeadline: invitation.acceptanceDeadline,
-  leaderName: invitation.leaderName,
-});
 
 export const list = query({
   args: { logtoId: v.string(), authToken: v.string() },
@@ -46,7 +32,9 @@ export const getPublic = query({
   args: { id: v.id("officerInvitations") },
   handler: async (ctx, args) => {
     const invitation = await ctx.db.get(args.id);
-    return invitation ? publicInvitationFields(invitation) : null;
+    return invitation
+      ? OfficerInvitationAccess.publicInvitationFields(invitation)
+      : null;
   },
 });
 
@@ -113,125 +101,24 @@ export const updateStatus = mutation({
 
 export const acceptPublic = mutation({
   args: {
+    logtoId: v.string(),
+    authToken: v.string(),
     id: v.id("officerInvitations"),
     selectedPosition: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const invitation = await ctx.db.get(args.id);
-    if (!invitation) {
-      throw new Error("Invitation not found");
-    }
-    if (invitation.status !== "pending") {
-      throw new Error(`Invitation has already been ${invitation.status}`);
-    }
-    if (Date.now() > invitation.expiresAt) {
-      await ctx.db.patch(args.id, { status: "expired" });
-      throw new Error("Invitation has expired");
-    }
-
-    const offeredPositions =
-      invitation.offeredPositions && invitation.offeredPositions.length > 0
-        ? invitation.offeredPositions
-        : [invitation.position];
-    if (offeredPositions.length > 1 && !args.selectedPosition?.trim()) {
-      throw new Error("Please select one position to accept");
-    }
-    const selectedPosition = args.selectedPosition?.trim() || invitation.position;
-    if (!offeredPositions.includes(selectedPosition)) {
-      throw new Error("Selected position is not part of this invitation");
-    }
-
-    const now = Date.now();
-    const normalizedEmail = invitation.email.trim().toLowerCase();
-    const existingUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-      .first();
-
-    let roleGranted = false;
-    if (existingUser) {
-      await ctx.db.patch(existingUser._id, {
-        role: invitation.role,
-        position: selectedPosition,
-        lastUpdated: now,
-        lastUpdatedBy: invitation.invitedBy,
-      });
-      roleGranted = true;
-    } else {
-      await ctx.db.insert("users", {
-        email: normalizedEmail,
-        emailVisibility: true,
-        verified: true,
-        name: invitation.name,
-        role: invitation.role,
-        position: selectedPosition,
-        status: "active",
-        signedUp: false,
-        requestedEmail: false,
-        joinDate: now,
-        invitedBy: invitation.invitedBy,
-        inviteAccepted: now,
-        lastUpdated: now,
-        lastUpdatedBy: invitation.invitedBy,
-        notificationPreferences: {},
-        displayPreferences: {},
-        accessibilitySettings: {},
-        eventsAttended: 0,
-        points: 0,
-      });
-      roleGranted = true;
-    }
-
-    const updates: Record<string, unknown> = {
-      status: "accepted",
-      position: selectedPosition,
-      acceptedAt: now,
-      roleGranted,
-      userCreatedOrUpdated: roleGranted,
-      permissionsGranted: roleGranted,
-    };
-    if (roleGranted) {
-      updates.roleGrantedAt = now;
-    }
-    await ctx.db.patch(args.id, updates);
-
-    return {
-      ...publicInvitationFields(invitation),
-      position: selectedPosition,
-      status: "accepted",
-      acceptedAt: now,
-      roleGranted,
-      userCreatedOrUpdated: roleGranted,
-    };
+    return await OfficerInvitationAccess.accept(ctx, args);
   },
 });
 
 export const declinePublic = mutation({
-  args: { id: v.id("officerInvitations") },
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    id: v.id("officerInvitations"),
+  },
   handler: async (ctx, args) => {
-    const invitation = await ctx.db.get(args.id);
-    if (!invitation) {
-      throw new Error("Invitation not found");
-    }
-    if (invitation.status !== "pending") {
-      throw new Error(`Invitation has already been ${invitation.status}`);
-    }
-    if (Date.now() > invitation.expiresAt) {
-      await ctx.db.patch(args.id, { status: "expired" });
-      throw new Error("Invitation has expired");
-    }
-
-    const now = Date.now();
-    await ctx.db.patch(args.id, {
-      status: "declined",
-      declinedAt: now,
-    });
-
-    return {
-      ...publicInvitationFields(invitation),
-      status: "declined",
-      declinedAt: now,
-    };
+    return await OfficerInvitationAccess.decline(ctx, args);
   },
 });
 

@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { ReimbursementStorageAccess } from "./reimbursementStorageAccess";
 import {
   requireCurrentUser,
   requireAdminAccess,
@@ -213,7 +214,8 @@ export const getStorageUrl = mutation({
     storageId: v.id("_storage"),
   },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    await ReimbursementStorageAccess.assertCanResolve(ctx, user, args.storageId);
     return await ctx.storage.getUrl(args.storageId);
   },
 });
