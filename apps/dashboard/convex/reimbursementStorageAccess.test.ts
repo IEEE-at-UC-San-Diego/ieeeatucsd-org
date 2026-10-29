@@ -33,7 +33,12 @@ function ctxWith(
   metadata: Record<string, { _creationTime?: number } | null> = {},
   pending: PendingReimbursementUpload[] = [],
 ) {
-  const pendingRows = [...pending];
+  const pendingRows = pending.map((row, index) => ({
+    _id:
+      row._id ??
+      (`pending_${row.storageId}_${index}` as Id<"pendingReimbursementUploads">),
+    ...row,
+  }));
   return {
     db: {
       query: (table: string) => {
@@ -76,8 +81,14 @@ function ctxWith(
         if (table !== "pendingReimbursementUploads") {
           throw new Error(`unexpected insert ${table}`);
         }
-        pendingRows.push(doc);
-        return `${table}_${pendingRows.length}`;
+        const id =
+          `pending_${pendingRows.length + 1}` as Id<"pendingReimbursementUploads">;
+        pendingRows.push({ _id: id, ...doc });
+        return id;
+      },
+      delete: async (id: Id<"pendingReimbursementUploads">) => {
+        const index = pendingRows.findIndex((row) => row._id === id);
+        if (index >= 0) pendingRows.splice(index, 1);
       },
       system: {
         get: async (id: Id<"_storage">) => metadata[id] ?? null,
@@ -314,6 +325,7 @@ describe("ReimbursementStorageAccess.registerPendingUpload", () => {
 
     expect(ctx._pending).toEqual([
       {
+        _id: "pending_1",
         storageId: STORAGE_NEW,
         uploadedBy: "logto|alice",
         createdAt: now,
@@ -356,6 +368,141 @@ describe("ReimbursementStorageAccess.registerPendingUpload", () => {
         member({ logtoId: "logto|bob" }),
         STORAGE_NEW,
         now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+  });
+});
+
+describe("ReimbursementStorageAccess.assertCanAttachAndConsume", () => {
+  it("rejects a member who attaches another user's storage id", async () => {
+    const now = Date.now();
+    const ctx = ctxWith(
+      [],
+      { [STORAGE_A]: { _creationTime: now - 1_000 } },
+      [
+        {
+          storageId: STORAGE_A,
+          uploadedBy: "logto|bob",
+          createdAt: now - 1_000,
+        },
+      ],
+    );
+
+    await expect(
+      ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx as never,
+        member(),
+        [`https://convex.example/api/storage/${STORAGE_A}`],
+        now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+    expect(ctx._pending).toHaveLength(1);
+  });
+
+  it("rejects attaching a storage id with no pending uploader", async () => {
+    const now = Date.now();
+    const ctx = ctxWith([], {
+      [STORAGE_A]: { _creationTime: now - 1_000 },
+    });
+
+    await expect(
+      ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx as never,
+        member(),
+        [STORAGE_A],
+        now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+  });
+
+  it("allows the uploader to attach their own receipt and consumes the claim", async () => {
+    const now = Date.now();
+    const ctx = ctxWith(
+      [],
+      { [STORAGE_NEW]: { _creationTime: now - 1_000 } },
+      [
+        {
+          storageId: STORAGE_NEW,
+          uploadedBy: "logto|alice",
+          createdAt: now - 1_000,
+        },
+      ],
+    );
+
+    await expect(
+      ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx as never,
+        member(),
+        ReimbursementStorageAccess.receiptFileValues([
+          {
+            receiptFile: `https://convex.example/api/storage/${STORAGE_NEW}`,
+          },
+        ]),
+        now,
+      ),
+    ).resolves.toBeUndefined();
+    expect(ctx._pending).toEqual([]);
+  });
+
+  it("does not consume a valid claim when another receipt is foreign", async () => {
+    const now = Date.now();
+    const ctx = ctxWith(
+      [],
+      {
+        [STORAGE_A]: { _creationTime: now - 1_000 },
+        [STORAGE_B]: { _creationTime: now - 1_000 },
+      },
+      [
+        {
+          storageId: STORAGE_A,
+          uploadedBy: "logto|alice",
+          createdAt: now - 1_000,
+        },
+        {
+          storageId: STORAGE_B,
+          uploadedBy: "logto|bob",
+          createdAt: now - 1_000,
+        },
+      ],
+    );
+
+    await expect(
+      ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx as never,
+        member(),
+        [
+          `https://convex.example/api/storage/${STORAGE_A}`,
+          `https://convex.example/api/storage?storageId=${STORAGE_B}`,
+        ],
+        now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+    expect(ctx._pending.map((row) => row.storageId)).toEqual([
+      STORAGE_A,
+      STORAGE_B,
+    ]);
+  });
+
+  it("allows attaching no file (mileage receipts) without a claim", async () => {
+    const ctx = ctxWith([]);
+
+    await expect(
+      ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx as never,
+        member(),
+        ReimbursementStorageAccess.receiptFileValues([
+          { receiptFile: undefined },
+        ]),
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it("rejects a non-empty receiptFile that is not a storage id", async () => {
+    await expect(
+      ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctxWith([]) as never,
+        member(),
+        ["https://convex.example/api/storage"],
       ),
     ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
   });

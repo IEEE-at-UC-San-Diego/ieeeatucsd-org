@@ -90,6 +90,11 @@ export const create = mutation({
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const userId = user.logtoId ?? user.authUserId ?? "";
     const { logtoId, authToken, ...data } = args;
+    await ReimbursementStorageAccess.assertCanAttachAndConsume(
+      ctx,
+      user,
+      ReimbursementStorageAccess.receiptFileValues(data.receipts),
+    );
     return await ctx.db.insert("reimbursements", {
       ...data,
       status: "submitted",
@@ -179,6 +184,12 @@ export const updatePaymentDetails = mutation({
     const reimbursement = await ctx.db.get(args.id);
     if (!reimbursement) throw new Error("Reimbursement not found");
     transitionReimbursementPayment(reimbursement.status);
+
+    await ReimbursementStorageAccess.assertCanAttachAndConsume(
+      ctx,
+      admin,
+      [args.paymentDetails.proofFileUrl],
+    );
 
     const auditLogs = reimbursement.auditLogs || [];
     auditLogs.push({
