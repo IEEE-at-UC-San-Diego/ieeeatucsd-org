@@ -164,26 +164,35 @@ function ctxWith(
 }
 
 describe("ReimbursementStorageAccess.includesStorageId", () => {
-  it("matches a raw id, URL path, or query parameter", () => {
+  it("matches only the exact stored id or the exact public URL", () => {
+    const publicUrl = `https://convex.example/api/storage/${STORAGE_A}`;
     expect(
       ReimbursementStorageAccess.includesStorageId(STORAGE_A, STORAGE_A),
+    ).toBe(true);
+    expect(
+      ReimbursementStorageAccess.includesStorageId(
+        publicUrl,
+        STORAGE_A,
+        publicUrl,
+      ),
     ).toBe(true);
     expect(
       ReimbursementStorageAccess.includesStorageId(
         `https://convex.example/api/storage/${STORAGE_A}`,
         STORAGE_A,
       ),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      ReimbursementStorageAccess.includesStorageId(
+        `${STORAGE_A}?storageId=${STORAGE_B}`,
+        STORAGE_B,
+      ),
+    ).toBe(false);
     expect(
       ReimbursementStorageAccess.includesStorageId(
         `https://convex.example/api/storage?storageId=${STORAGE_A}`,
         STORAGE_A,
-      ),
-    ).toBe(true);
-    expect(
-      ReimbursementStorageAccess.includesStorageId(
-        `https://convex.example/api/storage/${STORAGE_B}`,
-        STORAGE_A,
+        publicUrl,
       ),
     ).toBe(false);
   });
@@ -229,14 +238,19 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
   });
 
   it("allows the reimbursement owner to resolve their receipt", async () => {
-    const ctx = ctxWith([
-      reimbursement({
-        submittedBy: "logto|alice",
-        receipts: [
-          { receiptFile: `https://convex.example/api/storage/${STORAGE_A}` },
-        ],
-      }),
-    ]);
+    const publicUrl = `https://convex.example/api/storage/${STORAGE_A}`;
+    const ctx = ctxWith(
+      [
+        reimbursement({
+          submittedBy: "logto|alice",
+          receipts: [{ receiptFile: publicUrl }],
+        }),
+      ],
+      {},
+      [],
+      [],
+      { [STORAGE_A]: publicUrl },
+    );
 
     await expect(
       ReimbursementStorageAccess.assertCanResolve(
@@ -247,15 +261,39 @@ describe("ReimbursementStorageAccess.assertCanResolve", () => {
     ).resolves.toBeUndefined();
   });
 
-  it("allows an Executive Officer to resolve any referenced receipt", async () => {
+  it("does not treat a crafted receiptFile as a reference to an embedded foreign id", async () => {
     const ctx = ctxWith([
       reimbursement({
         submittedBy: "logto|alice",
-        paymentDetails: {
-          proofFileUrl: `https://convex.example/api/storage/${STORAGE_B}`,
-        },
+        receipts: [{ receiptFile: `${STORAGE_A}?storageId=${STORAGE_B}` }],
       }),
     ]);
+
+    await expect(
+      ReimbursementStorageAccess.assertCanResolve(
+        ctx as never,
+        member(),
+        STORAGE_B,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+  });
+
+  it("allows an Executive Officer to resolve any referenced receipt", async () => {
+    const publicUrl = `https://convex.example/api/storage/${STORAGE_B}`;
+    const ctx = ctxWith(
+      [
+        reimbursement({
+          submittedBy: "logto|alice",
+          paymentDetails: {
+            proofFileUrl: publicUrl,
+          },
+        }),
+      ],
+      {},
+      [],
+      [],
+      { [STORAGE_B]: publicUrl },
+    );
 
     await expect(
       ReimbursementStorageAccess.assertCanResolve(
@@ -592,7 +630,62 @@ describe("ReimbursementStorageAccess.assertCanAttachAndConsume", () => {
         ]),
         now,
       ),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual([STORAGE_NEW]);
+    expect(ctx._pending).toEqual([]);
+  });
+
+  it("rejects a crafted receiptFile that embeds a second storage id", async () => {
+    const now = Date.now();
+    const ctx = ctxWith(
+      [],
+      {
+        [STORAGE_A]: { _creationTime: now - 1_000 },
+        [STORAGE_B]: { _creationTime: now - 1_000 },
+      },
+      [
+        {
+          storageId: STORAGE_A,
+          uploadedBy: "logto|alice",
+          createdAt: now - 1_000,
+        },
+      ],
+    );
+
+    await expect(
+      ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx as never,
+        member(),
+        [`${STORAGE_A}?storageId=${STORAGE_B}`],
+        now,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
+    expect(ctx._pending.map((row) => row.storageId)).toEqual([STORAGE_A]);
+  });
+
+  it("still attaches an owned pending claim after the 15-minute preview window", async () => {
+    const now = Date.now();
+    const createdAt =
+      now - ReimbursementStorageAccess.RECENT_UNREFERENCED_UPLOAD_MS - 1;
+    const ctx = ctxWith(
+      [],
+      { [STORAGE_NEW]: { _creationTime: createdAt } },
+      [
+        {
+          storageId: STORAGE_NEW,
+          uploadedBy: "logto|alice",
+          createdAt,
+        },
+      ],
+    );
+
+    await expect(
+      ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx as never,
+        member(),
+        [STORAGE_NEW],
+        now,
+      ),
+    ).resolves.toEqual([STORAGE_NEW]);
     expect(ctx._pending).toEqual([]);
   });
 
@@ -646,7 +739,7 @@ describe("ReimbursementStorageAccess.assertCanAttachAndConsume", () => {
           { receiptFile: undefined },
         ]),
       ),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual([]);
   });
 
   it("rejects a non-empty receiptFile that is not a storage id", async () => {
@@ -684,7 +777,7 @@ describe("ReimbursementStorageAccess.assertCanAttachAndConsume", () => {
         [publicUrl],
         now,
       ),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual([STORAGE_NEW]);
     expect(ctx._pending).toEqual([]);
   });
 
@@ -715,5 +808,65 @@ describe("ReimbursementStorageAccess.assertCanAttachAndConsume", () => {
       ),
     ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
     expect(ctx._pending).toHaveLength(1);
+  });
+});
+
+describe("ReimbursementStorageAccess.canonicalizeStorageValue", () => {
+  it("rewrites a crafted receiptFile to the resolved owned id URL", async () => {
+    const now = Date.now();
+    const publicUrl = `https://convex.example/api/storage/${STORAGE_A}`;
+    const ctx = ctxWith(
+      [],
+      { [STORAGE_A]: { _creationTime: now - 1_000 } },
+      [
+        {
+          storageId: STORAGE_A,
+          uploadedBy: "logto|alice",
+          createdAt: now - 1_000,
+        },
+      ],
+      [],
+      { [STORAGE_A]: publicUrl },
+    );
+
+    const attachedIds =
+      await ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx as never,
+        member(),
+        [STORAGE_A],
+        now,
+      );
+    const rewritten = await ReimbursementStorageAccess.rewriteReceiptFiles(
+      ctx as never,
+      [{ receiptFile: `${STORAGE_A}?storageId=${STORAGE_B}` }],
+      attachedIds,
+    );
+
+    expect(rewritten).toEqual([{ receiptFile: publicUrl }]);
+  });
+});
+
+describe("ReimbursementStorageAccess.resolveOwnedPendingStorageId", () => {
+  it("rejects ownId?storageId=foreignId even when the caller owns the first id", async () => {
+    const now = Date.now();
+    const ctx = ctxWith(
+      [],
+      { [STORAGE_A]: { _creationTime: now - 1_000 } },
+      [
+        {
+          storageId: STORAGE_A,
+          uploadedBy: "logto|alice",
+          createdAt: now - 1_000,
+        },
+      ],
+    );
+
+    await expect(
+      ReimbursementStorageAccess.resolveOwnedPendingStorageId(
+        ctx as never,
+        member(),
+        `${STORAGE_A}?storageId=${STORAGE_B}`,
+      ),
+    ).rejects.toThrow(ReimbursementStorageAccess.UNAUTHORIZED);
   });
 });

@@ -124,6 +124,8 @@ export const declinePublic = mutation({
 
 export const recordAcceptanceSideEffects = mutation({
   args: {
+    logtoId: v.string(),
+    authToken: v.string(),
     id: v.id("officerInvitations"),
     onboardingEmailSent: v.optional(v.boolean()),
     roleGranted: v.optional(v.boolean()),
@@ -136,6 +138,11 @@ export const recordAcceptanceSideEffects = mutation({
     if (!invitation) {
       throw new Error("Invitation not found");
     }
+    await OfficerInvitationAccess.requireMatchingCaller(
+      ctx,
+      args,
+      invitation.email,
+    );
 
     const now = Date.now();
     const updates: Record<string, unknown> = {};

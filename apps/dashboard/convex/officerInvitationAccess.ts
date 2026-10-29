@@ -1,7 +1,6 @@
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { LogtoIdentity } from "./logtoIdentity";
-import { requireCurrentUser } from "./permissions";
+import { readVerifiedSession } from "./permissions";
 
 export type InvitationCallerArgs = {
   logtoId: string;
@@ -113,30 +112,26 @@ export class OfficerInvitationAccess {
       throw new Error(OfficerInvitationAccess.AUTH_REQUIRED);
     }
 
-    const native = await LogtoIdentity.fromConvexAuth(ctx);
-    if (native) {
-      if (native.subject !== args.logtoId) {
-        throw new Error("Auth token subject mismatch");
-      }
-      if (!OfficerInvitationAccess.emailsMatch(native.email, invitationEmail)) {
-        throw new Error(OfficerInvitationAccess.EMAIL_MISMATCH);
-      }
-      return {
-        email: OfficerInvitationAccess.normalizeEmail(native.email),
-        subject: native.subject,
-        source: "native",
-      };
-    }
-
-    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    if (!OfficerInvitationAccess.emailsMatch(user.email, invitationEmail)) {
+    const session = await readVerifiedSession(
+      ctx,
+      args.logtoId,
+      args.authToken,
+    );
+    const existingUser = session.subject
+      ? await ctx.db
+          .query("users")
+          .withIndex("by_logtoId", (q) => q.eq("logtoId", session.subject))
+          .first()
+      : null;
+    const callerEmail = existingUser?.email || session.email;
+    if (!OfficerInvitationAccess.emailsMatch(callerEmail, invitationEmail)) {
       throw new Error(OfficerInvitationAccess.EMAIL_MISMATCH);
     }
 
     return {
-      email: OfficerInvitationAccess.normalizeEmail(user.email),
-      subject: user.logtoId ?? args.logtoId,
-      source: "session",
+      email: OfficerInvitationAccess.normalizeEmail(callerEmail),
+      subject: session.subject,
+      source: session.source,
     };
   }
 
@@ -156,7 +151,7 @@ export class OfficerInvitationAccess {
       throw new Error("Invitation not found");
     }
 
-    await OfficerInvitationAccess.requireMatchingCaller(
+    const caller = await OfficerInvitationAccess.requireMatchingCaller(
       ctx,
       args,
       invitation.email,
@@ -198,6 +193,7 @@ export class OfficerInvitationAccess {
         position: selectedPosition,
         lastUpdated: now,
         lastUpdatedBy: invitation.invitedBy,
+        ...(existingUser.logtoId ? {} : { logtoId: caller.subject }),
       });
       roleGranted = true;
     } else {
@@ -216,6 +212,7 @@ export class OfficerInvitationAccess {
         inviteAccepted: now,
         lastUpdated: now,
         lastUpdatedBy: invitation.invitedBy,
+        logtoId: caller.subject,
         notificationPreferences: {},
         displayPreferences: {},
         accessibilitySettings: {},

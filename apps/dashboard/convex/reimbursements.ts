@@ -84,13 +84,20 @@ export const create = mutation({
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const userId = user.logtoId ?? user.authUserId ?? "";
     const { logtoId, authToken, ...data } = args;
-    await ReimbursementStorageAccess.assertCanAttachAndConsume(
+    const attachedIds =
+      await ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx,
+        user,
+        ReimbursementStorageAccess.receiptFileValues(data.receipts),
+      );
+    const receipts = await ReimbursementStorageAccess.rewriteReceiptFiles(
       ctx,
-      user,
-      ReimbursementStorageAccess.receiptFileValues(data.receipts),
+      data.receipts,
+      attachedIds,
     );
     return await ctx.db.insert("reimbursements", {
       ...data,
+      receipts,
       status: "submitted",
       submittedBy: userId,
       auditLogs: [
@@ -173,11 +180,18 @@ export const updatePaymentDetails = mutation({
     const reimbursement = await ctx.db.get(args.id);
     if (!reimbursement) throw new Error("Reimbursement not found");
 
-    await ReimbursementStorageAccess.assertCanAttachAndConsume(
-      ctx,
-      admin,
-      [args.paymentDetails.proofFileUrl],
-    );
+    const attachedIds =
+      await ReimbursementStorageAccess.assertCanAttachAndConsume(
+        ctx,
+        admin,
+        [args.paymentDetails.proofFileUrl],
+      );
+    const proofFileUrl = args.paymentDetails.proofFileUrl
+      ? await ReimbursementStorageAccess.canonicalizeStorageValue(
+          ctx,
+          attachedIds[0],
+        )
+      : args.paymentDetails.proofFileUrl;
 
     const auditLogs = reimbursement.auditLogs || [];
     auditLogs.push({
@@ -188,7 +202,10 @@ export const updatePaymentDetails = mutation({
 
     await ctx.db.patch(args.id, {
       status: "paid",
-      paymentDetails: args.paymentDetails,
+      paymentDetails: {
+        ...args.paymentDetails,
+        proofFileUrl,
+      },
       auditLogs,
     });
     return args.id;

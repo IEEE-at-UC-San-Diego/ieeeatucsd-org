@@ -14,6 +14,7 @@ export type SponsorTier = "Bronze" | "Silver" | "Gold" | "Platinum" | "Diamond";
 type SessionPayload = {
   sub: string;
   role?: UserRole;
+  email?: string;
   iat: number;
   exp: number;
   v: number;
@@ -65,13 +66,16 @@ async function signHex(input: string, secret: string) {
   return toHex(new Uint8Array(signature));
 }
 
-async function verifySessionToken(authToken: string): Promise<SessionPayload> {
-  const parts = authToken.split(".");
-  if (parts.length !== 2) {
+function splitSignedToken(token: string): [string, string] {
+  const separator = token.lastIndexOf(".");
+  if (separator <= 0 || separator === token.length - 1) {
     throw new Error("Invalid auth token format");
   }
+  return [token.slice(0, separator), token.slice(separator + 1)];
+}
 
-  const [encodedPayload, signature] = parts;
+async function verifySessionToken(authToken: string): Promise<SessionPayload> {
+  const [encodedPayload, signature] = splitSignedToken(authToken);
   const secret = getSessionSecret();
   const expected = await signHex(encodedPayload, secret);
   if (expected !== signature) {
@@ -94,6 +98,40 @@ async function verifySessionToken(authToken: string): Promise<SessionPayload> {
   }
 
   return payload;
+}
+
+export async function readVerifiedSession(
+  ctx: AuthContext,
+  logtoId?: string,
+  authToken?: string,
+) {
+  const nativeIdentity = await getNativeIdentity(ctx);
+  if (nativeIdentity?.subject) {
+    if (logtoId && nativeIdentity.subject !== logtoId) {
+      throw new Error("Auth token subject mismatch");
+    }
+    return {
+      subject: nativeIdentity.subject,
+      email:
+        typeof nativeIdentity.email === "string" ? nativeIdentity.email : "",
+      source: "native" as const,
+    };
+  }
+
+  if (!logtoId?.trim() || !authToken?.trim()) {
+    throw new Error("Missing auth token");
+  }
+
+  const claims = await verifySessionToken(authToken);
+  if (claims.sub !== logtoId) {
+    throw new Error("Auth token subject mismatch");
+  }
+
+  return {
+    subject: claims.sub,
+    email: typeof claims.email === "string" ? claims.email : "",
+    source: "session" as const,
+  };
 }
 
 async function getNativeIdentity(ctx: AuthContext) {

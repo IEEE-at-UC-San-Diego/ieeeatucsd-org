@@ -56,11 +56,17 @@ export const POST: APIRoute = async ({ request }) => {
       request.headers.get("content-type") || "application/json";
     const endpoint = getDashboardApiUrl();
 
+    const headers: Record<string, string> = {
+      "Content-Type": contentType,
+    };
+    const authorization = request.headers.get("authorization");
+    if (authorization) {
+      headers.Authorization = authorization;
+    }
+
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": contentType,
-      },
+      headers,
       body,
     });
 

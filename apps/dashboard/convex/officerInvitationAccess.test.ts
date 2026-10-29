@@ -6,9 +6,9 @@ const INVITE_ID = "invite_1" as Id<"officerInvitations">;
 
 const SESSION_SECRET = "test-convex-session-secret";
 
-async function mintSessionToken(sub: string) {
+async function mintSessionToken(sub: string, email?: string) {
   const now = Math.floor(Date.now() / 1000);
-  const payload = { sub, iat: now, exp: now + 300, v: 1 };
+  const payload = { sub, email, iat: now, exp: now + 300, v: 1 };
   const encodedPayload = encodeURIComponent(JSON.stringify(payload));
   const key = await crypto.subtle.importKey(
     "raw",
@@ -245,6 +245,44 @@ describe("OfficerInvitationAccess.accept", () => {
     expect(result.roleGranted).toBe(true);
     expect(db._tables.users[0]?.email).toBe("alex@ucsd.edu");
     expect(db._tables.users[0]?.role).toBe("General Officer");
+  });
+
+  it("creates a user for a first-time invitee whose session email matches", async () => {
+    const db = createMockDb({
+      invitations: [invitation()],
+    });
+    const authToken = await mintSessionToken("logto|alex", "Alex@UCSD.edu");
+
+    const result = await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
+      id: INVITE_ID,
+      logtoId: "logto|alex",
+      authToken,
+    });
+
+    expect(result.status).toBe("accepted");
+    expect(result.roleGranted).toBe(true);
+    expect(result.userCreatedOrUpdated).toBe(true);
+    expect(db._tables.users).toHaveLength(1);
+    expect(db._tables.users[0]?.email).toBe("alex@ucsd.edu");
+    expect(db._tables.users[0]?.logtoId).toBe("logto|alex");
+    expect(db._tables.users[0]?.role).toBe("General Officer");
+  });
+
+  it("rejects a first-time invitee whose session has no matching email", async () => {
+    const db = createMockDb({
+      invitations: [invitation()],
+    });
+    const authToken = await mintSessionToken("logto|alex");
+
+    await expect(
+      OfficerInvitationAccess.accept(ctxFrom(db) as never, {
+        id: INVITE_ID,
+        logtoId: "logto|alex",
+        authToken,
+      }),
+    ).rejects.toThrow(OfficerInvitationAccess.EMAIL_MISMATCH);
+    expect(db._tables.officerInvitations[0]?.status).toBe("pending");
+    expect(db._tables.users).toHaveLength(0);
   });
 
   it("rejects a native identity whose email does not match", async () => {

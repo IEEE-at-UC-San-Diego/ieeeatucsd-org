@@ -136,10 +136,16 @@ export class AcceptInvitationApi {
 			googleGroupAssigned?: boolean;
 			googleGroup?: string;
 		},
+		auth: { logtoId: string; authToken: string },
 	) {
 		const recordFn =
 			"officerInvitations:recordAcceptanceSideEffects" as unknown as FunctionReference<"mutation">;
-		await convex.mutation(recordFn, { id: inviteId, ...data });
+		await convex.mutation(recordFn, {
+			id: inviteId,
+			logtoId: auth.logtoId,
+			authToken: auth.authToken,
+			...data,
+		});
 	}
 
 	static async handleGet({ request }: { request: Request }) {
@@ -173,7 +179,9 @@ export class AcceptInvitationApi {
 
 	static async handlePost({ request }: { request: Request }) {
 		try {
-			const authResult = await AcceptInvitationApi.requireAuth(request);
+			const authResult = await AcceptInvitationApi.requireAuth(request, {
+				allowUnprovisionedUser: true,
+			});
 			if (authResult instanceof Response) return authResult;
 
 			const { body, logtoId, user, claims } = authResult;
@@ -219,6 +227,7 @@ export class AcceptInvitationApi {
 			const { token } = AcceptInvitationApi.createSession({
 				sub: logtoId,
 				role: user.role as UserRole | undefined,
+				email: callerEmail,
 			});
 
 			if (action === "decline") {
@@ -302,13 +311,20 @@ export class AcceptInvitationApi {
 				warnings.push(...googleGroupResult.warnings);
 			}
 
-			await AcceptInvitationApi.recordAcceptanceSideEffects(convex, inviteId, {
-				onboardingEmailSent,
-				roleGranted: Boolean(acceptedInvitation.roleGranted || logtoUpdated),
-				userCreatedOrUpdated: Boolean(acceptedInvitation.userCreatedOrUpdated),
-				googleGroupAssigned,
-				googleGroup: resolvedGoogleGroup || undefined,
-			});
+			await AcceptInvitationApi.recordAcceptanceSideEffects(
+				convex,
+				inviteId,
+				{
+					onboardingEmailSent,
+					roleGranted: Boolean(acceptedInvitation.roleGranted || logtoUpdated),
+					userCreatedOrUpdated: Boolean(
+						acceptedInvitation.userCreatedOrUpdated,
+					),
+					googleGroupAssigned,
+					googleGroup: resolvedGoogleGroup || undefined,
+				},
+				{ logtoId, authToken: token },
+			);
 
 			return AcceptInvitationApi.json({
 				success: true,
