@@ -1,3 +1,4 @@
+import { EventPoints } from "@convex/eventPoints";
 import { AlertTriangle, FileText, Upload, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ interface LogisticsSectionProps {
 		startDate: number;
 		endDate: number;
 		eventCode: string;
+		pointsToReward: number;
 		hasFood: boolean;
 		willOrHaveRoomBooking: boolean;
 		roomBookingFiles: string[];
@@ -192,6 +194,27 @@ export function LogisticsSection({
 					/>
 					<p className="text-xs text-muted-foreground">
 						Used for check-in and tracking attendance.
+					</p>
+				</div>
+
+				<div className="space-y-2">
+					<Label htmlFor="pointsToReward">Points to Reward</Label>
+					<Input
+						id="pointsToReward"
+						type="number"
+						min={0}
+						step={1}
+						value={
+							Number.isFinite(data.pointsToReward) ? data.pointsToReward : 0
+						}
+						onChange={(e) => {
+							const parsed = EventPoints.tryParseInput(e.target.value);
+							if (parsed === null) return;
+							onChange({ pointsToReward: parsed });
+						}}
+					/>
+					<p className="text-xs text-muted-foreground">
+						Points awarded to attendees when they check in.
 					</p>
 				</div>
 

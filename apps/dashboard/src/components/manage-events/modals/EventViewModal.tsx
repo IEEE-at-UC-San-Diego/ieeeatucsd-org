@@ -609,6 +609,10 @@ export function EventViewModal({
 								</p>
 							</MetaField>
 
+							<MetaField icon={DollarSign} label="Points to Reward">
+								<p className="tabular-nums">{event.pointsToReward}</p>
+							</MetaField>
+
 							{event.department ? (
 								<MetaField label="Department">
 									<p>{formatDepartmentLabel(event.department)}</p>

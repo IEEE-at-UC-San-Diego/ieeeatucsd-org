@@ -53,6 +53,7 @@ export interface EventRequest {
 	startDate: number;
 	endDate: number;
 	eventCode: string;
+	pointsToReward: number;
 	hasFood: boolean;
 	needsFlyers: boolean;
 	needsGraphics: boolean;
@@ -143,6 +144,7 @@ export interface EventFormData {
 	startDate: number;
 	endDate: number;
 	eventCode: string;
+	pointsToReward: number;
 	hasFood: boolean;
 	needsFlyers: boolean;
 	needsGraphics: boolean;

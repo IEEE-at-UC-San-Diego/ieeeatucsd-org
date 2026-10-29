@@ -158,6 +158,13 @@ export function DraftViewModal({
 						</p>
 					</div>
 
+					<div className="space-y-1">
+						<span className="text-xs font-medium text-muted-foreground block mb-1">
+							Points to Reward
+						</span>
+						<p className="font-medium tabular-nums">{event.pointsToReward}</p>
+					</div>
+
 					{event.department && (
 						<div className="space-y-1">
 							<span className="text-xs font-medium text-muted-foreground block mb-1">
