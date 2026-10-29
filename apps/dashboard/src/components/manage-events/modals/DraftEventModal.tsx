@@ -1,3 +1,4 @@
+import { EventPoints } from "@convex/eventPoints";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { ResponsiveOverlay } from "@/components/mobile";
@@ -44,6 +45,7 @@ const defaultDraftData: Partial<EventRequest> = {
 	startDate: Date.now() + 86400000,
 	endDate: Date.now() + 90000000,
 	eventCode: "",
+	pointsToReward: EventPoints.DEFAULT,
 	status: "draft",
 	hasFood: false,
 	needsFlyers: false,
@@ -367,6 +369,29 @@ export function DraftEventModal({
 							placeholder="e.g., 50"
 						/>
 					</div>
+				</div>
+
+				<div className="space-y-2">
+					<Label htmlFor="draft-points">Points to Reward</Label>
+					<Input
+						id="draft-points"
+						type="number"
+						min={0}
+						step={1}
+						value={
+							Number.isFinite(formData.pointsToReward)
+								? formData.pointsToReward
+								: 0
+						}
+						onChange={(e) => {
+							const parsed = EventPoints.tryParseInput(e.target.value);
+							if (parsed === null) return;
+							updateField("pointsToReward", parsed);
+						}}
+					/>
+					<p className="text-xs text-muted-foreground">
+						Points awarded to attendees when they check in.
+					</p>
 				</div>
 
 				<div className="bg-muted p-3 rounded-lg text-sm text-muted-foreground">

@@ -104,6 +104,12 @@ export function EventReviewSection({
 				before: o.eventCode,
 				after: data.eventCode,
 			});
+		if ((o.pointsToReward ?? 0) !== data.pointsToReward)
+			changes.push({
+				label: "Points to Reward",
+				before: String(o.pointsToReward ?? 0),
+				after: String(data.pointsToReward),
+			});
 		if ((o.foodDrinksBeingServed ?? o.hasFood) !== data.foodDrinksBeingServed)
 			changes.push({
 				label: "Food/Drinks",
@@ -241,6 +247,10 @@ export function EventReviewSection({
 						/>
 					</div>
 					<ReviewItem label="Event Code" value={data.eventCode} />
+					<ReviewItem
+						label="Points to Reward"
+						value={String(data.pointsToReward)}
+					/>
 				</ReviewSection>
 
 				<ReviewSection title="Requirements & Marketing">

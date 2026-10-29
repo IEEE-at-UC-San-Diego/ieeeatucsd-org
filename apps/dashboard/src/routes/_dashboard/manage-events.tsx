@@ -32,10 +32,7 @@ import {
 	type VcoPipelinePatch,
 	VcoPipelineView,
 } from "@/components/manage-events";
-import {
-	normalizeDepartment,
-	normalizeEventType,
-} from "@/components/manage-events/constants";
+import { EventRequestMapping } from "@/components/manage-events/EventRequestMapping";
 import {
 	defaultWeekLabelSettings,
 	getWeekLabelForDate,
@@ -64,144 +61,6 @@ export const Route = createFileRoute("/_dashboard/manage-events")({
 	loader: (ctx) => prefetchAuthedQuery(api.events.listAll, undefined, ctx),
 	component: ManageEventsPage,
 });
-
-// Map from unified Convex events table to EventRequest UI type
-function mapEventToType(event: any): EventRequest {
-	const status: EventRequest["status"] = event.published
-		? "published"
-		: event.status === "completed"
-			? "published"
-			: event.status || "draft";
-
-	return {
-		_id: event._id,
-		_creationTime: event._creationTime,
-		createdAt: event.createdAt,
-		eventName: event.eventName || "Untitled Event",
-		eventDescription: event.eventDescription || "",
-		eventType: normalizeEventType(event.eventType),
-		department: normalizeDepartment(event.department),
-		location: event.location || "TBD",
-		startDate: event.startDate || Date.now(),
-		endDate: event.endDate || Date.now() + 3600000,
-		eventCode: event.eventCode || "",
-		hasFood: event.hasFood || event.foodDrinksBeingServed || false,
-		needsFlyers: event.flyersNeeded || false,
-		needsGraphics: event.needsGraphics || false,
-		needsASFunding: event.needsAsFunding || event.asFundingRequired || false,
-		estimatedAttendance: event.expectedAttendance || 0,
-		status,
-		files: event.files || [],
-		invoices: (event.invoices || []).map((inv: any) => ({
-			_id: inv.id || crypto.randomUUID(),
-			vendor: inv.vendor || "Unknown",
-			items: inv.items || [],
-			tax: inv.tax || 0,
-			tip: inv.tip || 0,
-			invoiceFile: inv.invoiceFile,
-			additionalFiles: inv.additionalFiles || [],
-			subtotal: inv.subtotal || 0,
-			total: inv.total || 0,
-			amount: inv.total || 0,
-			description: inv.items?.map((i: any) => i.description).join(", ") || "",
-			fileUrl: inv.invoiceFile,
-		})),
-		createdBy:
-			event.submitterName ||
-			event.requestedUser ||
-			event.createdBy ||
-			"Unknown",
-		requestedUser: event.requestedUser,
-		_updatedAt: event._updatedAt,
-		attendeeCount: event.attendeeCount || 0,
-		attendees: event.attendees || [],
-		willOrHaveRoomBooking: event.willOrHaveRoomBooking || false,
-		roomBookingFiles: event.roomBookingFiles || [],
-		foodDrinksBeingServed: event.foodDrinksBeingServed || false,
-		asFundingRequired: event.asFundingRequired || false,
-		flyerType: event.flyerType || [],
-		otherFlyerType: event.otherFlyerType || "",
-		flyerAdvertisingStartDate: event.flyerAdvertisingStartDate || 0,
-		flyerAdditionalRequests: event.flyerAdditionalRequests || "",
-		photographyNeeded: event.photographyNeeded || false,
-		requiredLogos: event.requiredLogos || [],
-		otherLogos: event.otherLogos || [],
-		advertisingFormat: event.advertisingFormat || "",
-		additionalSpecifications: event.additionalSpecifications || "",
-		flyersCompleted: event.flyersCompleted || false,
-		graphicsUploadNote: event.graphicsUploadNote || "",
-		dateTbd: event.dateTbd || false,
-		finId: event.finId || "",
-		funded: event.funded,
-		tresOwner: event.tresOwner,
-		progAppDoneAt: event.progAppDoneAt,
-		progAppDoneBy: event.progAppDoneBy,
-		tresStartDoneAt: event.tresStartDoneAt,
-		tresStartDoneBy: event.tresStartDoneBy,
-		tresFinishDoneAt: event.tresFinishDoneAt,
-		tresFinishDoneBy: event.tresFinishDoneBy,
-	};
-}
-
-function buildUpdateEventArgs(
-	logtoId: string,
-	eventId: string,
-	data: EventFormData,
-) {
-	return {
-		logtoId,
-		id: eventId as any,
-		eventName: data.eventName,
-		location: data.location,
-		startDate: data.startDate,
-		endDate: data.endDate,
-		eventDescription: data.eventDescription,
-		eventType: normalizeEventType(data.eventType),
-		department: data.department,
-		expectedAttendance: data.estimatedAttendance,
-		flyersNeeded: data.needsFlyers,
-		needsGraphics: data.needsGraphics,
-		needsAsFunding: data.needsASFunding,
-		hasFood: data.hasFood,
-		eventCode: data.eventCode,
-		invoices: data.invoices.map((inv) => ({
-			id: inv._id,
-			vendor: inv.vendor,
-			items:
-				inv.items.length > 0
-					? inv.items
-					: [
-							{
-								description: inv.description,
-								quantity: 1,
-								unitPrice: inv.amount,
-								total: inv.amount,
-							},
-						],
-			tax: inv.tax || 0,
-			tip: inv.tip || 0,
-			subtotal: inv.subtotal || inv.amount,
-			total: inv.total || inv.amount,
-			additionalFiles: inv.additionalFiles || [],
-			invoiceFile: inv.invoiceFile,
-		})),
-		flyerType: data.flyerType,
-		otherFlyerType: data.otherFlyerType,
-		flyerAdvertisingStartDate: data.flyerAdvertisingStartDate,
-		flyerAdditionalRequests: data.flyerAdditionalRequests,
-		photographyNeeded: data.photographyNeeded,
-		requiredLogos: data.requiredLogos,
-		otherLogos: data.otherLogos,
-		advertisingFormat: data.advertisingFormat,
-		willOrHaveRoomBooking: data.willOrHaveRoomBooking,
-		roomBookingFiles: data.roomBookingFiles,
-		asFundingRequired: data.asFundingRequired,
-		foodDrinksBeingServed: data.foodDrinksBeingServed,
-		additionalSpecifications: data.additionalSpecifications,
-		flyersCompleted: data.flyersCompleted,
-		graphicsUploadNote: data.graphicsUploadNote || undefined,
-	};
-}
 
 function ManageEventsPage() {
 	const {
@@ -344,7 +203,9 @@ function ManageEventsPage() {
 
 	// Transform data to EventRequest type — single query, no merge needed
 	const allEvents: EventRequest[] = useMemo(() => {
-		return (stableEventsData || []).map(mapEventToType);
+		return (stableEventsData || []).map((event) =>
+			EventRequestMapping.fromDocument(event as Record<string, unknown>),
+		);
 	}, [stableEventsData]);
 
 	// Filter events
@@ -447,58 +308,7 @@ function ManageEventsPage() {
 		if (!logtoId) return;
 		setIsProcessing(true);
 		try {
-			await createEvent({
-				logtoId,
-				eventName: data.eventName,
-				location: data.location,
-				startDate: data.startDate,
-				endDate: data.endDate,
-				eventDescription: data.eventDescription,
-				eventCode: data.eventCode,
-				eventType: normalizeEventType(data.eventType),
-				department: data.department,
-				expectedAttendance: data.estimatedAttendance,
-				flyersNeeded: data.needsFlyers,
-				needsGraphics: data.needsGraphics,
-				needsAsFunding: data.needsASFunding,
-				invoices: data.invoices.map((inv) => ({
-					id: inv._id,
-					vendor: inv.vendor,
-					items:
-						inv.items.length > 0
-							? inv.items
-							: [
-									{
-										description: inv.description,
-										quantity: 1,
-										unitPrice: inv.amount,
-										total: inv.amount,
-									},
-								],
-					tax: inv.tax || 0,
-					tip: inv.tip || 0,
-					subtotal: inv.subtotal || inv.amount,
-					total: inv.total || inv.amount,
-					additionalFiles: inv.additionalFiles || ([] as string[]),
-					invoiceFile: inv.invoiceFile,
-				})),
-				isDraft: false,
-				flyersCompleted: data.flyersCompleted,
-				photographyNeeded: data.photographyNeeded,
-				requiredLogos: data.requiredLogos,
-				otherFlyerType: data.otherFlyerType,
-				flyerAdvertisingStartDate: data.flyerAdvertisingStartDate,
-				flyerAdditionalRequests: data.flyerAdditionalRequests,
-				advertisingFormat: data.advertisingFormat,
-				otherLogos: data.otherLogos,
-				asFundingRequired: data.asFundingRequired,
-				flyerType: data.flyerType,
-				willOrHaveRoomBooking: data.willOrHaveRoomBooking,
-				roomBookingFiles: data.roomBookingFiles,
-				foodDrinksBeingServed: data.foodDrinksBeingServed,
-				additionalSpecifications: data.additionalSpecifications,
-				graphicsUploadNote: data.graphicsUploadNote || undefined,
-			});
+			await createEvent(EventRequestMapping.toCreateArgs(logtoId, data));
 			toast.success("Event request submitted successfully!");
 
 			// Fire-and-forget email notification
@@ -533,7 +343,7 @@ function ManageEventsPage() {
 		setIsProcessing(true);
 		try {
 			await updateEvent(
-				buildUpdateEventArgs(logtoId, editingRequest._id, data),
+				EventRequestMapping.toUpdateArgs(logtoId, editingRequest._id, data),
 			);
 			toast.success("Event saved successfully!");
 		} catch (error: any) {
@@ -553,7 +363,7 @@ function ManageEventsPage() {
 			const eventId = editingRequest._id as any;
 
 			await updateEvent(
-				buildUpdateEventArgs(logtoId, editingRequest._id, data),
+				EventRequestMapping.toUpdateArgs(logtoId, editingRequest._id, data),
 			);
 
 			if (convertingDraft) {
@@ -798,39 +608,7 @@ function ManageEventsPage() {
 		if (!logtoId) return;
 		setIsProcessing(true);
 		try {
-			await createEvent({
-				logtoId,
-				eventName: data.eventName || "Draft Event",
-				location: data.location || "TBD",
-				startDate: data.startDate || Date.now(),
-				endDate: data.endDate || Date.now() + 3600000,
-				eventDescription: data.eventDescription || "",
-				eventCode: data.eventCode || `EVENT-${Date.now()}`,
-				eventType: normalizeEventType(
-					(data.eventType as string | undefined) || "other",
-				),
-				department: normalizeDepartment(data.department),
-				expectedAttendance: data.estimatedAttendance,
-				isDraft: true,
-				flyersNeeded: false,
-				flyerType: [] as string[],
-				flyersCompleted: false,
-				photographyNeeded: false,
-				requiredLogos: [] as string[],
-				otherFlyerType: "",
-				flyerAdvertisingStartDate: 0,
-				flyerAdditionalRequests: "",
-				advertisingFormat: "",
-				otherLogos: [] as string[],
-				willOrHaveRoomBooking: false,
-				roomBookingFiles: [] as string[],
-				asFundingRequired: false,
-				foodDrinksBeingServed: false,
-				invoices: [] as any[],
-				needsGraphics: false,
-				needsAsFunding: false,
-				graphicsUploadNote: "",
-			});
+			await createEvent(EventRequestMapping.toDraftCreateArgs(logtoId, data));
 			toast.success("Draft event created!");
 			setIsDraftModalOpen(false);
 		} catch (error: any) {
@@ -875,42 +653,14 @@ function ManageEventsPage() {
 		setIsProcessing(true);
 		try {
 			const eventId = editingDraft._id as any;
-			await updateEvent({
-				logtoId,
-				id: eventId,
-				eventName: data.eventName || editingDraft.eventName,
-				location: data.location || editingDraft.location,
-				startDate: data.startDate || editingDraft.startDate,
-				endDate: data.endDate || editingDraft.endDate,
-				eventDescription:
-					data.eventDescription || editingDraft.eventDescription,
-				eventCode:
-					data.eventCode || editingDraft.eventCode || `EVENT-${Date.now()}`,
-				eventType: normalizeEventType(
-					(data.eventType as string | undefined) || editingDraft.eventType,
+			await updateEvent(
+				EventRequestMapping.toDraftUpdateArgs(
+					logtoId,
+					eventId,
+					data,
+					editingDraft,
 				),
-				department: normalizeDepartment(
-					data.department || editingDraft.department,
-				),
-				expectedAttendance: data.estimatedAttendance,
-				flyersNeeded: data.needsFlyers ?? false,
-				needsGraphics: data.needsGraphics ?? false,
-				needsAsFunding: data.needsASFunding ?? false,
-				hasFood:
-					data.hasFood ??
-					data.foodDrinksBeingServed ??
-					editingDraft.hasFood ??
-					false,
-				flyerType: data.flyerType || [],
-				willOrHaveRoomBooking: data.willOrHaveRoomBooking ?? false,
-				roomBookingFiles: data.roomBookingFiles || [],
-				asFundingRequired: data.asFundingRequired ?? false,
-				foodDrinksBeingServed: data.foodDrinksBeingServed ?? false,
-				photographyNeeded: data.photographyNeeded ?? false,
-				requiredLogos: data.requiredLogos || [],
-				graphicsUploadNote:
-					data.graphicsUploadNote || editingDraft.graphicsUploadNote || "",
-			});
+			);
 			toast.success("Draft updated successfully!");
 			setIsDraftModalOpen(false);
 			setEditingDraft(null);
