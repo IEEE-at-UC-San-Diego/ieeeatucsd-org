@@ -1,5 +1,14 @@
 import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAdminAccess } from "./permissions";
+
+export const assertAdminCaller = internalQuery({
+  args: { logtoId: v.string(), authToken: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    return null;
+  },
+});
 
 // Internal queries for Google Calendar sync actions
 export const getPublishedEventsForSync = internalQuery({

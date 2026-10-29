@@ -221,6 +221,13 @@ describe("UserAuth.upsertFromAuth", () => {
   });
 });
 
+describe("users public query surface", () => {
+  it("does not export an unauthenticated getUserInfo lookup", async () => {
+    const usersModule = await import("./users");
+    expect(usersModule).not.toHaveProperty("getUserInfo");
+  });
+});
+
 describe("UserAuth.getByLogtoId", () => {
   beforeEach(() => {
     process.env.CONVEX_SESSION_SECRET = SESSION_SECRET;
