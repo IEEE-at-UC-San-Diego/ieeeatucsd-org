@@ -20,6 +20,7 @@ import {
   generateGoogleCalendarEventId,
 } from "./googleCalendarIds";
 import { assertValidEventTimeRange } from "./eventTimeRange";
+import { EventReadAccess } from "./eventReadAccess";
 import { PublicPublishedEvent } from "./publicPublishedEvent";
 
 function getLegacyAttendeeIds(event: Record<string, unknown>): string[] {
@@ -339,7 +340,7 @@ export const listAll = query({
 export const getByCode = query({
   args: { logtoId: v.string(), authToken: v.string(), eventCode: v.string() },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const normalizedCode = normalizeEventCode(args.eventCode);
     if (!normalizedCode) return null;
     const canonicalCode = canonicalizeEventCode(normalizedCode);
@@ -361,7 +362,7 @@ export const getByCode = query({
         ) ?? null;
     }
 
-    return event;
+    return EventReadAccess.forViewer(user, event);
   },
 });
 
@@ -372,8 +373,8 @@ export const get = query({
     id: v.id("events"),
   },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    return await ctx.db.get(args.id);
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    return EventReadAccess.forViewer(user, await ctx.db.get(args.id));
   },
 });
 

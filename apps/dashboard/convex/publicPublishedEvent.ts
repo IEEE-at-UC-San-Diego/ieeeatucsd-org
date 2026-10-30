@@ -41,10 +41,13 @@ export type PublicPublishedEventView = PublicPublishedEventSource &
  * so internal request/VCO fields must not ride along on the document spread.
  */
 export class PublicPublishedEvent {
-  static fromDocument(
+  /**
+   * Fields safe to show without event-request or VCO funding access.
+   * `listPublished`, `events.get`, and `events.getByCode` all use this set.
+   */
+  static publicFields(
     event: PublicPublishedEventSource,
-    extras: PublicCalendarMeta & { attendeeCount: number },
-  ): PublicPublishedEventView {
+  ): PublicPublishedEventSource {
     return {
       _id: event._id,
       eventName: event.eventName,
@@ -58,6 +61,15 @@ export class PublicPublishedEvent {
       published: event.published,
       eventType: event.eventType,
       hasFood: event.hasFood,
+    };
+  }
+
+  static fromDocument(
+    event: PublicPublishedEventSource,
+    extras: PublicCalendarMeta & { attendeeCount: number },
+  ): PublicPublishedEventView {
+    return {
+      ...PublicPublishedEvent.publicFields(event),
       attendeeCount: extras.attendeeCount,
       publicGoogleEventId: extras.publicGoogleEventId,
       publicGoogleEventUrl: extras.publicGoogleEventUrl,
