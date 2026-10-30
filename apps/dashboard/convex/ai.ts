@@ -1,6 +1,8 @@
 import { query } from "./_generated/server";
+import type { TableNames } from "./_generated/dataModel";
 import { v } from "convex/values";
-import { requireOfficerAccess } from "./permissions";
+import { canOfficerReadAiTable, projectAiRecord } from "./aiAccess";
+import { requireOfficerAccess, type UserRole } from "./permissions";
 
 const ALL_TABLES = [
   "users",
@@ -27,6 +29,17 @@ const ALL_TABLES = [
 ] as const;
 
 type TableName = (typeof ALL_TABLES)[number];
+
+function aiTableAccessError(role: string, table: string): string | null {
+  if (!ALL_TABLES.includes(table as TableName)) {
+    return `Unknown table: ${table}`;
+  }
+  if (!canOfficerReadAiTable(role as UserRole, table)) {
+    return "Insufficient permissions";
+  }
+  return null;
+}
+
 type OfficerUser = {
   _id: string | { toString(): string };
   logtoId?: string;
@@ -191,19 +204,23 @@ export const getRecordById = query({
     recordId: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const tableError = aiTableAccessError(user.role, args.table);
+    if (tableError) return { error: tableError, record: null };
 
-    if (!ALL_TABLES.includes(args.table as TableName)) {
-      return { error: `Unknown table: ${args.table}`, record: null };
-    }
+    const tableName = args.table as TableName;
+    // The id itself names the table. Ignore ids that do not belong to the
+    // requested table so an officer cannot read a user or reimbursement by
+    // labeling it as an officer-readable table.
+    const recordId = ctx.db.normalizeId(tableName as TableNames, args.recordId);
+    if (!recordId) return { error: "Invalid record ID", record: null };
 
-    try {
-      const doc = await ctx.db.get(args.recordId as any);
-      if (!doc) return { error: "Record not found", record: null };
-      return { error: null, record: sanitizeValue(doc) };
-    } catch {
-      return { error: "Invalid record ID", record: null };
-    }
+    const doc = await ctx.db.get(recordId);
+    if (!doc) return { error: "Record not found", record: null };
+    return {
+      error: null,
+      record: sanitizeValue(projectAiRecord(tableName, user.role, doc)),
+    };
   },
 });
 
@@ -218,11 +235,9 @@ export const listRecords = query({
     sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
   },
   handler: async (ctx, args) => {
-    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
-
-    if (!ALL_TABLES.includes(args.table as TableName)) {
-      return { error: `Unknown table: ${args.table}`, records: [], total: 0 };
-    }
+    const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const tableError = aiTableAccessError(user.role, args.table);
+    if (tableError) return { error: tableError, records: [], total: 0 };
 
     const limit = clamp(args.limit ?? 25, 1, 100);
     const tableName = args.table as TableName;
@@ -241,7 +256,9 @@ export const listRecords = query({
 
     return {
       error: null,
-      records: docs.map((doc: any) => sanitizeValue(doc)),
+      records: docs.map((doc: any) =>
+        sanitizeValue(projectAiRecord(tableName, user.role, doc)),
+      ),
       total: docs.length,
     };
   },
@@ -254,11 +271,9 @@ export const getStatistics = query({
     table: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
-
-    if (!ALL_TABLES.includes(args.table as TableName)) {
-      return { error: `Unknown table: ${args.table}` };
-    }
+    const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const tableError = aiTableAccessError(user.role, args.table);
+    if (tableError) return { error: tableError };
 
     const tableName = args.table as TableName;
     const docs = await ctx.db.query(tableName).take(MAX_DOCS_PER_TABLE);
@@ -306,7 +321,7 @@ export const getUserByNameOrEmail = query({
     searchTerm: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
 
     const term = args.searchTerm.toLowerCase().trim();
     if (!term) return { error: "Empty search term", users: [] };
@@ -324,7 +339,9 @@ export const getUserByNameOrEmail = query({
 
     return {
       error: null,
-      users: matches.slice(0, 20).map((u) => sanitizeValue(u)),
+      users: matches.slice(0, 20).map((u) =>
+        sanitizeValue(projectAiRecord("users", user.role, u)),
+      ),
     };
   },
 });
@@ -409,11 +426,14 @@ export const searchEverything = query({
     const tokens = tokenize(args.query);
     const limit = clamp(args.limit ?? 25, 1, 60);
 
-    const selectedTables: TableName[] = args.table
+    const requestedTables: TableName[] = args.table
       ? ALL_TABLES.includes(args.table as TableName)
         ? [args.table as TableName]
         : []
       : [...ALL_TABLES];
+    const selectedTables = requestedTables.filter((table) =>
+      canOfficerReadAiTable(user.role, table),
+    );
 
     if (!normalizedQuery || selectedTables.length === 0) {
       return {
@@ -443,7 +463,12 @@ export const searchEverything = query({
       scannedCountByTable[tableName] = docs.length;
 
       for (const doc of docs) {
-        const searchText = `${tableName} ${asSearchText(doc)}`;
+        const visible = projectAiRecord(
+          tableName,
+          user.role,
+          doc as Record<string, unknown>,
+        );
+        const searchText = `${tableName} ${asSearchText(visible)}`;
         const score = scoreDocument(searchText, normalizedQuery, tokens);
         if (score <= 0) continue;
 
@@ -453,7 +478,7 @@ export const searchEverything = query({
           id: String((doc as { _id: string })._id),
           createdAt: (doc as { _creationTime: number })._creationTime ?? 0,
           snippet: buildSnippet(searchText, normalizedQuery),
-          record: sanitizeValue(doc),
+          record: sanitizeValue(visible),
         });
       }
     }
