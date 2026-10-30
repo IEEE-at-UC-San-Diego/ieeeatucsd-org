@@ -1,7 +1,7 @@
-import { query } from "./_generated/server";
+import { query, type QueryCtx } from "./_generated/server";
 import type { TableNames } from "./_generated/dataModel";
 import { v } from "convex/values";
-import { canOfficerReadAiTable, projectAiRecord } from "./aiAccess";
+import { AiAccess } from "./aiAccess";
 import { requireOfficerAccess, type UserRole } from "./permissions";
 
 const ALL_TABLES = [
@@ -30,14 +30,30 @@ const ALL_TABLES = [
 
 type TableName = (typeof ALL_TABLES)[number];
 
-function aiTableAccessError(role: string, table: string): string | null {
-  if (!ALL_TABLES.includes(table as TableName)) {
-    return `Unknown table: ${table}`;
+function aiTableAccessError(role: UserRole, table: string): string | null {
+  return AiAccess.namedSearchAccessError(role, table, ALL_TABLES);
+}
+
+async function loadVisibleDocs(
+  ctx: QueryCtx,
+  tableName: TableName,
+  role: UserRole,
+  actorId: string,
+  limit: number,
+): Promise<any[]> {
+  // Same row scope as fundDeposits.listAll. Query the owner's index so a
+  // capped scan cannot mix in other officers' deposits.
+  if (
+    tableName === "fundDeposits" &&
+    !AiAccess.readsFullFundDepositTable(role)
+  ) {
+    return await ctx.db
+      .query("fundDeposits")
+      .withIndex("by_depositedBy", (q) => q.eq("depositedBy", actorId))
+      .take(limit);
   }
-  if (!canOfficerReadAiTable(role as UserRole, table)) {
-    return "Insufficient permissions";
-  }
-  return null;
+
+  return await ctx.db.query(tableName).take(limit);
 }
 
 type OfficerUser = {
@@ -188,14 +204,6 @@ const TABLES_WITH_STATUS = [
   "invites",
 ] as const;
 
-const TABLES_WITH_AMOUNT = [
-  "reimbursements",
-  "fundRequests",
-  "fundDeposits",
-  "budgetConfigs",
-  "budgetAdjustments",
-] as const;
-
 export const getRecordById = query({
   args: {
     logtoId: v.string(),
@@ -217,9 +225,19 @@ export const getRecordById = query({
 
     const doc = await ctx.db.get(recordId);
     if (!doc) return { error: "Record not found", record: null };
+    if (
+      !AiAccess.canReadRecord(
+        tableName,
+        user.role,
+        AiAccess.actorId(user),
+        doc,
+      )
+    ) {
+      return { error: "Insufficient permissions", record: null };
+    }
     return {
       error: null,
-      record: sanitizeValue(projectAiRecord(tableName, user.role, doc)),
+      record: sanitizeValue(AiAccess.projectAiRecord(tableName, user.role, doc)),
     };
   },
 });
@@ -241,9 +259,22 @@ export const listRecords = query({
 
     const limit = clamp(args.limit ?? 25, 1, 100);
     const tableName = args.table as TableName;
+    const actorId = AiAccess.actorId(user);
 
     let docs: any[];
     if (
+      tableName === "fundDeposits" &&
+      !AiAccess.readsFullFundDepositTable(user.role)
+    ) {
+      const owned = ctx.db
+        .query("fundDeposits")
+        .withIndex("by_depositedBy", (q) => q.eq("depositedBy", actorId));
+      docs = args.status
+        ? await owned
+            .filter((q) => q.eq(q.field("status"), args.status))
+            .take(limit)
+        : await owned.order("desc").take(limit);
+    } else if (
       args.status &&
       (TABLES_WITH_STATUS as readonly string[]).includes(tableName)
     ) {
@@ -254,12 +285,19 @@ export const listRecords = query({
       docs = await ctx.db.query(tableName).order("desc").take(limit);
     }
 
+    const visible = AiAccess.scopeRecords(
+      tableName,
+      user.role,
+      actorId,
+      docs,
+    );
+
     return {
       error: null,
-      records: docs.map((doc: any) =>
-        sanitizeValue(projectAiRecord(tableName, user.role, doc)),
+      records: visible.map((doc) =>
+        sanitizeValue(AiAccess.projectAiRecord(tableName, user.role, doc)),
       ),
-      total: docs.length,
+      total: visible.length,
     };
   },
 });
@@ -276,40 +314,20 @@ export const getStatistics = query({
     if (tableError) return { error: tableError };
 
     const tableName = args.table as TableName;
-    const docs = await ctx.db.query(tableName).take(MAX_DOCS_PER_TABLE);
-    const totalCount = docs.length;
-
-    const statusCounts: Record<string, number> = {};
-    let totalAmount = 0;
-    let hasAmount = false;
-
-    for (const doc of docs) {
-      const record = doc as Record<string, unknown>;
-      if (typeof record.status === "string") {
-        statusCounts[record.status] = (statusCounts[record.status] || 0) + 1;
-      }
-      if (
-        (TABLES_WITH_AMOUNT as readonly string[]).includes(tableName) &&
-        typeof record.amount === "number"
-      ) {
-        totalAmount += record.amount;
-        hasAmount = true;
-      }
-      if (
-        tableName === "reimbursements" &&
-        typeof record.totalAmount === "number"
-      ) {
-        totalAmount += record.totalAmount;
-        hasAmount = true;
-      }
-    }
+    const actorId = AiAccess.actorId(user);
+    const docs = await loadVisibleDocs(
+      ctx,
+      tableName,
+      user.role,
+      actorId,
+      MAX_DOCS_PER_TABLE,
+    );
+    const summary = AiAccess.summarize(tableName, user.role, actorId, docs);
 
     return {
       error: null,
       table: tableName,
-      totalCount,
-      statusCounts: Object.keys(statusCounts).length > 0 ? statusCounts : undefined,
-      totalAmount: hasAmount ? totalAmount : undefined,
+      ...summary,
     };
   },
 });
@@ -340,7 +358,7 @@ export const getUserByNameOrEmail = query({
     return {
       error: null,
       users: matches.slice(0, 20).map((u) =>
-        sanitizeValue(projectAiRecord("users", user.role, u)),
+        sanitizeValue(AiAccess.projectAiRecord("users", user.role, u)),
       ),
     };
   },
@@ -353,7 +371,10 @@ export const getBudgetOverview = query({
     department: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const includeReimbursements = AiAccess.includeReimbursementTotals(
+      user.role,
+    );
 
     const configs = await ctx.db.query("budgetConfigs").take(100);
     const adjustments = await ctx.db.query("budgetAdjustments").take(500);
@@ -365,9 +386,9 @@ export const getBudgetOverview = query({
       .query("fundDeposits")
       .withIndex("by_status", (q) => q.eq("status", "verified"))
       .take(500);
-    const reimbursements = await ctx.db
-      .query("reimbursements")
-      .take(500);
+    const reimbursements = includeReimbursements
+      ? await ctx.db.query("reimbursements").take(500)
+      : [];
 
     const departments = ["events", "projects", "internal", "other"] as const;
     const overview = departments.map((dept) => {
@@ -385,20 +406,14 @@ export const getBudgetOverview = query({
         .filter((r) => r.department === dept && (r.status === "approved" || r.status === "paid"))
         .reduce((sum, r) => sum + r.totalAmount, 0);
 
-      return {
+      return AiAccess.budgetDepartment(user.role, {
         department: dept,
         totalBudget: config?.totalBudget ?? 0,
         adjustments: deptAdjustments,
         approvedFundRequests: deptApproved,
         verifiedDeposits: deptDeposits,
         approvedReimbursements: deptReimbursements,
-        remaining:
-          (config?.totalBudget ?? 0) +
-          deptAdjustments +
-          deptDeposits -
-          deptApproved -
-          deptReimbursements,
-      };
+      });
     });
 
     if (args.department) {
@@ -420,23 +435,33 @@ export const searchEverything = query({
   },
   handler: async (ctx, args) => {
     const user = await requireOfficerAccess(ctx, args.logtoId, args.authToken);
+    const actorId = AiAccess.actorId(user);
     const currentUser = toCurrentUserContext(user);
     const currentServerTimeMs = Date.now();
     const normalizedQuery = normalize(args.query);
     const tokens = tokenize(args.query);
     const limit = clamp(args.limit ?? 25, 1, 60);
+    const selection = AiAccess.searchTables(user.role, args.table, ALL_TABLES);
 
-    const requestedTables: TableName[] = args.table
-      ? ALL_TABLES.includes(args.table as TableName)
-        ? [args.table as TableName]
-        : []
-      : [...ALL_TABLES];
-    const selectedTables = requestedTables.filter((table) =>
-      canOfficerReadAiTable(user.role, table),
-    );
+    if (selection.error) {
+      return {
+        error: selection.error,
+        currentServerTimeMs,
+        currentUser,
+        userRole: user.role,
+        query: args.query,
+        scannedTables: [],
+        scannedCountByTable: {},
+        totalMatches: 0,
+        results: [],
+      };
+    }
+
+    const selectedTables = selection.tables as TableName[];
 
     if (!normalizedQuery || selectedTables.length === 0) {
       return {
+        error: null,
         currentServerTimeMs,
         currentUser,
         userRole: user.role,
@@ -459,11 +484,22 @@ export const searchEverything = query({
     }> = [];
 
     for (const tableName of selectedTables) {
-      const docs = await ctx.db.query(tableName).take(MAX_DOCS_PER_TABLE);
+      const docs = AiAccess.scopeRecords(
+        tableName,
+        user.role,
+        actorId,
+        await loadVisibleDocs(
+          ctx,
+          tableName,
+          user.role,
+          actorId,
+          MAX_DOCS_PER_TABLE,
+        ),
+      );
       scannedCountByTable[tableName] = docs.length;
 
       for (const doc of docs) {
-        const visible = projectAiRecord(
+        const visible = AiAccess.projectAiRecord(
           tableName,
           user.role,
           doc as Record<string, unknown>,
@@ -489,6 +525,7 @@ export const searchEverything = query({
     });
 
     return {
+      error: null,
       currentServerTimeMs,
       currentUser,
       userRole: user.role,
