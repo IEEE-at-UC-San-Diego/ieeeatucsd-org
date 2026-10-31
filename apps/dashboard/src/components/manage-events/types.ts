@@ -90,6 +90,7 @@ export interface EventRequest {
 	additionalSpecifications?: string;
 	flyersCompleted?: boolean;
 	graphicsUploadNote?: string;
+	graphicsFiles?: string[];
 	dateTbd?: boolean;
 	finId?: string;
 	funded?: boolean;

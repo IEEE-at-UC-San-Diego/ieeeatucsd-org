@@ -147,6 +147,9 @@ export class EventRequestMapping {
 			additionalSpecifications: String(event.additionalSpecifications || ""),
 			flyersCompleted: Boolean(event.flyersCompleted),
 			graphicsUploadNote: String(event.graphicsUploadNote || ""),
+			graphicsFiles: Array.isArray(event.graphicsFiles)
+				? (event.graphicsFiles as string[])
+				: [],
 			dateTbd: Boolean(event.dateTbd),
 			finId: String(event.finId || ""),
 			funded: typeof event.funded === "boolean" ? event.funded : undefined,
