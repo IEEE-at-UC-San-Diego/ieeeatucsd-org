@@ -39,6 +39,17 @@ export class GraphicsUploadSession {
 		return (inFlight[eventId] ?? 0) > 0;
 	}
 
+	static persistedFileIds(
+		graphicsFiles: readonly string[] | null | undefined,
+	): string[] {
+		const ids: string[] = [];
+		for (const raw of graphicsFiles ?? []) {
+			const id = raw.trim();
+			if (id && !ids.includes(id)) ids.push(id);
+		}
+		return ids;
+	}
+
 	static appendLinkedUrl(note: string, fileUrl: string): string {
 		const trimmed = fileUrl.trim();
 		if (!trimmed) return note;
