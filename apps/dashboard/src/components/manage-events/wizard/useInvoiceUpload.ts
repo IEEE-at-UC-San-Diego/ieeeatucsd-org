@@ -22,6 +22,7 @@ export interface InvoiceUploadResult {
 
 interface UseInvoiceUploadOptions {
 	generateUploadUrl?: () => Promise<string>;
+	uploadFile?: (file: File) => Promise<string>;
 	parseWithAI: boolean;
 	onUploaded?: (storageId: string) => void;
 	/** Not called when validation or the storage upload fails. */
@@ -77,6 +78,7 @@ async function parseInvoiceFile(
 
 export function useInvoiceUpload({
 	generateUploadUrl,
+	uploadFile,
 	parseWithAI,
 	onUploaded,
 	onFinished,
@@ -107,11 +109,16 @@ export function useInvoiceUpload({
 			return;
 		}
 
+		const storeFile = uploadFile
+			? () => uploadFile(file)
+			: generateUploadUrl
+				? () => uploadInvoiceFile(generateUploadUrl, file)
+				: undefined;
 		let storageId: string | undefined;
-		if (generateUploadUrl) {
+		if (storeFile) {
 			dispatch({ type: "start", requestId, stage: "upload" });
 			try {
-				storageId = await uploadInvoiceFile(generateUploadUrl, file);
+				storageId = await storeFile();
 			} catch {
 				dispatch({
 					type: "fail",
@@ -137,7 +144,7 @@ export function useInvoiceUpload({
 		}
 
 		dispatch(
-			generateUploadUrl
+			storeFile
 				? { type: "uploaded", requestId }
 				: { type: "start", requestId, stage: "parse" },
 		);

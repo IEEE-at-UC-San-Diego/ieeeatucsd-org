@@ -8,6 +8,9 @@ import {
 export const GRAPHICS_ATTACH_DENIED =
   "You can only attach files you uploaded or can already view";
 
+/** A checksum grant can only claim the upload that just created it. */
+export const STORAGE_UPLOAD_GRANT_TTL_MS = 60 * 60 * 1000;
+
 /**
  * A graphics storage id may be saved only when this caller uploaded it
  * or can already resolve it through `events.getStorageUrl`.
@@ -104,12 +107,18 @@ export class StorageUploadClaim {
     return normalized;
   }
 
+  static isGrantCurrent(createdAt: number, now: number): boolean {
+    return createdAt <= now && now - createdAt <= STORAGE_UPLOAD_GRANT_TTL_MS;
+  }
+
   static allow(input: {
     callerId: string;
     metadataSha256: string | null;
     grantSha256: string | null;
     existingOwnerId: string | null;
     attachedWhereCallerCannotRead: boolean;
+    now?: number;
+    grantCreatedAt?: number | null;
   }): boolean {
     if (!input.callerId || !input.metadataSha256) return false;
     if (input.existingOwnerId && input.existingOwnerId !== input.callerId) {
@@ -117,8 +126,10 @@ export class StorageUploadClaim {
     }
     if (input.existingOwnerId === input.callerId) return true;
     if (input.attachedWhereCallerCannotRead) return false;
-    return (
-      Boolean(input.grantSha256) && input.grantSha256 === input.metadataSha256
-    );
+    if (!input.grantSha256 || input.grantSha256 !== input.metadataSha256) {
+      return false;
+    }
+    if (input.grantCreatedAt == null || input.now == null) return false;
+    return StorageUploadClaim.isGrantCurrent(input.grantCreatedAt, input.now);
   }
 }

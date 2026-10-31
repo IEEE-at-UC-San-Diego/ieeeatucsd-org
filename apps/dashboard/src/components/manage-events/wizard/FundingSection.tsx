@@ -29,7 +29,7 @@ interface FundingSectionProps {
 		invoices: Invoice[];
 	};
 	onChange: (data: Partial<FundingSectionProps["data"]>) => void;
-	generateUploadUrl?: () => Promise<string>;
+	uploadStorageFile?: (file: File) => Promise<string>;
 	aiEnabled?: boolean;
 }
 
@@ -40,7 +40,7 @@ export function shouldParseInvoiceWithAI(aiEnabled: boolean) {
 export function FundingSection({
 	data,
 	onChange,
-	generateUploadUrl,
+	uploadStorageFile,
 	aiEnabled = true,
 }: FundingSectionProps) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,7 +48,7 @@ export function FundingSection({
 	const fundingQuestionId = useId();
 	const formId = useId();
 	const { phase, selectFile } = useInvoiceUpload({
-		generateUploadUrl,
+		uploadFile: uploadStorageFile,
 		parseWithAI: shouldParseInvoiceWithAI(aiEnabled),
 		onFinished: ({ storageId, parsed }) => {
 			const newInvoice = invoiceFromUpload(

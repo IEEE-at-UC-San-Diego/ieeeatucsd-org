@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { GraphicsUploadSession } from "./graphicsUpload";
+import { describe, expect, it, vi } from "vitest";
+import {
+	GraphicsUploadSession,
+	uploadOwnedStorageFile,
+} from "./graphicsUpload";
 
 describe("GraphicsUploadSession", () => {
 	it("ignores a finished upload once the modal shows a different event", () => {
@@ -63,5 +66,31 @@ describe("GraphicsUploadSession", () => {
 				"https://files.example/b",
 			),
 		).toBe("https://files.example/a\nhttps://files.example/b");
+	});
+
+	it("claims a storage id before the caller can attach it", async () => {
+		const calls: string[] = [];
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => ({
+				ok: true,
+				json: async () => ({ storageId: " storage_new " }),
+			})),
+		);
+		const storageId = await uploadOwnedStorageFile(new Blob(["abc"]), {
+			beginStorageUpload: async ({ sha256 }) => {
+				calls.push(`begin:${sha256.slice(0, 8)}`);
+			},
+			generateUploadUrl: async () => {
+				calls.push("url");
+				return "https://upload.example";
+			},
+			claimStorageUpload: async ({ storageId: claimed }) => {
+				calls.push(`claim:${claimed}`);
+			},
+		});
+		expect(storageId).toBe("storage_new");
+		expect(calls).toEqual(["begin:ba7816bf", "url", "claim:storage_new"]);
+		vi.unstubAllGlobals();
 	});
 });

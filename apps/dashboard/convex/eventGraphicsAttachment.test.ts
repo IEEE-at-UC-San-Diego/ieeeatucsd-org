@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   EventGraphicsAttachment,
   GRAPHICS_ATTACH_DENIED,
+  STORAGE_UPLOAD_GRANT_TTL_MS,
   StorageUploadClaim,
 } from "./eventGraphicsAttachment";
 import {
@@ -120,6 +121,8 @@ describe("EventGraphicsAttachment", () => {
         callerId: "logto|member",
         metadataSha256: "b".repeat(64),
         grantSha256: "b".repeat(64),
+        grantCreatedAt: 1_000,
+        now: 1_000,
         existingOwnerId: null,
         attachedWhereCallerCannotRead: false,
       }),
@@ -178,6 +181,32 @@ describe("EventGraphicsAttachment", () => {
     ).toThrow("You can only edit your own events");
     expect(
       EventStorageAccess.canReadStorageId(member, [ownEvent], FOREIGN_ID),
+    ).toBe(false);
+  });
+
+  it("rejects an upload grant after it expires", () => {
+    const createdAt = 5_000;
+    expect(
+      StorageUploadClaim.allow({
+        callerId: "logto|member",
+        metadataSha256: "c".repeat(64),
+        grantSha256: "c".repeat(64),
+        grantCreatedAt: createdAt,
+        now: createdAt + STORAGE_UPLOAD_GRANT_TTL_MS,
+        existingOwnerId: null,
+        attachedWhereCallerCannotRead: false,
+      }),
+    ).toBe(true);
+    expect(
+      StorageUploadClaim.allow({
+        callerId: "logto|member",
+        metadataSha256: "c".repeat(64),
+        grantSha256: "c".repeat(64),
+        grantCreatedAt: createdAt,
+        now: createdAt + STORAGE_UPLOAD_GRANT_TTL_MS + 1,
+        existingOwnerId: null,
+        attachedWhereCallerCannotRead: false,
+      }),
     ).toBe(false);
   });
 
