@@ -784,6 +784,15 @@ export function EventViewModal({
 							</div>
 
 							<div className="space-y-3">
+								<div>
+									<h4 className="mb-2.5 text-sm font-medium">
+										Attached graphics
+									</h4>
+									{renderFileCards(
+										GraphicsUploadSession.persistedFileIds(event.graphicsFiles),
+										"Graphics",
+									)}
+								</div>
 								<Label htmlFor={`${formId}-graphics-upload-note`}>
 									Link or File URL
 								</Label>

@@ -40,6 +40,19 @@ describe("GraphicsUploadSession", () => {
 		);
 	});
 
+	it("lists saved graphics files when the note has no link", () => {
+		expect(
+			GraphicsUploadSession.persistedFileIds([
+				" storage_a ",
+				"",
+				"storage_a",
+				"storage_b",
+			]),
+		).toEqual(["storage_a", "storage_b"]);
+		expect(GraphicsUploadSession.persistedFileIds(undefined)).toEqual([]);
+		expect(GraphicsUploadSession.persistedFileIds(null)).toEqual([]);
+	});
+
 	it("appends a resolved url onto the note for the event that owns the upload", () => {
 		expect(
 			GraphicsUploadSession.appendLinkedUrl("", " https://files.example/a "),
