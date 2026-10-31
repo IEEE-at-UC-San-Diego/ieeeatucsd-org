@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import {
   requireCurrentUser,
@@ -8,6 +8,7 @@ import {
   hasAdminAccess,
   hasOfficerAccess,
   isGeneralOfficer,
+  type UserRole,
 } from "./permissions";
 import {
   buildVcoPhaseDonePatch,
@@ -20,6 +21,16 @@ import {
   generateGoogleCalendarEventId,
 } from "./googleCalendarIds";
 import { assertValidEventTimeRange } from "./eventTimeRange";
+import { EventEditAccess } from "./eventEditAccess";
+import {
+  EventGraphicsAttachment,
+  GRAPHICS_ATTACH_DENIED,
+  StorageUploadClaim,
+} from "./eventGraphicsAttachment";
+import { EventGraphicsFiles } from "./eventGraphicsFiles";
+import { EventReadAccess } from "./eventReadAccess";
+import { EventStorageAccess } from "./eventStorageAccess";
+import { EventStorageAttachment } from "./eventStorageAttachment";
 import { PublicPublishedEvent } from "./publicPublishedEvent";
 
 function getLegacyAttendeeIds(event: Record<string, unknown>): string[] {
@@ -339,7 +350,7 @@ export const listAll = query({
 export const getByCode = query({
   args: { logtoId: v.string(), authToken: v.string(), eventCode: v.string() },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
     const normalizedCode = normalizeEventCode(args.eventCode);
     if (!normalizedCode) return null;
     const canonicalCode = canonicalizeEventCode(normalizedCode);
@@ -361,7 +372,7 @@ export const getByCode = query({
         ) ?? null;
     }
 
-    return event;
+    return EventReadAccess.forViewer(user, event);
   },
 });
 
@@ -372,8 +383,8 @@ export const get = query({
     id: v.id("events"),
   },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    return await ctx.db.get(args.id);
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    return EventReadAccess.forViewer(user, await ctx.db.get(args.id));
   },
 });
 
@@ -487,6 +498,11 @@ export const create = mutation({
     const normalizedEventCode = normalizeEventCode(eventCode);
 
     assertValidEventTimeRange(data.startDate, data.endDate);
+    await assertStorageIdsAttachable(
+      ctx,
+      user,
+      EventStorageAttachment.addedIds(null, data),
+    );
 
     return await ctx.db.insert("events", {
       ...data,
@@ -574,27 +590,15 @@ export const update = mutation({
     ),
     needsGraphics: v.optional(v.boolean()),
     needsAsFunding: v.optional(v.boolean()),
+    graphicsFiles: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    const userId = user.logtoId ?? user.authUserId ?? "";
 
     const event = await ctx.db.get(args.id);
     if (!event) throw new Error("Event not found");
 
-    // Admins, Executive Officers, and General Officers can edit any event
-    const canEditAnyEvent = hasOfficerAccess(user.role);
-    if (!canEditAnyEvent) {
-      // Non-admin users can only edit their own events
-      if (event.requestedUser && event.requestedUser !== userId) {
-        throw new Error("You can only edit your own events");
-      }
-      // Non-admin users can only edit events in editable statuses
-      const editableStatuses = ["draft", "submitted", "pending", "needs_review"];
-      if (event.status && !editableStatuses.includes(event.status)) {
-        throw new Error("Cannot edit an event that has already been approved or declined");
-      }
-    }
+    EventEditAccess.assertCanEdit(user, event);
 
     const { id, ...updates } = args;
     const cleanUpdates = removeUndefinedFields(stripAuthFields(updates));
@@ -618,6 +622,12 @@ export const update = mutation({
       }
     }
 
+    await assertStorageIdsAttachable(
+      ctx,
+      user,
+      EventStorageAttachment.addedIds(event, cleanUpdates),
+    );
+
     const shouldQueueCalendarDeletion =
       Boolean(event.published) && cleanUpdates.published === false;
 
@@ -628,6 +638,45 @@ export const update = mutation({
     }
 
     return id;
+  },
+});
+
+export const appendGraphicsFile = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    id: v.id("events"),
+    storageId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const event = await ctx.db.get(args.id);
+    if (!event) throw new Error("Event not found");
+
+    EventEditAccess.assertCanEdit(user, event);
+
+    const storageId = args.storageId.trim();
+    const uploaded = await uploadedStorageIdsForCaller(
+      ctx,
+      user,
+      storageId ? [storageId] : [],
+    );
+    const visibleEvents = await listEventsForStorageRead(ctx, user);
+    EventGraphicsAttachment.assertCanAppend(
+      user,
+      event,
+      visibleEvents,
+      event.graphicsFiles,
+      storageId,
+      uploaded,
+    );
+
+    const graphicsFiles = EventGraphicsFiles.append(
+      event.graphicsFiles,
+      storageId,
+    );
+    await ctx.db.patch(args.id, { graphicsFiles });
+    return graphicsFiles;
   },
 });
 
@@ -755,6 +804,163 @@ export const generateUploadUrl = mutation({
   },
 });
 
+export const beginStorageUpload = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    sha256: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const ownerId = EventEditAccess.editorId(user);
+    const sha256 = StorageUploadClaim.normalizeSha256(args.sha256);
+    if (!ownerId) throw new Error(GRAPHICS_ATTACH_DENIED);
+    await ctx.db.insert("storageUploadGrants", {
+      ownerId,
+      sha256,
+      createdAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+export const claimStorageUpload = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    storageId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const ownerId = EventEditAccess.editorId(user);
+    const storageId = args.storageId.trim();
+    if (!ownerId || !storageId) throw new Error(GRAPHICS_ATTACH_DENIED);
+
+    const existing = await ctx.db
+      .query("storageFileOwners")
+      .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+      .unique();
+
+    let metadataSha256: string | null = null;
+    try {
+      const metadata = await ctx.storage.getMetadata(storageId as any);
+      metadataSha256 = metadata?.sha256?.toLowerCase() ?? null;
+    } catch {
+      metadataSha256 = null;
+    }
+
+    const events = await ctx.db.query("events").collect();
+    const attachedWhereCallerCannotRead = events.some(
+      (event) =>
+        EventStorageAccess.attachedStorageIds(event).has(storageId) &&
+        !EventStorageAccess.canReadEventFiles(user, event),
+    );
+
+    const now = Date.now();
+    const grants = metadataSha256
+      ? await ctx.db
+          .query("storageUploadGrants")
+          .withIndex("by_ownerId_and_sha256", (q) =>
+            q.eq("ownerId", ownerId).eq("sha256", metadataSha256),
+          )
+          .collect()
+      : [];
+    let grant: (typeof grants)[number] | null = null;
+    for (const candidate of grants) {
+      if (!StorageUploadClaim.isGrantCurrent(candidate.createdAt, now)) {
+        await ctx.db.delete(candidate._id);
+        continue;
+      }
+      grant = candidate;
+    }
+
+    if (
+      !StorageUploadClaim.allow({
+        callerId: ownerId,
+        metadataSha256,
+        grantSha256: grant?.sha256 ?? null,
+        grantCreatedAt: grant?.createdAt ?? null,
+        now,
+        existingOwnerId: existing?.ownerId ?? null,
+        attachedWhereCallerCannotRead,
+      })
+    ) {
+      throw new Error(GRAPHICS_ATTACH_DENIED);
+    }
+
+    if (!existing) {
+      await ctx.db.insert("storageFileOwners", { storageId, ownerId });
+      if (grant) await ctx.db.delete(grant._id);
+    }
+    return storageId;
+  },
+});
+
+async function uploadedStorageIdsForCaller(
+  ctx: QueryCtx | MutationCtx,
+  user: { logtoId?: string | null; authUserId?: string | null },
+  storageIds: string[],
+) {
+  const callerIds = new Set(
+    [user.logtoId, user.authUserId].filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    ),
+  );
+  const owned = new Set<string>();
+  for (const storageId of storageIds) {
+    const owner = await ctx.db
+      .query("storageFileOwners")
+      .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+      .unique();
+    if (owner && callerIds.has(owner.ownerId)) owned.add(storageId);
+  }
+  return owned;
+}
+
+async function assertStorageIdsAttachable(
+  ctx: MutationCtx,
+  user: { role: UserRole; logtoId?: string; authUserId?: string },
+  storageIds: string[],
+) {
+  if (storageIds.length === 0) return;
+  const events = await listEventsForStorageRead(ctx, user);
+  const uploaded = await uploadedStorageIdsForCaller(ctx, user, storageIds);
+  for (const storageId of storageIds) {
+    EventGraphicsAttachment.assertCanAttach(
+      user,
+      events,
+      storageId,
+      uploaded,
+    );
+  }
+}
+
+async function listEventsForStorageRead(
+  ctx: QueryCtx,
+  user: { role: UserRole; logtoId?: string; authUserId?: string },
+) {
+  if (hasOfficerAccess(user.role)) {
+    return await ctx.db.query("events").collect();
+  }
+
+  const ownerIds = [
+    ...new Set(
+      [user.logtoId, user.authUserId].filter(
+        (id): id is string => typeof id === "string" && id.length > 0,
+      ),
+    ),
+  ];
+  const groups = await Promise.all(
+    ownerIds.map((ownerId) =>
+      ctx.db
+        .query("events")
+        .withIndex("by_requestedUser", (q) => q.eq("requestedUser", ownerId))
+        .collect(),
+    ),
+  );
+  return groups.flat();
+}
+
 export const getStorageUrl = mutation({
   args: {
     logtoId: v.string(),
@@ -762,8 +968,13 @@ export const getStorageUrl = mutation({
     storageId: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    return await ctx.storage.getUrl(args.storageId as any);
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const storageId = args.storageId.trim();
+    const events = await listEventsForStorageRead(ctx, user);
+    if (!EventStorageAccess.canReadStorageId(user, events, storageId)) {
+      throw new Error("Storage file is not attached to an event you can view");
+    }
+    return await ctx.storage.getUrl(storageId as any);
   },
 });
 

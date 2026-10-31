@@ -1,4 +1,5 @@
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { format } from "date-fns";
 import {
 	Calendar,
@@ -48,6 +49,10 @@ import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { cn } from "@/lib/utils";
 import { formatDepartmentLabel, formatEventTypeLabel } from "../constants";
 import { StatusBadge } from "../filters/StatusBadge";
+import {
+	GraphicsUploadSession,
+	uploadOwnedStorageFile,
+} from "../graphicsUpload";
 import type { EventRequest, EventStatus } from "../types";
 
 function MetaField({
@@ -186,18 +191,29 @@ export function EventViewModal({
 	canManageStatus,
 }: EventViewModalProps) {
 	const getStorageUrl = useAuthedMutation(api.events.getStorageUrl);
+	const appendGraphicsFile = useAuthedMutation(api.events.appendGraphicsFile);
+	const beginStorageUpload = useAuthedMutation(api.events.beginStorageUpload);
+	const claimStorageUpload = useAuthedMutation(api.events.claimStorageUpload);
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
 	const [activeTab, setActiveTab] = useState("details");
 	const [copiedInvoice, setCopiedInvoice] = useState(false);
 	const [graphicsCompleted, setGraphicsCompleted] = useState(false);
 	const [graphicsUploadNote, setGraphicsUploadNote] = useState("");
 	const [isSavingGraphics, setIsSavingGraphics] = useState(false);
-	const [isUploadingGraphics, setIsUploadingGraphics] = useState(false);
+	const [graphicsUploadsInFlight, setGraphicsUploadsInFlight] = useState<
+		Record<string, number>
+	>({});
 	const [resolvedStorageUrls, setResolvedStorageUrls] = useState<
 		Record<string, string>
 	>({});
 	const getStorageUrlRef = useRef(getStorageUrl);
 	const resolvableFileRefsRef = useRef<string[]>([]);
+	const activeEventIdRef = useRef<string | null>(event?._id ?? null);
+	activeEventIdRef.current = event?._id ?? null;
+	const isUploadingGraphics = GraphicsUploadSession.isUploading(
+		graphicsUploadsInFlight,
+		event?._id,
+	);
 
 	useEffect(() => {
 		getStorageUrlRef.current = getStorageUrl;
@@ -219,6 +235,7 @@ export function EventViewModal({
 			new Set([
 				...(event.files || []),
 				...(event.roomBookingFiles || []),
+				...(event.graphicsFiles || []),
 				...invoiceRefs,
 			]),
 		);
@@ -351,27 +368,52 @@ export function EventViewModal({
 		if (file.size > maxSize) {
 			return;
 		}
-		setIsUploadingGraphics(true);
+		const uploadEventId = event._id;
+		setGraphicsUploadsInFlight((current) =>
+			GraphicsUploadSession.start(current, uploadEventId),
+		);
 		try {
-			const uploadUrl = await generateUploadUrl({});
-			const uploadResponse = await fetch(uploadUrl, {
-				method: "POST",
-				headers: { "Content-Type": file.type || "application/octet-stream" },
-				body: file,
+			const storageId = await uploadOwnedStorageFile(file, {
+				beginStorageUpload,
+				generateUploadUrl: () => generateUploadUrl({}),
+				claimStorageUpload,
 			});
-			if (!uploadResponse.ok) throw new Error("Upload failed");
-			const { storageId } = await uploadResponse.json();
-			const fileUrl = await getStorageUrl({ storageId });
-			if (fileUrl) {
-				const newNote = graphicsUploadNote
-					? `${graphicsUploadNote}\n${fileUrl}`
-					: fileUrl;
-				setGraphicsUploadNote(newNote);
+			await appendGraphicsFile({
+				id: uploadEventId as Id<"events">,
+				storageId,
+			});
+			if (
+				!GraphicsUploadSession.isActiveEvent(
+					activeEventIdRef.current,
+					uploadEventId,
+				)
+			) {
+				return;
 			}
+			const fileUrl = await getStorageUrl({ storageId });
+			if (
+				!fileUrl ||
+				!GraphicsUploadSession.isActiveEvent(
+					activeEventIdRef.current,
+					uploadEventId,
+				)
+			) {
+				return;
+			}
+			setGraphicsUploadNote((current) =>
+				GraphicsUploadSession.isActiveEvent(
+					activeEventIdRef.current,
+					uploadEventId,
+				)
+					? GraphicsUploadSession.appendLinkedUrl(current, fileUrl)
+					: current,
+			);
 		} catch (error) {
 			console.error("Graphics file upload failed:", error);
 		} finally {
-			setIsUploadingGraphics(false);
+			setGraphicsUploadsInFlight((current) =>
+				GraphicsUploadSession.finish(current, uploadEventId),
+			);
 		}
 	};
 
@@ -697,6 +739,15 @@ export function EventViewModal({
 							</div>
 
 							<div className="space-y-3">
+								<div>
+									<h4 className="mb-2.5 text-sm font-medium">
+										Attached graphics
+									</h4>
+									{renderFileCards(
+										GraphicsUploadSession.persistedFileIds(event.graphicsFiles),
+										"Graphics",
+									)}
+								</div>
 								<Label htmlFor="graphics-upload-note">Link or File URL</Label>
 								<div className="flex gap-2">
 									<Input
