@@ -196,6 +196,8 @@ export function EventViewModal({
 	const formId = useId();
 	const getStorageUrl = useAuthedMutation(api.events.getStorageUrl);
 	const appendGraphicsFile = useAuthedMutation(api.events.appendGraphicsFile);
+	const beginStorageUpload = useAuthedMutation(api.events.beginStorageUpload);
+	const claimStorageUpload = useAuthedMutation(api.events.claimStorageUpload);
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
 	const [activeTab, setActiveTab] = useState("details");
 	const [copiedInvoice, setCopiedInvoice] = useState(false);
@@ -372,6 +374,8 @@ export function EventViewModal({
 			GraphicsUploadSession.start(current, uploadEventId),
 		);
 		try {
+			const sha256 = await GraphicsUploadSession.sha256Hex(file);
+			await beginStorageUpload({ sha256 });
 			const uploadUrl = await generateUploadUrl({});
 			const uploadResponse = await fetch(uploadUrl, {
 				method: "POST",
@@ -380,6 +384,7 @@ export function EventViewModal({
 			});
 			if (!uploadResponse.ok) throw new Error("Upload failed");
 			const { storageId } = await uploadResponse.json();
+			await claimStorageUpload({ storageId });
 			await appendGraphicsFile({
 				id: uploadEventId as Id<"events">,
 				storageId,
