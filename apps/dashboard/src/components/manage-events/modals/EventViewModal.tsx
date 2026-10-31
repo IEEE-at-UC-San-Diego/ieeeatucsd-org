@@ -55,6 +55,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatDepartmentLabel, formatEventTypeLabel } from "../constants";
 import { StatusBadge } from "../filters/StatusBadge";
+import { GraphicsUploadSession } from "../graphicsUpload";
 import type { EventRequest, EventStatus } from "../types";
 
 function MetaField({
@@ -202,7 +203,7 @@ export function EventViewModal({
 }: EventViewModalProps) {
 	const formId = useId();
 	const getStorageUrl = useAuthedMutation(api.events.getStorageUrl);
-	const updateEvent = useAuthedMutation(api.events.update);
+	const appendGraphicsFile = useAuthedMutation(api.events.appendGraphicsFile);
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
 	const [activeTab, setActiveTab] = useState("details");
 	const [copiedInvoice, setCopiedInvoice] = useState(false);
@@ -210,23 +211,24 @@ export function EventViewModal({
 	const [graphicsUploadNote, setGraphicsUploadNote] = useState("");
 	const [graphicsStatus, setGraphicsStatus] =
 		useState<GraphicsStatus>(graphicsIdle);
-	const isGraphicsBusy =
-		graphicsStatus.kind === "uploading" || graphicsStatus.kind === "saving";
+	const [graphicsUploadsInFlight, setGraphicsUploadsInFlight] = useState<
+		Record<string, number>
+	>({});
 	const [resolvedStorageUrls, setResolvedStorageUrls] = useState<
 		Record<string, string>
 	>({});
 	const getStorageUrlRef = useRef(getStorageUrl);
 	const resolvableFileRefsRef = useRef<string[]>([]);
-	const [graphicsEventId, setGraphicsEventId] = useState<string | null>(
-		event?._id ?? null,
+	const activeEventIdRef = useRef<string | null>(event?._id ?? null);
+	activeEventIdRef.current = event?._id ?? null;
+	const isUploadingGraphics = GraphicsUploadSession.isUploading(
+		graphicsUploadsInFlight,
+		event?._id,
 	);
-	const [graphicsFileIds, setGraphicsFileIds] = useState<string[]>(
-		event?.graphicsFiles ?? [],
-	);
-	if ((event?._id ?? null) !== graphicsEventId) {
-		setGraphicsEventId(event?._id ?? null);
-		setGraphicsFileIds(event?.graphicsFiles ?? []);
-	}
+	const isGraphicsBusy =
+		isUploadingGraphics ||
+		graphicsStatus.kind === "uploading" ||
+		graphicsStatus.kind === "saving";
 
 	useEffect(() => {
 		getStorageUrlRef.current = getStorageUrl;
@@ -378,6 +380,10 @@ export function EventViewModal({
 			});
 			return;
 		}
+		const uploadEventId = event._id;
+		setGraphicsUploadsInFlight((current) =>
+			GraphicsUploadSession.start(current, uploadEventId),
+		);
 		setGraphicsStatus({ kind: "uploading" });
 		try {
 			const uploadUrl = await generateUploadUrl({});
@@ -388,28 +394,58 @@ export function EventViewModal({
 			});
 			if (!uploadResponse.ok) throw new Error("Upload failed");
 			const { storageId } = await uploadResponse.json();
-			const graphicsFiles = graphicsFileIds.includes(storageId)
-				? graphicsFileIds
-				: [...graphicsFileIds, storageId];
-			await updateEvent({
-				id: event._id as Id<"events">,
-				graphicsFiles,
+			await appendGraphicsFile({
+				id: uploadEventId as Id<"events">,
+				storageId,
 			});
-			setGraphicsFileIds(graphicsFiles);
-			const fileUrl = await getStorageUrl({ storageId });
-			if (fileUrl) {
-				const newNote = graphicsUploadNote
-					? `${graphicsUploadNote}\n${fileUrl}`
-					: fileUrl;
-				setGraphicsUploadNote(newNote);
+			if (
+				!GraphicsUploadSession.isActiveEvent(
+					activeEventIdRef.current,
+					uploadEventId,
+				)
+			) {
+				setGraphicsStatus(graphicsIdle);
+				return;
 			}
+			const fileUrl = await getStorageUrl({ storageId });
+			if (
+				!fileUrl ||
+				!GraphicsUploadSession.isActiveEvent(
+					activeEventIdRef.current,
+					uploadEventId,
+				)
+			) {
+				setGraphicsStatus(graphicsIdle);
+				return;
+			}
+			setGraphicsUploadNote((current) =>
+				GraphicsUploadSession.isActiveEvent(
+					activeEventIdRef.current,
+					uploadEventId,
+				)
+					? GraphicsUploadSession.appendLinkedUrl(current, fileUrl)
+					: current,
+			);
 			setGraphicsStatus(graphicsIdle);
 		} catch (error) {
 			console.error("Graphics file upload failed:", error);
-			setGraphicsStatus({
-				kind: "error",
-				message: "Upload failed. Check your connection and try again.",
-			});
+			if (
+				GraphicsUploadSession.isActiveEvent(
+					activeEventIdRef.current,
+					uploadEventId,
+				)
+			) {
+				setGraphicsStatus({
+					kind: "error",
+					message: "Upload failed. Check your connection and try again.",
+				});
+			} else {
+				setGraphicsStatus(graphicsIdle);
+			}
+		} finally {
+			setGraphicsUploadsInFlight((current) =>
+				GraphicsUploadSession.finish(current, uploadEventId),
+			);
 		}
 	};
 
