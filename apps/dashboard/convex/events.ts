@@ -21,6 +21,8 @@ import {
   generateGoogleCalendarEventId,
 } from "./googleCalendarIds";
 import { assertValidEventTimeRange } from "./eventTimeRange";
+import { EventEditAccess } from "./eventEditAccess";
+import { EventGraphicsFiles } from "./eventGraphicsFiles";
 import { EventReadAccess } from "./eventReadAccess";
 import { EventStorageAccess } from "./eventStorageAccess";
 import { PublicPublishedEvent } from "./publicPublishedEvent";
@@ -581,24 +583,11 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    const userId = user.logtoId ?? user.authUserId ?? "";
 
     const event = await ctx.db.get(args.id);
     if (!event) throw new Error("Event not found");
 
-    // Admins, Executive Officers, and General Officers can edit any event
-    const canEditAnyEvent = hasOfficerAccess(user.role);
-    if (!canEditAnyEvent) {
-      // Non-admin users can only edit their own events
-      if (event.requestedUser && event.requestedUser !== userId) {
-        throw new Error("You can only edit your own events");
-      }
-      // Non-admin users can only edit events in editable statuses
-      const editableStatuses = ["draft", "submitted", "pending", "needs_review"];
-      if (event.status && !editableStatuses.includes(event.status)) {
-        throw new Error("Cannot edit an event that has already been approved or declined");
-      }
-    }
+    EventEditAccess.assertCanEdit(user, event);
 
     const { id, ...updates } = args;
     const cleanUpdates = removeUndefinedFields(stripAuthFields(updates));
@@ -632,6 +621,29 @@ export const update = mutation({
     }
 
     return id;
+  },
+});
+
+export const appendGraphicsFile = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    id: v.id("events"),
+    storageId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const event = await ctx.db.get(args.id);
+    if (!event) throw new Error("Event not found");
+
+    EventEditAccess.assertCanEdit(user, event);
+
+    const graphicsFiles = EventGraphicsFiles.append(
+      event.graphicsFiles,
+      args.storageId,
+    );
+    await ctx.db.patch(args.id, { graphicsFiles });
+    return graphicsFiles;
   },
 });
 
