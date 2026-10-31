@@ -33,6 +33,13 @@ describe("GraphicsUploadSession", () => {
 		expect(inFlight).toEqual({});
 	});
 
+	it("hashes the file the caller is about to upload", async () => {
+		const digest = await GraphicsUploadSession.sha256Hex(new Blob(["abc"]));
+		expect(digest).toBe(
+			"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+		);
+	});
+
 	it("appends a resolved url onto the note for the event that owns the upload", () => {
 		expect(
 			GraphicsUploadSession.appendLinkedUrl("", " https://files.example/a "),

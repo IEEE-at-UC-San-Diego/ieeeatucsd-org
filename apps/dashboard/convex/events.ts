@@ -22,6 +22,11 @@ import {
 } from "./googleCalendarIds";
 import { assertValidEventTimeRange } from "./eventTimeRange";
 import { EventEditAccess } from "./eventEditAccess";
+import {
+  EventGraphicsAttachment,
+  GRAPHICS_ATTACH_DENIED,
+  StorageUploadClaim,
+} from "./eventGraphicsAttachment";
 import { EventGraphicsFiles } from "./eventGraphicsFiles";
 import { EventReadAccess } from "./eventReadAccess";
 import { EventStorageAccess } from "./eventStorageAccess";
@@ -611,6 +616,14 @@ export const update = mutation({
       }
     }
 
+    if (Array.isArray(cleanUpdates.graphicsFiles)) {
+      const added = EventGraphicsAttachment.addedIds(
+        event.graphicsFiles,
+        cleanUpdates.graphicsFiles,
+      );
+      await assertGraphicsIdsAttachable(ctx, user, added);
+    }
+
     const shouldQueueCalendarDeletion =
       Boolean(event.published) && cleanUpdates.published === false;
 
@@ -638,9 +651,25 @@ export const appendGraphicsFile = mutation({
 
     EventEditAccess.assertCanEdit(user, event);
 
+    const storageId = args.storageId.trim();
+    const uploaded = await uploadedStorageIdsForCaller(
+      ctx,
+      user,
+      storageId ? [storageId] : [],
+    );
+    const visibleEvents = await listEventsForStorageRead(ctx, user);
+    EventGraphicsAttachment.assertCanAppend(
+      user,
+      event,
+      visibleEvents,
+      event.graphicsFiles,
+      storageId,
+      uploaded,
+    );
+
     const graphicsFiles = EventGraphicsFiles.append(
       event.graphicsFiles,
-      args.storageId,
+      storageId,
     );
     await ctx.db.patch(args.id, { graphicsFiles });
     return graphicsFiles;
@@ -770,6 +799,126 @@ export const generateUploadUrl = mutation({
     return await ctx.storage.generateUploadUrl();
   },
 });
+
+export const beginStorageUpload = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    sha256: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const ownerId = EventEditAccess.editorId(user);
+    const sha256 = StorageUploadClaim.normalizeSha256(args.sha256);
+    if (!ownerId) throw new Error(GRAPHICS_ATTACH_DENIED);
+    await ctx.db.insert("storageUploadGrants", {
+      ownerId,
+      sha256,
+      createdAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+export const claimStorageUpload = mutation({
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    storageId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const ownerId = EventEditAccess.editorId(user);
+    const storageId = args.storageId.trim();
+    if (!ownerId || !storageId) throw new Error(GRAPHICS_ATTACH_DENIED);
+
+    const existing = await ctx.db
+      .query("storageFileOwners")
+      .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+      .unique();
+
+    let metadataSha256: string | null = null;
+    try {
+      const metadata = await ctx.storage.getMetadata(storageId as any);
+      metadataSha256 = metadata?.sha256?.toLowerCase() ?? null;
+    } catch {
+      metadataSha256 = null;
+    }
+
+    const events = await ctx.db.query("events").collect();
+    const attachedWhereCallerCannotRead = events.some(
+      (event) =>
+        EventStorageAccess.attachedStorageIds(event).has(storageId) &&
+        !EventStorageAccess.canReadEventFiles(user, event),
+    );
+
+    const grant = metadataSha256
+      ? await ctx.db
+          .query("storageUploadGrants")
+          .withIndex("by_ownerId_and_sha256", (q) =>
+            q.eq("ownerId", ownerId).eq("sha256", metadataSha256),
+          )
+          .first()
+      : null;
+
+    if (
+      !StorageUploadClaim.allow({
+        callerId: ownerId,
+        metadataSha256,
+        grantSha256: grant?.sha256 ?? null,
+        existingOwnerId: existing?.ownerId ?? null,
+        attachedWhereCallerCannotRead,
+      })
+    ) {
+      throw new Error(GRAPHICS_ATTACH_DENIED);
+    }
+
+    if (!existing) {
+      await ctx.db.insert("storageFileOwners", { storageId, ownerId });
+      if (grant) await ctx.db.delete(grant._id);
+    }
+    return storageId;
+  },
+});
+
+async function uploadedStorageIdsForCaller(
+  ctx: QueryCtx | MutationCtx,
+  user: { logtoId?: string | null; authUserId?: string | null },
+  storageIds: string[],
+) {
+  const callerIds = new Set(
+    [user.logtoId, user.authUserId].filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    ),
+  );
+  const owned = new Set<string>();
+  for (const storageId of storageIds) {
+    const owner = await ctx.db
+      .query("storageFileOwners")
+      .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+      .unique();
+    if (owner && callerIds.has(owner.ownerId)) owned.add(storageId);
+  }
+  return owned;
+}
+
+async function assertGraphicsIdsAttachable(
+  ctx: MutationCtx,
+  user: { role: UserRole; logtoId?: string; authUserId?: string },
+  storageIds: string[],
+) {
+  if (storageIds.length === 0) return;
+  const events = await listEventsForStorageRead(ctx, user);
+  const uploaded = await uploadedStorageIdsForCaller(ctx, user, storageIds);
+  for (const storageId of storageIds) {
+    EventGraphicsAttachment.assertCanAttach(
+      user,
+      events,
+      storageId,
+      uploaded,
+    );
+  }
+}
 
 async function listEventsForStorageRead(
   ctx: QueryCtx,
