@@ -130,6 +130,7 @@ function mapEventToType(event: any): EventRequest {
 		additionalSpecifications: event.additionalSpecifications || "",
 		flyersCompleted: event.flyersCompleted || false,
 		graphicsUploadNote: event.graphicsUploadNote || "",
+		graphicsFiles: event.graphicsFiles || [],
 		dateTbd: event.dateTbd || false,
 		finId: event.finId || "",
 		funded: event.funded,

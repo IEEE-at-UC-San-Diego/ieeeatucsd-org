@@ -1,4 +1,5 @@
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { format } from "date-fns";
 import {
 	Calendar,
@@ -186,6 +187,7 @@ export function EventViewModal({
 	canManageStatus,
 }: EventViewModalProps) {
 	const getStorageUrl = useAuthedMutation(api.events.getStorageUrl);
+	const updateEvent = useAuthedMutation(api.events.update);
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
 	const [activeTab, setActiveTab] = useState("details");
 	const [copiedInvoice, setCopiedInvoice] = useState(false);
@@ -198,6 +200,16 @@ export function EventViewModal({
 	>({});
 	const getStorageUrlRef = useRef(getStorageUrl);
 	const resolvableFileRefsRef = useRef<string[]>([]);
+	const [graphicsEventId, setGraphicsEventId] = useState<string | null>(
+		event?._id ?? null,
+	);
+	const [graphicsFileIds, setGraphicsFileIds] = useState<string[]>(
+		event?.graphicsFiles ?? [],
+	);
+	if ((event?._id ?? null) !== graphicsEventId) {
+		setGraphicsEventId(event?._id ?? null);
+		setGraphicsFileIds(event?.graphicsFiles ?? []);
+	}
 
 	useEffect(() => {
 		getStorageUrlRef.current = getStorageUrl;
@@ -219,6 +231,7 @@ export function EventViewModal({
 			new Set([
 				...(event.files || []),
 				...(event.roomBookingFiles || []),
+				...(event.graphicsFiles || []),
 				...invoiceRefs,
 			]),
 		);
@@ -361,6 +374,14 @@ export function EventViewModal({
 			});
 			if (!uploadResponse.ok) throw new Error("Upload failed");
 			const { storageId } = await uploadResponse.json();
+			const graphicsFiles = graphicsFileIds.includes(storageId)
+				? graphicsFileIds
+				: [...graphicsFileIds, storageId];
+			await updateEvent({
+				id: event._id as Id<"events">,
+				graphicsFiles,
+			});
+			setGraphicsFileIds(graphicsFiles);
 			const fileUrl = await getStorageUrl({ storageId });
 			if (fileUrl) {
 				const newNote = graphicsUploadNote

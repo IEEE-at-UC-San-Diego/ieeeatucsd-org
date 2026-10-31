@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import {
   requireCurrentUser,
@@ -8,6 +8,7 @@ import {
   hasAdminAccess,
   hasOfficerAccess,
   isGeneralOfficer,
+  type UserRole,
 } from "./permissions";
 import {
   buildVcoPhaseDonePatch,
@@ -21,6 +22,7 @@ import {
 } from "./googleCalendarIds";
 import { assertValidEventTimeRange } from "./eventTimeRange";
 import { EventReadAccess } from "./eventReadAccess";
+import { EventStorageAccess } from "./eventStorageAccess";
 import { PublicPublishedEvent } from "./publicPublishedEvent";
 
 function getLegacyAttendeeIds(event: Record<string, unknown>): string[] {
@@ -575,6 +577,7 @@ export const update = mutation({
     ),
     needsGraphics: v.optional(v.boolean()),
     needsAsFunding: v.optional(v.boolean()),
+    graphicsFiles: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
@@ -756,6 +759,32 @@ export const generateUploadUrl = mutation({
   },
 });
 
+async function listEventsForStorageRead(
+  ctx: QueryCtx,
+  user: { role: UserRole; logtoId?: string; authUserId?: string },
+) {
+  if (hasOfficerAccess(user.role)) {
+    return await ctx.db.query("events").collect();
+  }
+
+  const ownerIds = [
+    ...new Set(
+      [user.logtoId, user.authUserId].filter(
+        (id): id is string => typeof id === "string" && id.length > 0,
+      ),
+    ),
+  ];
+  const groups = await Promise.all(
+    ownerIds.map((ownerId) =>
+      ctx.db
+        .query("events")
+        .withIndex("by_requestedUser", (q) => q.eq("requestedUser", ownerId))
+        .collect(),
+    ),
+  );
+  return groups.flat();
+}
+
 export const getStorageUrl = mutation({
   args: {
     logtoId: v.string(),
@@ -763,8 +792,13 @@ export const getStorageUrl = mutation({
     storageId: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireCurrentUser(ctx, args.logtoId, args.authToken);
-    return await ctx.storage.getUrl(args.storageId as any);
+    const user = await requireCurrentUser(ctx, args.logtoId, args.authToken);
+    const storageId = args.storageId.trim();
+    const events = await listEventsForStorageRead(ctx, user);
+    if (!EventStorageAccess.canReadStorageId(user, events, storageId)) {
+      throw new Error("Storage file is not attached to an event you can view");
+    }
+    return await ctx.storage.getUrl(storageId as any);
   },
 });
 
