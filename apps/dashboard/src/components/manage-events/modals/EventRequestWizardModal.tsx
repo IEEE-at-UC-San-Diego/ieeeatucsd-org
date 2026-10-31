@@ -19,6 +19,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { EventRequestMapping } from "../EventRequestMapping";
+import { uploadOwnedStorageFile } from "../graphicsUpload";
 import type { EventFormData, EventRequest } from "../types";
 import { BasicInfoSection } from "../wizard/BasicInfoSection";
 import { DisclaimerSection } from "../wizard/DisclaimerSection";
@@ -60,6 +61,14 @@ export function EventRequestWizardModal({
 	const isConvertingDraft = initialData?.status === "draft";
 	const isMobile = useIsMobile();
 	const generateUploadUrl = useAuthedMutation(api.events.generateUploadUrl);
+	const beginStorageUpload = useAuthedMutation(api.events.beginStorageUpload);
+	const claimStorageUpload = useAuthedMutation(api.events.claimStorageUpload);
+	const uploadStorageFile = (file: File) =>
+		uploadOwnedStorageFile(file, {
+			beginStorageUpload,
+			generateUploadUrl: () => generateUploadUrl({}),
+			claimStorageUpload,
+		});
 	const [currentStep, setCurrentStep] = useState(isEditing ? 2 : 1);
 	const [disclaimerAccepted, setDisclaimerAccepted] = useState(isEditing);
 	const [formData, setFormData] = useState<EventFormData>(
@@ -240,16 +249,7 @@ export function EventRequestWizardModal({
 							const urls: string[] = [];
 							for (const file of files) {
 								try {
-									const uploadUrl = await generateUploadUrl({});
-									const res = await fetch(uploadUrl, {
-										method: "POST",
-										headers: { "Content-Type": file.type },
-										body: file,
-									});
-									if (res.ok) {
-										const { storageId } = await res.json();
-										urls.push(storageId);
-									}
+									urls.push(await uploadStorageFile(file));
 								} catch (err) {
 									console.error("Failed to upload room booking file:", err);
 								}
@@ -292,9 +292,7 @@ export function EventRequestWizardModal({
 							invoices: formData.invoices,
 						}}
 						onChange={(data) => updateFormData(data)}
-						generateUploadUrl={async () => {
-							return await generateUploadUrl({});
-						}}
+						uploadStorageFile={uploadStorageFile}
 						aiEnabled={aiEnabled}
 					/>
 				);

@@ -31,6 +31,7 @@ import {
 import { EventGraphicsFiles } from "./eventGraphicsFiles";
 import { EventReadAccess } from "./eventReadAccess";
 import { EventStorageAccess } from "./eventStorageAccess";
+import { EventStorageAttachment } from "./eventStorageAttachment";
 import { PublicPublishedEvent } from "./publicPublishedEvent";
 import {
   transitionEventRequest,
@@ -503,6 +504,11 @@ export const create = mutation({
 
     assertValidEventTimeRange(data.startDate, data.endDate);
     const pointsToReward = EventPoints.fromUnknown(data.pointsToReward);
+    await assertStorageIdsAttachable(
+      ctx,
+      user,
+      EventStorageAttachment.addedIds(null, data),
+    );
     const listing = transitionEventRequest(null, {
       kind: "create",
       isDraft: Boolean(isDraft),
@@ -635,13 +641,11 @@ export const update = mutation({
       }
     }
 
-    if (Array.isArray(cleanUpdates.graphicsFiles)) {
-      const added = EventGraphicsAttachment.addedIds(
-        event.graphicsFiles,
-        cleanUpdates.graphicsFiles,
-      );
-      await assertGraphicsIdsAttachable(ctx, user, added);
-    }
+    await assertStorageIdsAttachable(
+      ctx,
+      user,
+      EventStorageAttachment.addedIds(event, cleanUpdates),
+    );
 
     const currentListing = {
       status: (event.status ?? "draft") as EventRequestStatus,
@@ -915,20 +919,31 @@ export const claimStorageUpload = mutation({
         !EventStorageAccess.canReadEventFiles(user, event),
     );
 
-    const grant = metadataSha256
+    const now = Date.now();
+    const grants = metadataSha256
       ? await ctx.db
           .query("storageUploadGrants")
           .withIndex("by_ownerId_and_sha256", (q) =>
             q.eq("ownerId", ownerId).eq("sha256", metadataSha256),
           )
-          .first()
-      : null;
+          .collect()
+      : [];
+    let grant: (typeof grants)[number] | null = null;
+    for (const candidate of grants) {
+      if (!StorageUploadClaim.isGrantCurrent(candidate.createdAt, now)) {
+        await ctx.db.delete(candidate._id);
+        continue;
+      }
+      grant = candidate;
+    }
 
     if (
       !StorageUploadClaim.allow({
         callerId: ownerId,
         metadataSha256,
         grantSha256: grant?.sha256 ?? null,
+        grantCreatedAt: grant?.createdAt ?? null,
+        now,
         existingOwnerId: existing?.ownerId ?? null,
         attachedWhereCallerCannotRead,
       })
@@ -965,7 +980,7 @@ async function uploadedStorageIdsForCaller(
   return owned;
 }
 
-async function assertGraphicsIdsAttachable(
+async function assertStorageIdsAttachable(
   ctx: MutationCtx,
   user: { role: UserRole; logtoId?: string; authUserId?: string },
   storageIds: string[],
