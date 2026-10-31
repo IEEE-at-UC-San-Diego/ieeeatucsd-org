@@ -268,6 +268,9 @@ importers:
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
+      convex-test:
+        specifier: 0.0.41
+        version: 0.0.41(convex@1.27.3(react@19.3.1))
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0(supports-color@7.2.0)
@@ -7150,6 +7153,11 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
+
+  convex-test@0.0.41:
+    resolution: {integrity: sha512-GPHeYFOi70n7UtW0eCEQFVhzl/+m8PvbWkDCbKpHLybI1MrScf4sVpGeM0cC2qmtxiduxa2nLPbehPalhh9oyQ==}
+    peerDependencies:
+      convex: ^1.16.4
 
   convex@1.27.3:
     resolution: {integrity: sha512-Ebr9lPgXkL7JO5IFr3bG+gYvHskyJjc96Fx0BBNkJUDXrR/bd9/uI4q8QszbglK75XfDu068vR0d/HK2T7tB9Q==}
@@ -21814,6 +21822,10 @@ snapshots:
   consola@3.4.2: {}
 
   convert-source-map@2.0.0: {}
+
+  convex-test@0.0.41(convex@1.27.3(react@19.3.1)):
+    dependencies:
+      convex: 1.27.3(react@19.3.1)
 
   convex@1.27.3(react@18.3.1):
     dependencies:

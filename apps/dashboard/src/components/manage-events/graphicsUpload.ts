@@ -66,3 +66,28 @@ export class GraphicsUploadSession {
 			.join("");
 	}
 }
+
+export async function uploadOwnedStorageFile(
+	file: Blob,
+	deps: {
+		beginStorageUpload: (args: { sha256: string }) => Promise<unknown>;
+		generateUploadUrl: () => Promise<string>;
+		claimStorageUpload: (args: { storageId: string }) => Promise<unknown>;
+	},
+): Promise<string> {
+	const sha256 = await GraphicsUploadSession.sha256Hex(file);
+	await deps.beginStorageUpload({ sha256 });
+	const uploadResponse = await fetch(await deps.generateUploadUrl(), {
+		method: "POST",
+		headers: { "Content-Type": file.type || "application/octet-stream" },
+		body: file,
+	});
+	if (!uploadResponse.ok) throw new Error("Upload failed");
+	const body = (await uploadResponse.json()) as { storageId?: unknown };
+	if (typeof body.storageId !== "string" || !body.storageId.trim()) {
+		throw new Error("Upload failed");
+	}
+	const storageId = body.storageId.trim();
+	await deps.claimStorageUpload({ storageId });
+	return storageId;
+}

@@ -49,7 +49,10 @@ import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { cn } from "@/lib/utils";
 import { formatDepartmentLabel, formatEventTypeLabel } from "../constants";
 import { StatusBadge } from "../filters/StatusBadge";
-import { GraphicsUploadSession } from "../graphicsUpload";
+import {
+	GraphicsUploadSession,
+	uploadOwnedStorageFile,
+} from "../graphicsUpload";
 import type { EventRequest, EventStatus } from "../types";
 
 function MetaField({
@@ -370,17 +373,11 @@ export function EventViewModal({
 			GraphicsUploadSession.start(current, uploadEventId),
 		);
 		try {
-			const sha256 = await GraphicsUploadSession.sha256Hex(file);
-			await beginStorageUpload({ sha256 });
-			const uploadUrl = await generateUploadUrl({});
-			const uploadResponse = await fetch(uploadUrl, {
-				method: "POST",
-				headers: { "Content-Type": file.type || "application/octet-stream" },
-				body: file,
+			const storageId = await uploadOwnedStorageFile(file, {
+				beginStorageUpload,
+				generateUploadUrl: () => generateUploadUrl({}),
+				claimStorageUpload,
 			});
-			if (!uploadResponse.ok) throw new Error("Upload failed");
-			const { storageId } = await uploadResponse.json();
-			await claimStorageUpload({ storageId });
 			await appendGraphicsFile({
 				id: uploadEventId as Id<"events">,
 				storageId,
