@@ -4,9 +4,10 @@ import {
 	isAiEnabledForUser,
 	requireApiAuth,
 } from "@/server/auth";
+import { invoiceUserContent } from "@/server/invoice-parse";
 import { validateExternalFileUrl } from "@/server/url-guard";
 
-async function handle({ request }: { request: Request }) {
+export async function handle({ request }: { request: Request }) {
 	try {
 		const authResult = await requireApiAuth(request);
 		if (authResult instanceof Response) return authResult;
@@ -78,10 +79,8 @@ async function handle({ request }: { request: Request }) {
 			}
 		}
 
-		// Determine if this is a PDF
-		const isPdf =
-			(contentType && /application\/pdf/i.test(contentType)) ||
-			/\.pdf(?:\?|#|$)/i.test(imageUrl);
+		const contentParts = invoiceUserContent(finalUrl, contentType);
+		const isPdf = contentParts.some((part) => part.type === "file");
 
 		const systemPrompt = `Extract data from this invoice/receipt into the following JSON structure. Return ONLY valid JSON with no additional text or markdown formatting.
 
@@ -112,22 +111,6 @@ Rules:
 - total = subtotal + tax + tip
 - All monetary values should be numbers with 2 decimal places
 - Return ONLY the JSON object, no markdown or extra text`;
-
-		const userPrompt =
-			"Analyze this invoice/receipt and extract all line items and totals.";
-
-		// Build content parts based on file type
-		const contentParts: any[] = [
-			{ type: "text", text: userPrompt },
-			...(isPdf
-				? [
-						{
-							type: "file",
-							file: { filename: "invoice.pdf", file_data: finalUrl },
-						},
-					]
-				: [{ type: "image_url", image_url: { url: finalUrl } }]),
-		];
 
 		const plugins = isPdf
 			? [{ id: "file-parser", pdf: { engine: "mistral-ocr" } }]
