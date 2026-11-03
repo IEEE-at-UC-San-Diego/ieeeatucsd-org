@@ -11,6 +11,10 @@ import {
   validateAndBuildResume,
 } from "./resume";
 import { UserAuth } from "./userAuth";
+import {
+  UserRoleAssignment,
+  assignableUserRoleValidator,
+} from "./userRoleAssignment";
 
 const FISCAL_YEAR_START_MONTH = 6; // July
 const FISCAL_MONTH_LABELS = [
@@ -132,24 +136,6 @@ export const getByIdForAdmin = query({
   handler: async (ctx, args) => {
     await requireAdminAccess(ctx, args.logtoId, args.authToken);
     return await ctx.db.get(args.userId);
-  },
-});
-
-export const getUserInfo = query({
-  args: { logtoId: v.string() },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_logtoId", (q) => q.eq("logtoId", args.logtoId))
-      .first();
-    
-    if (!user) return null;
-    
-    return {
-      name: user.name,
-      zelleInformation: user.zelleInformation,
-      email: user.email,
-    };
   },
 });
 
@@ -429,15 +415,7 @@ export const updateRole = mutation({
     logtoId: v.string(),
     authToken: v.string(),
     userId: v.id("users"),
-    role: v.union(
-      v.literal("Member"),
-      v.literal("General Officer"),
-      v.literal("Executive Officer"),
-      v.literal("Member at Large"),
-      v.literal("Past Officer"),
-      v.literal("Sponsor"),
-      v.literal("Administrator"),
-    ),
+    role: assignableUserRoleValidator,
     position: v.optional(v.string()),
     team: v.optional(
       v.union(
@@ -453,21 +431,11 @@ export const updateRole = mutation({
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser) throw new Error("Target user not found");
 
-    // Nuanced restrictions for Executive Officers (non-Admin)
-    if (admin.role === "Executive Officer") {
-      // Executive Officers cannot change Administrator users
-      if (targetUser.role === "Administrator") {
-        throw new Error("Executive Officers cannot modify Administrator accounts");
-      }
-      // Executive Officers cannot change their own role
-      if (targetUser._id === admin._id) {
-        throw new Error("Executive Officers cannot change their own role");
-      }
-      // Executive Officers cannot assign the Administrator role
-      if (args.role === "Administrator") {
-        throw new Error("Only Administrators can assign the Administrator role");
-      }
-    }
+    UserRoleAssignment.assertCanAssign({
+      actor: admin,
+      role: args.role,
+      target: targetUser,
+    });
 
     await ctx.db.patch(args.userId, {
       role: args.role,
@@ -487,12 +455,16 @@ export const createPlaceholder = mutation({
     authToken: v.string(),
     email: v.string(),
     name: v.string(),
-    role: v.string(),
+    role: assignableUserRoleValidator,
     position: v.optional(v.string()),
     team: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const admin = await requireAdminAccess(ctx, args.logtoId, args.authToken);
+    UserRoleAssignment.assertCanAssign({
+      actor: admin,
+      role: args.role,
+    });
     const normalizedEmail = args.email.trim().toLowerCase();
     const now = Date.now();
 
@@ -510,7 +482,7 @@ export const createPlaceholder = mutation({
       emailVisibility: true,
       verified: true,
       name: args.name,
-      role: args.role as any,
+      role: args.role,
       position: args.position,
       team: args.team as any,
       status: "active",
