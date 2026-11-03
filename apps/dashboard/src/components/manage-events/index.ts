@@ -2,6 +2,7 @@
 
 // Calendar
 export { EventCalendar } from "./calendar/EventCalendar";
+export { EventRequestMapping } from "./EventRequestMapping";
 // Filters
 export { EventsFilters } from "./filters/EventsFilters";
 export { StatusBadge } from "./filters/StatusBadge";

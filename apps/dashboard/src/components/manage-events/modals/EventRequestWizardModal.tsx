@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
-import { normalizeDepartment, normalizeEventType } from "../constants";
+import { EventRequestMapping } from "../EventRequestMapping";
 import type { EventFormData, EventRequest } from "../types";
 import { BasicInfoSection } from "../wizard/BasicInfoSection";
 import { DisclaimerSection } from "../wizard/DisclaimerSection";
@@ -44,95 +44,7 @@ const steps = [
 	{ id: 6, title: "Review", description: "Final check" },
 ];
 
-const defaultFormData: EventFormData = {
-	eventName: "",
-	eventDescription: "",
-	eventType: "",
-	department: undefined,
-	location: "",
-	startDate: Date.now(),
-	endDate: Date.now() + 3600000,
-	eventCode: "",
-	hasFood: false,
-	needsFlyers: false,
-	needsGraphics: false,
-	needsASFunding: false,
-	estimatedAttendance: 0,
-	files: [],
-	invoices: [],
-	willOrHaveRoomBooking: false,
-	roomBookingFiles: [],
-	foodDrinksBeingServed: false,
-	asFundingRequired: false,
-	flyerType: [],
-	otherFlyerType: "",
-	flyerAdvertisingStartDate: 0,
-	flyerAdditionalRequests: "",
-	photographyNeeded: false,
-	requiredLogos: [],
-	otherLogos: [],
-	advertisingFormat: "",
-	additionalSpecifications: "",
-	flyersCompleted: false,
-	graphicsUploadNote: "",
-};
-
-function buildFormDataFromInitial(
-	initialData?: Partial<EventRequest>,
-): EventFormData {
-	if (!initialData) return { ...defaultFormData };
-	return {
-		eventName: initialData.eventName || defaultFormData.eventName,
-		eventDescription:
-			initialData.eventDescription || defaultFormData.eventDescription,
-		eventType: initialData.eventType
-			? normalizeEventType(initialData.eventType)
-			: defaultFormData.eventType,
-		department: normalizeDepartment(initialData.department),
-		location: initialData.location || defaultFormData.location,
-		startDate: initialData.startDate || Date.now(),
-		endDate: initialData.endDate || Date.now() + 3600000,
-		eventCode: initialData.eventCode || defaultFormData.eventCode,
-		hasFood:
-			initialData.hasFood ??
-			initialData.foodDrinksBeingServed ??
-			defaultFormData.hasFood,
-		needsFlyers: initialData.needsFlyers ?? defaultFormData.needsFlyers,
-		needsGraphics: initialData.needsGraphics ?? defaultFormData.needsGraphics,
-		needsASFunding:
-			initialData.needsASFunding ?? defaultFormData.needsASFunding,
-		estimatedAttendance:
-			initialData.estimatedAttendance ?? defaultFormData.estimatedAttendance,
-		files: initialData.files || [],
-		invoices: initialData.invoices || [],
-		willOrHaveRoomBooking:
-			initialData.willOrHaveRoomBooking ??
-			defaultFormData.willOrHaveRoomBooking,
-		roomBookingFiles: initialData.roomBookingFiles || [],
-		foodDrinksBeingServed:
-			initialData.foodDrinksBeingServed ??
-			initialData.hasFood ??
-			defaultFormData.foodDrinksBeingServed,
-		asFundingRequired:
-			initialData.asFundingRequired ??
-			initialData.needsASFunding ??
-			defaultFormData.asFundingRequired,
-		flyerType: initialData.flyerType || [],
-		otherFlyerType: initialData.otherFlyerType || "",
-		flyerAdvertisingStartDate: initialData.flyerAdvertisingStartDate || 0,
-		flyerAdditionalRequests: initialData.flyerAdditionalRequests || "",
-		photographyNeeded:
-			initialData.photographyNeeded ?? defaultFormData.photographyNeeded,
-		requiredLogos: initialData.requiredLogos || [],
-		otherLogos: initialData.otherLogos || [],
-		advertisingFormat: initialData.advertisingFormat || "",
-		additionalSpecifications: initialData.additionalSpecifications || "",
-		flyersCompleted:
-			initialData.flyersCompleted ?? defaultFormData.flyersCompleted,
-		graphicsUploadNote:
-			initialData.graphicsUploadNote || defaultFormData.graphicsUploadNote,
-	};
-}
+const defaultFormData = EventRequestMapping.defaultFormData;
 
 export function EventRequestWizardModal({
 	isOpen,
@@ -149,7 +61,7 @@ export function EventRequestWizardModal({
 	const [currentStep, setCurrentStep] = useState(isEditing ? 2 : 1);
 	const [disclaimerAccepted, setDisclaimerAccepted] = useState(isEditing);
 	const [formData, setFormData] = useState<EventFormData>(
-		buildFormDataFromInitial(initialData),
+		EventRequestMapping.toFormData(initialData),
 	);
 	const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -161,7 +73,7 @@ export function EventRequestWizardModal({
 	// Sync form data when initialData changes (e.g., opening edit for a different event)
 	useEffect(() => {
 		if (isOpen) {
-			const nextFormData = buildFormDataFromInitial(initialData);
+			const nextFormData = EventRequestMapping.toFormData(initialData);
 			setFormData(nextFormData);
 			initialSnapshotRef.current = JSON.stringify(nextFormData);
 			setCurrentStep(initialData ? 2 : 1);
@@ -313,6 +225,7 @@ export function EventRequestWizardModal({
 							startDate: formData.startDate,
 							endDate: formData.endDate,
 							eventCode: formData.eventCode,
+							pointsToReward: formData.pointsToReward,
 							hasFood: formData.hasFood,
 							willOrHaveRoomBooking: formData.willOrHaveRoomBooking,
 							roomBookingFiles: formData.roomBookingFiles,

@@ -19,6 +19,7 @@ import {
   buildGoogleCalendarSubscribeUrl,
   generateGoogleCalendarEventId,
 } from "./googleCalendarIds";
+import { EventPoints } from "./eventPoints";
 import { assertValidEventTimeRange } from "./eventTimeRange";
 import { PublicPublishedEvent } from "./publicPublishedEvent";
 
@@ -487,9 +488,11 @@ export const create = mutation({
     const normalizedEventCode = normalizeEventCode(eventCode);
 
     assertValidEventTimeRange(data.startDate, data.endDate);
+    const pointsToReward = EventPoints.fromUnknown(data.pointsToReward);
 
     return await ctx.db.insert("events", {
       ...data,
+      pointsToReward,
       ...(normalizedEventCode ? { eventCode: normalizedEventCode } : {}),
       status: isDraft ? "draft" : (data.published ? "approved" : "submitted"),
       requestedUser: userId,
@@ -598,6 +601,11 @@ export const update = mutation({
 
     const { id, ...updates } = args;
     const cleanUpdates = removeUndefinedFields(stripAuthFields(updates));
+    if (cleanUpdates.pointsToReward !== undefined) {
+      cleanUpdates.pointsToReward = EventPoints.fromUnknown(
+        cleanUpdates.pointsToReward,
+      );
+    }
 
     const nextStartDate = cleanUpdates.startDate ?? event.startDate;
     const nextEndDate = cleanUpdates.endDate ?? event.endDate;
@@ -861,11 +869,11 @@ export const checkIn = mutation({
       userId,
       timeCheckedIn: Date.now(),
       food: args.food || "none",
-      pointsEarned: event.pointsToReward ?? 0,
+      pointsEarned: EventPoints.fromDocument(event),
     });
 
     // Update user points and events attended
-    const pts = event.pointsToReward ?? 0;
+    const pts = EventPoints.fromDocument(event);
     await ctx.db.patch(user._id, {
       points: (user.points || 0) + pts,
       eventsAttended: (user.eventsAttended || 0) + 1,
