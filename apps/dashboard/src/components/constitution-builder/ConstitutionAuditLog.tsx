@@ -1,5 +1,4 @@
 import { api } from "@convex/_generated/api";
-import { useQuery } from "convex/react";
 import { format, formatDistanceToNow } from "date-fns";
 import {
 	ArrowUpDown,
@@ -27,6 +26,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useAuthedQuery } from "@/hooks/useAuthedConvex";
 import type { ConstitutionAuditEntry } from "./types";
 
 interface ConstitutionAuditLogProps {
@@ -109,9 +109,10 @@ function buildChangeSummary(entry: ConstitutionAuditEntry): string {
 export const ConstitutionAuditLog: React.FC<ConstitutionAuditLogProps> = ({
 	constitutionId,
 }) => {
-	const auditLog = useQuery(api.constitutions.getAuditLog, {
-		constitutionId: constitutionId as any,
-	});
+	const auditLog = useAuthedQuery(
+		api.constitutions.getAuditLog,
+		constitutionId ? { constitutionId: constitutionId as any } : "skip",
+	);
 
 	const entries = auditLog || [];
 	const [searchQuery, setSearchQuery] = useState("");

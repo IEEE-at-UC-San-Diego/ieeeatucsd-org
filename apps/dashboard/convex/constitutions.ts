@@ -33,15 +33,25 @@ export const list = query({
 });
 
 export const get = query({
-  args: { id: v.id("constitutions") },
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    id: v.id("constitutions"),
+  },
   handler: async (ctx, args) => {
+    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
     return await ctx.db.get(args.id);
   },
 });
 
 export const getByTitle = query({
-  args: { title: v.string() },
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    title: v.string(),
+  },
   handler: async (ctx, args) => {
+    await requireOfficerAccess(ctx, args.logtoId, args.authToken);
     return await ctx.db
       .query("constitutions")
       .filter((q) => q.eq(q.field("title"), args.title))
@@ -936,8 +946,14 @@ async function createAuditEntryInternal(
 }
 
 export const getAuditLog = query({
-  args: { constitutionId: v.id("constitutions") },
+  args: {
+    logtoId: v.string(),
+    authToken: v.string(),
+    constitutionId: v.id("constitutions"),
+  },
   handler: async (ctx, args) => {
+    await requireAdminAccess(ctx, args.logtoId, args.authToken);
+
     const auditLog = await ctx.db
       .query("constitutionAuditLogs")
       .withIndex("by_constitutionId", (q: any) => q.eq("constitutionId", args.constitutionId))
