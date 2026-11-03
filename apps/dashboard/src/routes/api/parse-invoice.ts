@@ -4,9 +4,16 @@ import {
 	isAiEnabledForUser,
 	requireApiAuth,
 } from "@/server/auth";
+import {
+	INVOICE_SCAN_EMPTY,
+	INVOICE_SCAN_NOT_CONFIGURED,
+	INVOICE_SCAN_REJECTED,
+	INVOICE_SCAN_UNREADABLE,
+	invoiceUserContent,
+} from "@/server/invoice-parse";
 import { validateExternalFileUrl } from "@/server/url-guard";
 
-async function handle({ request }: { request: Request }) {
+export async function handle({ request }: { request: Request }) {
 	try {
 		const authResult = await requireApiAuth(request);
 		if (authResult instanceof Response) return authResult;
@@ -29,7 +36,7 @@ async function handle({ request }: { request: Request }) {
 		if (!apiKey) {
 			console.error("OPENROUTER_API_KEY not configured");
 			return new Response(
-				JSON.stringify({ error: "AI service not configured" }),
+				JSON.stringify({ error: INVOICE_SCAN_NOT_CONFIGURED }),
 				{ status: 500, headers: { "Content-Type": "application/json" } },
 			);
 		}
@@ -78,10 +85,8 @@ async function handle({ request }: { request: Request }) {
 			}
 		}
 
-		// Determine if this is a PDF
-		const isPdf =
-			(contentType && /application\/pdf/i.test(contentType)) ||
-			/\.pdf(?:\?|#|$)/i.test(imageUrl);
+		const contentParts = invoiceUserContent(finalUrl, contentType);
+		const isPdf = contentParts.some((part) => part.type === "file");
 
 		const systemPrompt = `Extract data from this invoice/receipt into the following JSON structure. Return ONLY valid JSON with no additional text or markdown formatting.
 
@@ -112,22 +117,6 @@ Rules:
 - total = subtotal + tax + tip
 - All monetary values should be numbers with 2 decimal places
 - Return ONLY the JSON object, no markdown or extra text`;
-
-		const userPrompt =
-			"Analyze this invoice/receipt and extract all line items and totals.";
-
-		// Build content parts based on file type
-		const contentParts: any[] = [
-			{ type: "text", text: userPrompt },
-			...(isPdf
-				? [
-						{
-							type: "file",
-							file: { filename: "invoice.pdf", file_data: finalUrl },
-						},
-					]
-				: [{ type: "image_url", image_url: { url: finalUrl } }]),
-		];
 
 		const plugins = isPdf
 			? [{ id: "file-parser", pdf: { engine: "mistral-ocr" } }]
@@ -162,8 +151,7 @@ Rules:
 			console.error("OpenRouter API error:", errorText);
 			return new Response(
 				JSON.stringify({
-					error: "Failed to parse invoice with AI",
-					details: errorText,
+					error: INVOICE_SCAN_REJECTED,
 				}),
 				{
 					status: response.status,
@@ -175,11 +163,11 @@ Rules:
 		const data = await response.json();
 		const content = data.choices?.[0]?.message?.content;
 
-		if (!content) {
-			return new Response(
-				JSON.stringify({ error: "No content returned from AI" }),
-				{ status: 500, headers: { "Content-Type": "application/json" } },
-			);
+		if (!content || typeof content !== "string") {
+			return new Response(JSON.stringify({ error: INVOICE_SCAN_EMPTY }), {
+				status: 500,
+				headers: { "Content-Type": "application/json" },
+			});
 		}
 
 		let parsedData;
@@ -193,8 +181,7 @@ Rules:
 			console.error("Failed to parse AI response:", content);
 			return new Response(
 				JSON.stringify({
-					error: "Invalid JSON response from AI",
-					rawContent: content,
+					error: INVOICE_SCAN_UNREADABLE,
 				}),
 				{ status: 500, headers: { "Content-Type": "application/json" } },
 			);

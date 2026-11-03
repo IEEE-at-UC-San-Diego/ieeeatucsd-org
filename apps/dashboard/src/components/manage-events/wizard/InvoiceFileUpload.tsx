@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import type { InvoiceItem } from "../types";
+import { invoiceScanFailureMessage } from "./invoice-scan-error";
 
 interface ParsedInvoiceData {
 	vendor: string;
@@ -142,14 +143,16 @@ export function InvoiceFileUpload({
 				}
 			} catch (err) {
 				setError(
-					`AI parsing failed: ${err instanceof Error ? err.message : "Unknown error"}. You can still enter items manually.`,
+					invoiceScanFailureMessage(
+						err instanceof Error ? err.message : undefined,
+					),
 				);
 			} finally {
 				setIsParsing(false);
 			}
 		} else {
 			setError(
-				"AI is disabled for this account. Enter invoice details manually.",
+				"AI is disabled for this account. Enter the vendor and line items below.",
 			);
 		}
 	};

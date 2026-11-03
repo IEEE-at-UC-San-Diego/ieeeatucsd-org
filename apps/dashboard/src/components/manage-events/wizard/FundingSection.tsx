@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import type { Invoice, InvoiceItem } from "../types";
+import { invoiceScanFailureMessage } from "./invoice-scan-error";
 
 interface FundingSectionProps {
 	data: {
@@ -93,47 +94,45 @@ export function FundingSection({
 					body: JSON.stringify({ imageUrl: parseDataUrl }),
 				});
 
-				if (response.ok) {
-					const result = await response.json();
-					if (result.success && result.data) {
-						const parsed = result.data;
-						const newInvoice: Invoice = {
-							_id: newInvoiceId,
-							vendor: parsed.vendor || "",
-							items: (parsed.items || []).map((item: any) => ({
-								description: item.description || "",
-								quantity: item.quantity || 1,
-								unitPrice: item.unitPrice || 0,
-								total: item.total || 0,
-							})),
-							tax: parsed.tax || 0,
-							tip: parsed.tip || 0,
-							invoiceFile: fileUrl || undefined,
-							additionalFiles: [],
-							subtotal: parsed.subtotal || 0,
-							total: parsed.total || 0,
-							amount: parsed.total || 0,
-							description: "",
-						};
-						onChange({ invoices: [...data.invoices, newInvoice] });
-						setIsUploading(false);
-						return;
-					}
+				const result = await response.json().catch(() => ({}));
+				if (response.ok && result.success && result.data) {
+					const parsed = result.data;
+					const newInvoice: Invoice = {
+						_id: newInvoiceId,
+						vendor: parsed.vendor || "",
+						items: (parsed.items || []).map((item: any) => ({
+							description: item.description || "",
+							quantity: item.quantity || 1,
+							unitPrice: item.unitPrice || 0,
+							total: item.total || 0,
+						})),
+						tax: parsed.tax || 0,
+						tip: parsed.tip || 0,
+						invoiceFile: fileUrl || undefined,
+						additionalFiles: [],
+						subtotal: parsed.subtotal || 0,
+						total: parsed.total || 0,
+						amount: parsed.total || 0,
+						description: "",
+					};
+					onChange({ invoices: [...data.invoices, newInvoice] });
+					setIsUploading(false);
+					return;
 				}
-				// AI failed — create empty invoice with file attached
 				setUploadError(
-					"AI parsing failed. Please enter invoice details manually.",
+					invoiceScanFailureMessage(
+						typeof result.error === "string" ? result.error : undefined,
+					),
 				);
 			} catch {
-				setUploadError(
-					"AI parsing failed. Please enter invoice details manually.",
-				);
+				setUploadError(invoiceScanFailureMessage());
 			}
 		} else {
-			setUploadError("AI is disabled. Please enter invoice details manually.");
+			setUploadError(
+				"AI is disabled for this account. Enter the vendor and line items below.",
+			);
 		}
 
-		// Fallback: create invoice with file but no parsed data
 		const newInvoice: Invoice = {
 			_id: newInvoiceId,
 			vendor: "",
@@ -421,9 +420,9 @@ export function FundingSection({
 										<div className="flex items-center gap-2 text-xs text-tone-success bg-ds-green-100 border border-ds-green-100 rounded-lg px-3 py-2">
 											<FileText className="h-3.5 w-3.5 shrink-0" />
 											<span>
-												{aiEnabled
-													? "Invoice file attached (AI-scanned)"
-													: "Invoice file attached"}
+												{invoice.items.length > 0
+													? "Invoice file attached. Check the line items below before you continue."
+													: "Invoice file attached. Enter the vendor and line items below."}
 											</span>
 										</div>
 									)}
