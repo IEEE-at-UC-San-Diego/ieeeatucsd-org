@@ -111,6 +111,57 @@ describe("POST /api/parse-invoice", () => {
 		);
 	});
 
+	it("treats an unlabeled PDF data URL as a PDF file", async () => {
+		const imageUrl = "data:application/octet-stream;base64,JVBERi0xLjQK";
+		requireApiAuthMock.mockResolvedValue({
+			body: { imageUrl },
+			user: { aiFeaturesEnabled: true },
+		});
+		const fetchMock = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(modelResponse());
+
+		const { handle } = await import("./parse-invoice");
+		const response = await handle({
+			request: new Request("http://localhost/api/parse-invoice", {
+				method: "POST",
+				body: JSON.stringify({ imageUrl }),
+			}),
+		});
+
+		expect(response.status).toBe(200);
+		expect(sentFilePart(fetchMock).type).toBe("file");
+		expect(
+			sentFilePart(fetchMock).file?.file_data?.startsWith(
+				"data:application/pdf;base64,",
+			),
+		).toBe(true);
+	});
+
+	it("tells the officer how to continue when scanning is not configured", async () => {
+		vi.stubEnv("OPENROUTER_API_KEY", "");
+		requireApiAuthMock.mockResolvedValue({
+			body: { imageUrl: JPEG_DATA_URL },
+			user: { aiFeaturesEnabled: true },
+		});
+		const fetchMock = vi.spyOn(globalThis, "fetch");
+
+		const { handle } = await import("./parse-invoice");
+		const response = await handle({
+			request: new Request("http://localhost/api/parse-invoice", {
+				method: "POST",
+				body: JSON.stringify({ imageUrl: JPEG_DATA_URL }),
+			}),
+		});
+
+		expect(response.status).toBe(500);
+		const payload = (await response.json()) as { error: string };
+		expect(payload.error).toBe(
+			"Invoice scanning is not configured. Enter the vendor and line items below.",
+		);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
 	it.each([
 		["JPG", JPEG_DATA_URL],
 		["PNG", PNG_DATA_URL],
