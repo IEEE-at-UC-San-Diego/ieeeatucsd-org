@@ -33,6 +33,7 @@ const schema = defineSchema({
     location: v.string(),
     startDate: v.number(),
     endDate: v.number(),
+    pointsToReward: v.optional(v.number()),
     published: v.optional(v.boolean()),
     status: v.optional(v.string()),
     requestedUser: v.optional(v.string()),
