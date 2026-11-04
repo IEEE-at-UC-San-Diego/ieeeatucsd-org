@@ -2,11 +2,12 @@ export function legacyDashboardRedirect(
   pathname: string,
   dashboardBase: string,
 ): string | null {
-  if (!pathname.startsWith("/dashboard")) {
+  if (pathname !== "/dashboard" && !pathname.startsWith("/dashboard/")) {
     return null;
   }
 
-  const newPath = pathname.replace(/^\/dashboard/, "") || "/";
-  const dashboardDomain = dashboardBase.replace(/\/$/, "");
-  return `${dashboardDomain}${newPath}`;
+  const rest = pathname.slice("/dashboard".length);
+  const path = rest.length === 0 ? "/" : rest;
+  const base = dashboardBase.replace(/\/$/, "");
+  return `${base}${path}`;
 }
