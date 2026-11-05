@@ -1,5 +1,9 @@
 import type { APIRoute } from "astro";
 import { Resend } from "resend";
+import {
+  officerContactHtml,
+  senderConfirmationHtml,
+} from "./sponsor-contact-html";
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -32,12 +36,7 @@ export const POST: APIRoute = async ({ request }) => {
       to: [toEmail],
       replyTo: email,
       subject: "New Contact Form Submission",
-      html: `
-        <p><strong>From:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone || "(none)"}</p>
-        <p><strong>Message:</strong></p>
-        <pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(message)}</pre>
-      `,
+      html: officerContactHtml({ email, phone, message }),
     });
 
     // User confirmation
@@ -46,14 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
       to: [email],
       replyTo: replyToEmail,
       subject: "IEEE UCSD — We received your message",
-      html: `
-        <p>Hi!</p>
-        <p>Thanks for reaching out to IEEE UCSD. We received your message and will get back to you soon.</p>
-        <hr/>
-        <p><strong>Your message:</strong></p>
-        <pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(message)}</pre>
-        <p>— IEEE UCSD</p>
-      `,
+      html: senderConfirmationHtml(message),
     });
 
     // return back to contact page
@@ -66,10 +58,3 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response("Failed to send", { status: 500 });
   }
 };
-
-function escapeHtml(s: string) {
-  return s
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
