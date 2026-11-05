@@ -5,8 +5,8 @@ export function officerContactHtml(input: {
 }) {
   const phoneText = input.phone || "(none)";
   return `
-        <p><strong>From:</strong> ${input.email}</p>
-        <p><strong>Phone:</strong> ${phoneText}</p>
+        <p><strong>From:</strong> ${escapeHtml(input.email)}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(phoneText)}</p>
         <p><strong>Message:</strong></p>
         <pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(input.message)}</pre>
       `;
