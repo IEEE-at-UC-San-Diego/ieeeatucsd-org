@@ -10,8 +10,10 @@ import {
 	UserPlus,
 	X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import {
 	DashboardPage,
 	PageHeader,
@@ -23,6 +25,7 @@ import {
 	type SortConfig,
 	TEAMS,
 	USER_ROLES,
+	USER_STATUSES,
 	type UserFilters,
 	type UserModalData,
 	type UserRole,
@@ -49,7 +52,22 @@ import {
 } from "@/lib/members-csv";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 
+const SORT_FIELDS = ["name", "email", "role", "team", "lastLogin"] as const;
+
+const searchSchema = z.object({
+	q: z.string().catch(""),
+	role: z.enum(["all", ...USER_ROLES]).catch("all"),
+	status: z.enum(USER_STATUSES).catch("all"),
+	team: z.enum(TEAMS).catch("all"),
+	sort: z.enum(SORT_FIELDS).catch("name"),
+	dir: z.enum(["asc", "desc"]).catch("asc"),
+	page: z.number().int().min(1).catch(1),
+});
+
+type UsersSearch = z.infer<typeof searchSchema>;
+
 export const Route = createFileRoute("/_dashboard/manage-users")({
+	validateSearch: searchSchema,
 	loader: (ctx) => prefetchAuthedQuery(api.users.list, undefined, ctx),
 	component: ManageUsersPage,
 });
@@ -74,30 +92,42 @@ function ManageUsersPage() {
 	const deleteUserMutation = useAuthedMutation(api.users.deleteUser);
 
 	// State
-	const [filters, setFilters] = useState<UserFilters>({
-		searchTerm: "",
-		roleFilter: "all",
-		statusFilter: "all",
-		teamFilter: "all",
-	});
-	const [sortConfig, setSortConfig] = useState<SortConfig>({
-		field: "name",
-		direction: "asc",
-	});
-	const [currentPage, setCurrentPage] = useState(1);
+	const search = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const setSearch = (patch: Partial<UsersSearch>) =>
+		navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
+	const filters: UserFilters = {
+		searchTerm: search.q,
+		roleFilter: search.role,
+		statusFilter: search.status,
+		teamFilter: search.team,
+	};
+	const setFilters = (next: UserFilters) =>
+		setSearch({
+			q: next.searchTerm,
+			role: next.roleFilter,
+			status: next.statusFilter,
+			team: next.teamFilter,
+			page: 1,
+		});
+	const sortConfig: SortConfig = { field: search.sort, direction: search.dir };
+	const setCurrentPage = (page: number) => setSearch({ page });
+	const confirm = useConfirm();
 	const [showEditModal, setShowEditModal] = useState(false);
 	const [showAddMemberModal, setShowAddMemberModal] = useState(false);
 	const [editingUser, setEditingUser] = useState<UserModalData | null>(null);
 	const [saving, setSaving] = useState(false);
 
-	// Reset pagination when filters or sorting change
-	useEffect(() => {
-		setCurrentPage(1);
-	}, [filters, sortConfig]);
-
 	// Filter and sort users
 	const filteredUsers = useMemo(() => {
 		if (!users) return [];
+		const filters = {
+			searchTerm: search.q,
+			roleFilter: search.role,
+			statusFilter: search.status,
+			teamFilter: search.team,
+		};
+		const sortConfig = { field: search.sort, direction: search.dir };
 
 		return users
 			.filter((user) => {
@@ -149,10 +179,19 @@ function ManageUsersPage() {
 						return 0;
 				}
 			});
-	}, [users, filters, sortConfig]);
+	}, [
+		users,
+		search.q,
+		search.role,
+		search.status,
+		search.team,
+		search.sort,
+		search.dir,
+	]);
 
 	// Pagination
 	const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+	const currentPage = Math.min(search.page, Math.max(totalPages, 1));
 	const paginatedUsers = filteredUsers.slice(
 		(currentPage - 1) * ITEMS_PER_PAGE,
 		currentPage * ITEMS_PER_PAGE,
@@ -160,11 +199,13 @@ function ManageUsersPage() {
 
 	// Handlers
 	const handleSort = (field: string) => {
-		setSortConfig((prev) => ({
-			field,
-			direction:
-				prev.field === field && prev.direction === "asc" ? "desc" : "asc",
-		}));
+		const parsed = searchSchema.shape.sort.safeParse(field);
+		if (!parsed.success) return;
+		setSearch({
+			sort: parsed.data,
+			dir: search.sort === parsed.data && search.dir === "asc" ? "desc" : "asc",
+			page: 1,
+		});
 	};
 
 	const handleEditUser = (user: any) => {
@@ -247,7 +288,10 @@ function ManageUsersPage() {
 			setShowEditModal(false);
 			setEditingUser(null);
 		} catch (error: any) {
-			toast.error(error.message || "Failed to update user");
+			toast.error(
+				error.message ||
+					"Failed to update user. Check your connection and try again.",
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -290,7 +334,10 @@ function ManageUsersPage() {
 			toast.success("User promoted successfully");
 			setShowAddMemberModal(false);
 		} catch (error: any) {
-			toast.error(error.message || "Failed to promote user");
+			toast.error(
+				error.message ||
+					"Failed to promote user. Check your connection and try again.",
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -306,16 +353,21 @@ function ManageUsersPage() {
 			toast.success(`Exported ${users.length} members`);
 		} catch (error: unknown) {
 			const message =
-				error instanceof Error ? error.message : "Failed to export members";
+				error instanceof Error
+					? error.message
+					: "Failed to export members. Try again in a moment.";
 			toast.error(message);
 		}
 	};
 
 	const handleDeleteUser = async (userId: Id<"users">) => {
 		if (
-			!confirm(
-				"Are you sure you want to delete this user? This action cannot be undone.",
-			)
+			!(await confirm({
+				title: "Delete User?",
+				description: "This can’t be undone.",
+				confirmLabel: "Delete User",
+				destructive: true,
+			}))
 		) {
 			return;
 		}
@@ -327,7 +379,10 @@ function ManageUsersPage() {
 			setShowEditModal(false);
 			setEditingUser(null);
 		} catch (error: any) {
-			toast.error(error.message || "Failed to delete user");
+			toast.error(
+				error.message ||
+					"Failed to delete user. Check your connection and try again.",
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -369,7 +424,10 @@ function ManageUsersPage() {
 				width="wide"
 				className="flex min-h-[60vh] items-center justify-center"
 			>
-				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+				<output aria-live="polite" className="block">
+					<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+					<span className="sr-only">Loading…</span>
+				</output>
 			</DashboardPage>
 		);
 	}
@@ -381,6 +439,7 @@ function ManageUsersPage() {
 				<div className="bg-background rounded-md border p-8 text-center">
 					<div className="text-tone-danger mb-4">
 						<svg
+							aria-hidden="true"
 							className="w-12 h-12 mx-auto"
 							fill="none"
 							stroke="currentColor"
@@ -394,11 +453,12 @@ function ManageUsersPage() {
 							/>
 						</svg>
 					</div>
-					<h3 className="text-lg font-medium text-foreground mb-2">
+					<h3 className="text-lg font-medium text-foreground mb-2 text-balance">
 						Access Denied
 					</h3>
 					<p className="text-muted-foreground">
-						You don't have permission to access user management.
+						You don’t have permission to access user management. Ask an
+						administrator for access.
 					</p>
 				</div>
 			</DashboardPage>
@@ -424,7 +484,7 @@ function ManageUsersPage() {
 							variant="outline"
 							onClick={() => setShowAddMemberModal(true)}
 						>
-							<UserPlus /> Promote member…
+							<UserPlus /> Promote Member…
 						</Button>
 						<Button
 							onClick={() => {
@@ -432,7 +492,7 @@ function ManageUsersPage() {
 								setShowEditModal(true);
 							}}
 						>
-							<Plus /> Add user
+							<Plus /> Add User
 						</Button>
 					</>
 				}
@@ -449,7 +509,11 @@ function ManageUsersPage() {
 						<div className="relative flex-1 max-w-md">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 							<Input
-								placeholder="Search by name, email, TSN, major..."
+								type="search"
+								name="q"
+								aria-label="Search users"
+								autoComplete="off"
+								placeholder="Search by name, email, TSN, major…"
 								value={filters.searchTerm}
 								onChange={(e) =>
 									setFilters({ ...filters, searchTerm: e.target.value })
@@ -467,7 +531,10 @@ function ManageUsersPage() {
 									setFilters({ ...filters, roleFilter: v as any })
 								}
 							>
-								<SelectTrigger className="w-[150px]">
+								<SelectTrigger
+									aria-label="Filter by role"
+									className="w-[150px]"
+								>
 									<SelectValue placeholder="Role" />
 								</SelectTrigger>
 								<SelectContent>
@@ -489,7 +556,10 @@ function ManageUsersPage() {
 									setFilters({ ...filters, statusFilter: v as any })
 								}
 							>
-								<SelectTrigger className="w-[150px]">
+								<SelectTrigger
+									aria-label="Filter by status"
+									className="w-[150px]"
+								>
 									<SelectValue placeholder="Status" />
 								</SelectTrigger>
 								<SelectContent>
@@ -511,7 +581,10 @@ function ManageUsersPage() {
 									setFilters({ ...filters, teamFilter: v as any })
 								}
 							>
-								<SelectTrigger className="w-[150px]">
+								<SelectTrigger
+									aria-label="Filter by team"
+									className="w-[150px]"
+								>
 									<SelectValue placeholder="Team" />
 								</SelectTrigger>
 								<SelectContent>
@@ -539,11 +612,14 @@ function ManageUsersPage() {
 
 							{filters.searchTerm && (
 								<Badge variant="secondary" className="rounded-[3px]">
-									Search: "{filters.searchTerm}"
+									<span className="max-w-48 truncate">
+										Search: “{filters.searchTerm}”
+									</span>
 									<Button
 										variant="ghost"
 										size="icon"
 										type="button"
+										aria-label="Clear search filter"
 										onClick={() => setFilters({ ...filters, searchTerm: "" })}
 										className="ml-2 hover:text-destructive"
 									>
@@ -559,6 +635,7 @@ function ManageUsersPage() {
 										variant="ghost"
 										size="icon"
 										type="button"
+										aria-label="Clear role filter"
 										onClick={() =>
 											setFilters({ ...filters, roleFilter: "all" })
 										}
@@ -576,6 +653,7 @@ function ManageUsersPage() {
 										variant="ghost"
 										size="icon"
 										type="button"
+										aria-label="Clear status filter"
 										onClick={() =>
 											setFilters({ ...filters, statusFilter: "all" })
 										}
@@ -593,6 +671,7 @@ function ManageUsersPage() {
 										variant="ghost"
 										size="icon"
 										type="button"
+										aria-label="Clear team filter"
 										onClick={() =>
 											setFilters({ ...filters, teamFilter: "all" })
 										}
@@ -616,7 +695,7 @@ function ManageUsersPage() {
 								}
 								className="text-xs"
 							>
-								Clear all
+								Clear All Filters
 							</Button>
 						</div>
 					</div>
@@ -637,7 +716,7 @@ function ManageUsersPage() {
 					{/* Pagination Controls */}
 					{totalPages > 1 && (
 						<div className="flex items-center justify-between">
-							<p className="text-sm text-muted-foreground">
+							<p className="text-sm tabular-nums text-muted-foreground">
 								Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
 								{Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)}{" "}
 								of {filteredUsers.length} users
@@ -653,6 +732,7 @@ function ManageUsersPage() {
 			) : (
 				<div className="bg-background rounded-md border p-12 text-center">
 					<svg
+						aria-hidden="true"
 						className="w-12 h-12 mx-auto text-muted-foreground mb-4"
 						fill="none"
 						stroke="currentColor"
@@ -665,8 +745,8 @@ function ManageUsersPage() {
 							d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
 						/>
 					</svg>
-					<h3 className="text-lg font-medium text-foreground mb-2">
-						No users found
+					<h3 className="text-lg font-medium text-foreground mb-2 text-balance">
+						No Users Found
 					</h3>
 					<p className="text-muted-foreground">
 						Try adjusting your search or filter criteria.

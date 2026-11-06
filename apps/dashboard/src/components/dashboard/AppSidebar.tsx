@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, ChevronRight, LogOut, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { OfficerAiChat } from "@/components/dashboard/shared/OfficerAiChat";
 import { UserAvatarFallback } from "@/components/dashboard/UserAvatarFallback";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -39,6 +40,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ currentPath = "" }: AppSidebarProps) {
 	const { user, userRole, isLoading, signOut } = useAuth();
+	const confirm = useConfirm();
 	const activeGroup = navigationCategories.find((category) =>
 		category.items.some((item) => item.href === currentPath),
 	)?.title;
@@ -118,6 +120,8 @@ export function AppSidebar({ currentPath = "" }: AppSidebarProps) {
 					<img
 						src="/logos/blue_logo_only.svg"
 						alt="IEEE UCSD Logo"
+						width={32}
+						height={32}
 						className="h-8 w-8"
 					/>
 					<span className="text-base font-semibold tracking-[-0.02em] group-data-[collapsible=icon]:hidden">
@@ -235,9 +239,11 @@ export function AppSidebar({ currentPath = "" }: AppSidebarProps) {
 													/>
 												</AvatarFallback>
 											</Avatar>
-											<div>
-												<p className="font-semibold">{user?.name || "User"}</p>
-												<p className="text-sm text-muted-foreground">
+											<div className="min-w-0">
+												<p className="truncate font-semibold">
+													{user?.name || "User"}
+												</p>
+												<p className="truncate text-sm text-muted-foreground">
 													{user?.email}
 												</p>
 											</div>
@@ -251,7 +257,18 @@ export function AppSidebar({ currentPath = "" }: AppSidebarProps) {
 										</Link>
 									</DropdownMenuItem>
 									<DropdownMenuItem
-										onClick={() => signOut()}
+										onClick={async () => {
+											if (
+												!(await confirm({
+													title: "Sign Out?",
+													description:
+														"You’ll need to sign in again to use the dashboard.",
+													confirmLabel: "Sign Out",
+												}))
+											)
+												return;
+											void signOut();
+										}}
 										className="flex items-center gap-2"
 									>
 										<LogOut className="h-4 w-4" />

@@ -34,13 +34,17 @@ function Pagination({
 	};
 
 	return (
-		<nav className={cn("flex items-center justify-center gap-1", className)}>
+		<nav
+			aria-label="Pagination"
+			className={cn("flex items-center justify-center gap-1", className)}
+		>
 			<Button
 				variant="outline"
 				size="sm"
 				className="h-8 w-8 p-0"
 				onClick={() => onPageChange(currentPage - 1)}
 				disabled={currentPage <= 1}
+				aria-label="Previous Page"
 			>
 				<ChevronLeft className="h-4 w-4" />
 			</Button>
@@ -57,8 +61,10 @@ function Pagination({
 						key={page}
 						variant={currentPage === page ? "default" : "outline"}
 						size="sm"
-						className="h-8 w-8 p-0"
+						className="h-8 w-8 p-0 tabular-nums"
 						onClick={() => onPageChange(page)}
+						aria-label={`Page ${page}`}
+						aria-current={currentPage === page ? "page" : undefined}
 					>
 						{page}
 					</Button>
@@ -70,6 +76,7 @@ function Pagination({
 				className="h-8 w-8 p-0"
 				onClick={() => onPageChange(currentPage + 1)}
 				disabled={currentPage >= totalPages}
+				aria-label="Next Page"
 			>
 				<ChevronRight className="h-4 w-4" />
 			</Button>

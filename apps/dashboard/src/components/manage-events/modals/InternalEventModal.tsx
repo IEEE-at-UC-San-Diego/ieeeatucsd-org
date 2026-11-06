@@ -9,12 +9,14 @@ import {
 	Users,
 	Wrench,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { ResponsiveOverlay } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { cn } from "@/lib/utils";
 
 type InternalEventType =
@@ -138,12 +140,30 @@ export function InternalEventModal({
 	editingEvent,
 	initialDate,
 }: InternalEventModalProps) {
+	const formId = useId();
 	const [formData, setFormData] = useState(defaultFormData);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [isDirty, setIsDirty] = useState(false);
+	const [error, setError] = useState("");
+	const confirm = useConfirm();
+	const confirmDiscard = useUnsavedChangesGuard(isOpen && isDirty);
+
+	const updateForm = (patch: Partial<typeof defaultFormData>) => {
+		setFormData((prev) => ({ ...prev, ...patch }));
+		setIsDirty(true);
+	};
+
+	const handleClose = async () => {
+		if (!(await confirmDiscard())) return;
+		setIsDirty(false);
+		onClose();
+	};
 
 	useEffect(() => {
 		if (isOpen) {
+			setIsDirty(false);
+			setError("");
 			if (editingEvent) {
 				const startDate = new Date(editingEvent.startDate);
 				const endDate = new Date(editingEvent.endDate);
@@ -189,9 +209,13 @@ export function InternalEventModal({
 		).getTime();
 
 		if (endDateTime <= startDateTime) {
+			setError(
+				"End time must be after the start time. Adjust the times and try again.",
+			);
 			return;
 		}
 
+		setError("");
 		setIsSubmitting(true);
 		try {
 			await onSubmit({
@@ -202,7 +226,12 @@ export function InternalEventModal({
 				endDate: endDateTime,
 				eventType: formData.eventType,
 			});
+			setIsDirty(false);
 			onClose();
+		} catch {
+			setError(
+				"Failed to save the event. Check your connection and try again.",
+			);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -210,17 +239,38 @@ export function InternalEventModal({
 
 	const handleDelete = async () => {
 		if (!editingEvent || !onDelete) return;
+		if (
+			!(await confirm({
+				title: "Delete Event?",
+				description: `“${editingEvent.name}” will be permanently deleted. This can’t be undone.`,
+				confirmLabel: "Delete Event",
+				destructive: true,
+			}))
+		)
+			return;
+		setError("");
 		setIsDeleting(true);
 		try {
 			await onDelete(editingEvent);
+			setIsDirty(false);
 			onClose();
+		} catch {
+			setError(
+				"Failed to delete the event. Check your connection and try again.",
+			);
 		} finally {
 			setIsDeleting(false);
 		}
 	};
 
 	const footer = (
-		<div className="flex w-full items-center justify-end gap-2">
+		<div className="flex w-full flex-wrap items-center justify-end gap-2">
+			<output
+				aria-live="polite"
+				className="block w-full text-xs text-tone-danger empty:hidden"
+			>
+				{error}
+			</output>
 			{editingEvent && onDelete && (
 				<Button
 					variant="ghost"
@@ -231,19 +281,19 @@ export function InternalEventModal({
 					{isDeleting ? (
 						<span className="flex items-center gap-1.5 text-sm">
 							<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ds-red-800 border-t-transparent" />
-							Deleting...
+							Deleting…
 						</span>
 					) : (
 						<span className="flex items-center gap-1.5 text-sm">
 							<Trash2 className="h-3.5 w-3.5" />
-							Delete
+							Delete Event
 						</span>
 					)}
 				</Button>
 			)}
 			<Button
 				variant="outline"
-				onClick={onClose}
+				onClick={handleClose}
 				disabled={isSubmitting || isDeleting}
 				className="h-11 flex-1 sm:h-8 sm:flex-none"
 			>
@@ -264,12 +314,12 @@ export function InternalEventModal({
 				{isSubmitting ? (
 					<span className="flex items-center gap-1.5 text-sm">
 						<span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-on-accent border-t-transparent" />
-						Saving...
+						Saving…
 					</span>
 				) : editingEvent ? (
-					"Update"
+					"Update Event"
 				) : (
-					"Create"
+					"Create Event"
 				)}
 			</Button>
 		</div>
@@ -278,7 +328,9 @@ export function InternalEventModal({
 	return (
 		<ResponsiveOverlay
 			open={isOpen}
-			onOpenChange={onClose}
+			onOpenChange={(open) => {
+				if (!open) void handleClose();
+			}}
 			title={editingEvent ? "Edit Event" : "New Internal Event"}
 			variant="fullscreen"
 			className="sm:max-w-[700px]"
@@ -288,15 +340,17 @@ export function InternalEventModal({
 				{/* Event Name */}
 				<div className="space-y-1.5">
 					<Label
-						htmlFor="name"
+						htmlFor={`${formId}-name`}
 						className="text-xs font-medium text-muted-foreground"
 					>
 						Name
 					</Label>
 					<Input
-						id="name"
+						id={`${formId}-name`}
+						name="name"
+						autoComplete="off"
 						value={formData.name}
-						onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+						onChange={(e) => updateForm({ name: e.target.value })}
 						placeholder="Weekly Team Meeting"
 						className="h-9 text-sm"
 					/>
@@ -304,10 +358,16 @@ export function InternalEventModal({
 
 				{/* Event Type - 6 columns compact */}
 				<div className="space-y-1.5">
-					<Label className="text-xs font-medium text-muted-foreground">
+					<Label
+						id={`${formId}-internal-event-type-label`}
+						className="text-xs font-medium text-muted-foreground"
+					>
 						Type
 					</Label>
-					<div className="grid grid-cols-6 gap-1">
+					<fieldset
+						aria-labelledby={`${formId}-internal-event-type-label`}
+						className="grid min-w-0 grid-cols-6 gap-1"
+					>
 						{EVENT_TYPES.map((type) => {
 							const Icon = type.icon;
 							const isSelected = formData.eventType === type.value;
@@ -316,9 +376,8 @@ export function InternalEventModal({
 									variant="outline"
 									key={type.value}
 									type="button"
-									onClick={() =>
-										setFormData({ ...formData, eventType: type.value })
-									}
+									aria-pressed={isSelected}
+									onClick={() => updateForm({ eventType: type.value })}
 									className={cn(
 										"flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-md border transition-[background-color,border-color,color] duration-150 ease-[ease]",
 										isSelected
@@ -334,13 +393,13 @@ export function InternalEventModal({
 								</Button>
 							);
 						})}
-					</div>
+					</fieldset>
 				</div>
 
 				{/* Location */}
 				<div className="space-y-1.5">
 					<Label
-						htmlFor="location"
+						htmlFor={`${formId}-location`}
 						className="text-xs font-medium text-muted-foreground"
 					>
 						Location
@@ -348,11 +407,11 @@ export function InternalEventModal({
 					<div className="relative">
 						<MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
 						<Input
-							id="location"
+							id={`${formId}-location`}
+							name="location"
+							autoComplete="off"
 							value={formData.location}
-							onChange={(e) =>
-								setFormData({ ...formData, location: e.target.value })
-							}
+							onChange={(e) => updateForm({ location: e.target.value })}
 							placeholder="EBU-1 Room 101"
 							className="h-9 pl-8 text-sm"
 						/>
@@ -361,18 +420,26 @@ export function InternalEventModal({
 
 				{/* Date & Time - Compact inline */}
 				<div className="space-y-1.5">
-					<Label className="text-xs font-medium text-muted-foreground">
+					<Label
+						id={`${formId}-internal-event-datetime-label`}
+						className="text-xs font-medium text-muted-foreground"
+					>
 						Date & Time
 					</Label>
-					<div className="flex flex-wrap items-center gap-2">
+					<fieldset
+						aria-labelledby={`${formId}-internal-event-datetime-label`}
+						className="flex min-w-0 flex-wrap items-center gap-2"
+					>
 						<div className="relative flex-1">
 							<Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
 							<Input
 								type="date"
+								name="startDate"
+								aria-label="Date"
+								autoComplete="off"
 								value={formData.startDate}
 								onChange={(e) =>
-									setFormData({
-										...formData,
+									updateForm({
 										startDate: e.target.value,
 										endDate: e.target.value,
 									})
@@ -382,39 +449,46 @@ export function InternalEventModal({
 						</div>
 						<Input
 							type="time"
+							name="startTime"
+							aria-label="Start time"
+							autoComplete="off"
 							value={formData.startTime}
-							onChange={(e) =>
-								setFormData({ ...formData, startTime: e.target.value })
-							}
+							onChange={(e) => updateForm({ startTime: e.target.value })}
 							className="h-9 w-36 min-w-[8.5rem] text-sm"
 						/>
-						<span className="text-muted-foreground text-sm shrink-0">→</span>
+						<span
+							aria-hidden="true"
+							className="text-muted-foreground text-sm shrink-0"
+						>
+							→
+						</span>
 						<Input
 							type="time"
+							name="endTime"
+							aria-label="End time"
+							autoComplete="off"
 							value={formData.endTime}
-							onChange={(e) =>
-								setFormData({ ...formData, endTime: e.target.value })
-							}
+							onChange={(e) => updateForm({ endTime: e.target.value })}
 							className="h-9 w-36 min-w-[8.5rem] text-sm"
 						/>
-					</div>
+					</fieldset>
 				</div>
 
 				{/* Description - Smaller */}
 				<div className="space-y-1.5">
 					<Label
-						htmlFor="description"
+						htmlFor={`${formId}-description`}
 						className="text-xs font-medium text-muted-foreground"
 					>
 						Notes <span className="font-normal">(optional)</span>
 					</Label>
 					<Textarea
-						id="description"
+						id={`${formId}-description`}
+						name="description"
+						autoComplete="off"
 						value={formData.description}
-						onChange={(e) =>
-							setFormData({ ...formData, description: e.target.value })
-						}
-						placeholder="Additional details..."
+						onChange={(e) => updateForm({ description: e.target.value })}
+						placeholder="Additional details…"
 						rows={1}
 						className="resize-none h-9 text-sm py-2"
 					/>

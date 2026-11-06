@@ -61,7 +61,7 @@ export function InvoiceFileUpload({
 		// Validate file
 		const maxSize = 10 * 1024 * 1024; // 10MB
 		if (file.size > maxSize) {
-			setError("File too large. Maximum 10MB.");
+			setError("File too large. Choose a file under 10\u00a0MB.");
 			return;
 		}
 
@@ -99,7 +99,7 @@ export function InvoiceFileUpload({
 				setUploadedFileUrl(fileUrl);
 				onFileUploaded(fileUrl);
 			} catch (err) {
-				setError("Failed to upload file. Please try again.");
+				setError("Failed to upload file. Check your connection and try again.");
 				setIsUploading(false);
 				return;
 			}
@@ -159,32 +159,35 @@ export function InvoiceFileUpload({
 
 	return (
 		<div className="space-y-2">
-			{error && (
-				<div className="flex items-start gap-2 p-2 bg-ds-red-100 border border-ds-red-100 rounded-lg">
-					<AlertCircle className="h-4 w-4 text-tone-danger mt-0.5 shrink-0" />
-					<div className="flex-1">
-						<p className="text-xs text-tone-danger">{error}</p>
+			<output aria-live="polite" className="block space-y-2">
+				{error && (
+					<div className="flex items-start gap-2 p-2 bg-ds-red-100 border border-ds-red-100 rounded-lg">
+						<AlertCircle className="h-4 w-4 text-tone-danger mt-0.5 shrink-0" />
+						<div className="min-w-0 flex-1">
+							<p className="text-xs text-tone-danger break-words">{error}</p>
+						</div>
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							className="h-5 w-5 p-0"
+							onClick={() => setError("")}
+							aria-label="Dismiss error"
+						>
+							<X className="h-3 w-3" />
+						</Button>
 					</div>
-					<Button
-						type="button"
-						variant="ghost"
-						size="sm"
-						className="h-5 w-5 p-0"
-						onClick={() => setError("")}
-					>
-						<X className="h-3 w-3" />
-					</Button>
-				</div>
-			)}
+				)}
 
-			{parseSuccess && (
-				<div className="flex items-center gap-2 p-2 bg-ds-green-100 border border-ds-green-100 rounded-lg">
-					<CheckCircle className="h-4 w-4 text-tone-success shrink-0" />
-					<p className="text-xs text-tone-success">
-						Invoice parsed successfully! Please verify the extracted data below.
-					</p>
-				</div>
-			)}
+				{parseSuccess && (
+					<div className="flex items-center gap-2 p-2 bg-ds-green-100 border border-ds-green-100 rounded-lg">
+						<CheckCircle className="h-4 w-4 text-tone-success shrink-0" />
+						<p className="text-xs text-tone-success">
+							Invoice parsed successfully! Verify the extracted data below.
+						</p>
+					</div>
+				)}
+			</output>
 
 			{uploadedFileUrl && (
 				<div className="flex items-center gap-2 text-xs text-tone-success">
@@ -205,12 +208,12 @@ export function InvoiceFileUpload({
 					{isUploading ? (
 						<>
 							<Loader2 className="h-3 w-3 mr-1 animate-spin" />
-							Uploading...
+							Uploading…
 						</>
 					) : isParsing ? (
 						<>
 							<Loader2 className="h-3 w-3 mr-1 animate-spin" />
-							AI Scanning...
+							AI Scanning…
 						</>
 					) : (
 						<>
@@ -226,6 +229,8 @@ export function InvoiceFileUpload({
 				<Input
 					ref={fileInputRef}
 					type="file"
+					name="invoiceFile"
+					aria-label="Upload invoice file"
 					accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
 					className="hidden"
 					onChange={handleFileSelect}

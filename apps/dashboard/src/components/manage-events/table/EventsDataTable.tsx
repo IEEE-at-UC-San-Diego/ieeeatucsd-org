@@ -29,6 +29,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatNumber } from "@/lib/formatters";
 import { VcoDeadlines } from "@/lib/vco/VcoDeadlines";
 import { formatEventTypeLabel } from "../constants";
 import { StatusBadge } from "../filters/StatusBadge";
@@ -45,6 +46,7 @@ interface EventsDataTableProps {
 	pagination?: {
 		currentPage: number;
 		totalPages: number;
+		totalItems: number;
 		onPageChange: (page: number) => void;
 	};
 }
@@ -70,6 +72,13 @@ export function EventsDataTable({
 		}
 		return null;
 	};
+
+	const getAriaSort = (field: string) =>
+		sortConfig.field === field
+			? sortConfig.direction === "asc"
+				? "ascending"
+				: "descending"
+			: undefined;
 
 	const getRequirements = (event: EventRequest) => {
 		const reqs: Array<{
@@ -109,8 +118,8 @@ export function EventsDataTable({
 				<div className="text-muted-foreground mb-4">
 					<MapPin className="w-12 h-12 mx-auto" />
 				</div>
-				<h3 className="text-lg font-medium text-foreground mb-2">
-					No events found
+				<h3 className="text-lg font-medium text-foreground mb-2 text-balance">
+					No Events Found
 				</h3>
 				<p className="text-muted-foreground">
 					Create a new event or adjust your filters to see events here.
@@ -205,30 +214,42 @@ export function EventsDataTable({
 					<TableHeader>
 						<TableRow className="border-b hover:bg-transparent">
 							<TableHead
-								className="cursor-pointer hover:bg-muted/50 transition-colors w-[30%] py-3 px-4 pl-6"
-								onClick={() => onSort("eventName")}
+								className="hover:bg-muted/50 transition-colors w-[30%] py-3 px-4 pl-6"
+								aria-sort={getAriaSort("eventName")}
 							>
-								<span className="flex items-center gap-1">
+								<button
+									type="button"
+									className="flex items-center gap-1"
+									onClick={() => onSort("eventName")}
+								>
 									Name {getSortIcon("eventName")}
-								</span>
+								</button>
 							</TableHead>
 							<TableHead
-								className="cursor-pointer hover:bg-muted/50 transition-colors py-3 px-4"
-								onClick={() => onSort("status")}
+								className="hover:bg-muted/50 transition-colors py-3 px-4"
+								aria-sort={getAriaSort("status")}
 							>
-								<span className="flex items-center gap-1">
+								<button
+									type="button"
+									className="flex items-center gap-1"
+									onClick={() => onSort("status")}
+								>
 									Status {getSortIcon("status")}
-								</span>
+								</button>
 							</TableHead>
 							<TableHead className="py-3 px-4">Location</TableHead>
 							<TableHead className="py-3 px-4">Requirements</TableHead>
 							<TableHead
-								className="cursor-pointer hover:bg-muted/50 transition-colors text-right py-3 px-4"
-								onClick={() => onSort("startDate")}
+								className="hover:bg-muted/50 transition-colors text-right py-3 px-4"
+								aria-sort={getAriaSort("startDate")}
 							>
-								<span className="flex items-center justify-end gap-1">
+								<button
+									type="button"
+									className="ml-auto flex items-center justify-end gap-1"
+									onClick={() => onSort("startDate")}
+								>
 									Date {getSortIcon("startDate")}
-								</span>
+								</button>
 							</TableHead>
 							<TableHead className="text-right py-3 px-4 pr-6">
 								Actions
@@ -266,13 +287,13 @@ export function EventsDataTable({
 											</span>
 										</div>
 										{event.estimatedAttendance > 0 && (
-											<div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+											<div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 tabular-nums">
 												<Users className="h-3 w-3" />
 												Expected: {event.estimatedAttendance}
 											</div>
 										)}
 										{event.status === "published" && (
-											<div className="text-xs text-muted-foreground mt-0.5">
+											<div className="text-xs text-muted-foreground mt-0.5 tabular-nums">
 												Checked in: {event.attendeeCount || 0}
 											</div>
 										)}
@@ -309,6 +330,7 @@ export function EventsDataTable({
 												size="sm"
 												className="text-muted-foreground hover:text-foreground"
 												onClick={() => onView(event)}
+												aria-label={`View ${event.eventName}`}
 											>
 												<Eye className="h-4 w-4" />
 												<span className="hidden xl:inline">View</span>
@@ -345,14 +367,12 @@ export function EventsDataTable({
 			</div>
 			{pagination && (
 				<div className="flex items-center justify-between px-4 py-3 border-t">
-					<span className="text-sm text-muted-foreground">
-						Showing {((pagination.currentPage - 1) * 10 + 1).toLocaleString()}{" "}
-						to{" "}
-						{Math.min(
-							pagination.currentPage * 10,
-							events.length,
-						).toLocaleString()}{" "}
-						of {events.length.toLocaleString()} events
+					<span className="text-sm text-muted-foreground tabular-nums">
+						Showing {formatNumber((pagination.currentPage - 1) * 10 + 1)} to{" "}
+						{formatNumber(
+							Math.min(pagination.currentPage * 10, pagination.totalItems),
+						)}{" "}
+						of {formatNumber(pagination.totalItems)} events
 					</span>
 					<Pagination
 						currentPage={pagination.currentPage}

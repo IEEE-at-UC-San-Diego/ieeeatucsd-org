@@ -1,6 +1,6 @@
 import { api } from "@convex/_generated/api";
 import { CheckCircle, Loader2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { MobileTaskStepper, ResponsiveOverlay } from "@/components/mobile";
 import {
 	AlertDialog,
@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { EventRequestMapping } from "../EventRequestMapping";
 import type { EventFormData, EventRequest } from "../types";
 import { BasicInfoSection } from "../wizard/BasicInfoSection";
@@ -54,6 +55,7 @@ export function EventRequestWizardModal({
 	initialData,
 	aiEnabled = true,
 }: EventRequestWizardModalProps) {
+	const formId = useId();
 	const isEditing = !!initialData;
 	const isConvertingDraft = initialData?.status === "draft";
 	const isMobile = useIsMobile();
@@ -145,6 +147,8 @@ export function EventRequestWizardModal({
 		JSON.stringify(formData) !== initialSnapshotRef.current ||
 		(!isEditing && disclaimerAccepted);
 
+	useUnsavedChangesGuard(isOpen && isDirty && !submissionSucceeded);
+
 	const requestClose = () => {
 		if (isSubmitting || isSaving) return;
 		if (isDirty && !submissionSucceeded) {
@@ -165,7 +169,7 @@ export function EventRequestWizardModal({
 			setSubmitError(
 				error instanceof Error
 					? error.message
-					: "The request could not be saved. Please try again.",
+					: "The request couldn’t be submitted. Check your connection and try again.",
 			);
 			setIsSubmitting(false);
 		}
@@ -182,7 +186,7 @@ export function EventRequestWizardModal({
 			setSubmitError(
 				error instanceof Error
 					? error.message
-					: "The request could not be saved. Please try again.",
+					: "The request couldn’t be saved. Check your connection and try again.",
 			);
 		} finally {
 			setIsSaving(false);
@@ -320,8 +324,9 @@ export function EventRequestWizardModal({
 			<div className="flex flex-1 flex-wrap items-center justify-end gap-2">
 				{(blockedMessage || submitError) && (
 					<p
-						className={`mr-auto hidden text-xs sm:block ${submitError ? "text-destructive" : "text-muted-foreground"}`}
-						role={submitError ? "alert" : undefined}
+						className={`mr-auto text-xs ${submitError ? "block text-destructive" : "hidden text-muted-foreground sm:block"}`}
+						role={submitError ? "alert" : "status"}
+						aria-live="polite"
 					>
 						{submitError || blockedMessage}
 					</p>
@@ -344,7 +349,7 @@ export function EventRequestWizardModal({
 						disabled={isSubmitting || isSaving || !canSave()}
 					>
 						{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-						Save
+						{isSaving ? "Saving…" : "Save"}
 					</Button>
 				)}
 				{currentStep < steps.length ? (
@@ -368,11 +373,13 @@ export function EventRequestWizardModal({
 						) : (
 							<CheckCircle className="h-4 w-4" />
 						)}
-						{isConvertingDraft
-							? "Submit Request"
-							: isEditing
-								? "Update Request"
-								: "Submit Request"}
+						{isSubmitting
+							? "Submitting…"
+							: isConvertingDraft
+								? "Submit Request"
+								: isEditing
+									? "Update Request"
+									: "Submit Request"}
 					</Button>
 				)}
 			</div>
@@ -435,13 +442,15 @@ export function EventRequestWizardModal({
 					)}
 
 					{submissionSucceeded ? (
-						<div className="flex min-h-80 flex-col items-center justify-center text-center success-reveal">
+						<output className="flex min-h-80 flex-col items-center justify-center text-center success-reveal">
 							<CheckCircle className="size-10 text-tone-success" />
-							<h2 className="mt-3 text-lg font-semibold">Request saved</h2>
+							<h2 className="mt-3 text-lg font-semibold text-balance">
+								Request Saved
+							</h2>
 							<p className="mt-1 text-sm text-muted-foreground">
 								Your event request was submitted successfully.
 							</p>
-						</div>
+						</output>
 					) : (
 						<div className="min-h-[300px]">{renderStepContent()}</div>
 					)}
@@ -449,11 +458,11 @@ export function EventRequestWizardModal({
 					{currentStep === 1 && !submissionSucceeded && (
 						<div className="mt-4 border-t pt-4">
 							<label
-								htmlFor="event-requirements"
+								htmlFor={`${formId}-event-requirements`}
 								className="flex cursor-pointer items-start gap-3 text-sm leading-5"
 							>
 								<Checkbox
-									id="event-requirements"
+									id={`${formId}-event-requirements`}
 									checked={disclaimerAccepted}
 									onCheckedChange={(value) =>
 										setDisclaimerAccepted(value === true)
@@ -472,21 +481,21 @@ export function EventRequestWizardModal({
 			<AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
 				<AlertDialogContent className="sm:max-w-md">
 					<AlertDialogHeader>
-						<AlertDialogTitle>Discard this event request?</AlertDialogTitle>
+						<AlertDialogTitle>Discard This Event Request?</AlertDialogTitle>
 						<AlertDialogDescription>
-							Your changes have not been saved. This action cannot be undone.
+							Your changes haven’t been saved. This can’t be undone.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter className="gap-2 sm:gap-2">
 						<AlertDialogCancel className="h-11 sm:h-9">
-							Keep editing
+							Keep Editing
 						</AlertDialogCancel>
 						<AlertDialogAction
 							variant="destructive"
 							className="h-11 sm:h-9"
 							onClick={resetAndClose}
 						>
-							Discard changes
+							Discard Changes
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>

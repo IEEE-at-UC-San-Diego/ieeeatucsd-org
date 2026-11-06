@@ -34,6 +34,9 @@ overrides:
   source-map-js: "1.2.2"
   basic-ftp: "6.2.3"
   sharp: "0.35.5"
+  # seroval-plugins must match seroval's minor; 1.6 plugins break 1.7 ReadableStream SSR serialization.
+  seroval: "1.7.7"
+  seroval-plugins: "1.7.7"
 minimumReleaseAgeExclude:
   - "@pnpm/exe@11.28.8"
   - "@pnpm/linux-arm64@11.28.8"

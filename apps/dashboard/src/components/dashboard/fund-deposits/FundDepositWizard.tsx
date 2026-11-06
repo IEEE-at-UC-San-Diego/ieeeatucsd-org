@@ -8,7 +8,7 @@ import {
 	Loader2,
 	Sparkles,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import { ResponsiveOverlay, useMobileShell } from "@/components/mobile";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
 import { useGlobalImagePaste } from "@/hooks/useGlobalImagePaste";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { formatCurrencyUSD } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { MultiFileUpload } from "./MultiFileUpload";
 import type { DepositMethod, IeeeDepositSource } from "./types";
@@ -47,6 +49,7 @@ export function FundDepositWizard({
 	onClose,
 	logtoId,
 }: FundDepositWizardProps) {
+	const formId = useId();
 	const { setHideTabBar } = useMobileShell();
 	const { user, getAuthHeaders } = useAuth();
 	const aiEnabled = user?.aiFeaturesEnabled !== false;
@@ -74,6 +77,20 @@ export function FundDepositWizard({
 	const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 	const [isAiParsing, setIsAiParsing] = useState(false);
 	const [aiParseMessage, setAiParseMessage] = useState("");
+
+	const isDirty =
+		isOpen &&
+		!isSubmitting &&
+		(Boolean(
+			formData.title ||
+				formData.amount ||
+				formData.purpose ||
+				formData.otherDepositMethod ||
+				formData.description ||
+				formData.referenceNumber,
+		) ||
+			receiptFiles.length > 0);
+	const confirmDiscard = useUnsavedChangesGuard(isDirty);
 
 	useEffect(() => {
 		setHideTabBar(isOpen);
@@ -124,7 +141,7 @@ export function FundDepositWizard({
 						.slice(0, 5)
 						.map(
 							(item) =>
-								`${item.description}${item.amount ? ` ($${Number(item.amount).toFixed(2)})` : ""}`,
+								`${item.description}${item.amount ? ` (${formatCurrencyUSD(Number(item.amount))})` : ""}`,
 						)
 						.join(", ")
 				: "";
@@ -205,6 +222,11 @@ export function FundDepositWizard({
 	const handleClose = () => {
 		onClose();
 		setTimeout(resetForm, 300); // Reset after animation
+	};
+
+	const handleCancel = async () => {
+		if (!(await confirmDiscard())) return;
+		handleClose();
 	};
 
 	const validateStep1 = () => {
@@ -303,7 +325,9 @@ export function FundDepositWizard({
 			handleClose();
 		} catch (error: unknown) {
 			const errorMessage =
-				error instanceof Error ? error.message : "Failed to submit deposit";
+				error instanceof Error
+					? error.message
+					: "Failed to submit deposit. Please try again.";
 			toast.error(errorMessage);
 		} finally {
 			setIsSubmitting(false);
@@ -314,7 +338,7 @@ export function FundDepositWizard({
 		<ResponsiveOverlay
 			open={isOpen}
 			onOpenChange={(open) => {
-				if (!open) handleClose();
+				if (!open) void handleCancel();
 			}}
 			title="New Fund Deposit"
 			description={`Step ${step} of 3: ${DEPOSIT_STEPS[step - 1].name}`}
@@ -334,7 +358,7 @@ export function FundDepositWizard({
 					<div className="flex flex-1 justify-end gap-2 sm:flex-none">
 						<Button
 							variant="outline"
-							onClick={handleClose}
+							onClick={() => void handleCancel()}
 							disabled={isSubmitting}
 							className="h-11 flex-1 sm:h-9 sm:flex-none"
 						>
@@ -378,11 +402,13 @@ export function FundDepositWizard({
 						{/* Amount and Title Group */}
 						<div className="grid gap-4">
 							<div>
-								<Label htmlFor="title">
+								<Label htmlFor={`${formId}-title`}>
 									Deposit Title <span className="text-destructive">*</span>
 								</Label>
 								<Input
-									id="title"
+									id={`${formId}-title`}
+									name="title"
+									autoComplete="off"
 									value={formData.title}
 									onChange={(e) =>
 										setFormData({ ...formData, title: e.target.value })
@@ -392,7 +418,6 @@ export function FundDepositWizard({
 										"h-11 text-base sm:h-9 sm:text-sm",
 										formErrors.title ? "border-destructive" : "",
 									)}
-									autoFocus
 								/>
 								{formErrors.title && (
 									<p className="text-xs text-destructive mt-1">
@@ -403,22 +428,25 @@ export function FundDepositWizard({
 
 							<div className="grid grid-cols-2 gap-4">
 								<div>
-									<Label htmlFor="amount">
+									<Label htmlFor={`${formId}-amount`}>
 										Amount <span className="text-destructive">*</span>
 									</Label>
 									<div className="relative">
 										<DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
 										<Input
-											id="amount"
+											id={`${formId}-amount`}
+											name="amount"
 											type="number"
+											inputMode="decimal"
 											step="0.01"
+											autoComplete="off"
 											value={formData.amount}
 											onChange={(e) =>
 												setFormData({ ...formData, amount: e.target.value })
 											}
 											placeholder="0.00"
 											className={cn(
-												"h-11 pl-9 text-base sm:h-9 sm:text-sm",
+												"h-11 pl-9 text-base tabular-nums sm:h-9 sm:text-sm",
 												formErrors.amount ? "border-destructive" : "",
 											)}
 										/>
@@ -430,11 +458,12 @@ export function FundDepositWizard({
 									)}
 								</div>
 								<div>
-									<Label htmlFor="depositDate">
+									<Label htmlFor={`${formId}-depositDate`}>
 										Date <span className="text-destructive">*</span>
 									</Label>
 									<Input
-										id="depositDate"
+										id={`${formId}-depositDate`}
+										name="depositDate"
 										type="date"
 										value={formData.depositDate}
 										onChange={(e) =>
@@ -451,20 +480,25 @@ export function FundDepositWizard({
 
 						{/* Method Group */}
 						<div className="space-y-3 pt-2">
-							<Label>
+							<Label id={`${formId}-deposit-method-label`}>
 								Deposit Method <span className="text-destructive">*</span>
 							</Label>
-							<div className="grid grid-cols-2 gap-2">
+							<fieldset
+								className="grid min-w-0 grid-cols-2 gap-2"
+								aria-labelledby={`${formId}-deposit-method-label`}
+							>
 								{(
 									["cash", "check", "bank_transfer", "other"] as DepositMethod[]
 								).map((method) => (
-									<div
+									<button
+										type="button"
 										key={method}
+										aria-pressed={formData.depositMethod === method}
 										onClick={() =>
 											setFormData({ ...formData, depositMethod: method })
 										}
 										className={cn(
-											"cursor-pointer rounded-lg border p-3 min-h-11 flex items-center justify-between transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] active:bg-muted/50 sm:hover:bg-muted/50",
+											"w-full text-left cursor-pointer rounded-lg border p-3 min-h-11 flex items-center justify-between transition-[background-color,border-color,box-shadow,opacity] duration-150 ease-[ease] active:bg-muted/50 sm:hover:bg-muted/50",
 											formData.depositMethod === method
 												? "border-primary bg-primary/5 ring-1 ring-primary"
 												: "border-input",
@@ -476,14 +510,23 @@ export function FundDepositWizard({
 										{formData.depositMethod === method && (
 											<CheckCircle className="h-4 w-4 text-primary" />
 										)}
-									</div>
+									</button>
 								))}
-							</div>
+							</fieldset>
 
 							{formData.depositMethod === "other" && (
 								<div className="animate-in fade-in duration-150 motion-instant-reduce">
+									<Label
+										htmlFor={`${formId}-otherDepositMethod`}
+										className="sr-only"
+									>
+										Other Deposit Method
+									</Label>
 									<Input
-										placeholder="Specify method..."
+										id={`${formId}-otherDepositMethod`}
+										name="otherDepositMethod"
+										autoComplete="off"
+										placeholder="Specify method…"
 										value={formData.otherDepositMethod}
 										onChange={(e) =>
 											setFormData({
@@ -496,6 +539,11 @@ export function FundDepositWizard({
 											formErrors.otherDepositMethod ? "border-destructive" : "",
 										)}
 									/>
+									{formErrors.otherDepositMethod && (
+										<p className="text-xs text-destructive mt-1">
+											{formErrors.otherDepositMethod}
+										</p>
+									)}
 								</div>
 							)}
 						</div>
@@ -503,27 +551,32 @@ export function FundDepositWizard({
 						{/* IEEE Source checkbox */}
 						<div className="flex items-center space-x-2 pt-2 min-h-11">
 							<Checkbox
-								id="isIeee"
+								id={`${formId}-isIeee`}
 								checked={formData.isIeeeDeposit}
 								onCheckedChange={(c) =>
 									setFormData({ ...formData, isIeeeDeposit: c === true })
 								}
 							/>
-							<Label htmlFor="isIeee" className="cursor-pointer">
+							<Label htmlFor={`${formId}-isIeee`} className="cursor-pointer">
 								This is an IEEE Deposit (Concur)
 							</Label>
 						</div>
 
 						{formData.isIeeeDeposit && (
 							<div className="pl-6 border-l-2 py-1 animate-in fade-in duration-150 motion-instant-reduce">
-								<Label>IEEE Source</Label>
+								<Label htmlFor={`${formId}-ieeeDepositSource`}>
+									IEEE Source
+								</Label>
 								<Select
 									value={formData.ieeeDepositSource}
 									onValueChange={(v: IeeeDepositSource) =>
 										setFormData({ ...formData, ieeeDepositSource: v })
 									}
 								>
-									<SelectTrigger className="mt-1 h-11 sm:h-9">
+									<SelectTrigger
+										id={`${formId}-ieeeDepositSource`}
+										className="mt-1 h-11 sm:h-9"
+									>
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -543,11 +596,13 @@ export function FundDepositWizard({
 				{step === 2 && (
 					<div className="space-y-4">
 						<div>
-							<Label htmlFor="purpose">
+							<Label htmlFor={`${formId}-purpose`}>
 								Purpose <span className="text-destructive">*</span>
 							</Label>
 							<Input
-								id="purpose"
+								id={`${formId}-purpose`}
+								name="purpose"
+								autoComplete="off"
 								value={formData.purpose}
 								onChange={(e) =>
 									setFormData({ ...formData, purpose: e.target.value })
@@ -557,7 +612,6 @@ export function FundDepositWizard({
 									"h-11 text-base sm:h-9 sm:text-sm",
 									formErrors.purpose ? "border-destructive" : "",
 								)}
-								autoFocus
 							/>
 							{formErrors.purpose && (
 								<p className="text-xs text-destructive mt-1">
@@ -567,9 +621,14 @@ export function FundDepositWizard({
 						</div>
 
 						<div>
-							<Label htmlFor="reference">Reference Number (Optional)</Label>
+							<Label htmlFor={`${formId}-reference`}>
+								Reference Number (Optional)
+							</Label>
 							<Input
-								id="reference"
+								id={`${formId}-reference`}
+								name="referenceNumber"
+								autoComplete="off"
+								spellCheck={false}
 								value={formData.referenceNumber}
 								onChange={(e) =>
 									setFormData({
@@ -583,14 +642,17 @@ export function FundDepositWizard({
 						</div>
 
 						<div>
-							<Label htmlFor="description">Additional Notes (Optional)</Label>
+							<Label htmlFor={`${formId}-description`}>
+								Additional Notes (Optional)
+							</Label>
 							<Textarea
-								id="description"
+								id={`${formId}-description`}
+								name="description"
 								value={formData.description}
 								onChange={(e) =>
 									setFormData({ ...formData, description: e.target.value })
 								}
-								placeholder="Any extra details..."
+								placeholder="Any extra details…"
 								className="h-32 resize-none text-base sm:text-sm"
 							/>
 						</div>
@@ -640,11 +702,18 @@ export function FundDepositWizard({
 									? "The latest uploaded receipt will auto-fill amount/title when possible."
 									: "AI is disabled for this account. Enter details manually after uploading receipts."}
 							</p>
-							{aiParseMessage && (
-								<p className="text-xs mt-2 text-muted-foreground">
-									{aiParseMessage}
-								</p>
-							)}
+							<output aria-live="polite" className="block">
+								{isAiParsing && (
+									<p className="text-xs mt-2 text-muted-foreground">
+										Analyzing receipt…
+									</p>
+								)}
+								{aiParseMessage && (
+									<p className="text-xs mt-2 text-muted-foreground">
+										{aiParseMessage}
+									</p>
+								)}
+							</output>
 						</div>
 
 						<div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2 border">
@@ -653,8 +722,10 @@ export function FundDepositWizard({
 							</h4>
 							<div className="grid grid-cols-2 gap-2 text-muted-foreground">
 								<span>Amount:</span>
-								<span className="font-medium text-foreground text-right">
-									${formData.amount}
+								<span className="font-medium text-foreground text-right tabular-nums">
+									{formData.amount
+										? formatCurrencyUSD(parseFloat(formData.amount) || 0)
+										: "—"}
 								</span>
 
 								<span>Method:</span>
@@ -665,7 +736,7 @@ export function FundDepositWizard({
 								</span>
 
 								<span>Receipts:</span>
-								<span className="font-medium text-foreground text-right">
+								<span className="font-medium text-foreground text-right tabular-nums">
 									{receiptFiles.length} file(s)
 								</span>
 							</div>

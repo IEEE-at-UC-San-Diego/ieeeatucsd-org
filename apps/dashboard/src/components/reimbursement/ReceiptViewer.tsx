@@ -455,6 +455,7 @@ export default function ReceiptViewer({
 								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={handleZoomOut}
 								title="Zoom out"
+								aria-label="Zoom out"
 							>
 								<ZoomOut className="w-4 h-4" />
 							</Button>
@@ -467,6 +468,7 @@ export default function ReceiptViewer({
 								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={handleZoomIn}
 								title="Zoom in"
+								aria-label="Zoom in"
 							>
 								<ZoomIn className="w-4 h-4" />
 							</Button>
@@ -476,6 +478,7 @@ export default function ReceiptViewer({
 								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={handleRotate}
 								title="Rotate"
+								aria-label="Rotate"
 							>
 								<RotateCw className="w-4 h-4" />
 							</Button>
@@ -485,12 +488,13 @@ export default function ReceiptViewer({
 								className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
 								onClick={resetView}
 								title="Reset view"
+								aria-label="Reset view"
 							>
 								<RefreshCw className="w-3 h-3" />
 							</Button>
 						</>
 					)}
-					<div className="w-px h-4 bg-muted mx-1" />
+					<div aria-hidden="true" className="w-px h-4 bg-muted mx-1" />
 					<Button
 						variant="ghost"
 						size="icon"
@@ -503,6 +507,7 @@ export default function ReceiptViewer({
 							a.click();
 						}}
 						title="Download"
+						aria-label="Download"
 					>
 						<Download className="w-4 h-4" />
 					</Button>
@@ -512,6 +517,7 @@ export default function ReceiptViewer({
 						className="h-8 w-8 text-muted-foreground hover:text-tone-info hover:bg-muted"
 						onClick={() => window.open(receiptUrl, "_blank")}
 						title="Open in new tab"
+						aria-label="Open in new tab"
 					>
 						<ExternalLink className="w-4 h-4" />
 					</Button>
@@ -522,7 +528,10 @@ export default function ReceiptViewer({
 			<div className="flex-1 overflow-hidden relative bg-muted flex items-center justify-center">
 				{/* Loading / Converting State */}
 				{loading && (
-					<div className="flex flex-col items-center gap-3 text-muted-foreground">
+					<output
+						aria-live="polite"
+						className="flex flex-col items-center gap-3 text-muted-foreground"
+					>
 						<Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
 						<p className="text-sm">
 							{isConverting
@@ -534,18 +543,21 @@ export default function ReceiptViewer({
 								This can take a few seconds on larger photos.
 							</p>
 						)}
-					</div>
+					</output>
 				)}
 
 				{/* Error State */}
 				{!loading && imageError && (
-					<div className="flex flex-col items-center gap-4 text-center p-8 max-w-sm">
+					<div
+						role="alert"
+						className="flex flex-col items-center gap-4 text-center p-8 max-w-sm"
+					>
 						<div className="w-14 h-14 rounded-full bg-ds-red-100 flex items-center justify-center">
 							<AlertCircle className="w-7 h-7 text-tone-danger" />
 						</div>
 						<div>
 							<p className="text-sm font-medium text-foreground mb-1">
-								Unable to display receipt
+								Unable to Display Receipt
 							</p>
 							<p className="text-xs text-muted-foreground">{errorMessage}</p>
 						</div>
@@ -566,7 +578,7 @@ export default function ReceiptViewer({
 								className="text-xs"
 							>
 								<ExternalLink className="w-3 h-3 mr-1.5" />
-								Open directly
+								Open Directly
 							</Button>
 							<Button
 								size="sm"
@@ -632,10 +644,12 @@ export default function ReceiptViewer({
 						<img
 							src={displayUrl}
 							alt={receiptName || "Receipt"}
+							width={800}
+							height={1000}
 							className={cn(
-								"max-w-full max-h-full object-contain rounded shadow-sm origin-center block",
+								"max-w-full max-h-full w-auto h-auto object-contain rounded shadow-sm origin-center block",
 								gestureRef.current.mode === "none" &&
-									"transition-transform duration-200 ease-out",
+									"transition-transform duration-200 ease-out motion-reduce:transition-none",
 							)}
 							style={{
 								transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel}) rotate(${rotation}deg)`,

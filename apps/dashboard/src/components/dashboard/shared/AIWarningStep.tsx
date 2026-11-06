@@ -5,7 +5,7 @@ import {
 	FileText,
 	Shield,
 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -26,6 +26,7 @@ export default function AIWarningStep({
 	onContinue,
 	isLoading = false,
 }: AIWarningStepProps) {
+	const formId = useId();
 	const [acknowledged, setAcknowledged] = useState(false);
 
 	return (
@@ -37,7 +38,7 @@ export default function AIWarningStep({
 						<AlertTriangle className="w-4 h-4 text-tone-warning" />
 					</div>
 				</div>
-				<CardTitle className="text-2xl font-bold text-foreground">
+				<CardTitle className="text-2xl font-bold text-balance text-foreground">
 					AI-Powered Receipt Processing
 				</CardTitle>
 				<CardDescription className="text-muted-foreground text-lg mt-2 leading-relaxed">
@@ -98,13 +99,13 @@ export default function AIWarningStep({
 				{/* Acknowledgment Checkbox */}
 				<div className="flex items-start space-x-3 p-4 border border-border rounded-lg">
 					<Checkbox
-						id="ai-acknowledgment"
+						id={`${formId}-ai-acknowledgment`}
 						checked={acknowledged}
 						onCheckedChange={(checked) => setAcknowledged(checked === true)}
 						className="mt-0.5"
 					/>
 					<label
-						htmlFor="ai-acknowledgment"
+						htmlFor={`${formId}-ai-acknowledgment`}
 						className="text-sm text-foreground cursor-pointer select-none"
 					>
 						I understand that AI-generated data may contain errors and it is my
@@ -121,8 +122,11 @@ export default function AIWarningStep({
 				>
 					{isLoading ? (
 						<>
-							<span className="mr-2">Processing...</span>
-							<div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+							<span className="mr-2">Processing…</span>
+							<div
+								aria-hidden="true"
+								className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+							/>
 						</>
 					) : (
 						<>

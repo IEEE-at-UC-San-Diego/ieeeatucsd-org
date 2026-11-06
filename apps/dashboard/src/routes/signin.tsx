@@ -75,10 +75,13 @@ function SignInPage() {
 							<img
 								src="/logos/blue_logo_only.svg"
 								alt="IEEE UCSD Logo"
+								width={80}
+								height={80}
+								fetchPriority="high"
 								className="h-20 w-20"
 							/>
 						</div>
-						<h1 className="mb-2 text-2xl font-semibold tracking-[-0.04em] text-foreground">
+						<h1 className="mb-2 text-2xl font-semibold tracking-[-0.04em] text-balance text-foreground">
 							Welcome
 						</h1>
 						<p className="text-sm leading-5 text-muted-foreground">
@@ -89,14 +92,14 @@ function SignInPage() {
 							dashboard
 						</p>
 						{reason === "session-init" && (
-							<p className="mt-3 text-sm text-tone-warning">
+							<output className="block mt-3 text-sm text-tone-warning">
 								Session initialization failed. Sign in again.
-							</p>
+							</output>
 						)}
 						{reason === "stale-callback" && (
-							<p className="mt-3 text-sm text-tone-warning">
+							<output className="block mt-3 text-sm text-tone-warning">
 								Your previous sign-in callback expired. Retrying sign-in now.
-							</p>
+							</output>
 						)}
 					</div>
 

@@ -9,7 +9,8 @@ import {
 	User,
 	XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useState } from "react";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/accept-invitation/$inviteId")({
@@ -33,6 +34,7 @@ function getAcceptInvitationEndpoint() {
 }
 
 function AcceptInvitationPage() {
+	const formId = useId();
 	const { inviteId } = Route.useParams();
 	const [invitation, setInvitation] = useState<Invitation | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -41,6 +43,7 @@ function AcceptInvitationPage() {
 	const [success, setSuccess] = useState(false);
 	const [declined, setDeclined] = useState(false);
 	const [selectedPosition, setSelectedPosition] = useState("");
+	const confirm = useConfirm();
 
 	const offeredPositions =
 		invitation?.offeredPositions && invitation.offeredPositions.length > 0
@@ -85,15 +88,20 @@ function AcceptInvitationPage() {
 				);
 
 				const expiresAt = new Date(data.expiresAt);
-				if (new Date() > expiresAt && data.status === "pending") {
-					setError("This invitation has expired.");
-				} else if (data.status === "expired") {
-					setError("This invitation has expired.");
+				if (
+					(new Date() > expiresAt && data.status === "pending") ||
+					data.status === "expired"
+				) {
+					setError(
+						"This invitation has expired. Contact IEEE UCSD leadership to request a new one.",
+					);
 				}
 			} catch (err) {
 				console.error("Error fetching invitation:", err);
 				if (!cancelled) {
-					setError("Failed to load invitation. Please try again.");
+					setError(
+						"Failed to load invitation. Check your connection and reload the page.",
+					);
 				}
 			} finally {
 				if (!cancelled) {
@@ -136,10 +144,36 @@ function AcceptInvitationPage() {
 		} catch (err) {
 			console.error("Error accepting invitation:", err);
 			setError(
-				err instanceof Error ? err.message : "Failed to accept invitation",
+				err instanceof Error
+					? err.message
+					: "Failed to accept invitation. Try again in a moment.",
 			);
 		} finally {
 			setProcessing(false);
+		}
+	};
+
+	const handlePositionKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+		const step =
+			event.key === "ArrowRight" || event.key === "ArrowDown"
+				? 1
+				: event.key === "ArrowLeft" || event.key === "ArrowUp"
+					? -1
+					: 0;
+		if (!step) return;
+		event.preventDefault();
+		const index = offeredPositions.indexOf(selectedPosition);
+		const next =
+			offeredPositions[
+				index === -1
+					? 0
+					: (index + step + offeredPositions.length) % offeredPositions.length
+			];
+		setSelectedPosition(next);
+		for (const option of event.currentTarget.querySelectorAll<HTMLElement>(
+			"[data-position]",
+		)) {
+			if (option.dataset.position === next) option.focus();
 		}
 	};
 
@@ -147,7 +181,15 @@ function AcceptInvitationPage() {
 		!processing && (!hasMultiplePositions || Boolean(selectedPosition));
 
 	const handleDecline = async () => {
-		if (!window.confirm("Are you sure you want to decline this position?")) {
+		if (
+			!(await confirm({
+				title: "Decline Position?",
+				description:
+					"You won’t be able to accept this invitation after declining.",
+				confirmLabel: "Decline Position",
+				destructive: true,
+			}))
+		) {
 			return;
 		}
 
@@ -174,7 +216,9 @@ function AcceptInvitationPage() {
 		} catch (err) {
 			console.error("Error declining invitation:", err);
 			setError(
-				err instanceof Error ? err.message : "Failed to decline invitation",
+				err instanceof Error
+					? err.message
+					: "Failed to decline invitation. Try again in a moment.",
 			);
 		} finally {
 			setProcessing(false);
@@ -184,8 +228,10 @@ function AcceptInvitationPage() {
 	if (loading) {
 		return (
 			<CenteredShell>
-				<Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
-				<p className="text-muted-foreground">Loading invitation...</p>
+				<output className="block">
+					<Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
+					<p className="text-muted-foreground">Loading invitation…</p>
+				</output>
 			</CenteredShell>
 		);
 	}
@@ -194,8 +240,12 @@ function AcceptInvitationPage() {
 		return (
 			<CenteredShell>
 				<AlertCircle className="mx-auto mb-4 h-16 w-16 text-destructive" />
-				<h1 className="mb-2 text-2xl font-bold">Invitation Unavailable</h1>
-				<p className="mb-6 text-muted-foreground">{error}</p>
+				<h1 className="mb-2 text-2xl font-bold text-balance">
+					Invitation Unavailable
+				</h1>
+				<p className="mb-6 text-muted-foreground" role="alert">
+					{error}
+				</p>
 				<Button asChild>
 					<a href="/signin">Go to Dashboard</a>
 				</Button>
@@ -209,11 +259,11 @@ function AcceptInvitationPage() {
 				className="success-reveal"
 				icon={<CheckCircle className="h-12 w-12 text-tone-success" />}
 				title="Welcome to the Team!"
-				description="You've successfully accepted the position."
+				description="You’ve successfully accepted the position."
 				invitation={invitation}
 			>
 				<div className="rounded-lg border border-ds-blue-100 bg-ds-blue-100 p-5 text-left text-ds-blue-1000">
-					<h2 className="mb-3 font-semibold">What's next?</h2>
+					<h2 className="mb-3 font-semibold text-balance">What’s Next?</h2>
 					<ul className="list-disc space-y-2 pl-5 text-sm">
 						<li>Check your email for detailed onboarding instructions.</li>
 						<li>Your officer invitation has been recorded.</li>
@@ -223,7 +273,7 @@ function AcceptInvitationPage() {
 					</ul>
 				</div>
 				<Button asChild className="w-full">
-					<a href="/signin">Sign in to Dashboard</a>
+					<a href="/signin">Sign In to Dashboard</a>
 				</Button>
 			</StatusShell>
 		);
@@ -249,11 +299,11 @@ function AcceptInvitationPage() {
 			<section className="mx-auto flex min-h-[calc(100dvh-2rem)] max-w-3xl items-start py-6 sm:items-center sm:py-10">
 				<div className="w-full overflow-hidden rounded-md border bg-background shadow-sm">
 					<div className="bg-primary px-4 py-6 text-center text-primary-foreground sm:px-8 sm:py-10">
-						<h1 className="mb-1 text-xl font-bold sm:mb-2 sm:text-3xl">
+						<h1 className="mb-1 text-xl font-bold text-balance break-words sm:mb-2 sm:text-3xl">
 							Congratulations, {invitation?.name}!
 						</h1>
 						<p className="text-sm text-primary-foreground/80 sm:text-base">
-							You've been elected to the IEEE at UCSD board.
+							You’ve been elected to the IEEE at UCSD board.
 						</p>
 					</div>
 
@@ -269,9 +319,9 @@ function AcceptInvitationPage() {
 											? "Available Positions"
 											: "Your Position"}
 									</p>
-									<h2 className="text-xl font-bold sm:text-2xl">
+									<h2 className="text-xl font-bold text-balance break-words sm:text-2xl">
 										{hasMultiplePositions
-											? "Choose one position"
+											? "Choose One Position"
 											: invitation?.position}
 									</h2>
 									<p className="mt-1 text-sm text-muted-foreground">
@@ -283,17 +333,30 @@ function AcceptInvitationPage() {
 
 						{hasMultiplePositions ? (
 							<div className="space-y-3">
-								<p className="text-sm font-medium">
+								<p
+									id={`${formId}-position-picker-label`}
+									className="text-sm font-medium"
+								>
 									Select the position you want to accept
 								</p>
-								<div className="grid gap-3">
-									{offeredPositions.map((position) => {
+								<div
+									className="grid gap-3"
+									role="radiogroup"
+									aria-labelledby={`${formId}-position-picker-label`}
+									onKeyDown={handlePositionKeyDown}
+								>
+									{offeredPositions.map((position, index) => {
 										const selected = selectedPosition === position;
+										const focusable = selectedPosition ? selected : index === 0;
 										return (
 											<Button
 												variant="outline"
 												key={position}
 												type="button"
+												role="radio"
+												aria-checked={selected}
+												tabIndex={focusable ? 0 : -1}
+												data-position={position}
 												onClick={() => setSelectedPosition(position)}
 												className={`rounded-lg border p-4 text-left transition ${
 													selected
@@ -302,9 +365,12 @@ function AcceptInvitationPage() {
 												}`}
 											>
 												<div className="flex items-center justify-between gap-3">
-													<span className="font-semibold">{position}</span>
+													<span className="min-w-0 font-semibold break-words whitespace-normal">
+														{position}
+													</span>
 													<span
-														className={`h-4 w-4 rounded-full border ${
+														aria-hidden="true"
+														className={`h-4 w-4 shrink-0 rounded-full border ${
 															selected
 																? "border-primary bg-primary"
 																: "border-muted-foreground/40"
@@ -341,7 +407,7 @@ function AcceptInvitationPage() {
 										? selectedPosition || "the selected position"
 										: invitation?.position}
 								</strong>{" "}
-								and commit to supporting IEEE at UCSD's mission.
+								and commit to supporting IEEE at UCSD’s mission.
 							</p>
 						</div>
 
@@ -365,7 +431,7 @@ function AcceptInvitationPage() {
 									{processing ? (
 										<Loader2 className="h-4 w-4 animate-spin" />
 									) : null}
-									{processing ? "Processing..." : "Accept Position"}
+									{processing ? "Processing…" : "Accept Position"}
 								</Button>
 							</div>
 						</div>
@@ -410,7 +476,9 @@ function StatusShell({
 					<div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-background sm:mb-4 sm:h-20 sm:w-20">
 						{icon}
 					</div>
-					<h1 className="mb-2 text-xl font-bold sm:text-3xl">{title}</h1>
+					<h1 className="mb-2 text-xl font-bold text-balance sm:text-3xl">
+						{title}
+					</h1>
 					<p className="text-sm text-muted-foreground sm:text-base">
 						{description}
 					</p>

@@ -63,9 +63,9 @@ export function MobileAppBar({
 					)}
 				</div>
 
-				<h1 className="min-w-0 flex-1 truncate text-center text-[17px] font-semibold tracking-[-0.02em] text-foreground">
+				<p className="min-w-0 flex-1 truncate text-center text-[17px] font-semibold tracking-[-0.02em] text-foreground">
 					{title}
-				</h1>
+				</p>
 
 				<div className="flex w-12 shrink-0 items-center justify-end gap-0.5">
 					{trailing}

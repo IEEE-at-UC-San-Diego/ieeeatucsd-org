@@ -1,3 +1,8 @@
+import {
+	formatCurrencyUSD,
+	formatDate as formatDateBase,
+	formatDateTime as formatDateTimeBase,
+} from "@/lib/formatters";
 // Fund request status lifecycle
 export type FundRequestStatus =
 	| "draft"
@@ -131,29 +136,8 @@ export const FUNDING_SOURCE_LABELS: Record<FundingSource, string> = {
 export const FUNDING_SOURCES: FundingSource[] = ["department", "ieee"];
 
 // Helper functions
-export const formatCurrency = (amount: number): string => {
-	return new Intl.NumberFormat("en-US", {
-		style: "currency",
-		currency: "USD",
-	}).format(amount);
-};
-
-export const formatDate = (timestamp: number): string => {
-	const date = new Date(timestamp);
-	return date.toLocaleDateString("en-US", {
-		year: "numeric",
-		month: "short",
-		day: "numeric",
-	});
-};
-
-export const formatDateTime = (timestamp: number): string => {
-	const date = new Date(timestamp);
-	return date.toLocaleDateString("en-US", {
-		year: "numeric",
-		month: "short",
-		day: "numeric",
-		hour: "2-digit",
-		minute: "2-digit",
-	});
-};
+export const formatCurrency = formatCurrencyUSD;
+export const formatDate = (timestamp: number): string =>
+	formatDateBase(timestamp);
+export const formatDateTime = (timestamp: number): string =>
+	formatDateTimeBase(timestamp);

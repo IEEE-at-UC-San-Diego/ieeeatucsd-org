@@ -14,6 +14,7 @@ import { useMobileShell } from "@/components/mobile/MobileShellContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
+import { formatDateTime, formatFileSize } from "@/lib/formatters";
 import type { EmailMessage } from "./types";
 
 interface EmailModalProps {
@@ -61,14 +62,6 @@ const getFileTypeIcon = (contentType: string, filename: string) => {
 	return <File className="w-4 h-4 text-muted-foreground" />;
 };
 
-const formatFileSize = (bytes: number): string => {
-	if (bytes === 0) return "0 B";
-	const k = 1024;
-	const sizes = ["B", "KB", "MB", "GB"];
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
-	return parseFloat((bytes / k ** i).toFixed(1)) + " " + sizes[i];
-};
-
 /** Splits "Name <address>" into its parts; falls back to the raw string. */
 export function parseSender(from: string): { name: string; address: string } {
 	const match = from.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
@@ -83,7 +76,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 	const { getAuthHeaders } = useAuth();
 	const { setHideTabBar } = useMobileShell();
 	const [emailContent, setEmailContent] = useState<any>(null);
-	const [isLoading, setIsLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [viewMode, setViewMode] = useState<"html" | "text">("html");
 
@@ -233,14 +226,20 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 
 			<div className="min-w-0 pb-4">
 				{isLoading ? (
-					<div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+					<output
+						aria-live="polite"
+						className="flex flex-col items-center justify-center px-6 py-20 text-center"
+					>
 						<RefreshCw className="mb-3 h-5 w-5 animate-spin text-muted-foreground" />
 						<p className="text-sm text-muted-foreground">Loading message…</p>
-					</div>
+					</output>
 				) : error ? (
-					<div className="mx-auto max-w-sm px-6 py-16 text-center">
-						<h3 className="text-base font-semibold text-foreground">
-							Couldn't load this message
+					<div
+						aria-live="polite"
+						className="mx-auto max-w-sm px-6 py-16 text-center"
+					>
+						<h3 className="text-balance text-base font-semibold text-foreground">
+							Couldn’t Load This Message
 						</h3>
 						<p className="mt-1 text-sm text-muted-foreground">{error}</p>
 						<Button
@@ -249,15 +248,15 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 							onClick={() => window.location.reload()}
 						>
 							<RefreshCw className="mr-2 h-4 w-4" />
-							Try again
+							Try Again
 						</Button>
 					</div>
 				) : emailContent ? (
 					<div className="space-y-6 py-2">
 						{/* Header */}
 						<header className="space-y-4">
-							<h3 className="text-xl font-semibold leading-snug tracking-[-0.02em] text-foreground">
-								{emailContent.subject}
+							<h3 className="text-balance break-words text-xl font-semibold leading-snug tracking-[-0.02em] text-foreground">
+								{emailContent.subject || "(No Subject)"}
 							</h3>
 							<dl className="divide-y rounded-md border text-sm">
 								<div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
@@ -282,14 +281,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 								<div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
 									<dt className="w-12 shrink-0 text-muted-foreground">Date</dt>
 									<dd className="min-w-0 flex-1 tabular-nums text-foreground">
-										{new Date(emailContent.date).toLocaleDateString("en-US", {
-											weekday: "short",
-											year: "numeric",
-											month: "short",
-											day: "numeric",
-											hour: "numeric",
-											minute: "2-digit",
-										})}
+										{formatDateTime(emailContent.date)}
 									</dd>
 								</div>
 							</dl>
@@ -355,7 +347,7 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 												Formatted
 											</TabsTrigger>
 											<TabsTrigger value="text" className="px-3 text-xs">
-												Plain text
+												Plain Text
 											</TabsTrigger>
 										</TabsList>
 									</Tabs>
@@ -463,7 +455,11 @@ export function EmailModal({ email, credentials, onClose }: EmailModalProps) {
 							)}
 						</section>
 					</div>
-				) : null}
+				) : (
+					<p className="px-6 py-16 text-center text-sm text-muted-foreground">
+						This message has no content to display.
+					</p>
+				)}
 			</div>
 		</ResponsiveOverlay>
 	);

@@ -8,7 +8,7 @@ import {
 	Shield,
 	Upload,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
 	DashboardPage,
@@ -35,6 +35,7 @@ import { Switch } from "@/components/ui/switch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation } from "@/hooks/useAuthedConvex";
+import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { formatDateDisplay } from "@/lib/formatters";
 import {
 	downloadFileFromUrl,
@@ -47,6 +48,7 @@ export const Route = createFileRoute("/_dashboard/settings")({
 });
 
 function SettingsPage() {
+	const formId = useId();
 	const { user, isLoading, logtoId } = useAuth();
 	const isMobile = useIsMobile();
 	const updateProfile = useAuthedMutation(api.users.updateProfile);
@@ -82,20 +84,37 @@ function SettingsPage() {
 
 	const resumeUrl = user?.resumeUrl;
 
+	const initialForm = useMemo(
+		() =>
+			user
+				? {
+						name: user.name || "",
+						pid: user.pid || "",
+						major: user.major || "",
+						graduationYear: user.graduationYear?.toString() || "",
+						memberId: user.memberId || "",
+						zelleInformation: user.zelleInformation || "",
+					}
+				: null,
+		[user],
+	);
+
 	// Initialize form when user data loads
 	useEffect(() => {
-		if (user) {
-			setForm({
-				name: user.name || "",
-				pid: user.pid || "",
-				major: user.major || "",
-				graduationYear: user.graduationYear?.toString() || "",
-				memberId: user.memberId || "",
-				zelleInformation: user.zelleInformation || "",
-			});
+		if (initialForm && user) {
+			setForm(initialForm);
 			setAiFeaturesEnabled(user.aiFeaturesEnabled !== false);
 		}
-	}, [user]);
+	}, [initialForm, user]);
+
+	const isDirty =
+		!!initialForm &&
+		!!user &&
+		((Object.keys(initialForm) as (keyof typeof initialForm)[]).some(
+			(key) => form[key] !== initialForm[key],
+		) ||
+			aiFeaturesEnabled !== (user.aiFeaturesEnabled !== false));
+	useUnsavedChangesGuard(isDirty);
 
 	// Check if user is OAuth (Logto) user
 	const isOAuthUser = () => {
@@ -128,8 +147,13 @@ function SettingsPage() {
 			setSuccess("Profile updated successfully!");
 			toast.success("Profile updated successfully");
 		} catch (err: any) {
-			setError(err.message || "Failed to update profile");
-			toast.error("Failed to update profile");
+			setError(
+				err.message ||
+					"Failed to update profile. Check your connection and try again.",
+			);
+			toast.error(
+				"Failed to update profile. Check your connection and try again.",
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -175,8 +199,12 @@ function SettingsPage() {
 			setSuccess("Resume uploaded successfully!");
 			toast.success("Resume uploaded successfully");
 		} catch (err: any) {
-			setError("Failed to upload resume: " + (err.message || "Unknown error"));
-			toast.error("Failed to upload resume");
+			setError(
+				`Failed to upload resume: ${err.message || "Unknown error"}. Try again.`,
+			);
+			toast.error(
+				"Failed to upload resume. Check your connection and try again.",
+			);
 		} finally {
 			setUploadingResume(false);
 		}
@@ -189,8 +217,12 @@ function SettingsPage() {
 		try {
 			await downloadFileFromUrl(resumeUrl, user.resume.fileName);
 		} catch {
-			setError("Failed to download resume");
-			toast.error("Failed to download resume");
+			setError(
+				"Failed to download resume. Try again or use View Resume to open it.",
+			);
+			toast.error(
+				"Failed to download resume. Try again or use View Resume to open it.",
+			);
 		} finally {
 			setDownloadingResume(false);
 		}
@@ -209,8 +241,12 @@ function SettingsPage() {
 			toast.success("Resume removed successfully");
 			return true;
 		} catch (err: any) {
-			setError("Failed to remove resume: " + (err.message || "Unknown error"));
-			toast.error("Failed to remove resume");
+			setError(
+				`Failed to remove resume: ${err.message || "Unknown error"}. Try again.`,
+			);
+			toast.error(
+				"Failed to remove resume. Check your connection and try again.",
+			);
 			return false;
 		} finally {
 			setRemovingResume(false);
@@ -233,8 +269,13 @@ function SettingsPage() {
 			setSuccess("AI preferences updated successfully!");
 			toast.success("AI preferences updated");
 		} catch (err: any) {
-			setError(err.message || "Failed to update AI preferences");
-			toast.error("Failed to update AI preferences");
+			setError(
+				err.message ||
+					"Failed to update AI preferences. Check your connection and try again.",
+			);
+			toast.error(
+				"Failed to update AI preferences. Check your connection and try again.",
+			);
 		} finally {
 			setSavingAiPreference(false);
 		}
@@ -294,7 +335,7 @@ function SettingsPage() {
 								disabled={savingAiPreference}
 							>
 								<Save className="h-4 w-4 mr-2" />
-								{savingAiPreference ? "Saving..." : "Save AI Preferences"}
+								{savingAiPreference ? "Saving…" : "Save AI Preferences"}
 							</Button>
 						</div>
 					</div>
@@ -369,17 +410,27 @@ function SettingsPage() {
 				<div className="min-w-0 space-y-4 md:space-y-6">
 					{/* Status Messages */}
 					{error && (
-						<div className="flex items-center space-x-2 p-4 bg-ds-red-100 border border-ds-red-100 rounded-md text-tone-danger">
+						<div
+							role="alert"
+							className="flex items-center space-x-2 p-4 bg-ds-red-100 border border-ds-red-100 rounded-md text-tone-danger"
+						>
 							<AlertCircle className="w-5 h-5 flex-shrink-0" />
-							<span className="text-sm md:text-base">{error}</span>
+							<span className="min-w-0 break-words text-sm md:text-base">
+								{error}
+							</span>
 						</div>
 					)}
 
 					{success && (
-						<div className="flex items-center space-x-2 p-4 bg-ds-green-100 border border-ds-green-100 rounded-md text-tone-success">
+						<output
+							aria-live="polite"
+							className="flex items-center space-x-2 p-4 bg-ds-green-100 border border-ds-green-100 rounded-md text-tone-success"
+						>
 							<CheckCircle className="w-5 h-5 flex-shrink-0" />
-							<span className="text-sm md:text-base">{success}</span>
-						</div>
+							<span className="min-w-0 break-words text-sm md:text-base">
+								{success}
+							</span>
+						</output>
 					)}
 
 					{/* Appearance */}
@@ -426,7 +477,7 @@ function SettingsPage() {
 								disabled={savingAiPreference}
 							>
 								<Save className="h-4 w-4 mr-2" />
-								{savingAiPreference ? "Saving..." : "Save AI Preferences"}
+								{savingAiPreference ? "Saving…" : "Save AI Preferences"}
 							</Button>
 						</div>
 					</div>
@@ -439,18 +490,24 @@ function SettingsPage() {
 
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 							<div>
-								<Label htmlFor="name">Full Name</Label>
+								<Label htmlFor={`${formId}-name`}>Full Name</Label>
 								<Input
-									id="name"
+									id={`${formId}-name`}
+									name="name"
+									autoComplete="name"
 									value={form.name}
 									onChange={(e) => setForm({ ...form, name: e.target.value })}
-									placeholder="John Doe"
+									placeholder="Jane Doe"
 								/>
 							</div>
 							<div>
-								<Label htmlFor="email">Email</Label>
+								<Label htmlFor={`${formId}-email`}>Email</Label>
 								<Input
-									id="email"
+									id={`${formId}-email`}
+									name="email"
+									type="email"
+									autoComplete="email"
+									spellCheck={false}
 									value={user?.email || ""}
 									disabled
 									className="bg-muted cursor-not-allowed"
@@ -462,28 +519,38 @@ function SettingsPage() {
 								</p>
 							</div>
 							<div>
-								<Label htmlFor="pid">Student ID (TSN)</Label>
+								<Label htmlFor={`${formId}-pid`}>Student ID (TSN)</Label>
 								<Input
-									id="pid"
+									id={`${formId}-pid`}
+									name="pid"
+									autoComplete="off"
+									spellCheck={false}
 									value={form.pid}
 									onChange={(e) => setForm({ ...form, pid: e.target.value })}
 									placeholder="123456789"
 								/>
 							</div>
 							<div>
-								<Label htmlFor="major">Major</Label>
+								<Label htmlFor={`${formId}-major`}>Major</Label>
 								<Input
-									id="major"
+									id={`${formId}-major`}
+									name="major"
+									autoComplete="off"
 									value={form.major}
 									onChange={(e) => setForm({ ...form, major: e.target.value })}
 									placeholder="Computer Science"
 								/>
 							</div>
 							<div>
-								<Label htmlFor="graduationYear">Expected Graduation Year</Label>
+								<Label htmlFor={`${formId}-graduationYear`}>
+									Expected Graduation Year
+								</Label>
 								<Input
-									id="graduationYear"
+									id={`${formId}-graduationYear`}
+									name="graduationYear"
 									type="number"
+									inputMode="numeric"
+									autoComplete="off"
 									value={form.graduationYear}
 									onChange={(e) =>
 										setForm({ ...form, graduationYear: e.target.value })
@@ -494,9 +561,15 @@ function SettingsPage() {
 								/>
 							</div>
 							<div>
-								<Label htmlFor="memberId">IEEE Member ID (Optional)</Label>
+								<Label htmlFor={`${formId}-memberId`}>
+									IEEE Member ID (Optional)
+								</Label>
 								<Input
-									id="memberId"
+									id={`${formId}-memberId`}
+									name="memberId"
+									autoComplete="off"
+									spellCheck={false}
+									inputMode="numeric"
 									value={form.memberId}
 									onChange={(e) =>
 										setForm({ ...form, memberId: e.target.value })
@@ -505,14 +578,19 @@ function SettingsPage() {
 								/>
 							</div>
 							<div className="md:col-span-2">
-								<Label htmlFor="zelle">Zelle Information (Optional)</Label>
+								<Label htmlFor={`${formId}-zelle`}>
+									Zelle Information (Optional)
+								</Label>
 								<Input
-									id="zelle"
+									id={`${formId}-zelle`}
+									name="zelleInformation"
+									autoComplete="off"
+									spellCheck={false}
 									value={form.zelleInformation}
 									onChange={(e) =>
 										setForm({ ...form, zelleInformation: e.target.value })
 									}
-									placeholder="Phone number or email for reimbursements"
+									placeholder="Phone number or email for reimbursements…"
 								/>
 							</div>
 						</div>
@@ -520,7 +598,7 @@ function SettingsPage() {
 						<div className="flex justify-end mt-6">
 							<Button onClick={handleProfileUpdate} disabled={saving}>
 								<Save className="h-4 w-4 mr-2" />
-								{saving ? "Saving..." : "Save Profile"}
+								{saving ? "Saving…" : "Save Profile"}
 							</Button>
 						</div>
 					</div>
@@ -538,10 +616,12 @@ function SettingsPage() {
 						{user?.resume ? (
 							<div className="space-y-4">
 								<div className="flex flex-col gap-4 p-4 bg-muted rounded-md sm:flex-row sm:items-center sm:justify-between">
-									<div className="flex items-center space-x-3">
+									<div className="flex min-w-0 items-center space-x-3">
 										<FileText className="w-8 h-8 text-muted-foreground shrink-0" />
-										<div>
-											<p className="font-medium">{user.resume.fileName}</p>
+										<div className="min-w-0">
+											<p className="truncate font-medium">
+												{user.resume.fileName}
+											</p>
 											<p className="text-sm text-muted-foreground">
 												Uploaded {formatDateDisplay(user.resume.uploadedAt)}
 											</p>
@@ -556,7 +636,7 @@ function SettingsPage() {
 														target="_blank"
 														rel="noopener noreferrer"
 													>
-														View
+														View Resume
 													</a>
 												</Button>
 												<Button
@@ -565,7 +645,9 @@ function SettingsPage() {
 													onClick={handleResumeDownload}
 													disabled={downloadingResume}
 												>
-													{downloadingResume ? "Downloading..." : "Download"}
+													{downloadingResume
+														? "Downloading…"
+														: "Download Resume"}
 												</Button>
 											</>
 										) : (
@@ -600,7 +682,7 @@ function SettingsPage() {
 												</AlertDialogTrigger>
 												<AlertDialogContent>
 													<AlertDialogHeader>
-														<AlertDialogTitle>Remove resume?</AlertDialogTitle>
+														<AlertDialogTitle>Remove Resume?</AlertDialogTitle>
 														<AlertDialogDescription>
 															This will permanently delete your resume file. You
 															can upload a new one at any time.
@@ -621,7 +703,7 @@ function SettingsPage() {
 																}
 															}}
 														>
-															{removingResume ? "Removing..." : "Remove"}
+															{removingResume ? "Removing…" : "Remove"}
 														</AlertDialogAction>
 													</AlertDialogFooter>
 												</AlertDialogContent>
@@ -654,7 +736,7 @@ function SettingsPage() {
 													disabled={!resumeFile || uploadingResume}
 												>
 													<Upload className="h-4 w-4 mr-2" />
-													{uploadingResume ? "Uploading..." : "Replace"}
+													{uploadingResume ? "Uploading…" : "Replace"}
 												</Button>
 											</div>
 										</div>
@@ -662,6 +744,8 @@ function SettingsPage() {
 										<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
 											<Input
 												type="file"
+												name="resume"
+												aria-label="Resume PDF"
 												accept=".pdf,application/pdf"
 												onChange={(e) =>
 													handleResumeFileChange(e.target.files?.[0] || null)
@@ -673,7 +757,7 @@ function SettingsPage() {
 												disabled={!resumeFile || uploadingResume}
 											>
 												<Upload className="h-4 w-4 mr-2" />
-												{uploadingResume ? "Uploading..." : "Replace"}
+												{uploadingResume ? "Uploading…" : "Replace"}
 											</Button>
 										</div>
 									)}
@@ -709,7 +793,7 @@ function SettingsPage() {
 													disabled={!resumeFile || uploadingResume}
 												>
 													<Upload className="h-4 w-4 mr-2" />
-													{uploadingResume ? "Uploading..." : "Upload"}
+													{uploadingResume ? "Uploading…" : "Upload"}
 												</Button>
 											</div>
 										</div>
@@ -717,6 +801,8 @@ function SettingsPage() {
 										<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
 											<Input
 												type="file"
+												name="resume"
+												aria-label="Resume PDF"
 												accept=".pdf,application/pdf"
 												onChange={(e) =>
 													handleResumeFileChange(e.target.files?.[0] || null)
@@ -728,13 +814,13 @@ function SettingsPage() {
 												disabled={!resumeFile || uploadingResume}
 											>
 												<Upload className="h-4 w-4 mr-2" />
-												{uploadingResume ? "Uploading..." : "Upload"}
+												{uploadingResume ? "Uploading…" : "Upload"}
 											</Button>
 										</div>
 									)}
 								</div>
 								<p className="text-xs text-muted-foreground">
-									PDF only, maximum 5MB
+									PDF only, maximum 5&nbsp;MB
 								</p>
 							</div>
 						)}
@@ -743,8 +829,10 @@ function SettingsPage() {
 					<ResponsiveOverlay
 						open={resumePickerOpen}
 						onOpenChange={setResumePickerOpen}
-						title="Upload resume"
-						description="PDF only, maximum 5MB. Files are not camera/photo captures."
+						title="Upload Resume"
+						description={
+							"PDF only, maximum 5\u00a0MB. Files are not camera/photo captures."
+						}
 						variant="sheet"
 					>
 						<div className="space-y-3 pb-2">
@@ -752,6 +840,7 @@ function SettingsPage() {
 								Choose PDF from Files
 								<input
 									type="file"
+									name="resume"
 									accept=".pdf,application/pdf"
 									className="sr-only"
 									onChange={(e) => {
@@ -769,7 +858,7 @@ function SettingsPage() {
 					<ResponsiveOverlay
 						open={isMobile && removeDialogOpen}
 						onOpenChange={setRemoveDialogOpen}
-						title="Remove resume?"
+						title="Remove Resume?"
 						description="This will permanently delete your resume file. You can upload a new one later."
 						variant="sheet"
 						footer={
@@ -791,7 +880,7 @@ function SettingsPage() {
 										if (ok) setRemoveDialogOpen(false);
 									}}
 								>
-									{removingResume ? "Removing..." : "Remove"}
+									{removingResume ? "Removing…" : "Remove"}
 								</Button>
 							</div>
 						}
@@ -810,7 +899,9 @@ function SettingsPage() {
 						<div className="space-y-2 text-sm">
 							<div className="flex justify-between py-2 border-b">
 								<span className="text-muted-foreground">Email</span>
-								<span className="font-medium">{user?.email}</span>
+								<span className="min-w-0 truncate font-medium">
+									{user?.email}
+								</span>
 							</div>
 							<div className="flex justify-between py-2 border-b">
 								<span className="text-muted-foreground">Role</span>
@@ -829,9 +920,7 @@ function SettingsPage() {
 							<div className="flex justify-between py-2">
 								<span className="text-muted-foreground">Member Since</span>
 								<span className="font-medium">
-									{user?.joinDate
-										? new Date(user.joinDate).toLocaleDateString()
-										: "N/A"}
+									{user?.joinDate ? formatDateDisplay(user.joinDate) : "N/A"}
 								</span>
 							</div>
 						</div>

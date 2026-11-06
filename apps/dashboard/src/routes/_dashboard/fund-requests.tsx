@@ -19,8 +19,10 @@ import {
 	Trash2,
 	XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import {
 	DashboardPage,
 	EmptyState,
@@ -45,6 +47,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthedMutation, useAuthedQuery } from "@/hooks/useAuthedConvex";
 import { usePermissions } from "@/hooks/usePermissions";
+import { formatFileSize } from "@/lib/formatters";
 import { prefetchAuthedQuery } from "@/lib/prefetch/prefetch";
 import { cn } from "@/lib/utils";
 import {
@@ -59,7 +62,28 @@ import {
 	STATUS_LABELS,
 } from "@/types/fund-requests";
 
+const searchSchema = z.object({
+	view: z.enum(["list", "form", "detail"]).catch("list"),
+	id: z.string().optional().catch(undefined),
+	q: z.string().catch(""),
+	status: z
+		.enum([
+			"all",
+			"draft",
+			"submitted",
+			"needs_info",
+			"approved",
+			"denied",
+			"completed",
+		])
+		.catch("all"),
+	page: z.number().int().min(1).catch(1),
+});
+
+type FundRequestsSearch = z.infer<typeof searchSchema>;
+
 export const Route = createFileRoute("/_dashboard/fund-requests")({
+	validateSearch: searchSchema,
 	loader: (ctx) =>
 		prefetchAuthedQuery(api.fundRequests.listMine, undefined, ctx),
 	component: FundRequestsPage,
@@ -95,9 +119,8 @@ const getStatusIcon = (status: FundRequestStatus) => {
 	}
 };
 
-type FilterTab = "all" | FundRequestStatus;
+type FilterTab = FundRequestsSearch["status"];
 type FundRequestRecord = Doc<"fundRequests">;
-type PageView = "list" | "form" | "detail";
 
 function FundRequestDetailPage({
 	request,
@@ -135,7 +158,7 @@ function FundRequestDetailPage({
 					<div className="min-w-0 space-y-2">
 						<div className="flex flex-wrap items-center gap-2">
 							<h1
-								className="min-w-0 text-2xl font-bold tracking-tight sm:text-3xl"
+								className="min-w-0 break-words text-2xl font-bold tracking-tight text-balance sm:text-3xl"
 								title={request.title}
 							>
 								{request.title}
@@ -158,7 +181,7 @@ function FundRequestDetailPage({
 				<div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
 					<div className="rounded-lg border bg-card px-4 py-2 sm:text-right">
 						<p className="text-xs font-medium text-muted-foreground">Amount</p>
-						<p className="text-xl font-bold text-tone-success">
+						<p className="text-xl font-bold text-tone-success tabular-nums">
 							{formatCurrency(request.amount)}
 						</p>
 					</div>
@@ -224,7 +247,7 @@ function FundRequestDetailPage({
 							<h2 className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
 								<FileText className="w-3.5 h-3.5" /> Purpose
 							</h2>
-							<p className="text-sm leading-relaxed whitespace-pre-wrap">
+							<p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
 								{request.purpose}
 							</p>
 						</CardContent>
@@ -304,7 +327,10 @@ function FundRequestDetailPage({
 											key={log.id}
 											className="relative pl-5 pb-5 last:pb-0 border-l border-border/60 last:border-l-0"
 										>
-											<div className="absolute top-0.5 left-0 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-background bg-muted-foreground/30 z-10 box-content" />
+											<div
+												aria-hidden="true"
+												className="absolute top-0.5 left-0 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-background bg-muted-foreground/30 z-10 box-content"
+											/>
 											<p className="text-xs font-medium">
 												<span className="capitalize">
 													{log.action.replace(/_/g, " ")}
@@ -393,7 +419,7 @@ function FundRequestDetailPage({
 													{attachment.name}
 												</p>
 												<p className="text-[10px] text-muted-foreground">
-													{(attachment.size / 1024).toFixed(1)} KB
+													{formatFileSize(attachment.size)}
 												</p>
 											</div>
 											<div className="flex gap-1">
@@ -461,15 +487,36 @@ function FundRequestsPage() {
 		logtoId ? { logtoId } : "skip",
 	);
 	const deleteFundRequest = useAuthedMutation(api.fundRequests.deleteRequest);
+	const confirm = useConfirm();
 
-	const [view, setView] = useState<PageView>("list");
+	const {
+		view,
+		id: selectedRequestId,
+		q,
+		status: selectedTab,
+		page,
+	} = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const setSearchParams = (patch: Partial<FundRequestsSearch>) =>
+		navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
+	const setView = (
+		nextView: FundRequestsSearch["view"],
+		id?: FundRequestRecord["_id"],
+	) => navigate({ search: (prev) => ({ ...prev, view: nextView, id }) });
+	const [searchQuery, setSearchInput] = useState(q);
+	const setSearchQuery = (value: string) => {
+		setSearchInput(value);
+		setSearchParams({ q: value, page: 1 });
+	};
+	const setSelectedTab = (status: FilterTab) =>
+		setSearchParams({ status, page: 1 });
+	const setPage = (nextPage: number) => setSearchParams({ page: nextPage });
+
+	const selectedRequest = selectedRequestId
+		? (requests?.find((r) => r._id === selectedRequestId) ?? null)
+		: null;
+	const isEditMode = view === "form" && !!selectedRequestId;
 	const [isBudgetLogOpen, setIsBudgetLogOpen] = useState(false);
-	const [selectedRequest, setSelectedRequest] =
-		useState<FundRequestRecord | null>(null);
-	const [isEditMode, setIsEditMode] = useState(false);
-	const [searchQuery, setSearchQuery] = useState("");
-	const [selectedTab, setSelectedTab] = useState<FilterTab>("all");
-	const [page, setPage] = useState(1);
 	const [isDeleting, setIsDeleting] = useState(false);
 
 	useEffect(() => {
@@ -541,7 +588,7 @@ function FundRequestsPage() {
 	const [selectedBudgetDepartment, setSelectedBudgetDepartment] =
 		useState<FundRequestDepartment>("events");
 
-	const getSelectedRequestFormData = () => {
+	const selectedRequestFormData = useMemo(() => {
 		if (!selectedRequest) return undefined;
 
 		return {
@@ -558,7 +605,7 @@ function FundRequestsPage() {
 			})),
 			_id: selectedRequest._id,
 		};
-	};
+	}, [selectedRequest]);
 
 	const getFilteredRequests = () => {
 		if (!requests) return [];
@@ -621,25 +668,25 @@ function FundRequestsPage() {
 
 	const stats = getStats();
 
-	const handleNewRequest = () => {
-		setSelectedRequest(null);
-		setIsEditMode(false);
-		setView("form");
-	};
+	const handleNewRequest = () => setView("form");
 
-	const handleEditRequest = (request: FundRequestRecord) => {
-		setSelectedRequest(request);
-		setIsEditMode(true);
-		setView("form");
-	};
+	const handleEditRequest = (request: FundRequestRecord) =>
+		setView("form", request._id);
 
-	const handleViewRequest = (request: FundRequestRecord) => {
-		setSelectedRequest(request);
-		setView("detail");
-	};
+	const handleViewRequest = (request: FundRequestRecord) =>
+		setView("detail", request._id);
 
 	const handleDeleteRequest = async (request: FundRequestRecord) => {
 		if (!logtoId) return;
+		if (
+			!(await confirm({
+				title: "Delete Draft?",
+				description: `“${request.title}” will be permanently deleted. This can’t be undone.`,
+				confirmLabel: "Delete Draft",
+				destructive: true,
+			}))
+		)
+			return;
 		setIsDeleting(true);
 		try {
 			await deleteFundRequest({ logtoId, id: request._id });
@@ -648,18 +695,14 @@ function FundRequestsPage() {
 			const message =
 				error instanceof Error
 					? error.message
-					: "Failed to delete fund request";
+					: "Failed to delete fund request. Please try again.";
 			toast.error(message);
 		} finally {
 			setIsDeleting(false);
 		}
 	};
 
-	const handleFormClose = () => {
-		setView("list");
-		setSelectedRequest(null);
-		setIsEditMode(false);
-	};
+	const handleFormClose = () => setView("list");
 
 	const handleFormSuccess = () => {
 		handleFormClose();
@@ -702,7 +745,21 @@ function FundRequestsPage() {
 		budgetStatsInternal,
 	].some((budget) => budget?.isConfigured);
 
-	if (view === "form") {
+	const isSelectedRequestPending = !!selectedRequestId && !requests;
+	if ((view === "form" || view === "detail") && isSelectedRequestPending) {
+		return (
+			<output
+				className="block w-full max-w-[1600px] mx-auto space-y-4 p-4 sm:p-6"
+				aria-live="polite"
+			>
+				<span className="sr-only">Loading fund request…</span>
+				<Skeleton className="h-10 w-1/3 rounded-md" />
+				<Skeleton className="h-64 w-full rounded-md" />
+			</output>
+		);
+	}
+
+	if (view === "form" && (!selectedRequestId || selectedRequest)) {
 		return (
 			<div className="h-[calc(100vh-3rem)] flex flex-col overflow-hidden">
 				<div className="border-b px-4 py-4 sm:px-6 flex items-start gap-3 shrink-0">
@@ -716,7 +773,7 @@ function FundRequestsPage() {
 						Back
 					</Button>
 					<div className="min-w-0">
-						<h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+						<h1 className="text-xl font-bold tracking-tight text-balance sm:text-2xl">
 							{isEditMode ? "Edit Fund Request" : "New Fund Request"}
 						</h1>
 						<p className="text-sm text-muted-foreground">
@@ -729,7 +786,7 @@ function FundRequestsPage() {
 						isOpen
 						onClose={handleFormClose}
 						onSuccess={handleFormSuccess}
-						initialData={getSelectedRequestFormData()}
+						initialData={selectedRequestFormData}
 						isEditMode={isEditMode}
 						showHeader={false}
 						renderMode="page"
@@ -745,11 +802,7 @@ function FundRequestsPage() {
 		return (
 			<FundRequestDetailPage
 				request={selectedRequest}
-				onBack={() => {
-					setSelectedRequest(null);
-					setIsEditMode(false);
-					setView("list");
-				}}
+				onBack={() => setView("list")}
 				onEdit={
 					selectedRequest.status === "draft" ||
 					selectedRequest.status === "needs_info"
@@ -814,8 +867,8 @@ function FundRequestsPage() {
 				{hasOfficerAccess && !budgetsConfigured && (
 					<div className="flex flex-col gap-3 rounded-md border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
 						<div>
-							<h2 className="font-medium">
-								Department budgets are not configured
+							<h2 className="font-medium text-balance">
+								Department Budgets Aren’t Configured
 							</h2>
 							<p className="mt-1 text-sm text-muted-foreground">
 								Events, Projects, and Internal Operations need starting budgets.
@@ -831,10 +884,7 @@ function FundRequestsPage() {
 						<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 							<Tabs
 								value={selectedTab}
-								onValueChange={(v) => {
-									setSelectedTab(v as FilterTab);
-									setPage(1);
-								}}
+								onValueChange={(v) => setSelectedTab(v as FilterTab)}
 								className="w-full min-w-0 lg:w-auto"
 							>
 								<div className="scrollbar-quiet -mx-1 overflow-x-auto px-1 pb-1 [mask-image:linear-gradient(to_right,transparent,black_12px,black_calc(100%-12px),transparent)]">
@@ -899,12 +949,13 @@ function FundRequestsPage() {
 							<div className="relative w-full lg:max-w-sm">
 								<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
 								<Input
-									placeholder="Search requests..."
+									type="search"
+									name="search"
+									aria-label="Search fund requests"
+									autoComplete="off"
+									placeholder="Search requests…"
 									value={searchQuery}
-									onChange={(e) => {
-										setSearchQuery(e.target.value);
-										setPage(1);
-									}}
+									onChange={(e) => setSearchQuery(e.target.value)}
 									className="pl-10"
 								/>
 							</div>
@@ -914,18 +965,19 @@ function FundRequestsPage() {
 
 				{/* Request List - Card Grid */}
 				{!requests ? (
-					<div className="grid grid-cols-1 gap-4">
+					<output className="grid grid-cols-1 gap-4" aria-live="polite">
+						<span className="sr-only">Loading fund requests…</span>
 						{[1, 2, 3, 4, 5, 6].map((i) => (
 							<Skeleton key={i} className="h-32 w-full rounded-md" />
 						))}
-					</div>
+					</output>
 				) : filteredRequests.length === 0 ? (
 					<EmptyState
 						icon={<FileText />}
 						title={
 							requests.length === 0
-								? "No fund requests yet"
-								: "No matching requests found"
+								? "No Fund Requests Yet"
+								: "No Matching Requests Found"
 						}
 						description={
 							requests.length === 0
@@ -935,7 +987,7 @@ function FundRequestsPage() {
 						action={
 							requests.length === 0 ? (
 								<Button variant="outline" onClick={handleNewRequest}>
-									Create a fund request
+									Create a Fund Request
 								</Button>
 							) : undefined
 						}
@@ -951,7 +1003,11 @@ function FundRequestsPage() {
 									r.category
 								}
 								meta={formatDate(r.createdAt)}
-								trailing={formatCurrency(r.amount)}
+								trailing={
+									<span className="tabular-nums">
+										{formatCurrency(r.amount)}
+									</span>
+								}
 								status={
 									<Badge
 										className={`${statusColors[r.status] || ""}`}
@@ -982,7 +1038,16 @@ function FundRequestsPage() {
 													className="min-w-0 max-w-full truncate text-base font-semibold text-foreground"
 													title={r.title}
 												>
-													{r.title}
+													<button
+														type="button"
+														className="max-w-full truncate text-left"
+														onClick={(e) => {
+															e.stopPropagation();
+															handleViewRequest(r);
+														}}
+													>
+														{r.title}
+													</button>
 												</h3>
 												<Badge
 													className={`${statusColors[r.status] || ""} min-h-6 px-2 py-1 text-xs`}
@@ -1007,7 +1072,10 @@ function FundRequestsPage() {
 													{formatCurrency(r.amount)}
 												</span>
 												<div className="flex items-center gap-1.5">
-													<div className="w-1 h-1 rounded-full bg-muted-foreground" />
+													<div
+														aria-hidden="true"
+														className="w-1 h-1 rounded-full bg-muted-foreground"
+													/>
 													<span className="text-xs">
 														{CATEGORY_LABELS[
 															r.category as keyof typeof CATEGORY_LABELS
@@ -1059,7 +1127,7 @@ function FundRequestsPage() {
 													size="icon"
 													onClick={(e) => {
 														e.stopPropagation();
-														handleDeleteRequest(r);
+														void handleDeleteRequest(r);
 													}}
 													disabled={isDeleting}
 													className="h-9 w-9 text-muted-foreground hover:text-destructive"
@@ -1079,7 +1147,7 @@ function FundRequestsPage() {
 				{/* Pagination */}
 				{filteredRequests.length > ITEMS_PER_PAGE && (
 					<div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-						<p className="text-sm text-muted-foreground">
+						<p className="text-sm text-muted-foreground tabular-nums">
 							Showing {(page - 1) * ITEMS_PER_PAGE + 1} to{" "}
 							{Math.min(page * ITEMS_PER_PAGE, filteredRequests.length)} of{" "}
 							{filteredRequests.length} requests

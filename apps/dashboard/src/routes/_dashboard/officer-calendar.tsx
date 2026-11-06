@@ -298,7 +298,8 @@ function OfficerCalendarPage() {
 		return (
 			<div className="flex items-center justify-center h-full">
 				<p className="text-muted-foreground">
-					You do not have access to this page.
+					You don’t have access to this page. Ask an administrator for officer
+					access.
 				</p>
 			</div>
 		);
@@ -338,9 +339,13 @@ function OfficerCalendarPage() {
 			/>
 
 			{isLoading ? (
-				<div className="flex items-center justify-center h-64">
+				<output
+					aria-live="polite"
+					className="flex items-center justify-center h-64"
+				>
 					<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-				</div>
+					<span className="sr-only">Loading calendar…</span>
+				</output>
 			) : (
 				<EventCalendar
 					events={calendarEvents}
@@ -354,13 +359,14 @@ function OfficerCalendarPage() {
 			{isMobile && (
 				<Button
 					onClick={() => openCreateModal()}
+					aria-label="Add Internal Event"
 					className="fixed right-4 z-30 h-12 gap-2 rounded-full px-5 shadow-modal active:scale-[0.97]"
 					style={{
 						bottom: "calc(3.5rem + env(safe-area-inset-bottom) + 0.75rem)",
 					}}
 				>
 					<Plus className="h-5 w-5" />
-					Add
+					Add Event
 				</Button>
 			)}
 

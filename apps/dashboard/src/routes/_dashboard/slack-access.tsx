@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
 	DashboardPage,
 	PageHeader,
@@ -38,7 +39,12 @@ import { useAuth } from "@/hooks/useAuth";
  */
 const IEEE_EMAIL_DOMAIN = "ieeeucsd.org";
 
+const searchSchema = z.object({
+	inboxPage: z.number().int().min(1).default(1).catch(1),
+});
+
 export const Route = createFileRoute("/_dashboard/slack-access")({
+	validateSearch: searchSchema,
 	component: SlackAccessPage,
 });
 
@@ -52,7 +58,13 @@ function SlackAccessPage() {
 	const [showInboxPassword, setShowInboxPassword] = useState(false);
 	const [inboxPassword, setInboxPassword] = useState("");
 
-	const [currentPage, setCurrentPage] = useState(1);
+	const { inboxPage } = Route.useSearch();
+	const navigate = Route.useNavigate();
+	const setCurrentPage = (page: number) =>
+		navigate({
+			search: (prev) => ({ ...prev, inboxPage: page }),
+			replace: true,
+		});
 	const emailsPerPage = 10;
 
 	const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
@@ -140,6 +152,12 @@ function SlackAccessPage() {
 		}
 	};
 
+	const inboxTotalPages = Math.max(
+		1,
+		Math.ceil(inboxState.emails.length / emailsPerPage),
+	);
+	const currentPage = Math.min(inboxPage, inboxTotalPages);
+
 	const getPaginatedEmails = () => {
 		const startIndex = (currentPage - 1) * emailsPerPage;
 		const endIndex = startIndex + emailsPerPage;
@@ -150,7 +168,7 @@ function SlackAccessPage() {
 		if (!user) {
 			setEmailState((prev) => ({
 				...prev,
-				error: "User authentication required",
+				error: "You’re signed out. Sign in again to continue.",
 			}));
 			return;
 		}
@@ -158,13 +176,17 @@ function SlackAccessPage() {
 		if (!user.email || !user.email.includes("@")) {
 			setEmailState((prev) => ({
 				...prev,
-				error: "Invalid user email format",
+				error:
+					"Your account email looks invalid. Contact webmaster@ieeeatucsd.org for help.",
 			}));
 			return;
 		}
 
 		if (!customPassword.trim()) {
-			setEmailState((prev) => ({ ...prev, error: "Password is required" }));
+			setEmailState((prev) => ({
+				...prev,
+				error: "Enter a password to continue.",
+			}));
 			return;
 		}
 
@@ -172,7 +194,8 @@ function SlackAccessPage() {
 		if (!validation.isValid) {
 			setEmailState((prev) => ({
 				...prev,
-				error: "Password does not meet requirements.",
+				error:
+					"Password doesn’t meet the requirements below. Update it and try again.",
 			}));
 			return;
 		}
@@ -232,7 +255,9 @@ function SlackAccessPage() {
 				setEmailState((prev) => ({
 					...prev,
 					isGenerating: false,
-					error: result.message || "Failed to create IEEE email",
+					error:
+						result.message ||
+						"Failed to create IEEE email. Try again or contact webmaster@ieeeatucsd.org.",
 				}));
 			}
 		} catch (error) {
@@ -243,7 +268,7 @@ function SlackAccessPage() {
 				error:
 					error instanceof Error
 						? error.message
-						: "Failed to create IEEE email.",
+						: "Failed to create IEEE email. Try again or contact webmaster@ieeeatucsd.org.",
 			}));
 		}
 	};
@@ -253,7 +278,7 @@ function SlackAccessPage() {
 		if (!ieeeEmailAddress || !customPassword.trim()) {
 			setEmailState((prev) => ({
 				...prev,
-				error: "Email and password required",
+				error: "Enter a new password to continue.",
 			}));
 			return;
 		}
@@ -262,7 +287,8 @@ function SlackAccessPage() {
 		if (!validation.isValid) {
 			setEmailState((prev) => ({
 				...prev,
-				error: "Password does not meet requirements.",
+				error:
+					"Password doesn’t meet the requirements below. Update it and try again.",
 			}));
 			return;
 		}
@@ -300,7 +326,9 @@ function SlackAccessPage() {
 				setEmailState((prev) => ({
 					...prev,
 					isResetting: false,
-					error: result.message || "Failed to reset password",
+					error:
+						result.message ||
+						"Failed to reset password. Try again or contact webmaster@ieeeatucsd.org.",
 				}));
 			}
 		} catch (error) {
@@ -309,7 +337,9 @@ function SlackAccessPage() {
 				...prev,
 				isResetting: false,
 				error:
-					error instanceof Error ? error.message : "Failed to reset password.",
+					error instanceof Error
+						? error.message
+						: "Failed to reset password. Try again or contact webmaster@ieeeatucsd.org.",
 			}));
 		}
 	};
@@ -317,7 +347,10 @@ function SlackAccessPage() {
 	const authenticateInbox = async () => {
 		const ieeeEmailAddress = emailState.generatedEmail || user?.ieeeEmail;
 		if (!ieeeEmailAddress || !inboxPassword.trim()) {
-			setInboxState((prev) => ({ ...prev, error: "Credentials required" }));
+			setInboxState((prev) => ({
+				...prev,
+				error: "Enter your email password to open the inbox.",
+			}));
 			return;
 		}
 
@@ -355,8 +388,8 @@ function SlackAccessPage() {
 					...prev,
 					isLoading: false,
 					error: isAuthError
-						? "Login failed. Check password."
-						: "Connection failed.",
+						? "Login failed. Check your email password and try again."
+						: "Connection failed. Check your connection and try again.",
 				}));
 			}
 		} catch (error) {
@@ -364,7 +397,7 @@ function SlackAccessPage() {
 			setInboxState((prev) => ({
 				...prev,
 				isLoading: false,
-				error: "Connection failed.",
+				error: "Connection failed. Check your connection and try again.",
 			}));
 		}
 	};
@@ -393,14 +426,14 @@ function SlackAccessPage() {
 				setInboxState((prev) => ({
 					...prev,
 					isRefreshing: false,
-					error: "Failed to refresh.",
+					error: "Failed to refresh. Check your connection and try again.",
 				}));
 			}
 		} catch (_error) {
 			setInboxState((prev) => ({
 				...prev,
 				isRefreshing: false,
-				error: "Failed to refresh.",
+				error: "Failed to refresh. Check your connection and try again.",
 			}));
 		}
 	};
@@ -421,7 +454,9 @@ function SlackAccessPage() {
 			/>
 			<main className="space-y-8">
 				<section>
-					<h2 className="mb-3 text-sm font-semibold">How to join</h2>
+					<h2 className="mb-3 text-balance text-sm font-semibold">
+						How to Join
+					</h2>
 					<ol className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
 						{[
 							{
@@ -468,8 +503,8 @@ function SlackAccessPage() {
 					{/* Account */}
 					<div className="flex flex-col overflow-hidden rounded-md border lg:col-span-5">
 						<header className="border-b px-5 py-4">
-							<h2 className="text-base font-semibold">
-								{hasIEEEEmail ? "Your IEEE email" : "Create your IEEE email"}
+							<h2 className="text-balance text-base font-semibold">
+								{hasIEEEEmail ? "Your IEEE Email" : "Create Your IEEE Email"}
 							</h2>
 							<p className="mt-0.5 text-sm text-muted-foreground">
 								{hasIEEEEmail
@@ -526,11 +561,12 @@ function SlackAccessPage() {
 								<div className="relative">
 									<Input
 										id={passwordInputId}
+										name="password"
 										type={showPassword ? "text" : "password"}
 										placeholder={
 											hasIEEEEmail
-												? "Enter new password"
-												: "Create a secure password"
+												? "Enter new password…"
+												: "Create a secure password…"
 										}
 										value={customPassword}
 										onChange={(e) => setCustomPassword(e.target.value)}
@@ -581,7 +617,7 @@ function SlackAccessPage() {
 										) : (
 											<RefreshCw className="mr-2 h-4 w-4" />
 										)}
-										Reset password
+										Reset Password
 									</Button>
 								) : (
 									<p className="text-sm text-muted-foreground">
@@ -603,18 +639,24 @@ function SlackAccessPage() {
 									) : (
 										<Mail className="mr-2 h-4 w-4" />
 									)}
-									Generate email
+									Generate Email
 								</Button>
 							)}
 
 							{emailState.success && (
-								<p className="flex items-center gap-2 text-sm text-tone-success">
+								<output
+									aria-live="polite"
+									className="flex items-center gap-2 break-words text-sm text-tone-success"
+								>
 									<CheckCircle className="h-4 w-4 shrink-0" />
 									{emailState.success}
-								</p>
+								</output>
 							)}
 							{emailState.error && (
-								<p className="flex items-center gap-2 text-sm text-tone-danger">
+								<p
+									role="alert"
+									className="flex items-center gap-2 break-words text-sm text-tone-danger"
+								>
 									<AlertCircle className="h-4 w-4 shrink-0" />
 									{emailState.error}
 								</p>
@@ -632,10 +674,11 @@ function SlackAccessPage() {
 								>
 									ieeeucsdofficers.slack.com
 									<ExternalLink className="h-3 w-3" />
+									<span className="sr-only">(opens in new tab)</span>
 								</a>
 							</p>
 							<p className="text-xs leading-relaxed text-muted-foreground">
-								This account is for Slack authentication only. Don't use it for
+								This account is for Slack authentication only. Don’t use it for
 								external communication.
 							</p>
 						</footer>
@@ -671,7 +714,7 @@ function SlackAccessPage() {
 						<div className="flex min-h-0 flex-1 flex-col">
 							{!ieeeEmail ? (
 								<div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-									<p className="text-sm font-medium">No inbox yet</p>
+									<p className="text-sm font-medium">No Inbox Yet</p>
 									<p className="mt-1 max-w-xs text-sm text-muted-foreground">
 										Create your IEEE email first, then your messages will show
 										up here.
@@ -681,8 +724,8 @@ function SlackAccessPage() {
 								<div className="flex flex-1 items-center justify-center px-6">
 									<div className="w-full max-w-[320px] space-y-4">
 										<div className="text-center">
-											<h3 className="text-base font-semibold">
-												Sign in to inbox
+											<h3 className="text-balance text-base font-semibold">
+												Sign In to Inbox
 											</h3>
 											<p className="mt-0.5 break-all text-sm text-muted-foreground">
 												{ieeeEmail}
@@ -692,7 +735,8 @@ function SlackAccessPage() {
 											<div className="relative">
 												<Input
 													type={showInboxPassword ? "text" : "password"}
-													placeholder="Email password"
+													name="inbox-password"
+													placeholder="Email password…"
 													aria-label="Email password"
 													value={inboxPassword}
 													onChange={(e) => setInboxPassword(e.target.value)}
@@ -731,9 +775,12 @@ function SlackAccessPage() {
 												className="h-11 w-full md:h-10"
 											>
 												{inboxState.isLoading ? (
-													<Loader2 className="h-4 w-4 animate-spin" />
+													<>
+														<Loader2 className="h-4 w-4 animate-spin" />
+														<span className="sr-only">Opening Inbox…</span>
+													</>
 												) : (
-													"Open inbox"
+													"Open Inbox"
 												)}
 											</Button>
 										</div>
@@ -744,7 +791,7 @@ function SlackAccessPage() {
 									<div className="min-h-0 flex-1 overflow-y-auto">
 										{inboxState.emails.length === 0 ? (
 											<div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-												<p className="text-sm">Your inbox is empty</p>
+												<p className="text-sm">Your inbox is empty.</p>
 											</div>
 										) : (
 											<ul className="divide-y">
@@ -789,7 +836,7 @@ function SlackAccessPage() {
 																				: "font-medium text-foreground"
 																		}`}
 																	>
-																		{email.subject || "(No subject)"}
+																		{email.subject || "(No Subject)"}
 																		{isSlackRelated && (
 																			<span className="ml-2 text-xs font-normal text-tone-link">
 																				Slack
@@ -823,7 +870,11 @@ function SlackAccessPage() {
 													variant={currentPage === page ? "default" : "ghost"}
 													size="sm"
 													onClick={() => setCurrentPage(page)}
-													className="h-7 w-7 p-0 text-xs"
+													aria-label={`Inbox page ${page}`}
+													aria-current={
+														currentPage === page ? "page" : undefined
+													}
+													className="h-7 w-7 p-0 text-xs tabular-nums"
 												>
 													{page}
 												</Button>
@@ -833,7 +884,10 @@ function SlackAccessPage() {
 								</>
 							)}
 							{inboxState.error && (
-								<p className="border-t px-5 py-3 text-sm text-tone-danger">
+								<p
+									role="alert"
+									className="border-t px-5 py-3 text-sm text-tone-danger"
+								>
 									{inboxState.error}
 								</p>
 							)}
