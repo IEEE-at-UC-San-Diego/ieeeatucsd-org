@@ -82,7 +82,7 @@ export class AcceptInvitationApi {
 		if (!invitation) {
 			return AcceptInvitationApi.json({ error: "Invitation not found" }, 404);
 		}
-		if (invitation.status === "expired" || Date.now() > invitation.expiresAt) {
+		if (invitation.status === "expired") {
 			return AcceptInvitationApi.json(
 				{ error: "This invitation has expired" },
 				410,
@@ -101,6 +101,17 @@ export class AcceptInvitationApi {
 			);
 		}
 		return null;
+	}
+
+	static expiredPublicResult(value: unknown) {
+		if (!value || typeof value !== "object") return null;
+		const result = value as { ok?: unknown; status?: unknown; error?: unknown };
+		if (result.ok !== false || result.status !== "expired") return null;
+		const error =
+			typeof result.error === "string" && result.error
+				? result.error
+				: "This invitation has expired";
+		return AcceptInvitationApi.json({ error }, 410);
 	}
 
 	static invitationLookupUnavailableResponse(
@@ -258,6 +269,9 @@ export class AcceptInvitationApi {
 					logtoId,
 					authToken: token,
 				});
+				const expiredDecline =
+					AcceptInvitationApi.expiredPublicResult(declinedInvitation);
+				if (expiredDecline) return expiredDecline;
 				return AcceptInvitationApi.json({
 					success: true,
 					invitation: declinedInvitation,
@@ -266,12 +280,16 @@ export class AcceptInvitationApi {
 
 			const acceptFn =
 				"officerInvitations:acceptPublic" as unknown as FunctionReference<"mutation">;
-			const acceptedInvitation = (await convex.mutation(acceptFn, {
+			const acceptedResult = await convex.mutation(acceptFn, {
 				id: inviteId,
 				logtoId,
 				authToken: token,
 				selectedPosition,
-			})) as PublicInvitation & {
+			});
+			const expiredAccept =
+				AcceptInvitationApi.expiredPublicResult(acceptedResult);
+			if (expiredAccept) return expiredAccept;
+			const acceptedInvitation = acceptedResult as PublicInvitation & {
 				roleGranted?: boolean;
 				userCreatedOrUpdated?: boolean;
 			};

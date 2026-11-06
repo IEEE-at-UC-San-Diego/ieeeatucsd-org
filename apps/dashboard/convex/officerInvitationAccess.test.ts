@@ -116,6 +116,15 @@ function memberUser(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function acceptedResult(
+  result: Awaited<ReturnType<typeof OfficerInvitationAccess.accept>>,
+) {
+  if ("ok" in result) {
+    throw new Error(result.error);
+  }
+  return result;
+}
+
 function ctxFrom(
   db: ReturnType<typeof createMockDb>,
   identity: { subject: string; email: string } | null = null,
@@ -221,6 +230,31 @@ describe("OfficerInvitationAccess.accept", () => {
     expect(db._tables.users[0]?.role).toBe("Member");
   });
 
+  it("keeps the expired stamp when accept fails after the deadline", async () => {
+    const db = createMockDb({
+      invitations: [invitation({ expiresAt: Date.now() - 1_000 })],
+      users: [memberUser()],
+    });
+    const authToken = await mintSessionToken("logto|alex", "alex@ucsd.edu");
+
+    const result = await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
+      id: INVITE_ID,
+      logtoId: "logto|alex",
+      authToken,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Invitation has expired",
+      status: "expired",
+    });
+    const stored = db._tables.officerInvitations[0];
+    expect(stored?.status).toBe("expired");
+    expect(stored?.acceptedAt).toBeUndefined();
+    expect(stored?.declinedAt).toBeUndefined();
+    expect(db._tables.users[0]?.role).toBe("Member");
+  });
+
   it("lets the invited member accept and receive the offered role", async () => {
     const db = createMockDb({
       invitations: [invitation()],
@@ -228,11 +262,13 @@ describe("OfficerInvitationAccess.accept", () => {
     });
     const authToken = await mintSessionToken("logto|alex");
 
-    const result = await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
-      id: INVITE_ID,
-      logtoId: "logto|alex",
-      authToken,
-    });
+    const result = acceptedResult(
+      await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
+        id: INVITE_ID,
+        logtoId: "logto|alex",
+        authToken,
+      }),
+    );
 
     expect(result.status).toBe("accepted");
     expect(result.roleGranted).toBe(true);
@@ -247,17 +283,19 @@ describe("OfficerInvitationAccess.accept", () => {
       invitations: [invitation()],
     });
 
-    const result = await OfficerInvitationAccess.accept(
-      ctxFrom(db, {
-        subject: "logto|alex",
-        email: "Alex@UCSD.edu",
-      }) as never,
-      {
-        id: INVITE_ID,
-        logtoId: "logto|alex",
-        authToken: "unused-when-native",
-        selectedPosition: "Project Lead",
-      },
+    const result = acceptedResult(
+      await OfficerInvitationAccess.accept(
+        ctxFrom(db, {
+          subject: "logto|alex",
+          email: "Alex@UCSD.edu",
+        }) as never,
+        {
+          id: INVITE_ID,
+          logtoId: "logto|alex",
+          authToken: "unused-when-native",
+          selectedPosition: "Project Lead",
+        },
+      ),
     );
 
     expect(result.status).toBe("accepted");
@@ -272,11 +310,13 @@ describe("OfficerInvitationAccess.accept", () => {
     });
     const authToken = await mintSessionToken("logto|alex", "Alex@UCSD.edu");
 
-    const result = await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
-      id: INVITE_ID,
-      logtoId: "logto|alex",
-      authToken,
-    });
+    const result = acceptedResult(
+      await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
+        id: INVITE_ID,
+        logtoId: "logto|alex",
+        authToken,
+      }),
+    );
 
     expect(result.status).toBe("accepted");
     expect(result.roleGranted).toBe(true);
@@ -294,11 +334,13 @@ describe("OfficerInvitationAccess.accept", () => {
     });
     const authToken = await mintSessionToken("logto|alex", "alex.new@ucsd.edu");
 
-    const result = await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
-      id: INVITE_ID,
-      logtoId: "logto|alex",
-      authToken,
-    });
+    const result = acceptedResult(
+      await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
+        id: INVITE_ID,
+        logtoId: "logto|alex",
+        authToken,
+      }),
+    );
 
     expect(result.status).toBe("accepted");
     expect(result.roleGranted).toBe(true);
@@ -352,11 +394,13 @@ describe("OfficerInvitationAccess.accept", () => {
     });
     const authToken = await mintSessionToken("logto|alex", "alex@ucsd.edu");
 
-    const result = await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
-      id: INVITE_ID,
-      logtoId: "logto|alex",
-      authToken,
-    });
+    const result = acceptedResult(
+      await OfficerInvitationAccess.accept(ctxFrom(db) as never, {
+        id: INVITE_ID,
+        logtoId: "logto|alex",
+        authToken,
+      }),
+    );
 
     expect(result.status).toBe("accepted");
     expect(result.roleGranted).toBe(true);
