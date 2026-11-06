@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireApiAuth } from "@/server/auth";
 import { resetEmailPassword } from "@/server/mxroute";
 
-async function handle({ request }: { request: Request }) {
+export async function handle({ request }: { request: Request }) {
 	try {
 		const authResult = await requireApiAuth(request);
 		if (authResult instanceof Response) return authResult;
@@ -22,14 +22,28 @@ async function handle({ request }: { request: Request }) {
 			"General Officer",
 		]);
 		const isPrivileged = privilegedRoles.has(String(user.role || ""));
-		if (!isPrivileged && user.ieeeEmail !== email) {
-			return new Response(
-				JSON.stringify({
-					success: false,
-					error: "Forbidden: mailbox ownership mismatch",
-				}),
-				{ status: 403, headers: { "Content-Type": "application/json" } },
-			);
+		if (!isPrivileged) {
+			const requesterEmail = String(user.email || "");
+			const requesterUsername = requesterEmail
+				.split("@")[0]
+				?.toLowerCase()
+				.replace(/[^a-z0-9]/g, "");
+			const mxDomain = (
+				process.env.MXROUTE_EMAIL_DOMAIN || "ieeeatucsd.org"
+			).toLowerCase();
+			const expectedEmail = requesterUsername
+				? `${requesterUsername}@${mxDomain}`
+				: "";
+
+			if (!expectedEmail || email.toLowerCase() !== expectedEmail) {
+				return new Response(
+					JSON.stringify({
+						success: false,
+						error: "Forbidden: mailbox ownership mismatch",
+					}),
+					{ status: 403, headers: { "Content-Type": "application/json" } },
+				);
+			}
 		}
 
 		const result = await resetEmailPassword({ email, password });
