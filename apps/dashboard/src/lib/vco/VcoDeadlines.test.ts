@@ -487,6 +487,47 @@ describe("VcoDeadlines.compute", () => {
 		expect(status.flags).not.toContain("overdue");
 	});
 
+	it("does not treat the three phase timestamps as an ordered pipeline", () => {
+		const shifted = {
+			nowMs: pacificAfternoon(2026, 11, 15),
+			finalsWeeks: [{ start: d(2026, 11, 12), end: d(2026, 12, 31) }],
+		};
+		const event = {
+			eventName: "Finals shift",
+			startDate: pacificAfternoon(2026, 12, 16),
+			createdAt: pacificAfternoon(2026, 8, 1),
+			location: "CSE 1202",
+			expectedAttendance: 40,
+			needsAsFunding: true,
+		};
+		const open = VcoDeadlines.compute(event, shifted);
+		const finish = open.phases.find(
+			(phase) => phase.phase === "invoices_tres_finish",
+		);
+		const prog = open.phases.find((phase) => phase.phase === "prog_app");
+		expect(prog?.done).toBe(false);
+		expect(finish?.done).toBe(false);
+		expect(finish?.overdue).toBe(true);
+		expect(open.nextDeadline?.phase).toBe("tres_start");
+
+		const finishChecked = VcoDeadlines.compute(
+			{
+				...event,
+				tresFinishDoneAt: pacificAfternoon(2026, 10, 1),
+			},
+			shifted,
+		);
+		expect(
+			finishChecked.phases.find(
+				(phase) => phase.phase === "invoices_tres_finish",
+			),
+		).toEqual(expect.objectContaining({ done: true, overdue: false }));
+		expect(
+			finishChecked.phases.find((phase) => phase.phase === "prog_app")?.done,
+		).toBe(false);
+		expect(finishChecked.allDone).toBe(false);
+	});
+
 	it("shows all done instead of a deadline when every funded phase is done", () => {
 		const status = VcoDeadlines.compute(
 			{
