@@ -225,7 +225,7 @@ export class OfficerInvitationAccess {
         acceptedAt: decision.stamp.acceptedAt,
         declinedAt: decision.stamp.declinedAt,
       });
-      throw new Error(decision.error ?? "Invitation has expired");
+      return expired;
     }
     if (!decision.ok || !decision.stamp) {
       throw new Error(decision.error ?? "Illegal invitation transition");
@@ -351,7 +351,7 @@ export class OfficerInvitationAccess {
         acceptedAt: decision.stamp.acceptedAt,
         declinedAt: decision.stamp.declinedAt,
       });
-      throw new Error(decision.error ?? "Invitation has expired");
+      return expired;
     }
     if (!decision.ok || !decision.stamp) {
       throw new Error(decision.error ?? "Illegal invitation transition");
