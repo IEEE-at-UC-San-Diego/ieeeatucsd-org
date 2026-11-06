@@ -168,6 +168,20 @@ interface FundRequestData {
 	}>;
 }
 
+function reviewChoiceForStatus(status: string) {
+	if (status === "approved") return "approve";
+	if (status === "denied") return "deny";
+	if (status === "needs_info") return "needs_info";
+	return "unchanged";
+}
+
+function statusFromReviewChoice(choice: string, current: string) {
+	if (choice === "approve") return "approved";
+	if (choice === "deny") return "denied";
+	if (choice === "needs_info") return "needs_info";
+	return current;
+}
+
 // Detail View Component
 function FundRequestDetailView({
 	request,
@@ -184,12 +198,17 @@ function FundRequestDetailView({
 	const updateStatus = useAuthedMutation(api.fundRequests.updateStatus);
 	const updateFundSource = useAuthedMutation(api.fundRequests.updateFundSource);
 
-	const [selectedStatus, setSelectedStatus] = useState<string>("approve");
+	const [selectedStatus, setSelectedStatus] = useState<string>(() =>
+		reviewChoiceForStatus(request.status),
+	);
 	const [selectedFundSource, setSelectedFundSource] = useState<string>(
 		request.fundSource || "other",
 	);
 	const [reviewNotes, setReviewNotes] = useState(request.reviewNotes || "");
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	useEffect(() => {
+		setSelectedStatus(reviewChoiceForStatus(request.status));
+	}, [request._id, request.status]);
 	useUnsavedChangesGuard(
 		!isSubmitting &&
 			(reviewNotes !== (request.reviewNotes || "") ||
@@ -201,12 +220,10 @@ function FundRequestDetailView({
 
 		setIsSubmitting(true);
 		try {
-			const statusToSet =
-				selectedStatus === "approve"
-					? "approved"
-					: selectedStatus === "deny"
-						? "denied"
-						: "needs_info";
+			const statusToSet = statusFromReviewChoice(
+				selectedStatus,
+				request.status,
+			);
 
 			// Update status if changed
 			const statusChanged = statusToSet !== request.status;
