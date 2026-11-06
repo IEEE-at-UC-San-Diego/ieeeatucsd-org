@@ -1,4 +1,5 @@
 import { api } from "@convex/_generated/api";
+import { eventRequestLabel } from "@convex/eventRequestTransition";
 import { createFileRoute } from "@tanstack/react-router";
 import { ExternalLink, Loader2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -144,7 +145,7 @@ function OfficerCalendarPage() {
 						needsGraphics: event.needsGraphics || false,
 						needsASFunding: event.needsAsFunding || false,
 						estimatedAttendance: event.expectedAttendance || 0,
-						status: "published" as EventStatus,
+						status: eventRequestLabel(event.status, true),
 						files: event.files || [],
 						invoices: [],
 						createdBy: event.requestedUser || "",

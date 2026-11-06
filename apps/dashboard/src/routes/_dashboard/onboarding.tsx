@@ -1854,7 +1854,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 									</span>
 								}
 								actions={
-									inv.status === "pending" ? (
+									inv.status === "pending" && !expired ? (
 										<Button
 											size="icon"
 											variant="ghost"
@@ -1925,7 +1925,7 @@ function PendingInvitationsTab({ logtoId }: { logtoId: string | null }) {
 											{formatDateTimeDisplay(inv.expiresAt)}
 										</TableCell>
 										<TableCell>
-											{inv.status === "pending" && (
+											{inv.status === "pending" && !expired && (
 												<Button
 													size="sm"
 													variant="ghost"

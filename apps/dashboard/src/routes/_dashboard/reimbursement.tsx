@@ -3451,6 +3451,10 @@ function ReimbursementPage() {
 			toast.error("Payment method is required. Choose one in Report Details.");
 			return;
 		}
+		if (!formData.businessPurpose.trim()) {
+			toast.error("Business purpose is required. Add one in Report Details.");
+			return;
+		}
 		if (totalAmount <= 0) {
 			toast.error(
 				"Total amount must be greater than zero. Add an amount to your expenses.",
@@ -3504,6 +3508,7 @@ function ReimbursementPage() {
 				totalAmount,
 				paymentMethod: formData.paymentMethod,
 				additionalInfo: formData.additionalInfo,
+				businessPurpose: formData.businessPurpose.trim(),
 				department: formData.department as any,
 				receipts: formattedReceipts,
 				dateOfPurchase: Date.now(),

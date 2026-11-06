@@ -56,6 +56,34 @@ describe("EventRequestMapping.fromDocument", () => {
 		expect(event.status).toBe("published");
 	});
 
+	it("keeps a declined event declined after reload even if the public flag is still set", () => {
+		const event = EventRequestMapping.fromDocument({
+			_id: "events:declined",
+			eventName: "Old social",
+			eventDescription: "Desc",
+			location: "PC",
+			startDate: 10,
+			endDate: 20,
+			status: "declined",
+			published: true,
+		});
+		expect(event.status).toBe("declined");
+	});
+
+	it("labels a stored completed event as published", () => {
+		const event = EventRequestMapping.fromDocument({
+			_id: "events:live",
+			eventName: "Workshop",
+			eventDescription: "Desc",
+			location: "CSE",
+			startDate: 10,
+			endDate: 20,
+			status: "completed",
+			published: true,
+		});
+		expect(event.status).toBe("published");
+	});
+
 	it("defaults missing points to zero so new events are not left undefined", () => {
 		const event = EventRequestMapping.fromDocument({
 			_id: "events:social",
