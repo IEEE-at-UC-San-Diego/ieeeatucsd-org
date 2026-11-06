@@ -74,6 +74,17 @@ function invitationUnavailableResponse(invitation: PublicInvitation | null) {
 	return null;
 }
 
+function expiredPublicResult(value: unknown) {
+	if (!value || typeof value !== "object") return null;
+	const result = value as { ok?: unknown; status?: unknown; error?: unknown };
+	if (result.ok !== false || result.status !== "expired") return null;
+	const error =
+		typeof result.error === "string" && result.error
+			? result.error
+			: "This invitation has expired";
+	return json({ error }, 410);
+}
+
 function invitationLookupUnavailableResponse(
 	invitation: PublicInvitation | null,
 ) {
@@ -180,16 +191,21 @@ async function handlePost({ request }: { request: Request }) {
 			const declinedInvitation = await convex.mutation(declineFn, {
 				id: inviteId,
 			});
+			const expiredDecline = expiredPublicResult(declinedInvitation);
+			if (expiredDecline) return expiredDecline;
 			return json({ success: true, invitation: declinedInvitation });
 		}
 
 		const acceptFn =
 			"officerInvitations:acceptPublic" as unknown as FunctionReference<"mutation">;
-		const acceptedInvitation = (await convex.mutation(acceptFn, {
+		const acceptedResult = await convex.mutation(acceptFn, {
 			id: inviteId,
 			email,
 			selectedPosition,
-		})) as PublicInvitation & {
+		});
+		const expiredAccept = expiredPublicResult(acceptedResult);
+		if (expiredAccept) return expiredAccept;
+		const acceptedInvitation = acceptedResult as PublicInvitation & {
 			email: string;
 			roleGranted?: boolean;
 			userCreatedOrUpdated?: boolean;

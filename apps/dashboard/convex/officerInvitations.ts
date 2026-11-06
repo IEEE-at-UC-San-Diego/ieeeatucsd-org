@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import { requireAdminAccess } from "./permissions";
 import {
   assertInvitationServerWriter,
+  expiredInvitationFailure,
   transitionOfficerInvitation,
   type InvitationState,
 } from "./officerInvitationTransition";
@@ -236,8 +237,12 @@ export const acceptPublic = mutation({
       { type: "accept", emailMatches },
       now,
     );
+    const expired = expiredInvitationFailure(result);
+    if (expired && result.stamp) {
+      await ctx.db.patch(args.id, stampPatch(result.stamp));
+      return expired;
+    }
     if (!result.ok) {
-      if (result.stamp) await ctx.db.patch(args.id, stampPatch(result.stamp));
       throw new Error(result.error ?? "Illegal invitation transition");
     }
 
@@ -286,8 +291,13 @@ export const declinePublic = mutation({
       { type: "decline" },
       now,
     );
-    if (result.stamp) await ctx.db.patch(args.id, stampPatch(result.stamp));
+    const expired = expiredInvitationFailure(result);
+    if (expired && result.stamp) {
+      await ctx.db.patch(args.id, stampPatch(result.stamp));
+      return expired;
+    }
     if (!result.ok) throw new Error(result.error ?? "Illegal invitation transition");
+    if (result.stamp) await ctx.db.patch(args.id, stampPatch(result.stamp));
 
     return {
       ...publicInvitationFields(invitation),

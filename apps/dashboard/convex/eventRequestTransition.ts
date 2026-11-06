@@ -170,16 +170,19 @@ export function transitionEventRequest(
     case "setStatus": {
       if (!current) throw new Error("Event not found");
       const from = storedStatus(current.status);
-      if (from === action.status) return listingForStatus(from);
+      const sameStatus = from === action.status;
       const edge = `${from}->${action.status}`;
       const allowed =
-        (action.canSubmitOwnDraft && edge === "draft->submitted") ||
-        (action.canReview && REVIEW_EDGES.has(edge));
+        (action.canReview && (sameStatus || REVIEW_EDGES.has(edge))) ||
+        (!sameStatus &&
+          action.canSubmitOwnDraft &&
+          edge === "draft->submitted");
       if (!allowed) {
         throw new Error(
           `Cannot move an event request from ${from} to ${action.status}`,
         );
       }
+      if (sameStatus) return current;
       return listingForStatus(action.status);
     }
     default: {

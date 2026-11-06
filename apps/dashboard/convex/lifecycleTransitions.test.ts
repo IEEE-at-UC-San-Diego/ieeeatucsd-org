@@ -21,6 +21,7 @@ import {
 import { serverPolicyAcceptance } from "./legalVersions";
 import {
   assertInvitationServerWriter,
+  expiredInvitationFailure,
   INVITATION_EXPIRED,
   transitionOfficerInvitation,
   type InvitationState,
@@ -129,6 +130,38 @@ describe("event request transitions", () => {
     ).toEqual({ status: "draft", published: false, isDraft: true });
   });
 
+  it("authorizes a same-status call and keeps a published event published", () => {
+    const published = {
+      status: "approved" as const,
+      published: true,
+      isDraft: false,
+    };
+    expect(
+      transitionEventRequest(published, {
+        kind: "setStatus",
+        status: "approved",
+        canReview: true,
+        canSubmitOwnDraft: false,
+      }),
+    ).toEqual(published);
+    expect(() =>
+      transitionEventRequest(published, {
+        kind: "setStatus",
+        status: "approved",
+        canReview: false,
+        canSubmitOwnDraft: false,
+      }),
+    ).toThrow(/Cannot move an event request from approved to approved/);
+    expect(() =>
+      transitionEventRequest(listing("submitted"), {
+        kind: "setStatus",
+        status: "submitted",
+        canReview: false,
+        canSubmitOwnDraft: true,
+      }),
+    ).toThrow(/Cannot move an event request from submitted to submitted/);
+  });
+
   it("lets a member submit only their own draft", () => {
     expect(
       transitionEventRequest(listing("draft"), {
@@ -201,6 +234,26 @@ describe("officer invitation transitions", () => {
       stamp: { status: "expired", grantRole: false },
     });
     expect(decline.stamp?.status).toBe("expired");
+    expect(expiredInvitationFailure(accept)).toEqual({
+      ok: false,
+      error: INVITATION_EXPIRED,
+      status: "expired",
+    });
+    expect(expiredInvitationFailure(decline)).toEqual({
+      ok: false,
+      error: INVITATION_EXPIRED,
+      status: "expired",
+    });
+  });
+
+  it("does not persist a failed accept that has no expiry stamp", () => {
+    const mismatch = transitionOfficerInvitation(
+      invite(),
+      { type: "accept", emailMatches: false },
+      1_000,
+    );
+    expect(expiredInvitationFailure(mismatch)).toBeNull();
+    expect(mismatch.stamp).toBeUndefined();
   });
 
   it("refuses to mark accepted without a role grant", () => {

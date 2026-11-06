@@ -76,6 +76,23 @@ function fail(error: string): InvitationTransitionResult {
   return { ok: false, error };
 }
 
+export type ExpiredInvitationFailure = {
+  ok: false;
+  error: string;
+  status: "expired";
+};
+
+export function expiredInvitationFailure(
+  result: InvitationTransitionResult,
+): ExpiredInvitationFailure | null {
+  if (result.ok || result.stamp?.status !== "expired") return null;
+  return {
+    ok: false,
+    error: result.error ?? INVITATION_EXPIRED,
+    status: "expired",
+  };
+}
+
 export function assertInvitationServerWriter(provided: string | undefined) {
   const expected = process.env.CONVEX_SESSION_SECRET;
   if (!expected || provided !== expected) {
