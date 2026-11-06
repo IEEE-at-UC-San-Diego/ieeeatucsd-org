@@ -13,6 +13,8 @@ import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { useConfirm } from "@/components/dashboard/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthFlow } from "@/lib/auth/AuthFlow";
 
 export const Route = createFileRoute("/accept-invitation/$inviteId")({
 	component: AcceptInvitationPage,
@@ -37,6 +39,12 @@ function getAcceptInvitationEndpoint() {
 function AcceptInvitationPage() {
 	const formId = useId();
 	const { inviteId } = Route.useParams();
+	const {
+		isAuthenticated,
+		isLoading: authLoading,
+		getAuthHeaders,
+		signIn,
+	} = useAuth();
 	const [invitation, setInvitation] = useState<Invitation | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [processing, setProcessing] = useState(false);
@@ -119,14 +127,32 @@ function AcceptInvitationPage() {
 		};
 	}, [inviteId]);
 
+	useEffect(() => {
+		if (authLoading || isAuthenticated) return;
+		AuthFlow.stashPostLoginRedirect(`/accept-invitation/${inviteId}`);
+	}, [authLoading, inviteId, isAuthenticated]);
+
+	const handleSignInToRespond = () => {
+		AuthFlow.stashPostLoginRedirect(`/accept-invitation/${inviteId}`);
+		signIn();
+	};
+
 	const handleAccept = async () => {
 		try {
 			setProcessing(true);
 			setError(null);
 
+			const authHeaders = getAuthHeaders();
+			if (!authHeaders.Authorization) {
+				throw new Error("Sign in to accept this invitation.");
+			}
+
 			const response = await fetch(getAcceptInvitationEndpoint(), {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					...authHeaders,
+				},
 				body: JSON.stringify({
 					inviteId,
 					action: "accept",
@@ -202,9 +228,17 @@ function AcceptInvitationPage() {
 			setProcessing(true);
 			setError(null);
 
+			const authHeaders = getAuthHeaders();
+			if (!authHeaders.Authorization) {
+				throw new Error("Sign in to decline this invitation.");
+			}
+
 			const response = await fetch(getAcceptInvitationEndpoint(), {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					...authHeaders,
+				},
 				body: JSON.stringify({
 					inviteId,
 					action: "decline",
@@ -230,7 +264,7 @@ function AcceptInvitationPage() {
 		}
 	};
 
-	if (loading) {
+	if (loading || authLoading) {
 		return (
 			<CenteredShell>
 				<output className="block">
@@ -434,28 +468,44 @@ function AcceptInvitationPage() {
 						</div>
 
 						<div className="sticky bottom-0 -mx-4 border-t bg-background/95 px-4 py-3 backdrop-blur-xl supports-[backdrop-filter]:bg-background/85 [@media(prefers-reduced-transparency:reduce)]:bg-background [@media(prefers-reduced-transparency:reduce)]:backdrop-blur-none sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
-							<div className="flex flex-col gap-3 sm:flex-row">
-								<Button
-									type="button"
-									variant="outline"
-									onClick={handleDecline}
-									disabled={processing}
-									className="h-12 flex-1"
-								>
-									Decline Position
-								</Button>
-								<Button
-									type="button"
-									onClick={handleAccept}
-									disabled={!canAccept}
-									className="h-12 flex-1"
-								>
-									{processing ? (
-										<Loader2 className="h-4 w-4 animate-spin" />
-									) : null}
-									{processing ? "Processing…" : "Accept Position"}
-								</Button>
-							</div>
+							{isAuthenticated ? (
+								<div className="flex flex-col gap-3 sm:flex-row">
+									<Button
+										type="button"
+										variant="outline"
+										onClick={handleDecline}
+										disabled={processing}
+										className="h-12 flex-1"
+									>
+										Decline Position
+									</Button>
+									<Button
+										type="button"
+										onClick={handleAccept}
+										disabled={!canAccept}
+										className="h-12 flex-1"
+									>
+										{processing ? (
+											<Loader2 className="h-4 w-4 animate-spin" />
+										) : null}
+										{processing ? "Processing…" : "Accept Position"}
+									</Button>
+								</div>
+							) : (
+								<div className="space-y-3">
+									<p className="text-sm text-muted-foreground">
+										Sign in with {invitation?.email || "the invited email"} to
+										accept or decline this invitation.
+									</p>
+									<Button
+										type="button"
+										onClick={handleSignInToRespond}
+										className="h-12 w-full"
+									>
+										Sign in to respond
+									</Button>
+								</div>
+							)}
 						</div>
 					</div>
 				</div>

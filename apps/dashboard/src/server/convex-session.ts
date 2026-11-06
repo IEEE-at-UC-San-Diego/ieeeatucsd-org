@@ -7,6 +7,7 @@ export const CONVEX_SESSION_TTL_SECONDS = 5 * 60;
 export type ConvexSessionPayload = {
 	sub: string;
 	role?: UserRole;
+	email?: string;
 	iat: number;
 	exp: number;
 	v: 1;
@@ -37,6 +38,7 @@ function safeEqualHex(a: string, b: string) {
 export function createConvexSessionToken(params: {
 	sub: string;
 	role?: UserRole;
+	email?: string;
 	nowMs?: number;
 }) {
 	const nowMs = params.nowMs ?? Date.now();
@@ -45,6 +47,7 @@ export function createConvexSessionToken(params: {
 	const payload: ConvexSessionPayload = {
 		sub: params.sub,
 		role: params.role,
+		email: params.email?.trim().toLowerCase() || undefined,
 		iat,
 		exp,
 		v: 1,
@@ -58,13 +61,16 @@ export function createConvexSessionToken(params: {
 	};
 }
 
-export function verifyConvexSessionToken(token: string): ConvexSessionPayload {
-	const parts = token.split(".");
-	if (parts.length !== 2) {
+function splitSignedToken(token: string): [string, string] {
+	const separator = token.lastIndexOf(".");
+	if (separator <= 0 || separator === token.length - 1) {
 		throw new Error("Invalid session token format");
 	}
+	return [token.slice(0, separator), token.slice(separator + 1)];
+}
 
-	const [encodedPayload, signature] = parts;
+export function verifyConvexSessionToken(token: string): ConvexSessionPayload {
+	const [encodedPayload, signature] = splitSignedToken(token);
 	const expected = sign(encodedPayload, getSessionSecret());
 	if (!safeEqualHex(signature, expected)) {
 		throw new Error("Invalid session token signature");

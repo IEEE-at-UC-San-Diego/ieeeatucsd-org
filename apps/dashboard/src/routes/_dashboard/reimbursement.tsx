@@ -1359,6 +1359,7 @@ function ReceiptsStep({
 	receipts,
 	setReceipts,
 	generateUploadUrl,
+	registerPendingUpload,
 	getStorageUrl,
 	onBack,
 	onNext,
@@ -1367,6 +1368,9 @@ function ReceiptsStep({
 	receipts: ReceiptEntry[];
 	setReceipts: React.Dispatch<React.SetStateAction<ReceiptEntry[]>>;
 	generateUploadUrl: (args: Record<string, never>) => Promise<string>;
+	registerPendingUpload: (args: {
+		storageId: Id<"_storage">;
+	}) => Promise<unknown>;
 	getStorageUrl: (args: {
 		storageId: Id<"_storage">;
 	}) => Promise<string | null>;
@@ -1853,6 +1857,9 @@ function ReceiptsStep({
 			}
 
 			const uploadPayload = await uploadResponse.json();
+			await registerPendingUpload({
+				storageId: uploadPayload.storageId,
+			});
 
 			const fileUrl = await getStorageUrl({
 				storageId: uploadPayload.storageId,
@@ -3289,6 +3296,9 @@ function ReimbursementPage() {
 	const generateUploadUrl = useAuthedMutation(
 		api.reimbursements.generateUploadUrl,
 	);
+	const registerPendingUpload = useAuthedMutation(
+		api.reimbursements.registerPendingUpload,
+	);
 	const getStorageUrl = useAuthedMutation(api.reimbursements.getStorageUrl);
 
 	const {
@@ -3609,6 +3619,7 @@ function ReimbursementPage() {
 							receipts={receipts}
 							setReceipts={setReceipts}
 							generateUploadUrl={generateUploadUrl}
+							registerPendingUpload={registerPendingUpload}
 							getStorageUrl={getStorageUrl}
 							onBack={handleBack}
 							onNext={handleNext}

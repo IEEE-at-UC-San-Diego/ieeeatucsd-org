@@ -4,7 +4,6 @@ import {
 	HeadContent,
 	Outlet,
 	Scripts,
-	useRouterState,
 } from "@tanstack/react-router";
 import { useTheme } from "next-themes";
 import { Toaster } from "sonner";
@@ -215,21 +214,6 @@ function ThemedToaster() {
 }
 
 function RootComponent() {
-	const pathname = useRouterState({
-		select: (state) => state.location.pathname,
-	});
-
-	if (pathname.startsWith("/accept-invitation/")) {
-		return (
-			<ThemeProvider>
-				<ThemeMeta />
-				<ConfirmProvider>
-					<Outlet />
-				</ConfirmProvider>
-			</ThemeProvider>
-		);
-	}
-
 	return (
 		<ThemeProvider>
 			<ThemeMeta />
